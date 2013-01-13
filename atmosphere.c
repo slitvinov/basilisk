@@ -10,7 +10,7 @@ typedef struct {
   double un, vn, hn;
 } Data;
 // #define INDEX(a,k,l) m[i][j].a[k-i+1][l-j+1]
-#define INDEX(a,k,l) m[k][l].a[0][0]
+#define INDEX(a,k,l) m[i+k][j+l].a[0][0]
 
 #else
 
@@ -18,7 +18,7 @@ typedef struct {
   double u, v, h, b;
   double un, vn, hn;
 } Data;
-#define INDEX(a,k,l) m[k][l].a
+#define INDEX(a,k,l) m[i+k][j+l].a
 
 #endif
 
@@ -26,9 +26,9 @@ typedef struct {
 #define v(k,l) INDEX(v,k,l)
 #define h(k,l) INDEX(h,k,l)
 #define b(k,l) INDEX(b,k,l)
-#define un(k,l) m[k][l].un
-#define vn(k,l) m[k][l].vn
-#define hn(k,l) m[k][l].hn
+#define un(k,l) m[i+k][j+l].un
+#define vn(k,l) m[i+k][j+l].vn
+#define hn(k,l) m[i+k][j+l].hn
 
 // Default parameters, do not change them!! edit parameters.h instead
 // number of grid points
@@ -69,8 +69,8 @@ void update_u (Data ** m, int n)
 {
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++) {
-      u(i,j) = un(i,j);
-      v(i,j) = vn(i,j);
+      u(0,0) = un(0,0);
+      v(0,0) = vn(0,0);
     }
 }
 
@@ -78,25 +78,41 @@ void update_h (Data ** m, int n)
 {
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++)
-      h(i,j) = hn(i,j);
+      h(0,0) = hn(0,0);
 }
 
 void boundary_h (Data ** m, int n)
 {
-  for (int i = 1; i <= n; i++) {
+  int i, j;
+  for (i = 1; i <= n; i++) {
     /* symmetry */
-    h(i,0) = h(i,1);
-    h(i,n+1) = h(i,n);
-    h(0,i) = h(1,i);
-    h(n+1,i) = h(n,i);
+    j = 1;
+    h(0,-1) = h(0,0);
+    j = n;
+    h(0,1) = h(0,0);
+  }
+  for (j = 1; j <= n; j++) {
+    /* symmetry */
+    i = 1;
+    h(-1,0) = h(0,0);
+    i = n;
+    h(1,0) = h(0,0);
   }
 }
 
 void boundary_u (Data ** m, int n)
 {
-  for (int i = 1; i <= n; i++)
+  int i, j;
+  for (i = 1; i <= n; i++) {
     /* solid walls */
-    u(1,i) = u(n+1,i) = v(i,1) = v(i,n+1) = 0.;
+    j = 1; v(0,0) = 0.;
+    j = n; v(0,1) = 0.;
+  }
+  for (j = 1; j <= n; j++) {
+    /* solid walls */
+    i = 1; u(0,0) = 0.;
+    i = n; u(1,0) = 0.;
+  }
 }
 
 void tracer_advection (Data ** m, int n, double dt)
@@ -105,10 +121,10 @@ void tracer_advection (Data ** m, int n, double dt)
   dt /= 2.*h;
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++)
-      hn(i,j) = h(i,j) + dt*((h(i,j) + h(i-1,j))*u(i,j) - 
-			     (h(i,j) + h(i+1,j))*u(i+1,j) +
-			     (h(i,j) + h(i,j-1))*v(i,j) - 
-			     (h(i,j) + h(i,j+1))*v(i,j+1));
+      hn(0,0) = h(0,0) + dt*((h(0,0) + h(-1,0))*u(0,0) - 
+			     (h(0,0) + h(1,0))*u(1,0) +
+			     (h(0,0) + h(0,-1))*v(0,0) - 
+			     (h(0,0) + h(0,1))*v(0,1));
 }
 
 void tracer_advection_upwind (Data ** m, int n, double dt)
@@ -117,26 +133,26 @@ void tracer_advection_upwind (Data ** m, int n, double dt)
   dt /= h;
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++)
-      hn(i,j) = h(i,j) + dt*((u(i,j) < 0. ? h(i,j) : h(i-1,j))*u(i,j) - 
-			     (u(i+1,j) > 0. ? h(i,j) : h(i+1,j))*u(i+1,j) +
-			     (v(i,j) < 0. ? h(i,j) : h(i,j-1))*v(i,j) - 
-			     (v(i,j+1) > 0. ? h(i,j) : h(i,j+1))*v(i,j+1));
+      hn(0,0) = h(0,0) + dt*((u(0,0) < 0. ? h(0,0) : h(-1,0))*u(0,0) - 
+			     (u(1,0) > 0. ? h(0,0) : h(1,0))*u(1,0) +
+			     (v(0,0) < 0. ? h(0,0) : h(0,-1))*v(0,0) - 
+			     (v(0,1) > 0. ? h(0,0) : h(0,1))*v(0,1));
 }
 
 static double vorticity (Data ** m, int i, int j, int n)
 {
-  return (v(i,j) - v(i-1,j) + u(i,j-1) - u(i,j))/(L0/n);
+  return (v(0,0) - v(-1,0) + u(0,-1) - u(0,0))/(L0/n);
 }
 
 static double KE (Data ** m, int i, int j)
 {
 #if 1
-  double uc = u(i,j) + u(i+1,j);
-  double vc = v(i,j) + v(i,j+1);
+  double uc = u(0,0) + u(1,0);
+  double vc = v(0,0) + v(0,1);
   return (uc*uc + vc*vc)/8.;
 #else
-  double uc = u(i,j)*u(i,j) + u(i+1,j)*u(i+1,j);
-  double vc = v(i,j)*v(i,j) + v(i,j+1)*v(i,j+1);
+  double uc = u(0,0)*u(0,0) + u(1,0)*u(1,0);
+  double vc = v(0,0)*v(0,0) + v(0,1)*v(0,1);
   return (uc + vc)/4.;
 #endif
 }
@@ -148,15 +164,15 @@ void momentum (Data ** m, int n, double dt)
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++) {
       double vort = vorticity(m,i,j,n);
-      double g = h(i,j) + b(i,j) + KE(m,i,j);
+      double g = h(0,0) + b(0,0) + KE(m,i,j);
       double vortu = (vort + vorticity(m,i,j+1,n))/2.;
-      un(i,j) = u(i,j)
-	- dtg*(g - h(i-1,j) - b(i-1,j) - KE(m,i-1,j))
-	+ dtf*(vortu + F0)*(v(i,j) + v(i,j+1) + v(i-1,j) + v(i-1,j+1));
-      double vortv = (vort + vorticity (m, i+1, j, n))/2.;
-      vn(i,j) = v(i,j)
-	- dtg*(g - h(i,j-1) - b(i,j-1) - KE(m,i,j-1))
-	- dtf*(vortv + F0)*(u(i,j) + u(i+1,j) + u(i,j-1) + u(i+1,j-1));
+      un(0,0) = u(0,0)
+	- dtg*(g - h(-1,0) - b(-1,0) - KE(m,i-1,j))
+	+ dtf*(vortu + F0)*(v(0,0) + v(0,1) + v(-1,0) + v(-1,1));
+      double vortv = (vort + vorticity (m,i+1,j,n))/2.;
+      vn(0,0) = v(0,0)
+	- dtg*(g - h(0,-1) - b(0,-1) - KE(m,i,j-1))
+	- dtf*(vortv + F0)*(u(0,0) + u(1,0) + u(0,-1) + u(1,-1));
     }
 }
 
@@ -168,7 +184,7 @@ void output_field (Data ** m, int n, FILE * fp)
   for (int i = 1; i <= n; i++) {
     for (int j = 1; j <= n; j++) {
       double x = XC, y = YC;
-      fprintf (fp, "%g %g %g\n", x, y, h(i,j) + b(i,j));
+      fprintf (fp, "%g %g %g\n", x, y, h(0,0) + b(0,0));
     }
     fprintf (fp, "\n");
   }
@@ -182,16 +198,16 @@ double timestep (Data ** m, int n)
   dx *= dx;
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++) {
-      if (h(i,j) > 0.) {
-	double dt = dx/(G*h(i,j));
+      if (h(0,0) > 0.) {
+	double dt = dx/(G*h(0,0));
 	if (dt < dtmax) dtmax = dt;
       }
-      if (u(i,j) != 0.) {
-	double dt = dx/(u(i,j)*u(i,j));
+      if (u(0,0) != 0.) {
+	double dt = dx/(u(0,0)*u(0,0));
 	if (dt < dtmax) dtmax = dt;
       }
-      if (v(i,j) != 0.) {
-	double dt = dx/(v(i,j)*v(i,j));
+      if (v(0,0) != 0.) {
+	double dt = dx/(v(0,0)*v(0,0));
 	if (dt < dtmax) dtmax = dt;
       }
     }
@@ -226,6 +242,6 @@ int main (int argc, char ** argv)
   } while (t < TMAX);
   end = clock ();
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
-  fprintf (stderr, "%d timesteps, %g CPU, %d points.steps/s\n",
+  fprintf (stderr, "# %d timesteps, %g CPU, %d points.steps/s\n",
 	   i, cpu, (int) (n*n*i/cpu));
 }

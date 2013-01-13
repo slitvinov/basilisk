@@ -40,12 +40,12 @@ void initial_conditions (Data ** m, int n)
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++) {
       double x = XC, y = YC;
-      b(i,j) = 0.;
-      h1[i][j] = h(i,j) = (H0 + h0(sqrt (x*x + y*y)));
+      b(0,0) = 0.;
+      h1[i][j] = h(0,0) = (H0 + h0(sqrt (x*x + y*y)));
       x = XU; y = YU;
-      u(i,j) = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
+      u(0,0) = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
       x = XV; y = YV;
-      v(i,j) = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
+      v(0,0) = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
     }
 }
 
@@ -54,7 +54,7 @@ static double error (Data ** m, int n)
   double max = 0.;
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++) {
-      e[i][j] = fabs (h1[i][j]  - h(i,j));
+      e[i][j] = fabs (h1[i][j]  - h(0,0));
       if (e[i][j] > max) max = e[i][j];
     }
   return max;
@@ -65,6 +65,6 @@ static double energy (Data ** m, int n)
   double se = 0.;
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++)
-      se += h(i,j)*KE(m,i,j) + G*(h(i,j) - H0)*(h(i,j) - H0)/2.;
+      se += h(0,0)*KE(m,i,j) + G*(h(0,0) - H0)*(h(0,0) - H0)/2.;
   return se*(L0/n)*(L0/n);
 }
