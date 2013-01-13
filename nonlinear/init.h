@@ -40,12 +40,12 @@ void initial_conditions (Data ** m, int n)
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++) {
       double x = XC, y = YC;
-      b(0,0) = 0.;
-      h1[i][j] = h(0,0) = (H0 + h0(sqrt (x*x + y*y)));
+      bn(0,0) = 0.;
+      h1[i][j] = hn(0,0) = (H0 + h0(sqrt (x*x + y*y)));
       x = XU; y = YU;
-      u(0,0) = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
+      un(0,0) = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
       x = XV; y = YV;
-      v(0,0) = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
+      vn(0,0) = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
     }
 }
 

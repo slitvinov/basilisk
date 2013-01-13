@@ -4,23 +4,18 @@
 #include <time.h>
 
 #if 0
-
-typedef struct {
-  double u[3][3], v[3][3], h[3][3], b[3][3];
-  double un, vn, hn;
-} Data;
-// #define INDEX(a,k,l) m[i][j].a[k-i+1][l-j+1]
-#define INDEX(a,k,l) m[i+k][j+l].a[0][0]
-
+  #define NS 3
+  #define INDEX(a,k,l) m[i][j].a[k+NS/2][l+NS/2]
+//  #define INDEX(a,k,l) m[i+k][j+l].a[NS/2][NS/2]
 #else
+  #define NS 1
+  #define INDEX(a,k,l) m[i+k][j+l].a[0][0]
+#endif
 
 typedef struct {
-  double u, v, h, b;
-  double un, vn, hn;
+  double u[NS][NS], v[NS][NS], h[NS][NS], b[NS][NS];
+  double un, vn, hn, bn;
 } Data;
-#define INDEX(a,k,l) m[i+k][j+l].a
-
-#endif
 
 #define u(k,l) INDEX(u,k,l)
 #define v(k,l) INDEX(v,k,l)
@@ -29,6 +24,7 @@ typedef struct {
 #define un(k,l) m[i+k][j+l].un
 #define vn(k,l) m[i+k][j+l].vn
 #define hn(k,l) m[i+k][j+l].hn
+#define bn(k,l) m[i+k][j+l].bn
 
 // Default parameters, do not change them!! edit parameters.h instead
 // number of grid points
@@ -68,17 +64,30 @@ void matrix_free (void * m)
 void update_u (Data ** m, int n)
 {
   for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++) {
-      u(0,0) = un(0,0);
-      v(0,0) = vn(0,0);
-    }
+    for (int j = 1; j <= n; j++)
+      for (int k = -NS/2; k <= NS/2; k++)
+	for (int l = -NS/2; l <= NS/2; l++) {
+	  u(k,l) = un(k,l);
+	  v(k,l) = vn(k,l);
+	}
 }
 
 void update_h (Data ** m, int n)
 {
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++)
-      h(0,0) = hn(0,0);
+      for (int k = -NS/2; k <= NS/2; k++)
+	for (int l = -NS/2; l <= NS/2; l++)
+	  h(k,l) = hn(k,l);
+}
+
+void update_b (Data ** m, int n)
+{
+  for (int i = 1; i <= n; i++)
+    for (int j = 1; j <= n; j++)
+      for (int k = -NS/2; k <= NS/2; k++)
+	for (int l = -NS/2; l <= NS/2; l++)
+	  b(k,l) = bn(k,l);
 }
 
 void boundary_h (Data ** m, int n)
@@ -224,7 +233,10 @@ int main (int argc, char ** argv)
   Data ** m = matrix_new (n + 2, n + 2, sizeof (Data));
 
   initial_conditions (m, n);
+  update_b (m, n);
+  update_h (m, n);
   boundary_h (m, n);
+  update_u (m, n);
   boundary_u (m, n);
 
   clock_t start, end;
