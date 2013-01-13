@@ -33,38 +33,35 @@ double h0 (double r) {
 
 double ** h1, ** e;
 
-void initial_conditions (Data ** m, int n)
+void initial_conditions (Data * m, int n)
 {
   h1 = matrix_new (n + 2, n + 2, sizeof (double));
   e = matrix_new (n + 2, n + 2, sizeof (double));
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++) {
-      double x = XC, y = YC;
-      bn(0,0) = 0.;
-      h1[i][j] = hn(0,0) = (H0 + h0(sqrt (x*x + y*y)));
-      x = XU; y = YU;
-      un(0,0) = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
-      x = XV; y = YV;
-      vn(0,0) = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
-    }
+  foreach (m) {
+    double x = XC, y = YC;
+    bn(0,0) = 0.;
+    h1[i][j] = hn(0,0) = (H0 + h0(sqrt (x*x + y*y)));
+    x = XU; y = YU;
+    un(0,0) = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
+    x = XV; y = YV;
+    vn(0,0) = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
+  }
 }
 
-static double error (Data ** m, int n)
+static double error (Data * m, int n)
 {
   double max = 0.;
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++) {
-      e[i][j] = fabs (h1[i][j]  - h(0,0));
-      if (e[i][j] > max) max = e[i][j];
-    }
+  foreach (m) {
+    e[i][j] = fabs (h1[i][j]  - h(0,0));
+    if (e[i][j] > max) max = e[i][j];
+  }
   return max;
 }
 
-static double energy (Data ** m, int n)
+static double energy (Data * m, int n)
 {
   double se = 0.;
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++)
-      se += h(0,0)*KE(m,i,j) + G*(h(0,0) - H0)*(h(0,0) - H0)/2.;
+  foreach (m)
+    se += h(0,0)*KE(m,i,j,n) + G*(h(0,0) - H0)*(h(0,0) - H0)/2.;
   return se*(L0/n)*(L0/n);
 }

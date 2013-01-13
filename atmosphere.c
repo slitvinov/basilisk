@@ -3,13 +3,14 @@
 #include <math.h>
 #include <time.h>
 
+#define M(i,j) m[(i)*(n + 2) + (j)]
 #if 0
   #define NS 3
-  #define INDEX(a,k,l) m[i][j].a[k+NS/2][l+NS/2]
-//  #define INDEX(a,k,l) m[i+k][j+l].a[NS/2][NS/2]
+  #define INDEX(a,k,l) M(i,j).a[k+NS/2][l+NS/2]
+//  #define INDEX(a,k,l) M(i+k,j+l).a[NS/2][NS/2]
 #else
   #define NS 1
-  #define INDEX(a,k,l) m[i+k][j+l].a[0][0]
+  #define INDEX(a,k,l) M(i+k,j+l).a[NS/2][NS/2]
 #endif
 
 typedef struct {
@@ -21,10 +22,12 @@ typedef struct {
 #define v(k,l) INDEX(v,k,l)
 #define h(k,l) INDEX(h,k,l)
 #define b(k,l) INDEX(b,k,l)
-#define un(k,l) m[i+k][j+l].un
-#define vn(k,l) m[i+k][j+l].vn
-#define hn(k,l) m[i+k][j+l].hn
-#define bn(k,l) m[i+k][j+l].bn
+#define un(k,l) M(i+k,j+l).un
+#define vn(k,l) M(i+k,j+l).vn
+#define hn(k,l) M(i+k,j+l).hn
+#define bn(k,l) M(i+k,j+l).bn
+
+#define foreach(m) for (int i = 1; i <= n; i++) for (int j = 1; j <= n; j++)
 
 // Default parameters, do not change them!! edit parameters.h instead
 // number of grid points
@@ -61,36 +64,33 @@ void matrix_free (void * m)
   free (m);
 }
 
-void update_u (Data ** m, int n)
+void update_u (Data * m, int n)
 {
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++)
-      for (int k = -NS/2; k <= NS/2; k++)
-	for (int l = -NS/2; l <= NS/2; l++) {
-	  u(k,l) = un(k,l);
-	  v(k,l) = vn(k,l);
-	}
+  foreach (m)
+    for (int k = -NS/2; k <= NS/2; k++)
+      for (int l = -NS/2; l <= NS/2; l++) {
+	u(k,l) = un(k,l);
+	v(k,l) = vn(k,l);
+      }
 }
 
-void update_h (Data ** m, int n)
+void update_h (Data * m, int n)
 {
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++)
-      for (int k = -NS/2; k <= NS/2; k++)
-	for (int l = -NS/2; l <= NS/2; l++)
-	  h(k,l) = hn(k,l);
+  foreach (m)
+    for (int k = -NS/2; k <= NS/2; k++)
+      for (int l = -NS/2; l <= NS/2; l++)
+	h(k,l) = hn(k,l);
 }
 
-void update_b (Data ** m, int n)
+void update_b (Data * m, int n)
 {
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++)
-      for (int k = -NS/2; k <= NS/2; k++)
-	for (int l = -NS/2; l <= NS/2; l++)
-	  b(k,l) = bn(k,l);
+  foreach (m)
+    for (int k = -NS/2; k <= NS/2; k++)
+      for (int l = -NS/2; l <= NS/2; l++)
+	b(k,l) = bn(k,l);
 }
 
-void boundary_h (Data ** m, int n)
+void boundary_h (Data * m, int n)
 {
   int i, j;
   for (i = 1; i <= n; i++) {
@@ -109,7 +109,7 @@ void boundary_h (Data ** m, int n)
   }
 }
 
-void boundary_u (Data ** m, int n)
+void boundary_u (Data * m, int n)
 {
   int i, j;
   for (i = 1; i <= n; i++) {
@@ -124,36 +124,34 @@ void boundary_u (Data ** m, int n)
   }
 }
 
-void tracer_advection (Data ** m, int n, double dt)
+void tracer_advection (Data * m, int n, double dt)
 {
   double h = L0/n;
   dt /= 2.*h;
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++)
-      hn(0,0) = h(0,0) + dt*((h(0,0) + h(-1,0))*u(0,0) - 
-			     (h(0,0) + h(1,0))*u(1,0) +
-			     (h(0,0) + h(0,-1))*v(0,0) - 
-			     (h(0,0) + h(0,1))*v(0,1));
+  foreach (m)
+    hn(0,0) = h(0,0) + dt*((h(0,0) + h(-1,0))*u(0,0) - 
+			   (h(0,0) + h(1,0))*u(1,0) +
+			   (h(0,0) + h(0,-1))*v(0,0) - 
+			   (h(0,0) + h(0,1))*v(0,1));
 }
 
-void tracer_advection_upwind (Data ** m, int n, double dt)
+void tracer_advection_upwind (Data * m, int n, double dt)
 {
   double h = L0/n;
   dt /= h;
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++)
-      hn(0,0) = h(0,0) + dt*((u(0,0) < 0. ? h(0,0) : h(-1,0))*u(0,0) - 
-			     (u(1,0) > 0. ? h(0,0) : h(1,0))*u(1,0) +
-			     (v(0,0) < 0. ? h(0,0) : h(0,-1))*v(0,0) - 
-			     (v(0,1) > 0. ? h(0,0) : h(0,1))*v(0,1));
+  foreach (m)
+    hn(0,0) = h(0,0) + dt*((u(0,0) < 0. ? h(0,0) : h(-1,0))*u(0,0) - 
+			   (u(1,0) > 0. ? h(0,0) : h(1,0))*u(1,0) +
+			   (v(0,0) < 0. ? h(0,0) : h(0,-1))*v(0,0) - 
+			   (v(0,1) > 0. ? h(0,0) : h(0,1))*v(0,1));
 }
 
-static double vorticity (Data ** m, int i, int j, int n)
+static double vorticity (Data * m, int i, int j, int n)
 {
   return (v(0,0) - v(-1,0) + u(0,-1) - u(0,0))/(L0/n);
 }
 
-static double KE (Data ** m, int i, int j)
+static double KE (Data * m, int i, int j, int n)
 {
 #if 1
   double uc = u(0,0) + u(1,0);
@@ -166,28 +164,27 @@ static double KE (Data ** m, int i, int j)
 #endif
 }
 
-void momentum (Data ** m, int n, double dt)
+void momentum (Data * m, int n, double dt)
 {
   double dtg = dt*G/(L0/n);
   double dtf = dt/4.;
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++) {
-      double vort = vorticity(m,i,j,n);
-      double g = h(0,0) + b(0,0) + KE(m,i,j);
-      double vortu = (vort + vorticity(m,i,j+1,n))/2.;
-      un(0,0) = u(0,0)
-	- dtg*(g - h(-1,0) - b(-1,0) - KE(m,i-1,j))
-	+ dtf*(vortu + F0)*(v(0,0) + v(0,1) + v(-1,0) + v(-1,1));
-      double vortv = (vort + vorticity (m,i+1,j,n))/2.;
-      vn(0,0) = v(0,0)
-	- dtg*(g - h(0,-1) - b(0,-1) - KE(m,i,j-1))
-	- dtf*(vortv + F0)*(u(0,0) + u(1,0) + u(0,-1) + u(1,-1));
-    }
+  foreach (m) {
+    double vort = vorticity(m,i,j,n);
+    double g = h(0,0) + b(0,0) + KE(m,i,j,n);
+    double vortu = (vort + vorticity(m,i,j+1,n))/2.;
+    un(0,0) = u(0,0)
+      - dtg*(g - h(-1,0) - b(-1,0) - KE(m,i-1,j,n))
+      + dtf*(vortu + F0)*(v(0,0) + v(0,1) + v(-1,0) + v(-1,1));
+    double vortv = (vort + vorticity (m,i+1,j,n))/2.;
+    vn(0,0) = v(0,0)
+      - dtg*(g - h(0,-1) - b(0,-1) - KE(m,i,j-1,n))
+      - dtf*(vortv + F0)*(u(0,0) + u(1,0) + u(0,-1) + u(1,-1));
+  }
 }
 
 #include "init.h"
 
-void output_field (Data ** m, int n, FILE * fp)
+void output_field (Data * m, int n, FILE * fp)
 {
   fprintf (fp, "# 1:x 2:y 3:F\n");
   for (int i = 1; i <= n; i++) {
@@ -199,27 +196,26 @@ void output_field (Data ** m, int n, FILE * fp)
   }
 }
 
-double timestep (Data ** m, int n)
+double timestep (Data * m, int n)
 {
   double dx = L0/n;
   double dtmax = DT/CFL;
   dtmax *= dtmax;
   dx *= dx;
-  for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= n; j++) {
-      if (h(0,0) > 0.) {
-	double dt = dx/(G*h(0,0));
-	if (dt < dtmax) dtmax = dt;
-      }
-      if (u(0,0) != 0.) {
-	double dt = dx/(u(0,0)*u(0,0));
-	if (dt < dtmax) dtmax = dt;
-      }
-      if (v(0,0) != 0.) {
-	double dt = dx/(v(0,0)*v(0,0));
-	if (dt < dtmax) dtmax = dt;
-      }
+  foreach (m) {
+    if (h(0,0) > 0.) {
+      double dt = dx/(G*h(0,0));
+      if (dt < dtmax) dtmax = dt;
     }
+    if (u(0,0) != 0.) {
+      double dt = dx/(u(0,0)*u(0,0));
+      if (dt < dtmax) dtmax = dt;
+    }
+    if (v(0,0) != 0.) {
+      double dt = dx/(v(0,0)*v(0,0));
+      if (dt < dtmax) dtmax = dt;
+    }
+  }
   return sqrt (dtmax)*CFL;
 }
 
@@ -230,7 +226,7 @@ int main (int argc, char ** argv)
   double t = 0;
   int i = 0, n = N;
   
-  Data ** m = matrix_new (n + 2, n + 2, sizeof (Data));
+  Data * m = malloc ((n + 2)*(n + 2)*sizeof (Data));
 
   initial_conditions (m, n);
   update_b (m, n);
