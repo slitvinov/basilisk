@@ -33,41 +33,38 @@ double h0 (double r) {
 
 double ** h1, ** e;
 
-void initial_conditions (double ** u, double ** v, double ** h, double ** b, int n)
+void initial_conditions (Data ** m, int n)
 {
   h1 = matrix_new (n + 2, n + 2, sizeof (double));
   e = matrix_new (n + 2, n + 2, sizeof (double));
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++) {
       double x = XC, y = YC;
-      b[i][j] = 0.;
-      h1[i][j] = h[i][j] = (H0 + h0(sqrt (x*x + y*y)));
+      b(i,j) = 0.;
+      h1[i][j] = h(i,j) = (H0 + h0(sqrt (x*x + y*y)));
       x = XU; y = YU;
-      u[i][j] = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
+      u(i,j) = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
       x = XV; y = YV;
-      v[i][j] = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
+      v(i,j) = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
     }
-  symmetry_conditions (h, n);
-  solid_walls_conditions (u, v, n);
 }
 
-static double error (double ** h, int n)
+static double error (Data ** m, int n)
 {
-  double max = 0., maxh = 0.;
+  double max = 0.;
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++) {
-      e[i][j] = fabs (h1[i][j]  - h[i][j]);
+      e[i][j] = fabs (h1[i][j]  - h(i,j));
       if (e[i][j] > max) max = e[i][j];
-      if (fabs (h1[i][j]) > maxh) maxh = fabs (h1[i][j]);
     }
-  return max/maxh;
+  return max;
 }
 
-static double energy (double ** u, double ** v, double ** h, int n)
+static double energy (Data ** m, int n)
 {
   double se = 0.;
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++)
-      se += h[i][j]*KE(u,v,i,j) + G*(h[i][j] - H0)*(h[i][j] - H0)/2.;
+      se += h(i,j)*KE(m,i,j) + G*(h(i,j) - H0)*(h(i,j) - H0)/2.;
   return se*(L0/n)*(L0/n);
 }
