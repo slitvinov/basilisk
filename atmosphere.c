@@ -15,7 +15,7 @@
 
 typedef struct {
   double u[NS][NS], v[NS][NS], h[NS][NS], b[NS][NS];
-  double un, vn, hn, bn;
+  double un, vn, hn;
 } Data;
 
 #define u(k,l) INDEX(u,k,l)
@@ -25,7 +25,6 @@ typedef struct {
 #define un(k,l) M(i+k,j+l).un
 #define vn(k,l) M(i+k,j+l).vn
 #define hn(k,l) M(i+k,j+l).hn
-#define bn(k,l) M(i+k,j+l).bn
 
 #define foreach(m) for (int i = 1; i <= n; i++) for (int j = 1; j <= n; j++)
 
@@ -64,65 +63,7 @@ void matrix_free (void * m)
   free (m);
 }
 
-void update_u (Data * m, int n)
-{
-  foreach (m)
-    for (int k = -NS/2; k <= NS/2; k++)
-      for (int l = -NS/2; l <= NS/2; l++) {
-	u(k,l) = un(k,l);
-	v(k,l) = vn(k,l);
-      }
-}
-
-void update_h (Data * m, int n)
-{
-  foreach (m)
-    for (int k = -NS/2; k <= NS/2; k++)
-      for (int l = -NS/2; l <= NS/2; l++)
-	h(k,l) = hn(k,l);
-}
-
-void update_b (Data * m, int n)
-{
-  foreach (m)
-    for (int k = -NS/2; k <= NS/2; k++)
-      for (int l = -NS/2; l <= NS/2; l++)
-	b(k,l) = bn(k,l);
-}
-
-void boundary_h (Data * m, int n)
-{
-  int i, j;
-  for (i = 1; i <= n; i++) {
-    /* symmetry */
-    j = 1;
-    h(0,-1) = h(0,0);
-    j = n;
-    h(0,1) = h(0,0);
-  }
-  for (j = 1; j <= n; j++) {
-    /* symmetry */
-    i = 1;
-    h(-1,0) = h(0,0);
-    i = n;
-    h(1,0) = h(0,0);
-  }
-}
-
-void boundary_u (Data * m, int n)
-{
-  int i, j;
-  for (i = 1; i <= n; i++) {
-    /* solid walls */
-    j = 1; v(0,0) = 0.;
-    j = n; v(0,1) = 0.;
-  }
-  for (j = 1; j <= n; j++) {
-    /* solid walls */
-    i = 1; u(0,0) = 0.;
-    i = n; u(1,0) = 0.;
-  }
-}
+#include "boundary.h"
 
 void tracer_advection (Data * m, int n, double dt)
 {
@@ -229,10 +170,8 @@ int main (int argc, char ** argv)
   Data * m = malloc ((n + 2)*(n + 2)*sizeof (Data));
 
   initial_conditions (m, n);
-  update_b (m, n);
-  update_h (m, n);
+  boundary_b (m, n);
   boundary_h (m, n);
-  update_u (m, n);
   boundary_u (m, n);
 
   clock_t start, end;
@@ -241,10 +180,8 @@ int main (int argc, char ** argv)
     #include "output.h"
     double dt = timestep (m, n);
     tracer_advection (m, n, dt);
-    update_h (m, n);
     boundary_h (m, n);
     momentum (m, n, dt);
-    update_u (m, n);
     boundary_u (m, n);
     t += dt; i++;
   } while (t < TMAX);
