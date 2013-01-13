@@ -48,6 +48,35 @@ void boundary_b (Data * m, int n)
   }
 }
 
+void boundary_ke_psi (Data * m, int n)
+{
+  /* update stencils */
+  foreach (m)
+    for (int k = -NS/2; k <= NS/2; k++)
+      for (int l = -NS/2; l <= NS/2; l++) {
+	ke(k,l) = M(i+k,j+l).ke[NS/2][NS/2];
+	psi(k,l) = M(i+k,j+l).psi[NS/2][NS/2];
+      }
+
+  int i, j;
+  for (i = 1; i <= n; i++) {
+    /* symmetry */
+    j = 1;
+    ke(0,-1) = ke(0,0);
+    j = n;
+    ke(0,1) = ke(0,0);
+    psi(0,1) = (v(0,1) - v(-1,1) + u(0,0) - u(0,1))/(L0/n);
+  }
+  for (j = 1; j <= n; j++) {
+    /* symmetry */
+    i = 1;
+    ke(-1,0) = ke(0,0);
+    i = n;
+    ke(1,0) = ke(0,0);
+    psi(1,0) = (v(1,0) - v(0,0) + u(1,-1) - u(1,0))/(L0/n);
+  }
+}
+
 void boundary_u (Data * m, int n)
 {
   /* update stencils */

@@ -7,24 +7,25 @@
 #if 0
   #define NS 3
   #define INDEX(a,k,l) M(i,j).a[k+NS/2][l+NS/2]
-//  #define INDEX(a,k,l) M(i+k,j+l).a[NS/2][NS/2]
 #else
   #define NS 1
   #define INDEX(a,k,l) M(i+k,j+l).a[NS/2][NS/2]
 #endif
 
 typedef struct {
-  double u[NS][NS], v[NS][NS], h[NS][NS], b[NS][NS];
+  double u[NS][NS], v[NS][NS], h[NS][NS], b[NS][NS], ke[NS][NS], psi[NS][NS];
   double un, vn, hn;
 } Data;
 
-#define u(k,l) INDEX(u,k,l)
-#define v(k,l) INDEX(v,k,l)
-#define h(k,l) INDEX(h,k,l)
-#define b(k,l) INDEX(b,k,l)
-#define un(k,l) M(i+k,j+l).un
-#define vn(k,l) M(i+k,j+l).vn
-#define hn(k,l) M(i+k,j+l).hn
+#define u(k,l)    INDEX(u,k,l)
+#define v(k,l)    INDEX(v,k,l)
+#define h(k,l)    INDEX(h,k,l)
+#define b(k,l)    INDEX(b,k,l)
+#define ke(k,l)   INDEX(ke,k,l)
+#define psi(k,l)  INDEX(psi,k,l)
+#define un(k,l)   M(i+k,j+l).un
+#define vn(k,l)   M(i+k,j+l).vn
+#define hn(k,l)   M(i+k,j+l).hn
 
 #define foreach(m) for (int i = 1; i <= n; i++) for (int j = 1; j <= n; j++)
 
@@ -87,40 +88,37 @@ void tracer_advection_upwind (Data * m, int n, double dt)
 			   (v(0,1) > 0. ? h(0,0) : h(0,1))*v(0,1));
 }
 
-static double vorticity (Data * m, int i, int j, int n)
-{
-  return (v(0,0) - v(-1,0) + u(0,-1) - u(0,0))/(L0/n);
-}
-
-static double KE (Data * m, int i, int j, int n)
-{
-#if 1
-  double uc = u(0,0) + u(1,0);
-  double vc = v(0,0) + v(0,1);
-  return (uc*uc + vc*vc)/8.;
-#else
-  double uc = u(0,0)*u(0,0) + u(1,0)*u(1,0);
-  double vc = v(0,0)*v(0,0) + v(0,1)*v(0,1);
-  return (uc + vc)/4.;
-#endif
-}
-
 void momentum (Data * m, int n, double dt)
 {
   double dtg = dt*G/(L0/n);
   double dtf = dt/4.;
   foreach (m) {
-    double vort = vorticity(m,i,j,n);
-    double g = h(0,0) + b(0,0) + KE(m,i,j,n);
-    double vortu = (vort + vorticity(m,i,j+1,n))/2.;
+    double g = h(0,0) + b(0,0) + ke(0,0);
+    double psiu = (psi(0,0) + psi(0,1))/2.;
     un(0,0) = u(0,0)
-      - dtg*(g - h(-1,0) - b(-1,0) - KE(m,i-1,j,n))
-      + dtf*(vortu + F0)*(v(0,0) + v(0,1) + v(-1,0) + v(-1,1));
-    double vortv = (vort + vorticity (m,i+1,j,n))/2.;
+      - dtg*(g - h(-1,0) - b(-1,0) - ke(-1,0))
+      + dtf*(psiu + F0)*(v(0,0) + v(0,1) + v(-1,0) + v(-1,1));
+    double psiv = (psi(0,0) + psi(1,0))/2.;
     vn(0,0) = v(0,0)
-      - dtg*(g - h(0,-1) - b(0,-1) - KE(m,i,j-1,n))
-      - dtf*(vortv + F0)*(u(0,0) + u(1,0) + u(0,-1) + u(1,-1));
+      - dtg*(g - h(0,-1) - b(0,-1) - ke(0,-1))
+      - dtf*(psiv + F0)*(u(0,0) + u(1,0) + u(0,-1) + u(1,-1));
   }
+}
+
+void ke_psi (Data * m, int n)
+{
+  foreach (m) {
+#if 1
+    double uc = u(0,0) + u(1,0);
+    double vc = v(0,0) + v(0,1);
+    ke(0,0) = (uc*uc + vc*vc)/8.;
+#else
+    double uc = u(0,0)*u(0,0) + u(1,0)*u(1,0);
+    double vc = v(0,0)*v(0,0) + v(0,1)*v(0,1);
+    ke(0,0) = (uc + vc)/4.;
+#endif
+    psi(0,0) = (v(0,0) - v(-1,0) + u(0,-1) - u(0,0))/(L0/n);
+  }    
 }
 
 #include "init.h"
@@ -173,6 +171,8 @@ int main (int argc, char ** argv)
   boundary_b (m, n);
   boundary_h (m, n);
   boundary_u (m, n);
+  ke_psi (m, n);
+  boundary_ke_psi (m, n);
 
   clock_t start, end;
   start = clock ();
@@ -183,6 +183,8 @@ int main (int argc, char ** argv)
     boundary_h (m, n);
     momentum (m, n, dt);
     boundary_u (m, n);
+    ke_psi (m, n);
+    boundary_ke_psi (m, n);
     t += dt; i++;
   } while (t < TMAX);
   end = clock ();

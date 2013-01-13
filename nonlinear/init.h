@@ -62,6 +62,6 @@ static double energy (Data * m, int n)
 {
   double se = 0.;
   foreach (m)
-    se += h(0,0)*KE(m,i,j,n) + G*(h(0,0) - H0)*(h(0,0) - H0)/2.;
+    se += h(0,0)*ke(0,0) + G*(h(0,0) - H0)*(h(0,0) - H0)/2.;
   return se*(L0/n)*(L0/n);
 }
