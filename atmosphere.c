@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 
 // Default parameters, do not change them!! edit parameters.h instead
 // number of grid points
@@ -141,22 +142,24 @@ double timestep (double ** u, double ** v, double ** h, int n)
 {
   double dx = L0/n;
   double dtmax = DT/CFL;
+  dtmax *= dtmax;
+  dx *= dx;
   for (int i = 1; i <= n; i++)
     for (int j = 1; j <= n; j++) {
       if (h[i][j] > 0.) {
-	double dt = dx/sqrt(G*h[i][j]);
+	double dt = dx/(G*h[i][j]);
 	if (dt < dtmax) dtmax = dt;
       }
       if (u[i][j] != 0.) {
-	double dt = dx/fabs(u[i][j]);
+	double dt = dx/(u[i][j]*u[i][j]);
 	if (dt < dtmax) dtmax = dt;
       }
       if (v[i][j] != 0.) {
-	double dt = dx/fabs(v[i][j]);
+	double dt = dx/(v[i][j]*v[i][j]);
 	if (dt < dtmax) dtmax = dt;
       }
     }
-  return dtmax*CFL;
+  return sqrt (dtmax)*CFL;
 }
 
 int main (int argc, char ** argv)
@@ -176,6 +179,8 @@ int main (int argc, char ** argv)
 
   initial_conditions (u, v, h, b, n);
 
+  clock_t start, end;
+  start = clock ();
   do {
     #include "output.h"
     double dt = timestep (u, v, h, n);
@@ -186,4 +191,8 @@ int main (int argc, char ** argv)
     swap (v, vn);
     t += dt; i++;
   } while (t < TMAX);
+  end = clock ();
+  double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
+  fprintf (stderr, "%d timesteps, %g CPU, %d points.steps/s\n",
+	   i, cpu, (int) (n*n*i/cpu));
 }
