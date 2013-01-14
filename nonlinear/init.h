@@ -1,12 +1,3 @@
-#define X0 -0.5
-#define Y0 -0.5
-#define XC (L0*(i - 0.5)/n + X0)
-#define YC (L0*(j - 0.5)/n + Y0)
-#define XU (L0*(i - 1.)/n + X0)
-#define YU (L0*(j - 0.5)/n + Y0)
-#define XV (L0*(i - 0.5)/n + X0)
-#define YV (L0*(j - 1.)/n + Y0)
-
 #include <gsl/gsl_integration.h>
 
 #define H0 1.
@@ -35,15 +26,15 @@ double ** h1, ** e;
 
 void initial_conditions (Data * m, int n)
 {
-  h1 = matrix_new (n + 2, n + 2, sizeof (double));
-  e = matrix_new (n + 2, n + 2, sizeof (double));
+  h1 = matrix_new (n, n, sizeof (double));
+  e = matrix_new (n, n, sizeof (double));
   foreach (m) {
-    double x = XC, y = YC;
+    double x = XC(I), y = YC(J);
     b(0,0) = 0.;
-    h1[i][j] = hn(0,0) = (H0 + h0(sqrt (x*x + y*y)));
-    x = XU; y = YU;
+    h1[I][J] = hn(0,0) = (H0 + h0(sqrt (x*x + y*y)));
+    x = XU(I); y = YU(J);
     un(0,0) = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
-    x = XV; y = YV;
+    x = XV(I); y = YV(J);
     vn(0,0) = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
   }
 }
@@ -52,8 +43,8 @@ static double error (Data * m, int n)
 {
   double max = 0.;
   foreach (m) {
-    e[i][j] = fabs (h1[i][j]  - h(0,0));
-    if (e[i][j] > max) max = e[i][j];
+    e[I][J] = fabs (h1[I][J]  - h(0,0));
+    if (e[I][J] > max) max = e[I][J];
   }
   return max;
 }
@@ -63,5 +54,15 @@ static double energy (Data * m, int n)
   double se = 0.;
   foreach (m)
     se += h(0,0)*ke(0,0) + G*(h(0,0) - H0)*(h(0,0) - H0)/2.;
-  return se*(L0/n)*(L0/n);
+  return se*DX*DX;
+}
+
+void output_field (Data * m, int n, FILE * fp)
+{
+  fprintf (fp, "# 1:x 2:y 3:F\n");
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++)
+      fprintf (fp, "%g %g %g\n", XC(i), YC(j), e[i][j]);
+    fprintf (fp, "\n");
+  }
 }

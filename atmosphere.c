@@ -3,37 +3,13 @@
 #include <math.h>
 #include <time.h>
 
-#define M(i,j) m[(i)*(n + 2) + (j)]
-#if 0
-  #define NS 3
-  #define INDEX(a,k,l) M(i,j).a[k+NS/2][l+NS/2]
-#else
-  #define NS 1
-  #define INDEX(a,k,l) M(i+k,j+l).a[NS/2][NS/2]
-#endif
-
-typedef struct {
-  double u[NS][NS], v[NS][NS], h[NS][NS], b[NS][NS], ke[NS][NS], psi[NS][NS];
-  double un, vn, hn;
-} Data;
-
-#define u(k,l)    INDEX(u,k,l)
-#define v(k,l)    INDEX(v,k,l)
-#define h(k,l)    INDEX(h,k,l)
-#define b(k,l)    INDEX(b,k,l)
-#define ke(k,l)   INDEX(ke,k,l)
-#define psi(k,l)  INDEX(psi,k,l)
-#define un(k,l)   M(i+k,j+l).un
-#define vn(k,l)   M(i+k,j+l).vn
-#define hn(k,l)   M(i+k,j+l).hn
-
-#define foreach(m) for (int i = 1; i <= n; i++) for (int j = 1; j <= n; j++)
-
 // Default parameters, do not change them!! edit parameters.h instead
 // number of grid points
 int N = 64;
 // maximum timestep
 double DT = 1e10;
+// coordinates of the center of the box
+double X0 = -0.5, Y0 = -0.5;
 // size of the box
 double L0 = 1.;
 // acceleration of gravity
@@ -44,6 +20,16 @@ double F0 = 1.;
 double TMAX = 1e10;
 // CFL number
 double CFL = 0.5;
+
+#define DX (L0/n)
+#define XC(i) ((i + 0.5)*DX + X0)
+#define YC(j) ((j + 0.5)*DX + X0)
+#define XU(i) ((i)*DX + X0)
+#define YU(j) YC(j)
+#define XV(i) XC(i)
+#define YV(j) ((j)*DX + X0)
+
+#include "grid.h"
 
 void * matrix_new (int n, int p, int size)
 {
@@ -64,12 +50,9 @@ void matrix_free (void * m)
   free (m);
 }
 
-#include "boundary.h"
-
 void tracer_advection (Data * m, int n, double dt)
 {
-  double h = L0/n;
-  dt /= 2.*h;
+  dt /= 2.*DX;
   foreach (m)
     hn(0,0) = h(0,0) + dt*((h(0,0) + h(-1,0))*u(0,0) - 
 			   (h(0,0) + h(1,0))*u(1,0) +
@@ -79,8 +62,7 @@ void tracer_advection (Data * m, int n, double dt)
 
 void tracer_advection_upwind (Data * m, int n, double dt)
 {
-  double h = L0/n;
-  dt /= h;
+  dt /= DX;
   foreach (m)
     hn(0,0) = h(0,0) + dt*((u(0,0) < 0. ? h(0,0) : h(-1,0))*u(0,0) - 
 			   (u(1,0) > 0. ? h(0,0) : h(1,0))*u(1,0) +
@@ -90,7 +72,7 @@ void tracer_advection_upwind (Data * m, int n, double dt)
 
 void momentum (Data * m, int n, double dt)
 {
-  double dtg = dt*G/(L0/n);
+  double dtg = dt*G/DX;
   double dtf = dt/4.;
   foreach (m) {
     double g = h(0,0) + b(0,0) + ke(0,0);
@@ -117,27 +99,13 @@ void ke_psi (Data * m, int n)
     double vc = v(0,0)*v(0,0) + v(0,1)*v(0,1);
     ke(0,0) = (uc + vc)/4.;
 #endif
-    psi(0,0) = (v(0,0) - v(-1,0) + u(0,-1) - u(0,0))/(L0/n);
+    psi(0,0) = (v(0,0) - v(-1,0) + u(0,-1) - u(0,0))/DX;
   }    
-}
-
-#include "init.h"
-
-void output_field (Data * m, int n, FILE * fp)
-{
-  fprintf (fp, "# 1:x 2:y 3:F\n");
-  for (int i = 1; i <= n; i++) {
-    for (int j = 1; j <= n; j++) {
-      double x = XC, y = YC;
-      fprintf (fp, "%g %g %g\n", x, y, h(0,0) + b(0,0));
-    }
-    fprintf (fp, "\n");
-  }
 }
 
 double timestep (Data * m, int n)
 {
-  double dx = L0/n;
+  double dx = DX;
   double dtmax = DT/CFL;
   dtmax *= dtmax;
   dx *= dx;
@@ -158,15 +126,16 @@ double timestep (Data * m, int n)
   return sqrt (dtmax)*CFL;
 }
 
+#include "init.h"
+
 int main (int argc, char ** argv)
 {
   #include "parameters.h"
 
   double t = 0;
   int i = 0, n = N;
-  
-  Data * m = malloc ((n + 2)*(n + 2)*sizeof (Data));
 
+  Data * m = init_grid (n);
   initial_conditions (m, n);
   boundary_b (m, n);
   boundary_h (m, n);
@@ -177,8 +146,8 @@ int main (int argc, char ** argv)
   clock_t start, end;
   start = clock ();
   do {
-    #include "output.h"
     double dt = timestep (m, n);
+    #include "output.h"
     tracer_advection (m, n, dt);
     boundary_h (m, n);
     momentum (m, n, dt);

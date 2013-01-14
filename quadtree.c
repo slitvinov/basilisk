@@ -5,6 +5,7 @@
  * ISCCSP 2008, Malta, 12-14 March 2008.
  * http://www.lcad.icmc.usp.br/~jbatista/procimg/quadtree_neighbours.pdf
  *
+ * This uses a Z-grid ordering
  */
 
 #include <stdio.h>
@@ -12,6 +13,9 @@
 #include <string.h>
 #include <math.h>
 #include <malloc.h>
+
+/* the maximum level */
+static int quad_r;
 
 int size (int l)
 {
@@ -26,52 +30,36 @@ int level (int p)
   return l - 1;
 }
 
-int code (int p, int r)
+int code (int p, int l)
 {
-  int l = level (p);
-  return (p - size (l - 1)) << 2*(r - l);
+  return (p - size (l - 1)) << 2*(quad_r - l);
 }
 
-int index (int code, int l, int r)
+int index (int code, int l)
 {
-  return size(l - 1) + (code >> 2*(r - l));
+  return size(l - 1) + (code >> 2*(quad_r - l));
 }
 
-const char* byte_to_binary(int x )
+int quad_x (int p)
 {
-  static char b[sizeof(int)*8+1] = {0};
-  int y;
-  long long z;
-  for (z=1LL<<sizeof(int)*8-1,y=0; z>0; z>>=1,y++)
-    {
-      b[y] = ( ((x & z) == z) ? '1' : '0');
-    }
-  
-  b[y] = 0;
-  
-  return b;
-}
-
-int x (int p, int r)
-{
-  int n = code (p, r), a = 0, m = 1, b = 1;
-  for (int i = 0; i < 2*r - 1; i += 2, m *= 4, b *= 2)
+  int n = code (p, level(p)), a = 0, m = 1, b = 1;
+  for (int i = 0; i < 2*quad_r - 1; i += 2, m *= 4, b *= 2)
     a += ((m & n) != 0)*b;
   return a;
 }
 
-int y (int p, int r)
+int quad_y (int p)
 {
-  int n = code (p, r), a = 0, m = 2, b = 1;
-  for (int i = 1; i < 2*r; i += 2, m *= 4, b *= 2)
+  int n = code (p, level(p)), a = 0, m = 2, b = 1;
+  for (int i = 1; i < 2*quad_r; i += 2, m *= 4, b *= 2)
     a += ((m & n) != 0)*b;
   return a;
 }
 
-int repeat (int a, int r)
+int repeat (int a)
 {
   int s = 0;
-  for (int i = 0; i < r; i++, a *= 4)
+  for (int i = 0; i < quad_r; i++, a *= 4)
     s += a;
   return s;
 }
@@ -80,21 +68,36 @@ static int left, right = 1, top = 2, bottom;
 
 #define quad(n, d) ((((n|bottom)+(d&left))&left)|(((n|left)+(d&bottom))&bottom))
 
-int neighbor (int p, int d, int r)
+static int quad_id[3][3];
+
+int quad_neighbor (int p, int i, int j)
 {
+  int d = quad_id[i+1][j+1];
+  if (d == 0) return p;
   int l = level (p);
-  int n = code (p, r);
-  d <<= (2*(r - l));
-  return index (quad(n, d), l, r);
+  int n = code (p, l);
+  d <<= (2*(quad_r - l));
+  return index (quad(n, d), l);
 }
 
 void * quadtree (int r, size_t s)
 {
-  int n = size (r);
-  void * q = malloc (s*n);
-  left = repeat (1, r);
-  bottom = repeat (2, r);
-  for (int p = size (r - 1); p < n; p++) {
+  quad_r = r;
+  void * q = malloc (s*size (r));
+  left = repeat (1);
+  bottom = repeat (2);
+  quad_id[0][2] = top|left;    quad_id[1][2] = top;    quad_id[2][2] = top|right;
+  quad_id[0][1] = left;        quad_id[1][1] = 0;      quad_id[2][1] = right;
+  quad_id[0][0] = bottom|left; quad_id[1][0] = bottom; quad_id[2][0] = bottom|right;
+  return q;
+}
+
+#if 0
+int main (int argc, char * argv[])
+{
+  int r = atoi(argv[1]);
+  void * q = quadtree (r, sizeof (double));
+  for (int p = size (r - 1); p < size (r); p++) {
     int q = neighbor (p, bottom | left, r);
     printf ("%d %d %d ( %d , %d ) | ( %d , %d ) ",
 	    p, index (code (p, r), level (p), r), level (p),
@@ -102,11 +105,6 @@ void * quadtree (int r, size_t s)
 	    x(q, r), y(q, r));
     printf ("\n");
   }
-  return q;
-}
-
-int main (int argc, char * argv[])
-{
-  void * q = quadtree (atoi(argv[1]), sizeof (double));
   return 0;
 }
+#endif
