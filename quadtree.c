@@ -70,11 +70,10 @@ static int left, right = 1, top = 2, bottom;
 
 static int quad_id[3][3];
 
-int quad_neighbor (int p, int i, int j)
+int quad_neighbor (int p, int l, int i, int j)
 {
   int d = quad_id[i+1][j+1];
   if (d == 0) return p;
-  int l = level (p);
   int n = code (p, l);
   d <<= (2*(quad_r - l));
   return index (quad(n, d), l);
@@ -83,12 +82,16 @@ int quad_neighbor (int p, int i, int j)
 void * quadtree (int r, size_t s)
 {
   quad_r = r;
-  void * q = malloc (s*size (r));
+  int m = size (r);
+  void * q = malloc (s*m);
   left = repeat (1);
   bottom = repeat (2);
   quad_id[0][2] = top|left;    quad_id[1][2] = top;    quad_id[2][2] = top|right;
   quad_id[0][1] = left;        quad_id[1][1] = 0;      quad_id[2][1] = right;
   quad_id[0][0] = bottom|left; quad_id[1][0] = bottom; quad_id[2][0] = bottom|right;
+  char * l = q;
+  for (int p = 0; p < m; p++, l += s)
+    *((int *)l) = level (p);
   return q;
 }
 
