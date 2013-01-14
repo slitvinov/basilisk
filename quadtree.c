@@ -80,6 +80,15 @@ int quad_neighbor (int p, int i, int j)
   return index (quad(n, d), l);
 }
 
+int quad_neighbor_finest (int p, int i, int j)
+{
+  int d = quad_id[i+1][j+1];
+  if (d == 0) return p;
+  int s = size (quad_r - 1);
+  int n = p - s;
+  return s + quad(n,d);
+}
+
 void * quadtree (int r, size_t s)
 {
   quad_r = r;

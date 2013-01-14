@@ -1,6 +1,6 @@
 #include "quadtree.c"
 
-#define M(k,l) m[quad_neighbor(p, k, l)]
+#define M(k,l) m[quad_neighbor_finest(p, k, l)]
 
 typedef struct {
   double u, v, h, b, ke, psi;
@@ -17,7 +17,7 @@ typedef struct {
 #define vn(k,l)   M(k,l).vn
 #define hn(k,l)   M(k,l).hn
 
-#define foreach(m) for (int p = size(quad_r - 1), stop = size(quad_r); p <= stop; p++)
+#define foreach(m) for (int p = size(quad_r - 1), stop = size(quad_r); p < stop; p++)
 
 #define I quad_x(p)
 #define J quad_y(p)
