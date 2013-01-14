@@ -1,9 +1,8 @@
 #include "quadtree.c"
 
-#define M(k,l) m[quad_neighbor(p, m[p].level, k, l)]
+#define M(k,l) m[quad_neighbor(p, k, l)]
 
 typedef struct {
-  int level;
   double u, v, h, b, ke, psi;
   double un, vn, hn;
 } Data;
