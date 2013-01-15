@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <gsl/gsl_integration.h>
 
 #define H0 1.
@@ -23,6 +24,25 @@ double h0 (double r) {
 }
 
 double ** h1, ** e;
+
+void * matrix_new (int n, int p, int size)
+{
+  int i;
+  void ** m;
+  char * a;
+  
+  m = malloc (n*sizeof (void **));
+  a = malloc (n*p*size);
+  for (i = 0; i < n; i++)
+    m[i] = a + i*p*size;
+  return (void *) m;
+}
+
+void matrix_free (void * m)
+{
+  free (((void **) m)[0]);
+  free (m);
+}
 
 void initial_conditions (Data * m, int n)
 {

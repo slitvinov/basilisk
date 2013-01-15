@@ -14,23 +14,16 @@ int main (int argc, char ** argv)
 
   Data * m = init_grid (n);
   initial_conditions (m, n);
-  boundary_b (m, n);
   boundary_h (m, n);
   boundary_u (m, n);
-  ke_psi (m, n);
-  boundary_ke_psi (m, n);
 
   clock_t start, end;
   start = clock ();
   do {
     double dt = timestep (m, n);
     #include "output.h"
-    tracer_advection (m, n, dt);
+    tracer_advection_upwind (m, n, dt);
     boundary_h (m, n);
-    momentum (m, n, dt);
-    boundary_u (m, n);
-    ke_psi (m, n);
-    boundary_ke_psi (m, n);
     t += dt; i++;
   } while (t < TMAX);
   end = clock ();
