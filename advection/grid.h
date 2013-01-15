@@ -1,13 +1,13 @@
 #include <stdio.h>
+
+struct _Data {
+  double u, v, h, b, ke, psi;
+  double un, vn, hn;
+};
+
 #include "mgrid.c"
 
 #define M(i,j) m[(i)*(n + 2) + (j)]
-
-typedef struct {
-  double u, v, h, b, ke, psi;
-  double un, vn, hn;
-} Data;
-
 #define u(k,l)    M(i+k,j+l).u
 #define v(k,l)    M(i+k,j+l).v
 #define h(k,l)    M(i+k,j+l).h
@@ -32,7 +32,7 @@ Data * init_grid (int n)
     n /= 2;
     r++;
   }
-  return quadtree (r, sizeof (Data));
+  return mgrid (r, sizeof (Data));
 }
 
 void boundary_h (Data * m, int n)
