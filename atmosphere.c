@@ -32,7 +32,7 @@ int main (int argc, char ** argv)
     ke_psi (m, n);
     boundary_ke_psi (m, n);
     t += dt; i++;
-  } while (t < TMAX);
+  } while (t < TMAX && i < IMAX);
   end = clock ();
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "# %d timesteps, %g CPU, %d points.steps/s\n",

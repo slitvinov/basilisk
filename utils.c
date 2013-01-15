@@ -16,6 +16,8 @@ double G = 1.;
 double F0 = 1.;
 // end time
 double TMAX = 1e10;
+// end iterations
+int IMAX = 1 << 30;
 // CFL number
 double CFL = 0.5;
 
