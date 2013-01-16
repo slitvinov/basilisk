@@ -102,7 +102,9 @@ void traverse_recursive (Data * m, int n)
   b = stack[top].l; c = stack[top].i; d = stack[top].j; e = stack[top].stage; \
   top--;
 
-#define foreach_leaf(m,n)			                                   \
+#define NOT_UNUSED(a) (a = a)
+
+#define foreach_condition(m,n,condition,stop)				           \
   {									           \
     int depth = mlevel (n);						           \
     assert (depth < STACKSIZE);						           \
@@ -116,14 +118,20 @@ void traverse_recursive (Data * m, int n)
       int level, i, j, stage;						\
       pop (level, i, j, stage);						\
       switch (stage) {							\
-      case 0:								\
-        if (level == depth) {						\
-  	  _m = ml[level]; int _n = 1 << level;				\
+      case 0: {								\
+        Data * _m = ml[level]; NOT_UNUSED(_m);				\
+        int _n = 1 << level; NOT_UNUSED(_n);				\
+        if (stop) continue;						\
+        if (condition) {						\
 	  /* do something */
-#define end_foreach_leaf()			                        \
+#define end_foreach_condition()			                        \
         }								\
-	if (level < depth) { push (level, i, j, 1); push (level + 1, 2*i-1, 2*j, 0); } \
+	if (level < depth) {						\
+          push (level, i, j, 1);					\
+          push (level + 1, 2*i-1, 2*j, 0);				       \
+        }								       \
 	break;								       \
+      }								               \
       case 1: push (level, i, j, 2); push (level + 1, 2*i,   2*j,   0); break; \
       case 2: push (level, i, j, 3); push (level + 1, 2*i-1, 2*j-1, 0); break; \
       case 3:                        push (level + 1, 2*i,   2*j-1, 0); break; \
@@ -135,6 +143,6 @@ void traverse_recursive (Data * m, int n)
   #define foreach foreach_level
   #define end_foreach end_foreach_level
 #else
-  #define foreach foreach_leaf
-  #define end_foreach end_foreach_leaf
+#define foreach(m,n) foreach_condition(m , n, level == depth, false)
+#define end_foreach end_foreach_condition
 #endif
