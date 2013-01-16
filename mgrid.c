@@ -9,18 +9,24 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#define GHOSTS 1        // number of ghost layers
+#define I (i - GHOSTS)
+#define J (j - GHOSTS)
+
 typedef struct _Data Data;
 
-int size (int l)
+size_t _size (size_t l)
 {
-  int n = (1 << l) + 2;
+  size_t n = (1 << l) + 2*GHOSTS;
   return n*n;
 }
 
-int totalsize (int l)
+size_t _totalsize (int l)
 {
-  l++;
-  return ((1 << (2*l)) - 1)/3 + 4*((1 << l) - 1) + 4*l;
+  size_t s = 0;
+  while (l)
+    s += _size(l--);
+  return s;
 }
 
 int mlevel (int n)
@@ -33,24 +39,25 @@ int mlevel (int n)
 #define field(data,offset,type) (*((type *)(((char *) &(data)) + (offset))))
 typedef size_t var;
 #define var(a) offsetof(Data,a)
-#define cell(k,l) _m[(i+k)*(_n + 2) + (j+l)]
-#define stencil(a,k,l) field(cell(k,l), a, double)
+#define cell _m[(i)*(_n + 2*GHOSTS) + j]
+#define celln(k,l) _m[(i + k)*(_n + 2*GHOSTS) + (j + l)]
+#define stencil(a,k,l) field(celln(k,l), a, double)
 #define val(a) stencil(a,0,0)
 
 Data * coarser_level (Data * m, int n)
 {
-  return (Data *) (((char *)m) + sizeof(Data)*(n+2)*(n+2));
+  return (Data *) (((char *)m) + sizeof(Data)*(n + 2*GHOSTS)*(n + 2*GHOSTS));
 }
 
 Data * finer_level (Data * m, int n)
 {
-  return (Data *) (((char *)m) - sizeof(Data)*(2*n+2)*(2*n+2));
+  return (Data *) (((char *)m) - sizeof(Data)*4*(n + GHOSTS)*(n + GHOSTS));
 }
 
 #define foreach_level(m,n) {				\
   Data * _m = m; int _n = n;				\
-  for (int i = 1; i <= _n; i++)				\
-    for (int j = 1; j <= _n; j++)
+  for (int i = GHOSTS; i < _n + GHOSTS; i++)		\
+    for (int j = GHOSTS; j < _n + GHOSTS; j++)
 #define end_foreach_level() }
 
 #define foreach_fine_to_coarse(m,n) {				\
@@ -59,11 +66,11 @@ Data * finer_level (Data * m, int n)
   for (int level = mlevel(_n);					\
        _n > 0;							\
        _mf = _m, _m = coarser_level (_m, _n), _n /= 2, level--)	\
-    for (int i = 1; i <= _n; i++)				\
-      for (int j = 1; j <= _n; j++)
+    for (int i = GHOSTS; i < _n + GHOSTS; i++)			\
+      for (int j = GHOSTS; j < _n + GHOSTS; j++)
 #define end_foreach_fine_to_coarse() }
 
-#define fine(a,k,l) field(_mf[(2*i-1+k)*(2*_n + 2) + (2*j-1+l)], a, double)
+#define fine(a,k,l) field(_mf[(2*i-GHOSTS+k)*2*(_n + GHOSTS) + (2*j-GHOSTS+l)], a, double)
 #define coarse(a,k,l) stencil(a,k,l)
 
 /* ===============================================================
@@ -78,6 +85,11 @@ Data * finer_level (Data * m, int n)
  *
  * =============================================================== */
 
+#define _BOTTOM (2*j - GHOSTS)
+#define _TOP    (_BOTTOM + 1)
+#define _LEFT   (2*i - GHOSTS)
+#define _RIGHT  (_LEFT + 1)
+
 void recursive (Data * m, int n, int i, int j, int nl)
 {
   if (n == nl) {
@@ -85,17 +97,17 @@ void recursive (Data * m, int n, int i, int j, int nl)
   }
   if (n < nl) {
     m = finer_level (m, n), n *= 2;
-    recursive (m, n, 2*i-1, 2*j,   nl);
-    recursive (m, n, 2*i,   2*j,   nl);
-    recursive (m, n, 2*i-1, 2*j-1, nl);
-    recursive (m, n, 2*i,   2*j-1, nl);
+    recursive (m, n, _LEFT,  _TOP,    nl);
+    recursive (m, n, _RIGHT, _TOP,    nl);
+    recursive (m, n, _LEFT,  _BOTTOM, nl);
+    recursive (m, n, _RIGHT, _BOTTOM, nl);
   }
 }
 
 void traverse_recursive (Data * m, int n)
 {
-  m = (Data *) (((char *)m) +  sizeof(Data)*(totalsize(mlevel(n)) - 9));
-  recursive (m, 1, 1, 1, n); /* level 0 */
+  m = (Data *) (((char *)m) +  sizeof(Data)*(_totalsize(mlevel(n)) - _size(0)));
+  recursive (m, 1, GHOSTS, GHOSTS, n); /* level 0, central cell */
 }
 
 #define STACKSIZE 20
@@ -120,7 +132,7 @@ enum {
     for (int i = depth; i >= 0; i--) {					           \
       ml[i] = _m; _m = coarser_level (_m, 1 << i);			           \
     }									           \
-    push (0, 1, 1, 0); /* the root */					           \
+    push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
     while (top >= 0) {							\
       int level, i, j, stage;						\
       pop (level, i, j, stage);						\
@@ -132,13 +144,13 @@ enum {
 #define end_foreach_cell()						\
         if (!(cell(0,0).flags & leaf)) {				\
           push (level, i, j, 1);					\
-          push (level + 1, 2*i-1, 2*j, 0);				       \
+          push (level + 1, _LEFT, _TOP, 0);				       \
         }								       \
 	break;								       \
       }								               \
-      case 1: push (level, i, j, 2); push (level + 1, 2*i,   2*j,   0); break; \
-      case 2: push (level, i, j, 3); push (level + 1, 2*i-1, 2*j-1, 0); break; \
-      case 3:                        push (level + 1, 2*i,   2*j-1, 0); break; \
+      case 1: push (level, i, j, 2); push (level + 1, _RIGHT, _TOP,    0); break; \
+      case 2: push (level, i, j, 3); push (level + 1, _LEFT,  _BOTTOM, 0); break; \
+      case 3:                        push (level + 1, _RIGHT, _BOTTOM, 0); break; \
       }								               \
     }                                                                          \
   }
@@ -150,7 +162,7 @@ enum {
 
 void * mgrid (int r, size_t s)
 {
-  void * m = calloc (totalsize(r), s);
+  void * m = calloc (_totalsize(r), s);
   foreach_level (m, 1 << r)
     cell(0,0).flags |= leaf;
   end_foreach_level();
