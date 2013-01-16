@@ -1,3 +1,6 @@
+#include <stddef.h>
+#include <stdbool.h>
+
 #ifdef CARTESIAN
   #define GRID "Multigrid quadtree (Cartesian)"
 #else
@@ -35,6 +38,12 @@ void * mgrid (int r, size_t s)
   return malloc (s*totalsize (r));
 }
 
+#define field(data,offset,type) (*((type *)(((char *) &(data)) + (offset))))
+typedef size_t var;
+#define var(a) offsetof(Data,a)
+#define grid(a,k,l) field(_m[(i+k)*(_n + 2) + (j+l)], a, double)
+#define val(a) grid(a,0,0)
+
 Data * coarser_level (Data * m, int n)
 {
   return (Data *) (((char *)m) + sizeof(Data)*(n+2)*(n+2));
@@ -61,7 +70,8 @@ Data * finer_level (Data * m, int n)
       for (int j = 1; j <= _n; j++)
 #define end_foreach_fine_to_coarse() }
 
-#define fine(k,l) _mf[(2*i-1+k)*(2*_n + 2) + (2*j-1+l)]
+#define fine(a,k,l) field(_mf[(2*i-1+k)*(2*_n + 2) + (2*j-1+l)], a, double)
+#define coarse(a,k,l) grid(a,k,l)
 
 /* ===============================================================
  *                    Quadtree traversal

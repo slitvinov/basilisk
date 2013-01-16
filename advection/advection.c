@@ -4,30 +4,26 @@
 #include "init.h"
 #include <assert.h>
 
-void restriction (Data * m, int n)
+void restriction (Data * m, int n, var a)
 {
   foreach_fine_to_coarse (m, n) {
-    h(0,0) = (fine(0,0).h + fine(1,0).h + fine(0,1).h + fine(1,1).h)/4.;
+    coarse(a,0,0) = (fine(a,0,0) + fine(a,1,0) + fine(a,0,1) + fine(a,1,1))/4.;
   } end_foreach_fine_to_coarse();
 }
 
-void error (Data * m, int n)
+void error (Data * m, int n, var a, var e)
 {
   foreach_fine_to_coarse (m, n) {
-    double eb = (h(0,0) + h(0,-1))/2. - (fine(0,0).h + fine(0,-1).h + 
-					 fine(1,0).h + fine(1,-1).h)/4.;
-    double et = (h(0,0) + h(0, 1))/2. - (fine(0,1).h + fine(1,1).h + 
-					 fine(0,2).h + fine(1,2).h)/4.;
-    double el = (h(0,0) + h(-1,0))/2. - (fine(0,0).h + fine(-1,0).h + 
-					 fine(0,1).h + fine(-1,1).h)/4.;
-    double er = (h(0,0) + h(1, 0))/2. - (fine(1,0).h + fine(1,1).h + 
-					 fine(2,0).h + fine(2,1).h)/4.;
-#if 0
-    if (l == 7)
-      printf ("%g %g %g %g %g %g %g\n", XC(i), YC(j), eb, et, er, el,
-	      (eb + et + er + el)/4.);
-#endif
-    fine(0,0).b = fine(0,1).b = fine(1,0).b = fine(1,1).b = (eb + et + er + el)/4.;
+    double eb = (coarse(a,0,0) + coarse(a,0,-1))/2. - (fine(a,0,0) + fine(a,0,-1) + 
+						       fine(a,1,0) + fine(a,1,-1))/4.;
+    double et = (coarse(a,0,0) + coarse(a,0, 1))/2. - (fine(a,0,1) + fine(a,1,1) + 
+						       fine(a,0,2) + fine(a,1,2))/4.;
+    double el = (coarse(a,0,0) + coarse(a,-1,0))/2. - (fine(a,0,0) + fine(a,-1,0) + 
+						       fine(a,0,1) + fine(a,-1,1))/4.;
+    double er = (coarse(a,0,0) + coarse(a,1, 0))/2. - (fine(a,1,0) + fine(a,1,1) + 
+						       fine(a,2,0) + fine(a,2,1))/4.;
+    double avg = (eb + et + er + el)/4.;
+    fine(e,0,0) = fine(e,0,1) = fine(e,1,0) = fine(e,1,1) = avg/4.;
   } end_foreach_fine_to_coarse();
 }
 

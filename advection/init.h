@@ -12,7 +12,7 @@ void initial_conditions (Data * m, int n)
   } end_foreach();
 }
 
-void output_field (Data * m, int n, FILE * fp)
+void output_field (Data * m, int n, var v, FILE * fp)
 {
   Data * _m = m; int _n = n; /* fixme: this is a hack */
   fprintf (fp, "# 1:x 2:y 3:F\n");
