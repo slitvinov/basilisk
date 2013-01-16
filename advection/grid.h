@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 struct _Data {
+  int flags;
   double u, v, h, b, ke, psi;
   double un, vn, hn;
 };
