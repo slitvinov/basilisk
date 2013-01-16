@@ -35,6 +35,6 @@ int main (int argc, char ** argv)
   } while (t < TMAX && i < IMAX);
   end = clock ();
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
-  fprintf (stderr, "# %d timesteps, %g CPU, %d points.steps/s\n",
+  fprintf (stderr, "# " GRID ", %d timesteps, %g CPU, %d points.steps/s\n",
 	   i, cpu, (int) (n*n*i/cpu));
 }

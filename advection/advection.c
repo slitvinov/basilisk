@@ -6,13 +6,14 @@
 
 void restriction (Data * m, int n)
 {
-  foreach_fine_to_coarse(m, n)
+  foreach_fine_to_coarse (m, n) {
     h(0,0) = (fine(0,0).h + fine(1,0).h + fine(0,1).h + fine(1,1).h)/4.;
+  } end_foreach_fine_to_coarse();
 }
 
 void error (Data * m, int n)
 {
-  foreach_fine_to_coarse(m, n) {
+  foreach_fine_to_coarse (m, n) {
     double eb = (h(0,0) + h(0,-1))/2. - (fine(0,0).h + fine(0,-1).h + 
 					 fine(1,0).h + fine(1,-1).h)/4.;
     double et = (h(0,0) + h(0, 1))/2. - (fine(0,1).h + fine(1,1).h + 
@@ -27,18 +28,7 @@ void error (Data * m, int n)
 	      (eb + et + er + el)/4.);
 #endif
     fine(0,0).b = fine(0,1).b = fine(1,0).b = fine(1,1).b = (eb + et + er + el)/4.;
-  }
-}
-
-void tracer_advection_upwind_leaf (Data * m, int n, double dt)
-{
-  dt /= DX;
-  foreach_leaf() {
-    hn(0,0) = h(0,0) + dt*((u(0,0) < 0. ? h(0,0) : h(-1,0))*u(0,0) - 
-			   (u(1,0) > 0. ? h(0,0) : h(1,0))*u(1,0) +
-			   (v(0,0) < 0. ? h(0,0) : h(0,-1))*v(0,0) - 
-			   (v(0,1) > 0. ? h(0,0) : h(0,1))*v(0,1));
-  } end_foreach_leaf();
+  } end_foreach_fine_to_coarse();
 }
 
 int main (int argc, char ** argv)
@@ -56,14 +46,10 @@ int main (int argc, char ** argv)
   clock_t start, end;
   start = clock ();
   do {
-    //    double dt = timestep (m, n);
-    double dt = CFL/n;
+    double dt = timestep (m, n);
+    //    double dt = CFL/n;
     #include "output.h"
-#if 0
     tracer_advection_upwind (m, n, dt);
-#else
-    tracer_advection_upwind_leaf (m, n, dt);
-#endif
     boundary_h (m, n);
 #if 0
     restriction (m, n);

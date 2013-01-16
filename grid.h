@@ -1,10 +1,14 @@
-#define M(i,j) m[(i)*(n + 2) + (j)]
+#include <stdlib.h>
+
+#define M(i,j) _m[(i)*(_n + 2) + (j)]
 #if 0
   #define NS 3
   #define INDEX(a,k,l) M(i,j).a[k+NS/2][l+NS/2]
+  #define GRID "Cartesian grid with stencils"
 #else
   #define NS 1
   #define INDEX(a,k,l) M(i+k,j+l).a[NS/2][NS/2]
+  #define GRID "Cartesian grid"
 #endif
 
 typedef struct {
@@ -22,7 +26,12 @@ typedef struct {
 #define vn(k,l)   M(i+k,j+l).vn
 #define hn(k,l)   M(i+k,j+l).hn
 
-#define foreach(m) for (int i = 1; i <= n; i++) for (int j = 1; j <= n; j++)
+#define foreach(m,n) {				\
+  Data * _m = m; int _n = n;			\
+  for (int i = 1; i <= n; i++)			\
+    for (int j = 1; j <= n; j++)
+
+#define end_foreach() }
 
 #define I (i - 1)
 #define J (j - 1)
@@ -35,11 +44,13 @@ Data * init_grid (int n)
 void boundary_h (Data * m, int n)
 {
   /* update stencils */
-  foreach (m)
+  foreach (m, n) {
     for (int k = -NS/2; k <= NS/2; k++)
       for (int l = -NS/2; l <= NS/2; l++)
 	h(k,l) = hn(k,l);
+  } end_foreach();
 
+  Data * _m = m; int _n = n; /* fixme: this is a hack */
   int i, j;
   for (i = 1; i <= n; i++) {
     /* symmetry */
@@ -60,11 +71,13 @@ void boundary_h (Data * m, int n)
 void boundary_b (Data * m, int n)
 {
   /* update stencils */
-  foreach (m)
+  foreach (m, n) {
     for (int k = -NS/2; k <= NS/2; k++)
       for (int l = -NS/2; l <= NS/2; l++)
 	b(k,l) = M(i+k,j+l).b[NS/2][NS/2];
+  } end_foreach();
 
+  Data * _m = m; int _n = n; /* fixme: this is a hack */
   int i, j;
   for (i = 1; i <= n; i++) {
     /* symmetry */
@@ -85,13 +98,16 @@ void boundary_b (Data * m, int n)
 void boundary_ke_psi (Data * m, int n)
 {
   /* update stencils */
-  foreach (m)
+  foreach (m, n) {
     for (int k = -NS/2; k <= NS/2; k++)
       for (int l = -NS/2; l <= NS/2; l++) {
 	ke(k,l) = M(i+k,j+l).ke[NS/2][NS/2];
 	psi(k,l) = M(i+k,j+l).psi[NS/2][NS/2];
       }
+  } end_foreach();
 
+  Data * _m = m; int _n = n; /* fixme: this is a hack */
+  double dx = 1./n; /* fixme: another hack and this should be L0/n !!!! */
   int i, j;
   for (i = 1; i <= n; i++) {
     /* symmetry */
@@ -99,7 +115,7 @@ void boundary_ke_psi (Data * m, int n)
     ke(0,-1) = ke(0,0);
     j = n;
     ke(0,1) = ke(0,0);
-    psi(0,1) = (v(0,1) - v(-1,1) + u(0,0) - u(0,1))/DX;
+    psi(0,1) = (v(0,1) - v(-1,1) + u(0,0) - u(0,1))/dx;
   }
   for (j = 1; j <= n; j++) {
     /* symmetry */
@@ -107,20 +123,22 @@ void boundary_ke_psi (Data * m, int n)
     ke(-1,0) = ke(0,0);
     i = n;
     ke(1,0) = ke(0,0);
-    psi(1,0) = (v(1,0) - v(0,0) + u(1,-1) - u(1,0))/DX;
+    psi(1,0) = (v(1,0) - v(0,0) + u(1,-1) - u(1,0))/dx;
   }
 }
 
 void boundary_u (Data * m, int n)
 {
   /* update stencils */
-  foreach (m)
+  foreach (m, n) {
     for (int k = -NS/2; k <= NS/2; k++)
       for (int l = -NS/2; l <= NS/2; l++) {
 	u(k,l) = un(k,l);
 	v(k,l) = vn(k,l);
       }
+  } end_foreach();
 
+  Data * _m = m; int _n = n; /* fixme: this is a hack */
   int i, j;
   for (i = 1; i <= n; i++) {
     /* solid walls */

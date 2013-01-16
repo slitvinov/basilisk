@@ -7,7 +7,7 @@ struct _Data {
 
 #include "mgrid.c"
 
-#define M(i,j) m[(i)*(n + 2) + (j)]
+#define M(i,j) _m[(i)*(_n + 2) + (j)]
 #define u(k,l)    M(i+k,j+l).u
 #define v(k,l)    M(i+k,j+l).v
 #define h(k,l)    M(i+k,j+l).h
@@ -38,9 +38,11 @@ Data * init_grid (int n)
 void boundary_h (Data * m, int n)
 {
   /* update stencils */
-  foreach (m)
+  foreach (m, n)
     h(0,0) = hn(0,0);
+  end_foreach();
 
+  Data * _m = m; int _n = n; /* fixme */
   for (int i = 1; i <= n; i++) {
     /* periodic */
     M(i,0).h = M(i,n).h;
@@ -54,6 +56,7 @@ void boundary_b (Data * m, int n)
 {
   /* update stencils */
 
+  Data * _m = m; int _n = n; /* fixme: this is a hack */
   for (int i = 1; i <= n; i++) {
     /* periodic */
     M(i,0).b = M(i,n).b;
@@ -67,6 +70,7 @@ void boundary_ke_psi (Data * m, int n)
 {
   /* update stencils */
 
+  Data * _m = m; int _n = n; /* fixme: this is a hack */
   for (int i = 1; i <= n; i++) {
     /* periodic */
     M(i,0).ke = M(i,n).ke;
@@ -84,11 +88,12 @@ void boundary_ke_psi (Data * m, int n)
 void boundary_u (Data * m, int n)
 {
   /* update stencils */
-  foreach (m) {
+  foreach (m, n) {
     u(0,0) = un(0,0);
     v(0,0) = vn(0,0);
-  }
+  } end_foreach();
 
+  Data * _m = m; int _n = n; /* fixme */
   for (int i = 1; i <= n; i++) {
     /* periodic */
     M(i,0).u = M(i,n).u;

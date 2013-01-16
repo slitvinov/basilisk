@@ -1,6 +1,6 @@
 #include "quadtree.c"
 
-#define M(k,l) m[quad_neighbor_finest(p, k, l)]
+#define M(k,l) _m[quad_neighbor_finest(p, k, l)]
 
 typedef struct {
   double u, v, h, b, ke, psi;
@@ -17,7 +17,11 @@ typedef struct {
 #define vn(k,l)   M(k,l).vn
 #define hn(k,l)   M(k,l).hn
 
-#define foreach(m) for (int p = size(quad_r - 1), stop = size(quad_r); p < stop; p++)
+#define foreach(m,n) {							\
+  Data * _m = m; int _n = n; _n = _n; /* unused */			\
+  for (int p = size(quad_r - 1), stop = size(quad_r); p < stop; p++)
+
+#define end_foreach() }
 
 #define I quad_x(p)
 #define J quad_y(p)
@@ -39,8 +43,9 @@ Data * init_grid (int n)
 void boundary_h (Data * m, int n)
 {
   /* update stencils */
-  foreach (m)
+  foreach (m, n)
     h(0,0) = hn(0,0);
+  end_foreach()
 
   /* periodic by construction */
 }
@@ -48,10 +53,10 @@ void boundary_h (Data * m, int n)
 void boundary_u (Data * m, int n)
 {
   /* update stencils */
-  foreach (m) {
+  foreach (m, n) {
     u(0,0) = un(0,0);
     v(0,0) = vn(0,0);
-  }
+  } end_foreach();
 
   /* periodic by construction */
 }

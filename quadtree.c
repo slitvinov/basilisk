@@ -8,6 +8,8 @@
  * This uses a Z-grid ordering
  */
 
+#define GRID "Linear quadtree"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

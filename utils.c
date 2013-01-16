@@ -21,7 +21,7 @@ int IMAX = 1 << 30;
 // CFL number
 double CFL = 0.5;
 
-#define DX (L0/n)
+#define DX    (L0/_n)
 #define XC(i) ((i + 0.5)*DX + X0)
 #define YC(j) ((j + 0.5)*DX + X0)
 #define XU(i) ((i)*DX + X0)
@@ -31,29 +31,31 @@ double CFL = 0.5;
 
 void tracer_advection (Data * m, int n, double dt)
 {
-  dt /= 2.*DX;
-  foreach (m)
+  dt /= 2.*(L0/n); /* fixme */
+  foreach (m, n)
     hn(0,0) = h(0,0) + dt*((h(0,0) + h(-1,0))*u(0,0) - 
 			   (h(0,0) + h(1,0))*u(1,0) +
 			   (h(0,0) + h(0,-1))*v(0,0) - 
 			   (h(0,0) + h(0,1))*v(0,1));
+  end_foreach();
 }
 
 void tracer_advection_upwind (Data * m, int n, double dt)
 {
-  dt /= DX;
-  foreach (m)
+  dt /= (L0/n); /* fixme */
+  foreach (m, n)
     hn(0,0) = h(0,0) + dt*((u(0,0) < 0. ? h(0,0) : h(-1,0))*u(0,0) - 
 			   (u(1,0) > 0. ? h(0,0) : h(1,0))*u(1,0) +
 			   (v(0,0) < 0. ? h(0,0) : h(0,-1))*v(0,0) - 
 			   (v(0,1) > 0. ? h(0,0) : h(0,1))*v(0,1));
+  end_foreach();
 }
 
 void momentum (Data * m, int n, double dt)
 {
-  double dtg = dt*G/DX;
+  double dtg = dt*G/(L0/n); /* fixme */
   double dtf = dt/4.;
-  foreach (m) {
+  foreach (m, n) {
     double g = h(0,0) + b(0,0) + ke(0,0);
     double psiu = (psi(0,0) + psi(0,1))/2.;
     un(0,0) = u(0,0)
@@ -63,12 +65,12 @@ void momentum (Data * m, int n, double dt)
     vn(0,0) = v(0,0)
       - dtg*(g - h(0,-1) - b(0,-1) - ke(0,-1))
       - dtf*(psiv + F0)*(u(0,0) + u(1,0) + u(0,-1) + u(1,-1));
-  }
+  } end_foreach();
 }
 
 void ke_psi (Data * m, int n)
 {
-  foreach (m) {
+  foreach (m, n) {
 #if 1
     double uc = u(0,0) + u(1,0);
     double vc = v(0,0) + v(0,1);
@@ -79,16 +81,16 @@ void ke_psi (Data * m, int n)
     ke(0,0) = (uc + vc)/4.;
 #endif
     psi(0,0) = (v(0,0) - v(-1,0) + u(0,-1) - u(0,0))/DX;
-  }    
+  } end_foreach();
 }
 
 double timestep (Data * m, int n)
 {
-  double dx = DX;
+  double dx = (L0/n); /* fixme */
   double dtmax = DT/CFL;
   dtmax *= dtmax;
   dx *= dx;
-  foreach (m) {
+  foreach (m, n) {
     if (h(0,0) > 0.) {
       double dt = dx/(G*h(0,0));
       if (dt < dtmax) dtmax = dt;
@@ -101,6 +103,6 @@ double timestep (Data * m, int n)
       double dt = dx/(v(0,0)*v(0,0));
       if (dt < dtmax) dtmax = dt;
     }
-  }
+  } end_foreach();
   return sqrt (dtmax)*CFL;
 }
