@@ -1,18 +1,15 @@
-#include <stddef.h>
-#include <stdbool.h>
-
 #ifdef CARTESIAN
   #define GRID "Multigrid quadtree (Cartesian)"
 #else
   #define GRID "Multigrid quadtree"
 #endif
 
+#include <stddef.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <assert.h>
 
 typedef struct _Data Data;
-
-/* multigrid quadtree implementation */
 
 int size (int l)
 {
@@ -33,16 +30,12 @@ int mlevel (int n)
   return r;
 }
 
-void * mgrid (int r, size_t s)
-{
-  return malloc (s*totalsize (r));
-}
-
 #define field(data,offset,type) (*((type *)(((char *) &(data)) + (offset))))
 typedef size_t var;
 #define var(a) offsetof(Data,a)
-#define grid(a,k,l) field(_m[(i+k)*(_n + 2) + (j+l)], a, double)
-#define val(a) grid(a,0,0)
+#define cell(k,l) _m[(i+k)*(_n + 2) + (j+l)]
+#define stencil(a,k,l) field(cell(k,l), a, double)
+#define val(a) stencil(a,0,0)
 
 Data * coarser_level (Data * m, int n)
 {
@@ -56,8 +49,8 @@ Data * finer_level (Data * m, int n)
 
 #define foreach_level(m,n) {				\
   Data * _m = m; int _n = n;				\
-  for (int i = 1; i <= n; i++)				\
-    for (int j = 1; j <= n; j++)
+  for (int i = 1; i <= _n; i++)				\
+    for (int j = 1; j <= _n; j++)
 #define end_foreach_level() }
 
 #define foreach_fine_to_coarse(m,n) {				\
@@ -71,7 +64,7 @@ Data * finer_level (Data * m, int n)
 #define end_foreach_fine_to_coarse() }
 
 #define fine(a,k,l) field(_mf[(2*i-1+k)*(2*_n + 2) + (2*j-1+l)], a, double)
-#define coarse(a,k,l) grid(a,k,l)
+#define coarse(a,k,l) stencil(a,k,l)
 
 /* ===============================================================
  *                    Quadtree traversal
@@ -114,7 +107,11 @@ void traverse_recursive (Data * m, int n)
 
 #define NOT_UNUSED(a) (a = a)
 
-#define foreach_condition(m,n,condition,stop)				           \
+enum {
+  leaf   = 1 << 0
+};
+
+#define foreach_cell(m,n)						\
   {									           \
     int depth = mlevel (n);						           \
     assert (depth < STACKSIZE);						           \
@@ -131,12 +128,9 @@ void traverse_recursive (Data * m, int n)
       case 0: {								\
         Data * _m = ml[level]; NOT_UNUSED(_m);				\
         int _n = 1 << level; NOT_UNUSED(_n);				\
-        if (stop) continue;						\
-        if (condition) {						\
-	  /* do something */
-#define end_foreach_condition()			                        \
-        }								\
-	if (level < depth) {						\
+	/* do something */
+#define end_foreach_cell()						\
+        if (!(cell(0,0).flags & leaf)) {				\
           push (level, i, j, 1);					\
           push (level + 1, 2*i-1, 2*j, 0);				       \
         }								       \
@@ -149,10 +143,24 @@ void traverse_recursive (Data * m, int n)
     }                                                                          \
   }
 
-#ifdef CARTESIAN /* uses finest grid traversal only (i.e. purely Cartesian mesh) */
+/* ================== derived traversals ========================= */
+
+#define foreach_leaf(m,n)   foreach_cell(m,n) if (cell(0,0).flags & leaf) {
+#define end_foreach_leaf()  continue; } end_foreach_cell()
+
+void * mgrid (int r, size_t s)
+{
+  void * m = calloc (totalsize(r), s);
+  foreach_level (m, 1 << r)
+    cell(0,0).flags |= leaf;
+  end_foreach_level();
+  return m;
+}
+
+#ifdef CARTESIAN /* uses finest grid traversal only (i.e. a purely Cartesian grid) */
   #define foreach foreach_level
   #define end_foreach end_foreach_level
 #else
-#define foreach(m,n) foreach_condition(m , n, level == depth, false)
-#define end_foreach end_foreach_condition
+#define foreach foreach_leaf
+#define end_foreach end_foreach_leaf
 #endif

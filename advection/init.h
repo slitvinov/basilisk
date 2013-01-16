@@ -18,7 +18,7 @@ void output_field (Data * m, int n, var v, FILE * fp)
   fprintf (fp, "# 1:x 2:y 3:F\n");
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++)
-      fprintf (fp, "%g %g %g\n", XC(i), YC(j), M(i,j).h);
+      fprintf (fp, "%g %g %g\n", XC(i), YC(j), stencil(v,0,0));
     fprintf (fp, "\n");
   }
 }
