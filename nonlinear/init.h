@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <gsl/gsl_integration.h>
 
+/* ---------------- Initial conditions ------------------- */
+
 #define H0 1.
 #define FROUDE 0.1
 
@@ -25,41 +27,50 @@ double h0 (double r) {
 
 double ** h1, ** e;
 
-void * matrix_new (int n, int p, int size)
-{
-  int i;
-  void ** m;
-  char * a;
-  
-  m = malloc (n*sizeof (void **));
-  a = malloc (n*p*size);
-  for (i = 0; i < n; i++)
-    m[i] = a + i*p*size;
-  return (void *) m;
-}
-
-void matrix_free (void * m)
-{
-  free (((void **) m)[0]);
-  free (m);
-}
-
 void initial_conditions (Data * m, int n)
 {
   h1 = matrix_new (n, n, sizeof (double));
   e = matrix_new (n, n, sizeof (double));
   foreach (m, n) {
-    double x = XC(I), y = YC(J);
-    b(0,0) = 0.;
-    h1[I][J] = hn(0,0) = (H0 + h0(sqrt (x*x + y*y)));
-    x = XU(I); y = YU(J);
-    un(0,0) = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
-    x = XV(I); y = YV(J);
-    vn(0,0) = vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
+    h1[I][J] = h(0,0) = (H0 + h0(sqrt (xc*xc + yc*yc)));
+    u(0,0) = - vtheta(sqrt (xu*xu + yu*yu))*yu/sqrt (xu*xu + yu*yu);
+    v(0,0) = vtheta(sqrt (xv*xv + yv*yv))*xv/sqrt (xv*xv + yv*yv);
   } end_foreach();
 }
 
-static double error (Data * m, int n)
+/* ------------------ Boundary conditions ------------------- */
+
+void boundary_h (Data * m, int n)
+{
+  symmetry (m, n, var(h));
+}
+
+void boundary_b (Data * m, int n)
+{
+  symmetry (m, n, var(b));
+}
+
+void boundary_ke_psi (Data * m, int n)
+{
+  symmetry (m, n, var(ke));
+
+  double dx = L0/n;
+  foreach_boundary (m, n, top) {
+    psi(0,1) = (v(0,1) - v(-1,1) + u(0,0) - u(0,1))/dx;    
+  } end_foreach_boundary();
+  foreach_boundary (m, n, right) {
+    psi(1,0) = (v(1,0) - v(0,0) + u(1,-1) - u(1,0))/dx;
+  } end_foreach_boundary();
+}
+
+void boundary_u (Data * m, int n)
+{
+  uv_symmetry (m, n, var(u), var(v));
+}
+
+/* ------------------ Output helper functions --------------- */
+
+double error (Data * m, int n)
 {
   double max = 0.;
   foreach (m, n) {
@@ -69,7 +80,7 @@ static double error (Data * m, int n)
   return max;
 }
 
-static double energy (Data * m, int n)
+double energy (Data * m, int n)
 {
   double se = 0.;
   foreach (m, n)

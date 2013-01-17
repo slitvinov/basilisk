@@ -1,3 +1,21 @@
+#include "utils.h"
+
+struct _Data {
+  int flags; /* fixme: this is grid-specific */
+  double u, v, h, b, ke, psi;
+  double un, vn, hn;
+};
+
+#define u(k,l)    celln(k,l).u
+#define v(k,l)    celln(k,l).v
+#define h(k,l)    celln(k,l).h
+#define b(k,l)    celln(k,l).b
+#define ke(k,l)   celln(k,l).ke
+#define psi(k,l)  celln(k,l).psi
+#define un(k,l)   celln(k,l).un
+#define vn(k,l)   celln(k,l).vn
+#define hn(k,l)   celln(k,l).hn
+
 #include "grid.h"
 #include "utils.c"
 
@@ -26,8 +44,13 @@ int main (int argc, char ** argv)
     double dt = timestep (m, n);
     #include "output.h"
     tracer_advection (m, n, dt);
+    foreach (m, n) { h(0,0) = hn(0,0); } end_foreach();
     boundary_h (m, n);
     momentum (m, n, dt);
+    foreach (m, n) {
+      u(0,0) = un(0,0);
+      v(0,0) = vn(0,0);
+    } end_foreach();
     boundary_u (m, n);
     ke_psi (m, n);
     boundary_ke_psi (m, n);
