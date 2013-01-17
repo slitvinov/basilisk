@@ -10,15 +10,16 @@
 #define XV(i) XC(i)
 #define YV(j) ((j)*DX + X0)
 
-#define NO_UNUSED(x) (x = x)
+#define NOT_UNUSED(x) (x = x)
+
 #define VARIABLES \
-  double xc = XC(I), yc = YC(J); /* cell center */	\
-  double xu = XU(I), yu = YU(J); /* staggered u-coordinate */ \
-  double xv = XV(I), yv = YV(J); /* staggered v-coordinate */ \
+  double x  = XC(I), y  = YC(J); /* cell center */	\
+  double xu = XU(I), yu = YU(J); /* staggered u-coordinates */ \
+  double xv = XV(I), yv = YV(J); /* staggered v-coordinates */ \
   /* we need this to avoid compiler warnings */	\
-  NO_UNUSED(xc); NO_UNUSED(yc);		        \
-  NO_UNUSED(xu); NO_UNUSED(yu);                 \
-  NO_UNUSED(xv); NO_UNUSED(yv);
+  NOT_UNUSED(x);  NOT_UNUSED(y);		        \
+  NOT_UNUSED(xu); NOT_UNUSED(yu);                 \
+  NOT_UNUSED(xv); NOT_UNUSED(yv);
 
 typedef struct _Data Data;
 

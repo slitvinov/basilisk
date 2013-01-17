@@ -32,7 +32,7 @@ void initial_conditions (Data * m, int n)
   h1 = matrix_new (n, n, sizeof (double));
   e = matrix_new (n, n, sizeof (double));
   foreach (m, n) {
-    h1[I][J] = h(0,0) = (H0 + h0(sqrt (xc*xc + yc*yc)));
+    h1[I][J] = h(0,0) = (H0 + h0(sqrt (x*x + y*y)));
     u(0,0) = - vtheta(sqrt (xu*xu + yu*yu))*yu/sqrt (xu*xu + yu*yu);
     v(0,0) = vtheta(sqrt (xv*xv + yv*yv))*xv/sqrt (xv*xv + yv*yv);
   } end_foreach();

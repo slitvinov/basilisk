@@ -1,19 +1,11 @@
-#ifdef CARTESIAN
-  #define GRID "Multigrid quadtree (Cartesian)"
-#else
-  #define GRID "Multigrid quadtree"
-#endif
+#define GRID "Multigrid quadtree"
 
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 
 #define GHOSTS 1        // number of ghost layers
 #define I (i - GHOSTS)
 #define J (j - GHOSTS)
-
-typedef struct _Data Data;
 
 size_t _size (size_t l)
 {
@@ -36,13 +28,7 @@ int mlevel (int n)
   return r;
 }
 
-#define field(data,offset,type) (*((type *)(((char *) &(data)) + (offset))))
-typedef size_t var;
-#define var(a) offsetof(Data,a)
-#define cell _m[(i)*(_n + 2*GHOSTS) + j]
 #define celln(k,l) _m[(i + k)*(_n + 2*GHOSTS) + (j + l)]
-#define stencil(a,k,l) field(celln(k,l), a, double)
-#define val(a) stencil(a,0,0)
 
 Data * coarser_level (Data * m, int n)
 {
@@ -111,38 +97,52 @@ void traverse_recursive (Data * m, int n)
 }
 
 #define STACKSIZE 20
-#define push(b,c,d,e) top++;						\
-  stack[top].l = b; stack[top].i = c; stack[top].j = d; stack[top].stage = e;
+#define push(b,c,d,e) _s++;						\
+  stack[_s].l = b; stack[_s].i = c; stack[_s].j = d; stack[_s].stage = e;
 #define pop(b,c,d,e)							\
-  b = stack[top].l; c = stack[top].i; d = stack[top].j; e = stack[top].stage; \
-  top--;
+  b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--;
 
-#define NOT_UNUSED(a) (a = a)
-
-enum {
-  leaf   = 1 << 0
-};
-
-#define foreach_cell(m,n)						\
+#define foreach_boundary_cell(m,n,dir)					\
   {									           \
-    int depth = mlevel (n);						           \
+    int depth = mlevel (n), _d = dir; NOT_UNUSED(_d);				   \
     assert (depth < STACKSIZE);						           \
-    struct { int l, i, j, stage; } stack[STACKSIZE]; int top = -1; /* the stack */ \
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */\
     Data * _m = m, * ml[STACKSIZE]; /* pointers on each level */	           \
     for (int i = depth; i >= 0; i--) {					           \
       ml[i] = _m; _m = coarser_level (_m, 1 << i);			           \
     }									           \
     push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
-    while (top >= 0) {							\
+    while (_s >= 0) {							\
       int level, i, j, stage;						\
       pop (level, i, j, stage);						\
       switch (stage) {							\
       case 0: {								\
         Data * _m = ml[level]; NOT_UNUSED(_m);				\
         int _n = 1 << level; NOT_UNUSED(_n);				\
+	VARIABLES							\
 	/* do something */
+#define end_foreach_boundary_cell()					\
+        if (level < depth) {						\
+          push (level, i, j, 1);					\
+	  int k = _d > left ? _LEFT : _RIGHT - _d;			\
+	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;			\
+          push (level + 1, k, l, 0);					\
+        }								\
+	break;								\
+      }								        \
+      case 1: {								\
+	  int k = _d > left ? _RIGHT : _RIGHT - _d;			\
+	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;			\
+          push (level + 1, k, l, 0);			                \
+          break;                                                        \
+        }								\
+      }									\
+    }                                                                   \
+  }
+
+#define foreach_cell(m,n) foreach_boundary_cell(m,n,0)
 #define end_foreach_cell()						\
-        if (!(cell(0,0).flags & leaf)) {				\
+        if (level < depth) {						\
           push (level, i, j, 1);					\
           push (level + 1, _LEFT, _TOP, 0);				       \
         }								       \
@@ -157,22 +157,33 @@ enum {
 
 /* ================== derived traversals ========================= */
 
-#define foreach_leaf(m,n)   foreach_cell(m,n) if (cell(0,0).flags & leaf) {
-#define end_foreach_leaf()  continue; } end_foreach_cell()
+enum {
+  leaf   = 1 << 0
+};
 
-void * mgrid (int r, size_t s)
+#define foreach_leaf(m,n)         foreach_cell(m,n) if (cell.flags & leaf) {
+#define end_foreach_leaf()        continue; } end_foreach_cell()
+
+#define foreach_boundary(m,n,dir) foreach_boundary_cell(m,n,dir)
+#define end_foreach_boundary()    if (cell.flags & leaf) continue; end_foreach_boundary_cell()
+
+Data * init_grid (int n)
 {
-  void * m = calloc (_totalsize(r), s);
+  int r = 0;
+  while (n > 1) {
+    if (n % 2) {
+      fprintf (stderr, "quadtree: N must be a power-of-two\n");
+      exit (1);
+    }
+    n /= 2;
+    r++;
+  }
+  void * m = calloc (_totalsize(r), sizeof (Data));
   foreach_level (m, 1 << r)
-    cell(0,0).flags |= leaf;
+    cell.flags |= leaf;
   end_foreach_level();
   return m;
 }
 
-#ifdef CARTESIAN /* uses finest grid traversal only (i.e. a purely Cartesian grid) */
-  #define foreach foreach_level
-  #define end_foreach end_foreach_level
-#else
 #define foreach foreach_leaf
 #define end_foreach end_foreach_leaf
-#endif
