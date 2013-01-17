@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include <assert.h>
 
+typedef struct {
+  int flags;
+  Data d;
+} Cell;
+
 #define GHOSTS 1        // number of ghost layers
 #define I (i - GHOSTS)
 #define J (j - GHOSTS)
@@ -16,7 +21,7 @@ size_t _size (size_t l)
 size_t _totalsize (int l)
 {
   size_t s = 0;
-  while (l)
+  while (l >= 0)
     s += _size(l--);
   return s;
 }
@@ -28,26 +33,28 @@ int mlevel (int n)
   return r;
 }
 
-#define celln(k,l) _m[(i + k)*(_n + 2*GHOSTS) + (j + l)]
+#define CELL(p)   ((Cell *)p)
+#define cell      CELL(_m)[i*(_n + 2*GHOSTS) + j]
+#define data(k,l) CELL(_m)[(i + k)*(_n + 2*GHOSTS) + (j + l)].d
 
-Data * coarser_level (Data * m, int n)
+void * coarser_level (void * m, int n)
 {
-  return (Data *) (((char *)m) + sizeof(Data)*(n + 2*GHOSTS)*(n + 2*GHOSTS));
+  return (void *) (((char *)m) + sizeof(Cell)*(n + 2*GHOSTS)*(n + 2*GHOSTS));
 }
 
-Data * finer_level (Data * m, int n)
+void * finer_level (void * m, int n)
 {
-  return (Data *) (((char *)m) - sizeof(Data)*4*(n + GHOSTS)*(n + GHOSTS));
+  return (void *) (((char *)m) - sizeof(Cell)*4*(n + GHOSTS)*(n + GHOSTS));
 }
 
 #define foreach_level(m,n) {				\
-  Data * _m = m; int _n = n;				\
+  void * _m = m; int _n = n;				\
   for (int i = GHOSTS; i < _n + GHOSTS; i++)		\
     for (int j = GHOSTS; j < _n + GHOSTS; j++)
 #define end_foreach_level() }
 
 #define foreach_fine_to_coarse(m,n) {				\
-  Data * _m = m, * _mf = _m;					\
+  void * _m = m, * _mf = _m;					\
   _m = coarser_level (_m, n); int _n = (n)/2;			\
   for (int level = mlevel(_n);					\
        _n > 0;							\
@@ -56,7 +63,7 @@ Data * finer_level (Data * m, int n)
       for (int j = GHOSTS; j < _n + GHOSTS; j++)
 #define end_foreach_fine_to_coarse() }
 
-#define fine(a,k,l) field(_mf[(2*i-GHOSTS+k)*2*(_n + GHOSTS) + (2*j-GHOSTS+l)], a, double)
+#define fine(a,k,l) field(CELL(_mf)[(2*i-GHOSTS+k)*2*(_n + GHOSTS) + (2*j-GHOSTS+l)].d, a, double)
 #define coarse(a,k,l) stencil(a,k,l)
 
 /* ===============================================================
@@ -76,7 +83,7 @@ Data * finer_level (Data * m, int n)
 #define _LEFT   (2*i - GHOSTS)
 #define _RIGHT  (_LEFT + 1)
 
-void recursive (Data * m, int n, int i, int j, int nl)
+void recursive (void * m, int n, int i, int j, int nl)
 {
   if (n == nl) {
     /* do something */
@@ -90,9 +97,9 @@ void recursive (Data * m, int n, int i, int j, int nl)
   }
 }
 
-void traverse_recursive (Data * m, int n)
+void traverse_recursive (void * m, int n)
 {
-  m = (Data *) (((char *)m) +  sizeof(Data)*(_totalsize(mlevel(n)) - _size(0)));
+  m = (void *) (((char *)m) +  sizeof(Cell)*(_totalsize(mlevel(n)) - _size(0)));
   recursive (m, 1, GHOSTS, GHOSTS, n); /* level 0, central cell */
 }
 
@@ -107,7 +114,7 @@ void traverse_recursive (Data * m, int n)
     int depth = mlevel (n), _d = dir; NOT_UNUSED(_d);				   \
     assert (depth < STACKSIZE);						           \
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */\
-    Data * _m = m, * ml[STACKSIZE]; /* pointers on each level */	           \
+    void * _m = m, * ml[STACKSIZE]; /* pointers on each level */	           \
     for (int i = depth; i >= 0; i--) {					           \
       ml[i] = _m; _m = coarser_level (_m, 1 << i);			           \
     }									           \
@@ -117,7 +124,7 @@ void traverse_recursive (Data * m, int n)
       pop (level, i, j, stage);						\
       switch (stage) {							\
       case 0: {								\
-        Data * _m = ml[level]; NOT_UNUSED(_m);				\
+        void * _m = ml[level]; NOT_UNUSED(_m);				\
         int _n = 1 << level; NOT_UNUSED(_n);				\
 	VARIABLES							\
 	/* do something */
@@ -164,10 +171,13 @@ enum {
 #define foreach_leaf(m,n)         foreach_cell(m,n) if (cell.flags & leaf) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
 
+#define foreach       foreach_leaf
+#define end_foreach   end_foreach_leaf
+
 #define foreach_boundary(m,n,dir) foreach_boundary_cell(m,n,dir)
 #define end_foreach_boundary()    if (cell.flags & leaf) continue; end_foreach_boundary_cell()
 
-Data * init_grid (int n)
+void * init_grid (int n)
 {
   int r = 0;
   while (n > 1) {
@@ -178,12 +188,11 @@ Data * init_grid (int n)
     n /= 2;
     r++;
   }
-  void * m = calloc (_totalsize(r), sizeof (Data));
+  void * m = calloc (_totalsize(r), sizeof (Cell));
   foreach_level (m, 1 << r)
     cell.flags |= leaf;
   end_foreach_level();
   return m;
 }
 
-#define foreach foreach_leaf
-#define end_foreach end_foreach_leaf
+#define free_grid free

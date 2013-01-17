@@ -1,13 +1,22 @@
 #include <time.h>
-#include "utils.h"
 
 struct _Data {
-  int flags; /* fixme: this is grid-specific */
   double u, v, h, b, ke, psi;
   double un, vn, hn;
 };
 
-#include "grid.h"
+#define u(k,l)    data(k,l).u
+#define v(k,l)    data(k,l).v
+#define h(k,l)    data(k,l).h
+#define b(k,l)    data(k,l).b
+#define ke(k,l)   data(k,l).ke
+#define psi(k,l)  data(k,l).psi
+#define un(k,l)   data(k,l).un
+#define vn(k,l)   data(k,l).vn
+#define hn(k,l)   data(k,l).hn
+
+#include "utils.h"
+#include "grid.c"
 #include "utils.c"
 
 // Default parameters, do not change them!! edit parameters.h instead
@@ -15,16 +24,6 @@ struct _Data {
 double F0 = 1.;
 // acceleration of gravity
 double G = 1.;
-
-#define u(k,l)    celln(k,l).u
-#define v(k,l)    celln(k,l).v
-#define h(k,l)    celln(k,l).h
-#define b(k,l)    celln(k,l).b
-#define ke(k,l)   celln(k,l).ke
-#define psi(k,l)  celln(k,l).psi
-#define un(k,l)   celln(k,l).un
-#define vn(k,l)   celln(k,l).vn
-#define hn(k,l)   celln(k,l).hn
 
 void tracer_advection (Data * m, int n, double dt)
 {
@@ -113,7 +112,7 @@ int main (int argc, char ** argv)
   double t = 0;
   int i = 0, n = N;
 
-  Data * m = init_grid (n);
+  void * m = init_grid (n);
   initial_conditions (m, n);
   boundary_b (m, n);
   boundary_h (m, n);
@@ -143,4 +142,6 @@ int main (int argc, char ** argv)
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "# " GRID ", %d timesteps, %g CPU, %d points.steps/s\n",
 	   i, cpu, (int) (n*n*i/cpu));
+
+  free_grid (m);
 }

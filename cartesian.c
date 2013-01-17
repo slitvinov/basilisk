@@ -3,7 +3,7 @@
 #define I (i - 1)
 #define J (j - 1)
 
-#define celln(k,l) _m[(i + k)*(_n + 2) + (j + l)]
+#define data(k,l) _m[(i + k)*(_n + 2) + (j + l)]
 
 #define foreach(m,n) {				\
   Data * _m = m; int _n = n;			\
@@ -20,7 +20,9 @@
     VARIABLES
 #define end_foreach_boundary() }}
 
-Data * init_grid (int n)
+void * init_grid (int n)
 {
   return calloc ((n + 2)*(n + 2), sizeof (Data));
 }
+
+#define free_grid free
