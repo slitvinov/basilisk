@@ -5,9 +5,7 @@
 void initial_conditions (Data * m, int n)
 {
   foreach (m, n) {
-    hn(0,0) = exp(-(x*x + y*y)/(R0*R0));
-    un(0,0) = 1.;
-    vn(0,0) = 0.333;
+    h(0,0) = exp(-(x*x + y*y)/(R0*R0));
   } end_foreach();
 }
 
