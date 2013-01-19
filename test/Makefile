@@ -31,5 +31,15 @@ interp.log: interp interp.plot
 interp: interp.c
 	$(CC) $(CFLAGS) interp.c -o interp -lm
 
+rk2.log: rk2 rk2.plot
+	./rk2 2> rk2.log > rk2.out
+	gnuplot -e "set term pngcairo; set output 'rk2.png';" rk2.plot
+	diff rk2.log rk2.ref
+
+-include rk2.d
+rk2: rk2.c
+	$(CC) $(CFLAGS) rk2.c -o rk2 -lm
+
 clean:
-	rm -f *.d *.log *.out *.png
+	rm -f *.d *.log *.out *.png \
+	halo speed interp

@@ -63,7 +63,7 @@ void update_halos (void * m, int n, var start, var end)
       if (level == l) {
 	if (cell.flags & inactive)
 	  /* bilinear interpolation from coarser level */
-	  for (var a = start; a <= end; a += sizeof(double))
+	  for (var a = start; a <= end; a += sizeof(double)) /* for each variable */
 	    val(a,0,0) = 
 	      (9.*coarse(a,0,0) + 
 	       3.*(coarse(a,childx,0) + coarse(a,0,childy)) + 

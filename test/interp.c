@@ -45,8 +45,9 @@ int main (int argc, char ** argv)
   } end_foreach_halo();
 
   fprintf (stderr, "maximum error on halos: %g\n", max);
-  assert (max < tolerance);
 
   fclose (fp);
   free_grid (m);
+
+  return (max > tolerance);
 }

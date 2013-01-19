@@ -1,5 +1,7 @@
 #define GRID "Cartesian grid"
 
+#include <stdlib.h>
+
 #define I (i - 1)
 #define J (j - 1)
 
