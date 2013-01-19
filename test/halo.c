@@ -1,3 +1,5 @@
+/* definition of halo cells after coarsening */
+
 #include <assert.h>
 
 struct _Data {
@@ -8,71 +10,8 @@ struct _Data {
 #include "utils.h"
 #include "quadtree.c"
 #include "utils.c"
-
-void restriction (Data * m, int n, var a)
-{
-  foreach_fine_to_coarse (m, n) {
-    coarse(a,0,0) = (fine(a,0,0) + fine(a,1,0) + fine(a,0,1) + fine(a,1,1))/4.;
-  } end_foreach_fine_to_coarse();
-}
-
-void wavelet (Data * m, int n, var a, var w)
-{
-  foreach_fine_to_coarse (m, n) {
-    /* difference between fine value and bilinearly-interpolated coarse value */
-    fine(w,0,0) = fine(a,0,0) - 
-      (9.*coarse(a,0,0) + 3.*(coarse(a,-1,0) + coarse(a,0,-1)) + coarse(a,-1,-1))/16.;
-    fine(w,0,1) = fine(a,0,1) - 
-      (9.*coarse(a,0,0) + 3.*(coarse(a,-1,0) + coarse(a,0,+1)) + coarse(a,-1,+1))/16.;
-    fine(w,1,0) = fine(a,1,0) - 
-      (9.*coarse(a,0,0) + 3.*(coarse(a,0,-1) + coarse(a,+1,0)) + coarse(a,+1,-1))/16.;
-    fine(w,1,1) = fine(a,1,1) - 
-      (9.*coarse(a,0,0) + 3.*(coarse(a,+1,0) + coarse(a,0,+1)) + coarse(a,+1,+1))/16.;
-  } end_foreach_fine_to_coarse ();
-}
-
-void coarsen_wavelet (Data * m, int n, var w, double max)
-{
-  foreach_fine_to_coarse (m, n) {
-    double error = 0.;
-    foreach_fine(k,l) {
-      double e = fabs(fine(w,k,l));
-      if (e > error)
-	error = e;
-    }
-    if (error < max) {
-      /* coarsen */
-      cell.flags |= leaf;
-      for (int k = 0; k < 2; k++)
-	for (int l = 0; l < 2; l++) {
-	  finecell(k,l).flags &= !leaf;
-	  finecell(k,l).flags |= inactive;
-	  /* update fine neighborhood */
-	  for (int o = -GHOSTS; o <= GHOSTS; o++)
-	    for (int p = -GHOSTS; p <= GHOSTS; p++)
-	      finecell(k+o,l+p).neighbors--;
-	}
-    }
-    /* propagate the error to coarser levels */
-    coarse(w,0,0) = fabs(coarse(w,0,0)) + error;
-  } end_foreach_fine_to_coarse ();
-}
-
-void flag_halo_cells (Data * m, int n)
-{
-  /* from the bottom up */
-  foreach_cell_post (m, n, !(cell.flags & inactive) || cell.neighbors > 0) {
-    if (cell.flags & inactive) {
-      /* inactive and neighbors > 0 => this is a halo cell */
-      cell.flags |= halo;
-      /* propagate to parent */
-      parentcell.flags |= halo;
-    }
-    else if (cell.flags & halo)
-      /* propagate to parent */
-      parentcell.flags |= halo;
-  } end_foreach_cell_post();
-}
+#include "wavelet.c"
+#include "adapt.c"
 
 int main (int argc, char ** argv)
 {

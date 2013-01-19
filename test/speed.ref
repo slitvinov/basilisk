@@ -1,0 +1,4 @@
+# Quadtree 10 iterations
+initial coarsening:   0.68 CPU, 1.54e+06 points.steps/s
+after coarsening: 149536 leaves, maximum level 10
+iterations:           1.09 CPU, 1.23e+06 leaves.steps/s
