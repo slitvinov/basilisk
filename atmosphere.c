@@ -25,7 +25,7 @@ double F0 = 1.;
 // acceleration of gravity
 double G = 1.;
 
-void tracer_advection (Data * m, int n, double dt)
+void tracer_advection (void * m, int n, double dt)
 {
   dt /= 2.*(L0/n); /* fixme */
   foreach (m, n)
@@ -36,7 +36,7 @@ void tracer_advection (Data * m, int n, double dt)
   end_foreach();
 }
 
-void tracer_advection_upwind (Data * m, int n, double dt)
+void tracer_advection_upwind (void * m, int n, double dt)
 {
   dt /= (L0/n); /* fixme */
   foreach (m, n)
@@ -47,7 +47,7 @@ void tracer_advection_upwind (Data * m, int n, double dt)
   end_foreach();
 }
 
-double timestep (Data * m, int n)
+double timestep (void * m, int n)
 {
   double dx = (L0/n); /* fixme */
   double dtmax = DT/CFL;
@@ -70,7 +70,7 @@ double timestep (Data * m, int n)
   return sqrt (dtmax)*CFL;
 }
 
-void momentum (Data * m, int n, double dt)
+void momentum (void * m, int n, double dt)
 {
   double dtg = dt*G/(L0/n); /* fixme */
   double dtf = dt/4.;
@@ -87,7 +87,7 @@ void momentum (Data * m, int n, double dt)
   } end_foreach();
 }
 
-void ke_psi (Data * m, int n)
+void ke_psi (void * m, int n)
 {
   foreach (m, n) {
 #if 1
@@ -140,8 +140,8 @@ int main (int argc, char ** argv)
   } while (t < TMAX && i < IMAX);
   end = clock ();
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
-  fprintf (stderr, "# " GRID ", %d timesteps, %g CPU, %d points.steps/s\n",
-	   i, cpu, (int) (n*n*(double)i/cpu));
+  fprintf (stderr, "# " GRID ", %d timesteps, %g CPU, %g points.steps/s\n",
+	   i, cpu, (n*n*(double)i/cpu));
 
   free_grid (m);
 }

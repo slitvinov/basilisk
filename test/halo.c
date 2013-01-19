@@ -28,29 +28,20 @@ int main (int argc, char ** argv)
   coarsen_wavelet (m, n, var(w), 1e-2);
   flag_halo_cells (m, n);
 
-  FILE 
-    * ftraversed = fopen("/tmp/traversed", "w"), 
-    * fhalo = fopen("/tmp/halo", "w"),
-    * flagged = fopen("/tmp/flagged", "w");
-
   foreach_cell (m, n) {
     fprintf (stderr, "%g %g %d %d traversed\n", x, y, level, cell.neighbors);
-    fprintf (ftraversed, "%g %g %d %d traversed\n", x, y, level, cell.neighbors);
+    printf ("%g %g %d %d 1\n", x, y, level, cell.neighbors);
     if (!(cell.flags & halo))
       continue;
     else if (cell.flags & inactive) {
       fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
-      fprintf (fhalo, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
+      printf ("%g %g %d %d 2\n", x, y, level, cell.neighbors);
     }
     else {
-      fprintf (flagged, "%g %g %d %d flagged\n", x, y, level, cell.neighbors);
       fprintf (stderr, "%g %g %d %d flagged\n", x, y, level, cell.neighbors);
+      printf ("%g %g %d %d 3\n", x, y, level, cell.neighbors);
     }
   } end_foreach_cell();
-
-  fclose (ftraversed);
-  fclose (fhalo);
-  fclose (flagged);
 
   free_grid (m);
 }

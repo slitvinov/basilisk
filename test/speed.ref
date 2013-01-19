@@ -1,4 +1,7 @@
-# Quadtree 10 iterations
-initial coarsening:   0.68 CPU, 1.54e+06 points.steps/s
+---- restriction + wavelet + coarsen_wavelet + flag_halo_cells ----
 after coarsening: 149536 leaves, maximum level 10
-iterations:           1.09 CPU, 1.23e+06 leaves.steps/s
+initial coarsening:    0.16 CPU, 6.55e+06 points.steps/s
+  10 iterations:        0.3 CPU, 4.98e+06 leaves.steps/s
+---- update_halos ----
+15308 halo points
+ 100 iterations:       0.52 CPU, 2.94e+06 halos.steps/s

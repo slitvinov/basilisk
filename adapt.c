@@ -59,7 +59,7 @@ void update_halos (void * m, int n, var start, var end)
     /* fixme: need to stop before mlevel(n) if there an't any halos */
     foreach_cell(m,n) {
       if (!(cell.flags & halo))
-	continue; /* no more halos, skip the rest of this branch */
+      	continue; /* no more halos, skip the rest of this branch */
       if (level == l) {
 	if (cell.flags & inactive)
 	  /* bilinear interpolation from coarser level */
@@ -72,3 +72,9 @@ void update_halos (void * m, int n, var start, var end)
       }
     } end_foreach_cell();
 }
+
+#define foreach_halo(m,n) foreach_cell(m,n) { \
+  if (!(cell.flags & halo))		      \
+    continue;				      \
+  else if (cell.flags & inactive) {
+#define end_foreach_halo()  }} end_foreach_cell();

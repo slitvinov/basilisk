@@ -4,7 +4,7 @@
 #include <time.h>
 
 struct _Data {
-  double h, e, w;
+  double h, w;
 };
 #define h(k,l) data(k,l).h
 
@@ -26,7 +26,7 @@ int main (int argc, char ** argv)
   clock_t start, end0, end;
   start = clock ();
   int i;
-  for (i = 0; i < 10; i++) {
+  for (i = 0; i < 11; i++) {
     /* coarsening */
     restriction (m, n, var(h));
     wavelet (m, n, var(h), var(w));
@@ -38,23 +38,30 @@ int main (int argc, char ** argv)
   end = clock ();
   double cpu0 = ((double) (end0 - start))/CLOCKS_PER_SEC;
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
-  fprintf (stderr, "# " GRID " %d iterations\n", i);
-  fprintf (stderr, "initial coarsening: %6g CPU, %.3g points.steps/s\n",
-	   cpu0, (n*n/cpu0));
+  fprintf (stderr, "---- restriction + wavelet + coarsen_wavelet + flag_halo_cells ----\n");
   int leaves = 0, maxlevel = 0;
   foreach (m, n) { leaves++; if (level > maxlevel) maxlevel = level; } end_foreach();
   fprintf (stderr, "after coarsening: %d leaves, maximum level %d\n", leaves, maxlevel);
-  fprintf (stderr, "iterations:         %6g CPU, %.3g leaves.steps/s\n",
-	   cpu - cpu0, (leaves*(i - 1)/(cpu - cpu0)));
+  fprintf (stderr, "initial coarsening:  %6g CPU, %.3g points.steps/s\n",
+	   cpu0, n*n/cpu0);
+  fprintf (stderr, "%4d iterations:     %6g CPU, %.3g leaves.steps/s\n",
+	   i - 1, cpu - cpu0, leaves*(i - 1)/(cpu - cpu0));
 
-  FILE * fp = fopen("/tmp/halo", "w");
-  foreach_cell (m, n) {
-    if (!(cell.flags & halo))
-      continue;
-    else if (cell.flags & inactive)
-      fprintf (fp, "%g %g %d %d\n", x, y, level, cell.neighbors);
-  } end_foreach_cell();
-  fclose(fp);
+  int nhalos = 0;
+  foreach_halo(m, n) {
+    printf ("%g %g %d %d\n", x, y, level, cell.neighbors);
+    nhalos++;
+  } end_foreach_halo();
+
+  start = clock ();
+  for (i = 0; i < 100; i++)
+    update_halos (m, n, var(h), var(h));
+  end = clock ();
+  cpu = ((double) (end - start))/CLOCKS_PER_SEC;
+  fprintf (stderr, "---- update_halos ----\n");
+  fprintf (stderr, "%d halo points\n", nhalos);
+  fprintf (stderr, "%4d iterations:     %6g CPU, %.3g halos.steps/s\n",
+	   i, cpu, nhalos*i/cpu);
 
   free_grid (m);
 }

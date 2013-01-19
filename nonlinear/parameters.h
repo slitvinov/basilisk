@@ -1,5 +1,5 @@
 // number of grid points
-N = 64;
+N = 128;
 // size of the box
 L0 = 1.;
 // acceleration of gravity

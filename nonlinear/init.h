@@ -27,7 +27,7 @@ double h0 (double r) {
 
 double ** h1, ** e;
 
-void initial_conditions (Data * m, int n)
+void initial_conditions (void * m, int n)
 {
   h1 = matrix_new (n, n, sizeof (double));
   e = matrix_new (n, n, sizeof (double));
@@ -40,17 +40,17 @@ void initial_conditions (Data * m, int n)
 
 /* ------------------ Boundary conditions ------------------- */
 
-void boundary_h (Data * m, int n)
+void boundary_h (void * m, int n)
 {
   symmetry (m, n, var(h));
 }
 
-void boundary_b (Data * m, int n)
+void boundary_b (void * m, int n)
 {
   symmetry (m, n, var(b));
 }
 
-void boundary_ke_psi (Data * m, int n)
+void boundary_ke_psi (void * m, int n)
 {
   symmetry (m, n, var(ke));
 
@@ -63,14 +63,14 @@ void boundary_ke_psi (Data * m, int n)
   } end_foreach_boundary();
 }
 
-void boundary_u (Data * m, int n)
+void boundary_u (void * m, int n)
 {
   uv_symmetry (m, n, var(u), var(v));
 }
 
 /* ------------------ Output helper functions --------------- */
 
-double error (Data * m, int n)
+double error (void * m, int n)
 {
   double max = 0.;
   foreach (m, n) {
@@ -80,7 +80,7 @@ double error (Data * m, int n)
   return max;
 }
 
-double energy (Data * m, int n)
+double energy (void * m, int n)
 {
   double se = 0.;
   foreach (m, n)
@@ -89,7 +89,7 @@ double energy (Data * m, int n)
   return se*(L0/n)*(L0/n); /* fixme */
 }
 
-void output_field (Data * m, int n, FILE * fp)
+void output_field (void * m, int n, FILE * fp)
 {
   fprintf (fp, "# 1:x 2:y 3:F\n");
   int _n = n; /* fixme */

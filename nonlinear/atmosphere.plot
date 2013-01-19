@@ -46,6 +46,7 @@ unset grid
 set key title ""
 set key inside right top vertical Right noreverse enhanced autotitles nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
+unset key
 unset label
 unset arrow
 set style increment default
@@ -53,6 +54,7 @@ unset style line
 unset style arrow
 set style histogram clustered gap 2 title  offset character 0, 0, 0
 unset logscale
+set logscale y 10
 set offsets 0, 0, 0, 0
 set pointsize 1
 set encoding default
@@ -98,30 +100,30 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq  norangelimit
-set title "Error on interpolated halo values" 
+set title "Nonlinear geostrophic balance" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
 set timestamp  offset character 0, 0, 0 font "" norotate
 set rrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
 set trange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set urange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set vrange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set xlabel "Radius" 
+set urange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
+set vrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
+set xlabel "Time" 
 set xlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set x2label "" 
 set x2label  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set xrange [ * : * ] noreverse nowriteback  # (currently [0.00000:0.700000] )
-set x2range [ * : * ] noreverse nowriteback  # (currently [0.00000:0.700000] )
-set ylabel "Error" 
+set xrange [ * : * ] noreverse nowriteback  # (currently [0.00000:5.00000] )
+set x2range [ * : * ] noreverse nowriteback  # (currently [0.00000:4.97932] )
+set ylabel "Error on geopotential" 
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
-set yrange [ * : * ] noreverse nowriteback  # (currently [-0.000100000:0.000100000] )
-set y2range [ * : * ] noreverse nowriteback  # (currently [-8.30317e-05:8.53779e-05] )
+set yrange [ * : * ] noreverse nowriteback  # (currently [-5.00000:-4.00000] )
+set y2range [ * : * ] noreverse nowriteback  # (currently [-4.54835:-4.13021] )
 set zlabel "" 
 set zlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set zrange [ * : * ] noreverse nowriteback  # (currently [0.00000:0.0180000] )
+set zrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
 set cblabel "" 
 set cblabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set cbrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
@@ -141,13 +143,6 @@ set colorbox vertical origin screen 0.9, 0.2, 0 size screen 0.05, 0.6, 0 front b
 set loadpath 
 set fontpath 
 set fit noerrorvariables
-r(x,y)=sqrt(x*x+y*y)
-f(x)=exp(-(x*x)/(R0*R0))
-e(a,x,y)=a-f(r(x,y))
 GNUTERM = "wxt"
-R0 = 0.1
-GPFUN_r = "r(x,y)=sqrt(x*x+y*y)"
-GPFUN_f = "f(x)=exp(-(x*x)/(R0*R0))"
-GPFUN_e = "e(a,x,y)=a-f(r(x,y))"
-plot [0:0.7] '< awk "(\$3==10){print \$0}" /tmp/interp' u (r($1,$2)):($6) t 'level 10', '< awk "(\$3==9){print \$0}" /tmp/interp' u (r($1,$2)):($6) t 'level 9',      '< awk "(\$3==8){print \$0}" /tmp/interp' u (r($1,$2)):($6) t 'level 8',      '< awk "(\$3==7){print \$0}" /tmp/interp' u (r($1,$2)):($6) t 'level 7',      '< awk "(\$3==6){print \$0}" /tmp/interp' u (r($1,$2)):($6) t 'level 6',      '< awk "(\$3==5){print \$0}" /tmp/interp' u (r($1,$2)):($6) t 'level 5',      '< awk "(\$3==4){print \$0}" /tmp/interp' u (r($1,$2)):($6) t 'level 4'
+plot './atmosphere.log' u 2:3 w l
 #    EOF
