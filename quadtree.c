@@ -33,10 +33,19 @@ int mlevel (int n)
   return r;
 }
 
-#define CELL(p)   ((Cell *)p)
-#define cell       CELL(_m)[i*(_n + 2*GHOSTS) + j]
-#define parentcell CELL(_mc[level])[(i + GHOSTS)/2*(_n/2 + 2*GHOSTS) + (j + GHOSTS)/2]
-#define data(k,l)  CELL(_m)[(i + k)*(_n + 2*GHOSTS) + (j + l)].d
+/***** Quadtree macros ****/
+#define cell         _m[i*(_n + 2*GHOSTS) + j]
+#define aparent(k,l) _mc[((i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + (j+GHOSTS)/2+l]
+#define parent       aparent(0,0)
+#define child(k,l)   _mf[(2*i-GHOSTS+k)*2*(_n + GHOSTS) + (2*j-GHOSTS+l)]
+#define childx       (2*((i+GHOSTS)%2)-1)
+#define childy       (2*((j+GHOSTS)%2)-1)
+
+/***** Data macros *****/
+#define data(k,l)  _m[(i + k)*(_n + 2*GHOSTS) + (j + l)].d
+#define fine(a,k,l) field(child(k,l).d, a, double)
+#define coarse(a,k,l) field(aparent(k,l).d, a, double)
+#define foreach_fine(a,b) for (int a = 0; a < 2; a++) for (int b = 0; b < 2; b++)
 
 void * coarser_level (void * m, int n)
 {
@@ -47,12 +56,6 @@ void * finer_level (void * m, int n)
 {
   return (void *) (((char *)m) - sizeof(Cell)*4*(n + GHOSTS)*(n + GHOSTS));
 }
-
-#define finecell(k,l) CELL(_mf)[(2*i-GHOSTS+k)*2*(_n + GHOSTS) + (2*j-GHOSTS+l)]
-#define fine(a,k,l) field(finecell(k,l).d, a, double)
-#define foreach_fine(a,b) for (int a = 0; a < 2; a++) for (int b = 0; b < 2; b++)
-#define coarse stencil
-
 
 /* ===============================================================
  *                    Quadtree traversal
@@ -102,7 +105,7 @@ void traverse_recursive (void * m, int n)
     int depth = mlevel (n), _d = dir; NOT_UNUSED(_d);				   \
     assert (depth < STACKSIZE);						           \
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
-    void * _m = m, * _ml[STACKSIZE]; /* pointers on each level */	           \
+    Cell * _m = m, * _ml[STACKSIZE]; /* pointers on each level */	           \
     for (int i = depth; i >= 0; i--) {					           \
       _ml[i] = _m; _m = coarser_level (_m, 1 << i);			           \
     }									           \
@@ -112,8 +115,9 @@ void traverse_recursive (void * m, int n)
       pop (level, i, j, stage);						\
       switch (stage) {							\
       case 0: {								\
-        void * _m = _ml[level]; NOT_UNUSED(_m);				\
-        int _n = 1 << level; NOT_UNUSED(_n);				\
+        Cell * _m  = _ml[level];   NOT_UNUSED(_m);			\
+        Cell * _mc = _ml[level-1]; NOT_UNUSED(_mc);			\
+        int _n = 1 << level;       NOT_UNUSED(_n);			\
 	VARIABLES;							\
 	/* do something */
 #define end_foreach_boundary_cell()					\
@@ -153,23 +157,24 @@ void traverse_recursive (void * m, int n)
 #define foreach_cell_post(m,n,condition)				\
   {									\
     int depth = mlevel (n);						\
-    assert (depth < STACKSIZE);						           \
+    assert (depth < STACKSIZE - 1);					\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
-    void * _m = m, * _ml[STACKSIZE], * _mc[STACKSIZE]; /* pointers on each level */	\
+    Cell * _m = m, * _mls[STACKSIZE], ** _ml = _mls; /* pointers on each level */ \
+    _ml++;								\
     for (int i = depth; i >= 0; i--) {					\
       _ml[i] = _m; _m = coarser_level (_m, 1 << i);			\
-      _mc[i] = _m;							\
     }									\
-    Cell dummy;								\
-    _mc[0] = &dummy;							\
+    Cell _parent_of_root; /* so that there is no need to check */	\
+    _ml[-1] = &_parent_of_root;						\
     push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
     while (_s >= 0) {							\
       int level, i, j, stage;						\
       pop (level, i, j, stage);						\
       switch (stage) {							\
       case 0: {								\
-        void * _m = _ml[level]; NOT_UNUSED(_m);				\
-        int _n = 1 << level;    NOT_UNUSED(_n);				\
+        Cell * _m = _ml[level];    NOT_UNUSED(_m);			\
+        Cell * _mc = _ml[level-1]; NOT_UNUSED(_mc);			\
+        int _n = 1 << level;       NOT_UNUSED(_n);			\
 	VARIABLES;							\
 	if (condition) {						\
 	  if (level == depth)	{					\
@@ -186,8 +191,9 @@ void traverse_recursive (void * m, int n)
       case 2: push (level, i, j, 3); push (level + 1, _LEFT,  _BOTTOM, 0); break; \
       case 3: push (level, i, j, 4); push (level + 1, _RIGHT, _BOTTOM, 0); break; \
       case 4: {								       \
-        void * _m = _ml[level];    NOT_UNUSED(_m);				\
-        void * _mf = _ml[level+1]; NOT_UNUSED(_mf);				\
+        Cell * _m = _ml[level];    NOT_UNUSED(_m);				\
+        Cell * _mc = _ml[level-1]; NOT_UNUSED(_mc);			\
+        Cell * _mf = _ml[level+1]; NOT_UNUSED(_mf);				\
         int _n = 1 << level;       NOT_UNUSED(_n);				\
 	VARIABLES;							\
 	/* do something */
@@ -228,7 +234,8 @@ void * init_grid (int n)
     n /= 2;
     r++;
   }
-  void * m = calloc (_totalsize(r), sizeof (Cell)), * _m = m;
+  void * m = calloc (_totalsize(r), sizeof (Cell));
+  Cell * _m = m;
   int _n = 1 << r;
   for (int i = GHOSTS; i < _n + GHOSTS; i++)
     for (int j = GHOSTS; j < _n + GHOSTS; j++) {

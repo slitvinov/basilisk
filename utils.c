@@ -16,31 +16,31 @@ int IMAX = 1 << 30;
 // CFL number
 double CFL = 0.5;
 
-void symmetry (Data * m, int n, var v)
+void symmetry (void * m, int n, var v)
 {
-  foreach_boundary (m, n, right)  { stencil(v,+1,0) = val(v); } end_foreach_boundary();
-  foreach_boundary (m, n, left)   { stencil(v,-1,0) = val(v); } end_foreach_boundary();
-  foreach_boundary (m, n, top)    { stencil(v,0,+1) = val(v); } end_foreach_boundary();
-  foreach_boundary (m, n, bottom) { stencil(v,0,-1) = val(v); } end_foreach_boundary();  
+  foreach_boundary (m, n, right)  { val(v,+1,0) = val(v,0,0); } end_foreach_boundary();
+  foreach_boundary (m, n, left)   { val(v,-1,0) = val(v,0,0); } end_foreach_boundary();
+  foreach_boundary (m, n, top)    { val(v,0,+1) = val(v,0,0); } end_foreach_boundary();
+  foreach_boundary (m, n, bottom) { val(v,0,-1) = val(v,0,0); } end_foreach_boundary();  
 }
 
-void uv_symmetry (Data * m, int n, var u, var v)
+void uv_symmetry (void * m, int n, var u, var v)
 {
   foreach_boundary (m, n, right) {
-    stencil(u,+1,0) = 0.;
-    stencil(v,+1,0) = val(v);
+    val(u,+1,0) = 0.;
+    val(v,+1,0) = val(v,0,0);
   } end_foreach_boundary();
   foreach_boundary (m, n, left) {
-    stencil(u,-1,0) = 0.;
-    stencil(v,-1,0) = val(v);
+    val(u,-1,0) = 0.;
+    val(v,-1,0) = val(v,0,0);
   } end_foreach_boundary();
   foreach_boundary (m, n, top) {
-    stencil(v,0,+1) = 0.;
-    stencil(u,0,+1) = val(u);
+    val(v,0,+1) = 0.;
+    val(u,0,+1) = val(u,0,0);
   } end_foreach_boundary();
   foreach_boundary (m, n, bottom) {
-    stencil(v,0,-1) = 0.;
-    stencil(u,0,-1) = val(u);
+    val(v,0,-1) = 0.;
+    val(u,0,-1) = val(u,0,0);
   } end_foreach_boundary();
 }
 

@@ -26,7 +26,6 @@ typedef struct _Data Data;
 enum { right, left, top, bottom };
 
 #define field(data,offset,type) (*((type *)(((char *) &(data)) + (offset))))
-#define stencil(a,k,l) field(data(k,l), a, double)
 typedef size_t var;
 #define var(a) offsetof(Data,a)
-#define val(a) stencil(a,0,0)
+#define val(a,k,l) field(data(k,l), a, double)
