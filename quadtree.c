@@ -4,7 +4,7 @@
 #include <assert.h>
 
 typedef struct {
-  int flags;
+  char flags, neighbors;
   Data d;
 } Cell;
 
@@ -34,8 +34,9 @@ int mlevel (int n)
 }
 
 #define CELL(p)   ((Cell *)p)
-#define cell      CELL(_m)[i*(_n + 2*GHOSTS) + j]
-#define data(k,l) CELL(_m)[(i + k)*(_n + 2*GHOSTS) + (j + l)].d
+#define cell       CELL(_m)[i*(_n + 2*GHOSTS) + j]
+#define parentcell CELL(_mc[level])[(i + GHOSTS)/2*(_n/2 + 2*GHOSTS) + (j + GHOSTS)/2]
+#define data(k,l)  CELL(_m)[(i + k)*(_n + 2*GHOSTS) + (j + l)].d
 
 void * coarser_level (void * m, int n)
 {
@@ -92,9 +93,9 @@ void traverse_recursive (void * m, int n)
 
 #define STACKSIZE 20
 #define push(b,c,d,e) _s++;						\
-  stack[_s].l = b; stack[_s].i = c; stack[_s].j = d; stack[_s].stage = e;
+  { stack[_s].l = b; stack[_s].i = c; stack[_s].j = d; stack[_s].stage = e; }
 #define pop(b,c,d,e)							\
-  b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--;
+  { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--; }
 
 #define foreach_boundary_cell(m,n,dir)					\
   {									           \
@@ -154,10 +155,13 @@ void traverse_recursive (void * m, int n)
     int depth = mlevel (n);						\
     assert (depth < STACKSIZE);						           \
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
-    void * _m = m, * _ml[STACKSIZE]; /* pointers on each level */	           \
-    for (int i = depth; i >= 0; i--) {					           \
-      _ml[i] = _m; _m = coarser_level (_m, 1 << i);			           \
-    }									           \
+    void * _m = m, * _ml[STACKSIZE], * _mc[STACKSIZE]; /* pointers on each level */	\
+    for (int i = depth; i >= 0; i--) {					\
+      _ml[i] = _m; _m = coarser_level (_m, 1 << i);			\
+      _mc[i] = _m;							\
+    }									\
+    Cell dummy;								\
+    _mc[0] = &dummy;							\
     push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
     while (_s >= 0) {							\
       int level, i, j, stage;						\
@@ -167,10 +171,15 @@ void traverse_recursive (void * m, int n)
         void * _m = _ml[level]; NOT_UNUSED(_m);				\
         int _n = 1 << level;    NOT_UNUSED(_n);				\
 	VARIABLES;							\
-	if (level < depth && (condition)) {				\
-          push (level, i, j, 1);					\
-          push (level + 1, _LEFT, _TOP, 0);				       \
-        }								       \
+	if (condition) {						\
+	  if (level == depth)	{					\
+	    push (level, i, j, 4);					\
+	  }								\
+	  else {							\
+	    push (level, i, j, 1);					\
+	    push (level + 1, _LEFT, _TOP, 0);				\
+	  }								\
+	}								\
 	break;								       \
       }								               \
       case 1: push (level, i, j, 2); push (level + 1, _RIGHT, _TOP,    0); break; \
@@ -192,7 +201,8 @@ void traverse_recursive (void * m, int n)
 
 enum {
   leaf     = 1 << 0,
-  inactive = 1 << 1
+  inactive = 1 << 1,
+  halo     = 1 << 2
 };
 
 #define foreach_leaf(m,n)         foreach_cell(m,n) if (cell.flags & leaf) {
@@ -218,12 +228,20 @@ void * init_grid (int n)
     n /= 2;
     r++;
   }
-  void * _m = calloc (_totalsize(r), sizeof (Cell));
+  void * m = calloc (_totalsize(r), sizeof (Cell)), * _m = m;
   int _n = 1 << r;
   for (int i = GHOSTS; i < _n + GHOSTS; i++)
-    for (int j = GHOSTS; j < _n + GHOSTS; j++)
+    for (int j = GHOSTS; j < _n + GHOSTS; j++) {
       cell.flags |= leaf;
-  return _m;
+      cell.neighbors = (2*GHOSTS + 1)*(2*GHOSTS + 1);
+    }
+  while (_n > 1) {
+    _m = coarser_level (_m, _n); _n /= 2;
+    for (int i = GHOSTS; i < _n + GHOSTS; i++)
+      for (int j = GHOSTS; j < _n + GHOSTS; j++)
+	cell.neighbors = (2*GHOSTS + 1)*(2*GHOSTS + 1);
+  }
+  return m;
 }
 
 #define free_grid free
