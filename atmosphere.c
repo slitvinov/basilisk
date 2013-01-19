@@ -3,11 +3,13 @@
 struct _Data {
   double u, v, h, b, ke, psi;
   double un, vn, hn;
+  //  double un1, vn1, hn1;
 };
 
+#define h(k,l)    data(k,l).h
 #define u(k,l)    data(k,l).u
 #define v(k,l)    data(k,l).v
-#define h(k,l)    data(k,l).h
+
 #define b(k,l)    data(k,l).b
 #define ke(k,l)   data(k,l).ke
 #define psi(k,l)  data(k,l).psi
@@ -25,25 +27,25 @@ double F0 = 1.;
 // acceleration of gravity
 double G = 1.;
 
-void tracer_advection (void * m, int n, double dt)
+void advection_centered (void * m, int n, var f, var u, var v, var df)
 {
-  dt /= 2.*(L0/n); /* fixme */
+  double dx = L0/n; // fixme
   foreach (m, n)
-    hn(0,0) = h(0,0) + dt*((h(0,0) + h(-1,0))*u(0,0) - 
-			   (h(0,0) + h(1,0))*u(1,0) +
-			   (h(0,0) + h(0,-1))*v(0,0) - 
-			   (h(0,0) + h(0,1))*v(0,1));
+    val(df,0,0) = ((val(f,0,0) + val(f,-1,0))*val(u,0,0) - 
+		   (val(f,0,0) + val(f,1,0))*val(u,1,0) +
+		   (val(f,0,0) + val(f,0,-1))*val(v,0,0) - 
+		   (val(f,0,0) + val(f,0,1))*val(v,0,1))/(2.*dx);
   end_foreach();
 }
 
-void tracer_advection_upwind (void * m, int n, double dt)
+void advection_upwind (void * m, int n, var f, var u, var v, var df)
 {
-  dt /= (L0/n); /* fixme */
+  double dx = L0/n; // fixme
   foreach (m, n)
-    hn(0,0) = h(0,0) + dt*((u(0,0) < 0. ? h(0,0) : h(-1,0))*u(0,0) - 
-			   (u(1,0) > 0. ? h(0,0) : h(1,0))*u(1,0) +
-			   (v(0,0) < 0. ? h(0,0) : h(0,-1))*v(0,0) - 
-			   (v(0,1) > 0. ? h(0,0) : h(0,1))*v(0,1));
+    val(df,0,0) = ((val(u,0,0) < 0. ? val(f,0,0) : val(f,-1,0))*val(u,0,0) - 
+		   (val(u,1,0) > 0. ? val(f,0,0) : val(f,1,0))*val(u,1,0) +
+		   (val(v,0,0) < 0. ? val(f,0,0) : val(f,0,-1))*val(v,0,0) - 
+		   (val(v,0,1) > 0. ? val(f,0,0) : val(f,0,1))*val(v,0,1))/dx;
   end_foreach();
 }
 
@@ -70,40 +72,57 @@ double timestep (void * m, int n)
   return sqrt (dtmax)*CFL;
 }
 
-void momentum (void * m, int n, double dt)
+void momentum (void * m, int n, var u, var v, var h, var du, var dv)
 {
-  double dtg = dt*G/(L0/n); /* fixme */
-  double dtf = dt/4.;
+  double dx = L0/n; // fixme
   foreach (m, n) {
-    double g = h(0,0) + b(0,0) + ke(0,0);
+    double g = val(h,0,0) + b(0,0) + ke(0,0);
     double psiu = (psi(0,0) + psi(0,1))/2.;
-    un(0,0) = u(0,0)
-      - dtg*(g - h(-1,0) - b(-1,0) - ke(-1,0))
-      + dtf*(psiu + F0)*(v(0,0) + v(0,1) + v(-1,0) + v(-1,1));
+    val(du,0,0) = 
+      - G*(g - val(h,-1,0) - b(-1,0) - ke(-1,0))/dx
+      + (psiu + F0)*(val(v,0,0) + val(v,0,1) + val(v,-1,0) + val(v,-1,1))/4.;
     double psiv = (psi(0,0) + psi(1,0))/2.;
-    vn(0,0) = v(0,0)
-      - dtg*(g - h(0,-1) - b(0,-1) - ke(0,-1))
-      - dtf*(psiv + F0)*(u(0,0) + u(1,0) + u(0,-1) + u(1,-1));
+    val(dv,0,0) = 
+      - G*(g - val(h,0,-1) - b(0,-1) - ke(0,-1))/dx
+      - (psiv + F0)*(val(u,0,0) + val(u,1,0) + val(u,0,-1) + val(u,1,-1))/4.;
   } end_foreach();
 }
 
-void ke_psi (void * m, int n)
+void ke_psi (void * m, int n, var u, var v)
 {
   foreach (m, n) {
 #if 1
-    double uc = u(0,0) + u(1,0);
-    double vc = v(0,0) + v(0,1);
+    double uc = val(u,0,0) + val(u,1,0);
+    double vc = val(v,0,0) + val(v,0,1);
     ke(0,0) = (uc*uc + vc*vc)/8.;
 #else
-    double uc = u(0,0)*u(0,0) + u(1,0)*u(1,0);
-    double vc = v(0,0)*v(0,0) + v(0,1)*v(0,1);
+    double uc = val(u,0,0)*val(u,0,0) + val(u,1,0)*val(u,1,0);
+    double vc = val(v,0,0)*val(v,0,0) + val(v,0,1)*val(v,0,1);
     ke(0,0) = (uc + vc)/4.;
 #endif
-    psi(0,0) = (v(0,0) - v(-1,0) + u(0,-1) - u(0,0))/DX;
+    psi(0,0) = (val(v,0,0) - val(v,-1,0) + val(u,0,-1) - val(u,0,0))/DX;
   } end_foreach();
 }
 
+void advance (void * m, int n, var * f, var * df)
+{
+  var u = f[0], v = f[1], h = f[2];
+  var du = df[0], dv = df[1], dh = df[2];
+
+  advection_centered (m, n, h, u, v, dh);
+  momentum (m, n, u, v, h, du, dv);
+}
+
 #include "init.h"
+
+void update (void * m, int n, var * f)
+{
+  var u = f[0], v = f[1], h = f[2];
+  boundary_h (m, n, h);
+  boundary_u (m, n, u, v);
+  ke_psi (m, n, u, v);
+  boundary_ke_psi (m, n);
+}
 
 int main (int argc, char ** argv)
 {
@@ -115,9 +134,9 @@ int main (int argc, char ** argv)
   void * m = init_grid (n);
   initial_conditions (m, n);
   boundary_b (m, n);
-  boundary_h (m, n);
-  boundary_u (m, n);
-  ke_psi (m, n);
+  boundary_h (m, n, var(h));
+  boundary_u (m, n, var(u), var(v));
+  ke_psi (m, n, var(u), var(v));
   boundary_ke_psi (m, n);
 
   clock_t start, end;
@@ -125,17 +144,24 @@ int main (int argc, char ** argv)
   do {
     double dt = timestep (m, n);
     #include "output.h"
-    tracer_advection (m, n, dt);
-    foreach (m, n) { h(0,0) = hn(0,0); } end_foreach();
-    boundary_h (m, n);
-    momentum (m, n, dt);
+#if 1
+    advection_centered (m, n, var(h), var(u), var(v), var(hn));
+    foreach (m, n) { h(0,0) += hn(0,0)*dt; } end_foreach();
+    boundary_h (m, n, var(h));
+    momentum (m, n, var(u), var(v), var(h), var(un), var(vn));
     foreach (m, n) {
-      u(0,0) = un(0,0);
-      v(0,0) = vn(0,0);
+      u(0,0) += un(0,0)*dt;
+      v(0,0) += vn(0,0)*dt;
     } end_foreach();
-    boundary_u (m, n);
-    ke_psi (m, n);
+    boundary_u (m, n, var(u), var(v));
+    ke_psi (m, n, var(u), var(v));
     boundary_ke_psi (m, n);
+#else /* unstable! */
+    var f[3] =  { var(u), var(v), var(h) };
+    var df[2][3] = {{ var(un),  var(vn),  var(hn) },
+		    { var(un1), var(vn1), var(hn1) }};
+    runge_kutta (2, dt, m, n, 3, f, df, advance, update);
+#endif
     t += dt; i++;
   } while (t < TMAX && i < IMAX);
   end = clock ();

@@ -1,4 +1,5 @@
 #include <math.h>
+#include <assert.h>
 
 // Default parameters, do not change them!! edit parameters.h instead
 // number of grid points
@@ -44,6 +45,45 @@ void uv_symmetry (void * m, int n, var u, var v)
   } end_foreach_boundary();
 }
 
+void runge_kutta (int stages, double dt,
+		  void * m, int n, 
+		  int nv, var f[nv], var df[stages][nv], 
+		  void (* advance) (void * m, int n, var f[nv], var df[nv]),
+		  void (* update)  (void * m, int n, var f[nv]))
+{
+  switch (stages) {
+  case 1:
+    (* advance) (m, n, f, df[0]);
+    foreach (m, n)
+      for (int v = 0; v < nv; v++)
+	val(f[v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt;
+    end_foreach();
+    (* update) (m, n, f);
+    break;
+
+  case 2:
+    (* advance) (m, n, f, df[0]);
+    foreach (m, n)
+      for (int v = 0; v < nv; v++)
+	val(df[0][v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt/2.;
+    end_foreach();
+    (* update) (m, n, df[0]);
+
+    (* advance) (m, n, df[0], df[1]);
+    foreach (m, n)
+      for (int v = 0; v < nv; v++)
+	val(f[v],0,0) += val(df[1][v],0,0)*dt;
+    end_foreach();
+    (* update) (m, n, f);
+    break;
+
+  default:
+    /* not implemented yet */
+    assert(false);
+  }
+}
+
+
 void * matrix_new (int n, int p, int size)
 {
   int i;
@@ -62,4 +102,3 @@ void matrix_free (void * m)
   free (((void **) m)[0]);
   free (m);
 }
-

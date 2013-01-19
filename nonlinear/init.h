@@ -40,9 +40,9 @@ void initial_conditions (void * m, int n)
 
 /* ------------------ Boundary conditions ------------------- */
 
-void boundary_h (void * m, int n)
+void boundary_h (void * m, int n, var h)
 {
-  symmetry (m, n, var(h));
+  symmetry (m, n, h);
 }
 
 void boundary_b (void * m, int n)
@@ -63,9 +63,9 @@ void boundary_ke_psi (void * m, int n)
   } end_foreach_boundary();
 }
 
-void boundary_u (void * m, int n)
+void boundary_u (void * m, int n, var u, var v)
 {
-  uv_symmetry (m, n, var(u), var(v));
+  uv_symmetry (m, n, u, v);
 }
 
 /* ------------------ Output helper functions --------------- */
