@@ -23,7 +23,7 @@ int main (int argc, char ** argv)
   symmetry (m, n, var(h));
   
   clock_t start, end0, end;
-  start = clock ();
+  start = end0 = clock ();
   int i;
   for (i = 0; i < 31; i++) {
     /* coarsening */

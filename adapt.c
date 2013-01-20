@@ -3,18 +3,20 @@ int coarsen_wavelet (void * m, int n, var w, double max)
   int nc = 0;
   foreach_fine_to_coarse (m, n) {
     double error = 0.;
-    foreach_fine(k,l) {
-      double e = fabs(fine(w,k,l));
-      if (e > error)
-	error = e;
-    }
+    for (int k = 0; k < 2; k++)
+      for (int l = 0; l < 2; l++) {
+	double e = fabs(fine(w,k,l));
+	if (e > error)
+	  error = e;
+      }
     if (error < max) {
       /* coarsen */
+      free_children();
       cell.flags |= leaf;
       for (int k = 0; k < 2; k++)
 	for (int l = 0; l < 2; l++) {
-	  child(k,l).flags &= !leaf;
-	  child(k,l).flags |= inactive;
+	  child(k,l).flags &= ~leaf;
+	  child(k,l).flags &= ~active;
 #if 1
 	  /* trash the data */
 	  for (int v = 0; v < sizeof(Data)/sizeof(double); v++)
@@ -36,32 +38,42 @@ int coarsen_wavelet (void * m, int n, var w, double max)
 int flag_halo_cells (void * m, int n)
 {
   int nh = 0;
+
+  /* reset old halos first */
+  foreach_cell (m, n) {
+    if (!(cell.flags & halo))
+      continue;
+    else 
+      cell.flags &= ~halo;
+  } end_foreach_cell();
+
   /* from the bottom up */
-  foreach_cell_post (m, n, cell.neighbors > 0 || !(cell.flags & inactive)) {
-    if (cell.flags & inactive) {
+  foreach_cell_post (m, n, cell.neighbors > 0 || (cell.flags & active)) {
+    if (!(cell.flags & active)) {
       /* inactive and neighbors > 0 => this is a halo cell */
       cell.flags |= halo;
       /* propagate to parent */
       parent.flags |= halo;
       nh++;
     }
-    else if (cell.flags & halo)
+    else if ((cell.flags & halo) && level > 0)
       /* propagate to parent */
       parent.flags |= halo;
   } end_foreach_cell_post();
+
   return nh;
 }
 
 void update_halos (void * m, int n, var start, var end)
 {
   /* breadth-first traversal of halos from coarse to fine */
-  for (int l = 1; l <= mlevel(n); l++)
-    /* fixme: need to stop before mlevel(n) if there an't any halos */
+  /* fixme: we are not really allowed to access 'depth' */
+  for (int l = 0; l <= ((Quadtree *)m)->depth; l++)
     foreach_cell(m,n) {
       if (!(cell.flags & halo))
       	continue; /* no more halos, skip the rest of this branch */
       if (level == l) {
-	if (cell.flags & inactive)
+	if (!(cell.flags & active))
 	  /* bilinear interpolation from coarser level */
 	  for (var a = start; a <= end; a += sizeof(double)) /* for each variable */
 	    val(a,0,0) = 
@@ -76,5 +88,5 @@ void update_halos (void * m, int n, var start, var end)
 #define foreach_halo(m,n) foreach_cell(m,n) { \
   if (!(cell.flags & halo))		      \
     continue;				      \
-  else if (cell.flags & inactive) {
+  else if (!(cell.flags & active)) {
 #define end_foreach_halo()  }} end_foreach_cell();

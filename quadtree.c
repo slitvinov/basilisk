@@ -12,11 +12,14 @@ typedef struct {
   Data d;
 } Cell;
 
-typedef struct {
+typedef struct _Quadtree Quadtree;
+
+struct _Quadtree {
+  Quadtree * back; /* messy */
   Cell ** m;       /* the grids at each level */
   int depth;       /* the maximum depth of the tree */
   int i, j, level; /* the current cell index and level */
-} Quadtree;
+};
 
 size_t _size (size_t l)
 {
@@ -37,6 +40,8 @@ int mlevel (int n)
 #define child(k,l)   _q.m[_q.level+1][(2*_q.i-GHOSTS+k)*2*(_n + GHOSTS) + (2*_q.j-GHOSTS+l)]
 #define cell         _q.m[_q.level][_q.i*(_n + 2*GHOSTS) + _q.j]
 #define parent       aparent(0,0)
+#define alloc_children() { if (_q.level == _q.depth) alloc_layer(&_q); }
+#define free_children()
 
 /***** Quadtree variables *****/
 #define QUADTREE_VARIABLES \
@@ -48,11 +53,10 @@ int mlevel (int n)
 #define data(k,l)  _q.m[_q.level][(_q.i + k)*(_n + 2*GHOSTS) + (_q.j + l)].d
 #define fine(a,k,l) field(child(k,l).d, a, double)
 #define coarse(a,k,l) field(aparent(k,l).d, a, double)
-#define foreach_fine(a,b) for (int a = 0; a < 2; a++) for (int b = 0; b < 2; b++)
 
 /* ===============================================================
  *                    Quadtree traversal
- * traverse_recursive() below is for reference only. The macro
+ * recursive() below is for reference only. The macro
  * foreach_leaf() is a stack-based implementation of
  * traverse_recursive(). It is about 12% slower than the recursive
  * version and 60% slower than simple array traversal.
@@ -81,12 +85,6 @@ void recursive (void * m, int n, int i, int j, int nl)
     recursive (m, n, _RIGHT, _BOTTOM, nl);
   }
 }
-
-void traverse_recursive (void * m, int n)
-{
-  m = (void *) (((char *)m) +  sizeof(Cell)*(_totalsize(mlevel(n)) - _size(0)));
-  recursive (m, 1, GHOSTS, GHOSTS, n); /* level 0, central cell */
-}
 #endif
 
 #define STACKSIZE 20
@@ -97,7 +95,7 @@ void traverse_recursive (void * m, int n)
 
 #define foreach_boundary_cell(m,n,dir)					\
   {									\
-    Quadtree _q = *((Quadtree *)m);					\
+    Quadtree _q = *((Quadtree *)m); _q.back = ((Quadtree *)m);		\
     int _d = dir; NOT_UNUSED(_d);					\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
     push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
@@ -145,7 +143,7 @@ void traverse_recursive (void * m, int n)
 
 #define foreach_cell_post(m,n,condition)				\
   {									\
-    Quadtree _q = *((Quadtree *)m);					\
+    Quadtree _q = *((Quadtree *)m); _q.back = ((Quadtree *)m);		\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
     push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
     while (_s >= 0) {							\
@@ -182,9 +180,9 @@ void traverse_recursive (void * m, int n)
 /* ================== derived traversals ========================= */
 
 enum {
-  leaf     = 1 << 0,
-  inactive = 1 << 1,
-  halo     = 1 << 2
+  active = 1 << 0,
+  leaf   = 1 << 1,
+  halo   = 1 << 2
 };
 
 #define foreach_leaf(m,n)         foreach_cell(m,n) if (cell.flags & leaf) {
@@ -198,6 +196,17 @@ enum {
 
 #define foreach_fine_to_coarse(m,n) foreach_cell_post(m,n,!(cell.flags & leaf))
 #define end_foreach_fine_to_coarse() end_foreach_cell_post()
+
+void alloc_layer (Quadtree * _q)
+{
+  Quadtree * q = _q->back;
+  q->depth++; _q->depth++;
+  q->m = &(q->m[-1]);
+  q->m = realloc(q->m, sizeof (Cell *)*(q->depth + 2)); 
+  q->m = &(q->m[1]);
+  _q->m = q->m;
+  q->m[q->depth] = calloc (_size(q->depth), sizeof (Cell));
+}
 
 void * init_grid (int n)
 {
@@ -213,17 +222,19 @@ void * init_grid (int n)
     q->depth++;
   }
   q->m = malloc(sizeof (Cell *)*(q->depth + 2));
-  q->m[0] = malloc(sizeof(Cell)); q->m = &(q->m[1]); /* add a dummy grid at level -1 */
+  q->m[0] = NULL; q->m = &(q->m[1]); /* make sure we don't try to access level -1 */
   for (int l = 0; l <= q->depth; l++)
     q->m[l] = calloc (_size(l), sizeof (Cell));
   Quadtree _q = *q;
   for (_q.level = 0; _q.level < _q.depth; _q.level++)
     for (_q.i = GHOSTS; _q.i < (1 << _q.level) + GHOSTS; _q.i++)
-      for (_q.j = GHOSTS; _q.j < (1 << _q.level) + GHOSTS; _q.j++)
+      for (_q.j = GHOSTS; _q.j < (1 << _q.level) + GHOSTS; _q.j++) {
+	cell.flags |= active;
 	cell.neighbors = (2*GHOSTS + 1)*(2*GHOSTS + 1);
+      }
   for (_q.i = GHOSTS; _q.i < (1 << _q.level) + GHOSTS; _q.i++)
     for (_q.j = GHOSTS; _q.j < (1 << _q.level) + GHOSTS; _q.j++) {
-      cell.flags |= leaf;
+      cell.flags |= (leaf | active);
       cell.neighbors = (2*GHOSTS + 1)*(2*GHOSTS + 1);
     }
   return (void *) q;
@@ -234,8 +245,7 @@ void free_grid (void * m)
   Quadtree * q = m;
   for (int l = 0; l <= q->depth; l++)
     free (q->m[l]);
-  q->m--;
-  free(q->m[0]);
+  q->m = &(q->m[-1]);
   free(q->m);
   free(q);
 }
