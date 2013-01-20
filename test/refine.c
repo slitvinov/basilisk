@@ -11,32 +11,6 @@ struct _Data {
 #include "wavelet.c"
 #include "adapt.c"
 
-int refine (void * m, int n, var w, double max, var start, var end)
-{
-  int nf = 0;
-  foreach_leaf (m, n) {
-    if (fabs(val(w,0,0)) >= max) {
-      alloc_children();
-      cell.flags &= ~leaf;
-      for (int k = 0; k < 2; k++)
-	for (int l = 0; l < 2; l++) {
-	  assert(!(child(k,l).flags & active));
-	  child(k,l).flags |= (active | leaf);
-	  /* bilinear interpolation from coarser level */
-	  for (var a = start; a <= end; a += sizeof(double)) /* for each variable */
-	    fine(a,k,l) = 
-	      (9.*val(a,0,0) + 3.*(val(a,2*k-1,0) + val(a,0,2*l-1)) + val(a,2*k-1,2*l-1))/16.;
-	  /* update neighborhood */
-	  for (int o = -GHOSTS; o <= GHOSTS; o++)
-	    for (int p = -GHOSTS; p <= GHOSTS; p++)
-	      child(k+o,l+p).neighbors++;
-	}
-      nf++;
-    }
-  } end_foreach_leaf();
-  return nf;
-}
-
 void refineiter (void * m, int n)
 {
   for (int n = 0; n < 2; n++) {
@@ -50,7 +24,7 @@ void refineiter (void * m, int n)
     restriction (m, n, var(h));
     wavelet (m, n, var(h), var(w));
 
-    int nf = refine (m, n, var(w), 1e-2, var(h), var(h));
+    int nf = refine_wavelet (m, n, var(w), 1e-2, var(h), var(h));
     flag_halo_cells (m, n);
 
     fprintf (stderr, "refined %d cells\n", nf);
@@ -60,14 +34,8 @@ void refineiter (void * m, int n)
 
 int main (int argc, char ** argv)
 {
-  void * m = init_grid (1);
+  void * m = init_grid (16);
   int n = 1; /* not used anyway */
-
-  fprintf (stderr, "refine uniformly to 4 levels\n");
-  for (int l = 0; l < 4; l++) {
-    int nf = refine (m, n, var(w), 0., var(h), var(h));
-    fprintf (stderr, "refined %d cells\n", nf);
-  }
 
   refineiter (m, n);
 

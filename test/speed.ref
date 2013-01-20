@@ -1,7 +1,7 @@
 ---- restriction + wavelet + coarsen_wavelet + flag_halo_cells ----
 after coarsening: 149536 leaves, maximum level 10
-initial coarsening:    0.17 CPU, 6.17e+06 points.steps/s
-  30 iterations:       1.01 CPU, 4.44e+06 leaves.steps/s
+initial coarsening:    0.16 CPU, 6.55e+06 points.steps/s
+  30 iterations:       0.96 CPU, 4.67e+06 leaves.steps/s
 ---- update_halos ----
-13728 halo points
- 200 iterations:       0.84 CPU, 3.27e+06 halos.steps/s
+5668 halo points
+ 200 iterations:       0.52 CPU, 2.18e+06 halos.steps/s

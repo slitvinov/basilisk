@@ -14,14 +14,7 @@
 
 #define NOT_UNUSED(x) (x = x)
 
-#define VARIABLES \
-  double x  = XC(I), y  = YC(J); /* cell center */	\
-  double xu = XU(I), yu = YU(J); /* staggered u-coordinates */ \
-  double xv = XV(I), yv = YV(J); /* staggered v-coordinates */ \
-  /* we need this to avoid compiler warnings */	\
-  NOT_UNUSED(x);  NOT_UNUSED(y);		        \
-  NOT_UNUSED(xu); NOT_UNUSED(yu);                 \
-  NOT_UNUSED(xv); NOT_UNUSED(yv);
+#define VARIABLES
 
 typedef struct _Data Data;
 

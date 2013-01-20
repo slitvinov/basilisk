@@ -17,6 +17,16 @@ int IMAX = 1 << 30;
 // CFL number
 double CFL = 0.5;
 
+#undef VARIABLES
+#define VARIABLES \
+  double x  = XC(I), y  = YC(J); /* cell center */	\
+  double xu = XU(I), yu = YU(J); /* staggered u-coordinates */ \
+  double xv = XV(I), yv = YV(J); /* staggered v-coordinates */ \
+  /* we need this to avoid compiler warnings */	\
+  NOT_UNUSED(x);  NOT_UNUSED(y);		        \
+  NOT_UNUSED(xu); NOT_UNUSED(yu);                 \
+  NOT_UNUSED(xv); NOT_UNUSED(yv);
+
 void symmetry (void * m, int n, var v)
 {
   foreach_boundary (m, n, right)  { val(v,+1,0) = val(v,0,0); } end_foreach_boundary();

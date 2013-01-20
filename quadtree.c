@@ -15,9 +15,10 @@ typedef struct {
 typedef struct _Quadtree Quadtree;
 
 struct _Quadtree {
+  int depth;       /* the maximum depth of the tree */
+
   Quadtree * back; /* messy */
   Cell ** m;       /* the grids at each level */
-  int depth;       /* the maximum depth of the tree */
   int i, j, level; /* the current cell index and level */
 };
 
@@ -25,13 +26,6 @@ size_t _size (size_t l)
 {
   size_t n = (1 << l) + 2*GHOSTS;
   return n*n;
-}
-
-int mlevel (int n)
-{
-  int r = 0;
-  while (n > 1) { n /= 2; r++; }
-  return r;
 }
 
 /***** Quadtree macros ****/
@@ -208,35 +202,48 @@ void alloc_layer (Quadtree * _q)
   q->m[q->depth] = calloc (_size(q->depth), sizeof (Cell));
 }
 
+/* fixme: this needs to be merged with refine_wavelet() */
+int refine_quadtree (void * m)
+{
+  int nf = 0;
+  foreach_leaf (m, n) {
+    alloc_children();
+    cell.flags &= ~leaf;
+    for (int k = 0; k < 2; k++)
+      for (int l = 0; l < 2; l++) {
+	assert(!(child(k,l).flags & active));
+	child(k,l).flags |= (active | leaf);
+	/* update neighborhood */
+	for (int o = -GHOSTS; o <= GHOSTS; o++)
+	  for (int p = -GHOSTS; p <= GHOSTS; p++)
+	    child(k+o,l+p).neighbors++;
+      }
+    nf++;
+  } end_foreach_leaf();
+  return nf;
+}
+
 void * init_grid (int n)
 {
-  Quadtree * q = malloc(sizeof (Quadtree));
-  q->depth = 0;
+  int depth = 0;
   while (n > 1) {
     if (n % 2) {
       fprintf (stderr, "quadtree: N must be a power-of-two\n");
-      free(q);
       exit (1);
     }
     n /= 2;
-    q->depth++;
+    depth++;
   }
-  q->m = malloc(sizeof (Cell *)*(q->depth + 2));
+  Quadtree * q = malloc(sizeof (Quadtree));
+  q->depth = 0;
+  q->m = malloc(sizeof (Cell *)*2);
   q->m[0] = NULL; q->m = &(q->m[1]); /* make sure we don't try to access level -1 */
-  for (int l = 0; l <= q->depth; l++)
-    q->m[l] = calloc (_size(l), sizeof (Cell));
-  Quadtree _q = *q;
-  for (_q.level = 0; _q.level < _q.depth; _q.level++)
-    for (_q.i = GHOSTS; _q.i < (1 << _q.level) + GHOSTS; _q.i++)
-      for (_q.j = GHOSTS; _q.j < (1 << _q.level) + GHOSTS; _q.j++) {
-	cell.flags |= active;
-	cell.neighbors = (2*GHOSTS + 1)*(2*GHOSTS + 1);
-      }
-  for (_q.i = GHOSTS; _q.i < (1 << _q.level) + GHOSTS; _q.i++)
-    for (_q.j = GHOSTS; _q.j < (1 << _q.level) + GHOSTS; _q.j++) {
-      cell.flags |= (leaf | active);
-      cell.neighbors = (2*GHOSTS + 1)*(2*GHOSTS + 1);
-    }
+  q->m[0] = calloc (_size(0), sizeof (Cell));
+  /* initialise the root cell */
+  q->m[0][2 + 2*GHOSTS].flags |= (leaf | active);
+  q->m[0][2 + 2*GHOSTS].neighbors = 1; // only itself as neighbor
+  while (depth--)
+    refine_quadtree(q);
   return (void *) q;
 }
 
