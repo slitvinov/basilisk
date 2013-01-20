@@ -7,7 +7,6 @@ struct _Data {
 };
 #define h(k,l) data(k,l).h
 
-#include "utils.h"
 #include "quadtree.c"
 #include "utils.c"
 #include "wavelet.c"

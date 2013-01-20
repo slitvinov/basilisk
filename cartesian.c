@@ -1,5 +1,6 @@
 #define GRID "Cartesian grid"
 
+#include "utils.h"
 #include <stdlib.h>
 
 #define I (i - 1)

@@ -8,7 +8,6 @@ struct _Data {
 };
 #define h(k,l) data(k,l).h
 
-#include "utils.h"
 #include "quadtree.c"
 #include "utils.c"
 #include "wavelet.c"
@@ -26,7 +25,7 @@ int main (int argc, char ** argv)
   clock_t start, end0, end;
   start = clock ();
   int i;
-  for (i = 0; i < 11; i++) {
+  for (i = 0; i < 31; i++) {
     /* coarsening */
     restriction (m, n, var(h));
     wavelet (m, n, var(h), var(w));
@@ -54,7 +53,7 @@ int main (int argc, char ** argv)
   } end_foreach_halo();
 
   start = clock ();
-  for (i = 0; i < 100; i++)
+  for (i = 0; i < 200; i++)
     update_halos (m, n, var(h), var(h));
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;

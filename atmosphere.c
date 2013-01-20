@@ -17,7 +17,6 @@ struct _Data {
 #define vn(k,l)   data(k,l).vn
 #define hn(k,l)   data(k,l).hn
 
-#include "utils.h"
 #include "grid.c"
 #include "utils.c"
 

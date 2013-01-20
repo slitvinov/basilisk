@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#define GHOSTS 1        // number of ghost layers
+
 #define DX    (L0/_n)
 #define XC(i) ((i + 0.5)*DX + X0)
 #define YC(j) ((j + 0.5)*DX + X0)

@@ -7,7 +7,6 @@ struct _Data {
   double h, w;
 };
 
-#include "utils.h"
 #include "quadtree.c"
 #include "utils.c"
 #include "wavelet.c"
