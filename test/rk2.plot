@@ -149,5 +149,5 @@ R0 = 0.1
 GPFUN_r = "r(x,y)=sqrt(x*x+y*y)"
 GPFUN_f = "f(x)=exp(-(x*x)/(R0*R0))"
 GPFUN_e = "e(a,x,y)=a-f(r(x,y))"
-plot exp(-0.2*x)*sin(x), 'rk2.log' w p t '2nd order Runge-Kutta' lc 3 pt 7 ps 0.5
+plot exp(-0.2*x)*sin(x), 'rk2.vlog' w p t '2nd order Runge-Kutta' lc 3 pt 7 ps 0.5
 #    EOF
