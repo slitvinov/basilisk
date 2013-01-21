@@ -18,3 +18,5 @@ typedef size_t var;
 #define val(a,k,l) field(data(k,l), a, double)
 
 #define pi 3.14159265358979
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#define min(a,b) ((a) < (b) ? (a) : (b))

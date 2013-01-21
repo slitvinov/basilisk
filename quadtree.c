@@ -1,4 +1,4 @@
-#define GRID "Quadtree"
+#define GRIDNAME "Quadtree"
 
 #include <stdio.h>
 #include <assert.h>
@@ -202,6 +202,14 @@ enum {
 
 #define foreach_fine_to_coarse(grid) foreach_cell_post(grid,!(cell.flags & leaf))
 #define end_foreach_fine_to_coarse() end_foreach_cell_post()
+
+#define foreach_level(grid,l)      foreach_cell(grid) { \
+                                      if (level == l || cell.flags & leaf) {
+#define end_foreach_level()           continue; } } end_foreach_cell()
+
+#define foreach_boundary_level(grid,dir,l)   foreach_boundary(grid,dir) {	\
+                                             if (level == l || cell.flags & leaf) {
+#define end_foreach_boundary_level()         continue; } } end_foreach_boundary()
 
 void alloc_layer (Quadtree * point)
 {

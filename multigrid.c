@@ -1,11 +1,17 @@
-#define GRID "Multigrid"
+#define GRIDNAME "Multigrid"
 
 #include <stdio.h>
 #include "utils.h"
 
 #define GHOSTS 1        // number of ghost layers
-#define I (i - GHOSTS)
-#define J (j - GHOSTS)
+#define I (point.i - GHOSTS)
+#define J (point.j - GHOSTS)
+
+typedef struct {
+  Data ** d;
+  int level, depth;
+  int i, j, n;
+} Point;
 
 size_t _size (size_t l)
 {
@@ -13,59 +19,61 @@ size_t _size (size_t l)
   return n*n;
 }
 
-size_t _totalsize (int l)
-{
-  size_t s = 0;
-  while (l >= 0)
-    s += _size(l--);
-  return s;
-}
+/***** Multigrid variables and macros *****/
+#define aparent(k,l) point.d[point.level-1][((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) + \
+					    (point.j+GHOSTS)/2+l]
+#define child(k,l)   point.d[point.level+1][(2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) + \
+					    (2*point.j-GHOSTS+l)]
+#define MULTIGRID_VARIABLES						\
+  int    level = point.level;                                   NOT_UNUSED(level);   \
+  int    childx = 2*((point.i+GHOSTS)%2)-1;                     NOT_UNUSED(childx);  \
+  int    childy = 2*((point.j+GHOSTS)%2)-1;                     NOT_UNUSED(childy);
 
-int mlevel (int n)
-{
-  int r = 0;
-  while (n > 1) { n /= 2; r++; }
-  return r;
-}
+/***** Data macros *****/
+#define data(k,l)  point.d[point.level][(point.i + k)*(point.n + 2*GHOSTS) + point.j + l]
+#define fine(a,k,l) field(child(k,l), a, double)
+#define coarse(a,k,l) field(aparent(k,l), a, double)
 
-#define data(k,l) (((Data *)_m)[(i + k)*(_n + 2*GHOSTS) + (j + l)])
+#define foreach_level(grid,l) {						\
+  Point point = *((Point *)grid);					\
+  point.level = l; point.n = 1 << point.level;				\
+  double delta = 1./point.n; NOT_UNUSED(delta);				\
+  for (point.i = GHOSTS; point.i < point.n + GHOSTS; point.i++)		\
+    for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
+      MULTIGRID_VARIABLES						\
+      VARIABLES								\
 
-void * coarser_level (void * m, int n)
-{
-  return (void *) (((char *)m) + sizeof(Data)*(n + 2*GHOSTS)*(n + 2*GHOSTS));
-}
+#define end_foreach_level() }}
 
-void * finer_level (void * m, int n)
-{
-  return (void *) (((char *)m) - sizeof(Data)*4*(n + GHOSTS)*(n + GHOSTS));
-}
+#define foreach(grid) foreach_level(grid,point.depth)
+#define end_foreach() end_foreach_level()
 
-#define foreach(m,n) {					\
-  void * _m = m; int _n = n;				\
-  for (int i = GHOSTS; i < _n + GHOSTS; i++)		\
-    for (int j = GHOSTS; j < _n + GHOSTS; j++) {	\
-      VARIABLES
-#define end_foreach() }}
-
-#define foreach_boundary(m,n,d) {		 \
-  void * _m = m; int _n = n;			 \
-  for (int _k = 1; _k <= _n; _k++) {		 \
-    int i = d > left ? _k : d == right ? _n : 1; \
-    int j = d < top  ? _k : d == top   ? _n : 1; \
+#define foreach_boundary_level(grid,d,l) {				\
+  Point point = *((Point *)grid);					\
+  point.level = l; point.n = 1 << point.level;				\
+  double delta = 1./point.n;		NOT_UNUSED(delta);		\
+  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
+    point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS; \
+    point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS; \
+    MULTIGRID_VARIABLES							\
     VARIABLES
+
+#define end_foreach_boundary_level() }}
+
+#define foreach_boundary(grid,d) foreach_boundary_level(grid,d,point.depth)
 #define end_foreach_boundary() }}
 
-#define foreach_fine_to_coarse(m,n) {				\
-  void * _m = m, * _mf = _m;					\
-  _m = coarser_level (_m, n); int _n = (n)/2;			\
-  for (int level = mlevel(_n);					\
-       _n > 0;							\
-       _mf = _m, _m = coarser_level (_m, _n), _n /= 2, level--)	\
-    for (int i = GHOSTS; i < _n + GHOSTS; i++)			\
-      for (int j = GHOSTS; j < _n + GHOSTS; j++)
-#define end_foreach_fine_to_coarse() }
+#define foreach_fine_to_coarse(grid) {					\
+  Point point = *((Point *)grid);					\
+  point.level = point.depth - 1; point.n = 1 << point.level;		\
+  for (; point.level > 0; point.n /= 2, point.level--) {		\
+    double delta = 1./point.n;		NOT_UNUSED(delta);		\
+    for (point.i = GHOSTS; point.i < point.n + GHOSTS; point.i++)	\
+      for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
+        MULTIGRID_VARIABLES						\
+        VARIABLES
 
-#define fine(a,k,l) field(CELL(_mf)[(2*i-GHOSTS+k)*2*(_n + GHOSTS) + (2*j-GHOSTS+l)].d, a, double)
+#define end_foreach_fine_to_coarse() } } }
 
 void * init_grid (int n)
 {
@@ -78,8 +86,17 @@ void * init_grid (int n)
     n /= 2;
     r++;
   }
-  void * m = calloc (_totalsize(r), sizeof (Data));
+  Point * m = malloc(sizeof(Point));
+  m->depth = r;
+  m->d = malloc(sizeof(Point *)*(r + 1));
+  for (int l = 0; l <= r; l++)
+    m->d[l] = calloc (_size(l), sizeof (Data));
   return m;
 }
 
-#define free_grid free
+void free_grid (Point * grid)
+{
+  for (int l = 0; l <= grid->depth; l++)
+    free (grid->d[l]);
+  free(grid->d);
+}

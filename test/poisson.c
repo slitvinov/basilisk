@@ -4,15 +4,9 @@ struct _Data {
   double a, b, res, dp;
 };
 
-#include "quadtree.c"
+#include GRID // works with all "multigrid" grids i.e. quadtree.c or multigrid.c
 #include "utils.c"
 #include "wavelet.c"
-
-#define foreach_level(grid,l) foreach_cell(grid) { if (level == l || cell.flags & leaf) {
-#define end_foreach_level() continue; } } end_foreach_cell()
-#define foreach_boundary_level(grid,dir,l) foreach_boundary(grid,dir) {	\
-  if (level == l || cell.flags & leaf) {
-#define end_foreach_boundary_level() continue; } } end_foreach_boundary()
 
 void symmetry_level (void * grid, var v, int l)
 {
@@ -66,7 +60,8 @@ void cycle (void * grid, int depth, var a, var res, var dp, int nrelax)
 
 int main()
 {
-  void * grid = init_grid(64);
+  int depth = 6, nrelax = 4;
+  void * grid = init_grid(1 << depth);
   var a = var(a), b = var(b), res = var(res), dp = var(dp);
 
   foreach(grid) {
@@ -75,20 +70,22 @@ int main()
   
   residual (grid, a, b, res);
   for (int i = 0; i < 20; i++) {
-    cycle (grid, 6, a, res, dp, 4);
+    cycle (grid, depth, a, res, dp, nrelax);
     residual (grid, a, b, res);
     double max = 0.;
     foreach(grid) { if (fabs(val(res,0,0)) > max) max = fabs(val(res,0,0)); } end_foreach();
     fprintf (stderr, "%d %g\n", i, max);
   }
 
-  double max = 0.;
+  double max = -1e10, min = 1e10, avg = 0.;
+  int n = 0;
   foreach(grid) {
     double e = val(a,0,0) - cos(2.*pi*x)*cos(2.*pi*y);
-    if (fabs(e) > max) max = fabs(e);
+    if (e > max) max = e; else if (e < min) min = e;
+    avg += e; n++;
     printf ("%g %g %g %g %g %g\n", x, y, val(a,0,0), val(b,0,0), val(res,0,0), e);
   } end_foreach();
-  fprintf (stderr, "# max error %g\n", max);
+  fprintf (stderr, "# max error %g\n", max(fabs(max-avg/n),fabs(min-avg/n)));
 
   free_grid(grid);
 }

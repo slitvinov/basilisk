@@ -1,0 +1,16 @@
+1 0 GfsPoisson GfsBox GfsGEdge {} {
+  Refine 10
+  Init {} { Div = -8.*M_PI*M_PI*cos(2.*M_PI*x)*cos(2.*M_PI*y) }
+  ApproxProjectionParams { tolerance = 1e-100 nrelax = 4 nitermin = 20 }
+  Time { iend = 1 }
+  OutputErrorNorm { start = end } stderr {
+	v = P
+  } {
+	s = cos(2.*M_PI*x)*cos(2.*M_PI*y)
+	unbiased = 1
+	v = E
+  }
+  OutputProjectionStats { start = end } stderr
+#  OutputSimulation { start = end } stdout
+}
+GfsBox {}
