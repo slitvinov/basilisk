@@ -23,10 +23,10 @@ multigrid.log: multigrid.exe
 	-rm -f $*.png
 
 poisson.exe: poisson.c
-	$(CC) $(CFLAGS) -DGRID=\"quadtree.c\" $< -o $@ -lm
+	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"quadtree.c\" -x c - -o $@ -lm
 
 multigrid.exe: poisson.c
-	$(CC) $(CFLAGS) -DGRID=\"multigrid.c\" $< -o $@ -lm
+	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"multigrid.c\" -x c - -o $@ -lm
 
 clean:
 	rm -f *.d *.log *.vlog *.slog *.out *.png *.exe
