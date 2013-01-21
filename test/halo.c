@@ -13,20 +13,19 @@ struct _Data {
 
 int main (int argc, char ** argv)
 {
-  int n = 32;
-  void * m = init_grid (n);
+  void * grid = init_grid (32);
 
   double R0 = 0.1;
-  foreach (m, n) { data(0,0).h = exp(-(x*x + y*y)/(R0*R0)); } end_foreach();
-  symmetry (m, n, var(h));
+  foreach (grid) { data(0,0).h = exp(-(x*x + y*y)/(R0*R0)); } end_foreach();
+  symmetry (grid, var(h));
   
   /* initial coarsening */
-  restriction (m, n, var(h));
-  wavelet (m, n, var(h), var(w));
-  coarsen_wavelet (m, n, var(w), 1e-2);
-  flag_halo_cells (m, n);
+  restriction (grid, var(h));
+  wavelet (grid, var(h), var(w));
+  coarsen_wavelet (grid, var(w), 1e-2);
+  flag_halo_cells (grid);
 
-  foreach_cell (m, n) {
+  foreach_cell (grid) {
     fprintf (stderr, "%g %g %d %d traversed\n", x, y, level, cell.neighbors);
     printf ("%g %g %d %d 1\n", x, y, level, cell.neighbors);
     if (!(cell.flags & halo))
@@ -41,5 +40,5 @@ int main (int argc, char ** argv)
     }
   } end_foreach_cell();
 
-  free_grid (m);
+  free_grid (grid);
 }

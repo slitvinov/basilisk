@@ -4,20 +4,21 @@
 #include <assert.h>
 #include "utils.h"
 
-#define I (_q.i - GHOSTS)
-#define J (_q.j - GHOSTS)
+#define I (point.i - GHOSTS)
+#define J (point.j - GHOSTS)
 
 typedef struct {
   char flags, neighbors;
   Data d;
 } Cell;
 
+typedef struct _Quadtree Point;
 typedef struct _Quadtree Quadtree;
 
 struct _Quadtree {
   int depth;       /* the maximum depth of the tree */
 
-  Quadtree * back; /* messy */
+  Quadtree * back; /* back pointer to the "parent" quadtree */
   Cell ** m;       /* the grids at each level */
   int i, j, level; /* the current cell index and level */
 };
@@ -29,30 +30,34 @@ size_t _size (size_t l)
 }
 
 /***** Quadtree macros ****/
-#define _n (1 << _q.level)
-#define aparent(k,l) _q.m[_q.level-1][((_q.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + (_q.j+GHOSTS)/2+l]
-#define child(k,l)   _q.m[_q.level+1][(2*_q.i-GHOSTS+k)*2*(_n + GHOSTS) + (2*_q.j-GHOSTS+l)]
-#define cell         _q.m[_q.level][_q.i*(_n + 2*GHOSTS) + _q.j]
+#define _n (1 << point.level) /* fixme */
+#define aparent(k,l) point.m[point.level-1][((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
+					    (point.j+GHOSTS)/2+l]
+#define child(k,l)   point.m[point.level+1][(2*point.i-GHOSTS+k)*2*(_n + GHOSTS) + \
+					    (2*point.j-GHOSTS+l)]
+#define cell         point.m[point.level][point.i*(_n + 2*GHOSTS) + point.j]
 #define parent       aparent(0,0)
-#define alloc_children() { if (_q.level == _q.depth) alloc_layer(&_q); }
+#define alloc_children() { if (point.level == point.depth) alloc_layer(&point); }
 #define free_children()
 
 /***** Quadtree variables *****/
 #define QUADTREE_VARIABLES \
-  int  level = _q.level;                                   NOT_UNUSED(level);   \
-  int  childx = 2*((_q.i+GHOSTS)%2)-1;                     NOT_UNUSED(childx);  \
-  int  childy = 2*((_q.j+GHOSTS)%2)-1;                     NOT_UNUSED(childy);
+  int    level = point.level;                                   NOT_UNUSED(level);   \
+  int    childx = 2*((point.i+GHOSTS)%2)-1;                     NOT_UNUSED(childx);  \
+  int    childy = 2*((point.j+GHOSTS)%2)-1;                     NOT_UNUSED(childy);  \
+  double delta = 1./(1 << point.level);                         NOT_UNUSED(delta);   \
 
 /***** Data macros *****/
-#define data(k,l)  _q.m[_q.level][(_q.i + k)*(_n + 2*GHOSTS) + (_q.j + l)].d
+#define data(k,l)  point.m[point.level][(point.i + k)*(_n + 2*GHOSTS) +	\
+					(point.j + l)].d
 #define fine(a,k,l) field(child(k,l).d, a, double)
 #define coarse(a,k,l) field(aparent(k,l).d, a, double)
 
 /* ===============================================================
  *                    Quadtree traversal
  * recursive() below is for reference only. The macro
- * foreach_leaf() is a stack-based implementation of
- * traverse_recursive(). It is about 12% slower than the recursive
+ * foreach_cell() is a stack-based implementation of
+ * recursive(). It is about 12% slower than the recursive
  * version and 60% slower than simple array traversal.
  *
  * This article was useful:
@@ -60,9 +65,9 @@ size_t _size (size_t l)
  *
  * =============================================================== */
 
-#define _BOTTOM (2*_q.j - GHOSTS)
+#define _BOTTOM (2*point.j - GHOSTS)
 #define _TOP    (_BOTTOM + 1)
-#define _LEFT   (2*_q.i - GHOSTS)
+#define _LEFT   (2*point.i - GHOSTS)
 #define _RIGHT  (_LEFT + 1)
 
 #if 0
@@ -82,93 +87,100 @@ void recursive (void * m, int n, int i, int j, int nl)
 #endif
 
 #define STACKSIZE 20
-#define push(b,c,d,e) _s++;						\
+#define _push(b,c,d,e) _s++;						\
   { stack[_s].l = b; stack[_s].i = c; stack[_s].j = d; stack[_s].stage = e; }
-#define pop(b,c,d,e)							\
+#define _pop(b,c,d,e)							\
   { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--; }
 
-#define foreach_boundary_cell(m,n,dir)					\
+#define foreach_boundary_cell(grid,dir)					\
   {									\
-    Quadtree _q = *((Quadtree *)m); _q.back = ((Quadtree *)m);		\
+    Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
     int _d = dir; NOT_UNUSED(_d);					\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
-    push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
+    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
     while (_s >= 0) {							\
       int stage;							\
-      pop (_q.level, _q.i, _q.j, stage);				\
+      _pop (point.level, point.i, point.j, stage);			\
       switch (stage) {							\
       case 0: {								\
         QUADTREE_VARIABLES;						\
 	VARIABLES;							\
 	/* do something */
 #define end_foreach_boundary_cell()					\
-        if (_q.level < _q.depth) {					\
-	  push (_q.level, _q.i, _q.j, 1);				\
+      if (point.level < point.depth) {					\
+	  _push (point.level, point.i, point.j, 1);			\
 	  int k = _d > left ? _LEFT : _RIGHT - _d;			\
 	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;			\
-          push (_q.level + 1, k, l, 0);					\
+          _push (point.level + 1, k, l, 0);				\
         }								\
 	break;								\
       }								        \
       case 1: {								\
 	  int k = _d > left ? _RIGHT : _RIGHT - _d;			\
 	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;			\
-          push (_q.level + 1, k, l, 0);			                \
+          _push (point.level + 1, k, l, 0);				\
           break;                                                        \
         }								\
       }									\
     }                                                                   \
   }
 
-#define foreach_cell(m,n) foreach_boundary_cell(m,n,0)
+#define foreach_cell(grid) foreach_boundary_cell(grid,0)
 #define end_foreach_cell()						\
-      if (_q.level < _q.depth) {					\
-	  push (_q.level, _q.i, _q.j, 1);					\
-          push (_q.level + 1, _LEFT, _TOP, 0);				       \
-        }								       \
-	break;								       \
-      }								               \
-      case 1: push (_q.level, _q.i, _q.j, 2); push (_q.level + 1, _RIGHT, _TOP,    0); break; \
-      case 2: push (_q.level, _q.i, _q.j, 3); push (_q.level + 1, _LEFT,  _BOTTOM, 0); break; \
-      case 3:                                 push (_q.level + 1, _RIGHT, _BOTTOM, 0); break; \
-      }								               \
-    }                                                                          \
+      if (point.level < point.depth) {					\
+	  _push (point.level, point.i, point.j, 1);			\
+          _push (point.level + 1, _LEFT, _TOP, 0);			\
+      }									\
+      break;								\
+      }									\
+      case 1: _push (point.level, point.i, point.j, 2);			\
+              _push (point.level + 1, _RIGHT, _TOP,    0);	        \
+      break;							\
+      case 2: _push (point.level, point.i, point.j, 3);		\
+              _push (point.level + 1, _LEFT,  _BOTTOM, 0); break;	\
+      case 3:								\
+              _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;	\
+      }								\
+    }                                                                   \
   }
 
-#define foreach_cell_post(m,n,condition)				\
+#define foreach_cell_post(grid,condition)				\
   {									\
-    Quadtree _q = *((Quadtree *)m); _q.back = ((Quadtree *)m);		\
+    Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
-    push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
+    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
     while (_s >= 0) {							\
       int stage;							\
-      pop (_q.level, _q.i, _q.j, stage);				\
+      _pop (point.level, point.i, point.j, stage);			\
       switch (stage) {							\
       case 0: {								\
         QUADTREE_VARIABLES;						\
 	VARIABLES;							\
 	if (condition) {						\
-	  if (_q.level == _q.depth)	{				\
-	    push (_q.level, _q.i, _q.j, 4);				\
+	  if (point.level == point.depth)	{			\
+	    _push (point.level, point.i, point.j, 4);			\
 	  }								\
 	  else {							\
-	    push (_q.level, _q.i, _q.j, 1);				\
-	    push (_q.level + 1, _LEFT, _TOP, 0);			\
+	    _push (point.level, point.i, point.j, 1);			\
+	    _push (point.level + 1, _LEFT, _TOP, 0);			\
 	  }								\
 	}								\
-	break;								       \
-      }								               \
-      case 1: push (_q.level, _q.i, _q.j, 2); push (_q.level + 1, _RIGHT, _TOP,    0); break; \
-      case 2: push (_q.level, _q.i, _q.j, 3); push (_q.level + 1, _LEFT,  _BOTTOM, 0); break; \
-      case 3: push (_q.level, _q.i, _q.j, 4); push (_q.level + 1, _RIGHT, _BOTTOM, 0); break; \
-      case 4: {								       \
+	break;								\
+      }									\
+      case 1: _push (point.level, point.i, point.j, 2);                 \
+              _push (point.level + 1, _RIGHT, _TOP,    0); break;	\
+      case 2: _push (point.level, point.i, point.j, 3);                 \
+	      _push (point.level + 1, _LEFT,  _BOTTOM, 0); break;	\
+      case 3: _push (point.level, point.i, point.j, 4);                 \
+	      _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;	\
+      case 4: {								\
         QUADTREE_VARIABLES;						\
         VARIABLES;							\
 	/* do something */
 #define end_foreach_cell_post()						\
-      }									       \
-      }								               \
-    }                                                                          \
+      }									\
+      }								        \
+    }                                                                   \
   }
 
 /* ================== derived traversals ========================= */
@@ -179,34 +191,34 @@ enum {
   halo   = 1 << 2
 };
 
-#define foreach_leaf(m,n)         foreach_cell(m,n) if (cell.flags & leaf) {
+#define foreach_leaf(grid)        foreach_cell(grid) if (cell.flags & leaf) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
 
 #define foreach       foreach_leaf
 #define end_foreach   end_foreach_leaf
 
-#define foreach_boundary(m,n,dir) foreach_boundary_cell(m,n,dir)
+#define foreach_boundary(grid,dir) foreach_boundary_cell(grid,dir)
 #define end_foreach_boundary()    if (cell.flags & leaf) continue; end_foreach_boundary_cell()
 
-#define foreach_fine_to_coarse(m,n) foreach_cell_post(m,n,!(cell.flags & leaf))
+#define foreach_fine_to_coarse(grid) foreach_cell_post(grid,!(cell.flags & leaf))
 #define end_foreach_fine_to_coarse() end_foreach_cell_post()
 
-void alloc_layer (Quadtree * _q)
+void alloc_layer (Quadtree * point)
 {
-  Quadtree * q = _q->back;
-  q->depth++; _q->depth++;
+  Quadtree * q = point->back;
+  q->depth++; point->depth++;
   q->m = &(q->m[-1]);
   q->m = realloc(q->m, sizeof (Cell *)*(q->depth + 2)); 
   q->m = &(q->m[1]);
-  _q->m = q->m;
+  point->m = q->m;
   q->m[q->depth] = calloc (_size(q->depth), sizeof (Cell));
 }
 
 /* fixme: this needs to be merged with refine_wavelet() */
-int refine_quadtree (void * m)
+int refine_quadtree (Quadtree * quadtree)
 {
   int nf = 0;
-  foreach_leaf (m, n) {
+  foreach_leaf (quadtree) {
     alloc_children();
     cell.flags &= ~leaf;
     for (int k = 0; k < 2; k++)

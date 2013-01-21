@@ -4,14 +4,6 @@
 
 #define GHOSTS 1        // number of ghost layers
 
-#define DX    (L0/_n)
-#define XC(i) ((i + 0.5)*DX + X0)
-#define YC(j) ((j + 0.5)*DX + X0)
-#define XU(i) ((i)*DX + X0)
-#define YU(j) YC(j)
-#define XV(i) XC(i)
-#define YV(j) ((j)*DX + X0)
-
 #define NOT_UNUSED(x) (x = x)
 
 #define VARIABLES

@@ -16,21 +16,21 @@ struct _Data {
 int main (int argc, char ** argv)
 {
   int n = 1024;
-  void * m = init_grid (n);
+  void * grid = init_grid (n);
 
   double R0 = 0.1;
-  foreach (m, n) { h(0,0) = exp(-(x*x + y*y)/(R0*R0)); } end_foreach();
-  symmetry (m, n, var(h));
+  foreach (grid) { h(0,0) = exp(-(x*x + y*y)/(R0*R0)); } end_foreach();
+  symmetry (grid, var(h));
   
   clock_t start, end0, end;
   start = end0 = clock ();
   int i;
   for (i = 0; i < 31; i++) {
     /* coarsening */
-    restriction (m, n, var(h));
-    wavelet (m, n, var(h), var(w));
-    coarsen_wavelet (m, n, var(w), 1e-5);
-    flag_halo_cells (m, n);
+    restriction (grid, var(h));
+    wavelet (grid, var(h), var(w));
+    coarsen_wavelet (grid, var(w), 1e-5);
+    flag_halo_cells (grid);
     if (i == 0)
       end0 = clock();
   }
@@ -39,7 +39,7 @@ int main (int argc, char ** argv)
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "---- restriction + wavelet + coarsen_wavelet + flag_halo_cells ----\n");
   int leaves = 0, maxlevel = 0;
-  foreach (m, n) { leaves++; if (level > maxlevel) maxlevel = level; } end_foreach();
+  foreach (grid) { leaves++; if (level > maxlevel) maxlevel = level; } end_foreach();
   fprintf (stderr, "after coarsening: %d leaves, maximum level %d\n", leaves, maxlevel);
   fprintf (stderr, "initial coarsening:  %6g CPU, %.3g points.steps/s\n",
 	   cpu0, n*n/cpu0);
@@ -47,14 +47,14 @@ int main (int argc, char ** argv)
 	   i - 1, cpu - cpu0, leaves*(i - 1)/(cpu - cpu0));
 
   int nhalos = 0;
-  foreach_halo(m, n) {
+  foreach_halo(grid) {
     printf ("%g %g %d %d\n", x, y, level, cell.neighbors);
     nhalos++;
   } end_foreach_halo();
 
   start = clock ();
   for (i = 0; i < 200; i++)
-    update_halos (m, n, var(h), var(h));
+    update_halos (grid, var(h), var(h));
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "---- update_halos ----\n");
@@ -62,5 +62,5 @@ int main (int argc, char ** argv)
   fprintf (stderr, "%4d iterations:     %6g CPU, %.3g halos.steps/s\n",
 	   i, cpu, nhalos*i/cpu);
 
-  free_grid (m);
+  free_grid (grid);
 }

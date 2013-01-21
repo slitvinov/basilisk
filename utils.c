@@ -17,6 +17,14 @@ int IMAX = 1 << 30;
 // CFL number
 double CFL = 0.5;
 
+#define DX    (L0*delta)
+#define XC(i) ((i + 0.5)*DX + X0)
+#define YC(j) ((j + 0.5)*DX + X0)
+#define XU(i) ((i)*DX + X0)
+#define YU(j) YC(j)
+#define XV(i) XC(i)
+#define YV(j) ((j)*DX + X0)
+
 #undef VARIABLES
 #define VARIABLES \
   double x  = XC(I), y  = YC(J); /* cell center */	\
@@ -27,88 +35,68 @@ double CFL = 0.5;
   NOT_UNUSED(xu); NOT_UNUSED(yu);                 \
   NOT_UNUSED(xv); NOT_UNUSED(yv);
 
-void symmetry (void * m, int n, var v)
+void symmetry (void * grid, var v)
 {
-  foreach_boundary (m, n, right)  { val(v,+1,0) = val(v,0,0); } end_foreach_boundary();
-  foreach_boundary (m, n, left)   { val(v,-1,0) = val(v,0,0); } end_foreach_boundary();
-  foreach_boundary (m, n, top)    { val(v,0,+1) = val(v,0,0); } end_foreach_boundary();
-  foreach_boundary (m, n, bottom) { val(v,0,-1) = val(v,0,0); } end_foreach_boundary();  
+  foreach_boundary (grid, right)  { val(v,+1,0) = val(v,0,0); } end_foreach_boundary();
+  foreach_boundary (grid, left)   { val(v,-1,0) = val(v,0,0); } end_foreach_boundary();
+  foreach_boundary (grid, top)    { val(v,0,+1) = val(v,0,0); } end_foreach_boundary();
+  foreach_boundary (grid, bottom) { val(v,0,-1) = val(v,0,0); } end_foreach_boundary();  
 }
 
-void uv_symmetry (void * m, int n, var u, var v)
+void uv_symmetry (void * grid, var u, var v)
 {
-  foreach_boundary (m, n, right) {
+  foreach_boundary (grid, right) {
     val(u,+1,0) = 0.;
     val(v,+1,0) = val(v,0,0);
   } end_foreach_boundary();
-  foreach_boundary (m, n, left) {
+  foreach_boundary (grid, left) {
     val(u,-1,0) = 0.;
     val(v,-1,0) = val(v,0,0);
   } end_foreach_boundary();
-  foreach_boundary (m, n, top) {
+  foreach_boundary (grid, top) {
     val(v,0,+1) = 0.;
     val(u,0,+1) = val(u,0,0);
   } end_foreach_boundary();
-  foreach_boundary (m, n, bottom) {
+  foreach_boundary (grid, bottom) {
     val(v,0,-1) = 0.;
     val(u,0,-1) = val(u,0,0);
   } end_foreach_boundary();
 }
 
 void runge_kutta (int stages, double dt,
-		  void * m, int n, 
+		  void * grid, 
 		  int nv, var f[nv], var df[stages][nv], 
-		  void (* advance) (void * m, int n, var f[nv], var df[nv]),
-		  void (* update)  (void * m, int n, var f[nv]))
+		  void (* advance) (void * grid, var f[nv], var df[nv]),
+		  void (* update)  (void * grid, var f[nv]))
 {
   switch (stages) {
   case 1:
-    (* advance) (m, n, f, df[0]);
-    foreach (m, n)
+    (* advance) (grid, f, df[0]);
+    foreach (grid)
       for (int v = 0; v < nv; v++)
 	val(f[v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt;
     end_foreach();
-    (* update) (m, n, f);
+    (* update) (grid, f);
     break;
 
   case 2:
-    (* advance) (m, n, f, df[0]);
-    foreach (m, n)
+    (* advance) (grid, f, df[0]);
+    foreach (grid)
       for (int v = 0; v < nv; v++)
 	val(df[0][v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt/2.;
     end_foreach();
-    (* update) (m, n, df[0]);
+    (* update) (grid, df[0]);
 
-    (* advance) (m, n, df[0], df[1]);
-    foreach (m, n)
+    (* advance) (grid, df[0], df[1]);
+    foreach (grid)
       for (int v = 0; v < nv; v++)
 	val(f[v],0,0) += val(df[1][v],0,0)*dt;
     end_foreach();
-    (* update) (m, n, f);
+    (* update) (grid, f);
     break;
 
   default:
     /* not implemented yet */
     assert(false);
   }
-}
-
-
-void * matrix_new (int n, int p, int size)
-{
-  int i;
-  void ** m;
-  char * a;
-  
-  m = malloc (n*sizeof (void **));
-  a = malloc (n*p*size);
-  for (i = 0; i < n; i++)
-    m[i] = a + i*p*size;
-  return (void *) m;
-}
-
-void matrix_free (void * m)
-{
-  free (((void **) m)[0]);
-  free (m);
 }

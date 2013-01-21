@@ -25,71 +25,69 @@ double h0 (double r) {
   return result;
 }
 
-double ** h1, ** e;
-
-void initial_conditions (void * m, int n)
+void initial_conditions (void * grid)
 {
-  h1 = matrix_new (n, n, sizeof (double));
-  e = matrix_new (n, n, sizeof (double));
-  foreach (m, n) {
-    h1[I][J] = h(0,0) = (H0 + h0(sqrt (x*x + y*y)));
-    u(0,0) = - vtheta(sqrt (xu*xu + yu*yu))*yu/sqrt (xu*xu + yu*yu);
-    v(0,0) = vtheta(sqrt (xv*xv + yv*yv))*xv/sqrt (xv*xv + yv*yv);
+  var h1 = var(h1);
+  foreach (grid) {
+    val(h1,0,0) = val(h,0,0) = (H0 + h0(sqrt (x*x + y*y)));
+    val(u,0,0)  = - vtheta(sqrt (xu*xu + yu*yu))*yu/sqrt (xu*xu + yu*yu);
+    val(v,0,0)  =   vtheta(sqrt (xv*xv + yv*yv))*xv/sqrt (xv*xv + yv*yv);
   } end_foreach();
 }
 
 /* ------------------ Boundary conditions ------------------- */
 
-void boundary_h (void * m, int n, var h)
+void boundary_h (void * grid, var h)
 {
-  symmetry (m, n, h);
+  symmetry (grid, h);
 }
 
-void boundary_b (void * m, int n)
+void boundary_b (void * grid)
 {
-  symmetry (m, n, var(b));
+  symmetry (grid, b);
 }
 
-void boundary_ke_psi (void * m, int n)
+void boundary_ke_psi (void * grid)
 {
-  symmetry (m, n, var(ke));
+  symmetry (grid, ke);
 
-  double dx = L0/n;
-  foreach_boundary (m, n, top) {
-    psi(0,1) = (v(0,1) - v(-1,1) + u(0,0) - u(0,1))/dx;    
+  foreach_boundary (grid, top) {
+    val(psi,0,1) = (val(v,0,1) - val(v,-1,1) + val(u,0,0) - val(u,0,1))/(L0*delta);
   } end_foreach_boundary();
-  foreach_boundary (m, n, right) {
-    psi(1,0) = (v(1,0) - v(0,0) + u(1,-1) - u(1,0))/dx;
+  foreach_boundary (grid, right) {
+    val(psi,1,0) = (val(v,1,0) - val(v,0,0) + val(u,1,-1) - val(u,1,0))/(L0*delta);
   } end_foreach_boundary();
 }
 
-void boundary_u (void * m, int n, var u, var v)
+void boundary_u (void * grid, var u, var v)
 {
-  uv_symmetry (m, n, u, v);
+  uv_symmetry (grid, u, v);
 }
 
 /* ------------------ Output helper functions --------------- */
 
-double error (void * m, int n)
+double error (void * grid)
 {
+  var e = var(e), h1 = var(h1);
   double max = 0.;
-  foreach (m, n) {
-    e[I][J] = fabs (h1[I][J]  - h(0,0));
-    if (e[I][J] > max) max = e[I][J];
+  foreach (grid) {
+    val(e,0,0) = fabs (val(h1,0,0)  - val(h,0,0));
+    if (val(e,0,0) > max) max = val(e,0,0);
   } end_foreach();
   return max;
 }
 
-double energy (void * m, int n)
+double energy (void * grid)
 {
   double se = 0.;
-  foreach (m, n)
-    se += h(0,0)*ke(0,0) + G*(h(0,0) - H0)*(h(0,0) - H0)/2.;
+  foreach (grid)
+    se += val(h,0,0)*val(ke,0,0) + G*(val(h,0,0) - H0)*(val(h,0,0) - H0)/2.*delta*delta;
   end_foreach();
-  return se*(L0/n)*(L0/n); /* fixme */
+  return se*L0*L0;
 }
 
-void output_field (void * m, int n, FILE * fp)
+#if 0
+void output_field (void * grid, FILE * fp)
 {
   fprintf (fp, "# 1:x 2:y 3:F\n");
   int _n = n; /* fixme */
@@ -99,3 +97,4 @@ void output_field (void * m, int n, FILE * fp)
     fprintf (fp, "\n");
   }
 }
+#endif

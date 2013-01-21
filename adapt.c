@@ -1,7 +1,7 @@
-int coarsen_wavelet (void * m, int n, var w, double max)
+int coarsen_wavelet (Quadtree * quadtree, var w, double max)
 {
   int nc = 0;
-  foreach_fine_to_coarse (m, n) {
+  foreach_fine_to_coarse (quadtree) {
     double error = 0.;
     for (int k = 0; k < 2; k++)
       for (int l = 0; l < 2; l++) {
@@ -36,10 +36,10 @@ int coarsen_wavelet (void * m, int n, var w, double max)
 }
 
 /* fixme: this needs to be merge with refine() in quadtree.c */
-int refine_wavelet (void * m, int n, var w, double max, var start, var end)
+int refine_wavelet (Quadtree * quadtree, var w, double max, var start, var end)
 {
   int nf = 0;
-  foreach_leaf (m, n) {
+  foreach_leaf (quadtree) {
     if (fabs(val(w,0,0)) >= max) {
       alloc_children();
       cell.flags &= ~leaf;
@@ -62,12 +62,12 @@ int refine_wavelet (void * m, int n, var w, double max, var start, var end)
   return nf;
 }
 
-int flag_halo_cells (void * m, int n)
+int flag_halo_cells (Quadtree * quadtree)
 {
   int nh = 0;
 
   /* reset old halos first */
-  foreach_cell (m, n) {
+  foreach_cell (quadtree) {
     if (!(cell.flags & halo))
       continue;
     else 
@@ -75,7 +75,7 @@ int flag_halo_cells (void * m, int n)
   } end_foreach_cell();
 
   /* from the bottom up */
-  foreach_cell_post (m, n, cell.neighbors > 0 || (cell.flags & active)) {
+  foreach_cell_post (quadtree, cell.neighbors > 0 || (cell.flags & active)) {
     if (!(cell.flags & active)) {
       /* inactive and neighbors > 0 => this is a halo cell */
       cell.flags |= halo;
@@ -91,12 +91,11 @@ int flag_halo_cells (void * m, int n)
   return nh;
 }
 
-void update_halos (void * m, int n, var start, var end)
+void update_halos (Quadtree * quadtree, var start, var end)
 {
   /* breadth-first traversal of halos from coarse to fine */
-  /* fixme: we are not really allowed to access 'depth' */
-  for (int l = 0; l <= ((Quadtree *)m)->depth; l++)
-    foreach_cell(m,n) {
+  for (int l = 0; l <= quadtree->depth; l++)
+    foreach_cell (quadtree) {
       if (!(cell.flags & halo))
       	continue; /* no more halos, skip the rest of this branch */
       if (level == l) {
@@ -112,7 +111,7 @@ void update_halos (void * m, int n, var start, var end)
     } end_foreach_cell();
 }
 
-#define foreach_halo(m,n) foreach_cell(m,n) { \
+#define foreach_halo(quadtree) foreach_cell(quadtree) { \
   if (!(cell.flags & halo))		      \
     continue;				      \
   else if (!(cell.flags & active)) {
