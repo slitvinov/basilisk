@@ -1,7 +1,7 @@
 VALGRIND = valgrind -q --tool=memcheck
 CFLAGS += -I$(HOME)/local/src/atmosphere -std=c99 -g -O2 -Wall -MD
 
-all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log multigrid.log
+all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log
 
 pictures: halo.png speed.png interp.png refine.png rk2.png poisson.png
 
@@ -11,6 +11,16 @@ pictures: halo.png speed.png interp.png refine.png rk2.png poisson.png
 -include refine.d
 -include rk2.d
 -include poisson.d
+
+poisson.log: poisson.exe multigrid.log
+	./$< 9 2> $@ > $*.out
+	diff $@ $*.ref
+	-rm -f $*.png
+
+multigrid.log: multigrid.exe
+	./$< 9 2> $@ > $*.out
+	diff $@ $*.ref
+	-rm -f $*.png
 
 poisson.exe: poisson.c
 	$(CC) $(CFLAGS) -DGRID=\"quadtree.c\" $< -o $@ -lm

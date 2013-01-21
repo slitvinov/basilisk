@@ -1,4 +1,6 @@
 #include <math.h>
+#include <stdlib.h>
+#include <time.h>
 
 struct _Data {
   double a, b, res, dp;
@@ -58,23 +60,31 @@ void cycle (void * grid, int depth, var a, var res, var dp, int nrelax)
   symmetry (grid, a);
 }
 
-int main()
+int main(int argc, char ** argv)
 {
-  int depth = 6, nrelax = 4;
+  int depth = atoi(argv[1]), nrelax = 4;
   void * grid = init_grid(1 << depth);
   var a = var(a), b = var(b), res = var(res), dp = var(dp);
 
   foreach(grid) {
     val(b,0,0) = -8.*pi*pi*cos(2.*pi*x)*cos(2.*pi*y);
   } end_foreach();
-  
+
+  #define NITER 20
+  clock_t start = clock(), iter[NITER];
+  double maxres[NITER];
   residual (grid, a, b, res);
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < NITER; i++) {
     cycle (grid, depth, a, res, dp, nrelax);
     residual (grid, a, b, res);
     double max = 0.;
     foreach(grid) { if (fabs(val(res,0,0)) > max) max = fabs(val(res,0,0)); } end_foreach();
-    fprintf (stderr, "%d %g\n", i, max);
+    iter[i] = clock();
+    maxres[i] = max;
+  }
+  for (int i = 0; i < NITER; i++) {  
+    fprintf (stderr, "%d %g\n", i, maxres[i]);
+    printf ("%d %g %g\n", i, (iter[i] - start)/(double)CLOCKS_PER_SEC, maxres[i]);
   }
 
   double max = -1e10, min = 1e10, avg = 0.;
@@ -83,9 +93,8 @@ int main()
     double e = val(a,0,0) - cos(2.*pi*x)*cos(2.*pi*y);
     if (e > max) max = e; else if (e < min) min = e;
     avg += e; n++;
-    printf ("%g %g %g %g %g %g\n", x, y, val(a,0,0), val(b,0,0), val(res,0,0), e);
   } end_foreach();
-  fprintf (stderr, "# max error %g\n", max(fabs(max-avg/n),fabs(min-avg/n)));
+  fprintf (stderr, "max error %g\n", max(fabs(max-avg/n),fabs(min-avg/n)));
 
   free_grid(grid);
 }

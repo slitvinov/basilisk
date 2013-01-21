@@ -33,7 +33,7 @@ set timefmt y2 "%d/%m/%y,%H:%M"
 set timefmt cb "%d/%m/%y,%H:%M"
 set boxwidth
 set style fill  empty border
-set style rectangle back fc lt -3 fillstyle   solid 1.00 border lt -1
+set style rectangle back fc  lt -3 fillstyle   solid 1.00 border lt -1
 set dummy x,y
 set format x "% g"
 set format y "% g"
@@ -49,7 +49,6 @@ set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
 set key title ""
 set key inside right top vertical Right noreverse enhanced autotitles nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
-unset key
 unset label
 unset arrow
 set style increment default
@@ -103,7 +102,7 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq  norangelimit
-set title "Solution of Laplacian(X) = -8.*pi*pi*cos(2.*pi*x)*cos(2.*pi*y)" 
+set title "Solution of Lap(X) = -8.*pi*pi*cos(2.*pi*x)*cos(2.*pi*y)\n512 x 512 uniform grid" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
@@ -112,21 +111,21 @@ set rrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e
 set trange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set urange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set vrange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set xlabel "Multigrid iterations" 
+set xlabel "CPU time" 
 set xlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set x2label "" 
 set x2label  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set xrange [ * : * ] noreverse nowriteback  # (currently [0.00000:20.0000] )
-set x2range [ * : * ] noreverse nowriteback  # (currently [0.00000:19.0000] )
+set xrange [ * : * ] noreverse nowriteback  # (currently [0.00000:3.00000] )
+set x2range [ * : * ] noreverse nowriteback  # (currently [0.0400000:2.94000] )
 set ylabel "Maximum residual" 
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
-set yrange [ * : * ] noreverse nowriteback  # (currently [-12.0000:2.00000] )
-set y2range [ * : * ] noreverse nowriteback  # (currently [-11.2563:1.76978] )
+set yrange [ * : * ] noreverse nowriteback  # (currently [-8.00000:4.00000] )
+set y2range [ * : * ] noreverse nowriteback  # (currently [-7.93887:3.38202] )
 set zlabel "" 
 set zlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set zrange [ * : * ] noreverse nowriteback  # (currently [-0.00640000:-0.00460000] )
+set zrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
 set cblabel "" 
 set cblabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set cbrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
@@ -154,5 +153,5 @@ R0 = 0.1
 GPFUN_r = "r(x,y)=sqrt(x*x+y*y)"
 GPFUN_f = "f(x)=exp(-(x*x)/(R0*R0))"
 GPFUN_e = "e(a,x,y)=a-f(r(x,y))"
-plot './poisson.log' u 1:2 w lp
+plot './poisson.out' u 2:3 w lp t 'quadtree', './multigrid.out' u 2:3 w lp t 'multigrid'
 #    EOF
