@@ -42,10 +42,14 @@ set format y2 "% g"
 set format z "% g"
 set format cb "% g"
 set angles radians
-unset grid
+set grid nopolar
+set grid xtics nomxtics ytics nomytics noztics nomztics \
+ nox2tics nomx2tics noy2tics nomy2tics nocbtics nomcbtics
+set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
 set key title ""
-set key outside right top vertical Right noreverse enhanced autotitles nobox
+set key inside right top vertical Right noreverse enhanced autotitles nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
+unset key
 unset label
 unset arrow
 set style increment default
@@ -53,13 +57,14 @@ unset style line
 unset style arrow
 set style histogram clustered gap 2 title  offset character 0, 0, 0
 unset logscale
+set logscale y 10
 set offsets 0, 0, 0, 0
 set pointsize 1
 set encoding default
 unset polar
 unset parametric
 unset decimalsign
-set view 60, 30, 1, 1  
+set view 49, 22, 1, 1  
 set samples 100, 100
 set isosamples 10, 10
 set surface
@@ -72,7 +77,7 @@ set cntrparam order 4
 set cntrparam linear
 set cntrparam levels auto 5
 set cntrparam points 5
-set size ratio -1 1,1
+set size ratio 0 1,1
 set origin 0,0
 set style data points
 set style function lines
@@ -98,7 +103,7 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq  norangelimit
-set title "Halo consistency when coarsening after refinement" 
+set title "Solution of Laplacian(X) = -8.*pi*pi*cos(2.*pi*x)*cos(2.*pi*y)" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
@@ -107,21 +112,21 @@ set rrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e
 set trange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set urange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set vrange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set xlabel "" 
+set xlabel "Multigrid iterations" 
 set xlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set x2label "" 
 set x2label  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set xrange [ * : * ] noreverse nowriteback  # (currently [-0.500000:0.500000] )
-set x2range [ * : * ] noreverse nowriteback  # (currently [-0.437500:0.437500] )
-set ylabel "" 
+set xrange [ * : * ] noreverse nowriteback  # (currently [0.00000:20.0000] )
+set x2range [ * : * ] noreverse nowriteback  # (currently [0.00000:19.0000] )
+set ylabel "Maximum residual" 
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
-set yrange [ * : * ] noreverse nowriteback  # (currently [-0.500000:0.500000] )
-set y2range [ * : * ] noreverse nowriteback  # (currently [-0.437500:0.437500] )
+set yrange [ * : * ] noreverse nowriteback  # (currently [-12.0000:2.00000] )
+set y2range [ * : * ] noreverse nowriteback  # (currently [-11.2563:1.76978] )
 set zlabel "" 
 set zlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set zrange [ * : * ] noreverse nowriteback  # (currently [0.00000:0.0180000] )
+set zrange [ * : * ] noreverse nowriteback  # (currently [-0.00640000:-0.00460000] )
 set cblabel "" 
 set cblabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set cbrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
@@ -149,5 +154,5 @@ R0 = 0.1
 GPFUN_r = "r(x,y)=sqrt(x*x+y*y)"
 GPFUN_f = "f(x)=exp(-(x*x)/(R0*R0))"
 GPFUN_e = "e(a,x,y)=a-f(r(x,y))"
-plot '< grep halo3 refine.out' t 'halo', '< grep flagged refine.vlog' t 'flagged'
+plot './poisson.log' u 1:2 w lp
 #    EOF
