@@ -63,36 +63,36 @@ void uv_symmetry (void * grid, var u, var v)
   } end_foreach_boundary();
 }
 
-void runge_kutta (int stages, double dt,
-		  void * grid, 
+void runge_kutta (void * grid, double t, double dt,
+		  int stages,
 		  int nv, var f[nv], var df[stages][nv], 
-		  void (* advance) (void * grid, var f[nv], var df[nv]),
-		  void (* update)  (void * grid, var f[nv]))
+		  void (* advance) (void * grid, double t, var f[nv], var df[nv]),
+		  void (* update)  (void * grid, double t, var f[nv]))
 {
   switch (stages) {
   case 1:
-    (* advance) (grid, f, df[0]);
+    (* advance) (grid, t, f, df[0]);
     foreach (grid)
       for (int v = 0; v < nv; v++)
 	val(f[v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt;
     end_foreach();
-    (* update) (grid, f);
+    (* update) (grid, t + dt, f);
     break;
 
   case 2:
-    (* advance) (grid, f, df[0]);
+    (* advance) (grid, t, f, df[0]);
     foreach (grid)
       for (int v = 0; v < nv; v++)
 	val(df[0][v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt/2.;
     end_foreach();
-    (* update) (grid, df[0]);
+    (* update) (grid, t + dt/2., df[0]);
 
-    (* advance) (grid, df[0], df[1]);
+    (* advance) (grid, t + dt/2., df[0], df[1]);
     foreach (grid)
       for (int v = 0; v < nv; v++)
 	val(f[v],0,0) += val(df[1][v],0,0)*dt;
     end_foreach();
-    (* update) (grid, f);
+    (* update) (grid, t + dt, f);
     break;
 
   default:

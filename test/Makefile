@@ -2,7 +2,7 @@ VALGRIND = valgrind -q --tool=memcheck
 CFLAGS += -I$(HOME)/local/src/atmosphere -std=c99 -g -O2 -Wall -MD
 LIBS = -lm
 
-all: halo.log speed.log interp.log refine.log
+all: halo.log speed.log interp.log refine.log rk2.log
 
 halo.log: halo halo.plot
 	$(VALGRIND) ./halo 2> halo.log > halo.out
@@ -41,7 +41,7 @@ refine: refine.c
 	$(CC) $(CFLAGS) refine.c -o refine -lm
 
 rk2.log: rk2 rk2.plot
-	./rk2 2> rk2.log > rk2.out
+	$(VALGRIND) ./rk2 2> rk2.log > rk2.out
 	gnuplot -e "set term pngcairo; set output 'rk2.png';" rk2.plot
 	diff rk2.log rk2.ref
 
@@ -62,5 +62,6 @@ test: test.c
 
 clean:
 	rm -f *.d *.log *.out *.png \
-	halo speed interp refine
+	halo speed interp refine rk2
+
 
