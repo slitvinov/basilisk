@@ -7,8 +7,8 @@ struct _Data {
   //  double un1, vn1, hn1;
 };
 
-#include "grid.c"
-#include "utils.c"
+#include GRID
+#include "utils.h"
 
 var u = var(u), v = var(v), h = var(h), b = var(b), ke = var(ke), psi = var(psi),
   un = var(un), vn = var(vn), hn = var(hn);
@@ -26,7 +26,6 @@ void advection_centered (void * grid, var f, var u, var v, var df)
 		   (val(f,0,0) + val(f,1,0))*val(u,1,0) +
 		   (val(f,0,0) + val(f,0,-1))*val(v,0,0) - 
 		   (val(f,0,0) + val(f,0,1))*val(v,0,1))/(2.*L0*delta);
-  end_foreach();
 }
 
 void advection_upwind (void * grid, var f, var u, var v, var df)
@@ -36,7 +35,6 @@ void advection_upwind (void * grid, var f, var u, var v, var df)
 		   (val(u,1,0) > 0. ? val(f,0,0) : val(f,1,0))*val(u,1,0) +
 		   (val(v,0,0) < 0. ? val(f,0,0) : val(f,0,-1))*val(v,0,0) - 
 		   (val(v,0,1) > 0. ? val(f,0,0) : val(f,0,1))*val(v,0,1))/(L0*delta);
-  end_foreach();
 }
 
 double timestep (void * grid)
@@ -58,7 +56,7 @@ double timestep (void * grid)
       double dt = dx/(val(v,0,0)*val(v,0,0));
       if (dt < dtmax) dtmax = dt;
     }
-  } end_foreach();
+  }
   return sqrt (dtmax)*CFL;
 }
 
@@ -75,7 +73,7 @@ void momentum (void * grid, var u, var v, var h, var du, var dv)
     val(dv,0,0) = 
       - G*(g - val(h,0,-1) - val(b,0,-1) - val(ke,0,-1))/dx
       - (psiv + F0)*(val(u,0,0) + val(u,1,0) + val(u,0,-1) + val(u,1,-1))/4.;
-  } end_foreach();
+  }
 }
 
 void ke_psi (void * grid, var u, var v)
@@ -91,7 +89,7 @@ void ke_psi (void * grid, var u, var v)
     val(ke,0,0) = (uc + vc)/4.;
 #endif
     val(psi,0,0) = (val(v,0,0) - val(v,-1,0) + val(u,0,-1) - val(u,0,0))/DX;
-  } end_foreach();
+  }
 }
 
 void advance (void * grid, var * f, var * df)
@@ -136,13 +134,13 @@ int main (int argc, char ** argv)
     #include "output.h"
 #if 1
     advection_centered (grid, h, u, v, hn);
-    foreach (grid) { val(h,0,0) += val(hn,0,0)*dt; } end_foreach();
+    foreach (grid) { val(h,0,0) += val(hn,0,0)*dt; }
     boundary_h (grid, h);
     momentum (grid, u, v, h, un, vn);
     foreach (grid) {
       val(u,0,0) += val(un,0,0)*dt;
       val(v,0,0) += val(vn,0,0)*dt;
-    } end_foreach();
+    }
     boundary_u (grid, u, v);
     ke_psi (grid, u, v);
     boundary_ke_psi (grid);

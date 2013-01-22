@@ -4,9 +4,8 @@
 
 void restriction (void * grid, var a)
 {
-  foreach_fine_to_coarse (grid) {
+  foreach_fine_to_coarse (grid)
     val(a,0,0) = (fine(a,0,0) + fine(a,1,0) + fine(a,0,1) + fine(a,1,1))/4.;
-  } end_foreach_fine_to_coarse();
 }
 
 void wavelet (void * grid, var a, var w)
@@ -21,5 +20,5 @@ void wavelet (void * grid, var a, var w)
       (9.*val(a,0,0) + 3.*(val(a,+1,0) + val(a,0,-1)) + val(a,+1,-1))/16.;
     fine(w,1,1) = fine(a,1,1) - 
       (9.*val(a,0,0) + 3.*(val(a,+1,0) + val(a,0,+1)) + val(a,+1,+1))/16.;
-  } end_foreach_fine_to_coarse ();
+  }
 }

@@ -7,10 +7,10 @@ struct _Data {
   double h, w;
 };
 
-#include "quadtree.c"
-#include "utils.c"
-#include "wavelet.c"
-#include "adapt.c"
+#include "grid/quadtree.h"
+#include "utils.h"
+#include "wavelet.h"
+#include "adapt.h"
 
 #define h(k,l) data(k,l).h
 
@@ -20,7 +20,7 @@ int main (int argc, char ** argv)
   void * grid = init_grid (n);
 
   double R0 = 0.1;
-  foreach (grid) { h(0,0) = exp(-(x*x + y*y)/(R0*R0)); } end_foreach();
+  foreach (grid) { h(0,0) = exp(-(x*x + y*y)/(R0*R0)); }
   symmetry (grid, var(h));
   
   /* initial coarsening (see halo.c) */
@@ -41,7 +41,7 @@ int main (int argc, char ** argv)
     fprintf (fp, "%g %g %d %d %g %g\n", x, y, level, cell.neighbors, h(0,0), e);
     if (fabs(e) > max)
       max = fabs(e);
-  } end_foreach_halo();
+  }
 
   fprintf (stderr, "maximum error on halos: %g\n", max);
 

@@ -6,17 +6,18 @@ struct _Data {
   double h, e, w;
 };
 
-#include "quadtree.c"
-#include "utils.c"
-#include "wavelet.c"
-#include "adapt.c"
+#include "grid/quadtree.h"
+#include "utils.h"
+#include "wavelet.h"
+#include "adapt.h"
 
 int main (int argc, char ** argv)
 {
   void * grid = init_grid (32);
 
   double R0 = 0.1;
-  foreach (grid) { data(0,0).h = exp(-(x*x + y*y)/(R0*R0)); } end_foreach();
+  foreach (grid)
+    data(0,0).h = exp(-(x*x + y*y)/(R0*R0));
   symmetry (grid, var(h));
   
   /* initial coarsening */
@@ -38,7 +39,7 @@ int main (int argc, char ** argv)
       fprintf (stderr, "%g %g %d %d flagged\n", x, y, level, cell.neighbors);
       printf ("%g %g %d %d 3\n", x, y, level, cell.neighbors);
     }
-  } end_foreach_cell();
+  }
 
   free_grid (grid);
 }

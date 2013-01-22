@@ -1,9 +1,9 @@
 VALGRIND = valgrind -q --tool=memcheck
-CFLAGS += -I$(HOME)/local/src/atmosphere -std=c99 -g -O2 -Wall -MD
+CFLAGS += -I$(HOME)/local/src/atmosphere -std=c99 -g -O2 -Wall -MMD
 
 all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log
 
-pictures: halo.png speed.png interp.png refine.png rk2.png poisson.png
+plots: halo.png speed.png interp.png refine.png rk2.png poisson.png
 
 -include halo.d
 -include speed.d
@@ -12,44 +12,34 @@ pictures: halo.png speed.png interp.png refine.png rk2.png poisson.png
 -include rk2.d
 -include poisson.d
 
-poisson.log: poisson.exe multigrid.log
-	./$< 9 2> $@ > $*.out
-	diff $@ $*.ref
-	-rm -f $*.png
-
-multigrid.log: multigrid.exe
-	./$< 9 2> $@ > $*.out
-	diff $@ $*.ref
-	-rm -f $*.png
+poisson.log: multigrid.log
 
 poisson.exe: poisson.c
-	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"quadtree.c\" -x c - -o $@ -lm
+	../endfor poisson.c | $(CC) $(CFLAGS) -DGRID=\"grid/quadtree.h\" -x c - -o poisson.exe -lm
 
 multigrid.exe: poisson.c
-	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"multigrid.c\" -x c - -o $@ -lm
+	../endfor poisson.c | $(CC) $(CFLAGS) -DGRID=\"grid/multigrid.h\" -x c - -o multigrid.exe -lm
 
 clean:
 	rm -f *.d *.log *.vlog *.slog *.out *.png *.exe
 
-.SUFFIXES: .log .vlog .slog .exe .png .plot
-
-.plot.png:
+%.png: %.plot
 	gnuplot -e "set term pngcairo; set output '$@';" $^
 
-.exe.log:
+%.log: %.exe
 	./$< 2> $@ > $*.out
 	diff $@ $*.ref
 	-rm -f $*.png
 
-.exe.slog:
+%.slog: %.exe
 	./$< 2> $@ > $*.out
 	-diff $@ $*.ref
 	-rm -f $*.png
 
-.exe.vlog:
+%.vlog: %.exe
 	$(VALGRIND) ./$< 2> $@ > $*.out
 	diff $@ $*.ref
 	-rm -f $*.png
 
-.c.exe:
-	$(CC) $(CFLAGS) $< -o $@ -lm
+%.exe: %.c
+	../endfor $< | $(CC) $(CFLAGS) -x c - -o $@ -lm

@@ -37,10 +37,10 @@ double CFL = 0.5;
 
 void symmetry (void * grid, var v)
 {
-  foreach_boundary (grid, right)  { val(v,+1,0) = val(v,0,0); } end_foreach_boundary();
-  foreach_boundary (grid, left)   { val(v,-1,0) = val(v,0,0); } end_foreach_boundary();
-  foreach_boundary (grid, top)    { val(v,0,+1) = val(v,0,0); } end_foreach_boundary();
-  foreach_boundary (grid, bottom) { val(v,0,-1) = val(v,0,0); } end_foreach_boundary();  
+  foreach_boundary (grid, right)  { val(v,+1,0) = val(v,0,0); }
+  foreach_boundary (grid, left)   { val(v,-1,0) = val(v,0,0); }
+  foreach_boundary (grid, top)    { val(v,0,+1) = val(v,0,0); }
+  foreach_boundary (grid, bottom) { val(v,0,-1) = val(v,0,0); }
 }
 
 void uv_symmetry (void * grid, var u, var v)
@@ -48,19 +48,19 @@ void uv_symmetry (void * grid, var u, var v)
   foreach_boundary (grid, right) {
     val(u,+1,0) = 0.;
     val(v,+1,0) = val(v,0,0);
-  } end_foreach_boundary();
+  }
   foreach_boundary (grid, left) {
     val(u,-1,0) = 0.;
     val(v,-1,0) = val(v,0,0);
-  } end_foreach_boundary();
+  }
   foreach_boundary (grid, top) {
     val(v,0,+1) = 0.;
     val(u,0,+1) = val(u,0,0);
-  } end_foreach_boundary();
+  }
   foreach_boundary (grid, bottom) {
     val(v,0,-1) = 0.;
     val(u,0,-1) = val(u,0,0);
-  } end_foreach_boundary();
+  }
 }
 
 void runge_kutta (void * grid, double t, double dt,
@@ -75,7 +75,6 @@ void runge_kutta (void * grid, double t, double dt,
     foreach (grid)
       for (int v = 0; v < nv; v++)
 	val(f[v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt;
-    end_foreach();
     (* update) (grid, t + dt, f);
     break;
 
@@ -84,14 +83,12 @@ void runge_kutta (void * grid, double t, double dt,
     foreach (grid)
       for (int v = 0; v < nv; v++)
 	val(df[0][v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt/2.;
-    end_foreach();
     (* update) (grid, t + dt/2., df[0]);
 
     (* advance) (grid, t + dt/2., df[0], df[1]);
     foreach (grid)
       for (int v = 0; v < nv; v++)
 	val(f[v],0,0) += val(df[1][v],0,0)*dt;
-    end_foreach();
     (* update) (grid, t + dt, f);
     break;
 

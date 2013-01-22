@@ -8,10 +8,10 @@ struct _Data {
 };
 #define h(k,l) data(k,l).h
 
-#include "quadtree.c"
-#include "utils.c"
-#include "wavelet.c"
-#include "adapt.c"
+#include "grid/quadtree.h"
+#include "utils.h"
+#include "wavelet.h"
+#include "adapt.h"
 
 int main (int argc, char ** argv)
 {
@@ -19,7 +19,8 @@ int main (int argc, char ** argv)
   void * grid = init_grid (n);
 
   double R0 = 0.1;
-  foreach (grid) { h(0,0) = exp(-(x*x + y*y)/(R0*R0)); } end_foreach();
+  foreach (grid)
+    h(0,0) = exp(-(x*x + y*y)/(R0*R0));
   symmetry (grid, var(h));
   
   clock_t start, end0, end;
@@ -39,7 +40,7 @@ int main (int argc, char ** argv)
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "---- restriction + wavelet + coarsen_wavelet + flag_halo_cells ----\n");
   int leaves = 0, maxlevel = 0;
-  foreach (grid) { leaves++; if (level > maxlevel) maxlevel = level; } end_foreach();
+  foreach (grid) { leaves++; if (level > maxlevel) maxlevel = level; }
   fprintf (stderr, "after coarsening: %d leaves, maximum level %d\n", leaves, maxlevel);
   fprintf (stderr, "initial coarsening:  %6g CPU, %.3g points.steps/s\n",
 	   cpu0, n*n/cpu0);
@@ -50,7 +51,7 @@ int main (int argc, char ** argv)
   foreach_halo(grid) {
     printf ("%g %g %d %d\n", x, y, level, cell.neighbors);
     nhalos++;
-  } end_foreach_halo();
+  }
 
   start = clock ();
   for (i = 0; i < 200; i++)

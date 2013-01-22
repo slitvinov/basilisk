@@ -6,9 +6,9 @@ struct _Data {
   double a, b, res, dp;
 };
 
-#include GRID // works with all "multigrid" grids i.e. quadtree.c or multigrid.c
-#include "utils.c"
-#include "wavelet.c"
+#include GRID // works with all "multigrid" grids i.e. quadtree.h or multigrid.h
+#include "utils.h"
+#include "wavelet.h"
 
 void symmetry_level (void * grid, var v, int l)
 {
@@ -57,7 +57,7 @@ void cycle (void * grid, int depth, var a, var res, var dp, int nrelax)
 
 int main(int argc, char ** argv)
 {
-  int depth = atoi(argv[1]), nrelax = 4;
+  int depth = argc < 2 ? 9 : atoi(argv[1]), nrelax = 4;
   void * grid = init_grid(1 << depth);
   var a = var(a), b = var(b), res = var(res), dp = var(dp);
 

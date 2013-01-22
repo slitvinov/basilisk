@@ -31,7 +31,7 @@ int coarsen_wavelet (Quadtree * quadtree, var w, double max)
     }
     /* propagate the error to coarser levels */
     val(w,0,0) = fabs(val(w,0,0)) + error;
-  } end_foreach_fine_to_coarse ();
+  }
   return nc;
 }
 
@@ -58,7 +58,7 @@ int refine_wavelet (Quadtree * quadtree, var w, double max, var start, var end)
 	}
       nf++;
     }
-  } end_foreach_leaf();
+  }
   return nf;
 }
 
@@ -72,7 +72,7 @@ int flag_halo_cells (Quadtree * quadtree)
       continue;
     else 
       cell.flags &= ~halo;
-  } end_foreach_cell();
+  }
 
   /* from the bottom up */
   foreach_cell_post (quadtree, cell.neighbors > 0 || (cell.flags & active)) {
@@ -86,7 +86,7 @@ int flag_halo_cells (Quadtree * quadtree)
     else if ((cell.flags & halo) && level > 0)
       /* propagate to parent */
       parent.flags |= halo;
-  } end_foreach_cell_post();
+  }
 
   return nh;
 }
@@ -108,7 +108,7 @@ void update_halos (Quadtree * quadtree, var start, var end)
 	       coarse(a,childx,childy))/16.;
 	continue; /* already at level l, skip the deeper branches */
       }
-    } end_foreach_cell();
+    }
 }
 
 #define foreach_halo(quadtree) foreach_cell(quadtree) { \

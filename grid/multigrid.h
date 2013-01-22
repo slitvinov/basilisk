@@ -1,7 +1,7 @@
 #define GRIDNAME "Multigrid"
 
 #include <stdio.h>
-#include "utils.h"
+#include "common.h"
 
 #define GHOSTS 1        // number of ghost layers
 #define I (point.i - GHOSTS)
