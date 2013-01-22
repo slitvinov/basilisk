@@ -63,8 +63,8 @@ void uv_symmetry (void * grid, var u, var v)
   }
 }
 
-void runge_kutta (void * grid, double t, double dt,
-		  int stages,
+void runge_kutta (int stages,
+		  void * grid, double t, double dt,
 		  int nv, var f[nv], var df[stages][nv], 
 		  void (* advance) (void * grid, double t, var f[nv], var df[nv]),
 		  void (* update)  (void * grid, double t, var f[nv]))

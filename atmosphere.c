@@ -92,7 +92,7 @@ void ke_psi (void * grid, var u, var v)
   }
 }
 
-void advance (void * grid, var * f, var * df)
+void advance (void * grid, double t, var * f, var * df)
 {
   var u = f[0], v = f[1], h = f[2];
   var du = df[0], dv = df[1], dh = df[2];
@@ -103,7 +103,7 @@ void advance (void * grid, var * f, var * df)
 
 #include "init.h"
 
-void update (void * grid, var * f)
+void update (void * grid, double t, var * f)
 {
   var u = f[0], v = f[1], h = f[2];
   boundary_h (grid, h);
@@ -148,7 +148,7 @@ int main (int argc, char ** argv)
     var f[3] =  { u, v, h };
     var df[2][3] = {{ un,  vn,  hn },
 		    { var(un1), var(vn1), var(hn1) }};
-    runge_kutta (2, dt, grid, 3, f, df, advance, update);
+    runge_kutta (2, grid, t, dt, 3, f, df, advance, update);
 #endif
     t += dt; i++;
   } while (t < TMAX && i < IMAX);
