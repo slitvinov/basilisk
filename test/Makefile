@@ -1,9 +1,9 @@
 VALGRIND = valgrind -q --tool=memcheck
-CFLAGS += -I$(HOME)/local/src/atmosphere -std=c99 -g -O2 -Wall -MMD
+CFLAGS += -I.. -std=c99 -g -O2 -Wall -MMD
 
-all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log
+all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log circle.log
 
-plots: halo.png speed.png interp.png refine.png rk2.png poisson.png
+plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png
 
 -include halo.d
 -include speed.d
@@ -11,6 +11,7 @@ plots: halo.png speed.png interp.png refine.png rk2.png poisson.png
 -include refine.d
 -include rk2.d
 -include poisson.d
+-include circle.d
 
 poisson.log: multigrid.log
 
@@ -24,7 +25,7 @@ clean:
 	rm -f *.d *.log *.vlog *.slog *.out *.png *.exe
 
 %.png: %.plot
-	gnuplot -e "set term pngcairo; set output '$@';" $^
+	gnuplot -e "batch=1; set term pngcairo; set output '$@';" $^
 
 %.log: %.exe
 	./$< 2> $@ > $*.out

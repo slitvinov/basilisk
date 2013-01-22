@@ -23,7 +23,7 @@ void refineiter (void * grid)
     restriction (grid, var(h));
     wavelet (grid, var(h), var(w));
 
-    int nf = refine_wavelet (grid, var(w), 1e-2, var(h), var(h));
+    int nf = refine_wavelet (grid, var(h), var(h), var(w), 1e-2);
     flag_halo_cells (grid);
 
     fprintf (stderr, "refined %d cells\n", nf);

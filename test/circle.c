@@ -1,3 +1,5 @@
+/* This is similar to gerris/test/poisson/circle */
+
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
@@ -6,9 +8,10 @@ struct _Data {
   double a, b, res, dp;
 };
 
-#include GRID // works with all "multigrid" grids i.e. quadtree.h or multigrid.h
+#include "grid/quadtree.h"
 #include "utils.h"
 #include "wavelet.h"
+#include "adapt.h"
 
 double solution (double x, double y)
 {
@@ -26,6 +29,8 @@ void boundary (void * grid, var v)
     val(v,0,+1) = 2.*solution(x, y + delta/2.) - val(v,0,0);
   foreach_boundary (grid, bottom)
     val(v,0,-1) = 2.*solution(x, y - delta/2.) - val(v,0,0);
+  restriction (grid, v);
+  update_halos (grid, v, v);
 }
 
 void boundary_level (void * grid, var v, int l)
@@ -35,6 +40,9 @@ void boundary_level (void * grid, var v, int l)
   foreach_boundary_level (grid, left, l)    val(v,-1,0) = - val(v,0,0);
   foreach_boundary_level (grid, top, l)     val(v,0,+1) = - val(v,0,0);
   foreach_boundary_level (grid, bottom, l)  val(v,0,-1) = - val(v,0,0);
+  /* we don't need to restrict because the solution is already defined
+     on coarse levels */
+  update_halos (grid, v, v);
 }
 
 void relax (void * grid, var a, var b, int l)
@@ -79,12 +87,22 @@ void cycle (void * grid, int depth,
   boundary (grid, a);
 }
 
-int main(int argc, char ** argv)
+int refine_circle (Point point, void * data)
 {
-  int depth = argc < 2 ? 9 : atoi(argv[1]), nrelax = 4;
-  void * grid = init_grid(1 << depth);
-  var a = var(a), b = var(b), res = var(res), dp = var(dp);
+  int depth = *((int *)data);
+  QUADTREE_VARIABLES;
+  VARIABLES;
+  return (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)));
+}
 
+void solve (int depth)
+{
+  var a = var(a), b = var(b), res = var(res), dp = var(dp);
+  int nrelax = 4;
+  void * grid = init_grid(1);
+
+  while (refine_function (grid, 1, 0, refine_circle, &depth));
+  flag_halo_cells (grid);
   foreach(grid)
     val(b,0,0) = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);
   boundary (grid, a);
@@ -104,8 +122,8 @@ int main(int argc, char ** argv)
     maxres[i] = max;
   }
   for (int i = 0; i < NITER; i++) {
-    fprintf (stderr, "%d %g\n", i, maxres[i]);
-    printf ("%d %g %g\n", i, (iter[i] - start)/(double)CLOCKS_PER_SEC, maxres[i]);
+    fprintf (stderr, "residual %d %d %g\n", depth, i, maxres[i]);
+    printf ("speed %d %d %g %g\n", depth, i, (iter[i] - start)/(double)CLOCKS_PER_SEC, maxres[i]);
   }
 
   double max = 0;
@@ -114,7 +132,13 @@ int main(int argc, char ** argv)
     if (fabs(e) > max) max = fabs(e);
     //    printf ("%g %g %g %g %g %g\n", x, y, val(a,0,0), val(b,0,0), val(res,0,0), e);
   }
-  fprintf (stderr, "# max error %g\n", max);
+  fprintf (stderr, "max error %d %g\n", depth, max);
 
   free_grid(grid);
+}
+
+int main (int argc, char ** argv)
+{
+  for (int depth = 7; depth <= 10; depth++)
+    solve (depth);
 }
