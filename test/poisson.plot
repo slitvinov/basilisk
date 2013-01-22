@@ -102,7 +102,7 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq  norangelimit
-set title "Solution of Lap(X) = -8.*pi*pi*cos(2.*pi*x)*cos(2.*pi*y)\n512 x 512 uniform grid" 
+set title "Solution of Lap(X) = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y)\n512 x 512 uniform grid" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
@@ -115,17 +115,17 @@ set xlabel "CPU time"
 set xlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set x2label "" 
 set x2label  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set xrange [ * : * ] noreverse nowriteback  # (currently [0.00000:3.00000] )
-set x2range [ * : * ] noreverse nowriteback  # (currently [0.0400000:2.94000] )
+set xrange [ * : * ] noreverse nowriteback  # (currently [0.00000:2.50000] )
+set x2range [ * : * ] noreverse nowriteback  # (currently [0.0500000:2.24000] )
 set ylabel "Maximum residual" 
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
-set yrange [ * : * ] noreverse nowriteback  # (currently [-8.00000:4.00000] )
-set y2range [ * : * ] noreverse nowriteback  # (currently [-7.93887:3.38202] )
+set yrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:6.00000] )
+set y2range [ * : * ] noreverse nowriteback  # (currently [-9.60034:5.00165] )
 set zlabel "" 
 set zlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set zrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
+set zrange [ * : * ] noreverse nowriteback  # (currently [-2.50000:2.50000] )
 set cblabel "" 
 set cblabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set cbrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
@@ -149,8 +149,8 @@ r(x,y)=sqrt(x*x+y*y)
 f(x)=exp(-(x*x)/(R0*R0))
 e(a,x,y)=a-f(r(x,y))
 GNUTERM = "wxt"
-R0 = 0.1
 GPFUN_r = "r(x,y)=sqrt(x*x+y*y)"
+R0 = 0.1
 GPFUN_f = "f(x)=exp(-(x*x)/(R0*R0))"
 GPFUN_e = "e(a,x,y)=a-f(r(x,y))"
 plot './poisson.out' u 2:3 w lp t 'quadtree', './multigrid.out' u 2:3 w lp t 'multigrid'
