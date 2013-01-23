@@ -4,7 +4,7 @@ set title 'Poisson solution with a circular refined patch'
 ftitle(a,b) = sprintf("%.0f/x^%4.2f", exp(a), -b)
 f(x)=a+b*x
 fit f(x) '< grep "max error" ./circle.log' u (log(2**$3)):(log($4)) via a,b
-set xlabel 'Maximum level'
+set xlabel 'Maximum resolution'
 set ylabel 'Maximum error'
 set logscale
 set xrange [64:2048]
@@ -18,6 +18,7 @@ set title 'Poisson solution with a circular refined patch'
 set xlabel 'Multigrid iteration'
 set ylabel 'Residual'
 set logscale y
+set grid ytics
 plot '< grep "residual 7" ./circle.log' u 3:4 w lp t 'level 7', \
      '< grep "residual 8" ./circle.log' u 3:4 w lp t 'level 8', \
      '< grep "residual 9" ./circle.log' u 3:4 w lp t 'level 9', \

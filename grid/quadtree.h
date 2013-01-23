@@ -70,21 +70,21 @@ size_t _size (size_t l)
 #define _LEFT   (2*point.i - GHOSTS)
 #define _RIGHT  (_LEFT + 1)
 
-#if 0
-void recursive (void * m, int n, int i, int j, int nl)
+void recursive (Point point)
 {
-  if (n == nl) {
+  if (point.level == point.depth) {
+    QUADTREE_VARIABLES;
+    VARIABLES;
     /* do something */
   }
-  if (n < nl) {
-    m = finer_level (m, n), n *= 2;
-    recursive (m, n, _LEFT,  _TOP,    nl);
-    recursive (m, n, _RIGHT, _TOP,    nl);
-    recursive (m, n, _LEFT,  _BOTTOM, nl);
-    recursive (m, n, _RIGHT, _BOTTOM, nl);
+  else {
+    Point p1 = point; p1.level = point.level + 1;
+    p1.i = _LEFT;  p1.j = _TOP;    recursive (p1);
+    p1.i = _RIGHT; p1.j = _TOP;    recursive (p1);
+    p1.i = _LEFT;  p1.j = _BOTTOM; recursive (p1);
+    p1.i = _RIGHT; p1.j = _BOTTOM; recursive (p1);
   }
 }
-#endif
 
 #define STACKSIZE 20
 #define _push(b,c,d,e) _s++;						\
@@ -134,13 +134,11 @@ void recursive (void * m, int n, int i, int j, int nl)
       break;								\
       }									\
       case 1: _push (point.level, point.i, point.j, 2);			\
-              _push (point.level + 1, _RIGHT, _TOP,    0);	        \
-      break;							\
-      case 2: _push (point.level, point.i, point.j, 3);		\
+              _push (point.level + 1, _RIGHT, _TOP,    0); break;	\
+      case 2: _push (point.level, point.i, point.j, 3);		        \
               _push (point.level + 1, _LEFT,  _BOTTOM, 0); break;	\
-      case 3:								\
-              _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;	\
-      }								\
+      case 3: _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;	\
+      }								        \
     }                                                                   \
   }
 
@@ -255,7 +253,7 @@ void * init_grid (int n)
     depth++;
   }
   Quadtree * q = malloc(sizeof (Quadtree));
-  q->depth = 0;
+  q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
   q->m = malloc(sizeof (Cell *)*2);
   q->m[0] = NULL; q->m = &(q->m[1]); /* make sure we don't try to access level -1 */
   q->m[0] = calloc (_size(0), sizeof (Cell));

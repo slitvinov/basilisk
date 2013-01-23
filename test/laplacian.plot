@@ -33,7 +33,7 @@ set timefmt y2 "%d/%m/%y,%H:%M"
 set timefmt cb "%d/%m/%y,%H:%M"
 set boxwidth
 set style fill  empty border
-set style rectangle back fc  lt -3 fillstyle   solid 1.00 border lt -1
+set style rectangle back fc lt -3 fillstyle   solid 1.00 border lt -1
 set dummy x,y
 set format x "% g"
 set format y "% g"
@@ -47,7 +47,7 @@ set grid xtics nomxtics ytics nomytics noztics nomztics \
  nox2tics nomx2tics noy2tics nomy2tics nocbtics nomcbtics
 set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
 set key title ""
-set key inside right top vertical Right noreverse enhanced autotitles nobox
+set key inside right center vertical Right noreverse enhanced autotitles nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
 unset label
 unset arrow
@@ -56,14 +56,13 @@ unset style line
 unset style arrow
 set style histogram clustered gap 2 title  offset character 0, 0, 0
 unset logscale
-set logscale y 10
 set offsets 0, 0, 0, 0
 set pointsize 1
 set encoding default
 unset polar
 unset parametric
 unset decimalsign
-set view 49, 22, 1, 1  
+set view 60, 30, 1, 1  
 set samples 100, 100
 set isosamples 10, 10
 set surface
@@ -102,7 +101,7 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq  norangelimit
-set title "Solution of Lap(X) = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y)\n512 x 512 uniform grid" 
+set title "Speed of 5-point Laplacian on a regular grid" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
@@ -111,18 +110,18 @@ set rrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e
 set trange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set urange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set vrange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set xlabel "CPU time" 
+set xlabel "Level" 
 set xlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set x2label "" 
 set x2label  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set xrange [ * : * ] noreverse nowriteback  # (currently [0.00000:2.50000] )
-set x2range [ * : * ] noreverse nowriteback  # (currently [0.160000:2.16000] )
-set ylabel "Maximum residual" 
+set xrange [ * : * ] noreverse nowriteback  # (currently [6.00000:11.0000] )
+set x2range [ * : * ] noreverse nowriteback  # (currently [6.00000:11.0000] )
+set ylabel "nanosecond / point" 
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
-set yrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:6.00000] )
-set y2range [ * : * ] noreverse nowriteback  # (currently [-9.50813:4.75409] )
+set yrange [ * : * ] noreverse nowriteback  # (currently [0.00000:40.0000] )
+set y2range [ * : * ] noreverse nowriteback  # (currently [2.60770:38.5940] )
 set zlabel "" 
 set zlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set zrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
@@ -146,22 +145,17 @@ set loadpath
 set fontpath 
 set fit noerrorvariables
 ftitle(a,b) = sprintf("%.0f/x^%4.2f", exp(a), -b)
-f(x)=exp(-(x*x)/(R0*R0))
-r(x,y)=sqrt(x*x+y*y)
-e(a,x,y)=a-f(r(x,y))
+f(x)=a+b*x
 GNUTERM = "wxt"
 GPFUN_ftitle = "ftitle(a,b) = sprintf(\"%.0f/x^%4.2f\", exp(a), -b)"
 a = 2.79718601098047
 b = -1.10422962273982
-GPFUN_f = "f(x)=exp(-(x*x)/(R0*R0))"
+GPFUN_f = "f(x)=a+b*x"
 FIT_CONVERGED = 1
 FIT_NDF = 2
 FIT_STDFIT = 0.0555182308282567
 FIT_WSSR = 0.00616454790859917
 batch = 0
-GPFUN_r = "r(x,y)=sqrt(x*x+y*y)"
-R0 = 0.1
-GPFUN_e = "e(a,x,y)=a-f(r(x,y))"
-plot './poisson.out' u 2:3 w lp t 'quadtree', './poisson.cout' u 2:3 w lp t 'multigrid'
+plot './laplacian.slog' w lp t 'Quadtree', './laplacian.clog' u 1:2 w lp t 'Cartesian'
 ## fit f(x) '< grep "max error" ./circle.log' u (log(2**$3)):(log($4)) via a,b
 #    EOF

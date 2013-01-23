@@ -1,9 +1,9 @@
 VALGRIND = valgrind -q --tool=memcheck
 CFLAGS += -I.. -std=c99 -g -O2 -Wall -MMD
 
-all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log circle.log
+all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log circle.log laplacian.slog
 
-plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png
+plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png laplacian.png
 
 -include halo.d
 -include speed.d
@@ -11,21 +11,19 @@ plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png
 -include refine.d
 -include rk2.d
 -include poisson.d
+-include multigrid.d
 -include circle.d
+-include laplacian.d
 
-poisson.log: multigrid.log
+poisson.log: poisson.clog
 
-poisson.exe: poisson.c
-	../endfor poisson.c | $(CC) $(CFLAGS) -DGRID=\"grid/quadtree.h\" -x c - -o poisson.exe -lm
-
-multigrid.exe: poisson.c
-	../endfor poisson.c | $(CC) $(CFLAGS) -DGRID=\"grid/multigrid.h\" -x c - -o multigrid.exe -lm
+laplacian.slog: laplacian.clog
 
 clean:
-	rm -f *.d *.log *.vlog *.slog *.out *.png *.exe
+	rm -f *.d *.log *.vlog *.slog *.clog *.out *.png *.exe *.cexe *.pgexe *.prof
 
 %.png: %.plot
-	gnuplot -e "batch=1; set term pngcairo; set output '$@';" $^
+	gnuplot -e "batch=1; set term pngcairo; set output '$@';" $<
 
 %.log: %.exe
 	./$< 2> $@ > $*.out
@@ -37,10 +35,23 @@ clean:
 	-diff $@ $*.ref
 	-rm -f $*.png
 
+%.clog: %.cexe
+	./$< 2> $@ > $*.cout
+
 %.vlog: %.exe
 	$(VALGRIND) ./$< 2> $@ > $*.out
 	diff $@ $*.ref
 	-rm -f $*.png
 
 %.exe: %.c
-	../endfor $< | $(CC) $(CFLAGS) -x c - -o $@ -lm
+	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"grid/quadtree.h\" -x c - -o $@ -lm
+
+%.cexe: %.c
+	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"grid/multigrid.h\" -x c - -o $@ -lm
+
+%.pgexe: %.c
+	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"grid/quadtree.h\" -pg -x c - -o $@ -lm
+
+%.prof: %.pgexe
+	./$< 2> $*.log > $*.out
+	gprof $< > $@
