@@ -10,7 +10,7 @@ struct _Data {
 
 #include "grid/quadtree.h"
 #include "utils.h"
-#include "wavelet.h"
+#include "mg.h"
 #include "adapt.h"
 
 double solution (double x, double y)
@@ -30,10 +30,10 @@ void boundary (void * grid, var v)
   foreach_boundary (grid, bottom)
     val(v,0,-1) = 2.*solution(x, y - delta/2.) - val(v,0,0);
   restriction (grid, v);
-  update_halos (grid, v, v);
+  update_halos (grid, -1, v, v);
 }
 
-void boundary_level (void * grid, var v, int l)
+void homogeneous_boundary (void * grid, var v, int l)
 {
   /* Homogeneous Dirichlet condition on all boundaries */
   foreach_boundary_level (grid, right, l)   val(v,+1,0) = - val(v,0,0);
@@ -42,7 +42,7 @@ void boundary_level (void * grid, var v, int l)
   foreach_boundary_level (grid, bottom, l)  val(v,0,-1) = - val(v,0,0);
   /* we don't need to restrict because the solution is already defined
      on coarse levels */
-  update_halos (grid, v, v);
+  update_halos (grid, l, v, v);
 }
 
 void relax (void * grid, var a, var b, int l)
@@ -51,7 +51,6 @@ void relax (void * grid, var a, var b, int l)
     val(a,0,0) = (val(a,1,0) + val(a,-1,0) +
 		  val(a,0,1) + val(a,0,-1) 
 		  - delta*delta*val(b,0,0))/4.;
-  boundary_level (grid, a, l);
 }
 
 void residual (void * grid, var a, var b, var res)
@@ -59,32 +58,6 @@ void residual (void * grid, var a, var b, var res)
   foreach (grid)
     val(res,0,0) = val(b,0,0) + 
     (4.*val(a,0,0) - val(a,1,0) - val(a,-1,0) - val(a,0,1) - val(a,0,-1))/(delta*delta);
-}
-
-void cycle (void * grid, int depth,
-	    var a, var res, var dp,
-	    int nrelax, int minlevel)
-{
-  restriction (grid, res);
-  for (int l = minlevel; l <= depth; l++) {
-    if (l == minlevel) {
-      foreach_level (grid, l)
-	val(dp,0,0) = 0.;
-    }
-    else 
-      /* linear interpolation from coarser level (works better than
-	 bilinear) */
-      foreach_level (grid, l)
-	val(dp,0,0) = coarse(dp,0,0) + 
-	  (childx*(coarse(dp,1,0) - coarse(dp,-1,0)) +
-	   childy*(coarse(dp,0,1) - coarse(dp,0,-1)))/8.;
-    boundary_level (grid, dp, l);
-    for (int i = 0; i < nrelax; i++)
-      relax (grid, dp, res, l);
-  }
-  foreach(grid)
-    val(a,0,0) += val(dp,0,0);
-  boundary (grid, a);
 }
 
 int refine_circle (Point point, void * data)
@@ -112,7 +85,10 @@ void solve (int depth)
   double maxres[NITER];
   residual (grid, a, b, res);
   for (int i = 0; i < NITER; i++) {
-    cycle (grid, depth, a, res, dp, nrelax, 0);
+    mg_cycle (grid, depth, a, res, dp,
+	      relax, homogeneous_boundary,
+	      nrelax, 0);
+    boundary (grid, a);
     residual (grid, a, b, res);
     double max = 0.;
     foreach(grid)

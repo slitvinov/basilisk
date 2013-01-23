@@ -18,7 +18,7 @@ void refineiter (void * grid)
     foreach(grid)
       data(0,0).h = exp(-(x*x + y*y)/(0.01));
     symmetry (grid, var(h));
-    update_halos (grid, var(h), var(h));
+    update_halos (grid, -1, var(h), var(h));
 
     restriction (grid, var(h));
     wavelet (grid, var(h), var(w));
@@ -28,7 +28,7 @@ void refineiter (void * grid)
 
     fprintf (stderr, "refined %d cells\n", nf);
   }
-  update_halos (grid, var(h), var(h));
+  update_halos (grid, -1, var(h), var(h));
 }
 
 int main (int argc, char ** argv)

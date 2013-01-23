@@ -128,10 +128,12 @@ int flag_halo_cells (Quadtree * quadtree)
   return nh;
 }
 
-void update_halos (Quadtree * quadtree, var start, var end)
+void update_halos (Quadtree * quadtree, int depth, var start, var end)
 {
+  if (depth < 0)
+    depth = quadtree->depth; /* fixme */
   /* breadth-first traversal of halos from coarse to fine */
-  for (int l = 0; l <= quadtree->depth; l++)
+  for (int l = 0; l <= depth; l++)
     foreach_cell (quadtree) {
       if (!(cell.flags & halo))
       	continue; /* no more halos, skip the rest of this branch */

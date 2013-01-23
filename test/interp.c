@@ -30,7 +30,7 @@ int main (int argc, char ** argv)
   coarsen_wavelet (grid, var(w), tolerance);
   flag_halo_cells (grid);
 
-  update_halos (grid, var(h), var(h));
+  update_halos (grid, -1, var(h), var(h));
 
   FILE 
     * fp = fopen("/tmp/interp", "w");
