@@ -9,7 +9,6 @@
 
 typedef struct {
   char flags, neighbors;
-  int level, i, j;
   Data d;
 } Cell;
 
@@ -93,37 +92,17 @@ void recursive (Point point)
 #define _pop(b,c,d,e)							\
   { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--; }
 
-#define foreach_redo(grid)						\
-  {									\
-    Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
-    point.level = 0; point.i = GHOSTS; point.j = GHOSTS;		\
-    while (point.level >= 0) {						\
-      QUADTREE_VARIABLES;						\
-      VARIABLES;							\
-      /* do something */
-#define end_foreach_redo()                                      \
-      Cell _c = cell;						\
-      point.level = _c.level; point.i = _c.i; point.j = _c.j;	\
-    } \
-  }
-
 #define foreach_boundary_cell(grid,dir)					\
   {									\
     Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
     int _d = dir; NOT_UNUSED(_d);					\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
-    Cell * previous = &point.m[0][2*GHOSTS*(1+GHOSTS)];			\
     while (_s >= 0) {							\
       int stage;							\
       _pop (point.level, point.i, point.j, stage);			\
       switch (stage) {							\
       case 0: {								\
-        cell.level = -1;						\
-	previous->level = point.level;					\
-	previous->i = point.i;						\
-	previous->j = point.j;						\
-	previous = &cell;						\
         QUADTREE_VARIABLES;						\
 	VARIABLES;							\
 	/* do something */
