@@ -4,7 +4,7 @@
 #    	G N U P L O T
 #    	Version 4.4 patchlevel 0
 #    	last modified March 2010
-#    	System: Linux 2.6.32-5-amd64
+#    	System: Linux 2.6.32-5-686
 #    
 #    	Copyright (C) 1986-1993, 1998, 2004, 2007-2010
 #    	Thomas Williams, Colin Kelley and many others
@@ -33,7 +33,7 @@ set timefmt y2 "%d/%m/%y,%H:%M"
 set timefmt cb "%d/%m/%y,%H:%M"
 set boxwidth
 set style fill  empty border
-set style rectangle back fc lt -3 fillstyle   solid 1.00 border lt -1
+set style rectangle back fc  lt -3 fillstyle   solid 1.00 border lt -1
 set dummy x,y
 set format x "% g"
 set format y "% g"
@@ -101,15 +101,15 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq  norangelimit
-set title "Speed of 5-point Laplacian on a regular grid" 
+set title "Speed of elementary operations on a regular grid" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
 set timestamp  offset character 0, 0, 0 font "" norotate
 set rrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
 set trange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set urange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set vrange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
+set urange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
+set vrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
 set xlabel "Level" 
 set xlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set x2label "" 
@@ -120,11 +120,11 @@ set ylabel "nanosecond / point"
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
-set yrange [ * : * ] noreverse nowriteback  # (currently [0.00000:40.0000] )
-set y2range [ * : * ] noreverse nowriteback  # (currently [2.60770:38.5940] )
+set yrange [ * : * ] noreverse nowriteback  # (currently [0.00000:160.000] )
+set y2range [ * : * ] noreverse nowriteback  # (currently [4.17233:148.416] )
 set zlabel "" 
 set zlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
-set zrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
+set zrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
 set cblabel "" 
 set cblabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set cbrange [ * : * ] noreverse nowriteback  # (currently [8.98847e+307:-8.98847e+307] )
@@ -156,6 +156,5 @@ FIT_NDF = 2
 FIT_STDFIT = 0.0555182308282567
 FIT_WSSR = 0.00616454790859917
 batch = 0
-plot './laplacian.slog' w lp t 'Quadtree', './laplacian.clog' u 1:2 w lp t 'Cartesian'
-## fit f(x) '< grep "max error" ./circle.log' u (log(2**$3)):(log($4)) via a,b
+plot './laplacian.slog' w lp t '5-points Laplacian: quadtree', './laplacian.out' w lp t 'sum: quadtree', './laplacian.clog' w lp t '5-points Laplacian: cartesian', './laplacian.cout' w lp t 'sum: cartesian'
 #    EOF

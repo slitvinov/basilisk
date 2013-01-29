@@ -22,7 +22,17 @@ int main ()
       foreach(grid)
 	val(b,0,0) = (val(a,0,1) + val(a,1,0) + val(a,0,-1) + val(a,-1,0) - 4.*val(a,0,0));
     end = clock();
-    fprintf (stderr, "%d %g\n", l, 1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)));
+    fprintf (stderr, "%d %g\n", l, 
+	     1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)));
+
+    nloops = i = (1 << 25) >> 2*l;
+    double sum = 0.;
+    start = clock();
+    while (i--)
+      foreach(grid)
+	sum += val(a,0,0);
+    end = clock();
+    printf ("%d %g %g\n", l, 1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)), sum);
 
     free_grid(grid);
   }
