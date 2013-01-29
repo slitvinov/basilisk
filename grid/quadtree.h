@@ -87,8 +87,8 @@ void recursive (Point point)
 }
 
 #define STACKSIZE 20
-#define _push(b,c,d,e) _s++;						\
-  { stack[_s].l = b; stack[_s].i = c; stack[_s].j = d; stack[_s].stage = e; }
+#define _push(b,c,d,e)						\
+  { _s++; stack[_s].l = b; stack[_s].i = c; stack[_s].j = d; stack[_s].stage = e; }
 #define _pop(b,c,d,e)							\
   { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--; }
 

@@ -10,7 +10,7 @@ struct _Data {
 
 int main ()
 {
-  for (int l = 6; l <= 11; l++) {
+  for (int l = 4; l <= 11; l++) {
     void * grid = init_grid (1 << l);
     var a = var(a), b = var(b);
     int nloops, i;
