@@ -1,6 +1,8 @@
 #define GRIDNAME "Multigrid"
 
 #include <stdio.h>
+#include <math.h>
+#include <assert.h>
 #include "common.h"
 
 #define GHOSTS 1        // number of ghost layers
@@ -99,4 +101,26 @@ void free_grid (Point * grid)
   for (int l = 0; l <= grid->depth; l++)
     free (grid->d[l]);
   free(grid->d);
+}
+
+double interpolate (void * grid, var v, double x, double y)
+{
+  Point point = *((Point *)grid);
+  point.level = point.depth; point.n = 1 << point.level;
+  double delta = 1./point.n;
+  x = (x + 0.5)/delta;
+  y = (y + 0.5)/delta;
+  point.i = GHOSTS + x + 0.5;
+  point.j = GHOSTS + y + 0.5;
+  x -= point.i - GHOSTS + 0.5;
+  y -= point.j - GHOSTS + 0.5;
+  assert (x >= -1. && x <= 1.);
+  assert (y >= -1. && y <= 1.);
+  int i = sign(x), j = sign(y);
+  x = fabs(x); y = fabs(y);
+  /* bilinear interpolation */
+  return (val(v,0,0)*(1. - x)*(1. - y) + 
+	  val(v,i,0)*x*(1. - y) + 
+	  val(v,0,j)*(1. - x)*y + 
+	  val(v,i,j)*x*y);
 }

@@ -3,9 +3,11 @@ VALGRIND = valgrind -q --tool=memcheck
 # see: http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html
 CFLAGS += -I.. -std=c99 -g -O2 -Wall -MMD -msse2 -mfpmath=sse
 
-all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log circle.log laplacian.slog
+all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log circle.log \
+	laplacian.slog interpolate.vlog
 
-plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png laplacian.png
+plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png \
+	laplacian.png interpolate.png
 
 -include halo.d
 -include speed.d
@@ -16,6 +18,7 @@ plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png l
 -include multigrid.d
 -include circle.d
 -include laplacian.d
+-include interpolate.d
 
 poisson.log: poisson.clog
 
