@@ -1,7 +1,5 @@
-all: endfor
+qcc: lex.yy.c
+	$(CC) $(CFLAGS) -O2 lex.yy.c -o qcc
 
-lex.yy.c: endfor.lex
-	flex endfor.lex
-
-endfor: lex.yy.c
-	cc -O2 -Wall -Wno-unused -g lex.yy.c -o endfor -lfl
+lex.yy.c: qcc.lex
+	flex qcc.lex

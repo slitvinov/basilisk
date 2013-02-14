@@ -7,4 +7,8 @@ atmosphere.log: atmosphere
 
 -include atmosphere.d
 atmosphere: atmosphere.c parameters.h
-	../endfor -grid=cartesian $(CFLAGS) -DOMEGA=0. -o atmosphere atmosphere.c -lgsl -lgslcblas -lm
+	../qcc -grid=cartesian $(CFLAGS) -DOMEGA=0. -o atmosphere atmosphere.c -lgsl -lgslcblas -lm
+
+clean:
+	rm -f atmosphere
+	

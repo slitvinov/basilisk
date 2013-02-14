@@ -9,4 +9,4 @@ lid.log: lid
 
 -include lid.d
 lid: lid.h
-	../endfor $(CFLAGS) -o lid -lm navier-stokes.c
+	../qcc $(CFLAGS) -o lid -lm navier-stokes.c

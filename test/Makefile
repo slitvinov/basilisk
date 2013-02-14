@@ -49,13 +49,13 @@ clean:
 	-rm -f $*.png
 
 %.exe: %.c
-	../endfor $(CFLAGS) -o $@ -lm $<
+	../qcc $(CFLAGS) -o $@ -lm $<
 
 %.cexe: %.c
-	../endfor -grid=multigrid $(CFLAGS) -o $@ -lm $<
+	../qcc -grid=multigrid $(CFLAGS) -o $@ -lm $<
 
 %.pgexe: %.c
-	../endfor $(CFLAGS) -pg -o $@ -lm $<
+	../qcc $(CFLAGS) -pg -o $@ -lm $<
 
 %.prof: %.pgexe
 	./$< 2> $*.log > $*.out

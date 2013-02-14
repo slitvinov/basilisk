@@ -1,3 +1,4 @@
+%option noyywrap
 %{
   #include <unistd.h>
   #include <sys/stat.h>
@@ -5,7 +6,7 @@
   #include <sys/wait.h>
   #include <assert.h>
 
-  int line, brack, para, inforeach, foreachbrack, foreachpara, hasgrid = 0;
+  int line, scope, para, inforeach, foreachscope, foreachpara, hasgrid = 0;
   char foreachs[80], * fname, grid[80] = "quadtree";
   
   char * _stack[100]; int stack = -1;
@@ -23,7 +24,7 @@
     }
   }
   void varpop () {
-    while (varstack >= 0 && _varstack[varstack].b > brack)
+    while (varstack >= 0 && _varstack[varstack].b > scope)
       free (_varstack[varstack--].v);
   }
   
@@ -55,40 +56,44 @@
 	fprintf (yyout, "#undef %s\n", v);
       }
     }
-    fprintf (yyout, " end_%s();\n#line %d\n", foreachs, line);
+    fprintf (yyout, " end_%s();\n#line %d\n", foreachs, line - 1);
   }
 
-  int _getput (int c) {
-    fputc (c, yyout);
-    if (c == '\n') line++;
-    return c;
+#define YY_INPUT(buf,result,max_size) {				\
+    int c = fgetc(yyin);					\
+    result = (c == EOF) ? YY_NULL : (buf[0] = c, 1);		\
+    if (c == '\n') line++;					\
   }
-#define getput() _getput(input())
+
+  int yyerror(const char * s);
+  int getput(void); 
+  int comment(void);
 %}
 
-ID [a-zA-Z_]
-SP [ \t]
+ID  [a-zA-Z_]
+SP  [ \t]
+ES  (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
+WS  [ \t\v\n\f]
 
 %%
-\n                 ECHO; ++line;
-
 "("                ECHO; para++;
 
-")"                ECHO; para--;
+")" {
+  ECHO; para--;
+  if (para < 0)
+    return yyerror ("mismatched ')'");
+}
 
 "{" {
-  ECHO; brack++;
+  ECHO; scope++;
 }
 
 "}" {
-  ECHO; brack--;
-  if (brack < 0) {
-    fprintf (stderr, 
-	     "%s:%d: error: mismatched bracket\n", fname, line);
-    return 1;
-  }
+  ECHO; scope--;
+  if (scope < 0)
+    return yyerror ("mismatched '}'");
   varpop();
-  if (inforeach && brack == foreachbrack) {
+  if (inforeach && scope == foreachscope) {
     inforeach = 0;
     endforeach ();
   }
@@ -97,23 +102,19 @@ SP [ \t]
 foreach{ID}* {
   ECHO;
   strcpy (foreachs, yytext);
-  inforeach = 1; foreachbrack = brack; foreachpara = para;
+  inforeach = 1; foreachscope = scope; foreachpara = para;
   int c = getput();
   while (strchr (" \t", c)) c = getput();
-  if (c != '(') {
-    fprintf (stderr, "%s:%d: error: expecting '('\n", fname, line);
-    return 1;
-  }
+  if (c != '(')
+    return yyerror ("expecting '('");
   para++;
   while (para > foreachpara && c != EOF) {
     c = getput();
     if (c == '(') para++;
     if (c == ')') para--;
   }
-  if (c != ')') {
-    fprintf (stderr, "%s:%d: error: expecting ')'\n", fname, line);
-    return 1;
-  }
+  if (c != ')')
+    return yyerror ("expecting ')");
   if (varstack >= 0) {
     fputc ('\n', yyout);
     int i = varstack;
@@ -137,7 +138,7 @@ end_foreach{ID}*{SP}*"()" {
 
 ;  {
   ECHO;
-  if (inforeach && brack == foreachbrack && para == foreachpara) {
+  if (inforeach && scope == foreachscope && para == foreachpara) {
     endforeach();
     inforeach = 0;
   }
@@ -158,7 +159,6 @@ end_foreach{ID}*{SP}*"()" {
     free (path);
     fclose (fp);
   }
-  line++;
 }
 
 [^a-z0-9]var[ \t]+ {
@@ -176,19 +176,17 @@ end_foreach{ID}*{SP}*"()" {
       *v = '\0';
       
       if (para == 1) { /* function prototype */
-	varpush (var, brack + 1);
+	varpush (var, scope + 1);
 	if (c == ')') para--;
 	break;
       }
 
       /* declaration in statement */
-      varpush (var, brack);
+      varpush (var, scope);
       while (c != ',' && c != ';' && c != EOF)
 	c = getput();
-      if (c == EOF) {
-	fprintf (stderr, "%s:%d: error: end-of-file in declaration\n", fname, line);
-	return 1;	
-      }
+      if (c == EOF)
+	return yyerror ("end-of-file in declaration");
       if (c == ';')
 	break;
       c = getput();
@@ -198,58 +196,52 @@ end_foreach{ID}*{SP}*"()" {
   }
 }
 
-"/*" {
-  ECHO;
-  register int c;
-  for (;;) {
-    while ((c = input()) != '*' && c != EOF)
-      fputc (c, yyout);    /* eat up text of comment */
-    if (c == '*') {
-      fputc (c, yyout);
-      while ( (c = input()) == '*' )
-	fputc (c, yyout);
-      fputc (c, yyout);
-      if ( c == '/' )
-	break;    /* found the end */
-    }
-    if (c == EOF) {
-      fprintf (stderr, 
-	       "%s:%d: error: "
-	       "EOF in comment\n", 
-	       fname, line);
-      return 1;
-    }
-  }
-}
-
-"//" {
-  ECHO;
-  register int c;
-  while ((c = input()) != '\n' && c != EOF)
-    fputc (c, yyout);    /* eat up text of comment */
-  if (c == '\n') line++;
-  fputc (c, yyout);
-}
-
 "#" {
   ECHO;                     
   register int oldc = 0, c;
   for (;;) {
-    while ((c = input()) != '\n' && c != EOF) {
-      fputc (c, yyout);
+    while ((c = getput()) != '\n' && c != EOF)
       oldc = c;    /* eat up text of preproc */
-    }
-    if (c == '\n') line++;
-    fputc (c, yyout);
     if (c == EOF || oldc != '\\')
       break;
   }
   fprintf (yyout, "\n#line %d\n", line);
 }
 
-\"[^\"]*\" ECHO;
+"/*"                                    { ECHO; if (comment()) return 1; }
+"//"[^\n]*                              { ECHO; /* consume //-comment */ }
+({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+	{ ECHO; /* STRING_LITERAL */ }
 
 %%
+
+int yyerror (const char * s)
+{
+  fprintf (stderr, "%s:%d: error: %s\n", fname, line, s);
+  return 1;
+}
+
+int comment(void)
+{
+  int c;
+  while ((c = getput()) != 0) {
+    if (c == '*') {
+      while ((c = getput()) == '*')
+	;
+      if (c == '/')
+	return 0;
+      if (c == 0)
+	break;
+    }
+  }
+  return yyerror ("unterminated comment");
+}
+
+int getput(void)
+{
+  int c = input();
+  fputc (c, yyout);
+  return c;
+}
 
 void stripname (char * path)
 {
@@ -291,12 +283,14 @@ int endfor (char * file, FILE * fin, FILE * fout)
   stripname (paths[npath]);
   yyin = fin;
   yyout = fout;
-  line = 1, brack = 0, para = 0;
-  inforeach = 0, foreachbrack = 0, foreachpara = 0;
+  line = 1, scope = 0, para = 0;
+  inforeach = 0, foreachscope = 0, foreachpara = 0;
   int ret = yylex();
-  if (!ret && brack > 0) {
-    fprintf (stderr, "%s:%d: error: unclosed bracket\n", fname, line);
-    ret = 1;
+  if (!ret) {
+    if (scope > 0)
+      ret = yyerror ("mismatched '{'");
+    else if (para > 0)
+      ret = yyerror ("mismatched '('");
   }
   free (fname);
   return ret;
@@ -325,7 +319,7 @@ void cleanup (int status)
   strcat (command, dir);
   strcat (command, "/grid.h; rm -r -f ");
   strcat (command, dir);
-  system (command);
+  //  int s = system (command);
   exit (status);
 }
 
