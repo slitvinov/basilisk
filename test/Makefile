@@ -1,7 +1,7 @@
 VALGRIND = valgrind -q --tool=memcheck
 # the 'sse' stuff is a trick to turn off 'extended precision', 
 # see: http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html
-CFLAGS += -I.. -std=c99 -g -O2 -Wall -MMD -msse2 -mfpmath=sse
+CFLAGS += -std=c99 -g -O2 -Wall -msse2 -mfpmath=sse
 
 all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log circle.log \
 	laplacian.slog interpolate.vlog
@@ -49,13 +49,13 @@ clean:
 	-rm -f $*.png
 
 %.exe: %.c
-	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"grid/quadtree.h\" -x c - -o $@ -lm
+	../endfor $(CFLAGS) -o $@ -lm $<
 
 %.cexe: %.c
-	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"grid/multigrid.h\" -x c - -o $@ -lm
+	../endfor -grid=multigrid $(CFLAGS) -o $@ -lm $<
 
 %.pgexe: %.c
-	../endfor $< | $(CC) $(CFLAGS) -DGRID=\"grid/quadtree.h\" -pg -x c - -o $@ -lm
+	../endfor $(CFLAGS) -pg -o $@ -lm $<
 
 %.prof: %.pgexe
 	./$< 2> $*.log > $*.out

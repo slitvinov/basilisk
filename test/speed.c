@@ -2,16 +2,12 @@
 
 #include <assert.h>
 #include <time.h>
-
-struct _Data {
-  double h, w;
-};
-#define h(k,l) data(k,l).h
-
 #include "grid/quadtree.h"
 #include "utils.h"
 #include "wavelet.h"
 #include "adapt.h"
+
+var h = var(h), w = var(w);
 
 int main (int argc, char ** argv)
 {

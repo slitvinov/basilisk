@@ -22,6 +22,7 @@ size_t _size (size_t l)
 }
 
 /***** Multigrid variables and macros *****/
+#define depth(grid) (((Point *)grid)->depth)
 #define aparent(k,l) point.d[point.level-1][((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) + \
 					    (point.j+GHOSTS)/2+l]
 #define child(k,l)   point.d[point.level+1][(2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) + \

@@ -1,5 +1,5 @@
-make
-./atmosphere 2> log | gfsplot "
+make atmosphere
+./atmosphere 2> atmosphere.log | gfsplot "
 set pm3d
 set pm3d map interpolate 1,1
 set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1,\

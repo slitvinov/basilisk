@@ -1,40 +1,33 @@
 #include <time.h>
-
-struct _Data {
-  double u, v, h, b, ke, psi;
-  double un, vn, hn;
-  double h1, e;
-  //  double un1, vn1, hn1;
-};
-
-#include GRID
 #include "utils.h"
 
-var u = var(u), v = var(v), h = var(h), b = var(b), ke = var(ke), psi = var(psi),
-  un = var(un), vn = var(vn), hn = var(hn);
+var u = var(u), v = var(v), h = var(h), b = var(b), ke = var(ke), psi = var(psi);
+var un = var(un), vn = var(vn), hn = var(hn);
 
 // Default parameters, do not change them!! edit parameters.h instead
 // Coriolis parameter
 double F0 = 1.;
 // acceleration of gravity
 double G = 1.;
+// Viscosity
+double NU = 0.;
 
 void advection_centered (void * grid, var f, var u, var v, var df)
 {
   foreach (grid)
-    val(df,0,0) = ((val(f,0,0) + val(f,-1,0))*val(u,0,0) - 
-		   (val(f,0,0) + val(f,1,0))*val(u,1,0) +
-		   (val(f,0,0) + val(f,0,-1))*val(v,0,0) - 
-		   (val(f,0,0) + val(f,0,1))*val(v,0,1))/(2.*L0*delta);
+    df(0,0) = ((f(0,0) + f(-1,0))*u(0,0) - 
+	       (f(0,0) + f(1,0))*u(1,0) +
+	       (f(0,0) + f(0,-1))*v(0,0) - 
+	       (f(0,0) + f(0,1))*v(0,1))/(2.*L0*delta);
 }
 
 void advection_upwind (void * grid, var f, var u, var v, var df)
 {
   foreach (grid)
-    val(df,0,0) = ((val(u,0,0) < 0. ? val(f,0,0) : val(f,-1,0))*val(u,0,0) - 
-		   (val(u,1,0) > 0. ? val(f,0,0) : val(f,1,0))*val(u,1,0) +
-		   (val(v,0,0) < 0. ? val(f,0,0) : val(f,0,-1))*val(v,0,0) - 
-		   (val(v,0,1) > 0. ? val(f,0,0) : val(f,0,1))*val(v,0,1))/(L0*delta);
+    df(0,0) = ((u(0,0) < 0. ? f(0,0) : f(-1,0))*u(0,0) - 
+	       (u(1,0) > 0. ? f(0,0) : f(1,0))*u(1,0) +
+	       (v(0,0) < 0. ? f(0,0) : f(0,-1))*v(0,0) - 
+	       (v(0,1) > 0. ? f(0,0) : f(0,1))*v(0,1))/(L0*delta);
 }
 
 double timestep (void * grid)
@@ -44,16 +37,16 @@ double timestep (void * grid)
   foreach (grid) {
     double dx = L0*delta;
     dx *= dx;
-    if (val(h,0,0) > 0.) {
-      double dt = dx/(G*val(h,0,0));
+    if (h(0,0) > 0.) {
+      double dt = dx/(G*h(0,0));
       if (dt < dtmax) dtmax = dt;
     }
-    if (val(u,0,0) != 0.) {
-      double dt = dx/(val(u,0,0)*val(u,0,0));
+    if (u(0,0) != 0.) {
+      double dt = dx/(u(0,0)*u(0,0));
       if (dt < dtmax) dtmax = dt;
     }
-    if (val(v,0,0) != 0.) {
-      double dt = dx/(val(v,0,0)*val(v,0,0));
+    if (v(0,0) != 0.) {
+      double dt = dx/(v(0,0)*v(0,0));
       if (dt < dtmax) dtmax = dt;
     }
   }
@@ -63,16 +56,18 @@ double timestep (void * grid)
 void momentum (void * grid, var u, var v, var h, var du, var dv)
 {
   foreach (grid) {
-    double g = val(h,0,0) + val(b,0,0) + val(ke,0,0);
-    double psiu = (val(psi,0,0) + val(psi,0,1))/2.;
+    double g = G*(h(0,0) + b(0,0)) + ke(0,0);
+    double psiu = (psi(0,0) + psi(0,1))/2.;
     double dx = L0*delta;
-    val(du,0,0) = 
-      - G*(g - val(h,-1,0) - val(b,-1,0) - val(ke,-1,0))/dx
-      + (psiu + F0)*(val(v,0,0) + val(v,0,1) + val(v,-1,0) + val(v,-1,1))/4.;
-    double psiv = (val(psi,0,0) + val(psi,1,0))/2.;
-    val(dv,0,0) = 
-      - G*(g - val(h,0,-1) - val(b,0,-1) - val(ke,0,-1))/dx
-      - (psiv + F0)*(val(u,0,0) + val(u,1,0) + val(u,0,-1) + val(u,1,-1))/4.;
+    du(0,0) = 
+      - (g - G*(h(-1,0) + b(-1,0)) - ke(-1,0))/dx
+      + (psiu + F0)*(v(0,0) + v(0,1) + v(-1,0) + v(-1,1))/4.
+      + NU*(u(1,0) + u(0,1) + u(-1,0) + u(0,-1) - 4.*u(0,0))/(dx*dx);
+    double psiv = (psi(0,0) + psi(1,0))/2.;
+    dv(0,0) = 
+      - (g - G*(h(0,-1) + b(0,-1)) - ke(0,-1))/dx
+      - (psiv + F0)*(u(0,0) + u(1,0) + u(0,-1) + u(1,-1))/4.
+      + NU*(v(1,0) + v(0,1) + v(-1,0) + v(0,-1) - 4.*v(0,0))/(dx*dx);
   }
 }
 
@@ -80,16 +75,22 @@ void ke_psi (void * grid, var u, var v)
 {
   foreach (grid) {
 #if 1
-    double uc = val(u,0,0) + val(u,1,0);
-    double vc = val(v,0,0) + val(v,0,1);
-    val(ke,0,0) = (uc*uc + vc*vc)/8.;
+    ke(0,0) = (sq(u(0,0) + u(1,0)) + sq(v(0,0) + v(0,1)))/8.;
 #else
-    double uc = val(u,0,0)*val(u,0,0) + val(u,1,0)*val(u,1,0);
-    double vc = val(v,0,0)*val(v,0,0) + val(v,0,1)*val(v,0,1);
-    val(ke,0,0) = (uc + vc)/4.;
+    double uc = u(0,0)*u(0,0) + u(1,0)*u(1,0);
+    double vc = v(0,0)*v(0,0) + v(0,1)*v(0,1);
+    ke(0,0) = (uc + vc)/4.;
 #endif
-    val(psi,0,0) = (val(v,0,0) - val(v,-1,0) + val(u,0,-1) - val(u,0,0))/DX;
+    psi(0,0) = (v(0,0) - v(-1,0) + u(0,-1) - u(0,0))/DX;
   }
+  foreach_boundary (grid, top)
+    psi(0,1) = (v(0,1) - v(-1,1) + u(0,0) - u(0,1))/DX;
+  foreach_boundary (grid, right)
+    psi(1,0) = (v(1,0) - v(0,0) + u(1,-1) - u(1,0))/DX;
+  foreach_boundary (grid, left)
+    ke(-1,0) = (sq(u(-1,0) + u(0,0)) + sq(v(-1,0) + v(-1,1)))/8.;
+  foreach_boundary (grid, bottom)
+    ke(0,-1) = (sq(u(0,-1) + u(1,-1)) + sq(v(0,-1) + v(0,0)))/8.;
 }
 
 void advance (void * grid, double t, var * f, var * df)
@@ -101,7 +102,7 @@ void advance (void * grid, double t, var * f, var * df)
   momentum (grid, u, v, h, du, dv);
 }
 
-#include "init.h"
+#include "parameters.h"
 
 void update (void * grid, double t, var * f)
 {
@@ -109,13 +110,11 @@ void update (void * grid, double t, var * f)
   boundary_h (grid, h);
   boundary_u (grid, u, v);
   ke_psi (grid, u, v);
-  boundary_ke_psi (grid);
 }
 
 int main (int argc, char ** argv)
 {
-  #include "parameters.h"
-
+  parameters();
   double t = 0;
   int i = 0;
 
@@ -125,25 +124,23 @@ int main (int argc, char ** argv)
   boundary_h (grid, h);
   boundary_u (grid, u, v);
   ke_psi (grid, u, v);
-  boundary_ke_psi (grid);
 
   clock_t start, end;
   start = clock ();
   do {
     double dt = timestep (grid);
-    #include "output.h"
+    events(grid, i, t, dt);
 #if 1
     advection_centered (grid, h, u, v, hn);
-    foreach (grid) { val(h,0,0) += val(hn,0,0)*dt; }
+    foreach (grid) { h(0,0) += hn(0,0)*dt; }
     boundary_h (grid, h);
     momentum (grid, u, v, h, un, vn);
     foreach (grid) {
-      val(u,0,0) += val(un,0,0)*dt;
-      val(v,0,0) += val(vn,0,0)*dt;
+      u(0,0) += un(0,0)*dt;
+      v(0,0) += vn(0,0)*dt;
     }
     boundary_u (grid, u, v);
     ke_psi (grid, u, v);
-    boundary_ke_psi (grid);
 #else /* unstable! */
     var f[3] =  { u, v, h };
     var df[2][3] = {{ un,  vn,  hn },

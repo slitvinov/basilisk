@@ -2,17 +2,12 @@
 
 #include <assert.h>
 #include <time.h>
-
-struct _Data {
-  double h, w;
-};
-
 #include "grid/quadtree.h"
 #include "utils.h"
 #include "wavelet.h"
 #include "adapt.h"
 
-#define h(k,l) data(k,l).h
+var h = var(h), w;
 
 int main (int argc, char ** argv)
 {
@@ -20,7 +15,8 @@ int main (int argc, char ** argv)
   void * grid = init_grid (n);
 
   double R0 = 0.1;
-  foreach (grid) { h(0,0) = exp(-(x*x + y*y)/(R0*R0)); }
+  foreach (grid)
+    h(0,0) = exp(-(x*x + y*y)/(R0*R0));
   symmetry (grid, var(h));
   
   /* initial coarsening (see halo.c) */

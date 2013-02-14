@@ -37,29 +37,31 @@ double CFL = 0.5;
 
 void symmetry (void * grid, var v)
 {
-  foreach_boundary (grid, right)  { val(v,+1,0) = val(v,0,0); }
-  foreach_boundary (grid, left)   { val(v,-1,0) = val(v,0,0); }
-  foreach_boundary (grid, top)    { val(v,0,+1) = val(v,0,0); }
-  foreach_boundary (grid, bottom) { val(v,0,-1) = val(v,0,0); }
+  foreach_boundary (grid, right)  v(+1,0) = v(0,0);
+  foreach_boundary (grid, left)   v(-1,0) = v(0,0);
+  foreach_boundary (grid, top)    v(0,+1) = v(0,0);
+  foreach_boundary (grid, bottom) v(0,-1) = v(0,0);
 }
 
 void uv_symmetry (void * grid, var u, var v)
 {
   foreach_boundary (grid, right) {
-    val(u,+1,0) = 0.;
-    val(v,+1,0) = val(v,0,0);
+    u(1,0) = 0.;
+    v(1,0) = v(0,0);
   }
   foreach_boundary (grid, left) {
-    val(u,-1,0) = 0.;
-    val(v,-1,0) = val(v,0,0);
+    u(-1,0) = - u(1,0);
+    u(0,0) = 0.;
+    v(-1,0) = v(0,0);
   }
   foreach_boundary (grid, top) {
-    val(v,0,+1) = 0.;
-    val(u,0,+1) = val(u,0,0);
+    v(0,1) = 0.;
+    u(0,1) = u(0,0);
   }
   foreach_boundary (grid, bottom) {
-    val(v,0,-1) = 0.;
-    val(u,0,-1) = val(u,0,0);
+    v(0,-1) = - v(0,1);
+    v(0,0) = 0.;
+    u(0,-1) = u(0,0);
   }
 }
 
@@ -96,4 +98,16 @@ void runge_kutta (int stages,
     /* not implemented yet */
     assert(false);
   }
+}
+
+double change (void * grid, var v, var vn)
+{
+  double max = 0.;
+  foreach (grid) {
+    double dv = fabs (v(0,0) - vn(0,0));
+    if (dv > max)
+      max = dv;
+    vn(0,0) = v(0,0);
+  }
+  return max;
 }

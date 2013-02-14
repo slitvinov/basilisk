@@ -1,15 +1,12 @@
 /* definition of halo cells after coarsening */
 
 #include <assert.h>
-
-struct _Data {
-  double h, e, w;
-};
-
 #include "grid/quadtree.h"
 #include "utils.h"
 #include "wavelet.h"
 #include "adapt.h"
+
+var h = var(h), e, w;
 
 int main (int argc, char ** argv)
 {
@@ -17,7 +14,7 @@ int main (int argc, char ** argv)
 
   double R0 = 0.1;
   foreach (grid)
-    data(0,0).h = exp(-(x*x + y*y)/(R0*R0));
+    h(0,0) = exp(-(x*x + y*y)/(R0*R0));
   symmetry (grid, var(h));
   
   /* initial coarsening */

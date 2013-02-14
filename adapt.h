@@ -47,7 +47,7 @@ int coarsen_wavelet (Quadtree * quadtree, var w, double max)
       nc++;
     }
     /* propagate the error to coarser levels */
-    val(w,0,0) = fabs(val(w,0,0)) + error;
+    w(0,0) = fabs(w(0,0)) + error;
   }
   return nc;
 }
@@ -92,7 +92,7 @@ int refine_wavelet (Quadtree * quadtree, var start, var end,
 {
   int nf = 0;
   foreach_leaf (quadtree)
-    if (fabs(val(w,0,0)) >= max) {
+    if (fabs(w(0,0)) >= max) {
       point = refine_cell (point, start, end);
       nf++;
     }
@@ -143,8 +143,7 @@ void update_halos (Quadtree * quadtree, int depth, var start, var end)
 	  for (var a = start; a <= end; a += sizeof(double)) /* for each variable */
 	    val(a,0,0) = 
 	      (9.*coarse(a,0,0) + 
-	       3.*(coarse(a,childx,0) + coarse(a,0,childy)) + 
-	       coarse(a,childx,childy))/16.;
+	       3.*(coarse(a,childx,0) + coarse(a,0,childy)) + coarse(a,childx,childy))/16.;
 	continue; /* already at level l, skip the deeper branches */
       }
     }

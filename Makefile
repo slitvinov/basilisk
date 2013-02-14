@@ -1,6 +1,7 @@
-all: endfor adapt.h atmosphere.h utils.h wavelet.h mg.h
+all: endfor
 
-.DELETE_ON_ERROR:
+lex.yy.c: endfor.lex
+	flex endfor.lex
 
-%.h: %.c endfor
-	./endfor $< > $@
+endfor: lex.yy.c
+	cc -O2 -Wall -Wno-unused -g lex.yy.c -o endfor -lfl

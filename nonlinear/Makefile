@@ -1,4 +1,4 @@
-CFLAGS += -I.. -I$(HOME)/local/src/atmosphere -std=c99 -O2 -g -Wall -MMD -DGRID=\"grid/cartesian.h\"
+CFLAGS += -std=c99 -O2 -g -Wall
 
 atmosphere.log: atmosphere
 	./atmosphere 2> atmosphere.log
@@ -6,5 +6,5 @@ atmosphere.log: atmosphere
 	-diff atmosphere.log atmosphere.ref
 
 -include atmosphere.d
-atmosphere: atmosphere.c
-	../endfor atmosphere.c | $(CC) $(CFLAGS) -DOMEGA=0 -x c - -o atmosphere -lgsl -lgslcblas -lm
+atmosphere: atmosphere.c parameters.h
+	../endfor -grid=cartesian $(CFLAGS) -DOMEGA=0. -o atmosphere atmosphere.c -lgsl -lgslcblas -lm

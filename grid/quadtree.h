@@ -29,12 +29,15 @@ size_t _size (size_t l)
   return n*n;
 }
 
-/***** Quadtree macros ****/
-#define _n (1 << point.level) /* fixme */
+/***** Multigrid macros *****/
+#define depth(grid) (((Quadtree *)grid)->depth)
 #define aparent(k,l) point.m[point.level-1][((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
 					    (point.j+GHOSTS)/2+l]
 #define child(k,l)   point.m[point.level+1][(2*point.i-GHOSTS+k)*2*(_n + GHOSTS) + \
 					    (2*point.j-GHOSTS+l)]
+
+/***** Quadtree macros ****/
+#define _n (1 << point.level) /* fixme */
 #define cell         point.m[point.level][point.i*(_n + 2*GHOSTS) + point.j]
 #define parent       aparent(0,0)
 #define alloc_children() { if (point.level == point.depth) alloc_layer(&point); }

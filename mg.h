@@ -12,12 +12,12 @@ void mg_cycle (void * grid, int depth,
   for (int l = minlevel; l <= depth; l++) {
     if (l == minlevel) {
       foreach_level (grid, l)
-	val(dp,0,0) = 0.;
+	dp(0,0) = 0.;
     }
     else 
       /* bilinear interpolation from coarser level */
       foreach_level (grid, l)
-	val(dp,0,0) = 
+	dp(0,0) = 
 	      (9.*coarse(dp,0,0) + 
 	       3.*(coarse(dp,childx,0) + coarse(dp,0,childy)) + 
 	       coarse(dp,childx,childy))/16.;
@@ -28,5 +28,5 @@ void mg_cycle (void * grid, int depth,
     }
   }
   foreach(grid)
-    val(a,0,0) += val(dp,0,0);
+    a(0,0) += dp(0,0);
 }

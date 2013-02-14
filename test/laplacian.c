@@ -2,17 +2,12 @@
 #include <stdio.h>
 #include <time.h>
 
-struct _Data {
-  double a, b;
-};
-
-#include GRID
+var a = var(a), b = var(b);
 
 int main ()
 {
   for (int l = 4; l <= 11; l++) {
     void * grid = init_grid (1 << l);
-    var a = var(a), b = var(b);
     int nloops, i;
     clock_t start, end;
 
@@ -20,7 +15,7 @@ int main ()
     start = clock();
     while (i--)
       foreach(grid)
-	val(b,0,0) = (val(a,0,1) + val(a,1,0) + val(a,0,-1) + val(a,-1,0) - 4.*val(a,0,0));
+	b(0,0) = (a(0,1) + a(1,0) + a(0,-1) + a(-1,0) - 4.*a(0,0));
     end = clock();
     fprintf (stderr, "%d %g\n", l, 
 	     1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)));
@@ -30,7 +25,7 @@ int main ()
     start = clock();
     while (i--)
       foreach(grid)
-	sum += val(a,0,0);
+	sum += a(0,0);
     end = clock();
     printf ("%d %g %g\n", l, 1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)), sum);
 
