@@ -1,31 +1,26 @@
 VALGRIND = valgrind -q --tool=memcheck
 # the 'sse' stuff is a trick to turn off 'extended precision', 
 # see: http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html
-CFLAGS += -std=c99 -g -O2 -Wall -msse2 -mfpmath=sse
+CFLAGS += -std=c99 -g -O2 -MD -Wall -msse2 -mfpmath=sse
 
 all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log circle.log \
-	laplacian.slog interpolate.vlog
+	laplacian.slog interpolate.vlog Makefile.deps
 
 plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png \
 	laplacian.png interpolate.png
 
--include halo.d
--include speed.d
--include interp.d
--include refine.d
--include rk2.d
--include poisson.d
--include multigrid.d
--include circle.d
--include laplacian.d
--include interpolate.d
+-include Makefile.deps
 
 poisson.log: poisson.clog
 
 laplacian.slog: laplacian.clog
 
+Makefile.deps:
+	cat *.d > Makefile.deps && rm -f *.d
+
 clean:
-	rm -f *.d *.log *.vlog *.slog *.clog *.out *.png *.exe *.cexe *.pgexe *.prof
+	rm -f *.d *.log *.vlog *.slog *.clog *.out *.png \
+	*.exe *.cexe *.pgexe *.prof Makefile.deps
 
 %.png: %.plot
 	gnuplot -e "batch=1; set term pngcairo; set output '$@';" $<

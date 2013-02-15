@@ -6,6 +6,8 @@
   #include <sys/wait.h>
   #include <assert.h>
 
+  FILE * fdepend = NULL;
+
   int line, scope, para, inforeach, foreachscope, foreachpara, hasgrid = 0;
   char foreachs[80], * fname, grid[80] = "quadtree";
   
@@ -60,6 +62,8 @@
       strcpy (p, paths[i]); strcat (p, "//"); strcat (p, name);
       FILE * fp = fopen (p, mode);
       if (fp) {
+	if (fdepend)
+	  fprintf (fdepend, "\t%s \\\n", p);
 	*path = p;
 	return fp;
       }
@@ -419,11 +423,19 @@ int main (int argc, char ** argv)
   char * cc = getenv ("CC"), command[1000];
   if (cc == NULL) cc = "cc";
   strcpy (command, cc);
-  char * file = NULL;
+  int depend = 0;
+  char * file = NULL, * output = NULL;
   int i;
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
       strcpy (grid, &argv[i][6]);
+    else if (!strcmp (argv[i], "-MD"))
+      depend = 1;
+    else if (!strcmp (argv[i], "-o")) {
+      output = argv[i + 1];
+      strcat (command, " ");
+      strcat (command, argv[i]);
+    }
     else if (argv[i][0] != '-' && !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
       if (file) {
 	fprintf (stderr, "usage: endfor -grid=[GRID] [OPTIONS] FILE.c\n");
@@ -440,12 +452,34 @@ int main (int argc, char ** argv)
     perror (dir);
     return 1;
   }
+  if (depend && output && file) {
+    char ndep[80], * s = &output[strlen(output)-1];
+    while (*s != '.' && s != output) s--;
+    if (1/*s == output*/) /* always generate dep files with suffixes included */
+      strcpy (ndep, output);
+    else {
+      *s = '\0';
+      strcpy (ndep, output);
+      *s = '.';
+    }
+    strcat (ndep, ".d");
+    fdepend = fopen (ndep, "w");
+    if (!fdepend) {
+      perror (ndep);
+      cleanup (1);
+    }
+    fprintf (fdepend, "%s:\t\\\n", output);
+  }
   if (file) {
     compdir (file);
     strcat (command, " ");
     strcat (command, dir);
     strcat (command, "/");
     strcat (command, file);
+  }
+  if (fdepend) {
+    fputc ('\n', fdepend);
+    fclose (fdepend);
   }
   /* compilation */
   int status = system (command);
