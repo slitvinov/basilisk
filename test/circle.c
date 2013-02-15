@@ -8,7 +8,7 @@
 #include "mg.h"
 #include "adapt.h"
 
-var a, b, res, dp;
+new var a, b, res, dp;
 
 double solution (double x, double y)
 {
@@ -66,7 +66,6 @@ int refine_circle (Point point, void * data)
 
 void solve (int depth)
 {
-  var a = var(a), b = var(b), res = var(res), dp = var(dp);
   int nrelax = 4;
   void * grid = init_grid(1);
 

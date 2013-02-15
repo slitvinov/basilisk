@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
-#include "common.h"
 
 #define GHOSTS 1        // number of ghost layers
 #define I (point.i - GHOSTS)

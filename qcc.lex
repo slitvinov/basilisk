@@ -15,7 +15,7 @@
   #define pop()  _stack[stack--];
   
   struct { char * v; int b; } _varstack[100]; int varstack = -1;
-  void varpush (char * s, int b) {
+  void varpush (const char * s, int b) {
     if (s[0] != '\0') {
       char * f = malloc (sizeof (char)*(strlen (s) + 1));
       strcpy (f, s); 
@@ -27,8 +27,30 @@
     while (varstack >= 0 && _varstack[varstack].b > scope)
       free (_varstack[varstack--].v);
   }
+
+  struct { char * v, * fname; int line; } _newvar[100]; int newvar = 0;
+  int newvarpush (const char * s) {
+    int i = 0;
+    for (i = 0; i < newvar; i++)
+      if (!strcmp (s, _newvar[i].v)) {
+	fprintf (stderr, "%s:%d: error: redefinition of '%s'\n", fname, line, s);
+	fprintf (stderr, "%s:%d: note: previous definition of '%s' was here\n", 
+		 _newvar[i].fname, _newvar[i].line, s);
+	return 1;
+      }
+    char * f = malloc (sizeof (char)*(strlen (s) + 1));
+    strcpy (f, s);
+    _newvar[newvar].v = f;
+    f = malloc (sizeof (char)*(strlen (fname) + 1));
+    strcpy (f, fname);
+    _newvar[newvar].fname = f;
+    _newvar[newvar].line = line;
+    newvar++;
+    varpush (s, 0);
+    return 0;
+  }
   
-  char * paths[100] = { "/home/popinet/local/src/atmosphere" };
+  char * paths[100] = { LIBDIR };
   int npath = 1;
   
   FILE * openpath (const char * name, const char * mode, char ** path) {
@@ -70,7 +92,7 @@
   int comment(void);
 %}
 
-ID  [a-zA-Z_]
+ID  [a-zA-Z_0-9]
 SP  [ \t]
 ES  (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 WS  [ \t\v\n\f]
@@ -161,38 +183,32 @@ end_foreach{ID}*{SP}*"()" {
   }
 }
 
-[^a-z0-9]var[ \t]+ {
+[^{ID}]new{WS}+var{WS}+({ID}|,|{WS})+ {
+  /* new var ID, ID, ID ... */
+  fputc (yytext[0], yyout);
+  if (yytext[0] == '(') para++;
+  char * s = strstr(yytext,"var"); s += 4;
+  while (strchr(" \t\v\n\f", *s)) s++;
+  while (*s != '\0') {
+    char * var = s;
+    while (!strchr(" \t\v\n\f,\0", *s)) s++;
+    if (*s != '\0') *s++ = '\0';
+    while (*s != '\0' && strchr(" \t\v\n\f,", *s))
+      s++;
+    if (newvarpush (var))
+      return 1;
+  }
+  fprintf (yyout, "\n#line %d\n", line);
+}
+
+[^{ID}]var{SP}+{ID}+ {
+  /* var ID*/
   ECHO;
   if (yytext[0] == '(') para++;
-  if (para <= 1) { /* no nested functions */
-    register int c = getput();
-    for (;;) {
-      char var[80] = "", * v = var;
-      while (c != EOF && 
-	     ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))) {
-	*v++ = c;
-	c = getput();
-      }
-      *v = '\0';
-      
-      if (para == 1) { /* function prototype */
-	varpush (var, scope + 1);
-	if (c == ')') para--;
-	break;
-      }
-
-      /* declaration in statement */
-      varpush (var, scope);
-      while (c != ',' && c != ';' && c != EOF)
-	c = getput();
-      if (c == EOF)
-	return yyerror ("end-of-file in declaration");
-      if (c == ';')
-	break;
-      c = getput();
-      while (c == ' ' || c == '\t')
-	c = getput();
-    }
+  if (para == 1) { /* ignore nested functions */
+    char * var = &yytext[5];
+    while (strchr (" \t", *var)) var++;
+    varpush (var, scope + 1);
   }
 }
 
@@ -314,18 +330,21 @@ FILE * writepath (char * path, const char * mode)
 
 void cleanup (int status)
 {
-  char command[1000] = "";
-  strcat (command, "cat ");
+  char command[80] = "rm -r -f ";
   strcat (command, dir);
-  strcat (command, "/grid.h; rm -r -f ");
-  strcat (command, dir);
-  //  int s = system (command);
+  int s = system (command);
   exit (status);
 }
 
 void compdir (char * file)
 {
   int first = 1, hadgrid = 1;
+  char * path;
+  FILE * fp = openpath ("common.h", "r", &path);
+  assert (fp);
+  push (path);
+  free (path);
+  fclose (fp);
   push (file);
   for (;;) {
     while (stack >= 0) {
@@ -371,22 +390,23 @@ void compdir (char * file)
     }
   }
   
-  /* global variables */
+  /* new variables */
   char * out = malloc (sizeof (char)*(strlen (dir) + strlen ("grid.h") + 2));
   strcpy (out, dir); strcat (out, "/grid.h");
   FILE * fout = fopen (out, "w");
-  if (varstack < 0)
+  fputs ("#include \"common.h\"\n", fout);
+  if (newvar == 0)
     fprintf (fout, "struct _Data {};\n");
   else {
     fprintf (fout, "struct _Data {\n  double");
     int i;
-    for (i = 0; i < varstack; i++) {
-      assert (_varstack[i].b == 0);
-      fprintf (fout, " %s,", _varstack[i].v);
-    }
-    assert (_varstack[i].b == 0);
-    fprintf (fout, " %s;", _varstack[i].v);
-    fprintf (fout, "\n};\n");
+    for (i = 0; i < newvar - 1; i++)
+      fprintf (fout, " %s,", _newvar[i].v);
+    fprintf (fout, " %s;", _newvar[i].v);
+    fputs ("\n};\nvar", fout);
+    for (i = 0; i < newvar - 1; i++)
+      fprintf (fout, "\t%s = offsetof(Data,%s),\n", _newvar[i].v, _newvar[i].v);
+    fprintf (fout, "\t%s = offsetof(Data,%s);\n", _newvar[i].v, _newvar[i].v);
   }
   if (!hadgrid)
     fprintf (fout, "#include \"grid/%s.h\"\n", grid);

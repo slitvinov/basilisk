@@ -6,7 +6,7 @@
 #include "wavelet.h"
 #include "adapt.h"
 
-var h = var(h), e, w;
+new var h, w;
 
 int main (int argc, char ** argv)
 {
@@ -15,12 +15,12 @@ int main (int argc, char ** argv)
   double R0 = 0.1;
   foreach (grid)
     h(0,0) = exp(-(x*x + y*y)/(R0*R0));
-  symmetry (grid, var(h));
+  symmetry (grid, h);
   
   /* initial coarsening */
-  restriction (grid, var(h));
-  wavelet (grid, var(h), var(w));
-  coarsen_wavelet (grid, var(w), 1e-2);
+  restriction (grid, h);
+  wavelet (grid, h, w);
+  coarsen_wavelet (grid, w, 1e-2);
   flag_halo_cells (grid);
 
   foreach_cell (grid) {

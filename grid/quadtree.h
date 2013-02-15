@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include "common.h"
 
 #define I (point.i - GHOSTS)
 #define J (point.j - GHOSTS)

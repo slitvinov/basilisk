@@ -4,7 +4,7 @@
 #include "utils.h"
 #include "mg.h"
 
-var a = var(a), b = var(b), res = var(res), dp = var(dp);
+new var a, b, res, dp;
 
 double solution (double x, double y)
 {
@@ -77,7 +77,6 @@ int main(int argc, char ** argv)
     fprintf (stderr, "%d %g\n", i, maxres[i]);
     printf ("%d %g %g\n", i, (iter[i] - start)/(double)CLOCKS_PER_SEC, maxres[i]);
   }
-
   double max = 0;
   foreach(grid) {
     double e = a(0,0) - solution(x, y);

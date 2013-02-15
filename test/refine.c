@@ -6,7 +6,7 @@
 #include "wavelet.h"
 #include "adapt.h"
 
-var h = var(h), w = var(w);
+new var h, w;
 
 void refineiter (void * grid)
 {
@@ -14,18 +14,18 @@ void refineiter (void * grid)
     fprintf (stderr, "\nwavelet refinement\n");
     foreach(grid)
       h(0,0) = exp(-(x*x + y*y)/(0.01));
-    symmetry (grid, var(h));
-    update_halos (grid, -1, var(h), var(h));
+    symmetry (grid, h);
+    update_halos (grid, -1, h, h);
 
-    restriction (grid, var(h));
-    wavelet (grid, var(h), var(w));
+    restriction (grid, h);
+    wavelet (grid, h, w);
 
-    int nf = refine_wavelet (grid, var(h), var(h), var(w), 1e-2);
+    int nf = refine_wavelet (grid, h, h, w, 1e-2);
     flag_halo_cells (grid);
 
     fprintf (stderr, "refined %d cells\n", nf);
   }
-  update_halos (grid, -1, var(h), var(h));
+  update_halos (grid, -1, h, h);
 }
 
 int main (int argc, char ** argv)
@@ -41,9 +41,9 @@ int main (int argc, char ** argv)
     printf ("%g %g %d %d %g %g leaf1\n", x, y, level, cell.neighbors, h(0,0),
 	    fabs(h(0,0) - exp(-(x*x + y*y)/(0.01))));
 
-  restriction (grid, var(h));
-  wavelet (grid, var(h), var(w));
-  fprintf (stderr, "\ncoarsened %d cells back\n", coarsen_wavelet (grid, var(w), 1e-2));
+  restriction (grid, h);
+  wavelet (grid, h, w);
+  fprintf (stderr, "\ncoarsened %d cells back\n", coarsen_wavelet (grid, w, 1e-2));
   flag_halo_cells (grid);
 
   foreach_halo(grid)

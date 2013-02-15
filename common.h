@@ -14,7 +14,6 @@ enum { right, left, top, bottom };
 
 #define field(data,offset,type) (*((type *)(((char *) &(data)) + (offset))))
 typedef size_t var;
-#define var(a) offsetof(Data,a)
 #define val(a,k,l) field(data(k,l), a, double)
 
 #define pi 3.14159265358979

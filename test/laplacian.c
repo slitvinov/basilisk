@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-var a = var(a), b = var(b);
+new var a, b;
 
 int main ()
 {
@@ -28,7 +28,6 @@ int main ()
 	sum += a(0,0);
     end = clock();
     printf ("%d %g %g\n", l, 1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)), sum);
-
     free_grid(grid);
   }
 }

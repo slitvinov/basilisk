@@ -7,7 +7,7 @@
 #include "wavelet.h"
 #include "adapt.h"
 
-var h = var(h), w;
+new var h, w;
 
 int main (int argc, char ** argv)
 {
@@ -17,16 +17,16 @@ int main (int argc, char ** argv)
   double R0 = 0.1;
   foreach (grid)
     h(0,0) = exp(-(x*x + y*y)/(R0*R0));
-  symmetry (grid, var(h));
+  symmetry (grid, h);
   
   /* initial coarsening (see halo.c) */
-  restriction (grid, var(h));
-  wavelet (grid, var(h), var(w));
+  restriction (grid, h);
+  wavelet (grid, h, w);
   double tolerance = 1e-4;
-  coarsen_wavelet (grid, var(w), tolerance);
+  coarsen_wavelet (grid, w, tolerance);
   flag_halo_cells (grid);
 
-  update_halos (grid, -1, var(h), var(h));
+  update_halos (grid, -1, h, h);
 
   FILE 
     * fp = fopen("/tmp/interp", "w");

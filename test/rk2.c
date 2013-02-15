@@ -5,7 +5,7 @@
 
 #define A 0.2
 
-var a = var(a), da1 = var(da1), da2 = var(da2);
+new var a, da1, da2;
 
 void advance (void * grid, double t, var * f, var * df)
 {

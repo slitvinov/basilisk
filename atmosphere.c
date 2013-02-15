@@ -1,8 +1,7 @@
 #include <time.h>
 #include "utils.h"
 
-var u = var(u), v = var(v), h = var(h), b = var(b), ke = var(ke), psi = var(psi);
-var un = var(un), vn = var(vn), hn = var(hn);
+new var u, v, h, b, ke, psi, un, vn, hn;
 
 // Default parameters, do not change them!! edit parameters.h instead
 // Coriolis parameter
@@ -144,7 +143,7 @@ int main (int argc, char ** argv)
 #else /* unstable! */
     var f[3] =  { u, v, h };
     var df[2][3] = {{ un,  vn,  hn },
-		    { var(un1), var(vn1), var(hn1) }};
+		    { un1, vn1, hn1 }};
     runge_kutta (2, grid, t, dt, 3, f, df, advance, update);
 #endif
     t += dt; i++;

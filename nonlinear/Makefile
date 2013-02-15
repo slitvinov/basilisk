@@ -11,4 +11,3 @@ atmosphere: atmosphere.c parameters.h
 
 clean:
 	rm -f atmosphere
-	

@@ -12,7 +12,6 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include "common.h"
 
 #define I (quad_x(point.i))
 #define J (quad_y(point.i))

@@ -68,7 +68,7 @@ void output_field (void * grid, var f, FILE * fp)
   }
 }
 
-var un = var(un); /* we need another variable */
+new var un; /* we need another variable */
 
 int events (void * grid, int i, double t, double dt)
 {

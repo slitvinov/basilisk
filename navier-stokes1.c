@@ -3,8 +3,8 @@
 #include "utils.h"
 #include "mg.h"
 
-var u = var(u), v = var(v), p = var(p);
-var Sxx = var(Sxx), Syy = var(Syy), Sxy = var(Sxy);
+new var u, v, p;
+new var Sxx, Syy, Sxy;
 
 // Default parameters, do not change them!! edit parameters.h instead
 // Viscosity
