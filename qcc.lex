@@ -6,15 +6,10 @@
   #include <sys/wait.h>
   #include <assert.h>
 
-  FILE * fdepend = NULL;
+  int debug = 0;
 
-  int line, scope, para, inforeach, foreachscope, foreachpara, hasgrid = 0;
-  char foreachs[80], * fname, grid[80] = "quadtree";
-  
-  char * _stack[100]; int stack = -1;
-  #define push(s) { char * f = malloc (sizeof (char)*(strlen (s) + 1));	\
-                    strcpy (f, s); _stack[++stack] = f; }
-  #define pop()  _stack[stack--];
+  int line, scope, para, inforeach, foreachscope, foreachpara;
+  char foreachs[80], * fname;
   
   struct { char * v; int b; } _varstack[100]; int varstack = -1;
   void varpush (const char * s, int b) {
@@ -52,27 +47,6 @@
     return 0;
   }
   
-  char * paths[100] = { LIBDIR };
-  int npath = 1;
-  
-  FILE * openpath (const char * name, const char * mode, char ** path) {
-    int i;
-    for (i = 0; i <= npath; i++) {
-      char * p = malloc (sizeof (char)*(strlen (paths[i]) + strlen (name) + 3));
-      strcpy (p, paths[i]); strcat (p, "//"); strcat (p, name);
-      FILE * fp = fopen (p, mode);
-      if (fp) {
-	if (fdepend)
-	  fprintf (fdepend, "\t%s \\\n", p);
-	*path = p;
-	return fp;
-      }
-      else
-	free (p);
-    }
-    return NULL;
-  }
-
   void endforeach() {
     if (varstack >= 0) {
       fputc ('\n', yyout);
@@ -170,23 +144,6 @@ end_foreach{ID}*{SP}*"()" {
   }
 }
 
-^{SP}*#{SP}*include{SP}+\".*\"*{SP}*\n  {
-  ECHO;
-  char * s = strchr(yytext, '"');
-  s++;
-  char * e = &s[strlen(s) - 1];
-  while (*e == ' ' || *e == '\t' || *e == '"' || *e == '\n') {
-    *e = '\0'; e--;
-  }
-  char * path;
-  FILE * fp = openpath (s, "r", &path);
-  if (fp != NULL) {
-    push (path);
-    free (path);
-    fclose (fp);
-  }
-}
-
 [^{ID}]new{WS}+var{WS}+({ID}|,|{WS})+ {
   /* new var ID, ID, ID ... */
   fputc (yytext[0], yyout);
@@ -229,7 +186,7 @@ end_foreach{ID}*{SP}*"()" {
 }
 
 "/*"                                    { ECHO; if (comment()) return 1; }
-"//"[^\n]*                              { ECHO; /* consume //-comment */ }
+"//".*                                  { ECHO; /* consume //-comment */ }
 ({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+	{ ECHO; /* STRING_LITERAL */ }
 
 %%
@@ -263,44 +220,16 @@ int getput(void)
   return c;
 }
 
-void stripname (char * path)
-{
-  char * s = &path[strlen(path)];
-  while (s != path && *s != '/')
-    *s-- = '\0';
-  if (s == path)
-    strcpy (path, ".");
-  else
-    *s = '\0';
-}
+void stripname (char * path);
+char * stripslash (char * path);
+int includes (int argc, char ** argv, char ** out, char ** grid);
 
-char * stripslash (char * path)
-{
-  char * strip = malloc (sizeof (char)*(strlen (path) + 1)), * s = path, * o = strip;
-  int slash = 0;
-  do {
-    if (*s == '/') {
-      if (!slash)
-	*o++ = *s;
-      slash = 1;
-    }
-    else {
-      *o++ = *s;
-      slash = 0;
-    }
-  } while (*s++ != '\0');
-  return strip;
-}
-
-char dir[] = ".endforXXXXXX";
+char dir[] = ".qccXXXXXX";
 
 int endfor (char * file, FILE * fin, FILE * fout)
 {
   fname = stripslash (file);
   fprintf (fout, "# 1 \"%s\"\n", fname);
-  paths[npath] = malloc (sizeof (char)*(strlen (file) + 1));
-  strcpy (paths[npath], file);
-  stripname (paths[npath]);
   yyin = fin;
   yyout = fout;
   line = 1, scope = 0, para = 0;
@@ -321,12 +250,8 @@ FILE * writepath (char * path, const char * mode)
   char * s = path;
   while ((s = strchr (s, '/'))) {
     *s = '\0';
-    if (access (path, R_OK|W_OK|X_OK)) {
-      if (strlen(path) > 5 && !strcmp(&path[strlen(path)-5], "/grid"))
-	hasgrid = 1;
-      if (mkdir (path, 0700))
-	return NULL;
-    }
+    if (access (path, R_OK|W_OK|X_OK) && mkdir (path, 0700))
+      return NULL;
     *s++ = '/';
   }
   return fopen (path, mode);
@@ -334,66 +259,45 @@ FILE * writepath (char * path, const char * mode)
 
 void cleanup (int status)
 {
-  char command[80] = "rm -r -f ";
-  strcat (command, dir);
-  int s = system (command);
+  if (!debug) {
+    char command[80] = "rm -r -f ";
+    strcat (command, dir);
+    int s = system (command);
+  }
   exit (status);
 }
 
-void compdir (char * file)
+void compdir (char * file, char ** in, int nin, char * grid)
 {
-  int first = 1, hadgrid = 1;
-  char * path;
-  FILE * fp = openpath ("common.h", "r", &path);
-  assert (fp);
-  push (path);
-  free (path);
-  fclose (fp);
-  push (file);
-  for (;;) {
-    while (stack >= 0) {
-      char * path = pop();
-      FILE * fin = fopen (path, "r");
-      if (fin == NULL) {
-	perror (path);
-	cleanup (1);
-      }
-      char * file = strstr (path, "//"); 
-      if (file) file += 2; else file = path;
-      char * out = malloc (sizeof (char)*(strlen (dir) + strlen (file) + 2));
-      strcpy (out, dir);
-      strcat (out, "/");
-      strcat (out, file);
-      FILE * fout = writepath (out, "w");
-      if (fout == NULL) {
-	perror (out);
-	cleanup (1);
-      }
-      if (first) {
-	fprintf (fout, "#include \"grid.h\"\n");
-	first = 0;
-      }
-      if (endfor (path, fin, fout))
-	cleanup (1);
-      fclose (fout);
-      free (out);
-      fclose (fin);
-      free (path);
+  int i;
+  for (i = nin - 1; i >= 0; i--) {
+    char * path = in[i];
+    FILE * fin = fopen (path, "r");
+    if (fin == NULL) {
+      perror (path);
+      cleanup (1);
     }
-    if (hasgrid)
-      break;
-    else {
-      char * path, gridpath[80] = "grid/";
-      strcat (gridpath, grid); strcat (gridpath, ".h");
-      FILE * fp = openpath (gridpath, "r", &path);
-      assert (fp);
-      push (path);
-      free (path);
-      fclose (fp);
-      hadgrid = 0;
+    char * file = strstr (path, "//"); 
+    if (file) file += 2; else file = path;
+    char * out = malloc (sizeof (char)*(strlen (dir) + strlen (file) + 2));
+    strcpy (out, dir);
+    strcat (out, "/");
+    strcat (out, file);
+    FILE * fout = writepath (out, "w");
+    if (fout == NULL) {
+      perror (out);
+      cleanup (1);
     }
+    if (i == 0)
+      fprintf (fout, "#include \"grid.h\"\n");
+    if (endfor (path, fin, fout))
+      cleanup (1);
+    fclose (fout);
+    free (out);
+    fclose (fin);
+    free (path);
   }
-  
+
   /* new variables */
   char * out = malloc (sizeof (char)*(strlen (dir) + strlen ("grid.h") + 2));
   strcpy (out, dir); strcat (out, "/grid.h");
@@ -412,7 +316,7 @@ void compdir (char * file)
       fprintf (fout, "\t%s = offsetof(Data,%s),\n", _newvar[i].v, _newvar[i].v);
     fprintf (fout, "\t%s = offsetof(Data,%s);\n", _newvar[i].v, _newvar[i].v);
   }
-  if (!hadgrid)
+  if (grid)
     fprintf (fout, "#include \"grid/%s.h\"\n", grid);
   free (out);
   fclose (fout);
@@ -423,22 +327,18 @@ int main (int argc, char ** argv)
   char * cc = getenv ("CC"), command[1000];
   if (cc == NULL) cc = "cc";
   strcpy (command, cc);
-  int depend = 0;
-  char * file = NULL, * output = NULL;
+  char * file = NULL;
   int i;
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
-      strcpy (grid, &argv[i][6]);
+      ;
     else if (!strcmp (argv[i], "-MD"))
-      depend = 1;
-    else if (!strcmp (argv[i], "-o")) {
-      output = argv[i + 1];
-      strcat (command, " ");
-      strcat (command, argv[i]);
-    }
+      ;
+    else if (!strcmp (argv[i], "-debug"))
+      debug = 1;
     else if (argv[i][0] != '-' && !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
       if (file) {
-	fprintf (stderr, "usage: endfor -grid=[GRID] [OPTIONS] FILE.c\n");
+	fprintf (stderr, "usage: qcc -grid=[GRID] [OPTIONS] FILE.c\n");
 	return 1;
       }
       file = argv[i];
@@ -448,41 +348,29 @@ int main (int argc, char ** argv)
       strcat (command, argv[i]);
     }
   }
-  if (!mkdtemp (dir)) {
+  int status;
+  if (debug) {
+    status = system ("rm -r -f .qcc");
+    strcpy (dir, ".qcc");
+    status = mkdir (dir, 0700);
+  }
+  else
+    status = (mkdtemp (dir) == NULL);
+  if (status) {
     perror (dir);
     return 1;
   }
-  if (depend && output && file) {
-    char ndep[80], * s = &output[strlen(output)-1];
-    while (*s != '.' && s != output) s--;
-    if (1/*s == output*/) /* always generate dep files with suffixes included */
-      strcpy (ndep, output);
-    else {
-      *s = '\0';
-      strcpy (ndep, output);
-      *s = '.';
-    }
-    strcat (ndep, ".d");
-    fdepend = fopen (ndep, "w");
-    if (!fdepend) {
-      perror (ndep);
-      cleanup (1);
-    }
-    fprintf (fdepend, "%s:\t\\\n", output);
-  }
   if (file) {
-    compdir (file);
+    char * out[100], * grid = NULL;
+    int nout = includes (argc, argv, out, &grid);
+    compdir (file, out, nout, grid);
     strcat (command, " ");
     strcat (command, dir);
     strcat (command, "/");
     strcat (command, file);
   }
-  if (fdepend) {
-    fputc ('\n', fdepend);
-    fclose (fdepend);
-  }
   /* compilation */
-  int status = system (command);
+  status = system (command);
   if (status == -1 ||
       (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT)))
     cleanup (1);

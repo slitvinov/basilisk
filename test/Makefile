@@ -16,7 +16,7 @@ poisson.log: poisson.clog
 laplacian.slog: laplacian.clog
 
 Makefile.deps:
-	cat *.d > Makefile.deps && rm -f *.d
+	cat *.d > Makefile.deps
 
 clean:
 	rm -f *.d *.log *.vlog *.slog *.clog *.out *.png \
