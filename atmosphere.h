@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <time.h>
 #include "utils.h"
 
@@ -10,6 +11,13 @@ double F0 = 1.;
 double G = 1.;
 // Viscosity
 double NU = 0.;
+// user-provided functions
+void parameters         (void);
+void initial_conditions (void * grid);
+void boundary_b         (void * grid);
+void boundary_h         (void * grid, var h);
+void boundary_u         (void * grid, var u, var v);
+int  events             (void * grid, int i, double t, double dt);
 
 void advection_centered (void * grid, var f, var u, var v, var df)
 {
@@ -101,8 +109,6 @@ void advance (void * grid, double t, var * f, var * df)
   momentum (grid, u, v, h, du, dv);
 }
 
-#include "parameters.h"
-
 void update (void * grid, double t, var * f)
 {
   var u = f[0], v = f[1], h = f[2];
@@ -111,7 +117,7 @@ void update (void * grid, double t, var * f)
   ke_psi (grid, u, v);
 }
 
-int main (int argc, char ** argv)
+void run (void)
 {
   parameters();
   double t = 0;

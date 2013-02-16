@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <gsl/gsl_integration.h>
+#include "atmosphere.h"
 
 void parameters() {
   // number of grid points
@@ -107,10 +107,13 @@ void output_field (void * grid, var f, FILE * fp)
   }
 }
 
-void events (void * grid, int i, double t, double dt)
+int events (void * grid, int i, double t, double dt)
 {
   if (i % 10 == 0)
     fprintf (stderr, "t: %g %g %g\n", t, error (grid), energy (grid));
   //if (i % 100 == 0)
   //  output_field (grid, var(e), stdout);
+  return 0;
 }
+
+int main() { run(); }

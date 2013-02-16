@@ -1,13 +1,13 @@
 CFLAGS += -std=c99 -O2 -g -Wall
 
-atmosphere.log: atmosphere
-	./atmosphere 2> atmosphere.log
-	gnuplot -e "set term pngcairo; set output 'atmosphere.png';" atmosphere.plot
-	-diff atmosphere.log atmosphere.ref
+nonlinear.log: nonlinear
+	./nonlinear 2> nonlinear.log
+	gnuplot -e "set term pngcairo; set output 'nonlinear.png';" nonlinear.plot
+	-diff nonlinear.log nonlinear.ref
 
--include atmosphere.d
-atmosphere: atmosphere.c parameters.h
-	../qcc -grid=cartesian $(CFLAGS) -DOMEGA=0. -o atmosphere atmosphere.c -lgsl -lgslcblas -lm
+-include nonlinear.d
+nonlinear: nonlinear.c
+	../qcc -grid=cartesian $(CFLAGS) -DOMEGA=0. -o nonlinear nonlinear.c -lgsl -lgslcblas -lm
 
 clean:
-	rm -f atmosphere
+	rm -f nonlinear

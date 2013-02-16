@@ -1,3 +1,5 @@
+#include "navier-stokes1.h"
+
 void parameters ()
 {
   // number of grid points
@@ -47,7 +49,7 @@ void boundary_u (void * grid, var u, var v)
   }
 }
 
-double energy (void * grid)
+static double energy (void * grid)
 {
   double se = 0.;
   foreach (grid)
@@ -55,7 +57,7 @@ double energy (void * grid)
   return se*L0*L0;
 }
 
-void output_field (void * grid, var f, FILE * fp)
+static void output_field (void * grid, var f, FILE * fp)
 {
   fprintf (fp, "# 1:x 2:y 3:F\n");
   double delta = 1./N;
@@ -95,3 +97,5 @@ void end (void * grid)
     fprintf (fp, "%g %g\n", x, interpolate (grid, v, x, 0));
   fclose (fp);
 }
+
+int main () { run (); }

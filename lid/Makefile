@@ -1,6 +1,4 @@
-CFLAGS += -std=c99 -O2 -g -Wall \
-	-DGRID=\"grid/multigrid.h\" \
-	-DSIM=\"lid.h\"
+CFLAGS += -std=c99 -O2 -MD -g -Wall
 
 lid.log: lid
 	./lid 2> lid.log
@@ -8,5 +6,8 @@ lid.log: lid
 	-diff lid.log lid.ref
 
 -include lid.d
-lid: lid.h
-	../qcc $(CFLAGS) -o lid -lm navier-stokes.c
+lid: lid.c
+	../qcc -grid=multigrid $(CFLAGS) -o lid -lm lid.c
+
+clean:
+	rm -f *.log *.d

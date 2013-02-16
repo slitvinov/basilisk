@@ -1,5 +1,4 @@
 #include <time.h>
-#include "grid/multigrid.h"
 #include "utils.h"
 #include "mg.h"
 
@@ -13,8 +12,13 @@ double NU = 0.;
 int NITERMAX = 100;
 // Tolerance on maximum divergence
 double TOLERANCE = 1e-3;
-
-#include "lid.h"
+// user-provided functions
+void parameters         (void);
+void initial_conditions (void * grid);
+void boundary_p         (void * grid, var p, int l);
+void boundary_u         (void * grid, var u, var v);
+int  events             (void * grid, int i, double t, double dt);
+void end                (void * grid);
 
 double timestep (void * grid)
 {
@@ -131,7 +135,7 @@ void projection (void * grid, var u, var v, var p,
   }
 }
 
-int main (int argc, char ** argv)
+void run (void)
 {
   parameters ();
 
