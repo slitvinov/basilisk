@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-new var a, b;
+var a = new var, b = new var;
 
 int main ()
 {

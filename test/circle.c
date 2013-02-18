@@ -8,7 +8,7 @@
 #include "mg.h"
 #include "adapt.h"
 
-new var a, b, res, dp;
+var a = new var, b = new var, res = new var, dp = new var;
 
 double solution (double x, double y)
 {

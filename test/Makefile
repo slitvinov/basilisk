@@ -4,7 +4,8 @@ VALGRIND = valgrind -q --tool=memcheck
 CFLAGS += -std=c99 -g -O2 -MD -Wall -msse2 -mfpmath=sse
 
 all: halo.vlog speed.slog interp.log refine.vlog rk2.vlog poisson.log circle.log \
-	laplacian.slog interpolate.vlog Makefile.deps
+	laplacian.slog interpolate.vlog
+	cat *.d > Makefile.deps
 
 plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png \
 	laplacian.png interpolate.png
@@ -14,9 +15,6 @@ plots: halo.png speed.png interp.png refine.png rk2.png poisson.png circle.png \
 poisson.log: poisson.clog
 
 laplacian.slog: laplacian.clog
-
-Makefile.deps:
-	cat *.d > Makefile.deps
 
 clean:
 	rm -f *.d *.log *.vlog *.slog *.clog *.out *.png \
@@ -43,13 +41,13 @@ clean:
 	diff $@ $*.ref
 	-rm -f $*.png
 
-%.exe: %.c
+%.exe: %.c ../qcc
 	../qcc $(CFLAGS) -o $@ -lm $<
 
-%.cexe: %.c
+%.cexe: %.c ../qcc
 	../qcc -grid=multigrid $(CFLAGS) -o $@ -lm $<
 
-%.pgexe: %.c
+%.pgexe: %.c ../qcc
 	../qcc $(CFLAGS) -pg -o $@ -lm $<
 
 %.prof: %.pgexe

@@ -10,8 +10,8 @@ void coarsen_cell (Point point)
       child(k,l).flags &= ~active;
 #if 1
       /* trash the data just to make sure it's never touched */
-      for (int v = 0; v < sizeof(Data)/sizeof(double); v++)
-	((double *)&child(k,l).d)[v] = -1e30;
+      for (var v = 0; v < nvar; v++)
+	fine(v,k,l) = undefined;
 #endif
       /* update neighborhood */
       for (int o = -GHOSTS; o <= GHOSTS; o++)

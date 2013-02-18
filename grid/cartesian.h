@@ -6,11 +6,11 @@
 #define J (point.j - 1)
 
 typedef struct {
-  Data * d;
+  char * d;
   int i, j, n;
 } Point;
 
-#define data(k,l) point.d[(point.i + k)*(point.n + 2) + (point.j + l)]
+#define data(k,l) ((double *)&point.d[((point.i + k)*(point.n + 2) + (point.j + l))*datasize])
 
 #define foreach(grid) {						\
   Point point = *((Point *)grid);				\
@@ -33,7 +33,7 @@ void * init_grid (int n)
 {
   Point * grid = malloc(sizeof(Point));
   grid->n = n;
-  grid->d = calloc ((n + 2)*(n + 2), sizeof (Data));
+  grid->d = calloc ((n + 2)*(n + 2), datasize);
   return grid;
 }
 

@@ -6,7 +6,7 @@
 #include "wavelet.h"
 #include "adapt.h"
 
-new var h, w;
+var h = new var, w = new var;
 
 void refineiter (void * grid)
 {

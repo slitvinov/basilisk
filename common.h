@@ -8,13 +8,10 @@
 
 #define VARIABLES
 
-typedef struct _Data Data;
-
 enum { right, left, top, bottom };
 
-#define field(data,offset,type) (*((type *)(((char *) &(data)) + (offset))))
-typedef size_t var;
-#define val(a,k,l) field(data(k,l), a, double)
+typedef int var;
+#define val(a,k,l) data(k,l)[a]
 
 #define pi 3.14159265358979
 #define undefined 1e100

@@ -9,7 +9,7 @@
 #define J (point.j - GHOSTS)
 
 typedef struct {
-  Data ** d;
+  char ** d;
   int level, depth;
   int i, j, n;
 } Point;
@@ -20,21 +20,23 @@ size_t _size (size_t l)
   return n*n;
 }
 
+#define CELL(m,level,i)  (*((Cell *) &m[level][(i)*datasize]))
+
+/***** Data macros *****/
+#define data(k,l)  ((double *)&point.d[point.level][((point.i + k)*(point.n + 2*GHOSTS) + \
+						     point.j + l)*datasize])
 /***** Multigrid variables and macros *****/
-#define depth(grid) (((Point *)grid)->depth)
-#define aparent(k,l) point.d[point.level-1][((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) + \
-					    (point.j+GHOSTS)/2+l]
-#define child(k,l)   point.d[point.level+1][(2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) + \
-					    (2*point.j-GHOSTS+l)]
+#define depth(grid)   (((Point *)grid)->depth)
+#define fine(a,k,l)   ((double *)\
+		       &point.d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) + \
+						(2*point.j-GHOSTS+l))*datasize])[a]
+#define coarse(a,k,l) ((double *)\
+		       &point.d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) + \
+						(point.j+GHOSTS)/2+l)*datasize])[a]
 #define MULTIGRID_VARIABLES						\
   int    level = point.level;                                   NOT_UNUSED(level);   \
   int    childx = 2*((point.i+GHOSTS)%2)-1;                     NOT_UNUSED(childx);  \
   int    childy = 2*((point.j+GHOSTS)%2)-1;                     NOT_UNUSED(childy);
-
-/***** Data macros *****/
-#define data(k,l)  point.d[point.level][(point.i + k)*(point.n + 2*GHOSTS) + point.j + l]
-#define fine(a,k,l) field(child(k,l), a, double)
-#define coarse(a,k,l) field(aparent(k,l), a, double)
 
 #define foreach_level(grid,l) {						\
   Point point = *((Point *)grid);					\
@@ -92,7 +94,7 @@ void * init_grid (int n)
   m->depth = r;
   m->d = malloc(sizeof(Point *)*(r + 1));
   for (int l = 0; l <= r; l++)
-    m->d[l] = calloc (_size(l), sizeof (Data));
+    m->d[l] = calloc (_size(l), datasize);
   return m;
 }
 

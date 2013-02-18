@@ -3,7 +3,7 @@
 #include "grid/multigrid.h"
 #include "utils.h"
 
-new var v;
+var v = new var;
 
 int main (int argc, char ** argv)
 {

@@ -44,7 +44,7 @@ double h0 (double r) {
   return result;
 }
 
-new var h1;
+var h1 = new var;
 
 void initial_conditions (void * grid)
 {
@@ -74,7 +74,7 @@ void boundary_u (void * grid, var u, var v)
 
 /* ------------------ Output helper functions --------------- */
 
-new var e;
+var e = new var;
 
 double error (void * grid)
 {

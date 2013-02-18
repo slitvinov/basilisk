@@ -8,7 +8,8 @@
 
   int debug = 0;
 
-  int line, scope, para, inforeach, foreachscope, foreachpara;
+  int nvar = 0;
+  int line, scope, para, inforeach, foreachscope, foreachpara, invardecl;
   char foreachs[80], * fname;
   
   struct { char * v; int b; } _varstack[100]; int varstack = -1;
@@ -23,28 +24,6 @@
   void varpop () {
     while (varstack >= 0 && _varstack[varstack].b > scope)
       free (_varstack[varstack--].v);
-  }
-
-  struct { char * v, * fname; int line; } _newvar[100]; int newvar = 0;
-  int newvarpush (const char * s) {
-    int i = 0;
-    for (i = 0; i < newvar; i++)
-      if (!strcmp (s, _newvar[i].v)) {
-	fprintf (stderr, "%s:%d: error: redefinition of '%s'\n", fname, line, s);
-	fprintf (stderr, "%s:%d: note: previous definition of '%s' was here\n", 
-		 _newvar[i].fname, _newvar[i].line, s);
-	return 1;
-      }
-    char * f = malloc (sizeof (char)*(strlen (s) + 1));
-    strcpy (f, s);
-    _newvar[newvar].v = f;
-    f = malloc (sizeof (char)*(strlen (fname) + 1));
-    strcpy (f, fname);
-    _newvar[newvar].fname = f;
-    _newvar[newvar].line = line;
-    newvar++;
-    varpush (s, 0);
-    return 0;
   }
   
   void endforeach() {
@@ -142,35 +121,44 @@ end_foreach{ID}*{SP}*"()" {
     endforeach();
     inforeach = 0;
   }
+  invardecl = 0;
 }
 
-[^{ID}]new{WS}+var{WS}+({ID}|,|{WS})+ {
-  /* new var ID, ID, ID ... */
-  fputc (yytext[0], yyout);
-  if (yytext[0] == '(') para++;
-  char * s = strstr(yytext,"var"); s += 4;
-  while (strchr(" \t\v\n\f", *s)) s++;
-  while (*s != '\0') {
-    char * var = s;
-    while (!strchr(" \t\v\n\f,\0", *s)) s++;
-    if (*s != '\0') *s++ = '\0';
-    while (*s != '\0' && strchr(" \t\v\n\f,", *s))
-      s++;
-    if (newvarpush (var))
-      return 1;
-  }
-  fprintf (yyout, "\n#line %d\n", line);
-}
-
-[^{ID}]var{SP}+{ID}+ {
-  /* var ID*/
+[^{ID}]{WS}*var{WS}+{ID}+ {
   ECHO;
   if (yytext[0] == '(') para++;
-  if (para == 1) { /* ignore nested functions */
-    char * var = &yytext[5];
-    while (strchr (" \t", *var)) var++;
+  char * var = &strstr(yytext,"var")[4];
+  while (strchr (" \t\v\n\f", *var)) var++;
+  if (para == 0) { /* declaration */
+    if (debug)
+      fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
+    varpush (var, scope);
+    invardecl = 1;
+  }
+  else if (para == 1) { /* function prototype (no nested functions) */
+    if (debug)
+      fprintf (stderr, "%s:%d: proto: %s\n", fname, line, var);
     varpush (var, scope + 1);
   }
+}
+
+,{WS}*{ID}+ {
+  ECHO;
+  if (invardecl) {
+    char * var = &yytext[1];
+    while (strchr (" \t\v\n\f", *var)) var++;
+    if (debug)
+      fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
+    varpush (var, scope);
+  }
+}
+
+[^{ID}]new{WS}+var[^{ID}] {
+  /* new var */
+  if (yytext[0] == '(') para++;
+  fputc (yytext[0], yyout);
+  fprintf (yyout, "%d", nvar++);
+  unput (yytext[yyleng - 1]);
 }
 
 "#" {
@@ -234,6 +222,7 @@ int endfor (char * file, FILE * fin, FILE * fout)
   yyout = fout;
   line = 1, scope = 0, para = 0;
   inforeach = 0, foreachscope = 0, foreachpara = 0;
+  invardecl = 0;
   int ret = yylex();
   if (!ret) {
     if (scope > 0)
@@ -302,20 +291,9 @@ void compdir (char * file, char ** in, int nin, char * grid)
   char * out = malloc (sizeof (char)*(strlen (dir) + strlen ("grid.h") + 2));
   strcpy (out, dir); strcat (out, "/grid.h");
   FILE * fout = fopen (out, "w");
-  fputs ("#include \"common.h\"\n", fout);
-  if (newvar == 0)
-    fprintf (fout, "struct _Data {};\n");
-  else {
-    fprintf (fout, "struct _Data {\n  double");
-    int i;
-    for (i = 0; i < newvar - 1; i++)
-      fprintf (fout, " %s,", _newvar[i].v);
-    fprintf (fout, " %s;", _newvar[i].v);
-    fputs ("\n};\nvar", fout);
-    for (i = 0; i < newvar - 1; i++)
-      fprintf (fout, "\t%s = offsetof(Data,%s),\n", _newvar[i].v, _newvar[i].v);
-    fprintf (fout, "\t%s = offsetof(Data,%s);\n", _newvar[i].v, _newvar[i].v);
-  }
+  fprintf (fout,
+	   "#include \"common.h\"\n"
+	   "int nvar = %d, datasize = %d*sizeof (double);\n", nvar, nvar);
   if (grid)
     fprintf (fout, "#include \"grid/%s.h\"\n", grid);
   free (out);

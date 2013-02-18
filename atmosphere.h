@@ -2,7 +2,9 @@
 #include <time.h>
 #include "utils.h"
 
-new var u, v, h, b, ke, psi, un, vn, hn;
+var u = new var, v = new var, h = new var, b = new var;
+var ke = new var, psi = new var;
+var un = new var, vn = new var, hn = new var;
 
 // Default parameters, do not change them!! edit parameters.h instead
 // Coriolis parameter

@@ -8,7 +8,6 @@
 
 typedef struct {
   char flags, neighbors;
-  Data d;
 } Cell;
 
 typedef struct _Quadtree Point;
@@ -18,7 +17,7 @@ struct _Quadtree {
   int depth;       /* the maximum depth of the tree */
 
   Quadtree * back; /* back pointer to the "parent" quadtree */
-  Cell ** m;       /* the grids at each level */
+  char ** m;       /* the grids at each level */
   int i, j, level; /* the current cell index and level */
 };
 
@@ -28,18 +27,20 @@ size_t _size (size_t l)
   return n*n;
 }
 
+#define CELL(m,level,i)  (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
+
 /***** Multigrid macros *****/
 #define depth(grid) (((Quadtree *)grid)->depth)
-#define aparent(k,l) point.m[point.level-1][((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
-					    (point.j+GHOSTS)/2+l]
-#define child(k,l)   point.m[point.level+1][(2*point.i-GHOSTS+k)*2*(_n + GHOSTS) + \
-					    (2*point.j-GHOSTS+l)]
+#define aparent(k,l) CELL(point.m, point.level-1, ((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
+			  (point.j+GHOSTS)/2+l)
+#define child(k,l)   CELL(point.m, point.level+1, (2*point.i-GHOSTS+k)*2*(_n + GHOSTS) + \
+			  (2*point.j-GHOSTS+l))
 
 /***** Quadtree macros ****/
 #define _n (1 << point.level) /* fixme */
-#define cell         point.m[point.level][point.i*(_n + 2*GHOSTS) + point.j]
-#define parent       aparent(0,0)
-#define alloc_children() { if (point.level == point.depth) alloc_layer(&point); }
+#define cell               CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
+#define parent             aparent(0,0)
+#define alloc_children()   { if (point.level == point.depth) alloc_layer(&point); }
 #define free_children()
 
 /***** Quadtree variables *****/
@@ -50,10 +51,11 @@ size_t _size (size_t l)
   double delta = 1./(1 << point.level);                         NOT_UNUSED(delta);   \
 
 /***** Data macros *****/
-#define data(k,l)  point.m[point.level][(point.i + k)*(_n + 2*GHOSTS) +	\
-					(point.j + l)].d
-#define fine(a,k,l) field(child(k,l).d, a, double)
-#define coarse(a,k,l) field(aparent(k,l).d, a, double)
+#define data(k,l)  ((double *) &point.m[point.level][((point.i + k)*(_n + 2*GHOSTS) + \
+			       (point.j + l))*(sizeof(Cell) + datasize) + sizeof(Cell)])
+#define field(cell) ((double *)(((char *) &cell) + sizeof(Cell)))
+#define fine(a,k,l) field(child(k,l))[a]
+#define coarse(a,k,l) field(aparent(k,l))[a]
 
 /* ===============================================================
  *                    Quadtree traversal
@@ -216,10 +218,10 @@ void alloc_layer (Quadtree * point)
   Quadtree * q = point->back;
   q->depth++; point->depth++;
   q->m = &(q->m[-1]);
-  q->m = realloc(q->m, sizeof (Cell *)*(q->depth + 2)); 
+  q->m = realloc(q->m, sizeof (char *)*(q->depth + 2)); 
   q->m = &(q->m[1]);
   point->m = q->m;
-  q->m[q->depth] = calloc (_size(q->depth), sizeof (Cell));
+  q->m[q->depth] = calloc (_size(q->depth), sizeof (Cell) + datasize);
 }
 
 /* fixme: this needs to be merged with refine_wavelet() */
@@ -256,12 +258,12 @@ void * init_grid (int n)
   }
   Quadtree * q = malloc(sizeof (Quadtree));
   q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
-  q->m = malloc(sizeof (Cell *)*2);
+  q->m = malloc(sizeof (char *)*2);
   q->m[0] = NULL; q->m = &(q->m[1]); /* make sure we don't try to access level -1 */
-  q->m[0] = calloc (_size(0), sizeof (Cell));
+  q->m[0] = calloc (_size(0), sizeof (Cell) + datasize);
   /* initialise the root cell */
-  q->m[0][2 + 2*GHOSTS].flags |= (leaf | active);
-  q->m[0][2 + 2*GHOSTS].neighbors = 1; // only itself as neighbor
+  CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
+  CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
   while (depth--)
     refine_quadtree(q);
   return (void *) q;
