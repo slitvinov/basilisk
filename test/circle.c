@@ -80,7 +80,7 @@ void solve (int depth)
   double maxres[NITER];
   residual (grid, a, b, res);
   for (int i = 0; i < NITER; i++) {
-    mg_cycle (grid, depth, a, res, dp,
+    mg_cycle (grid, a, res, dp,
 	      relax, homogeneous_boundary,
 	      nrelax, 0);
     boundary (grid, a);

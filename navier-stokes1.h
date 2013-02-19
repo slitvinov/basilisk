@@ -119,7 +119,7 @@ void projection (void * grid, var u, var v, var p,
   double maxres = residual (grid, p, div, res);
   int i;
   for (i = 0; i < NITERMAX && (i < 1 || maxres > TOLERANCE); i++) {
-    mg_cycle (grid, depth(grid), p, res, dp,
+    mg_cycle (grid, p, res, dp,
 	      relax, boundary_p,
 	      4, 0);
     boundary_p (grid, p, depth(grid));

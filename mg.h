@@ -2,14 +2,14 @@
 
 #include "wavelet.h"
 
-void mg_cycle (void * grid, int depth,
+void mg_cycle (void * grid,
 	       var a, var res, var dp,
 	       void (* relax)    (void * grid, var dp, var res, int depth),
 	       void (* boundary) (void * grid, var dp, int depth),
 	       int nrelax, int minlevel)
 {
   restriction (grid, res);
-  for (int l = minlevel; l <= depth; l++) {
+  for (int l = minlevel; l <= depth(grid); l++) {
     if (l == minlevel) {
       foreach_level (grid, l)
 	dp(0,0) = 0.;
