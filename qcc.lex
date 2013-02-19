@@ -34,8 +34,10 @@
 	char * v = _varstack[i--].v;
 	fprintf (yyout, "#undef %s\n", v);
       }
+      fprintf (yyout, " end_%s();\n#line %d\n", foreachs, line - 1);
     }
-    fprintf (yyout, " end_%s();\n#line %d\n", foreachs, line - 1);
+    else
+      fprintf (yyout, " end_%s();", foreachs);
   }
 
 #define YY_INPUT(buf,result,max_size) {				\
