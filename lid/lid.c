@@ -57,19 +57,6 @@ static double energy (void * grid)
   return se*L0*L0;
 }
 
-static void output_field (void * grid, var f, FILE * fp)
-{
-  fprintf (fp, "# 1:x 2:y 3:F\n");
-  double delta = 1./N;
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
-      double x = delta*i - 0.5 + delta/2., y = delta*j - 0.5 + delta/2.;
-      fprintf (fp, "%g %g %g\n", x, y, interpolate (grid, f, x, y));
-    }
-    fputc ('\n', fp);
-  }
-}
-
 var un = new var; /* we need another variable */
 
 int events (void * grid, int i, double t, double dt)

@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define I (point.i - GHOSTS)
-#define J (point.j - GHOSTS)
+#define I     (point.i - GHOSTS)
+#define J     (point.j - GHOSTS)
+#define DELTA (1./(1 << point.level))
 
 typedef struct {
   char flags, neighbors;
@@ -47,8 +48,7 @@ size_t _size (size_t l)
 #define QUADTREE_VARIABLES \
   int    level = point.level;                                   NOT_UNUSED(level);   \
   int    childx = 2*((point.i+GHOSTS)%2)-1;                     NOT_UNUSED(childx);  \
-  int    childy = 2*((point.j+GHOSTS)%2)-1;                     NOT_UNUSED(childy);  \
-  double delta = 1./(1 << point.level);                         NOT_UNUSED(delta);   \
+  int    childy = 2*((point.j+GHOSTS)%2)-1;                     NOT_UNUSED(childy);
 
 /***** Data macros *****/
 #define data(k,l)  ((double *) &point.m[point.level][((point.i + k)*(_n + 2*GHOSTS) + \
@@ -224,24 +224,34 @@ void alloc_layer (Quadtree * point)
   q->m[q->depth] = calloc (_size(q->depth), sizeof (Cell) + datasize);
 }
 
-/* fixme: this needs to be merged with refine_wavelet() */
+Point refine_cell (Point point, var start, var end)
+{
+  QUADTREE_VARIABLES;
+  alloc_children();
+  cell.flags &= ~leaf;
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++) {
+      assert(!(child(k,l).flags & active));
+      child(k,l).flags |= (active | leaf);
+      /* update neighborhood */
+      for (int o = -GHOSTS; o <= GHOSTS; o++)
+	for (int p = -GHOSTS; p <= GHOSTS; p++)
+	  child(k+o,l+p).neighbors++;
+      /* bilinear interpolation from coarser level */
+      for (var v = start; v <= end; v++)
+	fine(v,k,l) = 
+	  (9.*val(v,0,0) + 3.*(val(v,2*k-1,0) + val(v,0,2*l-1)) + val(v,2*k-1,2*l-1))/16.;
+    }
+  return point;
+}
+
 int refine_quadtree (Quadtree * quadtree)
 {
   int nf = 0;
   foreach_leaf (quadtree) {
-    alloc_children();
-    cell.flags &= ~leaf;
-    for (int k = 0; k < 2; k++)
-      for (int l = 0; l < 2; l++) {
-	assert(!(child(k,l).flags & active));
-	child(k,l).flags |= (active | leaf);
-	/* update neighborhood */
-	for (int o = -GHOSTS; o <= GHOSTS; o++)
-	  for (int p = -GHOSTS; p <= GHOSTS; p++)
-	    child(k+o,l+p).neighbors++;
-      }
+    point = refine_cell (point, 0, -1);
     nf++;
-  } end_foreach_leaf();
+  }
   return nf;
 }
 
@@ -277,4 +287,18 @@ void free_grid (void * m)
   q->m = &(q->m[-1]);
   free(q->m);
   free(q);
+}
+
+Point locate (void * grid, double xp, double yp)
+{
+  foreach_cell (grid) {
+    double delta = DELTA;
+    double x = (point.i - GHOSTS + 0.5)*delta - 0.5;
+    double y = (point.j - GHOSTS + 0.5)*delta - 0.5;
+    delta /= 2.;
+    if (xp < x - delta || xp > x + delta || yp < y - delta || yp > y + delta)
+      continue;
+    if (cell.flags & leaf)
+      return point;
+  }
 }

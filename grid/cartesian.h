@@ -2,8 +2,9 @@
 
 #include <stdlib.h>
 
-#define I (point.i - 1)
-#define J (point.j - 1)
+#define I     (point.i - 1)
+#define J     (point.j - 1)
+#define DELTA (1./point.n)
 
 typedef struct {
   char * d;
@@ -14,7 +15,6 @@ typedef struct {
 
 #define foreach(grid) {						\
   Point point = *((Point *)grid);				\
-  double delta = 1./point.n;		NOT_UNUSED(delta);	\
   for (point.i = 1; point.i <= point.n; point.i++)		\
     for (point.j = 1; point.j <= point.n; point.j++) {		\
       VARIABLES
@@ -22,7 +22,6 @@ typedef struct {
 
 #define foreach_boundary(grid,d) {				\
   Point point = *((Point *)grid);				\
-  double delta = 1./point.n;		NOT_UNUSED(delta);	\
   for (int _k = 1; _k <= point.n; _k++) {			\
     point.i = d > left ? _k : d == right ? point.n : 1;		\
     point.j = d < top  ? _k : d == top   ? point.n : 1;		\
@@ -41,4 +40,12 @@ void free_grid (Point * grid)
 {
   free (grid->d);
   free (grid);
+}
+
+Point locate (void * grid, double x, double y)
+{
+  Point point = *((Point *)grid);
+  point.i = (x + 0.5)*point.n + GHOSTS;
+  point.j = (y + 0.5)*point.n + GHOSTS;
+  return point;
 }

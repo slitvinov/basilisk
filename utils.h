@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <math.h>
 #include <assert.h>
 
@@ -26,14 +27,16 @@ double CFL = 0.5;
 #define YV(j) ((j)*DX + X0)
 
 #undef VARIABLES
-#define VARIABLES \
-  double x  = XC(I), y  = YC(J); /* cell center */	\
+#define VARIABLES					       \
+  double delta = DELTA;          /* cell size */	       \
+  double x  = XC(I), y  = YC(J); /* cell center */	       \
   double xu = XU(I), yu = YU(J); /* staggered u-coordinates */ \
   double xv = XV(I), yv = YV(J); /* staggered v-coordinates */ \
-  /* we need this to avoid compiler warnings */	\
-  NOT_UNUSED(x);  NOT_UNUSED(y);		        \
-  NOT_UNUSED(xu); NOT_UNUSED(yu);                 \
-  NOT_UNUSED(xv); NOT_UNUSED(yv);
+  /* we need this to avoid compiler warnings */	               \
+  NOT_UNUSED(x);  NOT_UNUSED(y);        \
+  NOT_UNUSED(xu); NOT_UNUSED(yu);	\
+  NOT_UNUSED(xv); NOT_UNUSED(yv);	\
+  NOT_UNUSED(delta);
 
 void symmetry (void * grid, var v)
 {
@@ -110,4 +113,34 @@ double change (void * grid, var v, var vn)
     vn(0,0) = v(0,0);
   }
   return max;
+}
+
+double interpolate (void * grid, var v, double xp, double yp)
+{
+  Point point = locate (grid, xp, yp);
+  VARIABLES;
+  x = (xp - x)/delta;
+  y = (yp - y)/delta;
+  assert (x >= -0.5 && x <= 0.5);
+  assert (y >= -0.5 && y <= 0.5);
+  int i = sign(x), j = sign(y);
+  x = fabs(x); y = fabs(y);
+  /* bilinear interpolation */
+  return (val(v,0,0)*(1. - x)*(1. - y) + 
+	  val(v,i,0)*x*(1. - y) + 
+	  val(v,0,j)*(1. - x)*y + 
+	  val(v,i,j)*x*y);
+}
+
+void output_field (void * grid, var f, FILE * fp)
+{
+  fprintf (fp, "# 1:x 2:y 3:F\n");
+  double delta = 1./N;
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < N; j++) {
+      double x = delta*i - 0.5 + delta/2., y = delta*j - 0.5 + delta/2.;
+      fprintf (fp, "%g %g %g\n", x, y, interpolate (grid, f, x, y));
+    }
+    fputc ('\n', fp);
+  }
 }

@@ -1,6 +1,5 @@
 /* interpolation */
 
-#include "grid/multigrid.h"
 #include "utils.h"
 
 var v = new var;

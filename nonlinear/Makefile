@@ -6,7 +6,7 @@ nonlinear.log: nonlinear
 	-diff nonlinear.log nonlinear.ref
 
 -include nonlinear.d
-nonlinear: nonlinear.c
+nonlinear: nonlinear.c ../qcc
 	../qcc -grid=cartesian $(CFLAGS) -DOMEGA=0. -o nonlinear nonlinear.c -lgsl -lgslcblas -lm
 
 clean:

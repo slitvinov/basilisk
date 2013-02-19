@@ -4,9 +4,9 @@
 #include <math.h>
 #include <assert.h>
 
-#define GHOSTS 1        // number of ghost layers
-#define I (point.i - GHOSTS)
-#define J (point.j - GHOSTS)
+#define I      (point.i - GHOSTS)
+#define J      (point.j - GHOSTS)
+#define DELTA  (1./point.n)
 
 typedef struct {
   char ** d;
@@ -41,7 +41,6 @@ size_t _size (size_t l)
 #define foreach_level(grid,l) {						\
   Point point = *((Point *)grid);					\
   point.level = l; point.n = 1 << point.level;				\
-  double delta = 1./point.n; NOT_UNUSED(delta);				\
   for (point.i = GHOSTS; point.i < point.n + GHOSTS; point.i++)		\
     for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
       MULTIGRID_VARIABLES						\
@@ -55,7 +54,6 @@ size_t _size (size_t l)
 #define foreach_boundary_level(grid,d,l) {				\
   Point point = *((Point *)grid);					\
   point.level = l; point.n = 1 << point.level;				\
-  double delta = 1./point.n;		NOT_UNUSED(delta);		\
   for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS; \
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS; \
@@ -71,7 +69,6 @@ size_t _size (size_t l)
   Point point = *((Point *)grid);					\
   point.level = point.depth - 1; point.n = 1 << point.level;		\
   for (; point.level > 0; point.n /= 2, point.level--) {		\
-    double delta = 1./point.n;		NOT_UNUSED(delta);		\
     for (point.i = GHOSTS; point.i < point.n + GHOSTS; point.i++)	\
       for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
         MULTIGRID_VARIABLES						\
@@ -105,24 +102,12 @@ void free_grid (Point * grid)
   free(grid->d);
 }
 
-double interpolate (void * grid, var v, double x, double y)
+Point locate (void * grid, double x, double y)
 {
   Point point = *((Point *)grid);
-  point.level = point.depth; point.n = 1 << point.level;
-  double delta = 1./point.n;
-  x = (x + 0.5)/delta;
-  y = (y + 0.5)/delta;
-  point.i = GHOSTS + x + 0.5;
-  point.j = GHOSTS + y + 0.5;
-  x -= point.i - GHOSTS + 0.5;
-  y -= point.j - GHOSTS + 0.5;
-  assert (x >= -1. && x <= 1.);
-  assert (y >= -1. && y <= 1.);
-  int i = sign(x), j = sign(y);
-  x = fabs(x); y = fabs(y);
-  /* bilinear interpolation */
-  return (val(v,0,0)*(1. - x)*(1. - y) + 
-	  val(v,i,0)*x*(1. - y) + 
-	  val(v,0,j)*(1. - x)*y + 
-	  val(v,i,j)*x*y);
+  point.level = point.depth;
+  point.n = 1 << point.level;
+  point.i = (x + 0.5)*point.n + GHOSTS;
+  point.j = (y + 0.5)*point.n + GHOSTS;
+  return point;
 }
