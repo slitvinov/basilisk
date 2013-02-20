@@ -52,28 +52,6 @@ int coarsen_wavelet (Quadtree * quadtree, var w, double max)
   return nc;
 }
 
-/* fixme: this needs to be merged with refine() in quadtree.c */
-Point refine_cell (Point point, var start, var end)
-{
-  QUADTREE_VARIABLES;
-  alloc_children();
-  cell.flags &= ~leaf;
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++) {
-      assert(!(child(k,l).flags & active));
-      child(k,l).flags |= (active | leaf);
-      /* update neighborhood */
-      for (int o = -GHOSTS; o <= GHOSTS; o++)
-	for (int p = -GHOSTS; p <= GHOSTS; p++)
-	  child(k+o,l+p).neighbors++;
-      /* bilinear interpolation from coarser level */
-      for (var a = start; a <= end; a += sizeof(double)) /* for each variable */
-	fine(a,k,l) = 
-	  (9.*val(a,0,0) + 3.*(val(a,2*k-1,0) + val(a,0,2*l-1)) + val(a,2*k-1,2*l-1))/16.;
-    }
-  return point;
-}
-
 int refine_function (Quadtree * quadtree, var start, var end,
 		     int (* func) (Point p, void * data), 
 		     void * data)
@@ -128,29 +106,42 @@ int flag_halo_cells (Quadtree * quadtree)
   return nh;
 }
 
-void update_halos (Quadtree * quadtree, int depth, var start, var end)
-{
-  if (depth < 0)
-    depth = quadtree->depth; /* fixme */
-  /* breadth-first traversal of halos from coarse to fine */
-  for (int l = 0; l <= depth; l++)
-    foreach_cell (quadtree) {
-      if (!(cell.flags & halo))
-      	continue; /* no more halos, skip the rest of this branch */
-      if (level == l) {
-	if (!(cell.flags & active))
-	  /* bilinear interpolation from coarser level */
-	  for (var a = start; a <= end; a += sizeof(double)) /* for each variable */
-	    val(a,0,0) = 
-	      (9.*coarse(a,0,0) + 
-	       3.*(coarse(a,childx,0) + coarse(a,0,childy)) + coarse(a,childx,childy))/16.;
-	continue; /* already at level l, skip the deeper branches */
-      }
-    }
-}
-
 #define foreach_halo(quadtree) foreach_cell(quadtree) { \
   if (!(cell.flags & halo))		      \
     continue;				      \
   else if (!(cell.flags & active)) {
 #define end_foreach_halo()  }} end_foreach_cell();
+
+/* breadth-first traversal of halos from coarse to fine */
+#define foreach_halo_coarse_fine(quadtree,depth1)    {			\
+  int _depth = depth1 < 0 ? depth(quadtree) : depth1;			\
+  for (int _l = 0; _l <= _depth; _l++)                                  \
+    foreach_cell (quadtree) {                                           \
+      if (!(cell.flags & halo))                                         \
+      	continue; /* no more halos, skip the rest of this branch */     \
+      if (level == _l) {                                                \
+	if (!(cell.flags & active))
+#define end_foreach_halo_coarse_fine()                                  \
+	continue; /* already at level l, skip the deeper branches */    \
+      }                                                                 \
+    } end_foreach_cell();				                \
+}
+
+void update_halo (Quadtree * quadtree, int depth, var start, var end)
+{
+  foreach_halo_coarse_fine (quadtree, depth)
+    /* bilinear interpolation from coarser level */
+    for (var v = start; v <= end; v++)
+      val(v,0,0) = (9.*coarse(v,0,0) + 
+		    3.*(coarse(v,childx,0) + coarse(v,0,childy)) + 
+		    coarse(v,childx,childy))/16.;
+}
+
+void update_halo_u_v (Quadtree * quadtree, int depth, var u, var v)
+{
+  foreach_halo_coarse_fine (quadtree, depth) {
+    /* linear interpolation from coarser level */
+    u[] = coarse(u,0,0) + childy*(coarse(u,0,1) - coarse(u,0,-1))/8.;
+    v[] = coarse(v,0,0) + childx*(coarse(v,1,0) - coarse(v,-1,0))/8.;
+  }
+}

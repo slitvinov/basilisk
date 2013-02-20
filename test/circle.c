@@ -27,7 +27,7 @@ void boundary (void * grid, var v)
   foreach_boundary (grid, bottom)
     v(0,-1) = 2.*solution(x, y - delta/2.) - v(0,0);
   restriction (grid, v);
-  update_halos (grid, -1, v, v);
+  update_halo (grid, -1, v, v);
 }
 
 void homogeneous_boundary (void * grid, var v, int l)
@@ -39,7 +39,7 @@ void homogeneous_boundary (void * grid, var v, int l)
   foreach_boundary_level (grid, bottom, l)  v(0,-1) = - v(0,0);
   /* we don't need to restrict because the solution is already defined
      on coarse levels */
-  update_halos (grid, l, v, v);
+  update_halo (grid, l, v, v);
 }
 
 void relax (void * grid, var a, var b, int l)

@@ -51,7 +51,7 @@ int main (int argc, char ** argv)
 
   start = clock ();
   for (i = 0; i < 200; i++)
-    update_halos (grid, -1, h, h);
+    update_halo (grid, -1, h, h);
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "---- update_halos ----\n");
