@@ -10,6 +10,8 @@
 
   int nvar = 0;
   int line, scope, para, inforeach, foreachscope, foreachpara, invardecl;
+  int inval, invalpara;
+  int brack, inarray;
   char foreachs[80], * fname;
   
   struct { char * v; int b; } _varstack[100]; int varstack = -1;
@@ -47,7 +49,7 @@
   }
 
   int yyerror(const char * s);
-  int getput(void); 
+  int getput(void);
   int comment(void);
 %}
 
@@ -60,7 +62,7 @@ WS  [ \t\v\n\f]
 "("                ECHO; para++;
 
 ")" {
-  ECHO; para--;
+  ECHO; para--; if (para == invalpara) inval = 0;
   if (para < 0)
     return yyerror ("mismatched ')'");
 }
@@ -92,7 +94,7 @@ foreach{ID}* {
   while (para > foreachpara && c != EOF) {
     c = getput();
     if (c == '(') para++;
-    if (c == ')') para--;
+    if (c == ')') { para--; if (para == invalpara) inval = 0; }
   }
   if (c != ')')
     return yyerror ("expecting ')");
@@ -145,7 +147,6 @@ end_foreach{ID}*{SP}*"()" {
 }
 
 ,{WS}*{ID}+ {
-  ECHO;
   if (invardecl) {
     char * var = &yytext[1];
     while (strchr (" \t\v\n\f", *var)) var++;
@@ -153,6 +154,9 @@ end_foreach{ID}*{SP}*"()" {
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
     varpush (var, scope);
   }
+  else
+    REJECT;
+  ECHO;
 }
 
 [^{ID}]new{WS}+var[^{ID}] {
@@ -161,6 +165,48 @@ end_foreach{ID}*{SP}*"()" {
   fputc (yytext[0], yyout);
   fprintf (yyout, "%d", nvar++);
   unput (yytext[yyleng - 1]);
+}
+
+[^{ID}]val{WS}*[(]    {
+  if (yytext[0] == '(') para++;
+  inval = 1; invalpara = para++;
+  ECHO;
+}
+
+{ID}+{WS}*\[{WS}*. {
+  /* v[... */
+  int found = 0;
+  if (inforeach && !inval) {
+    char * s = yytext, * index;
+    while (!strchr(" \t\v\n\f[", *s)) s++;
+    int i, len = s - yytext;
+    for (i = 0; i <= varstack && !found; i++)
+      if (strlen(_varstack[i].v) == len && !strncmp(yytext, _varstack[i].v, len)) {
+	if (yytext[yyleng-1] == ']')
+	  fprintf (yyout, "%s(0,0)", _varstack[i].v);
+	else {
+	  fprintf (yyout, "%s(", _varstack[i].v);
+	  fputc (yytext[yyleng-1], yyout);
+	  inarray = ++brack;
+	}
+	found = 1;	
+      }
+  }
+  if (!found)
+    REJECT;
+}
+
+"["        ECHO; brack++;
+"]"        {
+  if (inarray == brack) {
+    fputc (')', yyout);
+    inarray = 0;
+  }
+  else
+    ECHO;
+  brack--;
+  if (brack < 0)
+    return yyerror ("mismatched ']'");  
 }
 
 "#" {
@@ -222,9 +268,11 @@ int endfor (char * file, FILE * fin, FILE * fout)
   fprintf (fout, "# 1 \"%s\"\n", fname);
   yyin = fin;
   yyout = fout;
-  line = 1, scope = 0, para = 0;
-  inforeach = 0, foreachscope = 0, foreachpara = 0;
+  line = 1, scope = para = 0;
+  inforeach = foreachscope = foreachpara = 0;
   invardecl = 0;
+  inval = invalpara = 0;
+  brack = inarray = 0;
   int ret = yylex();
   if (!ret) {
     if (scope > 0)

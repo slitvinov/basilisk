@@ -21,31 +21,31 @@ void initial_conditions (void * grid)
 
 void boundary_p (void * grid, var p, int l)
 {
-  foreach_boundary_level (grid, right, l)  p(1,0)  = p(0,0);
-  foreach_boundary_level (grid, left, l)   p(-1,0) = p(0,0);
-  foreach_boundary_level (grid, top, l)    p(0,1)  = p(0,0);
-  foreach_boundary_level (grid, bottom, l) p(0,-1) = p(0,0);
+  foreach_boundary_level (grid, right, l)  p[1,0]  = p[];
+  foreach_boundary_level (grid, left, l)   p[-1,0] = p[];
+  foreach_boundary_level (grid, top, l)    p[0,1]  = p[];
+  foreach_boundary_level (grid, bottom, l) p[0,-1] = p[];
 }
 
 void boundary_u (void * grid, var u, var v)
 {
   foreach_boundary (grid, right) {
-    u(1,0) = 0.;
-    v(1,0) = - v(0,0);
+    u[1,0] = 0.;
+    v[1,0] = - v[];
   }
   foreach_boundary (grid, left) {
-    u(-1,0) = - u(1,0);
-    u(0,0) = 0.;
-    v(-1,0) = - v(0,0);
+    u[-1,0] = - u[1,0];
+    u[] = 0.;
+    v[-1,0] = - v[];
   }
   foreach_boundary (grid, top) {
-    v(0,1) = 0.;
-    u(0,1) = 2. - u(0,0);
+    v[0,1] = 0.;
+    u[0,1] = 2. - u[];
   }
   foreach_boundary (grid, bottom) {
-    v(0,-1) = - v(0,1);
-    v(0,0) = 0.;
-    u(0,-1) = - u(0,0);
+    v[0,-1] = - v[0,1];
+    v[] = 0.;
+    u[0,-1] = - u[];
   }
 }
 
@@ -53,7 +53,7 @@ static double energy (void * grid)
 {
   double se = 0.;
   foreach (grid)
-    se += (sq(u(0,0) + u(1,0)) + sq(v(0,0) + v(0,1)))/8.*delta*delta;
+    se += (sq(u[] + u[1,0)] + sq(v[] + v[0,1))]/8.*delta*delta;
   return se*L0*L0;
 }
 

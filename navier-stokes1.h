@@ -25,12 +25,12 @@ double timestep (void * grid)
   double dtmax = DT/CFL;
   foreach (grid) {
     double dx = L0*delta;
-    if (u(0,0) != 0.) {
-      double dt = dx/fabs(u(0,0));
+    if (u[] != 0.) {
+      double dt = dx/fabs(u[]);
       if (dt < dtmax) dtmax = dt;
     }
-    if (v(0,0) != 0.) {
-      double dt = dx/fabs(v(0,0));
+    if (v[] != 0.) {
+      double dt = dx/fabs(v[]);
       if (dt < dtmax) dtmax = dt;
     }
   }
@@ -43,39 +43,39 @@ void stresses (void * grid)
 {
   foreach (grid) {
     delta *= L0;
-    Sxx(0,0) = 
-      - sq(u(0,0) + u(1,0))/4. 
-      + 2.*NU*(u(1,0) - u(0,0))/delta;
-    Syy(0,0) = 
-      - sq(v(0,0) + v(0,1))/4. 
-      + 2.*NU*(v(0,1) - v(0,0))/delta;
-    Sxy(0,0) = 
-      - (u(0,0) + u(0,-1))*(v(0,0) + v(-1,0))/4. +
-      NU*(u(0,0) - u(0,-1) + v(0,0) - v(-1,0))/delta;
+    Sxx[] = 
+      - sq(u[] + u[1,0])/4. 
+      + 2.*NU*(u[1,0] - u[])/delta;
+    Syy[] = 
+      - sq(v[] + v[0,1])/4. 
+      + 2.*NU*(v[0,1] - v[])/delta;
+    Sxy[] = 
+      - (u[] + u[0,-1])*(v[] + v[-1,0])/4. +
+      NU*(u[] - u[0,-1] + v[] - v[-1,0])/delta;
   }
   foreach_boundary (grid, left) {
     delta *= L0;
-    Sxx(-1,0) = 
-      - sq(u(-1,0) + u(0,0))/4. 
-      + 2.*NU*(u(0,0) - u(-1,0))/delta;
+    Sxx[-1,0] = 
+      - sq(u[-1,0] + u[])/4. 
+      + 2.*NU*(u[] - u[-1,0])/delta;
   }
   foreach_boundary (grid, top) {
     delta *= L0;
-    Sxy(0,1) = 
-      - (u(0,1) + u(0,0))*(v(0,1) + v(-1,1))/4. +
-      NU*(u(0,1) - u(0,0) + v(0,1) - v(-1,1))/delta;
+    Sxy[0,1] = 
+      - (u[0,1] + u[])*(v[0,1] + v[-1,1])/4. +
+      NU*(u[0,1] - u[] + v[0,1] - v[-1,1])/delta;
   }
   foreach_boundary (grid, right) {
     delta *= L0;
-    Sxy(1,0) = 
-      - (u(1,0) + u(1,-1))*(v(1,0) + v(0,0))/4. +
-      NU*(u(1,0) - u(1,-1) + v(1,0) - v(0,0))/delta;
+    Sxy[1,0] = 
+      - (u[1,0] + u[1,-1])*(v[1,0] + v[])/4. +
+      NU*(u[1,0] - u[1,-1] + v[1,0] - v[])/delta;
   }
   foreach_boundary (grid, bottom) {
     delta *= L0;
-    Syy(0,-1) = 
-      - sq(v(0,-1) + v(0,0))/4. 
-      + 2.*NU*(v(0,0) - v(0,-1))/delta;
+    Syy[0,-1] = 
+      - sq(v[0,-1] + v[])/4. 
+      + 2.*NU*(v[] - v[0,-1])/delta;
   }
 }
 
@@ -83,27 +83,27 @@ void advance (void * grid, double dt)
 {
   foreach (grid) {
     delta *= L0;
-    u(0,0) += dt*(Sxx(0,0) - Sxx(-1,0) + Sxy(0,1) - Sxy(0,0))/delta;
-    v(0,0) += dt*(Syy(0,0) - Syy(0,-1) + Sxy(1,0) - Sxy(0,0))/delta;
+    u[] += dt*(Sxx[] - Sxx[-1,0] + Sxy[0,1] - Sxy[])/delta;
+    v[] += dt*(Syy[] - Syy[0,-1] + Sxy[1,0] - Sxy[])/delta;
   }
 }
 
 void relax (void * grid, var a, var b, int l)
 {
   foreach_level (grid, l)
-    a(0,0) = (a(1,0) + a(-1,0) +
-		  a(0,1) + a(0,-1) 
-		  - L0*L0*delta*delta*b(0,0))/4.;
+    a[] = (a[1,0] + a[-1,0] +
+		  a[0,1] + a[0,-1] 
+		  - L0*L0*delta*delta*b[])/4.;
 }
 
 double residual (void * grid, var a, var b, var res)
 {
   double maxres = 0.;
   foreach (grid) {
-    res(0,0) = b(0,0) + 
-    (4.*a(0,0) - a(1,0) - a(-1,0) - a(0,1) - a(0,-1))/(L0*L0*delta*delta);
-    if (fabs (res(0,0)) > maxres)
-      maxres = fabs (res(0,0));
+    res[] = b[] + 
+    (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(L0*L0*delta*delta);
+    if (fabs (res[]) > maxres)
+      maxres = fabs (res[]);
   }
   return maxres;
 }
@@ -113,8 +113,8 @@ void projection (void * grid, var u, var v, var p,
 {
   double sum = 0.;
   foreach(grid) {
-    div(0,0) = (u(1,0) - u(0,0) + v(0,1) - v(0,0))/(L0*delta);
-    sum += div(0,0);
+    div[] = (u[1,0] - u[] + v[0,1] - v[])/(L0*delta);
+    sum += div[];
   }
   double maxres = residual (grid, p, div, res);
   int i;
@@ -130,8 +130,8 @@ void projection (void * grid, var u, var v, var p,
 	     NITERMAX, sum);
   foreach (grid) {
     delta *= L0;
-    u(0,0) -= (p(0,0) - p(-1,0))/delta;
-    v(0,0) -= (p(0,0) - p(0,-1))/delta;
+    u[] -= (p[] - p[-1,0])/delta;
+    v[] -= (p[] - p[0,-1])/delta;
   }
 }
 

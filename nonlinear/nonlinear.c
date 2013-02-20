@@ -49,9 +49,9 @@ var h1 = new var;
 void initial_conditions (void * grid)
 {
   foreach (grid) {
-    h1(0,0) = h(0,0) = (H0 + h0(sqrt (x*x + y*y)));
-    u(0,0)  = - vtheta(sqrt (xu*xu + yu*yu))*yu/sqrt (xu*xu + yu*yu);
-    v(0,0)  =   vtheta(sqrt (xv*xv + yv*yv))*xv/sqrt (xv*xv + yv*yv);
+    h1[] = h[] = (H0 + h0(sqrt (x*x + y*y)));
+    u[] = - vtheta(sqrt (xu*xu + yu*yu))*yu/sqrt (xu*xu + yu*yu);
+    v[] =   vtheta(sqrt (xv*xv + yv*yv))*xv/sqrt (xv*xv + yv*yv);
   }
 }
 
@@ -80,8 +80,8 @@ double error (void * grid)
 {
   double max = 0.;
   foreach (grid) {
-    e(0,0) = fabs (h1(0,0)  - h(0,0));
-    if (e(0,0) > max) max = e(0,0);
+    e[] = fabs (h1[]  - h[]);
+    if (e[] > max) max = e[];
   }
   return max;
 }
@@ -90,7 +90,7 @@ double energy (void * grid)
 {
   double se = 0.;
   foreach (grid)
-    se += (h(0,0)*ke(0,0) + G*h(0,0)*(h(0,0)/2. + b(0,0)))*delta*delta;
+    se += (h[]*ke[] + G*h[]*(h[]/2. + b[]))*delta*delta;
   return se*L0*L0;
 }
 
