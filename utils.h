@@ -40,31 +40,31 @@ double CFL = 0.5;
 
 void symmetry (void * grid, var v)
 {
-  foreach_boundary (grid, right)  v(+1,0) = v(0,0);
-  foreach_boundary (grid, left)   v(-1,0) = v(0,0);
-  foreach_boundary (grid, top)    v(0,+1) = v(0,0);
-  foreach_boundary (grid, bottom) v(0,-1) = v(0,0);
+  foreach_boundary (grid, right)  v(+1,0) = v[];
+  foreach_boundary (grid, left)   v(-1,0) = v[];
+  foreach_boundary (grid, top)    v(0,+1) = v[];
+  foreach_boundary (grid, bottom) v(0,-1) = v[];
 }
 
 void uv_symmetry (void * grid, var u, var v)
 {
   foreach_boundary (grid, right) {
-    u(1,0) = 0.;
-    v(1,0) = v(0,0);
+    u[1,0] = 0.;
+    v[1,0] = v[];
   }
   foreach_boundary (grid, left) {
-    u(-1,0) = - u(1,0);
-    u(0,0) = 0.;
-    v(-1,0) = v(0,0);
+    u[-1,0] = - u[1,0];
+    u[] = 0.;
+    v[-1,0] = v[];
   }
   foreach_boundary (grid, top) {
-    v(0,1) = 0.;
-    u(0,1) = u(0,0);
+    v[0,1] = 0.;
+    u[0,1] = u[];
   }
   foreach_boundary (grid, bottom) {
-    v(0,-1) = - v(0,1);
-    v(0,0) = 0.;
-    u(0,-1) = u(0,0);
+    v[0,-1] = - v[0,1];
+    v[] = 0.;
+    u[0,-1] = u[];
   }
 }
 
@@ -107,10 +107,10 @@ double change (void * grid, var v, var vn)
 {
   double max = 0.;
   foreach (grid) {
-    double dv = fabs (v(0,0) - vn(0,0));
+    double dv = fabs (v[] - vn[]);
     if (dv > max)
       max = dv;
-    vn(0,0) = v(0,0);
+    vn[] = v[];
   }
   return max;
 }
@@ -132,12 +132,12 @@ double interpolate (void * grid, var v, double xp, double yp)
 	  val(v,i,j)*x*y);
 }
 
-void output_field (void * grid, var f, FILE * fp)
+void output_field (void * grid, var f, int n, FILE * fp)
 {
   fprintf (fp, "# 1:x 2:y 3:F\n");
-  double delta = 1./N;
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
+  double delta = 1./n;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
       double x = delta*i - 0.5 + delta/2., y = delta*j - 0.5 + delta/2.;
       fprintf (fp, "%g %g %g\n", x, y, interpolate (grid, f, x, y));
     }

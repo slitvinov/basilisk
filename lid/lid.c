@@ -68,7 +68,7 @@ int events (void * grid, int i, double t, double dt)
     fprintf (stderr, "t: %f %.9f %g\n", t, energy (grid), du);
   }
   if (i % 100 == 0)
-    output_field (grid, u, stdout);
+    output_field (grid, u, N, stdout);
   return 0; /* continue */
 }
 

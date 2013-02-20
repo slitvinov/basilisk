@@ -94,25 +94,12 @@ double energy (void * grid)
   return se*L0*L0;
 }
 
-void output_field (void * grid, var f, FILE * fp)
-{
-  fprintf (fp, "# 1:x 2:y 3:F\n");
-  double xold = -1e10;
-  foreach (grid) {
-    if (x != xold) {
-      fprintf (fp, "\n");
-      xold = x;
-    }
-    fprintf (fp, "%g %g %g\n", x, y, f(0,0));
-  }
-}
-
 int events (void * grid, int i, double t, double dt)
 {
   if (i % 10 == 0)
     fprintf (stderr, "t: %g %g %g\n", t, error (grid), energy (grid));
-  //if (i % 100 == 0)
-  //  output_field (grid, var(e), stdout);
+  //  if (i % 100 == 0)
+  //    output_field (grid, e, stdout);
   return 0;
 }
 
