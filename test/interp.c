@@ -20,13 +20,13 @@ int main (int argc, char ** argv)
   symmetry (grid, h);
   
   /* initial coarsening (see halo.c) */
-  restriction (grid, h);
+  restriction (grid, h, h);
   wavelet (grid, h, w);
   double tolerance = 1e-4;
   coarsen_wavelet (grid, w, tolerance);
   flag_halo_cells (grid);
 
-  restriction (grid, h);
+  restriction (grid, h, h);
   update_halo (grid, -1, h, h);
 
   double max = 0.;

@@ -2,10 +2,11 @@
 #  error "the grid needs to implement foreach_fine_to_coarse()"
 #endif
 
-void restriction (void * grid, var v)
+void restriction (void * grid, var start, var end)
 {
   foreach_fine_to_coarse (grid)
-    v[] = (fine(v,0,0) + fine(v,1,0) + fine(v,0,1) + fine(v,1,1))/4.;
+    for (var v = start; v <= end; v++)
+      val(v,0,0) = (fine(v,0,0) + fine(v,1,0) + fine(v,0,1) + fine(v,1,1))/4.;
 }
 
 void restriction_u_v (void * grid, var u, var v)

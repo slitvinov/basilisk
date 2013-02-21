@@ -8,7 +8,7 @@ void mg_cycle (void * grid,
 	       void (* boundary) (void * grid, var dp, int depth),
 	       int nrelax, int minlevel)
 {
-  restriction (grid, res);
+  restriction (grid, res, res);
   for (int l = minlevel; l <= depth(grid); l++) {
     if (l == minlevel) {
       foreach_level (grid, l)

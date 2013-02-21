@@ -17,7 +17,7 @@ void refineiter (void * grid)
     symmetry (grid, h);
     update_halo (grid, -1, h, h);
 
-    restriction (grid, h);
+    restriction (grid, h, h);
     wavelet (grid, h, w);
 
     int nf = refine_wavelet (grid, h, h, w, 1e-2);
@@ -41,7 +41,7 @@ int main (int argc, char ** argv)
     printf ("%g %g %d %d %g %g leaf1\n", x, y, level, cell.neighbors, h(0,0),
 	    fabs(h(0,0) - exp(-(x*x + y*y)/(0.01))));
 
-  restriction (grid, h);
+  restriction (grid, h, h);
   wavelet (grid, h, w);
   fprintf (stderr, "\ncoarsened %d cells back\n", coarsen_wavelet (grid, w, 1e-2));
   flag_halo_cells (grid);

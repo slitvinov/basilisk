@@ -20,7 +20,7 @@ int main (int argc, char ** argv)
   symmetry (grid, h);
   
   /* initial coarsening (see halo.c) */
-  restriction (grid, h);
+  restriction (grid, h, h);
   wavelet (grid, h, w);
   double tolerance = 1e-4;
   coarsen_wavelet (grid, w, tolerance);

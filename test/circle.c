@@ -26,7 +26,7 @@ void boundary (void * grid, var v)
     v[0,+1] = 2.*solution(x, y + delta/2.) - v[];
   foreach_boundary (grid, bottom)
     v[0,-1] = 2.*solution(x, y - delta/2.) - v[];
-  restriction (grid, v);
+  restriction (grid, v, v);
   update_halo (grid, -1, v, v);
 }
 

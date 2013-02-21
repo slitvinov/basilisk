@@ -18,7 +18,7 @@ int main (int argc, char ** argv)
   symmetry (grid, h);
   
   /* initial coarsening */
-  restriction (grid, h);
+  restriction (grid, h, h);
   wavelet (grid, h, w);
   coarsen_wavelet (grid, w, 1e-2);
   flag_halo_cells (grid);

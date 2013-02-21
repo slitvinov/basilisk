@@ -24,7 +24,7 @@ int main (int argc, char ** argv)
   int i;
   for (i = 0; i < 31; i++) {
     /* coarsening */
-    restriction (grid, h);
+    restriction (grid, h, h);
     wavelet (grid, h, w);
     coarsen_wavelet (grid, w, 1e-5);
     flag_halo_cells (grid);
