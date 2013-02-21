@@ -148,8 +148,7 @@ void run (void)
   projection (grid, u, v, p, Sxx, Syy, Sxy);
   boundary_u (grid, u, v);
 
-  clock_t cstart, cend;
-  cstart = clock ();
+  clock_t cstart = clock ();
   do {
     double dt = timestep (grid);
     if (events (grid, i, t, dt))
@@ -162,7 +161,7 @@ void run (void)
     t += dt; i++;
   } while (t < TMAX && i < IMAX);
   end (grid);
-  cend = clock ();
+  clock_t cend = clock ();
   double cpu = ((double) (cend - cstart))/CLOCKS_PER_SEC;
   fprintf (stderr, "# " GRIDNAME ", %d timesteps, %g CPU, %.3g points.steps/s\n",
 	   i, cpu, (N*N*(double)i/cpu));

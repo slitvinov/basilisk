@@ -85,4 +85,4 @@ void end (void * grid)
   fclose (fp);
 }
 
-int main () { run (); }
+int main() { run (); }
