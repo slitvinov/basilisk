@@ -144,3 +144,23 @@ void output_field (void * grid, var f, int n, FILE * fp)
     fputc ('\n', fp);
   }
 }
+
+void output_matrix (void * grid, var f, int n, FILE * fp)
+{
+  float fn = n;
+  float delta = 1./fn;
+  fwrite (&fn, sizeof(float), 1, fp);
+  for (int j = 0; j < n; j++) {
+    float y = delta*j - 0.5 + delta/2.;
+    fwrite (&y, sizeof(float), 1, fp);
+  }
+  for (int i = 0; i < n; i++) {
+    float x = delta*i - 0.5 + delta/2.;
+    fwrite (&x, sizeof(float), 1, fp);
+    for (int j = 0; j < n; j++) {
+      float y = delta*j - 0.5 + delta/2.;
+      float v = interpolate (grid, f, x, y);
+      fwrite (&v, sizeof(float), 1, fp);
+    }
+  }
+}
