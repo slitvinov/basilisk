@@ -8,7 +8,7 @@ void coarsen_cell (Point point)
     for (int l = 0; l < 2; l++) {
       child(k,l).flags &= ~leaf;
       child(k,l).flags &= ~active;
-#if 1
+#if TRASH
       /* trash the data just to make sure it's never touched */
       for (var v = 0; v < nvar; v++)
 	fine(v,k,l) = undefined;

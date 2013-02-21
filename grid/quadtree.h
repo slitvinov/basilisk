@@ -213,16 +213,65 @@ enum {
                                              if (level == l || cell.flags & leaf) {
 #define end_foreach_boundary_level()         continue; } } end_foreach_boundary()
 
-void alloc_layer (Quadtree * point)
+void alloc_layer (Quadtree * p)
 {
-  Quadtree * q = point->back;
-  q->depth++; point->depth++;
+  Quadtree * q = p->back;
+  q->depth++; p->depth++;
   q->m = &(q->m[-1]);
   q->m = realloc(q->m, sizeof (char *)*(q->depth + 2)); 
   q->m = &(q->m[1]);
-  point->m = q->m;
+  p->m = q->m;
   q->m[q->depth] = calloc (_size(q->depth), sizeof (Cell) + datasize);
+#if TRASH
+  /* trash the data just to make sure it's either explicitly
+     initialised or never touched */
+  foreach_cell (q)
+    if (level == q->depth) {
+      for (var v = 0; v < nvar; v++)
+	val(v,0,0) = undefined;
+      continue;
+    }
+#endif
 }
+
+Point refine_cell (Point point, var start, var end);
+
+void * init_grid (int n)
+{
+  int depth = 0;
+  while (n > 1) {
+    if (n % 2) {
+      fprintf (stderr, "quadtree: N must be a power-of-two\n");
+      exit (1);
+    }
+    n /= 2;
+    depth++;
+  }
+  Quadtree * q = malloc(sizeof (Quadtree));
+  q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
+  q->m = malloc(sizeof (char *)*2);
+  q->m[0] = NULL; q->m = &(q->m[1]); /* make sure we don't try to access level -1 */
+  /* initialise the root cell */
+  q->m[0] = calloc (_size(0), sizeof (Cell) + datasize);
+  CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
+  CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
+  while (depth--)
+    foreach_leaf (q)
+      point = refine_cell (point, 0, nvar - 1);
+  return (void *) q;
+}
+
+void free_grid (void * m)
+{
+  Quadtree * q = m;
+  for (int l = 0; l <= q->depth; l++)
+    free (q->m[l]);
+  q->m = &(q->m[-1]);
+  free(q->m);
+  free(q);
+}
+
+// The functions below should be independent from the details of the implementation
 
 Point refine_cell (Point point, var start, var end)
 {
@@ -243,50 +292,6 @@ Point refine_cell (Point point, var start, var end)
 	  (9.*val(v,0,0) + 3.*(val(v,2*k-1,0) + val(v,0,2*l-1)) + val(v,2*k-1,2*l-1))/16.;
     }
   return point;
-}
-
-int refine_quadtree (Quadtree * quadtree)
-{
-  int nf = 0;
-  foreach_leaf (quadtree) {
-    point = refine_cell (point, 0, -1);
-    nf++;
-  }
-  return nf;
-}
-
-void * init_grid (int n)
-{
-  int depth = 0;
-  while (n > 1) {
-    if (n % 2) {
-      fprintf (stderr, "quadtree: N must be a power-of-two\n");
-      exit (1);
-    }
-    n /= 2;
-    depth++;
-  }
-  Quadtree * q = malloc(sizeof (Quadtree));
-  q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
-  q->m = malloc(sizeof (char *)*2);
-  q->m[0] = NULL; q->m = &(q->m[1]); /* make sure we don't try to access level -1 */
-  q->m[0] = calloc (_size(0), sizeof (Cell) + datasize);
-  /* initialise the root cell */
-  CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
-  CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
-  while (depth--)
-    refine_quadtree(q);
-  return (void *) q;
-}
-
-void free_grid (void * m)
-{
-  Quadtree * q = m;
-  for (int l = 0; l <= q->depth; l++)
-    free (q->m[l]);
-  q->m = &(q->m[-1]);
-  free(q->m);
-  free(q);
 }
 
 Point locate (void * grid, double xp, double yp)

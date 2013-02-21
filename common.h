@@ -2,7 +2,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define GHOSTS 1        // number of ghost layers
+#define GHOSTS 1  // number of ghost layers
+#define TRASH  1  // whether to 'trash' uninitialised data (useful for debugging)
 
 #define NOT_UNUSED(x) (x = x)
 
