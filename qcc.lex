@@ -28,7 +28,7 @@
       free (_varstack[varstack--].v);
   }
   
-  void endforeach() {
+  void endforeach (int line) {
     if (varstack >= 0) {
       fputc ('\n', yyout);
       int i = varstack;
@@ -36,7 +36,7 @@
 	char * v = _varstack[i--].v;
 	fprintf (yyout, "#undef %s\n", v);
       }
-      fprintf (yyout, " end_%s();\n#line %d\n", foreachs, line - 1);
+      fprintf (yyout, " end_%s();\n#line %d\n", foreachs, line);
     }
     else
       fprintf (yyout, " end_%s();", foreachs);
@@ -78,7 +78,7 @@ WS  [ \t\v\n\f]
   varpop();
   if (inforeach && scope == foreachscope) {
     inforeach = 0;
-    endforeach ();
+    endforeach (line);
   }
 }
 
@@ -122,7 +122,7 @@ end_foreach{ID}*{SP}*"()" {
 ;  {
   ECHO;
   if (inforeach && scope == foreachscope && para == foreachpara) {
-    endforeach();
+    endforeach (line - 1);
     inforeach = 0;
   }
   invardecl = 0;
