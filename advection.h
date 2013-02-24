@@ -1,5 +1,6 @@
 #include <time.h>
 #include "utils.h"
+#include "events.h"
 
 var f = new var, u = new var, v = new var;
 
@@ -9,8 +10,6 @@ void initial_conditions (void * grid);
 void boundary_f         (void * grid, var f);
 void boundary_u_v       (void * grid, var u, var v);
 void boundary_gradient  (void * grid, var fx, var fy);
-int  events             (void * grid, int i, double t, double dt);
-void end                (void * grid, int i, double t, double dt);
 
 void fluxes_upwind (void * grid, const var f, const var u, const var v, var fu, var fv)
 {
@@ -87,7 +86,7 @@ void fluxes_upwind_bcg (void * grid,
   }
 }
 
-double timestep (void * grid, const var u, const var v)
+double timestep (void * grid, double t, const var u, const var v)
 {
   double dtmax = DT/CFL;
   foreach (grid) {
@@ -101,7 +100,15 @@ double timestep (void * grid, const var u, const var v)
       if (dt < dtmax) dtmax = dt;
     }
   }
-  return dtmax*CFL;
+  dtmax *= CFL;
+  int n = (tnext - t)/dtmax;
+  if (n == 0)
+    dtmax = tnext - t;
+  else {
+    dtmax = (tnext - t)/(n + 1);
+    tnext = t + dtmax;
+  }
+  return dtmax;
 }
 
 void run (void)
@@ -109,16 +116,15 @@ void run (void)
   parameters ();
   void * grid = init_grid (N);
 
+  events_init (grid);
   initial_conditions (grid);
   boundary_f (grid, f);
 
   clock_t cstart = clock ();
+  double t = 0.;
   int i = 0;
-  double dt = timestep (grid, u, v);
-  for (double t = 0; t <= TMAX; t += dt, i++) {
-    if (events (grid, i, t, dt))
-      break;
-    dt = timestep (grid, u, v);
+  while (events (grid, i, t)) {
+    double dt = timestep (grid, t, u, v);
     var fu = new var, fv = new var;
     var fx = new var, fy = new var;
     gradient (grid, f, fx, fy);
@@ -128,11 +134,14 @@ void run (void)
     foreach (grid)
       f[] += dt*(fu[] - fu[1,0] + fv[] - fv[0,1])/delta;
     boundary_f (grid, f);
+    i++; t = tnext;
   }
   clock_t cend = clock ();
   double cpu = ((double) (cend - cstart))/CLOCKS_PER_SEC;
+  int n = 0;
+  foreach (grid) n++;
   fprintf (stderr, "# " GRIDNAME ", %d timesteps, %g CPU, %.3g points.steps/s\n",
-	   i, cpu, (N*N*(double)i/cpu));
+	   i, cpu, (n*(double)i/cpu));
 
   free_grid (grid);
 }

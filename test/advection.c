@@ -41,8 +41,6 @@ void parameters ()
 {
   // number of grid points
   N = 128;
-  // end time
-  TMAX = 5;
   // maximum timestep
   DT = 1e-1;
   // CFL number
@@ -58,26 +56,22 @@ void initial_conditions (void * grid)
     f[] = exp(-100.*(sq(x + 0.2) + sq(y + .236338)));
 }
 
-int events (void * grid, int i, double t, double dt)
-{
-  if (i % 20 == 0)
-    output_matrix (grid, f, N, stdout);
+event (t += 0.1; t <= 5.) output_matrix (grid, f, N, stdout);
 
+event (i++) {
   double sum = 0., min = 1e100, max = -1e100;
   foreach (grid) {
     sum += f[]*delta*delta;
     if (f[] > max) max = f[];
     if (f[] < min) min = f[];
   }
-  fprintf (stderr, "%f %f %.12f %g %g\n", t, dt, sum, min, max);
+  fprintf (stderr, "%f %.12f %g %g\n", t, sum, min, max);
 
   foreach (grid) {
     u[] =   1.5*sin(2.*pi*t/5.)*sin((xu + 0.5)*pi)*cos((yu + 0.5)*pi);
     v[] = - 1.5*sin(2.*pi*t/5.)*cos((xv + 0.5)*pi)*sin((yv + 0.5)*pi);
   }
   boundary_u_v (grid, u, v);
-
-  return 0; /* continue */
 }
 
 int main() { run (); }
