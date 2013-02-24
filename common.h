@@ -20,3 +20,16 @@ typedef int var;
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define sq(x) ((x)*(x))
 #define sign(x) ((x) > 0 ? 1 : -1)
+
+typedef struct _Event Event;
+typedef int (* Expr) (void *, int *, double *);
+
+struct _Event {
+  int last, nexpr;
+  void (* action) (void *, int, double);
+  Expr expr[3];
+  double t;
+  int i;
+};
+
+double tnext; /* time of next event */

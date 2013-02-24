@@ -1,10 +1,10 @@
 %option noyywrap
+%option yylineno
 %{
   #include <assert.h>
 
   static FILE * fdepend = NULL;
   static char * fname;
-  static int line;
   
   static char * paths[100] = { LIBDIR }, grid[80] = "quadtree";
   static int npath = 1, hasgrid = 0;
@@ -30,12 +30,6 @@
 	free (p);
     }
     return NULL;
-  }
-
-#define YY_INPUT(buf,result,max_size) {				\
-    int c = fgetc(yyin);					\
-    result = (c == EOF) ? YY_NULL : (buf[0] = c, 1);		\
-    if (c == '\n') line++;					\
   }
 
   static int yyerror(const char * s);
@@ -73,7 +67,7 @@ SP  [ \t]
 
 int yyerror (const char * s)
 {
-  fprintf (stderr, "%s:%d: error: %s\n", fname, line, s);
+  fprintf (stderr, "%s:%d: error: %s\n", fname, yylineno, s);
   return 1;
 }
 
@@ -129,7 +123,7 @@ static int include (char * file, FILE * fin)
   strcpy (paths[npath], file);
   stripname (paths[npath]);
   yyin = fin;
-  line = 1;
+  yylineno = 1;
   int ret = yylex();
   free (fname);
   return ret;

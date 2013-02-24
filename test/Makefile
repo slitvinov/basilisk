@@ -4,7 +4,7 @@ VALGRIND = valgrind -q --tool=memcheck
 CFLAGS += -std=c99 -g -O2 -MD -Wall -msse2 -mfpmath=sse
 
 all: halo.vlog speed.slog interp.log interpu.log refine.vlog rk2.vlog poisson.log circle.log \
-	laplacian.slog interpolate.vlog
+	laplacian.slog interpolate.vlog events.vlog
 	cat *.d > Makefile.deps
 
 plots: halo.png speed.png interp.png interpu.png refine.png rk2.png poisson.png circle.png \
