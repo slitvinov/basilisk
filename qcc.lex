@@ -211,7 +211,7 @@ end_foreach{ID}*{SP}*"()" {
   /* v[... */
   int found = 0;
   if (inforeach && !inval) {
-    char * s = yytext, * index;
+    char * s = yytext;
     while (!strchr(" \t\v\n\f[", *s)) s++;
     int i, len = s - yytext;
     for (i = 0; i <= varstack && !found; i++)
@@ -348,7 +348,7 @@ void cleanup (int status)
   if (!debug) {
     char command[80] = "rm -r -f ";
     strcat (command, dir);
-    int s = system (command);
+    int s = system (command); s = s;
   }
   exit (status);
 }

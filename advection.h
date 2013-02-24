@@ -51,7 +51,7 @@ void fluxes_upwind_bcg (void * grid,
       double un = dt*(u[] + u[1,0])/(2.*delta);
       f2 = f1 + max(-1., -1. - un)*fx[]*delta/2.;
       double vn = v[] + v[0,1];
-      double fyy = vn > 0. ? f[0,1] - f[] : f[] - f[0,-1];
+      double fyy = vn < 0. ? f[0,1] - f[] : f[] - f[0,-1];
       f2 -= dt*vn*fyy/(4.*delta);
     }
     else {
@@ -59,7 +59,7 @@ void fluxes_upwind_bcg (void * grid,
       double un = dt*(u[-1,0] + u[])/(2.*delta);
       f2 = f1 + min(1., 1. - un)*fx[-1,0]*delta/2.;
       double vn = v[-1,0] + v[-1,1];
-      double fyy = vn > 0. ? f[-1,1] - f[-1,0] : f[-1,0] - f[-1,-1];
+      double fyy = vn < 0. ? f[-1,1] - f[-1,0] : f[-1,0] - f[-1,-1];
       f2 -= dt*vn*fyy/(4.*delta);
     }
     r = (f[] - f[-1,0])/(f[1,0] - f[]);
@@ -70,7 +70,7 @@ void fluxes_upwind_bcg (void * grid,
       double un = dt*(v[] + v[0,1])/(2.*delta);
       f2 = f1 + max(-1., -1. - un)*fy[]*delta/2.;
       double vn = u[] + u[1,0];
-      double fxx = vn > 0. ? f[1,0] - f[] : f[] - f[-1,0];
+      double fxx = vn < 0. ? f[1,0] - f[] : f[] - f[-1,0];
       f2 -= dt*vn*fxx/(4.*delta);
     }
     else {
@@ -78,7 +78,7 @@ void fluxes_upwind_bcg (void * grid,
       double un = dt*(v[0,-1] + v[])/(2.*delta);
       f2 = f1 + min(1., 1. - un)*fy[0,-1]*delta/2.;
       double vn = u[0,-1] + u[1,-1];
-      double fxx = vn > 0. ? f[1,-1] - f[0,-1] : f[0,-1] - f[-1,-1];
+      double fxx = vn < 0. ? f[1,-1] - f[0,-1] : f[0,-1] - f[-1,-1];
       f2 -= dt*vn*fxx/(4.*delta);
     }
     r = (f[] - f[0,-1])/(f[0,1] - f[]);
@@ -86,7 +86,7 @@ void fluxes_upwind_bcg (void * grid,
   }
 }
 
-double timestep (void * grid, double t, const var u, const var v)
+double timestep (void * grid, const var u, const var v)
 {
   double dtmax = DT/CFL;
   foreach (grid) {
@@ -100,15 +100,7 @@ double timestep (void * grid, double t, const var u, const var v)
       if (dt < dtmax) dtmax = dt;
     }
   }
-  dtmax *= CFL;
-  int n = (tnext - t)/dtmax;
-  if (n == 0)
-    dtmax = tnext - t;
-  else {
-    dtmax = (tnext - t)/(n + 1);
-    tnext = t + dtmax;
-  }
-  return dtmax;
+  return dtmax*CFL;
 }
 
 void run (void)
@@ -124,7 +116,7 @@ void run (void)
   double t = 0.;
   int i = 0;
   while (events (grid, i, t)) {
-    double dt = timestep (grid, t, u, v);
+    double dt = dtnext (t, timestep (grid, u, v));
     var fu = new var, fv = new var;
     var fx = new var, fy = new var;
     gradient (grid, f, fx, fy);

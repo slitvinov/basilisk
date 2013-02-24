@@ -42,10 +42,12 @@ void parameters ()
   // number of grid points
   N = 128;
   // maximum timestep
-  DT = 1e-1;
+  DT = .1;
   // CFL number
   CFL = 0.8;
 }
+
+#define bump(x,y) (exp(-100.*(sq(x + 0.2) + sq(y + .236338))))
 
 void initial_conditions (void * grid)
 {
@@ -53,7 +55,7 @@ void initial_conditions (void * grid)
   //  flag_halo_cells (grid);
 
   foreach (grid)
-    f[] = exp(-100.*(sq(x + 0.2) + sq(y + .236338)));
+    f[] = bump(x,y);
 }
 
 event (t += 0.1; t <= 5.) output_matrix (grid, f, N, stdout);
@@ -68,10 +70,32 @@ event (i++) {
   fprintf (stderr, "%f %.12f %g %g\n", t, sum, min, max);
 
   foreach (grid) {
-    u[] =   1.5*sin(2.*pi*t/5.)*sin((xu + 0.5)*pi)*cos((yu + 0.5)*pi);
-    v[] = - 1.5*sin(2.*pi*t/5.)*cos((xv + 0.5)*pi)*sin((yv + 0.5)*pi);
+    double u1 = 1.5*sin(2.*pi*t/5.)*sin((x + 0.5)*pi)*cos((y + 0.5)*pi);
+    double u0 = 1.5*sin(2.*pi*t/5.)*sin(((x - delta) + 0.5)*pi)*cos((y + 0.5)*pi);
+    u[] = (u0 + u1)/2.; 
+    double v1 = - 1.5*sin(2.*pi*t/5.)*cos((x + 0.5)*pi)*sin((y + 0.5)*pi);
+    double v0 = - 1.5*sin(2.*pi*t/5.)*cos((x + 0.5)*pi)*sin(((y - delta) + 0.5)*pi);
+    v[] = (v0 + v1)/2.;
   }
   boundary_u_v (grid, u, v);
+}
+
+event (t = 5) {
+  double max = 0., norm1 = 0., norm2 = 0., area = 0.;
+  var e = new var;
+  foreach (grid) {
+    e[] = f[] - bump(x,y);
+    if (fabs(e[]) > max) max = fabs(e[]);
+    double a = sq(delta);
+    norm1 += a*fabs(e[]);
+    norm2 += a*e[]*e[];
+    area  += a;
+  }
+  fprintf (stderr, "error: %g %g %g\n", norm1/area, sqrt(norm2/area), max);
+
+  FILE * fp = fopen ("error.m", "w");
+  output_matrix (grid, e, N, fp);
+  fclose (fp);
 }
 
 int main() { run (); }

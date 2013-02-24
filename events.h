@@ -75,3 +75,16 @@ int events (void * grid, int i, double t)
   }
   return tnext != undefined;
 }
+
+double dtnext (double t, double dt)
+{
+  if (tnext != undefined) {
+    int n = (tnext - t)/dt;
+    dt = (tnext - t)/(n + 1);
+    if (n > 0)
+      tnext = t + dt;
+  }
+  else
+    tnext = t + dt;
+  return dt;
+}

@@ -306,4 +306,6 @@ Point locate (void * grid, double xp, double yp)
     if (cell.flags & leaf)
       return point;
   }
+  Point point = {-1, NULL, NULL, -1, -1, -1}; // not found
+  return point;
 }
