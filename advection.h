@@ -11,31 +11,40 @@ void boundary_f         (void * grid, var f);
 void boundary_u_v       (void * grid, var u, var v);
 void boundary_gradient  (void * grid, var fx, var fy);
 
-void fluxes_upwind (void * grid, const var f, const var u, const var v, var fu, var fv)
+double generic_limiter (double r, double beta)
 {
-  foreach (grid) {
-    fu[] = (u[] < 0. ? f[] : f[-1,0])*u[];
-    fv[] = (v[] < 0. ? f[] : f[0,-1])*v[];
-  }
+  double v1 = min (r, beta), v2 = min (beta*r, 1.);
+  v1 = max (0., v1);
+  return max (v1, v2);
+}
+
+double minmod_limiter (double r)
+{
+  return generic_limiter (r, 1.);
+}
+
+double superbee_limiter (double r)
+{
+  return generic_limiter (r, 2.);
+}
+
+double sweby_limiter (double r)
+{
+  return generic_limiter (r, 1.5);
 }
 
 void gradient (void * grid, const var f, var fx, var fy)
 {
   foreach (grid) {
+#if 1
     delta *= 2.;
     fx[] = (f[1,0] - f[-1,0])/delta;
     fy[] = (f[0,1] - f[0,-1])/delta;
+#else
+    fx[] = minmod_limiter ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
+    fy[] = minmod_limiter ((f[0,1] - f[])/(f[] - f[0,-1]))*(f[] - f[0,-1])/delta;
+#endif
   }
-}
-
-double limiter (double r)
-{
-  return 1.; // no limiter
-  return r*(r + 1.)/(r*r + 1.); // van Albada
-  
-  //  double beta = 1.;
-  //  return max(0, max(min(beta*r, 1.), min(r, beta))); // Sweby
-  return max(0., min(1., r)); // minmod
 }
 
 void fluxes_upwind_bcg (void * grid,
@@ -45,44 +54,38 @@ void fluxes_upwind_bcg (void * grid,
 			double dt)
 {
   foreach (grid) {
-    double r, f1, f2;
+    double f2;
     if (u[] < 0.) {
-      f1 = f[];
       double un = dt*(u[] + u[1,0])/(2.*delta);
-      f2 = f1 + max(-1., -1. - un)*fx[]*delta/2.;
+      f2 = f[] + max(-1., -1. - un)*fx[]*delta/2.;
       double vn = v[] + v[0,1];
       double fyy = vn < 0. ? f[0,1] - f[] : f[] - f[0,-1];
       f2 -= dt*vn*fyy/(4.*delta);
     }
     else {
-      f1 = f[-1,0];
       double un = dt*(u[-1,0] + u[])/(2.*delta);
-      f2 = f1 + min(1., 1. - un)*fx[-1,0]*delta/2.;
+      f2 = f[-1,0] + min(1., 1. - un)*fx[-1,0]*delta/2.;
       double vn = v[-1,0] + v[-1,1];
       double fyy = vn < 0. ? f[-1,1] - f[-1,0] : f[-1,0] - f[-1,-1];
       f2 -= dt*vn*fyy/(4.*delta);
     }
-    r = (f[] - f[-1,0])/(f[1,0] - f[]);
-    fu[] = (f1 - limiter(r)*(f1 - f2))*u[];
+    fu[] = f2*u[];
     
     if (v[] < 0.) {
-      f1 = f[];
       double un = dt*(v[] + v[0,1])/(2.*delta);
-      f2 = f1 + max(-1., -1. - un)*fy[]*delta/2.;
+      f2 = f[] + max(-1., -1. - un)*fy[]*delta/2.;
       double vn = u[] + u[1,0];
       double fxx = vn < 0. ? f[1,0] - f[] : f[] - f[-1,0];
       f2 -= dt*vn*fxx/(4.*delta);
     }
     else {
-      f1 = f[0,-1];
       double un = dt*(v[0,-1] + v[])/(2.*delta);
-      f2 = f1 + min(1., 1. - un)*fy[0,-1]*delta/2.;
+      f2 = f[0,-1] + min(1., 1. - un)*fy[0,-1]*delta/2.;
       double vn = u[0,-1] + u[1,-1];
       double fxx = vn < 0. ? f[1,-1] - f[0,-1] : f[0,-1] - f[-1,-1];
       f2 -= dt*vn*fxx/(4.*delta);
     }
-    r = (f[] - f[0,-1])/(f[0,1] - f[]);
-    fv[] = (f1 - limiter(r)*(f1 - f2))*v[];    
+    fv[] = f2*v[];
   }
 }
 
