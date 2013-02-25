@@ -28,8 +28,10 @@ struct _Event {
   int last, nexpr;
   void (* action) (void *, int, double);
   Expr expr[3];
+  int * arrayi;
+  double * arrayt;
   double t;
-  int i;
+  int i, a;
 };
 
 double tnext; /* time of next event */

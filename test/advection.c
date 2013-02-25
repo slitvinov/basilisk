@@ -1,4 +1,4 @@
-// #include "grid/cartesian.h"
+#include "grid/cartesian.h"
 #include "advection.h"
 
 int refine_right (Point point, void * data)
@@ -39,8 +39,6 @@ void boundary_gradient (void * grid, var fx, var fy)
 
 void parameters ()
 {
-  // number of grid points
-  N = 128;
   // maximum timestep
   DT = .1;
   // CFL number
@@ -58,26 +56,24 @@ void initial_conditions (void * grid)
     f[] = bump(x,y);
 }
 
-event (t += 0.1; t <= 5.) output_matrix (grid, f, N, stdout);
+// event (t += 0.1; t <= 5.) output_matrix (grid, f, N, stdout);
 
 event (i++) {
+  foreach (grid) {
+    u[] = 1.5*sin(2.*pi*t/5.)*sin((xu + 0.5)*pi)*cos((yu + 0.5)*pi);
+    v[] = - 1.5*sin(2.*pi*t/5.)*cos((xv + 0.5)*pi)*sin((yv + 0.5)*pi);
+  }
+  boundary_u_v (grid, u, v);
+}
+
+event (t = {0,5}) {
   double sum = 0., min = 1e100, max = -1e100;
   foreach (grid) {
     sum += f[]*delta*delta;
     if (f[] > max) max = f[];
     if (f[] < min) min = f[];
   }
-  fprintf (stderr, "%f %.12f %g %g\n", t, sum, min, max);
-
-  foreach (grid) {
-    double u1 = 1.5*sin(2.*pi*t/5.)*sin((x + 0.5)*pi)*cos((y + 0.5)*pi);
-    double u0 = 1.5*sin(2.*pi*t/5.)*sin(((x - delta) + 0.5)*pi)*cos((y + 0.5)*pi);
-    u[] = (u0 + u1)/2.; 
-    double v1 = - 1.5*sin(2.*pi*t/5.)*cos((x + 0.5)*pi)*sin((y + 0.5)*pi);
-    double v0 = - 1.5*sin(2.*pi*t/5.)*cos((x + 0.5)*pi)*sin(((y - delta) + 0.5)*pi);
-    v[] = (v0 + v1)/2.;
-  }
-  boundary_u_v (grid, u, v);
+  fprintf (stderr, "# %f %.12f %g %g\n", t, sum, min, max);  
 }
 
 event (t = 5) {
@@ -91,11 +87,13 @@ event (t = 5) {
     norm2 += a*e[]*e[];
     area  += a;
   }
-  fprintf (stderr, "error: %g %g %g\n", norm1/area, sqrt(norm2/area), max);
-
-  FILE * fp = fopen ("error.m", "w");
-  output_matrix (grid, e, N, fp);
-  fclose (fp);
+  fprintf (stderr, "%d %g %g %g\n", N, norm1/area, sqrt(norm2/area), max);
+  
+  if (N == 256)
+    output_matrix (grid, e, N, stdout);
 }
 
-int main() { run (); }
+int main() {
+  for (N = 64; N <= 256; N *= 2)
+    run ();
+}

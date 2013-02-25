@@ -14,8 +14,9 @@
   int inval, invalpara;
   int brack, inarray;
   int inevent, eventscope, eventpara;
-  char foreachs[80], * fname;
+  char eventarray[100];
   int nexpr[100];
+  char foreachs[80], * fname;
   
   struct { char * v; int b; } _varstack[100]; int varstack = -1;
   void varpush (const char * s, int b) {
@@ -69,10 +70,12 @@ WS  [ \t\v\n\f]
   if (para < 0)
     return yyerror ("mismatched ')'");
   if (inevent > 0 && inevent < 4 && scope == eventscope && eventpara == para + 1) {
-    fprintf (yyout, ");\n"
-	     "  *ip = i; *tp = t;\n"
-	     "  return ret;\n"
-	     "}\n"
+    if (!eventarray[nevents])
+      fprintf (yyout, ");\n"
+	       "  *ip = i; *tp = t;\n"
+	       "  return ret;\n"
+	       "}\n");
+    fprintf (yyout, 
 	     "static void event_action%d (void * grid, int i, double t) {\n"
 	     "  #line %d\n",
 	     nevents, yylineno);
@@ -144,7 +147,9 @@ end_foreach{ID}*{SP}*"()" {
     endforeach (yylineno - 1);
     inforeach = 0;
   }
-  else if (inevent > 0 && inevent < 3 && para == eventpara)
+  else if (inevent > 0 && inevent < 3 && para == eventpara) {
+    if (eventarray[nevents])
+      return yyerror ("cannot mix arrays and expressions");
     fprintf (yyout, ");\n"
 	     "  *ip = i; *tp = t;\n"
 	     "  return ret;\n"
@@ -153,6 +158,7 @@ end_foreach{ID}*{SP}*"()" {
 	     "  int i = *ip; double t = *tp;\n"
 	     "  #line %d\n"
 	     "  int ret = (", nevents, inevent++, yylineno);
+  }
   else if (inevent == 4 && scope == eventscope && para == eventpara - 1) {
     ECHO;
     endevent ();
@@ -253,6 +259,22 @@ end_foreach{ID}*{SP}*"()" {
 	   "  #line %d\n"
 	   "  int ret = (", nevents, inevent++, yylineno);
   eventscope = scope; eventpara = ++para;
+  eventarray[nevents] = 0;
+}
+
+  [it]{WS}*={WS}*[{][^}]*[}] {
+  if (inevent == 1) {
+    eventarray[nevents] = yytext[0];
+    yytext[yyleng-1] = '\0';
+    fprintf (yyout, "1);\n"
+	     "  *ip = i; *tp = t;\n"
+	     "  return ret;\n"
+	     "}\n"
+	     "static %s event_array%d[] = %s,-1};\n",
+	     yytext[0] == 'i' ? "int" : "double", nevents, strchr (yytext, '{'));
+  }
+  else
+    REJECT;
 }
 
 "#" {
@@ -399,13 +421,23 @@ void compdir (char * file, char ** in, int nin, char * grid)
       fprintf (fout,
 	       "static int event_expr%d%d (void * grid, int * ip, double * tp);\n",
 	       i, j);
+    if (eventarray[i])
+      fprintf (fout, "static %s event_array%d[];\n", eventarray[i] == 'i' ? "int" : "double", i);
   }
   fputs ("Event Events[] = {\n", fout);
   for (i = 0; i < nevents; i++) {
     fprintf (fout, "  { false, %d, event_action%d, {", nexpr[i], i);
     for (j = 0; j < nexpr[i] - 1; j++)
       fprintf (fout, "event_expr%d%d, ", i, j);
-    fprintf (fout, "event_expr%d%d} },\n", i, j);
+    fprintf (fout, "event_expr%d%d}, ", i, j);
+    if (eventarray[i] == 'i')
+      fprintf (fout, "event_array%d, ", i);
+    else
+      fprintf (fout, "NULL, ");
+    if (eventarray[i] == 't')
+      fprintf (fout, "event_array%d},\n", i);
+    else
+      fprintf (fout, "NULL},\n");
   }
   fputs ("  { true }\n};\n", fout);
   /* grid */
