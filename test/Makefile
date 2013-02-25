@@ -21,7 +21,7 @@ clean:
 	*.exe *.cexe *.pgexe *.prof Makefile.deps
 
 %.png: %.plot
-	gnuplot -e "batch=1; set term pngcairo; set output '$@';" $<
+	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $<
 
 %.log: %.exe
 	./$< 2> $@ > $*.out

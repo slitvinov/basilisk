@@ -18,20 +18,9 @@ double generic_limiter (double r, double beta)
   return max (v1, v2);
 }
 
-double minmod_limiter (double r)
-{
-  return generic_limiter (r, 1.);
-}
-
-double superbee_limiter (double r)
-{
-  return generic_limiter (r, 2.);
-}
-
-double sweby_limiter (double r)
-{
-  return generic_limiter (r, 1.5);
-}
+double minmod   (double r) { return generic_limiter (r, 1.); }
+double superbee (double r) { return generic_limiter (r, 2.); }
+double sweby    (double r) { return generic_limiter (r, 1.5); }
 
 void gradient (void * grid, const var f, var fx, var fy)
 {
@@ -41,8 +30,8 @@ void gradient (void * grid, const var f, var fx, var fy)
     fx[] = (f[1,0] - f[-1,0])/delta;
     fy[] = (f[0,1] - f[0,-1])/delta;
 #else
-    fx[] = minmod_limiter ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
-    fy[] = minmod_limiter ((f[0,1] - f[])/(f[] - f[0,-1]))*(f[] - f[0,-1])/delta;
+    fx[] = minmod ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
+    fy[] = minmod ((f[0,1] - f[])/(f[] - f[0,-1]))*(f[] - f[0,-1])/delta;
 #endif
   }
 }
@@ -54,38 +43,24 @@ void fluxes_upwind_bcg (void * grid,
 			double dt)
 {
   foreach (grid) {
-    double f2;
-    if (u[] < 0.) {
-      double un = dt*(u[] + u[1,0])/(2.*delta);
-      f2 = f[] + max(-1., -1. - un)*fx[]*delta/2.;
-      double vn = v[] + v[0,1];
-      double fyy = vn < 0. ? f[0,1] - f[] : f[] - f[0,-1];
+    {
+      double un = dt*u[]/delta, s = sign(un);
+      int i = -(s + 1.)/2.;
+      double f2 = f[i,0] + s*min(1., 1. - s*un)*fx[i,0]*delta/2.;
+      double vn = v[i,0] + v[i,1];
+      double fyy = vn < 0. ? f[i,1] - f[i,0] : f[i,0] - f[i,-1];
       f2 -= dt*vn*fyy/(4.*delta);
+      fu[] = f2*u[];
     }
-    else {
-      double un = dt*(u[-1,0] + u[])/(2.*delta);
-      f2 = f[-1,0] + min(1., 1. - un)*fx[-1,0]*delta/2.;
-      double vn = v[-1,0] + v[-1,1];
-      double fyy = vn < 0. ? f[-1,1] - f[-1,0] : f[-1,0] - f[-1,-1];
+    {
+      double un = dt*v[]/delta, s = sign(un);
+      int i = -(s + 1.)/2.;
+      double f2 = f[0,i] + s*min(1., 1. - s*un)*fy[0,i]*delta/2.;
+      double vn = u[0,i] + u[1,i];
+      double fyy = vn < 0. ? f[1,i] - f[0,i] : f[0,i] - f[-1,i];
       f2 -= dt*vn*fyy/(4.*delta);
+      fv[] = f2*v[];
     }
-    fu[] = f2*u[];
-    
-    if (v[] < 0.) {
-      double un = dt*(v[] + v[0,1])/(2.*delta);
-      f2 = f[] + max(-1., -1. - un)*fy[]*delta/2.;
-      double vn = u[] + u[1,0];
-      double fxx = vn < 0. ? f[1,0] - f[] : f[] - f[-1,0];
-      f2 -= dt*vn*fxx/(4.*delta);
-    }
-    else {
-      double un = dt*(v[0,-1] + v[])/(2.*delta);
-      f2 = f[0,-1] + min(1., 1. - un)*fy[0,-1]*delta/2.;
-      double vn = u[0,-1] + u[1,-1];
-      double fxx = vn < 0. ? f[1,-1] - f[0,-1] : f[0,-1] - f[-1,-1];
-      f2 -= dt*vn*fxx/(4.*delta);
-    }
-    fv[] = f2*v[];
   }
 }
 
@@ -94,14 +69,10 @@ double timestep (void * grid, const var u, const var v)
   double dtmax = DT/CFL;
   foreach (grid) {
     double dx = L0*delta;
-    if (u[] != 0.) {
-      double dt = dx/fabs(u[]);
-      if (dt < dtmax) dtmax = dt;
-    }
-    if (v[] != 0.) {
-      double dt = dx/fabs(v[]);
-      if (dt < dtmax) dtmax = dt;
-    }
+    double dt = dx/fabs(u[]);
+    if (dt < dtmax) dtmax = dt;
+    dt = dx/fabs(v[]);
+    if (dt < dtmax) dtmax = dt;
   }
   return dtmax*CFL;
 }
