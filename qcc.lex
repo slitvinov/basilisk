@@ -1,5 +1,4 @@
 %option noyywrap
-%option yylineno
 %{
   #include <unistd.h>
   #include <sys/stat.h>
@@ -10,6 +9,7 @@
   int debug = 0;
 
   int nvar = 0, nevents = 0;
+  int line;
   int scope, para, inforeach, foreachscope, foreachpara, invardecl;
   int inval, invalpara;
   int brack, inarray;
@@ -47,9 +47,16 @@
   }
 
   void endevent() {
-    fprintf (yyout, "\n}\n#line %d\n", yylineno);
+    fprintf (yyout, "\n}\n#line %d\n", line);
     inevent = 0;
     nevents++;
+  }
+
+#define YY_INPUT(buf,result,max_size)			      \
+  {							      \
+    int c = fgetc(yyin);				      \
+    result = (c == EOF) ? YY_NULL : (buf[0] = c, 1);	      \
+    if (c == '\n') line++;				      \
   }
 
   int yyerror(const char * s);
@@ -78,7 +85,7 @@ WS  [ \t\v\n\f]
     fprintf (yyout, 
 	     "static void event_action%d (void * grid, int i, double t) {\n"
 	     "  #line %d\n",
-	     nevents, yylineno);
+	     nevents, line);
     assert (nevents < 100);
     nexpr[nevents] = inevent;
     inevent = 4;
@@ -96,10 +103,10 @@ WS  [ \t\v\n\f]
   if (scope < 0)
     return yyerror ("mismatched '}'");
   varpop();
-  if (inforeach && scope == foreachscope) {
-    inforeach = 0;
-    endforeach (yylineno);
-  }
+  if (inforeach && scope == foreachscope)
+    endforeach (line);
+  else if (foreachdim && scope == foreachdim)
+    endforeachdim ();
   else if (inevent && scope == eventscope)
     endevent ();
 }
@@ -127,7 +134,7 @@ foreach{ID}* {
       char * v = _varstack[i--].v;
       fprintf (yyout, "#define %s(i,j) val(%s,i,j)\n", v, v);
     }
-    fprintf (yyout, "#line %d\n", yylineno);
+    fprintf (yyout, "#line %d\n", line);
   }
 }
 
@@ -136,7 +143,7 @@ end_foreach{ID}*{SP}*"()" {
     fprintf (stderr, 
 	     "%s:%d: error: "
 	     "%s() loop ended with %s\n", 
-	     fname, yylineno, foreachs, yytext);
+	     fname, line, foreachs, yytext);
     return 1;
   }
 }
@@ -144,8 +151,7 @@ end_foreach{ID}*{SP}*"()" {
 ;  {
   if (inforeach && scope == foreachscope && para == foreachpara) {
     ECHO;
-    endforeach (yylineno - 1);
-    inforeach = 0;
+    endforeach (line - 1);
   }
   else if (inevent > 0 && inevent < 3 && para == eventpara) {
     if (eventarray[nevents])
@@ -157,7 +163,7 @@ end_foreach{ID}*{SP}*"()" {
 	     "static int event_expr%d%d (void * grid, int * ip, double * tp) {\n"
 	     "  int i = *ip; double t = *tp;\n"
 	     "  #line %d\n"
-	     "  int ret = (", nevents, inevent++, yylineno);
+	     "  int ret = (", nevents, inevent++, line);
   }
   else if (inevent == 4 && scope == eventscope && para == eventpara - 1) {
     ECHO;
@@ -175,13 +181,13 @@ end_foreach{ID}*{SP}*"()" {
   while (strchr (" \t\v\n\f", *var)) var++;
   if (para == 0) { /* declaration */
     if (debug)
-      fprintf (stderr, "%s:%d: declaration: %s\n", fname, yylineno, var);
+      fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
     varpush (var, scope);
     invardecl = 1;
   }
   else if (para == 1) { /* function prototype (no nested functions) */
     if (debug)
-      fprintf (stderr, "%s:%d: proto: %s\n", fname, yylineno, var);
+      fprintf (stderr, "%s:%d: proto: %s\n", fname, line, var);
     varpush (var, scope + 1);
   }
 }
@@ -191,7 +197,7 @@ end_foreach{ID}*{SP}*"()" {
     char * var = &yytext[1];
     while (strchr (" \t\v\n\f", *var)) var++;
     if (debug)
-      fprintf (stderr, "%s:%d: declaration: %s\n", fname, yylineno, var);
+      fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
     varpush (var, scope);
   }
   else
@@ -257,7 +263,7 @@ end_foreach{ID}*{SP}*"()" {
 	   "static int event_expr%d%d (void * grid, int * ip, double * tp) {\n"
 	   "  int i = *ip; double t = *tp;\n"
 	   "  #line %d\n"
-	   "  int ret = (", nevents, inevent++, yylineno);
+	   "  int ret = (", nevents, inevent++, line);
   eventscope = scope; eventpara = ++para;
   eventarray[nevents] = 0;
 }
@@ -286,7 +292,7 @@ end_foreach{ID}*{SP}*"()" {
     if (c == EOF || oldc != '\\')
       break;
   }
-  fprintf (yyout, "\n#line %d\n", yylineno);
+  fprintf (yyout, "\n#line %d\n", line);
 }
 
 "/*"                                    { ECHO; if (comment()) return 1; }
@@ -297,7 +303,7 @@ end_foreach{ID}*{SP}*"()" {
 
 int yyerror (const char * s)
 {
-  fprintf (stderr, "%s:%d: error: %s\n", fname, yylineno, s);
+  fprintf (stderr, "%s:%d: error: %s\n", fname, line, s);
   return 1;
 }
 
@@ -336,7 +342,7 @@ int endfor (char * file, FILE * fin, FILE * fout)
   fprintf (fout, "# 1 \"%s\"\n", fname);
   yyin = fin;
   yyout = fout;
-  yylineno = 1, scope = para = 0;
+  line = 1, scope = para = 0;
   inforeach = foreachscope = foreachpara = 0;
   invardecl = 0;
   inval = invalpara = 0;
