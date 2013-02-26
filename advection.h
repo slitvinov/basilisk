@@ -24,15 +24,10 @@ double sweby    (double r) { return generic_limiter (r, 1.5); }
 
 void gradient (void * grid, const var f, var g[2])
 {
-  foreach (grid) {
-    foreach_dimension (d) {
-#if 1
+  foreach (grid)
+    foreach_dimension (d)
       g[d][] = (f[1,0] - f[-1,0])/(2.*delta);
-#else
-      g[d][] = minmod ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
-#endif
-    }
-  }
+  //      g[d][] = minmod ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
 }
 
 void fluxes_upwind_bcg (void * grid,
@@ -41,7 +36,7 @@ void fluxes_upwind_bcg (void * grid,
 			var flux[2],
 			double dt)
 {
-  foreach (grid) {
+  foreach (grid)
     foreach_dimension (d) {
       double un = dt*u[d][]/delta, s = sign(un);
       int i = -(s + 1.)/2.;
@@ -51,7 +46,6 @@ void fluxes_upwind_bcg (void * grid,
       f2 -= dt*vn*fyy/(4.*delta);
       flux[d][] = f2*u[d][];
     }
-  }
 }
 
 double timestep (void * grid, const var u, const var v)

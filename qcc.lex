@@ -20,7 +20,7 @@
 
   int foreachdim, foreachdimpara, foreachdimline;
   FILE * foreachdimfp;
-  char * foreachdimindex;
+  char foreachdimindex[80];
 
   char foreachs[80], * fname;
   
@@ -88,7 +88,8 @@
     fclose (yyout);
     yyout = foreachdimfp;
     FILE * fp = fopen ("dimension.h", "r");
-    fprintf (yyout, "\n#define d 0\n#line %d\n", foreachdimline);
+    fprintf (yyout, "\n#define %s 0\n#line %d\n", 
+	     foreachdimindex, foreachdimline);
     writefile (fp);
     undef_var();
     int i = 0;
@@ -96,9 +97,10 @@
       def_var (i++);
       fprintf (yyout, ",j,i)\n");
     }
-    fprintf (yyout, "\n#undef d\n#define d 1\n#line %d\n", foreachdimline);
+    fprintf (yyout, "\n#undef %s\n#define %s 1\n#line %d\n", 
+	     foreachdimindex, foreachdimindex, foreachdimline);
     writefile (fp);
-    fprintf (yyout, "\n#undef d\n#line %d\n", line);
+    fprintf (yyout, "\n#undef %s\n#line %d\n", foreachdimindex, line);
     fclose (fp);
   }
 
@@ -159,10 +161,10 @@ WS  [ \t\v\n\f]
   if (scope < 0)
     return yyerror ("mismatched '}'");
   varpop();
+  if (foreachdim && scope == foreachdim)
+    endforeachdim ();
   if (inforeach && scope == foreachscope)
     endforeach (line);
-  else if (foreachdim && scope == foreachdim)
-    endforeachdim ();
   else if (inevent && scope == eventscope)
     endevent ();
 }
@@ -205,6 +207,10 @@ end_foreach{ID}*{SP}*"()" {
 }
 
 ;  {
+  if (foreachdim && scope == foreachdim && para == foreachdimpara) {
+    ECHO;
+    endforeachdim ();
+  }
   if (inforeach && scope == foreachscope && para == foreachpara) {
     ECHO;
     endforeach (line - 1);
@@ -363,6 +369,9 @@ foreach_dimension{WS}*[(]{WS}*{ID}+{WS}*[)] {
   if (!inforeach)
     ECHO;
   else {
+    char * s = strchr (yytext, '('); s++;
+    yytext[yyleng-1] = '\0';
+    strcpy (foreachdimindex, s);
     foreachdimline = line;
     foreachdim = scope; foreachdimpara = para;
     foreachdimfp = yyout;
