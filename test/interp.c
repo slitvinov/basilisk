@@ -31,8 +31,8 @@ int main (int argc, char ** argv)
 
   double max = 0.;
   foreach_halo(grid) {
-    double e = exp(-(x*x+y*y)/(R0*R0)) - h(0,0);
-    printf ("%g %g %d %d %g %g\n", x, y, level, cell.neighbors, h(0,0), e);
+    double e = exp(-(x*x+y*y)/(R0*R0)) - h[];
+    printf ("%g %g %d %d %g %g\n", x, y, level, cell.neighbors, h[], e);
     if (fabs(e) > max)
       max = fabs(e);
   }

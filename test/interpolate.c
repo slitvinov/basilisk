@@ -10,7 +10,7 @@ int main (int argc, char ** argv)
     void * grid = init_grid (n);
 
     foreach (grid)
-      v(0,0) = cos(2.*pi*x)*cos(2.*pi*y);
+      v[] = cos(2.*pi*x)*cos(2.*pi*y);
     symmetry (grid, v); /* fixme: does not work in corner cells yet */
 
     double emax = 0.;

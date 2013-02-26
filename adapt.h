@@ -47,7 +47,7 @@ int coarsen_wavelet (Quadtree * quadtree, var w, double max)
       nc++;
     }
     /* propagate the error to coarser levels */
-    w(0,0) = fabs(w(0,0)) + error;
+    w[] = fabs(w[]) + error;
   }
   return nc;
 }
@@ -70,7 +70,7 @@ int refine_wavelet (Quadtree * quadtree, var start, var end,
 {
   int nf = 0;
   foreach_leaf (quadtree)
-    if (fabs(w(0,0)) >= max) {
+    if (fabs(w[]) >= max) {
       point = refine_cell (point, start, end);
       nf++;
     }

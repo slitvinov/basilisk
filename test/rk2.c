@@ -23,7 +23,7 @@ int main ()
   int i = 0;
   for (double t = 0.; t <= 6.*3.14159265359; t += dt, i++) {
     foreach (grid)
-      fprintf (stderr, "%g %g %g\n", t, a(0,0), a(0,0) - exp(-A*t)*sin(t));
+      fprintf (stderr, "%g %g %g\n", t, a[], a[] - exp(-A*t)*sin(t));
     runge_kutta (2, grid, t, dt, 1, f, df, advance, update);
   }
   free_grid(grid);

@@ -15,7 +15,7 @@ int main ()
     start = clock();
     while (i--)
       foreach(grid)
-	b(0,0) = (a(0,1) + a(1,0) + a(0,-1) + a(-1,0) - 4.*a(0,0));
+	b[] = (a[0,1] + a[1,0] + a[0,-1] + a[-1,0] - 4.*a[]);
     end = clock();
     fprintf (stderr, "%d %g\n", l, 
 	     1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)));
@@ -25,7 +25,7 @@ int main ()
     start = clock();
     while (i--)
       foreach(grid)
-	sum += a(0,0);
+	sum += a[];
     end = clock();
     printf ("%d %g %g\n", l, 1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)), sum);
     free_grid(grid);

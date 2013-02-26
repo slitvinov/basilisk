@@ -13,7 +13,7 @@ void refineiter (void * grid)
   for (int n = 0; n < 2; n++) {
     fprintf (stderr, "\nwavelet refinement\n");
     foreach(grid)
-      h(0,0) = exp(-(x*x + y*y)/(0.01));
+      h[] = exp(-(x*x + y*y)/(0.01));
     symmetry (grid, h);
     update_halo (grid, -1, h, h);
 
@@ -35,11 +35,11 @@ int main (int argc, char ** argv)
   refineiter (grid);
 
   foreach_halo(grid)
-    printf ("%g %g %d %d %g %g halo1\n", x, y, level, cell.neighbors, h(0,0),
-	    fabs(h(0,0) - exp(-(x*x + y*y)/(0.01))));
+    printf ("%g %g %d %d %g %g halo1\n", x, y, level, cell.neighbors, h[],
+	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
   foreach_leaf(grid)
-    printf ("%g %g %d %d %g %g leaf1\n", x, y, level, cell.neighbors, h(0,0),
-	    fabs(h(0,0) - exp(-(x*x + y*y)/(0.01))));
+    printf ("%g %g %d %d %g %g leaf1\n", x, y, level, cell.neighbors, h[],
+	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
 
   restriction (grid, h, h);
   wavelet (grid, h, w);
@@ -47,11 +47,11 @@ int main (int argc, char ** argv)
   flag_halo_cells (grid);
 
   foreach_halo(grid)
-    printf ("%g %g %d %d %g %g halo2\n", x, y, level, cell.neighbors, h(0,0),
-	    fabs(h(0,0) - exp(-(x*x + y*y)/(0.01))));
+    printf ("%g %g %d %d %g %g halo2\n", x, y, level, cell.neighbors, h[],
+	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
   foreach_leaf(grid)
-    printf ("%g %g %d %d %g %g leaf2\n", x, y, level, cell.neighbors, h(0,0),
-	    fabs(h(0,0) - exp(-(x*x + y*y)/(0.01))));
+    printf ("%g %g %d %d %g %g leaf2\n", x, y, level, cell.neighbors, h[],
+	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
 
   refineiter (grid);
 
@@ -65,11 +65,11 @@ int main (int argc, char ** argv)
   }
 
   foreach_halo(grid)
-    printf ("%g %g %d %d %g %g halo3\n", x, y, level, cell.neighbors, h(0,0),
-	    fabs(h(0,0) - exp(-(x*x + y*y)/(0.01))));
+    printf ("%g %g %d %d %g %g halo3\n", x, y, level, cell.neighbors, h[],
+	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
   foreach_leaf(grid)
-    printf ("%g %g %d %d %g %g leaf3\n", x, y, level, cell.neighbors, h(0,0),
-	    fabs(h(0,0) - exp(-(x*x + y*y)/(0.01))));
+    printf ("%g %g %d %d %g %g leaf3\n", x, y, level, cell.neighbors, h[],
+	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
 
   free_grid (grid);
 }

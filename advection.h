@@ -18,8 +18,8 @@ double generic_limiter (double r, double beta)
   return max (v1, v2);
 }
 
-double minmod   (double r) { return generic_limiter (r, 1.); }
-double superbee (double r) { return generic_limiter (r, 2.); }
+double minmod   (double r) { return generic_limiter (r, 1.);  }
+double superbee (double r) { return generic_limiter (r, 2.);  }
 double sweby    (double r) { return generic_limiter (r, 1.5); }
 
 void gradient (void * grid, const var f, var g[2])

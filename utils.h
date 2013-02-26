@@ -40,10 +40,10 @@ double CFL = 0.5;
 
 void symmetry (void * grid, var v)
 {
-  foreach_boundary (grid, right)  v(+1,0) = v[];
-  foreach_boundary (grid, left)   v(-1,0) = v[];
-  foreach_boundary (grid, top)    v(0,+1) = v[];
-  foreach_boundary (grid, bottom) v(0,-1) = v[];
+  foreach_boundary (grid, right)  v[+1,0] = v[];
+  foreach_boundary (grid, left)   v[-1,0] = v[];
+  foreach_boundary (grid, top)    v[0,+1] = v[];
+  foreach_boundary (grid, bottom) v[0,-1] = v[];
 }
 
 void uv_symmetry (void * grid, var u, var v)

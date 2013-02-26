@@ -12,7 +12,7 @@
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, invardecl;
   int inval, invalpara;
-  int brack, inarray, arrayargs;
+  int brack, inarray;
 
   int inevent, eventscope, eventpara;
   char eventarray[100];
@@ -44,36 +44,9 @@
       free (_varstack[varstack--].v);
   }
   
-  void undef_var () {
-    if (varstack >= 0) {
-      fputc ('\n', yyout);
-      int i = varstack;
-      while (i >= 0) {
-	char * v = _varstack[i--].v;
-	fprintf (yyout, "#undef %s\n", v);
-      }
-    }
-  }
-
-  void def_var (int i) {
-    char * v = _varstack[i].v;
-    fprintf (yyout, "#undef %s\n#define %s(", v, v);
-    int j;
-    char s[] = "l";
-    for (j = 0; j < _varstack[i].a; j++, (*s)++)
-      fprintf (yyout, "%s,", s);
-    fprintf (yyout, "i,j) val(%s", v);
-    char s1[] = "l";
-    for (j = 0; j < _varstack[i].a; j++, (*s1)++)
-      fprintf (yyout, "[%s]", s1);
-  }
-
-  void endforeach (int line) {
+  void endforeach () {
     inforeach = 0;
-    undef_var ();
     fprintf (yyout, " end_%s();", foreachs);
-    if (varstack >= 0)
-      fprintf (yyout, "\n#line %d\n", line);
   }
 
   void writefile (FILE * fp) {
@@ -91,13 +64,10 @@
     fprintf (yyout, "\n#define %s 0\n#line %d\n", 
 	     foreachdimindex, foreachdimline);
     writefile (fp);
-    undef_var();
-    int i = 0;
-    while (i <= varstack) {
-      def_var (i++);
-      fprintf (yyout, ",j,i)\n");
-    }
-    fprintf (yyout, "\n#undef %s\n#define %s 1\n#line %d\n", 
+    fprintf (yyout, 
+	     "\n#undef val1\n"
+	     "#define val1(a,i,j) val(a,j,i)\n");
+    fprintf (yyout, "#undef %s\n#define %s 1\n#line %d\n", 
 	     foreachdimindex, foreachdimindex, foreachdimline);
     writefile (fp);
     fprintf (yyout, "\n#undef %s\n#line %d\n", foreachdimindex, line);
@@ -185,15 +155,11 @@ foreach{ID}* {
   }
   if (c != ')')
     return yyerror ("expecting ')");
-  if (varstack >= 0) {
-    fputc ('\n', yyout);
-    int i = 0;
-    while (i <= varstack) {
-      def_var (i++);
-      fprintf (yyout, ",i,j)\n");
-    }
-    fprintf (yyout, "#line %d\n", line);
-  }
+  if (varstack >= 0)
+    fprintf (yyout, 
+	     "\n#undef val1\n"
+	     "#define val1(a,i,j) val(a,i,j)\n"
+	     "#line %d\n", line);
 }
 
 end_foreach{ID}*{SP}*"()" {
@@ -289,12 +255,49 @@ new{WS}+var {
 	found = 1;
 	if (yytext[yyleng-1] == ']')
 	  /* v[] */
-	  fprintf (yyout, "%s(0,0)", _varstack[i].v);
+	  fprintf (yyout, "val1(%s,0,0)", _varstack[i].v);
 	else {
-	  fprintf (yyout, "%s(", _varstack[i].v);
-	  fputc (yytext[yyleng-1], yyout);
-	  inarray = ++brack;
-	  arrayargs = _varstack[i].a;
+	  fprintf (yyout, "val1(%s", _varstack[i].v);
+	  if (_varstack[i].a > 0) {
+	    /* v[...][... */
+	    fputc ('[', yyout);
+	    fputc (yytext[yyleng-1], yyout);
+	    inarray = brack++;
+	    int j = _varstack[i].a;
+	    while (j) {
+	      int c = getput();
+	      if (c == EOF)
+		return yyerror ("unexpected EOF");
+	      if (c == '[') brack++;
+	      if (c == ']') {
+		brack--;
+		if (brack == inarray)
+		  j--;
+	      }
+	    }
+	    int c = input();
+	    if (c != '[') {
+	      fprintf (stderr, "%s:%d: error: expecting '[' not '", fname, line);
+	      fputc (c, stderr);
+	      fputs ("'\n", stderr);
+	      return 1;
+	    }
+	    fputc (',', yyout);
+	    c = input();
+	    if (c == ']')
+	      /* v[...][] */
+	      fputs ("0,0)", yyout);
+	    else {
+	      fputc (c, yyout);
+	      inarray = ++brack;
+	    }
+	  }
+	  else {
+	    /* v[...] */
+	    fputc (',', yyout);
+	    fputc (yytext[yyleng-1], yyout);
+	    inarray = ++brack;
+	  }
 	}
       }
   }
@@ -306,30 +309,8 @@ new{WS}+var {
 "["        ECHO; brack++;
 "]"        {
   if (inarray == brack) {
-    if (arrayargs--) {
-      int c = input();
-      if (c != '[') {
-	fprintf (stderr, "%s:%d: error: expecting '[' not '", fname, line);
-	fputc (c, stderr);
-	fputs ("'\n", stderr);
-	return 1;
-      }
-      fputc (',', yyout);
-      brack++;
-      c = input();
-      if (c == ']') {
-	if (arrayargs > 0)
-	  return yyerror ("not expecting '[]'");
-	fprintf (yyout, "0,0)");
-	inarray = 0;
-      }
-      else
-	unput (c);
-    }
-    else {
-      fputc (')', yyout);
-      inarray = 0;
-    }
+    fputc (')', yyout);
+    inarray = 0;
   }
   else
     ECHO;

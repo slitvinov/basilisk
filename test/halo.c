@@ -14,7 +14,7 @@ int main (int argc, char ** argv)
 
   double R0 = 0.1;
   foreach (grid)
-    h(0,0) = exp(-(x*x + y*y)/(R0*R0));
+    h[] = exp(-(x*x + y*y)/(R0*R0));
   symmetry (grid, h);
   
   /* initial coarsening */
