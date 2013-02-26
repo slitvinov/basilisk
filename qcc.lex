@@ -6,11 +6,14 @@
   #include <sys/wait.h>
   #include <assert.h>
 
+  enum { variable, vector };
+
   int debug = 0;
 
   int nvar = 0, nevents = 0;
   int line;
-  int scope, para, inforeach, foreachscope, foreachpara, invardecl;
+  int scope, para, inforeach, foreachscope, foreachpara;
+  int invardecl, vartype;
   int inval, invalpara;
   int brack, inarray;
 
@@ -20,12 +23,11 @@
 
   int foreachdim, foreachdimpara, foreachdimline;
   FILE * foreachdimfp;
-  char foreachdimindex[80];
 
   char foreachs[80], * fname;
   
-  struct { char * v; int a, b; } _varstack[100]; int varstack = -1;
-  void varpush (const char * s, int scope) {
+  struct { char * v; int type, args, scope; } _varstack[100]; int varstack = -1;
+  void varpush (const char * s, int type, int scope) {
     if (s[0] != '\0') {
       char * f = malloc (sizeof (char)*(strlen (s) + 1));
       strcpy (f, s);
@@ -35,12 +37,13 @@
 	*q++ = '\0'; na++;
       }
       _varstack[++varstack].v = f;
-      _varstack[varstack].b = scope;
-      _varstack[varstack].a = na;
+      _varstack[varstack].scope = scope;
+      _varstack[varstack].args = na;
+      _varstack[varstack].type = type;
     }
   }
   void varpop () {
-    while (varstack >= 0 && _varstack[varstack].b > scope)
+    while (varstack >= 0 && _varstack[varstack].scope > scope)
       free (_varstack[varstack--].v);
   }
   
@@ -49,11 +52,29 @@
     fprintf (yyout, " end_%s();", foreachs);
   }
 
-  void writefile (FILE * fp) {
+  int identifier (int c) {
+    return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'));
+  }
+
+  void writefile (FILE * fp, char x, char y) {
     rewind (fp);
-    int c;
-    while ((c = fgetc(fp)) != EOF)
-      fputc (c, yyout);
+    char s[] = "123";
+    int c, i = 0;
+    while ((c = fgetc(fp)) != EOF) {
+      if (i < 3) {
+	s[i++] = c; s[i] = '\0';
+      }
+      else {
+	if (!identifier(s[0]) && !identifier(s[2])) {
+	  if      (s[1] == 'x') s[1] = x;
+	  else if (s[1] == 'y') s[1] = y;
+	}
+	fputc (s[0], yyout);
+	s[0] = s[1]; s[1] = s[2]; s[2] = c;
+      }
+    }
+    if (i > 0)
+      fputs (s, yyout);
   }
 
   void endforeachdim () {
@@ -61,16 +82,12 @@
     fclose (yyout);
     yyout = foreachdimfp;
     FILE * fp = fopen ("dimension.h", "r");
-    fprintf (yyout, "\n#define %s 0\n#line %d\n", 
-	     foreachdimindex, foreachdimline);
-    writefile (fp);
+    writefile (fp, 'x', 'y');
     fprintf (yyout, 
 	     "\n#undef val1\n"
-	     "#define val1(a,i,j) val(a,j,i)\n");
-    fprintf (yyout, "#undef %s\n#define %s 1\n#line %d\n", 
-	     foreachdimindex, foreachdimindex, foreachdimline);
-    writefile (fp);
-    fprintf (yyout, "\n#undef %s\n#line %d\n", foreachdimindex, line);
+	     "#define val1(a,i,j) val(a,j,i)\n"
+	     "#line %d\n", foreachdimline);
+    writefile (fp, 'y', 'x');
     fclose (fp);
   }
 
@@ -202,21 +219,29 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
-[^{ID}]{WS}*var{WS}+[a-zA-Z0-9\[\]]+ {
+[^{ID}]{WS}*(var|vector){WS}+[a-zA-Z0-9\[\]]+ {
   ECHO;
   if (yytext[0] == '(') para++;
-  char * var = &strstr(yytext,"var")[4];
+  char * var = strstr(yytext,"var");
+  vartype = variable;
+  if (var)
+    var = &var[4];
+  else {
+    var = strstr(yytext,"vector");
+    var = &var[7];
+    vartype = vector;
+  }
   while (strchr (" \t\v\n\f", *var)) var++;
   if (para == 0) { /* declaration */
     if (debug)
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
-    varpush (var, scope);
+    varpush (var, vartype, scope);
     invardecl = scope + 1;
   }
   else if (para == 1) { /* function prototype (no nested functions) */
     if (debug)
       fprintf (stderr, "%s:%d: proto: %s\n", fname, line, var);
-    varpush (var, scope + 1);
+    varpush (var, vartype, scope + 1);
   }
 }
 
@@ -226,7 +251,7 @@ end_foreach{ID}*{SP}*"()" {
     while (strchr (" \t\v\n\f", *var)) var++;
     if (debug)
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
-    varpush (var, scope);
+    varpush (var, vartype, scope);
   }
   else
     REJECT;
@@ -243,27 +268,31 @@ new{WS}+var {
   ECHO;
 }
 
-{ID}+{WS}*\[{WS}*. {
+[a-zA-Z_0-9\.]+{WS}*\[{WS}*. {
   /* v[... */
   int found = 0;
   if (inforeach && !inval) {
     char * s = yytext;
-    while (!strchr(" \t\v\n\f[", *s)) s++;
+    while (!strchr(" \t\v\n\f[.", *s)) s++;
     int i, len = s - yytext;
     for (i = varstack; i >= 0 && !found; i--)
-      if (strlen(_varstack[i].v) == len && !strncmp(yytext, _varstack[i].v, len)) {
+      if (strlen(_varstack[i].v) == len && !strncmp(yytext, _varstack[i].v, len) &&
+	  (*s != '.' || _varstack[i].type == vector)) {
 	found = 1;
+	s = yytext;
+	while (!strchr(" \t\v\n\f[", *s)) s++;
+	*s = '\0';
 	if (yytext[yyleng-1] == ']')
 	  /* v[] */
-	  fprintf (yyout, "val1(%s,0,0)", _varstack[i].v);
+	  fprintf (yyout, "val1(%s,0,0)", yytext);
 	else {
-	  fprintf (yyout, "val1(%s", _varstack[i].v);
-	  if (_varstack[i].a > 0) {
+	  fprintf (yyout, "val1(%s", yytext);
+	  if (_varstack[i].args > 0) {
 	    /* v[...][... */
 	    fputc ('[', yyout);
 	    fputc (yytext[yyleng-1], yyout);
 	    inarray = brack++;
-	    int j = _varstack[i].a;
+	    int j = _varstack[i].args;
 	    while (j) {
 	      int c = getput();
 	      if (c == EOF)
@@ -346,13 +375,10 @@ new{WS}+var {
     REJECT;
 }
 
-foreach_dimension{WS}*[(]{WS}*{ID}+{WS}*[)] {
+foreach_dimension{WS}*[(]{WS}*[)] {
   if (!inforeach)
     ECHO;
   else {
-    char * s = strchr (yytext, '('); s++;
-    yytext[yyleng-1] = '\0';
-    strcpy (foreachdimindex, s);
     foreachdimline = line;
     foreachdim = scope; foreachdimpara = para;
     foreachdimfp = yyout;

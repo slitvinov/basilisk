@@ -22,29 +22,29 @@ double minmod   (double r) { return generic_limiter (r, 1.);  }
 double superbee (double r) { return generic_limiter (r, 2.);  }
 double sweby    (double r) { return generic_limiter (r, 1.5); }
 
-void gradient (void * grid, const var f, var g[2])
+void gradient (void * grid, const var f, vector g)
 {
   foreach (grid)
-    foreach_dimension (d)
-      g[d][] = (f[1,0] - f[-1,0])/(2.*delta);
-  //      g[d][] = minmod ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
+    foreach_dimension ()
+      g.x[] = (f[1,0] - f[-1,0])/(2.*delta);
+  //      g.x[] = minmod ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
 }
 
 void fluxes_upwind_bcg (void * grid,
-			const var f, const var g[2],
-			const var u[2], 
-			var flux[2],
+			const var f, const vector g,
+			const vector u, 
+			vector flux,
 			double dt)
 {
   foreach (grid)
-    foreach_dimension (d) {
-      double un = dt*u[d][]/delta, s = sign(un);
+    foreach_dimension () {
+      double un = dt*u.x[]/delta, s = sign(un);
       int i = -(s + 1.)/2.;
-      double f2 = f[i,0] + s*min(1., 1. - s*un)*g[d][i,0]*delta/2.;
-      double vn = u[!d][i,0] + u[!d][i,1];
+      double f2 = f[i,0] + s*min(1., 1. - s*un)*g.x[i,0]*delta/2.;
+      double vn = u.y[i,0] + u.y[i,1];
       double fyy = vn < 0. ? f[i,1] - f[i,0] : f[i,0] - f[i,-1];
       f2 -= dt*vn*fyy/(4.*delta);
-      flux[d][] = f2*u[d][];
+      flux.x[] = f2*u.x[];
     }
 }
 
@@ -77,7 +77,7 @@ void run (void)
     double dt = dtnext (t, timestep (grid, u, v));
     var fu = new var, fv = new var;
     var fx = new var, fy = new var;
-    var flux[2] = {fu,fv}, g[2] = {fx,fy}, uv[2] = {u,v};
+    vector flux = {fu,fv}, g = {fx,fy}, uv = {u,v};
     gradient (grid, f, g);
     boundary_gradient (grid, fx, fy);
     fluxes_upwind_bcg (grid, f, g, uv, flux, dt);

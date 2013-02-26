@@ -12,6 +12,10 @@
 enum { right, left, top, bottom };
 
 typedef int var;
+typedef struct {
+  int x, y;
+} vector;
+
 #define val(a,k,l) data(k,l)[a]
 
 #define pi 3.14159265358979

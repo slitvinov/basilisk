@@ -91,17 +91,14 @@ void advance (void * grid, double dt)
 void relax (void * grid, var a, var b, int l)
 {
   foreach_level (grid, l)
-    a[] = (a[1,0] + a[-1,0] +
-		  a[0,1] + a[0,-1] 
-		  - L0*L0*delta*delta*b[])/4.;
+    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - L0*L0*delta*delta*b[])/4.;
 }
 
 double residual (void * grid, var a, var b, var res)
 {
   double maxres = 0.;
   foreach (grid) {
-    res[] = b[] + 
-    (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(L0*L0*delta*delta);
+    res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(L0*L0*delta*delta);
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
