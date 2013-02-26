@@ -79,7 +79,7 @@ void runge_kutta (int stages,
     (* advance) (grid, t, f, df[0]);
     foreach (grid)
       for (int v = 0; v < nv; v++)
-	val(f[v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt;
+	f[v][] += df[0][v][]*dt;
     (* update) (grid, t + dt, f);
     break;
 
@@ -87,13 +87,13 @@ void runge_kutta (int stages,
     (* advance) (grid, t, f, df[0]);
     foreach (grid)
       for (int v = 0; v < nv; v++)
-	val(df[0][v],0,0) = val(f[v],0,0) + val(df[0][v],0,0)*dt/2.;
+	df[0][v][] = f[v][] + df[0][v][]*dt/2.;
     (* update) (grid, t + dt/2., df[0]);
 
     (* advance) (grid, t + dt/2., df[0], df[1]);
     foreach (grid)
       for (int v = 0; v < nv; v++)
-	val(f[v],0,0) += val(df[1][v],0,0)*dt;
+	f[v][] += df[1][v][]*dt;
     (* update) (grid, t + dt, f);
     break;
 

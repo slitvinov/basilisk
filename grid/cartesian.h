@@ -7,11 +7,11 @@
 #define DELTA (1./point.n)
 
 typedef struct {
-  char * d;
+  char * data;
   int i, j, n;
 } Point;
 
-#define data(k,l) ((double *)&point.d[((point.i + k)*(point.n + 2) + (point.j + l))*datasize])
+#define data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) + (point.j + l))*datasize])
 
 #define foreach(grid) {						\
   Point point = *((Point *)grid);				\
@@ -32,13 +32,13 @@ void * init_grid (int n)
 {
   Point * grid = malloc(sizeof(Point));
   grid->n = n;
-  grid->d = calloc ((n + 2)*(n + 2), datasize);
+  grid->data = calloc ((n + 2)*(n + 2), datasize);
   return grid;
 }
 
 void free_grid (Point * grid)
 {
-  free (grid->d);
+  free (grid->data);
   free (grid);
 }
 

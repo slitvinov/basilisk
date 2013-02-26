@@ -22,44 +22,34 @@ double minmod   (double r) { return generic_limiter (r, 1.); }
 double superbee (double r) { return generic_limiter (r, 2.); }
 double sweby    (double r) { return generic_limiter (r, 1.5); }
 
-void gradient (void * grid, const var f, var fx, var fy)
+void gradient (void * grid, const var f, var g[2])
 {
   foreach (grid) {
+    foreach_dimension (d) {
 #if 1
-    delta *= 2.;
-    fx[] = (f[1,0] - f[-1,0])/delta;
-    fy[] = (f[0,1] - f[0,-1])/delta;
+      g[d][] = (f[1,0] - f[-1,0])/(2.*delta);
 #else
-    fx[] = minmod ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
-    fy[] = minmod ((f[0,1] - f[])/(f[] - f[0,-1]))*(f[] - f[0,-1])/delta;
+      g[d][] = minmod ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
 #endif
+    }
   }
 }
 
 void fluxes_upwind_bcg (void * grid,
-			const var f, const var fx, const var fy,
-			const var u, const var v,
-			var fu, var fv,
+			const var f, const var g[2],
+			const var u[2], 
+			var flux[2],
 			double dt)
 {
   foreach (grid) {
-    {
-      double un = dt*u[]/delta, s = sign(un);
+    foreach_dimension (d) {
+      double un = dt*u[d][]/delta, s = sign(un);
       int i = -(s + 1.)/2.;
-      double f2 = f[i,0] + s*min(1., 1. - s*un)*fx[i,0]*delta/2.;
-      double vn = v[i,0] + v[i,1];
+      double f2 = f[i,0] + s*min(1., 1. - s*un)*g[d][i,0]*delta/2.;
+      double vn = u[!d][i,0] + u[!d][i,1];
       double fyy = vn < 0. ? f[i,1] - f[i,0] : f[i,0] - f[i,-1];
       f2 -= dt*vn*fyy/(4.*delta);
-      fu[] = f2*u[];
-    }
-    {
-      double un = dt*v[]/delta, s = sign(un);
-      int i = -(s + 1.)/2.;
-      double f2 = f[0,i] + s*min(1., 1. - s*un)*fy[0,i]*delta/2.;
-      double vn = u[0,i] + u[1,i];
-      double fyy = vn < 0. ? f[1,i] - f[0,i] : f[0,i] - f[-1,i];
-      f2 -= dt*vn*fyy/(4.*delta);
-      fv[] = f2*v[];
+      flux[d][] = f2*u[d][];
     }
   }
 }
@@ -93,9 +83,10 @@ void run (void)
     double dt = dtnext (t, timestep (grid, u, v));
     var fu = new var, fv = new var;
     var fx = new var, fy = new var;
-    gradient (grid, f, fx, fy);
+    var flux[2] = {fu,fv}, g[2] = {fx,fy}, uv[2] = {u,v};
+    gradient (grid, f, g);
     boundary_gradient (grid, fx, fy);
-    fluxes_upwind_bcg (grid, f, fx, fy, u, v, fu, fv, dt);
+    fluxes_upwind_bcg (grid, f, g, uv, flux, dt);
     boundary_u_v (grid, fu, fv);
     foreach (grid)
       f[] += dt*(fu[] - fu[1,0] + fv[] - fv[0,1])/delta;

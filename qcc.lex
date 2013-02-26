@@ -12,19 +12,31 @@
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, invardecl;
   int inval, invalpara;
-  int brack, inarray;
+  int brack, inarray, arrayargs;
+
   int inevent, eventscope, eventpara;
   char eventarray[100];
   int nexpr[100];
+
+  int foreachdim, foreachdimpara, foreachdimline;
+  FILE * foreachdimfp;
+  char * foreachdimindex;
+
   char foreachs[80], * fname;
   
-  struct { char * v; int b; } _varstack[100]; int varstack = -1;
-  void varpush (const char * s, int b) {
+  struct { char * v; int a, b; } _varstack[100]; int varstack = -1;
+  void varpush (const char * s, int scope) {
     if (s[0] != '\0') {
       char * f = malloc (sizeof (char)*(strlen (s) + 1));
-      strcpy (f, s); 
-      _varstack[++varstack].v = f; 
-      _varstack[varstack].b = b;
+      strcpy (f, s);
+      char * q = f;
+      int na = 0;
+      while ((q = strchr (q, '['))) {
+	*q++ = '\0'; na++;
+      }
+      _varstack[++varstack].v = f;
+      _varstack[varstack].b = scope;
+      _varstack[varstack].a = na;
     }
   }
   void varpop () {
@@ -32,7 +44,7 @@
       free (_varstack[varstack--].v);
   }
   
-  void endforeach (int line) {
+  void undef_var () {
     if (varstack >= 0) {
       fputc ('\n', yyout);
       int i = varstack;
@@ -40,10 +52,54 @@
 	char * v = _varstack[i--].v;
 	fprintf (yyout, "#undef %s\n", v);
       }
-      fprintf (yyout, " end_%s();\n#line %d\n", foreachs, line);
     }
-    else
-      fprintf (yyout, " end_%s();", foreachs);
+  }
+
+  void def_var (int i) {
+    char * v = _varstack[i].v;
+    fprintf (yyout, "#undef %s\n#define %s(", v, v);
+    int j;
+    char s[] = "l";
+    for (j = 0; j < _varstack[i].a; j++, (*s)++)
+      fprintf (yyout, "%s,", s);
+    fprintf (yyout, "i,j) val(%s", v);
+    char s1[] = "l";
+    for (j = 0; j < _varstack[i].a; j++, (*s1)++)
+      fprintf (yyout, "[%s]", s1);
+  }
+
+  void endforeach (int line) {
+    inforeach = 0;
+    undef_var ();
+    fprintf (yyout, " end_%s();", foreachs);
+    if (varstack >= 0)
+      fprintf (yyout, "\n#line %d\n", line);
+  }
+
+  void writefile (FILE * fp) {
+    rewind (fp);
+    int c;
+    while ((c = fgetc(fp)) != EOF)
+      fputc (c, yyout);
+  }
+
+  void endforeachdim () {
+    foreachdim = 0;
+    fclose (yyout);
+    yyout = foreachdimfp;
+    FILE * fp = fopen ("dimension.h", "r");
+    fprintf (yyout, "\n#define d 0\n#line %d\n", foreachdimline);
+    writefile (fp);
+    undef_var();
+    int i = 0;
+    while (i <= varstack) {
+      def_var (i++);
+      fprintf (yyout, ",j,i)\n");
+    }
+    fprintf (yyout, "\n#undef d\n#define d 1\n#line %d\n", foreachdimline);
+    writefile (fp);
+    fprintf (yyout, "\n#undef d\n#line %d\n", line);
+    fclose (fp);
   }
 
   void endevent() {
@@ -129,10 +185,10 @@ foreach{ID}* {
     return yyerror ("expecting ')");
   if (varstack >= 0) {
     fputc ('\n', yyout);
-    int i = varstack;
-    while (i >= 0) {
-      char * v = _varstack[i--].v;
-      fprintf (yyout, "#define %s(i,j) val(%s,i,j)\n", v, v);
+    int i = 0;
+    while (i <= varstack) {
+      def_var (i++);
+      fprintf (yyout, ",i,j)\n");
     }
     fprintf (yyout, "#line %d\n", line);
   }
@@ -174,7 +230,7 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
-[^{ID}]{WS}*var{WS}+{ID}+ {
+[^{ID}]{WS}*var{WS}+[a-zA-Z0-9\[\]]+ {
   ECHO;
   if (yytext[0] == '(') para++;
   char * var = &strstr(yytext,"var")[4];
@@ -183,7 +239,7 @@ end_foreach{ID}*{SP}*"()" {
     if (debug)
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
     varpush (var, scope);
-    invardecl = 1;
+    invardecl = scope + 1;
   }
   else if (para == 1) { /* function prototype (no nested functions) */
     if (debug)
@@ -193,7 +249,7 @@ end_foreach{ID}*{SP}*"()" {
 }
 
 ,{WS}*{ID}+ {
-  if (invardecl) {
+  if (invardecl == scope + 1) {
     char * var = &yytext[1];
     while (strchr (" \t\v\n\f", *var)) var++;
     if (debug)
@@ -205,12 +261,8 @@ end_foreach{ID}*{SP}*"()" {
   ECHO;
 }
 
-[^{ID}]new{WS}+var[^{ID}] {
-  /* new var */
-  if (yytext[0] == '(') para++;
-  fputc (yytext[0], yyout);
+new{WS}+var {
   fprintf (yyout, "%d", nvar++);
-  unput (yytext[yyleng - 1]);
 }
 
 [^{ID}]val{WS}*[(]    {
@@ -226,16 +278,18 @@ end_foreach{ID}*{SP}*"()" {
     char * s = yytext;
     while (!strchr(" \t\v\n\f[", *s)) s++;
     int i, len = s - yytext;
-    for (i = 0; i <= varstack && !found; i++)
+    for (i = varstack; i >= 0 && !found; i--)
       if (strlen(_varstack[i].v) == len && !strncmp(yytext, _varstack[i].v, len)) {
+	found = 1;
 	if (yytext[yyleng-1] == ']')
+	  /* v[] */
 	  fprintf (yyout, "%s(0,0)", _varstack[i].v);
 	else {
 	  fprintf (yyout, "%s(", _varstack[i].v);
 	  fputc (yytext[yyleng-1], yyout);
 	  inarray = ++brack;
+	  arrayargs = _varstack[i].a;
 	}
-	found = 1;	
       }
   }
   if (!found)
@@ -246,8 +300,30 @@ end_foreach{ID}*{SP}*"()" {
 "["        ECHO; brack++;
 "]"        {
   if (inarray == brack) {
-    fputc (')', yyout);
-    inarray = 0;
+    if (arrayargs--) {
+      int c = input();
+      if (c != '[') {
+	fprintf (stderr, "%s:%d: error: expecting '[' not '", fname, line);
+	fputc (c, stderr);
+	fputs ("'\n", stderr);
+	return 1;
+      }
+      fputc (',', yyout);
+      brack++;
+      c = input();
+      if (c == ']') {
+	if (arrayargs > 0)
+	  return yyerror ("not expecting '[]'");
+	fprintf (yyout, "0,0)");
+	inarray = 0;
+      }
+      else
+	unput (c);
+    }
+    else {
+      fputc (')', yyout);
+      inarray = 0;
+    }
   }
   else
     ECHO;
@@ -268,7 +344,7 @@ end_foreach{ID}*{SP}*"()" {
   eventarray[nevents] = 0;
 }
 
-  [it]{WS}*={WS}*[{][^}]*[}] {
+[it]{WS}*={WS}*[{][^}]*[}] {
   if (inevent == 1) {
     eventarray[nevents] = yytext[0];
     yytext[yyleng-1] = '\0';
@@ -281,6 +357,17 @@ end_foreach{ID}*{SP}*"()" {
   }
   else
     REJECT;
+}
+
+foreach_dimension{WS}*[(]{WS}*{ID}+{WS}*[)] {
+  if (!inforeach)
+    ECHO;
+  else {
+    foreachdimline = line;
+    foreachdim = scope; foreachdimpara = para;
+    foreachdimfp = yyout;
+    yyout = fopen ("dimension.h", "w");
+  }
 }
 
 "#" {
@@ -348,6 +435,7 @@ int endfor (char * file, FILE * fin, FILE * fout)
   inval = invalpara = 0;
   brack = inarray = 0;
   inevent = 0;
+  foreachdim = 0;
   int ret = yylex();
   if (!ret) {
     if (scope > 0)
