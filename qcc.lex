@@ -9,6 +9,7 @@
   enum { variable, vector };
 
   int debug = 0;
+  char dir[] = ".qccXXXXXX";
 
   int nvar = 0, nevents = 0;
   int line;
@@ -22,6 +23,7 @@
   int nexpr[100];
 
   int foreachdim, foreachdimpara, foreachdimline;
+  char foreachdimname[80];
   FILE * foreachdimfp;
 
   char foreachs[80], * fname;
@@ -81,7 +83,7 @@
     foreachdim = 0;
     fclose (yyout);
     yyout = foreachdimfp;
-    FILE * fp = fopen ("dimension.h", "r");
+    FILE * fp = fopen (foreachdimname, "r");
     writefile (fp, 'x', 'y');
     fprintf (yyout, 
 	     "\n#undef val1\n"
@@ -384,7 +386,9 @@ foreach_dimension{WS}*[(]{WS}*[)] {
     foreachdimline = line;
     foreachdim = scope; foreachdimpara = para;
     foreachdimfp = yyout;
-    yyout = fopen ("dimension.h", "w");
+    strcpy (foreachdimname, dir);
+    strcat (foreachdimname, "/dimension.h");
+    yyout = fopen (foreachdimname, "w");
   }
 }
 
@@ -438,8 +442,6 @@ int getput(void)
 void stripname (char * path);
 char * stripslash (char * path);
 int includes (int argc, char ** argv, char ** out, char ** grid);
-
-char dir[] = ".qccXXXXXX";
 
 int endfor (char * file, FILE * fin, FILE * fout)
 {
