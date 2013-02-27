@@ -44,7 +44,7 @@ double h0 (double r) {
   return result;
 }
 
-var h1 = new var;
+scalar h1 = new scalar;
 
 void initial_conditions (void * grid)
 {
@@ -57,7 +57,7 @@ void initial_conditions (void * grid)
 
 /* ------------------ Boundary conditions ------------------- */
 
-void boundary_h (void * grid, var h)
+void boundary_h (void * grid, scalar h)
 {
   symmetry (grid, h);
 }
@@ -67,14 +67,14 @@ void boundary_b (void * grid)
   symmetry (grid, b);
 }
 
-void boundary_u (void * grid, var u, var v)
+void boundary_u (void * grid, scalar u, scalar v)
 {
   uv_symmetry (grid, u, v);
 }
 
 /* ------------------ Output helper functions --------------- */
 
-var e = new var;
+scalar e = new scalar;
 
 double error (void * grid)
 {

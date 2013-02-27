@@ -4,14 +4,14 @@
 #include "utils.h"
 #include "mg.h"
 
-var a = new var, b = new var, res = new var, dp = new var;
+scalar a = new scalar, b = new scalar, res = new scalar, dp = new scalar;
 
 double solution (double x, double y)
 {
   return sin(3.*pi*x)*sin(3.*pi*y);
 }
 
-void boundary (void * grid, var v)
+void boundary (void * grid, scalar v)
 {
   /* Dirichlet condition on all boundaries */
   foreach_boundary (grid, right)
@@ -24,7 +24,7 @@ void boundary (void * grid, var v)
     v[0,-1] = 2.*solution(x, y - delta/2.) - v[];
 }
 
-void homogeneous_boundary (void * grid, var v, int l)
+void homogeneous_boundary (void * grid, scalar v, int l)
 {
   /* Homogeneous Dirichlet condition on all boundaries */
   foreach_boundary_level (grid, right, l)   v[+1,0] = - v[];
@@ -33,13 +33,13 @@ void homogeneous_boundary (void * grid, var v, int l)
   foreach_boundary_level (grid, bottom, l)  v[0,-1] = - v[];
 }
 
-void relax (void * grid, var a, var b, int l)
+void relax (void * grid, scalar a, scalar b, int l)
 {
   foreach_level (grid, l)
     a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - delta*delta*b[])/4.;
 }
 
-void residual (void * grid, var a, var b, var res)
+void residual (void * grid, scalar a, scalar b, scalar res)
 {
   foreach (grid)
     res[] = b[] + 

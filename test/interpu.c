@@ -7,7 +7,7 @@
 #include "wavelet.h"
 #include "adapt.h"
 
-var h = new var, u = new var, v = new var, w = new var;
+scalar h = new scalar, u = new scalar, v = new scalar, w = new scalar;
 
 int main (int argc, char ** argv)
 {

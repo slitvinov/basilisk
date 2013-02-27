@@ -227,14 +227,14 @@ void alloc_layer (Quadtree * p)
      initialised or never touched */
   foreach_cell (q)
     if (level == q->depth) {
-      for (var v = 0; v < nvar; v++)
+      for (scalar v = 0; v < nvar; v++)
 	val(v,0,0) = undefined;
       continue;
     }
 #endif
 }
 
-Point refine_cell (Point point, var start, var end);
+Point refine_cell (Point point, scalar start, scalar end);
 
 void * init_grid (int n)
 {
@@ -273,7 +273,7 @@ void free_grid (void * m)
 
 // The functions below should be independent from the details of the implementation
 
-Point refine_cell (Point point, var start, var end)
+Point refine_cell (Point point, scalar start, scalar end)
 {
   QUADTREE_VARIABLES;
   alloc_children();
@@ -287,7 +287,7 @@ Point refine_cell (Point point, var start, var end)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)
 	  child(k+o,l+p).neighbors++;
       /* bilinear interpolation from coarser level */
-      for (var v = start; v <= end; v++)
+      for (scalar v = start; v <= end; v++)
 	fine(v,k,l) = 
 	  (9.*val(v,0,0) + 3.*(val(v,2*k-1,0) + val(v,0,2*l-1)) + val(v,2*k-1,2*l-1))/16.;
     }

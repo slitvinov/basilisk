@@ -3,9 +3,9 @@
 #include "wavelet.h"
 
 void mg_cycle (void * grid,
-	       var a, var res, var dp,
-	       void (* relax)    (void * grid, var dp, var res, int depth),
-	       void (* boundary) (void * grid, var dp, int depth),
+	       scalar a, scalar res, scalar dp,
+	       void (* relax)    (void * grid, scalar dp, scalar res, int depth),
+	       void (* boundary) (void * grid, scalar dp, int depth),
 	       int nrelax, int minlevel)
 {
   restriction (grid, res, res);

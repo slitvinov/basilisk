@@ -219,18 +219,16 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
-[^{ID}]{WS}*(var|vector){WS}+[a-zA-Z0-9\[\]]+ {
+[^{ID}]{WS}*(scalar|vector){WS}+[a-zA-Z0-9\[\]]+ {
   ECHO;
   if (yytext[0] == '(') para++;
-  char * var = strstr(yytext,"var");
+  char * var = strstr(yytext,"scalar");
   vartype = variable;
-  if (var)
-    var = &var[4];
-  else {
+  if (!var) {
     var = strstr(yytext,"vector");
-    var = &var[7];
     vartype = vector;
   }
+  var = &var[7];
   while (strchr (" \t\v\n\f", *var)) var++;
   if (para == 0) { /* declaration */
     if (debug)
@@ -258,7 +256,7 @@ end_foreach{ID}*{SP}*"()" {
   ECHO;
 }
 
-new{WS}+var {
+new{WS}+scalar {
   fprintf (yyout, "%d", nvar++);
 }
 

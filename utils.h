@@ -38,7 +38,7 @@ double CFL = 0.5;
   NOT_UNUSED(xv); NOT_UNUSED(yv);	\
   NOT_UNUSED(delta);
 
-void symmetry (void * grid, var v)
+void symmetry (void * grid, scalar v)
 {
   foreach_boundary (grid, right)  v[+1,0] = v[];
   foreach_boundary (grid, left)   v[-1,0] = v[];
@@ -46,7 +46,7 @@ void symmetry (void * grid, var v)
   foreach_boundary (grid, bottom) v[0,-1] = v[];
 }
 
-void uv_symmetry (void * grid, var u, var v)
+void uv_symmetry (void * grid, scalar u, scalar v)
 {
   foreach_boundary (grid, right) {
     u[1,0] = 0.;
@@ -70,9 +70,9 @@ void uv_symmetry (void * grid, var u, var v)
 
 void runge_kutta (int stages,
 		  void * grid, double t, double dt,
-		  int nv, var f[nv], var df[stages][nv], 
-		  void (* advance) (void * grid, double t, var f[nv], var df[nv]),
-		  void (* update)  (void * grid, double t, var f[nv]))
+		  int nv, scalar f[nv], scalar df[stages][nv], 
+		  void (* advance) (void * grid, double t, scalar f[nv], scalar df[nv]),
+		  void (* update)  (void * grid, double t, scalar f[nv]))
 {
   switch (stages) {
   case 1:
@@ -103,7 +103,7 @@ void runge_kutta (int stages,
   }
 }
 
-double change (void * grid, var v, var vn)
+double change (void * grid, scalar v, scalar vn)
 {
   double max = 0.;
   foreach (grid) {
@@ -115,7 +115,7 @@ double change (void * grid, var v, var vn)
   return max;
 }
 
-double interpolate (void * grid, var v, double xp, double yp)
+double interpolate (void * grid, scalar v, double xp, double yp)
 {
   Point point = locate (grid, xp, yp);
   VARIABLES;
@@ -132,7 +132,7 @@ double interpolate (void * grid, var v, double xp, double yp)
 	  val(v,i,j)*x*y);
 }
 
-void output_field (void * grid, var f, int n, FILE * fp)
+void output_field (void * grid, scalar f, int n, FILE * fp)
 {
   fprintf (fp, "# 1:x 2:y 3:F\n");
   double delta = 1./n;
@@ -145,7 +145,7 @@ void output_field (void * grid, var f, int n, FILE * fp)
   }
 }
 
-void output_matrix (void * grid, var f, int n, FILE * fp)
+void output_matrix (void * grid, scalar f, int n, FILE * fp)
 {
   float fn = n;
   float delta = 1./fn;

@@ -2,14 +2,14 @@
 #  error "the grid needs to implement foreach_fine_to_coarse()"
 #endif
 
-void restriction (void * grid, var start, var end)
+void restriction (void * grid, scalar start, scalar end)
 {
   foreach_fine_to_coarse (grid)
-    for (var v = start; v <= end; v++)
+    for (scalar v = start; v <= end; v++)
       val(v,0,0) = (fine(v,0,0) + fine(v,1,0) + fine(v,0,1) + fine(v,1,1))/4.;
 }
 
-void restriction_u_v (void * grid, var u, var v)
+void restriction_u_v (void * grid, scalar u, scalar v)
 {
   foreach_fine_to_coarse (grid) {
     u[] = (fine(u,0,0) + fine(u,0,1))/2.;
@@ -17,7 +17,7 @@ void restriction_u_v (void * grid, var u, var v)
   }
 }
 
-void wavelet (void * grid, var v, var w)
+void wavelet (void * grid, scalar v, scalar w)
 {
   foreach_fine_to_coarse (grid) {
     /* difference between fine value and bilinearly-interpolated coarse value */

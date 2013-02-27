@@ -11,9 +11,9 @@
 
 enum { right, left, top, bottom };
 
-typedef int var;
+typedef int scalar;
 typedef struct {
-  int x, y;
+  scalar x, y;
 } vector;
 
 #define val(a,k,l) data(k,l)[a]

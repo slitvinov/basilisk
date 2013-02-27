@@ -2,7 +2,7 @@
 
 #include "utils.h"
 
-var v = new var;
+scalar v = new scalar;
 
 int main (int argc, char ** argv)
 {

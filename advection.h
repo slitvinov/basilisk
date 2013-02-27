@@ -2,14 +2,14 @@
 #include "utils.h"
 #include "events.h"
 
-var f = new var, u = new var, v = new var;
+scalar f = new scalar, u = new scalar, v = new scalar;
 
 // user-provided functions
 void parameters         (void);
 void initial_conditions (void * grid);
-void boundary_f         (void * grid, var f);
-void boundary_u_v       (void * grid, var u, var v);
-void boundary_gradient  (void * grid, var fx, var fy);
+void boundary_f         (void * grid, scalar f);
+void boundary_u_v       (void * grid, scalar u, scalar v);
+void boundary_gradient  (void * grid, scalar fx, scalar fy);
 
 double generic_limiter (double r, double beta)
 {
@@ -22,7 +22,7 @@ double minmod   (double r) { return generic_limiter (r, 1.);  }
 double superbee (double r) { return generic_limiter (r, 2.);  }
 double sweby    (double r) { return generic_limiter (r, 1.5); }
 
-void gradient (void * grid, const var f, vector g)
+void gradient (void * grid, const scalar f, vector g)
 {
   foreach (grid)
     foreach_dimension ()
@@ -31,7 +31,7 @@ void gradient (void * grid, const var f, vector g)
 }
 
 void fluxes_upwind_bcg (void * grid,
-			const var f, const vector g,
+			const scalar f, const vector g,
 			const vector u, 
 			vector flux,
 			double dt)
@@ -48,7 +48,7 @@ void fluxes_upwind_bcg (void * grid,
     }
 }
 
-double timestep (void * grid, const var u, const var v)
+double timestep (void * grid, const scalar u, const scalar v)
 {
   double dtmax = DT/CFL;
   foreach (grid) {
@@ -75,15 +75,13 @@ void run (void)
   int i = 0;
   while (events (grid, i, t)) {
     double dt = dtnext (t, timestep (grid, u, v));
-    var fu = new var, fv = new var;
-    var fx = new var, fy = new var;
-    vector flux = {fu,fv}, g = {fx,fy}, uv = {u,v};
+    vector flux = new vector, g = new vector, uv = {u,v};
     gradient (grid, f, g);
-    boundary_gradient (grid, fx, fy);
+    boundary_gradient (grid, g.x, g.y);
     fluxes_upwind_bcg (grid, f, g, uv, flux, dt);
-    boundary_u_v (grid, fu, fv);
+    boundary_u_v (grid, flux.x, flux.y);
     foreach (grid)
-      f[] += dt*(fu[] - fu[1,0] + fv[] - fv[0,1])/delta;
+      f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;
     boundary_f (grid, f);
     i++; t = tnext;
   }

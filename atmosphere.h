@@ -2,9 +2,9 @@
 #include <time.h>
 #include "utils.h"
 
-var u = new var, v = new var, h = new var, b = new var;
-var ke = new var, psi = new var;
-var un = new var, vn = new var, hn = new var;
+scalar u = new scalar, v = new scalar, h = new scalar, b = new scalar;
+scalar ke = new scalar, psi = new scalar;
+scalar un = new scalar, vn = new scalar, hn = new scalar;
 
 // Default parameters, do not change them!! edit parameters.h instead
 // Coriolis parameter
@@ -17,11 +17,11 @@ double NU = 0.;
 void parameters         (void);
 void initial_conditions (void * grid);
 void boundary_b         (void * grid);
-void boundary_h         (void * grid, var h);
-void boundary_u         (void * grid, var u, var v);
+void boundary_h         (void * grid, scalar h);
+void boundary_u         (void * grid, scalar u, scalar v);
 int  events             (void * grid, int i, double t, double dt);
 
-void advection_centered (void * grid, var f, var u, var v, var df)
+void advection_centered (void * grid, scalar f, scalar u, scalar v, scalar df)
 {
   foreach (grid)
     df[] = ((f[] + f[-1,0)]*u[] - 
@@ -30,7 +30,7 @@ void advection_centered (void * grid, var f, var u, var v, var df)
 	    (f[] + f[0,1)]*v[0,1)]/(2.*L0*delta);
 }
 
-void advection_upwind (void * grid, var f, var u, var v, var df)
+void advection_upwind (void * grid, scalar f, scalar u, scalar v, scalar df)
 {
   foreach (grid)
     df[] = ((u[] < 0. ? f[] : f[-1,0)]*u[] - 
@@ -62,7 +62,7 @@ double timestep (void * grid)
   return sqrt (dtmax)*CFL;
 }
 
-void momentum (void * grid, var u, var v, var h, var du, var dv)
+void momentum (void * grid, scalar u, scalar v, scalar h, scalar du, scalar dv)
 {
   foreach (grid) {
     double g = G*(h[] + b[]) + ke[];
@@ -80,7 +80,7 @@ void momentum (void * grid, var u, var v, var h, var du, var dv)
   }
 }
 
-void ke_psi (void * grid, var u, var v)
+void ke_psi (void * grid, scalar u, scalar v)
 {
   foreach (grid) {
 #if 1
@@ -102,18 +102,18 @@ void ke_psi (void * grid, var u, var v)
     ke[0,-1] = (sq(u[0,-1] + u[1,-1]) + sq(v[0,-1] + v[]))/8.;
 }
 
-void advance (void * grid, double t, var * f, var * df)
+void advance (void * grid, double t, scalar * f, scalar * df)
 {
-  var u = f[0], v = f[1], h = f[2];
-  var du = df[0], dv = df[1], dh = df[2];
+  scalar u = f[0], v = f[1], h = f[2];
+  scalar du = df[0], dv = df[1], dh = df[2];
 
   advection_centered (grid, h, u, v, dh);
   momentum (grid, u, v, h, du, dv);
 }
 
-void update (void * grid, double t, var * f)
+void update (void * grid, double t, scalar * f)
 {
-  var u = f[0], v = f[1], h = f[2];
+  scalar u = f[0], v = f[1], h = f[2];
   boundary_h (grid, h);
   boundary_u (grid, u, v);
   ke_psi (grid, u, v);
@@ -149,9 +149,9 @@ void run (void)
     boundary_u (grid, u, v);
     ke_psi (grid, u, v);
 #else /* unstable! */
-    var f[3] =  { u, v, h };
-    var df[2][3] = {{ un,  vn,  hn },
-		    { un1, vn1, hn1 }};
+    scalar f[3] = { u, v, h };
+    scalar df[2][3] = {{ un,  vn,  hn },
+		       { un1, vn1, hn1 }};
     runge_kutta (2, grid, t, dt, 3, f, df, advance, update);
 #endif
     t += dt; i++;

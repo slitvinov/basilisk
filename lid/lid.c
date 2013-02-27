@@ -19,7 +19,7 @@ void initial_conditions (void * grid)
   /* default to zero */
 }
 
-void boundary_p (void * grid, var p, int l)
+void boundary_p (void * grid, scalar p, int l)
 {
   foreach_boundary_level (grid, right, l)  p[1,0]  = p[];
   foreach_boundary_level (grid, left, l)   p[-1,0] = p[];
@@ -27,7 +27,7 @@ void boundary_p (void * grid, var p, int l)
   foreach_boundary_level (grid, bottom, l) p[0,-1] = p[];
 }
 
-void boundary_u (void * grid, var u, var v)
+void boundary_u (void * grid, scalar u, scalar v)
 {
   foreach_boundary (grid, right) {
     u[1,0] = 0.;
@@ -57,7 +57,7 @@ static double energy (void * grid)
   return se*L0*L0;
 }
 
-var un = new var; /* we need another variable */
+scalar un = new scalar; /* we need another scalar */
 
 int events (void * grid, int i, double t, double dt)
 {

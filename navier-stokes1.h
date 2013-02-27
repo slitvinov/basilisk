@@ -2,8 +2,8 @@
 #include "utils.h"
 #include "mg.h"
 
-var u = new var, v = new var, p = new var;
-var Sxx = new var, Syy = new var, Sxy = new var;
+scalar u = new scalar, v = new scalar, p = new scalar;
+scalar Sxx = new scalar, Syy = new scalar, Sxy = new scalar;
 
 // Default parameters, do not change them!! edit parameters.h instead
 // Viscosity
@@ -15,8 +15,8 @@ double TOLERANCE = 1e-3;
 // user-provided functions
 void parameters         (void);
 void initial_conditions (void * grid);
-void boundary_p         (void * grid, var p, int l);
-void boundary_u         (void * grid, var u, var v);
+void boundary_p         (void * grid, scalar p, int l);
+void boundary_u         (void * grid, scalar u, scalar v);
 int  events             (void * grid, int i, double t, double dt);
 void end                (void * grid);
 
@@ -88,13 +88,13 @@ void advance (void * grid, double dt)
   }
 }
 
-void relax (void * grid, var a, var b, int l)
+void relax (void * grid, scalar a, scalar b, int l)
 {
   foreach_level (grid, l)
     a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - L0*L0*delta*delta*b[])/4.;
 }
 
-double residual (void * grid, var a, var b, var res)
+double residual (void * grid, scalar a, scalar b, scalar res)
 {
   double maxres = 0.;
   foreach (grid) {
@@ -105,8 +105,8 @@ double residual (void * grid, var a, var b, var res)
   return maxres;
 }
 
-void projection (void * grid, var u, var v, var p, 
-		 var div, var res, var dp)
+void projection (void * grid, scalar u, scalar v, scalar p, 
+		 scalar div, scalar res, scalar dp)
 {
   double sum = 0.;
   foreach(grid) {

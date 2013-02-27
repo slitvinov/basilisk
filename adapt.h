@@ -10,7 +10,7 @@ void coarsen_cell (Point point)
       child(k,l).flags &= ~active;
 #if TRASH
       /* trash the data just to make sure it's never touched */
-      for (var v = 0; v < nvar; v++)
+      for (scalar v = 0; v < nvar; v++)
 	fine(v,k,l) = undefined;
 #endif
       /* update neighborhood */
@@ -31,7 +31,7 @@ int coarsen_function (Quadtree * quadtree, int (* func) (Point p))
   return nc;
 }
 
-int coarsen_wavelet (Quadtree * quadtree, var w, double max)
+int coarsen_wavelet (Quadtree * quadtree, scalar w, double max)
 {
   int nc = 0;
   foreach_fine_to_coarse (quadtree) {
@@ -52,7 +52,7 @@ int coarsen_wavelet (Quadtree * quadtree, var w, double max)
   return nc;
 }
 
-int refine_function (Quadtree * quadtree, var start, var end,
+int refine_function (Quadtree * quadtree, scalar start, scalar end,
 		     int (* func) (Point p, void * data), 
 		     void * data)
 {
@@ -65,8 +65,8 @@ int refine_function (Quadtree * quadtree, var start, var end,
   return nf;
 }
 
-int refine_wavelet (Quadtree * quadtree, var start, var end,
-		    var w, double max)
+int refine_wavelet (Quadtree * quadtree, scalar start, scalar end,
+		    scalar w, double max)
 {
   int nf = 0;
   foreach_leaf (quadtree)
@@ -127,17 +127,17 @@ int flag_halo_cells (Quadtree * quadtree)
     } end_foreach_cell();				                \
 }
 
-void update_halo (Quadtree * quadtree, int depth, var start, var end)
+void update_halo (Quadtree * quadtree, int depth, scalar start, scalar end)
 {
   foreach_halo_coarse_fine (quadtree, depth)
     /* bilinear interpolation from coarser level */
-    for (var v = start; v <= end; v++)
+    for (scalar v = start; v <= end; v++)
       val(v,0,0) = (9.*coarse(v,0,0) + 
 		    3.*(coarse(v,childx,0) + coarse(v,0,childy)) + 
 		    coarse(v,childx,childy))/16.;
 }
 
-void update_halo_u_v (Quadtree * quadtree, int depth, var u, var v)
+void update_halo_u_v (Quadtree * quadtree, int depth, scalar u, scalar v)
 {
   foreach_halo_coarse_fine (quadtree, depth) {
     /* linear interpolation from coarser level */
