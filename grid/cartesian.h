@@ -13,14 +13,14 @@ typedef struct {
 
 #define data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) + (point.j + l))*datasize])
 
-#define foreach(grid) {						\
+#define foreach() {						\
   Point point = *((Point *)grid);				\
   for (point.i = 1; point.i <= point.n; point.i++)		\
     for (point.j = 1; point.j <= point.n; point.j++) {		\
       VARIABLES
 #define end_foreach() }}
 
-#define foreach_boundary(grid,d) {				\
+#define foreach_boundary(d) {					\
   Point point = *((Point *)grid);				\
   for (int _k = 1; _k <= point.n; _k++) {			\
     point.i = d > left ? _k : d == right ? point.n : 1;		\
@@ -28,21 +28,22 @@ typedef struct {
     VARIABLES
 #define end_foreach_boundary() }}
 
-void * init_grid (int n)
+void init_grid (int n)
 {
-  Point * grid = malloc(sizeof(Point));
-  grid->n = n;
-  grid->data = calloc ((n + 2)*(n + 2), datasize);
-  return grid;
+  Point * p = malloc(sizeof(Point));
+  p->n = n;
+  p->data = calloc ((n + 2)*(n + 2), datasize);
+  grid = p;
 }
 
-void free_grid (Point * grid)
+void free_grid (void)
 {
-  free (grid->data);
-  free (grid);
+  Point * p = grid;
+  free (p->data);
+  free (p);
 }
 
-Point locate (void * grid, double x, double y)
+Point locate (double x, double y)
 {
   Point point = *((Point *)grid);
   point.i = (x + 0.5)*point.n + GHOSTS;

@@ -46,9 +46,9 @@ double h0 (double r) {
 
 scalar h1 = new scalar;
 
-void initial_conditions (void * grid)
+void initial_conditions ()
 {
-  foreach (grid) {
+  foreach() {
     h1[] = h[] = (H0 + h0(sqrt (x*x + y*y)));
     u[] = - vtheta(sqrt (xu*xu + yu*yu))*yu/sqrt (xu*xu + yu*yu);
     v[] =   vtheta(sqrt (xv*xv + yv*yv))*xv/sqrt (xv*xv + yv*yv);
@@ -57,49 +57,49 @@ void initial_conditions (void * grid)
 
 /* ------------------ Boundary conditions ------------------- */
 
-void boundary_h (void * grid, scalar h)
+void boundary_h (scalar h)
 {
-  symmetry (grid, h);
+  symmetry (h);
 }
 
-void boundary_b (void * grid)
+void boundary_b ()
 {
-  symmetry (grid, b);
+  symmetry (b);
 }
 
-void boundary_u (void * grid, scalar u, scalar v)
+void boundary_u (scalar u, scalar v)
 {
-  uv_symmetry (grid, u, v);
+  uv_symmetry (u, v);
 }
 
 /* ------------------ Output helper functions --------------- */
 
 scalar e = new scalar;
 
-double error (void * grid)
+double error ()
 {
   double max = 0.;
-  foreach (grid) {
+  foreach() {
     e[] = fabs (h1[]  - h[]);
     if (e[] > max) max = e[];
   }
   return max;
 }
 
-double energy (void * grid)
+double energy ()
 {
   double se = 0.;
-  foreach (grid)
+  foreach()
     se += (h[]*ke[] + G*h[]*(h[]/2. + b[]))*delta*delta;
   return se*L0*L0;
 }
 
-int events (void * grid, int i, double t, double dt)
+int events (int i, double t, double dt)
 {
   if (i % 10 == 0)
     fprintf (stderr, "t: %g %g %g\n", t, error (grid), energy (grid));
   //  if (i % 100 == 0)
-  //    output_field (grid, e, stdout);
+  //    output_field (e, stdout);
   return 0;
 }
 

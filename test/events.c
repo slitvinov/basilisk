@@ -15,10 +15,10 @@ event (t += 1; t <= 20) fprintf (stderr, "t++: %g\n", t);
 
 int main (int argc, char * argv[])
 {
-  events_init (NULL);
+  events_init ();
   double t = 0.;
   int i = 0;
-  while (events (NULL, i, t)) {
+  while (events (i, t)) {
     t = tnext; i++;
   }
 }

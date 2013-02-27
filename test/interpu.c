@@ -12,30 +12,30 @@ scalar h = new scalar, u = new scalar, v = new scalar, w = new scalar;
 int main (int argc, char ** argv)
 {
   int n = 2048;
-  void * grid = init_grid (n);
+  init_grid (n);
 
   double R0 = 0.1;
-  foreach (grid)
+  foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));
-  symmetry (grid, h);
+  symmetry (h);
   
   /* initial coarsening (see halo.c) */
-  restriction (grid, h, h);
-  wavelet (grid, h, w);
+  restriction (h, h);
+  wavelet (h, w);
   double tolerance = 1e-4;
-  coarsen_wavelet (grid, w, tolerance);
+  coarsen_wavelet (w, tolerance);
   flag_halo_cells (grid);
 
-  foreach (grid) {
+  foreach() {
     u[] = exp(-(xu*xu + yu*yu)/(R0*R0));
     v[] = exp(-(xv*xv + yv*yv)/(R0*R0));
   }
 
-  restriction_u_v (grid, u, v);
-  update_halo_u_v (grid, -1, u, v);
+  restriction_u_v (u, v);
+  update_halo_u_v (-1, u, v);
 
   double max = 0.;
-  foreach (grid) {
+  foreach() {
     double e = exp(-(x*x+y*y)/(R0*R0)) - (u[] + u[1,0])/2.;
     if (fabs(e) > max)
       max = fabs(e);
@@ -44,7 +44,7 @@ int main (int argc, char ** argv)
 
   fprintf (stderr, "maximum error on halos: %g\n", max);
 
-  free_grid (grid);
+  free_grid ();
 
   return (max > 2.*tolerance);
 }

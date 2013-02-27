@@ -2,8 +2,8 @@ CFLAGS += -std=c99 -O2 -g -Wall
 
 nonlinear.log: nonlinear
 	./nonlinear 2> nonlinear.log
-	gnuplot -e "set term pngcairo; set output 'nonlinear.png';" nonlinear.plot
 	-diff nonlinear.log nonlinear.ref
+	gnuplot -e "set term pngcairo; set output 'nonlinear.png';" nonlinear.plot
 
 -include nonlinear.d
 nonlinear: nonlinear.c ../qcc

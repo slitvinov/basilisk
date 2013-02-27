@@ -13,27 +13,27 @@ int refine_circle (Point point, void * data)
   return x*x + y*y < 0.25*0.25;
 }
 
-void boundary_f (void * grid, var f)
+void boundary_f (scalar f)
 {
 #if 0
-  restriction (grid, f, f);
-  update_halo (grid, -1, f, f);
+  restriction (f, f);
+  update_halo (-1, f, f);
 #endif
 }
 
-void boundary_u_v (void * grid, var u, var v)
+void boundary_u_v (scalar u, scalar v)
 {
 #if 0
-  restriction_u_v (grid, u, v);
-  update_halo_u_v (grid, -1, u, v);
+  restriction_u_v (u, v);
+  update_halo_u_v (-1, u, v);
 #endif
 }
 
-void boundary_gradient (void * grid, var fx, var fy)
+void boundary_gradient (scalar fx, scalar fy)
 {
 #if 0
-  restriction (grid, fx, fy);
-  update_halo (grid, -1, fx, fy);
+  restriction (fx, fy);
+  update_halo (-1, fx, fy);
 #endif
 }
 
@@ -47,28 +47,28 @@ void parameters ()
 
 #define bump(x,y) (exp(-100.*(sq(x + 0.2) + sq(y + .236338))))
 
-void initial_conditions (void * grid)
+void initial_conditions ()
 {
-  //  refine_function (grid, 0, -1, refine_circle, NULL);
-  //  flag_halo_cells (grid);
+  //  refine_function (0, -1, refine_circle, NULL);
+  //  flag_halo_cells ();
 
-  foreach (grid)
+  foreach()
     f[] = bump(x,y);
 }
 
-// event (t += 0.1; t <= 5.) output_matrix (grid, f, N, stdout);
+// event (t += 0.1; t <= 5.) output_matrix (f, N, stdout);
 
 event (i++) {
-  foreach (grid) {
+  foreach() {
     u[] = 1.5*sin(2.*pi*t/5.)*sin((xu + 0.5)*pi)*cos((yu + 0.5)*pi);
     v[] = - 1.5*sin(2.*pi*t/5.)*cos((xv + 0.5)*pi)*sin((yv + 0.5)*pi);
   }
-  boundary_u_v (grid, u, v);
+  boundary_u_v (u, v);
 }
 
 event (t = {0,5}) {
   double sum = 0., min = 1e100, max = -1e100;
-  foreach (grid) {
+  foreach() {
     sum += f[]*delta*delta;
     if (f[] > max) max = f[];
     if (f[] < min) min = f[];
@@ -78,8 +78,8 @@ event (t = {0,5}) {
 
 event (t = 5) {
   double max = 0., norm1 = 0., norm2 = 0., area = 0.;
-  var e = new var;
-  foreach (grid) {
+  scalar e = new scalar;
+  foreach() {
     e[] = f[] - bump(x,y);
     if (fabs(e[]) > max) max = fabs(e[]);
     double a = sq(delta);
@@ -90,7 +90,7 @@ event (t = 5) {
   fprintf (stderr, "%d %g %g %g\n", N, norm1/area, sqrt(norm2/area), max);
   
   if (N == 256)
-    output_matrix (grid, e, N, stdout);
+    output_matrix (e, N, stdout);
 }
 
 int main() {

@@ -26,11 +26,11 @@ typedef struct {
 #define sign(x) ((x) > 0 ? 1 : -1)
 
 typedef struct _Event Event;
-typedef int (* Expr) (void *, int *, double *);
+typedef int (* Expr) (int *, double *);
 
 struct _Event {
   int last, nexpr;
-  void (* action) (void *, int, double);
+  void (* action) (int, double);
   Expr expr[3];
   int * arrayi;
   double * arrayt;
@@ -38,4 +38,5 @@ struct _Event {
   int i, a;
 };
 
-double tnext; /* time of next event */
+void * grid = NULL;       // the grid
+double tnext = undefined; // time of next event

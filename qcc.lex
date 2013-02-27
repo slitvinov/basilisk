@@ -128,7 +128,7 @@ WS  [ \t\v\n\f]
 	       "  return ret;\n"
 	       "}\n");
     fprintf (yyout, 
-	     "static void event_action%d (void * grid, int i, double t) {\n"
+	     "static void event_action%d (int i, double t) {\n"
 	     "  #line %d\n",
 	     nevents, line);
     assert (nevents < 100);
@@ -205,7 +205,7 @@ end_foreach{ID}*{SP}*"()" {
 	     "  *ip = i; *tp = t;\n"
 	     "  return ret;\n"
 	     "}\n"
-	     "static int event_expr%d%d (void * grid, int * ip, double * tp) {\n"
+	     "static int event_expr%d%d (int * ip, double * tp) {\n"
 	     "  int i = *ip; double t = *tp;\n"
 	     "  #line %d\n"
 	     "  int ret = (", nevents, inevent++, line);
@@ -354,7 +354,7 @@ new{WS}+vector {
   fputc (yytext[0], yyout);
   /* event (... */
   fprintf (yyout, 
-	   "static int event_expr%d%d (void * grid, int * ip, double * tp) {\n"
+	   "static int event_expr%d%d (int * ip, double * tp) {\n"
 	   "  int i = *ip; double t = *tp;\n"
 	   "  #line %d\n"
 	   "  int ret = (", nevents, inevent++, line);
@@ -528,10 +528,10 @@ void compdir (char * file, char ** in, int nin, char * grid)
   /* events */
   int j;
   for (i = 0; i < nevents; i++) {
-    fprintf (fout, "static void event_action%d (void * grid, int i, double t);\n", i);
+    fprintf (fout, "static void event_action%d (int i, double t);\n", i);
     for (j = 0; j < nexpr[i]; j++)
       fprintf (fout,
-	       "static int event_expr%d%d (void * grid, int * ip, double * tp);\n",
+	       "static int event_expr%d%d (int * ip, double * tp);\n",
 	       i, j);
     if (eventarray[i])
       fprintf (fout, "static %s event_array%d[];\n", eventarray[i] == 'i' ? "int" : "double", i);

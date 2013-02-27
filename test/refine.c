@@ -8,54 +8,54 @@
 
 scalar h = new scalar, w = new scalar;
 
-void refineiter (void * grid)
+void refineiter ()
 {
   for (int n = 0; n < 2; n++) {
     fprintf (stderr, "\nwavelet refinement\n");
-    foreach(grid)
+    foreach()
       h[] = exp(-(x*x + y*y)/(0.01));
-    symmetry (grid, h);
-    update_halo (grid, -1, h, h);
+    symmetry (h);
+    update_halo (-1, h, h);
 
-    restriction (grid, h, h);
-    wavelet (grid, h, w);
+    restriction (h, h);
+    wavelet (h, w);
 
-    int nf = refine_wavelet (grid, h, h, w, 1e-2);
+    int nf = refine_wavelet (h, h, w, 1e-2);
     flag_halo_cells (grid);
 
     fprintf (stderr, "refined %d cells\n", nf);
   }
-  update_halo (grid, -1, h, h);
+  update_halo (-1, h, h);
 }
 
 int main (int argc, char ** argv)
 {
-  void * grid = init_grid (16);
+  init_grid (16);
 
-  refineiter (grid);
+  refineiter();
 
-  foreach_halo(grid)
+  foreach_halo()
     printf ("%g %g %d %d %g %g halo1\n", x, y, level, cell.neighbors, h[],
 	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
-  foreach_leaf(grid)
+  foreach_leaf()
     printf ("%g %g %d %d %g %g leaf1\n", x, y, level, cell.neighbors, h[],
 	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
 
-  restriction (grid, h, h);
-  wavelet (grid, h, w);
-  fprintf (stderr, "\ncoarsened %d cells back\n", coarsen_wavelet (grid, w, 1e-2));
+  restriction (h, h);
+  wavelet (h, w);
+  fprintf (stderr, "\ncoarsened %d cells back\n", coarsen_wavelet (w, 1e-2));
   flag_halo_cells (grid);
 
-  foreach_halo(grid)
+  foreach_halo()
     printf ("%g %g %d %d %g %g halo2\n", x, y, level, cell.neighbors, h[],
 	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
-  foreach_leaf(grid)
+  foreach_leaf()
     printf ("%g %g %d %d %g %g leaf2\n", x, y, level, cell.neighbors, h[],
 	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
 
-  refineiter (grid);
+  refineiter();
 
-  foreach_cell (grid) {
+  foreach_cell() {
     if (!(cell.flags & halo))
       continue;
     else if (!(cell.flags & active))
@@ -64,12 +64,12 @@ int main (int argc, char ** argv)
       fprintf (stderr, "%g %g %d %d flagged\n", x, y, level, cell.neighbors);
   }
 
-  foreach_halo(grid)
+  foreach_halo()
     printf ("%g %g %d %d %g %g halo3\n", x, y, level, cell.neighbors, h[],
 	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
-  foreach_leaf(grid)
+  foreach_leaf()
     printf ("%g %g %d %d %g %g leaf3\n", x, y, level, cell.neighbors, h[],
 	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
 
-  free_grid (grid);
+  free_grid ();
 }

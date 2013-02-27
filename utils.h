@@ -38,30 +38,30 @@ double CFL = 0.5;
   NOT_UNUSED(xv); NOT_UNUSED(yv);	\
   NOT_UNUSED(delta);
 
-void symmetry (void * grid, scalar v)
+void symmetry (scalar v)
 {
-  foreach_boundary (grid, right)  v[+1,0] = v[];
-  foreach_boundary (grid, left)   v[-1,0] = v[];
-  foreach_boundary (grid, top)    v[0,+1] = v[];
-  foreach_boundary (grid, bottom) v[0,-1] = v[];
+  foreach_boundary (right)  v[+1,0] = v[];
+  foreach_boundary (left)   v[-1,0] = v[];
+  foreach_boundary (top)    v[0,+1] = v[];
+  foreach_boundary (bottom) v[0,-1] = v[];
 }
 
-void uv_symmetry (void * grid, scalar u, scalar v)
+void uv_symmetry (scalar u, scalar v)
 {
-  foreach_boundary (grid, right) {
+  foreach_boundary (right) {
     u[1,0] = 0.;
     v[1,0] = v[];
   }
-  foreach_boundary (grid, left) {
+  foreach_boundary (left) {
     u[-1,0] = - u[1,0];
     u[] = 0.;
     v[-1,0] = v[];
   }
-  foreach_boundary (grid, top) {
+  foreach_boundary (top) {
     v[0,1] = 0.;
     u[0,1] = u[];
   }
-  foreach_boundary (grid, bottom) {
+  foreach_boundary (bottom) {
     v[0,-1] = - v[0,1];
     v[] = 0.;
     u[0,-1] = u[];
@@ -69,32 +69,32 @@ void uv_symmetry (void * grid, scalar u, scalar v)
 }
 
 void runge_kutta (int stages,
-		  void * grid, double t, double dt,
+		  double t, double dt,
 		  int nv, scalar f[nv], scalar df[stages][nv], 
-		  void (* advance) (void * grid, double t, scalar f[nv], scalar df[nv]),
-		  void (* update)  (void * grid, double t, scalar f[nv]))
+		  void (* advance) (double t, scalar f[nv], scalar df[nv]),
+		  void (* update)  (double t, scalar f[nv]))
 {
   switch (stages) {
   case 1:
-    (* advance) (grid, t, f, df[0]);
-    foreach (grid)
+    (* advance) (t, f, df[0]);
+    foreach()
       for (int v = 0; v < nv; v++)
 	f[v][] += df[0][v][]*dt;
-    (* update) (grid, t + dt, f);
+    (* update) (t + dt, f);
     break;
 
   case 2:
-    (* advance) (grid, t, f, df[0]);
-    foreach (grid)
+    (* advance) (t, f, df[0]);
+    foreach()
       for (int v = 0; v < nv; v++)
 	df[0][v][] = f[v][] + df[0][v][]*dt/2.;
-    (* update) (grid, t + dt/2., df[0]);
+    (* update) (t + dt/2., df[0]);
 
-    (* advance) (grid, t + dt/2., df[0], df[1]);
-    foreach (grid)
+    (* advance) (t + dt/2., df[0], df[1]);
+    foreach()
       for (int v = 0; v < nv; v++)
 	f[v][] += df[1][v][]*dt;
-    (* update) (grid, t + dt, f);
+    (* update) (t + dt, f);
     break;
 
   default:
@@ -103,10 +103,10 @@ void runge_kutta (int stages,
   }
 }
 
-double change (void * grid, scalar v, scalar vn)
+double change (scalar v, scalar vn)
 {
   double max = 0.;
-  foreach (grid) {
+  foreach() {
     double dv = fabs (v[] - vn[]);
     if (dv > max)
       max = dv;
@@ -115,9 +115,9 @@ double change (void * grid, scalar v, scalar vn)
   return max;
 }
 
-double interpolate (void * grid, scalar v, double xp, double yp)
+double interpolate (scalar v, double xp, double yp)
 {
-  Point point = locate (grid, xp, yp);
+  Point point = locate (xp, yp);
   VARIABLES;
   x = (xp - x)/delta;
   y = (yp - y)/delta;
@@ -132,20 +132,20 @@ double interpolate (void * grid, scalar v, double xp, double yp)
 	  val(v,i,j)*x*y);
 }
 
-void output_field (void * grid, scalar f, int n, FILE * fp)
+void output_field (scalar f, int n, FILE * fp)
 {
   fprintf (fp, "# 1:x 2:y 3:F\n");
   double delta = 1./n;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
       double x = delta*i - 0.5 + delta/2., y = delta*j - 0.5 + delta/2.;
-      fprintf (fp, "%g %g %g\n", x, y, interpolate (grid, f, x, y));
+      fprintf (fp, "%g %g %g\n", x, y, interpolate (f, x, y));
     }
     fputc ('\n', fp);
   }
 }
 
-void output_matrix (void * grid, scalar f, int n, FILE * fp)
+void output_matrix (scalar f, int n, FILE * fp)
 {
   float fn = n;
   float delta = 1./fn;
@@ -159,7 +159,7 @@ void output_matrix (void * grid, scalar f, int n, FILE * fp)
     fwrite (&x, sizeof(float), 1, fp);
     for (int j = 0; j < n; j++) {
       float y = delta*j - 0.5 + delta/2.;
-      float v = interpolate (grid, f, x, y);
+      float v = interpolate (f, x, y);
       fwrite (&v, sizeof(float), 1, fp);
     }
   }

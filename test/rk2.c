@@ -7,24 +7,24 @@
 
 scalar a = new scalar, da1 = new scalar, da2 = new scalar;
 
-void advance (void * grid, double t, scalar * f, scalar * df)
+void advance (double t, scalar * f, scalar * df)
 {
-  foreach (grid)
+  foreach()
     val(df[0],0,0) = exp(-A*t)*cos(t) - A*val(f[0],0,0);
 }
 
-void update (void * grid, double t, scalar * f) {}
+void update (double t, scalar * f) {}
 
 int main ()
 {
-  void * grid = init_grid(1);
+  init_grid(1);
   double dt = 0.4;
   scalar f[1] = {a}, df[2][1] = {{da1},{da2}};
   int i = 0;
   for (double t = 0.; t <= 6.*3.14159265359; t += dt, i++) {
-    foreach (grid)
+    foreach()
       fprintf (stderr, "%g %g %g\n", t, a[], a[] - exp(-A*t)*sin(t));
-    runge_kutta (2, grid, t, dt, 1, f, df, advance, update);
+    runge_kutta (2, t, dt, 1, f, df, advance, update);
   }
-  free_grid(grid);
+  free_grid();
 }

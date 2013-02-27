@@ -15,43 +15,43 @@ double solution (double x, double y)
   return sin(3.*pi*x)*sin(3.*pi*y);
 }
 
-void boundary (void * grid, scalar v)
+void boundary (scalar v)
 {
   /* Dirichlet condition on all boundaries */
-  foreach_boundary (grid, right)
+  foreach_boundary (right)
     v[+1,0] = 2.*solution(x + delta/2., y) - v[];
-  foreach_boundary (grid, left)
+  foreach_boundary (left)
     v[-1,0] = 2.*solution(x - delta/2., y) - v[];
-  foreach_boundary (grid, top)
+  foreach_boundary (top)
     v[0,+1] = 2.*solution(x, y + delta/2.) - v[];
-  foreach_boundary (grid, bottom)
+  foreach_boundary (bottom)
     v[0,-1] = 2.*solution(x, y - delta/2.) - v[];
-  restriction (grid, v, v);
-  update_halo (grid, -1, v, v);
+  restriction (v, v);
+  update_halo (-1, v, v);
 }
 
-void homogeneous_boundary (void * grid, scalar v, int l)
+void homogeneous_boundary (scalar v, int l)
 {
   /* Homogeneous Dirichlet condition on all boundaries */
-  foreach_boundary_level (grid, right, l)   v[+1,0] = - v[];
-  foreach_boundary_level (grid, left, l)    v[-1,0] = - v[];
-  foreach_boundary_level (grid, top, l)     v[0,+1] = - v[];
-  foreach_boundary_level (grid, bottom, l)  v[0,-1] = - v[];
+  foreach_boundary_level (right, l)   v[+1,0] = - v[];
+  foreach_boundary_level (left, l)    v[-1,0] = - v[];
+  foreach_boundary_level (top, l)     v[0,+1] = - v[];
+  foreach_boundary_level (bottom, l)  v[0,-1] = - v[];
   /* we don't need to restrict because the solution is already defined
      on coarse levels */
-  update_halo (grid, l, v, v);
+  update_halo (l, v, v);
 }
 
-void relax (void * grid, scalar a, scalar b, int l)
+void relax (scalar a, scalar b, int l)
 {
-  foreach_level (grid, l)
+  foreach_level (l)
     a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] 
 	      - delta*delta*b[])/4.;
 }
 
-void residual (void * grid, scalar a, scalar b, scalar res)
+void residual (scalar a, scalar b, scalar res)
 {
-  foreach (grid)
+  foreach()
     res[] = b[] + 
     (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(delta*delta);
 }
@@ -67,26 +67,26 @@ int refine_circle (Point point, void * data)
 void solve (int depth)
 {
   int nrelax = 4;
-  void * grid = init_grid(1);
+  init_grid(1);
 
-  while (refine_function (grid, 0, nvar - 1, refine_circle, &depth));
-  flag_halo_cells (grid);
-  foreach(grid)
+  while (refine_function (0, nvar - 1, refine_circle, &depth));
+  flag_halo_cells();
+  foreach()
     b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);
-  boundary (grid, a);
+  boundary (a);
 
   #define NITER 15
   clock_t start = clock(), iter[NITER];
   double maxres[NITER];
-  residual (grid, a, b, res);
+  residual (a, b, res);
   for (int i = 0; i < NITER; i++) {
-    mg_cycle (grid, a, res, dp,
+    mg_cycle (a, res, dp,
 	      relax, homogeneous_boundary,
 	      nrelax, 0);
-    boundary (grid, a);
-    residual (grid, a, b, res);
+    boundary (a);
+    residual (a, b, res);
     double max = 0.;
-    foreach(grid)
+    foreach()
       if (fabs(res[]) > max)
 	max = fabs(res[]);
     iter[i] = clock();
@@ -98,14 +98,14 @@ void solve (int depth)
   }
 
   double max = 0;
-  foreach(grid) {
+  foreach() {
     double e = a[] - solution(x, y);
     if (fabs(e) > max) max = fabs(e);
     //    printf ("%g %g %g %g %g %g\n", x, y, a[], b[], res[], e);
   }
   fprintf (stderr, "max error %d %g\n", depth, max);
 
-  free_grid(grid);
+  free_grid();
 }
 
 int main (int argc, char ** argv)

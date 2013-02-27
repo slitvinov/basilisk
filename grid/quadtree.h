@@ -31,7 +31,7 @@ size_t _size (size_t l)
 #define CELL(m,level,i)  (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
 
 /***** Multigrid macros *****/
-#define depth(grid) (((Quadtree *)grid)->depth)
+#define depth()      (((Quadtree *)grid)->depth)
 #define aparent(k,l) CELL(point.m, point.level-1, ((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
 			  (point.j+GHOSTS)/2+l)
 #define child(k,l)   CELL(point.m, point.level+1, (2*point.i-GHOSTS+k)*2*(_n + GHOSTS) + \
@@ -96,7 +96,7 @@ void recursive (Point point)
 #define _pop(b,c,d,e)							\
   { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--; }
 
-#define foreach_boundary_cell(grid,dir)					\
+#define foreach_boundary_cell(dir)					\
   {									\
     Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
     int _d = dir; NOT_UNUSED(_d);					\
@@ -129,7 +129,7 @@ void recursive (Point point)
     }                                                                   \
   }
 
-#define foreach_cell(grid) foreach_boundary_cell(grid,0)
+#define foreach_cell() foreach_boundary_cell(0)
 #define end_foreach_cell()						\
       if (point.level < point.depth) {					\
 	  _push (point.level, point.i, point.j, 1);			\
@@ -146,7 +146,7 @@ void recursive (Point point)
     }                                                                   \
   }
 
-#define foreach_cell_post(grid,condition)				\
+#define foreach_cell_post(condition)					\
   {									\
     Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
@@ -193,23 +193,23 @@ enum {
   halo   = 1 << 2
 };
 
-#define foreach_leaf(grid)        foreach_cell(grid) if (cell.flags & leaf) {
+#define foreach_leaf()            foreach_cell() if (cell.flags & leaf) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
 
-#define foreach       foreach_leaf
+#define foreach()     foreach_leaf()
 #define end_foreach   end_foreach_leaf
 
-#define foreach_boundary(grid,dir) foreach_boundary_cell(grid,dir)
+#define foreach_boundary(dir)     foreach_boundary_cell(dir)
 #define end_foreach_boundary()    if (cell.flags & leaf) continue; end_foreach_boundary_cell()
 
-#define foreach_fine_to_coarse(grid) foreach_cell_post(grid,!(cell.flags & leaf))
+#define foreach_fine_to_coarse()     foreach_cell_post(!(cell.flags & leaf))
 #define end_foreach_fine_to_coarse() end_foreach_cell_post()
 
-#define foreach_level(grid,l)      foreach_cell(grid) { \
+#define foreach_level(l)            foreach_cell() { \
                                       if (level == l || cell.flags & leaf) {
 #define end_foreach_level()           continue; } } end_foreach_cell()
 
-#define foreach_boundary_level(grid,dir,l)   foreach_boundary(grid,dir) {	\
+#define foreach_boundary_level(dir,l)      foreach_boundary(dir) {	\
                                              if (level == l || cell.flags & leaf) {
 #define end_foreach_boundary_level()         continue; } } end_foreach_boundary()
 
@@ -225,7 +225,7 @@ void alloc_layer (Quadtree * p)
 #if TRASH
   /* trash the data just to make sure it's either explicitly
      initialised or never touched */
-  foreach_cell (q)
+  foreach_cell()
     if (level == q->depth) {
       for (scalar v = 0; v < nvar; v++)
 	val(v,0,0) = undefined;
@@ -236,7 +236,7 @@ void alloc_layer (Quadtree * p)
 
 Point refine_cell (Point point, scalar start, scalar end);
 
-void * init_grid (int n)
+void init_grid (int n)
 {
   int depth = 0;
   while (n > 1) {
@@ -255,15 +255,15 @@ void * init_grid (int n)
   q->m[0] = calloc (_size(0), sizeof (Cell) + datasize);
   CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
   CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
+  grid = q;
   while (depth--)
-    foreach_leaf (q)
+    foreach_leaf ()
       point = refine_cell (point, 0, nvar - 1);
-  return (void *) q;
 }
 
-void free_grid (void * m)
+void free_grid (void)
 {
-  Quadtree * q = m;
+  Quadtree * q = grid;
   for (int l = 0; l <= q->depth; l++)
     free (q->m[l]);
   q->m = &(q->m[-1]);
@@ -294,9 +294,9 @@ Point refine_cell (Point point, scalar start, scalar end)
   return point;
 }
 
-Point locate (void * grid, double xp, double yp)
+Point locate (double xp, double yp)
 {
-  foreach_cell (grid) {
+  foreach_cell () {
     double delta = DELTA;
     double x = (point.i - GHOSTS + 0.5)*delta - 0.5;
     double y = (point.j - GHOSTS + 0.5)*delta - 0.5;

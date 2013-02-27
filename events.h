@@ -1,8 +1,8 @@
-static int event_cond (Event * ev, void * grid, int i, double t)
+static int event_cond (Event * ev, int i, double t)
 {
   if (!ev->expr[1])
     return true;
-  return (* ev->expr[1]) (grid, &i, &t);
+  return (* ev->expr[1]) (&i, &t);
 }
 
 static void event_finished (Event * ev)
@@ -10,14 +10,14 @@ static void event_finished (Event * ev)
   ev->t = ev->i = -1;
 }
 
-static void event_do (Event * ev, void * grid, int i, double t)
+static void event_do (Event * ev, int i, double t)
 {
-  if ((i > ev->i && t > ev->t) || !event_cond (ev, grid, i, t)) {
+  if ((i > ev->i && t > ev->t) || !event_cond (ev, i, t)) {
     event_finished (ev);
     return;
   }
   if (i == ev->i || t == ev->t) {
-    (* ev->action) (grid, i, t);
+    (* ev->action) (i, t);
     if (ev->arrayi) { /* i = {...} */
       ev->i = ev->arrayi[ev->a++];
       if (ev->i < 0)
@@ -29,14 +29,14 @@ static void event_do (Event * ev, void * grid, int i, double t)
 	event_finished (ev);
     }
     else if (ev->expr[2]) { /* increment */
-      (* ev->expr[2]) (grid, &ev->i, &ev->t);
-      if (!event_cond (ev, grid, i + 1, ev->t))
+      (* ev->expr[2]) (&ev->i, &ev->t);
+      if (!event_cond (ev, i + 1, ev->t))
 	event_finished (ev);
     }
   }
 }
 
-void events_init (void * grid)
+void events_init (void)
 {
   for (Event * ev = Events; !ev->last; ev++) 
     if (ev->arrayi || ev->arrayt) {
@@ -53,7 +53,7 @@ void events_init (void * grid)
 	Expr init = NULL, cond = NULL, inc = NULL;
 	for (int j = 0; j < ev->nexpr; j++) {
 	  int i = -123456; double t = i;
-	  (* ev->expr[j]) (grid, &i, &t);
+	  (* ev->expr[j]) (&i, &t);
 	  if (i == -123456 && t == -123456) {
 	    /* nothing done to i and t: this must be the condition */
 	    if (cond)
@@ -63,7 +63,7 @@ void events_init (void * grid)
 	  else {
 	    /* this is either an initialisation or an increment */
 	    int i1 = i; double t1 = t;
-	    (* ev->expr[j]) (grid, &i1, &t1);
+	    (* ev->expr[j]) (&i1, &t1);
 	    if (i1 == i && t1 == t) {
 	      /* applying twice does not change anything: this is an initialisation */
 	      if (init)
@@ -85,9 +85,9 @@ void events_init (void * grid)
       }
       ev->i = ev->t = -1;
       if (ev->expr[0])
-	(* ev->expr[0]) (grid, &ev->i, &ev->t);
+	(* ev->expr[0]) (&ev->i, &ev->t);
       else if (ev->expr[2]) {
-	(* ev->expr[2]) (grid, &ev->i, &ev->t);
+	(* ev->expr[2]) (&ev->i, &ev->t);
 	if (ev->i != -1)
 	  ev->i = 0;
 	if (ev->t != -1)
@@ -96,11 +96,11 @@ void events_init (void * grid)
   }
 }
 
-int events (void * grid, int i, double t)
+int events (int i, double t)
 {
   tnext = undefined;
   for (Event * ev = Events; !ev->last; ev++) {
-    event_do (ev, grid, i, t);
+    event_do (ev, i, t);
     if (ev->t > t && ev->t < tnext)
       tnext = ev->t;
   }

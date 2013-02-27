@@ -26,7 +26,7 @@ size_t _size (size_t l)
 #define data(k,l)  ((double *)&point.d[point.level][((point.i + k)*(point.n + 2*GHOSTS) + \
 						     point.j + l)*datasize])
 /***** Multigrid variables and macros *****/
-#define depth(grid)   (((Point *)grid)->depth)
+#define depth()       (((Point *)grid)->depth)
 #define fine(a,k,l)   ((double *)\
 		       &point.d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) + \
 						(2*point.j-GHOSTS+l))*datasize])[a]
@@ -38,7 +38,7 @@ size_t _size (size_t l)
   int    childx = 2*((point.i+GHOSTS)%2)-1;                     NOT_UNUSED(childx);  \
   int    childy = 2*((point.j+GHOSTS)%2)-1;                     NOT_UNUSED(childy);
 
-#define foreach_level(grid,l) {						\
+#define foreach_level(l) {						\
   Point point = *((Point *)grid);					\
   point.level = l; point.n = 1 << point.level;				\
   for (point.i = GHOSTS; point.i < point.n + GHOSTS; point.i++)		\
@@ -48,10 +48,10 @@ size_t _size (size_t l)
 
 #define end_foreach_level() }}
 
-#define foreach(grid) foreach_level(grid,point.depth)
+#define foreach()     foreach_level(point.depth)
 #define end_foreach() end_foreach_level()
 
-#define foreach_boundary_level(grid,d,l) {				\
+#define foreach_boundary_level(d,l) {					\
   Point point = *((Point *)grid);					\
   point.level = l; point.n = 1 << point.level;				\
   for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
@@ -62,10 +62,10 @@ size_t _size (size_t l)
 
 #define end_foreach_boundary_level() }}
 
-#define foreach_boundary(grid,d) foreach_boundary_level(grid,d,point.depth)
+#define foreach_boundary(d) foreach_boundary_level(d,point.depth)
 #define end_foreach_boundary() }}
 
-#define foreach_fine_to_coarse(grid) {					\
+#define foreach_fine_to_coarse() {					\
   Point point = *((Point *)grid);					\
   point.level = point.depth - 1; point.n = 1 << point.level;		\
   for (; point.level > 0; point.n /= 2, point.level--) {		\
@@ -76,7 +76,7 @@ size_t _size (size_t l)
 
 #define end_foreach_fine_to_coarse() } } }
 
-void * init_grid (int n)
+void init_grid (int n)
 {
   int r = 0;
   while (n > 1) {
@@ -92,17 +92,18 @@ void * init_grid (int n)
   m->d = malloc(sizeof(Point *)*(r + 1));
   for (int l = 0; l <= r; l++)
     m->d[l] = calloc (_size(l), datasize);
-  return m;
+  grid = m;
 }
 
-void free_grid (Point * grid)
+void free_grid (void)
 {
-  for (int l = 0; l <= grid->depth; l++)
-    free (grid->d[l]);
-  free(grid->d);
+  Point * m = grid;
+  for (int l = 0; l <= m->depth; l++)
+    free (m->d[l]);
+  free(m->d);
 }
 
-Point locate (void * grid, double x, double y)
+Point locate (double x, double y)
 {
   Point point = *((Point *)grid);
   point.level = point.depth;

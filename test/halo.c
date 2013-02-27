@@ -10,20 +10,20 @@ scalar h = new scalar, w = new scalar;
 
 int main (int argc, char ** argv)
 {
-  void * grid = init_grid (32);
+  init_grid (32);
 
   double R0 = 0.1;
-  foreach (grid)
+  foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));
-  symmetry (grid, h);
+  symmetry (h);
   
   /* initial coarsening */
-  restriction (grid, h, h);
-  wavelet (grid, h, w);
-  coarsen_wavelet (grid, w, 1e-2);
-  flag_halo_cells (grid);
+  restriction (h, h);
+  wavelet (h, w);
+  coarsen_wavelet (w, 1e-2);
+  flag_halo_cells ();
 
-  foreach_cell (grid) {
+  foreach_cell () {
     fprintf (stderr, "%g %g %d %d traversed\n", x, y, level, cell.neighbors);
     printf ("%g %g %d %d 1\n", x, y, level, cell.neighbors);
     if (!(cell.flags & halo))
@@ -38,5 +38,5 @@ int main (int argc, char ** argv)
     }
   }
 
-  free_grid (grid);
+  free_grid ();
 }
