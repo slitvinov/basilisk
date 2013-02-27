@@ -260,6 +260,10 @@ new{WS}+scalar {
   fprintf (yyout, "%d", nvar++);
 }
 
+new{WS}+vector {
+  fprintf (yyout, "{%d,%d}", nvar++, nvar++);
+}
+
 [^{ID}]val{WS}*[(]    {
   if (yytext[0] == '(') para++;
   inval = 1; invalpara = para++;
