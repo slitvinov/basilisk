@@ -11,10 +11,6 @@ double DT = 1e10;
 double X0 = -0.5, Y0 = -0.5;
 // size of the box
 double L0 = 1.;
-// end time
-double TMAX = 1e10;
-// end iterations
-int IMAX = 1 << 30;
 // CFL number
 double CFL = 0.5;
 

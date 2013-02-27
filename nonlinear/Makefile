@@ -1,4 +1,4 @@
-CFLAGS += -std=c99 -O2 -g -Wall
+CFLAGS += -std=c99 -O2 -g -Wall -MD
 
 nonlinear.log: nonlinear
 	./nonlinear 2> nonlinear.log

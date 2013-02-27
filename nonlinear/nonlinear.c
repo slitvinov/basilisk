@@ -13,8 +13,6 @@ void parameters() {
   // Viscosity
   //  NU = 7e-5;
   NU = 0.;
-  // end time
-  TMAX = 5.;
   // CFL number
   //  CFL = 0.5;
   CFL = 0.25;
@@ -94,13 +92,7 @@ double energy ()
   return se*L0*L0;
 }
 
-int events (int i, double t, double dt)
-{
-  if (i % 10 == 0)
-    fprintf (stderr, "t: %g %g %g\n", t, error (grid), energy (grid));
-  //  if (i % 100 == 0)
-  //    output_field (e, stdout);
-  return 0;
-}
+event (i += 10; t <= 5.)
+  fprintf (stderr, "t: %g %g %g\n", t, error (grid), energy (grid));
 
 int main() { run(); }

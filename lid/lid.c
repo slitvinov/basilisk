@@ -1,20 +1,18 @@
 #include "navier-stokes1.h"
 
-void parameters ()
+void parameters()
 {
   // number of grid points
   N = 64;
   // viscosity
   NU = 1e-3;
-  // end time
-  TMAX = 300;
   // maximum timestep
   DT = 1e-1;
   // CFL number
   CFL = 0.8;
 }
 
-void initial_conditions ()
+void initial_conditions()
 {
   /* default to zero */
 }
@@ -59,18 +57,14 @@ static double energy ()
 
 scalar un = new scalar; /* we need another scalar */
 
-int events (int i, double t, double dt)
-{
-  if (i % 10 == 0) {
-    double du = change (u, un);
-    if (i > 0 && du < 1e-4)
-      return 1; /* stop */
-    fprintf (stderr, "t: %f %.9f %g\n", t, energy (), du);
-  }
-  if (i % 100 == 0)
-    output_field (u, N, stdout);
-  return 0; /* continue */
+event (i += 10) {
+  double du = change (u, un);
+  if (i > 0 && du < 1e-4)
+    return 1; /* stop */
+  fprintf (stderr, "t: %f %.9f %g\n", t, energy(), du);
 }
+
+event (i += 100) output_field (u, N, stdout);
 
 void end()
 {

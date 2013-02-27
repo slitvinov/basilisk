@@ -1,5 +1,6 @@
 #include <time.h>
 #include "utils.h"
+#include "events.h"
 #include "mg.h"
 
 scalar u = new scalar, v = new scalar, p = new scalar;
@@ -17,7 +18,6 @@ void parameters         (void);
 void initial_conditions (void);
 void boundary_p         (scalar p, int l);
 void boundary_u         (scalar u, scalar v);
-int  events             (int i, double t, double dt);
 void end                (void);
 
 double timestep ()
@@ -135,31 +135,28 @@ void projection (scalar u, scalar v, scalar p,
 void run (void)
 {
   parameters ();
-
-  double t = 0;
-  int i = 0;
-
   init_grid (N);
+  events_init ();
   initial_conditions ();
   boundary_u (u, v);
   projection (u, v, p, Sxx, Syy, Sxy);
   boundary_u (u, v);
 
-  clock_t cstart = clock ();
-  do {
-    double dt = timestep ();
-    if (events (i, t, dt))
-      break;
+  clock_t start = clock ();
+  double t = 0;
+  int i = 0;
+  while (events (i, t)) {
+    double dt = dtnext (t, timestep ());
     stresses ();
     advance (dt);
     boundary_u (u, v);
     projection (u, v, p, Sxx, Syy, Sxy);
     boundary_u (u, v);
-    t += dt; i++;
-  } while (t < TMAX && i < IMAX);
+    i++; t = tnext;
+  }
   end ();
   clock_t cend = clock ();
-  double cpu = ((double) (cend - cstart))/CLOCKS_PER_SEC;
+  double cpu = ((double) (cend - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "# " GRIDNAME ", %d timesteps, %g CPU, %.3g points.steps/s\n",
 	   i, cpu, (N*N*(double)i/cpu));
 

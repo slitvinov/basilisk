@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <time.h>
 #include "utils.h"
+#include "events.h"
 
 scalar u = new scalar, v = new scalar, h = new scalar, b = new scalar;
 scalar ke = new scalar, psi = new scalar;
@@ -19,7 +20,6 @@ void initial_conditions (void);
 void boundary_b         (void);
 void boundary_h         (scalar h);
 void boundary_u         (scalar u, scalar v);
-int  events             (int i, double t, double dt);
 
 void advection_centered (scalar f, scalar u, scalar v, scalar df)
 {
@@ -34,9 +34,9 @@ void advection_upwind (scalar f, scalar u, scalar v, scalar df)
 {
   foreach()
     df[] = ((u[] < 0. ? f[] : f[-1,0)]*u[] - 
-	       (u[1,0] > 0. ? f[] : f[1,0)]*u[1,0] +
-	       (v[] < 0. ? f[] : f[0,-1)]*v[] - 
-	       (v[0,1] > 0. ? f[] : f[0,1)]*v[0,1)]/(L0*delta);
+	    (u[1,0] > 0. ? f[] : f[1,0)]*u[1,0] +
+	    (v[] < 0. ? f[] : f[0,-1)]*v[] - 
+	    (v[0,1] > 0. ? f[] : f[0,1)]*v[0,1)]/(L0*delta);
 }
 
 double timestep (void)
@@ -121,22 +121,20 @@ void update (double t, scalar * f)
 
 void run (void)
 {
-  parameters();
-  double t = 0;
-  int i = 0;
-
+  parameters ();
   init_grid (N);
+  events_init ();
   initial_conditions ();
   boundary_b ();
   boundary_h (h);
   boundary_u (u, v);
   ke_psi (u, v);
 
-  clock_t start, end;
-  start = clock ();
-  do {
-    double dt = timestep ();
-    events(i, t, dt);
+  clock_t start = clock ();
+  double t = 0;
+  int i = 0;
+  while (events (i, t)) {
+    double dt = dtnext (t, timestep ());
 #if 1
     advection_centered (h, u, v, hn);
     foreach() { h[] += hn[]*dt; }
@@ -154,9 +152,9 @@ void run (void)
 		       { un1, vn1, hn1 }};
     runge_kutta (2, t, dt, 3, f, df, advance, update);
 #endif
-    t += dt; i++;
-  } while (t < TMAX && i < IMAX);
-  end = clock ();
+    i++; t = tnext;
+  }
+  clock_t end = clock ();
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "# " GRIDNAME ", %d timesteps, %g CPU, %.3g points.steps/s\n",
 	   i, cpu, (N*N*(double)i/cpu));

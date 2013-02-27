@@ -94,7 +94,7 @@
   }
 
   void endevent() {
-    fprintf (yyout, "\n}\n#line %d\n", line);
+    fprintf (yyout, "\n  return 0;\n}\n#line %d\n", line);
     inevent = 0;
     nevents++;
   }
@@ -130,7 +130,7 @@ WS  [ \t\v\n\f]
 	       "  return ret;\n"
 	       "}\n");
     fprintf (yyout, 
-	     "static void event_action%d (int i, double t) {\n"
+	     "static int event_action%d (int i, double t) {\n"
 	     "  #line %d\n",
 	     nevents, line);
     assert (nevents < 100);
@@ -530,7 +530,7 @@ void compdir (char * file, char ** in, int nin, char * grid)
   /* events */
   int j;
   for (i = 0; i < nevents; i++) {
-    fprintf (fout, "static void event_action%d (int i, double t);\n", i);
+    fprintf (fout, "static int event_action%d (int i, double t);\n", i);
     for (j = 0; j < nexpr[i]; j++)
       fprintf (fout,
 	       "static int event_expr%d%d (int * ip, double * tp);\n",
