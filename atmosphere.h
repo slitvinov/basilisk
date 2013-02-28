@@ -44,7 +44,7 @@ double timestep (void)
 {
   double dtmax = DT/CFL;
   dtmax *= dtmax;
-  foreach() {
+  foreach(reduction(min:dtmax)) {
     double dx = L0*delta;
     dx *= dx;
     if (h[] > 0.) {

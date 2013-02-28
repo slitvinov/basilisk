@@ -77,7 +77,7 @@ scalar e = new scalar;
 double error ()
 {
   double max = 0.;
-  foreach() { /* fixme: should be: foreach(reduction(max:max)) */
+  foreach(reduction(max:max)) {
     e[] = fabs (h1[]  - h[]);
     if (e[] > max) max = e[];
   }

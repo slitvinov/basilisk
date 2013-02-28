@@ -50,7 +50,7 @@ void fluxes_upwind_bcg (const scalar f, const vector g,
 double timestep (const scalar u, const scalar v)
 {
   double dtmax = DT/CFL;
-  foreach() {
+  foreach(reduction(min:dtmax)) {
     double dx = L0*delta;
     double dt = dx/fabs(u[]);
     if (dt < dtmax) dtmax = dt;
@@ -87,7 +87,7 @@ void run (void)
   clock_t cend = clock ();
   double cpu = ((double) (cend - cstart))/CLOCKS_PER_SEC;
   int n = 0;
-  foreach () n++;
+  foreach (reduction(+:n)) n++;
   fprintf (stderr, "# " GRIDNAME ", %d timesteps, %g CPU, %.3g points.steps/s\n",
 	   i, cpu, (n*(double)i/cpu));
 

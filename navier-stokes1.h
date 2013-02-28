@@ -23,7 +23,7 @@ void end                (void);
 double timestep ()
 {
   double dtmax = DT/CFL;
-  foreach() {
+  foreach(reduction(min:dtmax)) {
     double dx = L0*delta;
     if (u[] != 0.) {
       double dt = dx/fabs(u[]);
@@ -97,7 +97,7 @@ void relax (scalar a, scalar b, int l)
 double residual (scalar a, scalar b, scalar res)
 {
   double maxres = 0.;
-  foreach() {
+  foreach(reduction(max:maxres)) {
     res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(L0*L0*delta*delta);
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
@@ -109,7 +109,7 @@ void projection (scalar u, scalar v, scalar p,
 		 scalar div, scalar res, scalar dp)
 {
   double sum = 0.;
-  foreach() {
+  foreach(reduction(+:sum)) {
     div[] = (u[1,0] - u[] + v[0,1] - v[])/(L0*delta);
     sum += div[];
   }

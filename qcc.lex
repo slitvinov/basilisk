@@ -27,6 +27,7 @@
   FILE * foreachdimfp;
 
   char foreachs[80], * fname;
+  char reduction[4], reductvar[80];
   
   struct { char * v; int type, args, scope; } _varstack[100]; int varstack = -1;
   void varpush (const char * s, int type, int scope) {
@@ -52,6 +53,8 @@
   void endforeach () {
     inforeach = 0;
     fprintf (yyout, " end_%s();", foreachs);
+    if (reduction[0] != '\0')
+      fprintf (yyout, "// %s | %s\n", reduction, reductvar);
   }
 
   int identifier (int c) {
@@ -123,7 +126,18 @@ WS  [ \t\v\n\f]
   para--; if (para == invalpara) inval = 0;
   if (para < 0)
     return yyerror ("mismatched ')'");
-  if (inevent > 0 && inevent < 4 && scope == eventscope && eventpara == para + 1) {
+  if (inforeach == 1 && scope == foreachscope && para == foreachpara) {
+    ECHO;
+    if (reduction[0] != '\0')
+      fprintf (yyout, "// %s | %s\n", reduction, reductvar);
+    if (varstack >= 0)
+      fprintf (yyout, 
+	       "\n#undef val1\n"
+	       "#define val1(a,i,j) val(a,i,j)\n"
+	       "#line %d\n", line);
+    inforeach = 2;
+  }
+  else if (inevent > 0 && inevent < 4 && scope == eventscope && eventpara == para + 1) {
     if (!eventarray[nevents])
       fprintf (yyout, ");\n"
 	       "  *ip = i; *tp = t;\n"
@@ -153,7 +167,7 @@ WS  [ \t\v\n\f]
   if (foreachdim && scope == foreachdim)
     endforeachdim ();
   if (inforeach && scope == foreachscope)
-    endforeach (line);
+    endforeach ();
   else if (inevent && scope == eventscope)
     endevent ();
 }
@@ -162,23 +176,7 @@ foreach{ID}* {
   ECHO;
   strcpy (foreachs, yytext);
   inforeach = 1; foreachscope = scope; foreachpara = para;
-  int c = getput();
-  while (strchr (" \t", c)) c = getput();
-  if (c != '(')
-    return yyerror ("expecting '('");
-  para++;
-  while (para > foreachpara && c != EOF) {
-    c = getput();
-    if (c == '(') para++;
-    if (c == ')') { para--; if (para == invalpara) inval = 0; }
-  }
-  if (c != ')')
-    return yyerror ("expecting ')");
-  if (varstack >= 0)
-    fprintf (yyout, 
-	     "\n#undef val1\n"
-	     "#define val1(a,i,j) val(a,i,j)\n"
-	     "#line %d\n", line);
+  reduction[0] = '\0';
 }
 
 end_foreach{ID}*{SP}*"()" {
@@ -198,7 +196,7 @@ end_foreach{ID}*{SP}*"()" {
   }
   if (inforeach && scope == foreachscope && para == foreachpara) {
     ECHO;
-    endforeach (line - 1);
+    endforeach ();
   }
   else if (inevent > 0 && inevent < 3 && para == eventpara) {
     if (eventarray[nevents])
@@ -390,6 +388,14 @@ foreach_dimension{WS}*[(]{WS}*[)] {
     strcat (foreachdimname, "/dimension.h");
     yyout = fopen (foreachdimname, "w");
   }
+}
+
+reduction[(](min|max):{ID}+[)] {
+  char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':');
+  *s1 = '\0'; s1++;
+  strcpy (reduction, ++s);
+  yytext[yyleng-1] = '\0';
+  strcpy (reductvar, s1);
 }
 
 "#" {
