@@ -77,7 +77,7 @@ scalar e = new scalar;
 double error ()
 {
   double max = 0.;
-  foreach() {
+  foreach() { /* fixme: should be: foreach(reduction(max:max)) */
     e[] = fabs (h1[]  - h[]);
     if (e[] > max) max = e[];
   }
@@ -87,7 +87,7 @@ double error ()
 double energy ()
 {
   double se = 0.;
-  foreach()
+  foreach(reduction(+:se))
     se += (h[]*ke[] + G*h[]*(h[]/2. + b[]))*delta*delta;
   return se*L0*L0;
 }

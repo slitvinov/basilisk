@@ -1,6 +1,12 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdbool.h>
+#ifdef _OPENMP
+# include <omp.h>
+# define OMP(x) _Pragma(#x)
+#else
+# define OMP(x)
+#endif
 
 #define GHOSTS 1  // number of ghost layers
 #define TRASH  1  // whether to 'trash' uninitialised data (useful for debugging)

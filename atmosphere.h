@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <time.h>
+#include <sys/time.h>
 #include "utils.h"
 #include "events.h"
 
@@ -131,6 +132,8 @@ void run (void)
   ke_psi (u, v);
 
   clock_t start = clock ();
+  struct timeval tvstart;
+  gettimeofday (&tvstart, NULL);
   double t = 0;
   int i = 0;
   while (events (i, t)) {
@@ -155,9 +158,12 @@ void run (void)
     i++; t = tnext;
   }
   clock_t end = clock ();
+  struct timeval tvend;
+  gettimeofday (&tvend, NULL);
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
-  fprintf (stderr, "# " GRIDNAME ", %d timesteps, %g CPU, %.3g points.steps/s\n",
-	   i, cpu, (N*N*(double)i/cpu));
+  double real = (tvend.tv_sec - tvstart.tv_sec) + (tvend.tv_usec - tvstart.tv_usec)/1e6;
+  fprintf (stderr, "# " GRIDNAME ", %d steps, %g CPU, %.4g real, %.3g points.steps/s\n",
+	   i, cpu, real, (N*N*(double)i/real));
 
   free_grid ();
 }

@@ -1,4 +1,4 @@
-CFLAGS += -std=c99 -O2 -g -Wall -MD
+CFLAGS += -std=c99 -O2 -g -Wall -MD -fopenmp
 
 nonlinear.log: nonlinear
 	./nonlinear 2> nonlinear.log
@@ -6,7 +6,7 @@ nonlinear.log: nonlinear
 	gnuplot -e "set term pngcairo; set output 'nonlinear.png';" nonlinear.plot
 
 -include nonlinear.d
-nonlinear: nonlinear.c ../qcc
+nonlinear: Makefile nonlinear.c ../qcc
 	../qcc -grid=cartesian $(CFLAGS) -DOMEGA=0. -o nonlinear nonlinear.c -lgsl -lgslcblas -lm
 
 clean:
