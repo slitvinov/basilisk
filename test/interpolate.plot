@@ -1,7 +1,7 @@
 reset
 set title 'Interpolation on a regular grid'
 
-ftitle(a,b) = sprintf("%.0f/x^%4.2f", exp(a), -b)
+ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
 f(x)=a+b*x
 fit f(x) 'interpolate.vlog' u (log($1)):(log($2)) via a,b
 set xlabel 'Maximum resolution'

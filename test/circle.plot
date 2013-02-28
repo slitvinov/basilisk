@@ -1,7 +1,7 @@
 reset
 set title 'Poisson solution with a circular refined patch'
 
-ftitle(a,b) = sprintf("%.0f/x^%4.2f", exp(a), -b)
+ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
 f(x)=a+b*x
 fit f(x) '< grep "max error" ./circle.log' u (log(2**$3)):(log($4)) via a,b
 set xlabel 'Maximum resolution'
