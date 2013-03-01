@@ -44,7 +44,7 @@ double h0 (double r) {
 
 scalar h1 = new scalar;
 
-void initial_conditions ()
+void initial_conditions()
 {
   foreach() {
     h1[] = h[] = (H0 + h0(sqrt (x*x + y*y)));
@@ -60,7 +60,7 @@ void boundary_h (scalar h)
   symmetry (h);
 }
 
-void boundary_b ()
+void boundary_b()
 {
   symmetry (b);
 }
@@ -74,7 +74,7 @@ void boundary_u (scalar u, scalar v)
 
 scalar e = new scalar;
 
-double error ()
+double error()
 {
   double max = 0.;
   foreach(reduction(max:max)) {
@@ -84,7 +84,7 @@ double error ()
   return max;
 }
 
-double energy ()
+double energy()
 {
   double se = 0.;
   foreach(reduction(+:se))
@@ -93,6 +93,6 @@ double energy ()
 }
 
 event (i += 10; t <= 5.)
-  fprintf (stderr, "t: %g %g %g\n", t, error (grid), energy (grid));
+  fprintf (stderr, "t: %g %g %g\n", t, error(), energy());
 
 int main() { run(); }
