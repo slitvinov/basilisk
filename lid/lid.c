@@ -50,7 +50,7 @@ void boundary_u (scalar u, scalar v)
 static double energy ()
 {
   double se = 0.;
-  foreach()
+  foreach(reduction(+:se))
     se += (sq(u[] + u[1,0)] + sq(v[] + v[0,1))]/8.*delta*delta;
   return se*L0*L0;
 }

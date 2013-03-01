@@ -38,43 +38,55 @@ size_t _size (size_t l)
   int    childx = 2*((point.i+GHOSTS)%2)-1;                     NOT_UNUSED(childx);  \
   int    childy = 2*((point.j+GHOSTS)%2)-1;                     NOT_UNUSED(childy);
 
-#define foreach_level(l) {						\
-  Point point = *((Point *)grid);					\
-  point.level = l; point.n = 1 << point.level;				\
-  for (point.i = GHOSTS; point.i < point.n + GHOSTS; point.i++)		\
-    for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
-      MULTIGRID_VARIABLES						\
-      VARIABLES								\
-
-#define end_foreach_level() }}
-
-#define foreach()     foreach_level(point.depth)
-#define end_foreach() end_foreach_level()
-
-#define foreach_boundary_level(d,l) {					\
-  Point point = *((Point *)grid);					\
-  point.level = l; point.n = 1 << point.level;				\
-  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
-    point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS; \
-    point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS; \
-    MULTIGRID_VARIABLES							\
-    VARIABLES
-
-#define end_foreach_boundary_level() }}
-
-#define foreach_boundary(d) foreach_boundary_level(d,point.depth)
-#define end_foreach_boundary() }}
-
-#define foreach_fine_to_coarse() {					\
-  Point point = *((Point *)grid);					\
-  point.level = point.depth - 1; point.n = 1 << point.level;		\
-  for (; point.level > 0; point.n /= 2, point.level--) {		\
-    for (point.i = GHOSTS; point.i < point.n + GHOSTS; point.i++)	\
+#define foreach_level(l,...) {						\
+  OMP(omp parallel)							\
+  {									\
+    Point point = *((Point *)grid);					\
+    point.level = l; point.n = 1 << point.level;			\
+    OMP(omp for schedule(static) __VA_ARGS__)				\
+    for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {		\
+      point.i = _k;							\
       for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
         MULTIGRID_VARIABLES						\
-        VARIABLES
+        VARIABLES							\
 
-#define end_foreach_fine_to_coarse() } } }
+#define end_foreach_level() }}}}
+
+#define foreach(clause) foreach_level(point.depth, clause)
+#define end_foreach()   end_foreach_level()
+
+#define foreach_boundary_level(d,l) {					\
+  OMP(omp parallel)							\
+  {									\
+    Point point = *((Point *)grid);					\
+    point.level = l; point.n = 1 << point.level;			\
+    OMP(omp for schedule(static))					\
+    for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {		\
+      point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS; \
+      point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS; \
+      MULTIGRID_VARIABLES						\
+      VARIABLES
+
+#define end_foreach_boundary_level() }}}
+
+#define foreach_boundary(d)    foreach_boundary_level(d,point.depth)
+#define end_foreach_boundary() end_foreach_boundary_level()
+
+#define foreach_fine_to_coarse() {					\
+  Point _p = *((Point *)grid);						\
+  _p.level = _p.depth - 1; _p.n = 1 << _p.level;			\
+  for (; _p.level > 0; _p.n /= 2, _p.level--)				\
+    OMP(omp parallel)							\
+    {									\
+      Point point = _p;							\
+      OMP(omp for schedule(static))					\
+      for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {		\
+        point.i = _k;							\
+        for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
+          MULTIGRID_VARIABLES						\
+          VARIABLES
+
+#define end_foreach_fine_to_coarse() }}}}
 
 void init_grid (int n)
 {

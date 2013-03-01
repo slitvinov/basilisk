@@ -102,7 +102,7 @@ void runge_kutta (int stages,
 double change (scalar v, scalar vn)
 {
   double max = 0.;
-  foreach() {
+  foreach(reduction(max:max)) {
     double dv = fabs (v[] - vn[]);
     if (dv > max)
       max = dv;

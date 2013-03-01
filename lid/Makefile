@@ -6,7 +6,7 @@ lid.log: lid
 	-diff lid.log lid.ref
 
 -include lid.d
-lid: lid.c
+lid: lid.c Makefile ../qcc
 	../qcc -grid=multigrid $(CFLAGS) -o lid -lm lid.c
 
 clean:
