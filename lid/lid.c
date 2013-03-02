@@ -47,7 +47,7 @@ void boundary_u (scalar u, scalar v)
   }
 }
 
-static double energy ()
+static double energy()
 {
   double se = 0.;
   foreach(reduction(+:se))
@@ -61,10 +61,10 @@ event (i += 10) {
   double du = change (u, un);
   if (i > 0 && du < 1e-4)
     return 1; /* stop */
-  fprintf (stderr, "t: %f %.9f %g\n", t, energy(), du);
+  fprintf (stderr, "%f %.9f %g\n", t, energy(), du);
 }
 
-event (i += 100) output_field (u, N, stdout);
+event (i += 100) output_matrix (u, N, stdout);
 
 void end()
 {
