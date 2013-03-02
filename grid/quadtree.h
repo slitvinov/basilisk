@@ -97,8 +97,8 @@ void recursive (Point point)
   { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--; }
 
 #define foreach_boundary_cell(dir)					\
-  {									\
-    Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
+  OMP_PARALLEL()							\
+    Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid); \
     int _d = dir; NOT_UNUSED(_d);					\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
@@ -127,7 +127,7 @@ void recursive (Point point)
         }								\
       }									\
     }                                                                   \
-  }
+  OMP_END_PARALLEL()
 
 #define foreach_cell() foreach_boundary_cell(0)
 #define end_foreach_cell()						\
@@ -144,10 +144,10 @@ void recursive (Point point)
       case 3: _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;	\
       }								        \
     }                                                                   \
-  }
+  OMP_END_PARALLEL()
 
 #define foreach_cell_post(condition)					\
-  {									\
+  OMP_PARALLEL()							\
     Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
@@ -183,7 +183,7 @@ void recursive (Point point)
       }									\
       }								        \
     }                                                                   \
-  }
+  OMP_END_PARALLEL()
 
 /* ================== derived traversals ========================= */
 

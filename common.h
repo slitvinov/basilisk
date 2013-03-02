@@ -7,6 +7,12 @@
 #else
 # define OMP(x)
 #endif
+// fixme: _OMPSTART and _OMPEND are only used for working around the
+// lack of min|max reduction operations in OpenMP < 3.1
+#define OMP_PARALLEL()     OMP(omp parallel) { _OMPSTART
+#define OMP_END_PARALLEL() _OMPEND }
+#define _OMPSTART
+#define _OMPEND
 
 #define GHOSTS 1  // number of ghost layers
 #define TRASH  1  // whether to 'trash' uninitialised data (useful for debugging)

@@ -27,6 +27,8 @@
   FILE * foreachdimfp;
 
   char foreachs[80], * fname;
+  char foreachname[80];
+  FILE * foreachfp;
   char reduction[4], reductvar[80];
   
   struct { char * v; int type, args, scope; } _varstack[100]; int varstack = -1;
@@ -52,9 +54,22 @@
   
   void endforeach () {
     inforeach = 0;
-    fprintf (yyout, " end_%s();", foreachs);
     if (reduction[0] != '\0')
-      fprintf (yyout, "// %s | %s\n", reduction, reductvar);
+      fprintf (yyout, 
+	       "\n#undef _OMPEND\n"
+	       "#define _OMPEND OMP(omp critical) "
+	       "if (_%s %s %s) %s = _%s;\n"
+	       "end_%s();\n"
+	       "#undef _OMPSTART\n"
+	       "#undef _OMPEND\n"
+	       "#define _OMPSTART\n"
+	       "#define _OMPEND\n"
+	       "#line %d\n",
+	       reductvar, strcmp(reduction, "min") ? ">" : "<",
+	       reductvar, reductvar, reductvar,
+	       foreachs, line);
+    else
+      fprintf (yyout, " end_%s();", foreachs);
   }
 
   int identifier (int c) {
@@ -128,8 +143,17 @@ WS  [ \t\v\n\f]
     return yyerror ("mismatched ')'");
   if (inforeach == 1 && scope == foreachscope && para == foreachpara) {
     ECHO;
+    fclose (yyout);
+    yyout = foreachfp;
     if (reduction[0] != '\0')
-      fprintf (yyout, "// %s | %s\n", reduction, reductvar);
+      fprintf (yyout, "\n#undef _OMPSTART\n"
+	       "#define _OMPSTART double _%s = %s;\n#line %d\n",
+	       reductvar, reductvar, line);
+    FILE * fp = fopen (foreachname, "r");
+    int c;
+    while ((c = fgetc (fp)) != EOF)
+      fputc (c, yyout);
+    fclose (fp);
     if (varstack >= 0)
       fprintf (yyout, 
 	       "\n#undef val1\n"
@@ -137,7 +161,8 @@ WS  [ \t\v\n\f]
 	       "#line %d\n", line);
     inforeach = 2;
   }
-  else if (inevent > 0 && inevent < 4 && scope == eventscope && eventpara == para + 1) {
+  else if (inevent > 0 && inevent < 4 && 
+	   scope == eventscope && eventpara == para + 1) {
     if (!eventarray[nevents])
       fprintf (yyout, ");\n"
 	       "  *ip = i; *tp = t;\n"
@@ -173,10 +198,14 @@ WS  [ \t\v\n\f]
 }
 
 foreach{ID}* {
-  ECHO;
   strcpy (foreachs, yytext);
   inforeach = 1; foreachscope = scope; foreachpara = para;
   reduction[0] = '\0';
+  foreachfp = yyout;
+  strcpy (foreachname, dir);
+  strcat (foreachname, "/foreach.h");
+  yyout = fopen (foreachname, "w");
+  ECHO;
 }
 
 end_foreach{ID}*{SP}*"()" {
@@ -396,6 +425,12 @@ reduction[(](min|max):{ID}+[)] {
   strcpy (reduction, ++s);
   yytext[yyleng-1] = '\0';
   strcpy (reductvar, s1);
+}
+
+{ID}+ {
+  if (inforeach && reduction[0] != '\0' && !strcmp(reductvar, yytext))
+    fputc ('_', yyout);
+  ECHO;
 }
 
 "#" {
