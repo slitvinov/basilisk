@@ -196,8 +196,8 @@ enum {
 #define foreach_leaf()            foreach_cell() if (cell.flags & leaf) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
 
-#define foreach()     foreach_leaf()
-#define end_foreach   end_foreach_leaf
+#define foreach(clause)     foreach_leaf()
+#define end_foreach         end_foreach_leaf
 
 #define foreach_boundary(dir)     foreach_boundary_cell(dir)
 #define end_foreach_boundary()    if (cell.flags & leaf) continue; end_foreach_boundary_cell()

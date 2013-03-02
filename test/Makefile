@@ -3,9 +3,11 @@ VALGRIND = valgrind -q --tool=memcheck
 # see: http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html
 CFLAGS += -std=c99 -g -O2 -MD -Wall -msse2 -mfpmath=sse
 
-all: halo.vlog speed.slog interp.log interpu.log refine.vlog rk2.vlog poisson.log circle.log \
+fast: halo.vlog speed.slog interp.log interpu.log refine.vlog rk2.vlog poisson.log circle.log \
 	laplacian.slog interpolate.vlog events.vlog
 	cat *.d > Makefile.deps
+
+slow: advection.slog
 
 plots: halo.png speed.png interp.png interpu.png refine.png rk2.png poisson.png circle.png \
 	laplacian.png interpolate.png
