@@ -1,4 +1,3 @@
-#include <time.h>
 #include "utils.h"
 #include "events.h"
 
@@ -69,7 +68,7 @@ void run (void)
   initial_conditions();
   boundary_f(f);
 
-  clock_t cstart = clock ();
+  timer_t start = timer_start();
   double t = 0.;
   int i = 0;
   while (events (i, t)) {
@@ -84,12 +83,7 @@ void run (void)
     boundary_f (f);
     i++; t = tnext;
   }
-  clock_t cend = clock ();
-  double cpu = ((double) (cend - cstart))/CLOCKS_PER_SEC;
-  int n = 0;
-  foreach (reduction(+:n)) n++;
-  fprintf (stderr, "# " GRIDNAME ", %d timesteps, %g CPU, %.3g points.steps/s\n",
-	   i, cpu, (n*(double)i/cpu));
+  timer_print (start, i);
 
   free_grid ();
 }
