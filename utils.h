@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
+#include <time.h>
+#include <sys/time.h>
 
 // Default parameters, do not change them!! edit parameters.h instead
 // number of grid points
@@ -160,3 +162,29 @@ void output_matrix (scalar f, int n, FILE * fp)
     }
   }
 }
+
+typedef struct {
+  clock_t c;
+  struct timeval tv;
+} timer_t;
+
+timer_t timer_start (void)
+{
+  timer_t t;
+  t.c = clock();
+  gettimeofday (&t.tv, NULL);
+  return t;
+}
+
+void timer_print (timer_t t, int i)
+{
+  clock_t end = clock ();
+  struct timeval tvend;
+  gettimeofday (&tvend, NULL);
+  double cpu = ((double) (end - t.c))/CLOCKS_PER_SEC;
+  double real = (tvend.tv_sec - t.tv.tv_sec) + (tvend.tv_usec - t.tv.tv_usec)/1e6;
+  int n = 0; foreach(reduction(+:n)) n++;
+  fprintf (stderr, "# " GRIDNAME ", %d steps, %g CPU, %.4g real, %.3g points.steps/s\n",
+	   i, cpu, real, (n*(double)i/real));
+}
+

@@ -1,4 +1,3 @@
-#include <time.h>
 #include "utils.h"
 #include "events.h"
 #include "mg.h"
@@ -142,7 +141,7 @@ void run (void)
   projection (u, v, p, Sxx, Syy, Sxy);
   boundary_u (u, v);
 
-  clock_t start = clock ();
+  timer_t start = timer_start();
   double t = 0;
   int i = 0;
   while (events (i, t)) {
@@ -155,10 +154,7 @@ void run (void)
     i++; t = tnext;
   }
   end ();
-  clock_t cend = clock ();
-  double cpu = ((double) (cend - start))/CLOCKS_PER_SEC;
-  fprintf (stderr, "# " GRIDNAME ", %d timesteps, %g CPU, %.3g points.steps/s\n",
-	   i, cpu, (N*N*(double)i/cpu));
+  timer_print (start, i);
 
   free_grid ();
 }
