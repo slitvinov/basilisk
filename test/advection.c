@@ -68,7 +68,7 @@ event (i++) {
 
 event (t = {0,5}) {
   double sum = 0., min = 1e100, max = -1e100;
-  foreach() {
+  foreach(reduction(+:sum) reduction(max:max) reduction(min:min)) {
     sum += f[]*delta*delta;
     if (f[] > max) max = f[];
     if (f[] < min) min = f[];
@@ -79,7 +79,7 @@ event (t = {0,5}) {
 event (t = 5) {
   double max = 0., norm1 = 0., norm2 = 0., area = 0.;
   scalar e = new scalar;
-  foreach() {
+  foreach(reduction(max:max) reduction(+:norm1) reduction(+:norm2) reduction(+:area)) {
     e[] = f[] - bump(x,y);
     if (fabs(e[]) > max) max = fabs(e[]);
     double a = sq(delta);

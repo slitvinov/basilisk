@@ -29,7 +29,8 @@
   char foreachs[80], * fname;
   char foreachname[80];
   FILE * foreachfp;
-  char reduction[4], reductvar[80];
+  char reduction[10][4], reductvar[10][80];
+  int nreduct;
   
   struct { char * v; int type, args, scope; } _varstack[100]; int varstack = -1;
   void varpush (const char * s, int type, int scope) {
@@ -54,20 +55,22 @@
   
   void endforeach () {
     inforeach = 0;
-    if (reduction[0] != '\0')
-      fprintf (yyout, 
-	       "\n#undef _OMPEND\n"
-	       "#define _OMPEND OMP(omp critical) "
-	       "if (_%s %s %s) %s = _%s;\n"
-	       "end_%s();\n"
+    if (nreduct > 0) {
+      fputs ("\n#undef _OMPEND\n#define _OMPEND ", yyout);
+      int i;
+      for (i = 0; i < nreduct; i++)
+	fprintf (yyout, "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
+		 reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
+		 reductvar[i], reductvar[i], reductvar[i]);
+      fprintf (yyout,
+	       "\nend_%s();\n"
 	       "#undef _OMPSTART\n"
 	       "#undef _OMPEND\n"
 	       "#define _OMPSTART\n"
 	       "#define _OMPEND\n"
 	       "#line %d\n",
-	       reductvar, strcmp(reduction, "min") ? ">" : "<",
-	       reductvar, reductvar, reductvar,
 	       foreachs, line);
+    }
     else
       fprintf (yyout, " end_%s();", foreachs);
   }
@@ -145,10 +148,13 @@ WS  [ \t\v\n\f]
     ECHO;
     fclose (yyout);
     yyout = foreachfp;
-    if (reduction[0] != '\0')
-      fprintf (yyout, "\n#undef _OMPSTART\n"
-	       "#define _OMPSTART double _%s = %s;\n#line %d\n",
-	       reductvar, reductvar, line);
+    if (nreduct > 0) {
+      fprintf (yyout, "\n#undef _OMPSTART\n#define _OMPSTART ");
+      int i;
+      for (i = 0; i < nreduct; i++)
+	fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
+      fprintf (yyout, "\n#line %d\n", line);
+    }
     FILE * fp = fopen (foreachname, "r");
     int c;
     while ((c = fgetc (fp)) != EOF)
@@ -200,7 +206,7 @@ WS  [ \t\v\n\f]
 foreach{ID}* {
   strcpy (foreachs, yytext);
   inforeach = 1; foreachscope = scope; foreachpara = para;
-  reduction[0] = '\0';
+  nreduct = 0;
   foreachfp = yyout;
   strcpy (foreachname, dir);
   strcat (foreachname, "/foreach.h");
@@ -422,14 +428,21 @@ foreach_dimension{WS}*[(]{WS}*[)] {
 reduction[(](min|max):{ID}+[)] {
   char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':');
   *s1 = '\0'; s1++;
-  strcpy (reduction, ++s);
+  assert (nreduct < 10);
+  strcpy (reduction[nreduct], ++s);
   yytext[yyleng-1] = '\0';
-  strcpy (reductvar, s1);
+  strcpy (reductvar[nreduct++], s1);
 }
 
 {ID}+ {
-  if (inforeach && reduction[0] != '\0' && !strcmp(reductvar, yytext))
-    fputc ('_', yyout);
+  if (inforeach) {
+    int i;
+    for (i = 0; i < nreduct; i++)
+      if (!strcmp (yytext, reductvar[i])) {
+	fputc ('_', yyout);
+	break;
+      }
+  }
   ECHO;
 }
 
