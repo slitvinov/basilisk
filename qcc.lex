@@ -296,7 +296,8 @@ new{WS}+scalar {
 }
 
 new{WS}+vector {
-  fprintf (yyout, "{%d,%d}", nvar++, nvar++);
+  fprintf (yyout, "{%d,%d}", nvar, nvar + 1);
+  nvar += 2;
 }
 
 [^{ID}]val{WS}*[(]    {
