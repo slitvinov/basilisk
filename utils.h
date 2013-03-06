@@ -143,7 +143,7 @@ void output_field (scalar f, int n, FILE * fp)
   }
 }
 
-void output_matrix (scalar f, int n, FILE * fp)
+void output_matrix (scalar f, int n, FILE * fp, bool linear)
 {
   float fn = n;
   float delta = 1./fn;
@@ -156,10 +156,29 @@ void output_matrix (scalar f, int n, FILE * fp)
     float x = delta*i - 0.5 + delta/2.;
     fwrite (&x, sizeof(float), 1, fp);
     for (int j = 0; j < n; j++) {
-      float y = delta*j - 0.5 + delta/2.;
-      float v = interpolate (f, x, y);
+      float y = delta*j - 0.5 + delta/2., v;
+      if (linear)
+	v = interpolate (f, x, y);
+      else {
+	Point point = locate (x, y);
+	VARIABLES;
+	v = val (f, 0, 0);
+      }
       fwrite (&v, sizeof(float), 1, fp);
     }
+  }
+}
+
+void output_cells (FILE * fp)
+{
+  foreach() {
+    delta /= 2.;
+    fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
+	     x - delta, y - delta,
+	     x - delta, y + delta,
+	     x + delta, y + delta,
+	     x + delta, y - delta,
+	     x - delta, y - delta);
   }
 }
 

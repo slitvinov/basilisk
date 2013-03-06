@@ -64,7 +64,7 @@ event (i += 10) {
   fprintf (stderr, "%f %.9f %g\n", t, energy(), du);
 }
 
-event (i += 100) output_matrix (u, N, stdout);
+event (i += 100) output_matrix (u, N, stdout, true);
 
 void end()
 {
