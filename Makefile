@@ -11,3 +11,6 @@ include.c: include.lex
 
 qcc.c: qcc.lex
 	flex -o qcc.c qcc.lex
+
+tags:
+	etags *.h grid/*.h
