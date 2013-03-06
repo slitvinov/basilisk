@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "events.h"
+#include "wavelet.h"
 #include "mg.h"
 
 scalar u = new scalar, v = new scalar, p = new scalar;

@@ -271,11 +271,27 @@ void free_grid (void)
   free(q);
 }
 
-// The functions below should be independent from the details of the implementation
-
 Point refine_cell (Point point, scalar start, scalar end)
 {
   QUADTREE_VARIABLES;
+
+#if TWO_ONE
+  /* refine neighborhood if required */
+  if (level > 0)
+    for (int k = 0; k != 2*childx; k += childx)
+      for (int l = 0; l != 2*childy; l += childy)
+	if (aparent(k,l).flags & leaf) {
+	  Point p = point;
+	  /* fixme: this should be made
+	     independent from the quadtree implementation */
+	  p.level = point.level - 1;
+	  p.i = (point.i + GHOSTS)/2 + k;
+	  p.j = (point.j + GHOSTS)/2 + l;
+	  p = refine_cell (p, start, end);
+	  assert (p.m == point.m);
+	}
+#endif
+
   alloc_children();
   cell.flags &= ~leaf;
   for (int k = 0; k < 2; k++)
@@ -291,8 +307,43 @@ Point refine_cell (Point point, scalar start, scalar end)
 	fine(v,k,l) = 
 	  (9.*val(v,0,0) + 3.*(val(v,2*k-1,0) + val(v,0,2*l-1)) + val(v,2*k-1,2*l-1))/16.;
     }
+
   return point;
 }
+
+void output_cells (FILE * fp);
+
+void check_two_one (void)
+{
+  foreach_leaf()
+    if (level > 0)
+      for (int k = -1; k <= 1; k++)
+	for (int l = -1; l <= 1; l++) {
+	  /* fixme: all this mess is just to ignore ghost cells */
+	  int i = (point.i + GHOSTS)/2 + k;
+	  int j = (point.j + GHOSTS)/2 + l;
+	  double x = ((i - GHOSTS + 0.5)*DELTA*2. - 0.5);
+	  double y = ((j - GHOSTS + 0.5)*DELTA*2. - 0.5);
+	  if (x > -0.5 && x < 0.5 && y > -0.5 && y < 0.5 && 
+	      !(aparent(k,l).flags & active)) {
+	    FILE * fp = fopen("check_two_one_loc", "w");
+	    fprintf (fp,
+		     "# %d %d\n"
+		     "%g %g\n%g %g\n",
+		     k, l,
+		     ((I + 0.5)*DELTA - 0.5),
+		     ((J + 0.5)*DELTA - 0.5),
+		     x, y);
+	    fclose (fp);
+	    fp = fopen("check_two_one", "w");
+	    output_cells (fp);
+	    fclose (fp);
+	    assert (false);
+	  }
+	}
+}
+
+// The functions below should be independent from the details of the implementation
 
 Point locate (double xp, double yp)
 {

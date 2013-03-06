@@ -1,7 +1,5 @@
 /* Multigrid solver */
 
-#include "wavelet.h"
-
 void mg_cycle (scalar a, scalar res, scalar dp,
 	       void (* relax)    (scalar dp, scalar res, int depth),
 	       void (* boundary) (scalar dp, int depth),

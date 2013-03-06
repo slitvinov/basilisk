@@ -26,22 +26,22 @@ clean:
 	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $<
 
 %.log: %.exe
+	-rm -f $*.png
 	./$< 2> $@ > $*.out
 	diff $@ $*.ref
-	-rm -f $*.png
 
 %.slog: %.exe
+	-rm -f $*.png
 	./$< 2> $@ > $*.out
 	-diff $@ $*.ref
-	-rm -f $*.png
 
 %.clog: %.cexe
 	./$< 2> $@ > $*.cout
 
 %.vlog: %.exe
+	-rm -f $*.png
 	$(VALGRIND) ./$< 2> $@ > $*.out
 	diff $@ $*.ref
-	-rm -f $*.png
 
 %.exe: %.c ../qcc
 	../qcc $(CFLAGS) -o $@ -lm $<

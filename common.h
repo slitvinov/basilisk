@@ -14,8 +14,9 @@
 #define _OMPSTART
 #define _OMPEND
 
-#define GHOSTS 1  // number of ghost layers
-#define TRASH  1  // whether to 'trash' uninitialised data (useful for debugging)
+#define GHOSTS  1 // number of ghost layers
+#define TRASH   1 // whether to 'trash' uninitialised data (useful for debugging)
+#define TWO_ONE 1 // enforce 2:1 refinement ratio
 
 #define NOT_UNUSED(x) (x = x)
 

@@ -1,13 +1,23 @@
-void coarsen_cell (Point point)
+#include <math.h>
+
+bool coarsen_cell (Point point)
 {
   QUADTREE_VARIABLES;
+
+#if TWO_ONE
+  /* check that neighboring cells are not too fine */
+  for (int k = -1; k < 3; k++)
+    for (int l = -1; l < 3; l++)
+      if ((child(k,l).flags & active) && !(child(k,l).flags & leaf))
+	return false; // cannot coarsen
+#endif
+
   /* coarsen */
   free_children();
   cell.flags |= leaf;
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
-      child(k,l).flags &= ~leaf;
-      child(k,l).flags &= ~active;
+      child(k,l).flags &= ~(leaf|active);
 #if TRASH
       /* trash the data just to make sure it's never touched */
       for (scalar v = 0; v < nvar; v++)
@@ -18,15 +28,21 @@ void coarsen_cell (Point point)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)
 	  child(k+o,l+p).neighbors--;
     }
+  return true;
 }
 
 int coarsen_function (int (* func) (Point p))
 {
   int nc = 0;
-  foreach_fine_to_coarse()
-    if ((*func) (point)) {
-      coarsen_cell (point);
-      nc++;
+  for (int l = depth() - 1; l >= 0; l--)
+    foreach_cell() {
+      if (cell.flags & leaf)
+	continue;
+      else if (level == l) {
+	if ((*func) (point) && coarsen_cell (point))
+	  nc++;
+	continue;
+      }
     }
   return nc;
 }
@@ -34,21 +50,25 @@ int coarsen_function (int (* func) (Point p))
 int coarsen_wavelet (scalar w, double max)
 {
   int nc = 0;
-  foreach_fine_to_coarse() {
-    double error = 0.;
-    for (int k = 0; k < 2; k++)
-      for (int l = 0; l < 2; l++) {
-	double e = fabs(fine(w,k,l));
-	if (e > error)
-	  error = e;
+  for (int l = depth() - 1; l >= 0; l--)
+    foreach_cell() {
+      if (cell.flags & leaf)
+	continue;
+      else if (level == l) {
+	double error = 0.;
+	for (int k = 0; k < 2; k++)
+	  for (int l = 0; l < 2; l++) {
+	    double e = fabs(fine(w,k,l));
+	    if (e > error)
+	      error = e;
+	  }
+	if (error < max && coarsen_cell(point))
+	  nc++;
+	/* propagate the error to coarser levels */
+	w[] = fabs(w[]) + error;	
+	continue;
       }
-    if (error < max) {
-      coarsen_cell(point);
-      nc++;
     }
-    /* propagate the error to coarser levels */
-    w[] = fabs(w[]) + error;
-  }
   return nc;
 }
 
@@ -85,8 +105,14 @@ int flag_halo_cells ()
   foreach_cell() {
     if (!(cell.flags & halo))
       continue;
-    else 
+    else {
       cell.flags &= ~halo;
+#if TRASH
+      if (!(cell.flags & active))
+	for (scalar v = 0; v < nvar; v++)
+	  val(v,0,0) = undefined;
+#endif
+    }
   }
 
   /* from the bottom up */

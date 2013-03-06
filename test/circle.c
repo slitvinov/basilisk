@@ -5,6 +5,7 @@
 #include <time.h>
 #include "grid/quadtree.h"
 #include "utils.h"
+#include "wavelet.h"
 #include "mg.h"
 #include "adapt.h"
 
