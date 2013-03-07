@@ -34,7 +34,6 @@ set timefmt cb "%d/%m/%y,%H:%M"
 set boxwidth
 set style fill  empty border
 set style rectangle back fc lt -3 fillstyle   solid 1.00 border lt -1
-set style circle radius graph 0.02, first 0, 0 
 set dummy x,y
 set format x "% g"
 set format y "% g"
@@ -47,7 +46,6 @@ unset grid
 set key title ""
 set key inside right top vertical Right noreverse enhanced autotitles nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
-set key maxcolumns 0 maxrows 0
 unset label
 unset arrow
 set style increment default
@@ -57,7 +55,6 @@ set style histogram clustered gap 2 title  offset character 0, 0, 0
 unset logscale
 set offsets 0, 0, 0, 0
 set pointsize 1
-set pointintervalbox 1
 set encoding default
 unset polar
 unset parametric
