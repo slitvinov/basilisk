@@ -34,17 +34,20 @@ int main (int argc, char ** argv)
   restriction_u_v (u, v);
   update_halo_u_v (-1, u, v);
 
-  double max = 0.;
-  foreach() {
-    double e = exp(-(x*x+y*y)/(R0*R0)) - (u[] + u[1,0])/2.;
+  double max = 0., maxv = 0;
+  foreach_halo() {
+    double e = exp(-(xu*xu+yu*yu)/(R0*R0)) - u[];
     if (fabs(e) > max)
       max = fabs(e);
-    printf ("%g %g %d %d %g %g\n", x, y, level, cell.neighbors, (u[] + u[1,0])/2., e);
+    printf ("%g %g %d %d %g %g\n", xu, yu, level, cell.neighbors, u[], e);
+    e = fabs (exp(-(xv*xv+yv*yv)/(R0*R0)) - v[]);
+    if (e > maxv)
+      maxv = e;
   }
 
-  fprintf (stderr, "maximum error on halos: %g\n", max);
+  fprintf (stderr, "maximum error on halos: %g %g\n", max, maxv);
 
   free_grid ();
 
-  return (max > 2.*tolerance);
+  return (max > tolerance || maxv > tolerance || max != maxv);
 }

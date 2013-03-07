@@ -302,10 +302,17 @@ Point refine_cell (Point point, scalar start, scalar end)
       for (int o = -GHOSTS; o <= GHOSTS; o++)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)
 	  child(k+o,l+p).neighbors++;
+#if 0
       /* bilinear interpolation from coarser level */
       for (scalar v = start; v <= end; v++)
 	fine(v,k,l) = 
 	  (9.*val(v,0,0) + 3.*(val(v,2*k-1,0) + val(v,0,2*l-1)) + val(v,2*k-1,2*l-1))/16.;
+#else
+      /* linear interpolation from coarser level (conservative) */
+      for (scalar v = start; v <= end; v++)
+	fine(v,k,l) = val(v,0,0) + ((val(v,1,0) - val(v,-1,0))*(2*k-1)/8. +
+				    (val(v,0,1) - val(v,0,-1))*(2*l-1)/8.);
+#endif
     }
 
   return point;

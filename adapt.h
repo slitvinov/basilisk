@@ -167,7 +167,17 @@ void update_halo_u_v (int depth, scalar u, scalar v)
 {
   foreach_halo_coarse_fine (depth) {
     /* linear interpolation from coarser level */
-    u[] = coarse(u,0,0) + childy*(coarse(u,0,1) - coarse(u,0,-1))/8.;
-    v[] = coarse(v,0,0) + childx*(coarse(v,1,0) - coarse(v,-1,0))/8.;
+    if (childx < 0)
+      /* conservative interpolation */
+      u[] = coarse(u,0,0) + (coarse(u,0,1) - coarse(u,0,-1))*childy/8.;
+    else
+      u[] = (3.*coarse(u,0,0) + coarse(u,0,childy) + 
+	     3.*coarse(u,1,0) + coarse(u,1,childy))/8.;
+    if (childy < 0)
+      /* conservative interpolation */
+      v[] = coarse(v,0,0) + (coarse(v,1,0) - coarse(v,-1,0))*childx/8.;
+    else
+      v[] = (3.*coarse(v,0,0) + coarse(v,childx,0) + 
+	     3.*coarse(v,0,1) + coarse(v,childx,1))/8.;
   }
 }
