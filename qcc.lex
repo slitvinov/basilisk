@@ -406,8 +406,9 @@ new{WS}+vector {
 	     "  *ip = i; *tp = t;\n"
 	     "  return ret;\n"
 	     "}\n"
+	     "#line %d\n"
 	     "static %s event_array%d[] = %s,-1};\n",
-	     yytext[0] == 'i' ? "int" : "double", nevents, strchr (yytext, '{'));
+	     line, yytext[0] == 'i' ? "int" : "double", nevents, strchr (yytext, '{'));
   }
   else
     REJECT;
