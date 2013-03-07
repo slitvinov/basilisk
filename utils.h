@@ -195,15 +195,19 @@ timer_t timer_start (void)
   return t;
 }
 
-void timer_print (timer_t t, int i)
+void timer_print (timer_t t, int i, int tnc)
 {
   clock_t end = clock ();
   struct timeval tvend;
   gettimeofday (&tvend, NULL);
   double cpu = ((double) (end - t.c))/CLOCKS_PER_SEC;
   double real = (tvend.tv_sec - t.tv.tv_sec) + (tvend.tv_usec - t.tv.tv_usec)/1e6;
-  int n = 0; foreach(reduction(+:n)) n++;
+  if (tnc < 0) {
+    tnc = 0;
+    foreach(reduction(+:tnc)) tnc++;
+    tnc *= i;
+  }
   fprintf (stderr, "# " GRIDNAME ", %d steps, %g CPU, %.4g real, %.3g points.steps/s\n",
-	   i, cpu, real, (n*(double)i/real));
+	   i, cpu, real, tnc/real);
 }
 

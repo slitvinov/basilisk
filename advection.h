@@ -70,7 +70,7 @@ void run (void)
 
   timer_t start = timer_start();
   double t = 0.;
-  int i = 0;
+  int i = 0, tnc = 0;
   while (events (i, t)) {
     double dt = dtnext (t, timestep (u, v));
     vector flux = new vector, g = new vector, uv = {u,v};
@@ -78,12 +78,16 @@ void run (void)
     boundary_gradient (g.x, g.y);
     fluxes_upwind_bcg (f, g, uv, flux, dt);
     boundary_u_v (flux.x, flux.y);
-    foreach()
+    foreach() {
+      if (fabs (flux.x[]) > 1e10)
+	fprintf (stderr, "%d warning %g %g %g\n", i, x, y, flux.x[]);
       f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;
+    }
     boundary_f (f);
+    foreach() tnc++;
     i++; t = tnext;
   }
-  timer_print (start, i);
+  timer_print (start, i, tnc);
 
   free_grid ();
 }

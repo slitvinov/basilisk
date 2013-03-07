@@ -152,7 +152,7 @@ void run (void)
 #endif
     i++; t = tnext;
   }
-  timer_print (start, i);
+  timer_print (start, i, -1);
 
   free_grid ();
 }
