@@ -90,8 +90,12 @@ int refine_wavelet (scalar start, scalar end,
 {
   int nf = 0;
   foreach_leaf()
-    if (fabs(w[]) >= max) {
+    /* fixme: w[] should be explicitly defined */
+    if (w[] != undefined && fabs(w[]) >= max) {
       point = refine_cell (point, start, end);
+      for (int k = 0; k < 2; k++)
+	for (int l = 0; l < 2; l++)
+	  fine(w,k,l) = undefined;
       nf++;
     }
   return nf;

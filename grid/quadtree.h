@@ -342,9 +342,11 @@ void check_two_one (void)
 		     ((J + 0.5)*DELTA - 0.5),
 		     x, y);
 	    fclose (fp);
+#if 0
 	    fp = fopen("check_two_one", "w");
 	    output_cells (fp);
 	    fclose (fp);
+#endif
 	    assert (false);
 	  }
 	}
