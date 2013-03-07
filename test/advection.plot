@@ -3,16 +3,16 @@ set title 'Time-reversed advection'
 
 ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
 f(x)=a+b*x
-fit f(x) 'advection.log' u (log($1)):(log($4)) via a,b
+fit f(x) 'advection.slog' u (log($1)):(log($4)) via a,b
 f2(x)=a2+b2*x
-fit f2(x) 'advection.log' u (log($1)):(log($2)) via a2,b2
+fit f2(x) 'advection.slog' u (log($1)):(log($2)) via a2,b2
 set xlabel 'Maximum resolution'
 set ylabel 'Maximum error'
 set logscale
 set xrange [32:512]
 set xtics 32,2,512
 set grid ytics
-plot 'advection.log' u 1:4 t 'max', 'advection.log' u 1:2 t 'norm1', exp(f(log(x))) t ftitle(a,b), exp(f2(log(x))) t ftitle(a2,b2)
+plot 'advection.slog' u 1:4 t 'max', 'advection.slog' u 1:2 t 'norm1', exp(f(log(x))) t ftitle(a,b), exp(f2(log(x))) t ftitle(a2,b2)
 
 if (batch) set term pngcairo; set output "advection_error.png"; else pause -1;
 reset

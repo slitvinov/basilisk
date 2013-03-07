@@ -1,4 +1,10 @@
-#include "grid/cartesian.h"
+#if ADAPT
+# include "grid/quadtree.h"
+# include "wavelet.h"
+# include "adapt.h"
+#else
+# include "grid/cartesian.h"
+#endif
 #include "advection.h"
 
 int refine_right (Point point, void * data)
@@ -15,7 +21,8 @@ int refine_circle (Point point, void * data)
 
 void boundary_f (scalar f)
 {
-#if 0
+  symmetry (f);
+#if ADAPT
   restriction (f, f);
   update_halo (-1, f, f);
 #endif
@@ -23,7 +30,8 @@ void boundary_f (scalar f)
 
 void boundary_u_v (scalar u, scalar v)
 {
-#if 0
+  uv_symmetry (u, v);
+#if ADAPT
   restriction_u_v (u, v);
   update_halo_u_v (-1, u, v);
 #endif
@@ -31,7 +39,7 @@ void boundary_u_v (scalar u, scalar v)
 
 void boundary_gradient (scalar fx, scalar fy)
 {
-#if 0
+#if ADAPT
   restriction (fx, fy);
   update_halo (-1, fx, fy);
 #endif
@@ -56,7 +64,58 @@ void initial_conditions ()
     f[] = bump(x,y);
 }
 
-// event (t += 0.1; t <= 5.) output_matrix (f, N, stdout);
+event (i++) {
+#if ADAPT
+  scalar w = new scalar;
+  restriction (f, f);
+  wavelet (f, w);
+
+  double cmax = 1e-3;
+  int nf = refine_wavelet (f, f, w, cmax);
+  int nc = coarsen_wavelet (w, cmax/4.);
+  flag_halo_cells ();
+  boundary_f (f);
+#if 0
+  fprintf (stderr, "%d refined %d cells coarsened %d cells\n", i, nf, nc);
+  check_two_one();
+#endif
+#endif
+}
+
+/* event (t += 0.1; t <= 5.) output_matrix (f, N, stdout, true); */
+
+/* event (t += 0.1; t <= 5.) { */
+/*   scalar l = new scalar; */
+/*   foreach() l[] = level; */
+/*   output_matrix (l, N, stdout, false); */
+/* } */
+
+/* event (t += 0.1; t <= 5.) { */
+/*   char s[80]; */
+/*   FILE * fp; */
+/*   scalar l = new scalar; */
+/*   foreach() l[] = level; */
+/*   sprintf (s, "level-%g", t); */
+/*   fp = fopen (s, "w"); */
+/*   output_matrix (l, N, fp, false); */
+/*   fclose (fp); */
+
+/*   sprintf (s, "f-%g", t); */
+/*   fp = fopen (s, "w"); */
+/*   output_matrix (f, N, fp, false); */
+/*   fclose (fp);   */
+
+/*   sprintf (s, "cells-%g", t); */
+/*   fp = fopen (s, "w"); */
+/*   output_cells (fp); */
+/*   fclose (fp);   */
+/* } */
+
+/* event (t += 0.1; t <= 5.) { */
+/*   restriction (f, f); */
+/*   wavelet (f, w); */
+/*   output_matrix (w, N, stdout, false); */
+/* } */
 
 event (i++) {
   foreach() {
@@ -90,7 +149,7 @@ event (t = 5) {
   fprintf (stderr, "%d %g %g %g\n", N, norm1/area, sqrt(norm2/area), max);
   
   if (N == 256)
-    output_matrix (e, N, stdout);
+    output_matrix (e, N, stdout, false);
 }
 
 int main() {
