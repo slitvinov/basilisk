@@ -141,6 +141,7 @@ void output_field (scalar f, int n, FILE * fp)
     }
     fputc ('\n', fp);
   }
+  fflush (fp);
 }
 
 void output_matrix (scalar f, int n, FILE * fp, bool linear)
@@ -167,6 +168,7 @@ void output_matrix (scalar f, int n, FILE * fp, bool linear)
       fwrite (&v, sizeof(float), 1, fp);
     }
   }
+  fflush (fp);
 }
 
 void output_cells (FILE * fp)
@@ -211,3 +213,37 @@ void timer_print (timer_t t, int i, int tnc)
 	   i, cpu, real, tnc/real);
 }
 
+typedef struct {
+  double avg, rms, max, area;
+} norm;
+
+norm normf (scalar f)
+{
+  norm n = { 0., 0., 0., 0. };
+  foreach(reduction(max:n.max) reduction(+:n.avg) reduction(+:n.rms) reduction(+:n.area)) {
+    double v = fabs(f[]);
+    if (v > n.max) n.max = v;
+    double a = sq(delta);
+    n.avg  += a*v;
+    n.rms  += a*v*v;
+    n.area += a;
+  }
+  n.avg /= n.area;
+  n.rms = sqrt(n.rms/n.area);
+  return n;
+}
+
+typedef struct {
+  double min, max, sum;
+} stats;
+
+stats statsf (scalar f)
+{
+  stats s = { 1e100, -1e100, 0. };
+  foreach(reduction(+:s.sum) reduction(max:s.max) reduction(min:s.min)) {
+    s.sum += f[]*delta*delta;
+    if (f[] > s.max) s.max = f[];
+    if (f[] < s.min) s.min = f[];
+  }
+  return s;
+}
