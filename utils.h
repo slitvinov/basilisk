@@ -219,17 +219,20 @@ typedef struct {
 
 norm normf (scalar f)
 {
-  norm n = { 0., 0., 0., 0. };
-  foreach(reduction(max:n.max) reduction(+:n.avg) reduction(+:n.rms) reduction(+:n.area)) {
+  double avg = 0., rms = 0., max = 0., area = 0.;
+  foreach(reduction(max:max) reduction(+:avg) reduction(+:rms) reduction(+:area)) {
     double v = fabs(f[]);
-    if (v > n.max) n.max = v;
+    if (v > max) max = v;
     double a = sq(delta);
-    n.avg  += a*v;
-    n.rms  += a*v*v;
-    n.area += a;
+    avg  += a*v;
+    rms  += a*v*v;
+    area += a;
   }
-  n.avg /= n.area;
-  n.rms = sqrt(n.rms/n.area);
+  norm n;
+  n.avg = avg/area;
+  n.rms = sqrt(rms/area);
+  n.max = max;
+  n.area = area;
   return n;
 }
 
@@ -239,11 +242,13 @@ typedef struct {
 
 stats statsf (scalar f)
 {
-  stats s = { 1e100, -1e100, 0. };
-  foreach(reduction(+:s.sum) reduction(max:s.max) reduction(min:s.min)) {
-    s.sum += f[]*delta*delta;
-    if (f[] > s.max) s.max = f[];
-    if (f[] < s.min) s.min = f[];
+  double min = 1e100, max = -1e100, sum = 0.;
+  foreach(reduction(+:sum) reduction(max:max) reduction(min:min)) {
+    sum += f[]*delta*delta;
+    if (f[] > max) max = f[];
+    if (f[] < min) min = f[];
   }
+  stats s;
+  s.min = min, s.max = max, s.sum = sum;
   return s;
 }
