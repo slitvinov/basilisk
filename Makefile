@@ -1,3 +1,5 @@
+CFLAGS += -O2
+
 all: qcc qplot
 
 qcc: qcc.c include.o

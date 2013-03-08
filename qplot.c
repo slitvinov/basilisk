@@ -8,28 +8,35 @@ FILE * gnuplot = NULL;
 void cleanup (int number)
 {
   pclose (gnuplot);
-  system ("rm -f .qplot??????");
-  exit (1);
+  int ret = system ("rm -f .qplot??????");
+  exit (1 + ret);
 }
 
 int main (int argc, char * argv[])
 {
   float fn;
-  char command[80] = "gnuplot";
-  int i;
+  char command[80] = "gnuplot", * files[80], * commands[80];
+  int i, nf = 0, nc = 0;
   for (i = 1; i < argc; i++)
-    if (argv[i][0] == '-') {
+    if (!strcmp (argv[i], "-e")) {
+      if (i + 1 < argc)
+	commands[nc++] = argv[++i];
+    }
+    else if (argv[i][0] == '-') {
       strcat (command, " "); strcat (command, argv[i]);
     }
+    else
+      files[nf++] = argv[i];
   gnuplot = popen (command, "w");
   if (!gnuplot) {
     perror ("qplot: could not open pipe: ");
     return 1;
   }
   fprintf (gnuplot, "set terminal wxt noraise\n");
-  for (i = 1; i < argc; i++)
-    if (argv[i][0] != '-')
-      fprintf (gnuplot, "load '%s'\n", argv[i]);
+  for (i = 0; i < nf; i++)
+    fprintf (gnuplot, "load '%s'\n", files[i]);
+  for (i = 0; i < nc; i++)
+    fprintf (gnuplot, "%s\n", commands[i]);
   signal (SIGINT, cleanup);
   while (fread (&fn, sizeof(float), 1, stdin) == 1) {
     char fname[] = ".qplotXXXXXX";
@@ -63,6 +70,6 @@ int main (int argc, char * argv[])
     fflush (gnuplot);
   }
   pclose (gnuplot);
-  system ("rm -f .qplot??????");
-  return 0;
+  int ret = system ("rm -f .qplot??????");
+  return 0*ret;
 }
