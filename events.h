@@ -1,3 +1,5 @@
+#include <math.h>
+
 #define INIT ev->expr[0]
 #define COND ev->expr[1]
 #define INC  ev->expr[2]
@@ -20,7 +22,7 @@ static int event_do (Event * ev, int i, double t)
     event_finished (ev);
     return 0;
   }
-  if (i == ev->i || t == ev->t) {
+  if (i == ev->i || fabs (t - ev->t) <= 1e-9) {
     if ((* ev->action) (i, t)) {
       event_finished (ev);
       return 1;
