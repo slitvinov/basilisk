@@ -3,10 +3,10 @@ CFLAGS += -O2
 all: qcc qplot
 
 qcc: qcc.c include.o
-	$(CC) $(CFLAGS) -O2 qcc.c include.o -o qcc
+	$(CC) $(CFLAGS) qcc.c include.o -o qcc
 
 include.o: include.c
-	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" -O2 -c include.c
+	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" -c include.c
 
 include.c: include.lex
 	flex -P inc -o include.c include.lex

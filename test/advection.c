@@ -126,27 +126,16 @@ event (i++) {
 }
 
 event (t = {0,5}) {
-  double sum = 0., min = 1e100, max = -1e100;
-  foreach(reduction(+:sum) reduction(max:max) reduction(min:min)) {
-    sum += f[]*delta*delta;
-    if (f[] > max) max = f[];
-    if (f[] < min) min = f[];
-  }
-  fprintf (stderr, "# %f %.12f %g %g\n", t, sum, min, max);  
+  stats s = statsf (f);
+  fprintf (stderr, "# %f %.12f %g %g\n", t, s.sum, s.min, s.max);
 }
 
 event (t = 5) {
-  double max = 0., norm1 = 0., norm2 = 0., area = 0.;
   scalar e = new scalar;
-  foreach(reduction(max:max) reduction(+:norm1) reduction(+:norm2) reduction(+:area)) {
+  foreach()
     e[] = f[] - bump(x,y);
-    if (fabs(e[]) > max) max = fabs(e[]);
-    double a = sq(delta);
-    norm1 += a*fabs(e[]);
-    norm2 += a*e[]*e[];
-    area  += a;
-  }
-  fprintf (stderr, "%d %g %g %g\n", N, norm1/area, sqrt(norm2/area), max);
+  norm n = normf (e);
+  fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
   
   if (N == 256)
     output_matrix (e, N, stdout, false);
