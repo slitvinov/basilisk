@@ -46,15 +46,32 @@ void homogeneous_boundary (scalar v, int l)
 void relax (scalar a, scalar b, int l)
 {
   foreach_level (l)
-    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] 
-	      - delta*delta*b[])/4.;
+    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - delta*delta*b[])/4.;
 }
 
 void residual (scalar a, scalar b, scalar res)
 {
+#if 1
+  /* conservative coarse/fine discretisation */
+  vector g = new vector;
+  foreach() {
+    g.x[] = (a[] - a[-1,0])/delta;
+    g.y[] = (a[] - a[0,-1])/delta;
+  }
+  foreach_boundary (right)
+    g.x[1,0] = (a[1,0] - a[])/delta;
+  foreach_boundary (top)
+    g.y[0,1] = (a[0,1] - a[])/delta;
+  restriction_u_v (g.x, g.y);
+  update_halo_u_v (-1, g.x, g.y);
+  foreach()
+    res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/delta;
+#else
+  /* "naive" discretisation */
   foreach()
     res[] = b[] + 
     (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(delta*delta);
+#endif
 }
 
 int refine_circle (Point point, void * data)
