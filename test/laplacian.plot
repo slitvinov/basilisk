@@ -47,7 +47,7 @@ set grid xtics nomxtics ytics nomytics noztics nomztics \
  nox2tics nomx2tics noy2tics nomy2tics nocbtics nomcbtics
 set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
 set key title ""
-set key inside right center vertical Right noreverse enhanced autotitles nobox
+set key inside top left vertical Right noreverse enhanced autotitles nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
 unset label
 unset arrow

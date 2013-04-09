@@ -14,12 +14,20 @@ typedef struct {
 typedef struct _Quadtree Point;
 typedef struct _Quadtree Quadtree;
 
+typedef struct {
+  int i, j, level;
+} Index;
+
 struct _Quadtree {
   int depth;       /* the maximum depth of the tree */
 
   Quadtree * back; /* back pointer to the "parent" quadtree */
   char ** m;       /* the grids at each level */
   int i, j, level; /* the current cell index and level */
+
+  Index * index;   /* indices for leaf traversal */
+  int nleaves;     /* number of leaves */
+  bool dirty;      /* whether indices should be updated */
 };
 
 size_t _size (size_t l)
@@ -41,8 +49,9 @@ size_t _size (size_t l)
 #define _n (1 << point.level) /* fixme */
 #define cell               CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
 #define parent             aparent(0,0)
-#define alloc_children()   { if (point.level == point.depth) alloc_layer(&point); }
-#define free_children()
+#define alloc_children()   { point.back->dirty = true; \
+                             if (point.level == point.depth) alloc_layer(&point); }
+#define free_children()    { point.back->dirty = true; }
 
 /***** Quadtree variables *****/
 #define QUADTREE_VARIABLES \
@@ -97,7 +106,7 @@ void recursive (Point point)
   { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--; }
 
 #define foreach_boundary_cell(dir)					\
-  OMP_PARALLEL()							\
+  {									\
     Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid); \
     int _d = dir; NOT_UNUSED(_d);					\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
@@ -127,7 +136,7 @@ void recursive (Point point)
         }								\
       }									\
     }                                                                   \
-  OMP_END_PARALLEL()
+  }
 
 #define foreach_cell() foreach_boundary_cell(0)
 #define end_foreach_cell()						\
@@ -144,10 +153,10 @@ void recursive (Point point)
       case 3: _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;	\
       }								        \
     }                                                                   \
-  OMP_END_PARALLEL()
+  }
 
 #define foreach_cell_post(condition)					\
-  OMP_PARALLEL()							\
+  {									\
     Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
@@ -183,7 +192,7 @@ void recursive (Point point)
       }									\
       }								        \
     }                                                                   \
-  OMP_END_PARALLEL()
+  }
 
 /* ================== derived traversals ========================= */
 
@@ -196,8 +205,15 @@ enum {
 #define foreach_leaf()            foreach_cell() if (cell.flags & leaf) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
 
-#define foreach(clause)     foreach_leaf()
-#define end_foreach         end_foreach_leaf
+#define foreach(clause)     { update_cache();				\
+  OMP_PARALLEL()							\
+  Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid); \
+  OMP(omp for schedule(static) clause)					\
+  for (int _k = 0; _k < point.nleaves; _k++) {				\
+    point.i = point.index[_k].i; point.j = point.index[_k].j; point.level = point.index[_k].level; \
+    QUADTREE_VARIABLES;							\
+    VARIABLES;
+#define end_foreach()         } OMP_END_PARALLEL() }
 
 #define foreach_boundary(dir)     foreach_boundary_cell(dir)
 #define end_foreach_boundary()    if (cell.flags & leaf) continue; end_foreach_boundary_cell()
@@ -236,6 +252,26 @@ void alloc_layer (Quadtree * p)
 
 Point refine_cell (Point point, scalar start, scalar end);
 
+void update_cache (void)
+{
+  Quadtree * q = grid;
+  if (q->dirty) {
+    int n = 0;
+    foreach_leaf() {
+      if (n >= q->nleaves) {
+	q->nleaves += 100;
+	q->index = realloc (q->index, sizeof (Index)*q->nleaves);
+      }
+      q->index[n].i = point.i;
+      q->index[n].j = point.j;
+      q->index[n].level = point.level;
+      n++;
+    }
+    q->nleaves = n;
+    q->dirty = false;
+  }
+}
+
 void init_grid (int n)
 {
   int depth = 0;
@@ -255,10 +291,13 @@ void init_grid (int n)
   q->m[0] = calloc (_size(0), sizeof (Cell) + datasize);
   CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
   CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
+  q->index = NULL;
+  q->nleaves = 0;
   grid = q;
   while (depth--)
-    foreach_leaf ()
+    foreach_leaf()
       point = refine_cell (point, 0, nvar - 1);
+  update_cache();
 }
 
 void free_grid (void)
@@ -268,6 +307,7 @@ void free_grid (void)
     free (q->m[l]);
   q->m = &(q->m[-1]);
   free(q->m);
+  free(q->index);
   free(q);
 }
 
