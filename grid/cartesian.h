@@ -26,6 +26,7 @@ typedef struct {
 
 #define foreach_boundary(d) 						\
   OMP_PARALLEL()							\
+  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
   OMP(omp for schedule(static))						\
   for (int _k = 1; _k <= point.n; _k++) {				\
@@ -34,12 +35,18 @@ typedef struct {
     VARIABLES
 #define end_foreach_boundary() } OMP_END_PARALLEL()
 
+#define foreach_boundary_level(d,l) foreach_boundary(d)
+#define end_foreach_boundary_level() end_foreach_boundary()
+
+#define depth() 0
+
 void init_grid (int n)
 {
   Point * p = malloc(sizeof(Point));
   p->n = n;
   p->data = calloc ((n + 2)*(n + 2), datasize);
   grid = p;
+  init_boundaries (nvar);
 }
 
 void free_grid (void)
@@ -47,6 +54,7 @@ void free_grid (void)
   Point * p = grid;
   free (p->data);
   free (p);
+  free_boundaries ();
 }
 
 Point locate (double x, double y)

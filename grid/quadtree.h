@@ -107,6 +107,7 @@ void recursive (Point point)
 
 #define foreach_boundary_cell(dir)					\
   {									\
+    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
     Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid); \
     int _d = dir; NOT_UNUSED(_d);					\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
@@ -298,6 +299,7 @@ void init_grid (int n)
     foreach_leaf()
       point = refine_cell (point, 0, nvar - 1);
   update_cache();
+  init_boundaries (nvar);
 }
 
 void free_grid (void)
@@ -309,6 +311,7 @@ void free_grid (void)
   free(q->m);
   free(q->index);
   free(q);
+  free_boundaries();
 }
 
 Point refine_cell (Point point, scalar start, scalar end)

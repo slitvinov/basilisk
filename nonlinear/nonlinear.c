@@ -44,30 +44,13 @@ double h0 (double r) {
 
 scalar h1 = new scalar;
 
-void initial_conditions()
+void init()
 {
   foreach() {
     h1[] = h[] = (H0 + h0(sqrt (x*x + y*y)));
     u[] = - vtheta(sqrt (xu*xu + yu*yu))*yu/sqrt (xu*xu + yu*yu);
     v[] =   vtheta(sqrt (xv*xv + yv*yv))*xv/sqrt (xv*xv + yv*yv);
   }
-}
-
-/* ------------------ Boundary conditions ------------------- */
-
-void boundary_h (scalar h)
-{
-  symmetry (h);
-}
-
-void boundary_b()
-{
-  symmetry (b);
-}
-
-void boundary_u (scalar u, scalar v)
-{
-  uv_symmetry (u, v);
 }
 
 /* ------------------ Output helper functions --------------- */

@@ -56,6 +56,7 @@ size_t _size (size_t l)
 
 #define foreach_boundary_level(d,l) 					\
   OMP_PARALLEL()							\
+  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
   point.level = l; point.n = 1 << point.level;				\
   OMP(omp for schedule(static))						\
@@ -102,6 +103,7 @@ void init_grid (int n)
   for (int l = 0; l <= r; l++)
     m->d[l] = calloc (_size(l), datasize);
   grid = m;
+  init_boundaries (nvar);
 }
 
 void free_grid (void)
@@ -110,6 +112,7 @@ void free_grid (void)
   for (int l = 0; l <= m->depth; l++)
     free (m->d[l]);
   free(m->d);
+  free_boundaries();
 }
 
 Point locate (double x, double y)

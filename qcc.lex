@@ -13,7 +13,7 @@
 
   int nvar = 0, nevents = 0;
   int line;
-  int scope, para, inforeach, foreachscope, foreachpara;
+  int scope, para, inforeach, foreachscope, foreachpara, inforeach_boundary;
   int invardecl, vartype;
   int inval, invalpara;
   int brack, inarray;
@@ -31,6 +31,9 @@
   FILE * foreachfp;
   char reduction[10][4], reductvar[10][80];
   int nreduct;
+
+  FILE * boundary = NULL;
+  int inboundary;
   
   struct { char * v; int type, args, scope; } _varstack[100]; int varstack = -1;
   void varpush (const char * s, int type, int scope) {
@@ -54,7 +57,7 @@
   }
   
   void endforeach () {
-    inforeach = 0;
+    inforeach = inforeach_boundary = 0;
     if (nreduct > 0) {
       fputs ("\n#undef _OMPEND\n#define _OMPEND ", yyout);
       int i;
@@ -138,6 +141,7 @@ ES  (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 WS  [ \t\v\n\f]
 
 %%
+
 "("                ECHO; para++;
 
 ")" {
@@ -211,6 +215,7 @@ foreach{ID}* {
   strcpy (foreachname, dir);
   strcat (foreachname, "/foreach.h");
   yyout = fopen (foreachname, "w");
+  inforeach_boundary = (!strncmp(foreachs, "foreach_boundary", 16));
   ECHO;
 }
 
@@ -229,7 +234,14 @@ end_foreach{ID}*{SP}*"()" {
     ECHO;
     endforeachdim ();
   }
-  if (inforeach && scope == foreachscope && para == foreachpara) {
+  if (inboundary) {
+    ECHO;
+    fputs ("\n  end_foreach_boundary_level();\n}\n\n", yyout);
+    FILE * tmp = yyout; yyout = boundary; boundary = tmp;
+    fprintf (yyout, "\n#line %d\n", line - 1);
+    inboundary = inforeach = inforeach_boundary = 0;
+  }
+  else if (inforeach && scope == foreachscope && para == foreachpara) {
     ECHO;
     endforeach ();
   }
@@ -362,7 +374,7 @@ new{WS}+vector {
 	  else {
 	    /* v[...] */
 	    fputc (',', yyout);
-	    fputc (yytext[yyleng-1], yyout);
+	    unput (yytext[yyleng-1]);
 	    inarray = ++brack;
 	  }
 	}
@@ -370,6 +382,49 @@ new{WS}+vector {
   }
   if (!found)
     REJECT;
+}
+
+[a-zA-Z_0-9\.]+{WS}*\[{WS}*(left|right|top|bottom){WS}*\]{WS}*= {
+  /* v[top] = */
+  int found = 0;
+  char * s = yytext;
+  while (!strchr(" \t\v\n\f[.", *s)) s++;
+  int i, len = s - yytext;
+  for (i = varstack; i >= 0 && !found; i--)
+    if (strlen(_varstack[i].v) == len && !strncmp(yytext, _varstack[i].v, len) &&
+	(*s != '.' || _varstack[i].type == vector)) {
+      found = 1;
+      s = yytext;
+      while (!strchr(" \t\v\n\f[", *s)) s++;
+      *s++ = '\0';
+      while (strchr(" \t\v\n\f", *s)) s++;
+      char * b = s;
+      while (!strchr(" \t\v\n\f]", *s)) s++;
+      *s++ = '\0';
+      fprintf (yyout, "_boundary[%s][%s] = _%s%s;", b, yytext, yytext, b);
+      FILE * tmp = yyout; yyout = boundary; boundary = tmp;
+      fprintf (yyout,
+	       "static void _%s%s (scalar %s, int l) {\n"
+	       "  foreach_boundary_level (%s, l)\n"
+	       "#undef val1\n"
+	       "#define val1(a,i,j) val(a,i,j)\n"
+	       "#line %d \"%s\"\n"
+	       "    val(%s,ig,jg) =",
+	       yytext, b, yytext, 
+	       b,
+	       line, fname,
+	       yytext);
+      inboundary = inforeach = inforeach_boundary = 1;
+    }
+  if (!found)
+    REJECT;
+}
+
+ghost {
+  if (inforeach_boundary)
+    fputs ("ig,jg", yyout);
+  else
+    ECHO;
 }
 
 [\n]       ECHO;
@@ -506,12 +561,13 @@ int endfor (char * file, FILE * fin, FILE * fout)
   yyin = fin;
   yyout = fout;
   line = 1, scope = para = 0;
-  inforeach = foreachscope = foreachpara = 0;
+  inforeach = foreachscope = foreachpara = inforeach_boundary = 0;
   invardecl = 0;
   inval = invalpara = 0;
   brack = inarray = 0;
   inevent = 0;
   foreachdim = 0;
+  inboundary = 0;
   int ret = yylex();
   if (!ret) {
     if (scope > 0)
@@ -545,8 +601,18 @@ void cleanup (int status)
   exit (status);
 }
 
+FILE * dopen (const char * fname)
+{
+  char * out = malloc (sizeof (char)*(strlen (dir) + strlen (fname) + 2));
+  strcpy (out, dir); strcat (out, "/"); strcat (out, fname);
+  FILE * fout = fopen (out, "w");
+  free (out);
+  return fout;
+}
+
 void compdir (char * file, char ** in, int nin, char * grid)
 {
+  boundary = dopen ("boundary.h");
   int i;
   for (i = nin - 1; i >= 0; i--) {
     char * path = in[i];
@@ -567,7 +633,7 @@ void compdir (char * file, char ** in, int nin, char * grid)
       cleanup (1);
     }
     if (i == 0)
-      fprintf (fout, "#include \"grid.h\"\n");
+      fputs ("#include \"grid.h\"\n", fout);
     if (endfor (path, fin, fout))
       cleanup (1);
     fclose (fout);
@@ -575,10 +641,9 @@ void compdir (char * file, char ** in, int nin, char * grid)
     fclose (fin);
     free (path);
   }
+  fclose (boundary);
 
-  char * out = malloc (sizeof (char)*(strlen (dir) + strlen ("grid.h") + 2));
-  strcpy (out, dir); strcat (out, "/grid.h");
-  FILE * fout = fopen (out, "w");
+  FILE * fout = dopen ("grid.h");
   /* new variables */
   fprintf (fout,
 	   "#include \"common.h\"\n"
@@ -613,7 +678,6 @@ void compdir (char * file, char ** in, int nin, char * grid)
   /* grid */
   if (grid)
     fprintf (fout, "#include \"grid/%s.h\"\n", grid);
-  free (out);
   fclose (fout);
 }
 
@@ -665,6 +729,8 @@ int main (int argc, char ** argv)
     strcat (command, file);
   }
   /* compilation */
+  if (debug)
+    fprintf (stderr, "command: %s\n", command);
   status = system (command);
   if (status == -1 ||
       (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT)))

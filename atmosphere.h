@@ -1,11 +1,12 @@
 #include "utils.h"
 #include "events.h"
+#include "boundary.h"
 
 scalar u = new scalar, v = new scalar, h = new scalar, b = new scalar;
 scalar ke = new scalar, psi = new scalar;
 scalar un = new scalar, vn = new scalar, hn = new scalar;
 
-// Default parameters, do not change them!! edit parameters.h instead
+// Default parameters
 // Coriolis parameter
 double F0 = 1.;
 // acceleration of gravity
@@ -13,11 +14,8 @@ double G = 1.;
 // Viscosity
 double NU = 0.;
 // user-provided functions
-void parameters         (void);
-void initial_conditions (void);
-void boundary_b         (void);
-void boundary_h         (scalar h);
-void boundary_u         (scalar u, scalar v);
+void parameters (void);
+void init       (void);
 
 void advection_centered (scalar f, scalar u, scalar v, scalar df)
 {
@@ -112,8 +110,8 @@ void advance (double t, scalar * f, scalar * df)
 void update (double t, scalar * f)
 {
   scalar u = f[0], v = f[1], h = f[2];
-  boundary_h (h);
-  boundary_u (u, v);
+  boundary (h);
+  boundary_uv (u, v);
   ke_psi (u, v);
 }
 
@@ -122,10 +120,10 @@ void run (void)
   parameters ();
   init_grid (N);
   events_init ();
-  initial_conditions ();
-  boundary_b ();
-  boundary_h (h);
-  boundary_u (u, v);
+  init ();
+  boundary (b);
+  boundary (h);
+  boundary_uv (u, v);
   ke_psi (u, v);
 
   timer_t start = timer_start();
@@ -136,13 +134,13 @@ void run (void)
 #if 1
     advection_centered (h, u, v, hn);
     foreach() { h[] += hn[]*dt; }
-    boundary_h (h);
+    boundary (h);
     momentum (u, v, h, un, vn);
     foreach() {
       u[] += un[]*dt;
       v[] += vn[]*dt;
     }
-    boundary_u (u, v);
+    boundary_uv (u, v);
     ke_psi (u, v);
 #else /* unstable! */
     scalar f[3] = { u, v, h };

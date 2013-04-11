@@ -2,11 +2,12 @@
 #include "events.h"
 #include "wavelet.h"
 #include "mg.h"
+#include "boundary.h"
 
 scalar u = new scalar, v = new scalar, p = new scalar;
 scalar Sxx = new scalar, Syy = new scalar, Sxy = new scalar;
 
-// Default parameters, do not change them!! edit parameters.h instead
+// Default parameters
 // Viscosity
 double NU = 0.;
 // Maximum number of multigrid iterations
@@ -14,11 +15,9 @@ int NITERMAX = 100;
 // Tolerance on maximum divergence
 double TOLERANCE = 1e-3;
 // user-provided functions
-void parameters         (void);
-void initial_conditions (void);
-void boundary_p         (scalar p, int l);
-void boundary_u         (scalar u, scalar v);
-void end                (void);
+void parameters (void);
+void init       (void);
+void end        (void);
 
 double timestep ()
 {
@@ -117,9 +116,9 @@ void projection (scalar u, scalar v, scalar p,
   int i;
   for (i = 0; i < NITERMAX && (i < 1 || maxres > TOLERANCE); i++) {
     mg_cycle (p, res, dp,
-	      relax, boundary_p,
+	      relax, boundary_level,
 	      4, 0);
-    boundary_p (p, depth());
+    boundary_level (p, depth());
     maxres = residual (p, div, res);
   }
   if (i == NITERMAX)
@@ -137,10 +136,10 @@ void run (void)
   parameters ();
   init_grid (N);
   events_init ();
-  initial_conditions ();
-  boundary_u (u, v);
+  init ();
+  boundary_uv (u, v);
   projection (u, v, p, Sxx, Syy, Sxy);
-  boundary_u (u, v);
+  boundary_uv (u, v);
 
   timer_t start = timer_start();
   double t = 0;
@@ -149,13 +148,13 @@ void run (void)
     double dt = dtnext (t, timestep ());
     stresses ();
     advance (dt);
-    boundary_u (u, v);
+    boundary_uv (u, v);
     projection (u, v, p, Sxx, Syy, Sxy);
-    boundary_u (u, v);
+    boundary_uv (u, v);
     i++; t = tnext;
   }
   end ();
   timer_print (start, i, -1);
 
-  free_grid ();
+  free_grid();
 }

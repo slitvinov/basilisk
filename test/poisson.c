@@ -12,26 +12,26 @@ double solution (double x, double y)
   return sin(3.*pi*x)*sin(3.*pi*y);
 }
 
-void boundary (scalar v)
+void boundary_dirichlet (scalar v)
 {
   /* Dirichlet condition on all boundaries */
   foreach_boundary (right)
-    v[+1,0] = 2.*solution(x + delta/2., y) - v[];
+    v[ghost] = 2.*solution(x + delta/2., y) - v[];
   foreach_boundary (left)
-    v[-1,0] = 2.*solution(x - delta/2., y) - v[];
+    v[ghost] = 2.*solution(x - delta/2., y) - v[];
   foreach_boundary (top)
-    v[0,+1] = 2.*solution(x, y + delta/2.) - v[];
+    v[ghost] = 2.*solution(x, y + delta/2.) - v[];
   foreach_boundary (bottom)
-    v[0,-1] = 2.*solution(x, y - delta/2.) - v[];
+    v[ghost] = 2.*solution(x, y - delta/2.) - v[];
 }
 
 void homogeneous_boundary (scalar v, int l)
 {
   /* Homogeneous Dirichlet condition on all boundaries */
-  foreach_boundary_level (right, l)   v[+1,0] = - v[];
-  foreach_boundary_level (left, l)    v[-1,0] = - v[];
-  foreach_boundary_level (top, l)     v[0,+1] = - v[];
-  foreach_boundary_level (bottom, l)  v[0,-1] = - v[];
+  foreach_boundary_level (right, l)  v[ghost] = - v[];
+  foreach_boundary_level (left, l)   v[ghost] = - v[];
+  foreach_boundary_level (top, l)    v[ghost] = - v[];
+  foreach_boundary_level (bottom, l) v[ghost] = - v[];
 }
 
 void relax (scalar a, scalar b, int l)
@@ -54,7 +54,7 @@ int main(int argc, char ** argv)
 
   foreach()
     b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);
-  boundary (a);
+  boundary_dirichlet (a);
 
   #define NITER 15
   clock_t start = clock(), iter[NITER];
@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
     mg_cycle (a, res, dp,
 	      relax, homogeneous_boundary,
 	      nrelax, 0);
-    boundary (a);
+    boundary_dirichlet (a);
     residual (a, b, res);
     double max = 0.;
     foreach()

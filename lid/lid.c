@@ -12,39 +12,12 @@ void parameters()
   CFL = 0.8;
 }
 
-void initial_conditions()
+void init()
 {
-  /* default to zero */
-}
-
-void boundary_p (scalar p, int l)
-{
-  foreach_boundary_level (right, l)  p[1,0]  = p[];
-  foreach_boundary_level (left, l)   p[-1,0] = p[];
-  foreach_boundary_level (top, l)    p[0,1]  = p[];
-  foreach_boundary_level (bottom, l) p[0,-1] = p[];
-}
-
-void boundary_u (scalar u, scalar v)
-{
-  foreach_boundary (right) {
-    u[1,0] = 0.;
-    v[1,0] = - v[];
-  }
-  foreach_boundary (left) {
-    u[-1,0] = - u[1,0];
-    u[] = 0.;
-    v[-1,0] = - v[];
-  }
-  foreach_boundary (top) {
-    v[0,1] = 0.;
-    u[0,1] = 2. - u[];
-  }
-  foreach_boundary (bottom) {
-    v[0,-1] = - v[0,1];
-    v[] = 0.;
-    u[0,-1] = - u[];
-  }
+  u[top] = 2. - u[]; // u[] = 1. on top boundary
+  v[left] = - v[];   // no slip walls on all other boundaries
+  v[right] = - v[];
+  u[bottom] = - u[];
 }
 
 static double energy()

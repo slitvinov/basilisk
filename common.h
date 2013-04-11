@@ -22,7 +22,10 @@
 
 #define VARIABLES
 
-enum { right, left, top, bottom };
+enum { right, left, top, bottom, nboundary };
+// ghost cell coordinates for each direction
+int _ig[nboundary] = {1,-1,0,0}, 
+    _jg[nboundary] = {0,0,1,-1};
 
 typedef int scalar;
 typedef struct {
@@ -53,3 +56,18 @@ struct _Event {
 
 void * grid = NULL;       // the grid
 double tnext = undefined; // time of next event
+
+typedef void (* Boundary) (scalar v, int l);
+Boundary * _boundary[nboundary]; // boundary conditions for each direction/variable
+
+void init_boundaries (int nvar)
+{
+  for (int b = 0; b < nboundary; b++)
+    _boundary[b] = calloc (nvar, sizeof (Boundary));
+}
+
+void free_boundaries ()
+{
+  for (int b = 0; b < nboundary; b++)
+    free (_boundary[b]);
+}

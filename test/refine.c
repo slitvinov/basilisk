@@ -14,7 +14,7 @@ void refineiter ()
     fprintf (stderr, "\nwavelet refinement\n");
     foreach()
       h[] = exp(-(x*x + y*y)/(0.01));
-    symmetry (h);
+    boundary (h);
     update_halo (-1, h, h);
 
     restriction (h, h);

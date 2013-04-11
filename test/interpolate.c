@@ -11,7 +11,7 @@ int main (int argc, char ** argv)
 
     foreach()
       v[] = cos(2.*pi*x)*cos(2.*pi*y);
-    symmetry (v); /* fixme: does not work in corner cells yet */
+    boundary (v); /* fixme: does not work in corner cells yet */
 
     double emax = 0.;
     int ni = n + 7;
