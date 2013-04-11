@@ -269,6 +269,7 @@ void update_cache (void)
       n++;
     }
     q->nleaves = n;
+    q->index = realloc (q->index, sizeof (Index)*q->nleaves);
     q->dirty = false;
   }
 }
