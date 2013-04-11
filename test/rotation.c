@@ -9,7 +9,7 @@
 
 void boundary_f (scalar f)
 {
-  symmetry (f);
+  boundary (f);
 #if ADAPT
   restriction (f, f);
   update_halo (-1, f, f);
@@ -18,7 +18,7 @@ void boundary_f (scalar f)
 
 void boundary_u_v (scalar u, scalar v)
 {
-  uv_symmetry (u, v);
+  boundary_uv (u, v);
 #if ADAPT
   restriction_u_v (u, v);
   update_halo_u_v (-1, u, v);
