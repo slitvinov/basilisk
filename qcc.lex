@@ -35,6 +35,8 @@
   FILE * boundary = NULL;
   int inboundary;
   
+  int infunction, functionscope, functionpara;
+
   struct { char * v; int type, args, scope; } _varstack[100]; int varstack = -1;
   void varpush (const char * s, int type, int scope) {
     if (s[0] != '\0') {
@@ -186,6 +188,15 @@ WS  [ \t\v\n\f]
     nexpr[nevents] = inevent;
     inevent = 4;
   }
+  else if (infunction == 1 && scope == functionscope && para == functionpara) {
+    ECHO;
+    if (varstack >= 0)
+      fprintf (yyout, 
+	       "\n#undef val1\n"
+	       "#define val1(a,i,j) val(a,i,j)\n"
+	       "#line %d\n", line);
+    infunction = 2;
+  }
   else
     ECHO;
 }
@@ -201,6 +212,8 @@ WS  [ \t\v\n\f]
   varpop();
   if (foreachdim && scope == foreachdim)
     endforeachdim ();
+  if (infunction && scope == functionscope)
+    infunction = 0;
   if (inforeach && scope == foreachscope)
     endforeach ();
   else if (inevent && scope == eventscope)
@@ -234,6 +247,8 @@ end_foreach{ID}*{SP}*"()" {
     ECHO;
     endforeachdim ();
   }
+  if (infunction && scope == functionscope)
+    infunction = 0;
   if (inboundary) {
     ECHO;
     fputs ("\n  end_foreach_boundary_level();\n}\n\n", yyout);
@@ -321,7 +336,7 @@ new{WS}+vector {
 [a-zA-Z_0-9\.]+{WS}*\[{WS}*. {
   /* v[... */
   int found = 0;
-  if (inforeach && !inval) {
+  if ((inforeach || infunction) && !inval) {
     char * s = yytext;
     while (!strchr(" \t\v\n\f[.", *s)) s++;
     int i, len = s - yytext;
@@ -425,6 +440,12 @@ ghost {
     fputs ("ig,jg", yyout);
   else
     ECHO;
+}
+
+[(]{WS}*Point{WS}+point{WS}*, {
+  /* (Point, ... */
+  infunction = 1; functionscope = scope; functionpara = para;
+  ECHO; para++;
 }
 
 [\n]       ECHO;
@@ -568,6 +589,7 @@ int endfor (char * file, FILE * fin, FILE * fout)
   inevent = 0;
   foreachdim = 0;
   inboundary = 0;
+  infunction = 0;
   int ret = yylex();
   if (!ret) {
     if (scope > 0)
