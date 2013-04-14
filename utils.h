@@ -277,3 +277,73 @@ void boundary_uv (scalar u, scalar v)
       v[] = 0.;
     }
 }
+
+static double generic_limiter (double r, double beta)
+{
+  double v1 = min (r, beta), v2 = min (beta*r, 1.);
+  v1 = max (0., v1);
+  return max (v1, v2);
+}
+
+static double minmod1   (double r) { return generic_limiter (r, 1.);  }
+static double superbee1 (double r) { return generic_limiter (r, 2.);  }
+static double sweby1    (double r) { return generic_limiter (r, 1.5); }
+
+void centered (const scalar f, vector g)
+{
+  foreach()
+    foreach_dimension()
+      g.x[] = (f[1,0] - f[-1,0])/2.;
+}
+
+void minmod (const scalar f, vector g)
+{
+  foreach()
+    foreach_dimension()
+      g.x[] = minmod1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0]);
+}
+
+double theta = 1.3;
+
+static double minmod2 (double a, double b, double c)
+{
+  if (a > 0. && b > 0. && c > 0.)
+    return min(min(a,b),c);
+  if (a < 0. && b < 0. && c < 0.)
+    return max(max(a,b),c);
+  return 0.;
+}
+
+void generalized_minmod (const scalar f, vector g)
+{
+  /* see (A.6) in 
+   *    Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
+   *    Saint-Venant system. Mathematical Modelling and Numerical
+   *    Analysis, 36(3), 397-425.*/
+  foreach()
+    foreach_dimension()
+      g.x[] = minmod2 (theta*(f[] - f[-1,0]), 
+		       (f[1,0] - f[-1,0])/2., 
+		       theta*(f[1,0] - f[]));
+}
+
+void superbee (const scalar f, vector g)
+{
+  foreach()
+    foreach_dimension()
+      g.x[] = superbee1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0]);
+}
+
+void sweby (const scalar f, vector g)
+{
+  foreach()
+    foreach_dimension()
+      g.x[] = sweby1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0]);
+}
+
+void zero (const scalar f, vector g)
+{
+  foreach()
+    foreach_dimension()
+      g.x[] = 0.;
+}

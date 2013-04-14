@@ -10,17 +10,6 @@ void boundary_f         (scalar f);
 void boundary_u_v       (scalar u, scalar v);
 void boundary_gradient  (scalar fx, scalar fy);
 
-double generic_limiter (double r, double beta)
-{
-  double v1 = min (r, beta), v2 = min (beta*r, 1.);
-  v1 = max (0., v1);
-  return max (v1, v2);
-}
-
-double minmod   (double r) { return generic_limiter (r, 1.);  }
-double superbee (double r) { return generic_limiter (r, 2.);  }
-double sweby    (double r) { return generic_limiter (r, 1.5); }
-
 void gradient (const scalar f, vector g)
 {
   foreach()
