@@ -17,12 +17,12 @@ double L0 = 1.;
 double CFL = 0.5;
 
 #define DX    (L0*delta)
-#define XC(i) ((i + 0.5)*DX + X0)
-#define YC(j) ((j + 0.5)*DX + X0)
-#define XU(i) ((i)*DX + X0)
+#define XC(i) ((i + 0.5)*DX + X0*L0)
+#define YC(j) ((j + 0.5)*DX + X0*L0)
+#define XU(i) ((i)*DX + X0*L0)
 #define YU(j) YC(j)
 #define XV(i) XC(i)
-#define YV(j) ((j)*DX + X0)
+#define YV(j) ((j)*DX + X0*L0)
 
 #undef VARIABLES
 #define VARIABLES					       \
@@ -179,8 +179,8 @@ void timer_print (timer_t t, int i, int tnc)
     foreach(reduction(+:tnc)) tnc++;
     tnc *= i;
   }
-  fprintf (stderr, "# " GRIDNAME ", %d steps, %g CPU, %.4g real, %.3g points.steps/s\n",
-	   i, cpu, real, tnc/real);
+  printf ("# " GRIDNAME ", %d steps, %g CPU, %.4g real, %.3g points.steps/s\n",
+	  i, cpu, real, tnc/real);
 }
 
 typedef struct {
