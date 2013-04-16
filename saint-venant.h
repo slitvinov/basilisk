@@ -55,20 +55,22 @@ static double flux (Point point, int i, double dtmax)
   double wp  = w[i,0] - gw.x[i,0]/2., wm = w[i-1,0] + gw.x[i-1,0]/2.;
   double Bpm = (B[i,0] + B[i-1,0])/2.;
   double hp = wp - Bpm, hm = wm - Bpm;
-  double epsilon = sq(delta*L0)*sq(delta*L0);
+  double epsilon = 1e-6;
   double up = hu_over_h (hup, hp, epsilon), um = hu_over_h (hum, hm, epsilon);
   hup = hp*up; hum = hm*um;
   double cp = sqrt(G*hp), cm = sqrt(G*hm);
   double ap = max(up + cp, um + cm); ap = max(ap, 0.);
   double am = min(up - cp, um - cm); am = min(am, 0.);
-  fw.x[i,0] = (ap*hum - am*hup + (ap*am)*(wp - wm))/(ap - am); // (4.5) of [1]
-  fhu.x[i,0] = (ap*(hum*um + G*sq(hm)/2.) - am*(hup*up + G*sq(hp)/2.) + 
-		(ap*am)*(hup - hum))/(ap - am);
   double a = max(ap, -am);
-  double dt = CFL*L0*delta/a;
-  if (dt < dtmax)
-    fprintf (stderr, "%g %g %g %g %g\n", a, hp, hm, x, w[] - B[]);
-  return dt < dtmax ? dt : dtmax;
+  if (a > 0.) {
+    fw.x[i,0] = (ap*hum - am*hup + ap*am*(wp - wm))/(ap - am); // (4.5) of [1]
+    fhu.x[i,0] = (ap*(hum*um + G*sq(hm)/2.) - am*(hup*up + G*sq(hp)/2.) + 
+		  ap*am*(hup - hum))/(ap - am);
+    double dt = CFL*DX/a;
+    return dt < dtmax ? dt : dtmax;
+  }
+  fw.x[i,0] = fhu.x[i,0] = 0.;
+  return dtmax;
 }
 
 #define swap(a,b) { scalar tmp = a; a = b; b = tmp; }
@@ -78,15 +80,15 @@ static void update (scalar hu2, scalar hu1, scalar w2, scalar w1, double dt)
   foreach() {
     double Bp = (B[1,0] + B[])/2., Bm = (B[-1,0] + B[])/2.;
     double S = G*(w[] - (Bp + Bm)/2.)*(Bp - Bm); // (2.10) of [2]
-    hu1[] = hu2[] + dt*(fhu.x[] - fhu.x[1,0] - S)/(L0*delta);		  
+    hu1[] = hu2[] + dt*(fhu.x[] - fhu.x[1,0] - S)/DX;
   }
   foreach()
-    w1[] = w2[] + dt*(fw.x[] - fw.x[1,0])/(L0*delta);
+    w1[] = w2[] + dt*(fw.x[] - fw.x[1,0])/DX;
   boundary (w1);
   boundary (hu1);
 }
 
-double dt;
+double dt = 0.;
 
 void run (void)
 {
