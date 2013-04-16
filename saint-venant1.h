@@ -25,6 +25,100 @@ void init       (void);
 
 #define SQRT3 1.73205080756888
 
+/* kinetic(), kurganov() and hllc() are all Riemann solvers */
+
+void kinetic (double hL, double hR, double uL, double uR, double delta,
+	      double * fh, double * fhu, double * dtmax)
+{
+  double ci = sqrt(G*hL/2.);
+  double Mp = max(uL + ci*SQRT3, 0.);
+  double Mm = max(uL - ci*SQRT3, 0.);
+  double cig = ci/(6.*G*SQRT3);
+  *fh = cig*3.*(Mp*Mp - Mm*Mm);
+  *fhu = cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
+  if (Mp > 0.) {
+    double dt = CFL*delta/Mp;
+    if (dt < *dtmax)
+      *dtmax = dt;
+  }
+
+  ci = sqrt(G*hR/2.);
+  Mp = min(uR + ci*SQRT3, 0.);
+  Mm = min(uR - ci*SQRT3, 0.);
+  cig = ci/(6.*G*SQRT3);
+  *fh += cig*3.*(Mp*Mp - Mm*Mm);
+  *fhu += cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
+  if (Mm < 0.) {
+    double dt = CFL*delta/-Mm;
+    if (dt < *dtmax)
+      *dtmax = dt;
+  }
+}
+
+void kurganov (double hm, double hp, double um, double up, double delta,
+	       double * fh, double * fhu, double * dtmax)
+{
+  double cp = sqrt(G*hp), cm = sqrt(G*hm);
+  double ap = max(up + cp, um + cm); ap = max(ap, 0.);
+  double am = min(up - cp, um - cm); am = min(am, 0.);
+  double hum = hm*um, hup = hp*up;
+  double a = max(ap, -am);
+  if (a > 0.) {
+    *fh = (ap*hum - am*hup + ap*am*(hp - hm))/(ap - am); // (4.5) of [1]
+    *fhu = (ap*(hum*um + G*sq(hm)/2.) - am*(hup*up + G*sq(hp)/2.) + 
+	    ap*am*(hup - hum))/(ap - am);
+    double dt = CFL*delta/a;
+    if (dt < *dtmax)
+      *dtmax = dt;
+  }
+  else
+    *fh = *fhu = 0.;
+}
+
+void hllc (double hL, double hR, double uL, double uR, double delta,
+	   double * fh, double * fhu, double * dtmax)
+{
+  double cL = sqrt (G*hL), cR = sqrt (G*hR);
+  double ustar = (uL + uR)/2. + cL - cR;
+  double cstar = (cL + cR)/2. + (uL - uR)/4.;
+  double SL = hL == 0. ? uR - 2.*cR : min (uL - cL, ustar - cstar);
+  double SR = hR == 0. ? uL + 2.*cL : max (uR + cR, ustar + cstar);
+
+  if (0. <= SL) {
+    *fh = uL*hL;
+    *fhu = hL*(uL*uL + G*hL/2.);
+  }
+  else if (0. >= SR) {
+    *fh = uR*hR;
+    *fhu = hR*(uR*uR + G*hR/2.);
+  }
+  else {
+    double fhL = uL*hL;
+    double fhuL = hL*(uL*uL + G*hL/2.);
+    double fhR = uR*hR;
+    double fhuR = hR*(uR*uR + G*hR/2.);
+    *fh = (SR*fhL - SL*fhR + SL*SR*(hR - hL))/(SR - SL);
+    *fhu = (SR*fhuL - SL*fhuR + SL*SR*(hR*uR - hL*uL))/(SR - SL);
+#if 0
+    double SM = ((SL*hR*(uR - SR) - SR*hL*(uL - SL))/
+		  (hR*(uR - SR) - hL*(uL - SL)));
+    if (SL <= 0. && 0. <= SM)
+      f[V] = uL[V]*f[H];
+    else if (SM <= 0. && 0. <= SR)
+      f[V] = uR[V]*f[H];
+    else
+      assert (false);
+#endif
+  }
+
+  double a = max(fabs(SL), fabs(SR));
+  if (a > 0.) {
+    double dt = CFL*delta/a;
+    if (dt < *dtmax)
+      *dtmax = dt;
+  }
+}
+
 static double flux (Point point, int i, double dtmax)
 {
   VARIABLES;
@@ -46,36 +140,7 @@ static double flux (Point point, int i, double dtmax)
   double uR = etaR <= dry ? 0. : (hu[i-1,0] + ghu.x[i-1,0]/2.)/etaR;
   double hR = max(0., etaR + zbR - zbLR);
 
-  /* kinetic solver */
-  if (hL > dry) {
-    double ci = sqrt(G*hL/2.);
-    double Mp = max(uL + ci*SQRT3, 0.);
-    double Mm = max(uL - ci*SQRT3, 0.);
-    double cig = ci/(6.*G*SQRT3);
-    fh.x[i,0] = cig*3.*(Mp*Mp - Mm*Mm);
-    fhu.x[i,0] = cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
-    if (Mp > 0.) {
-      double dt = CFL*DX/Mp;
-      if (dt < dtmax)
-	dtmax = dt;
-    }
-  }
-  else
-    fh.x[i,0] = fhu.x[i,0] = 0.;
-
-  if (hR > dry) {
-    double ci = sqrt(G*hR/2.);
-    double Mp = min(uR + ci*SQRT3, 0.);
-    double Mm = min(uR - ci*SQRT3, 0.);
-    double cig = ci/(6.*G*SQRT3);
-    fh.x[i,0] += cig*3.*(Mp*Mp - Mm*Mm);
-    fhu.x[i,0] += cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
-    if (Mm < 0.) {
-      double dt = CFL*DX/-Mm;
-      if (dt < dtmax)
-	dtmax = dt;
-    }
-  }
+  kurganov (hL, hR, uL, uR, DX, &fh.x[i,0], &fhu.x[i,0], &dtmax);
 
   /* topographic source term */
   if (eta <= dry) eta = 0.;
