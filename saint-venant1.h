@@ -140,7 +140,7 @@ static double flux (Point point, int i, double dtmax)
   double uR = etaR <= dry ? 0. : (hu[i-1,0] + ghu.x[i-1,0]/2.)/etaR;
   double hR = max(0., etaR + zbR - zbLR);
 
-  kurganov (hL, hR, uL, uR, DX, &fh.x[i,0], &fhu.x[i,0], &dtmax);
+  kurganov (hR, hL, uR, uL, DX, &fh.x[i,0], &fhu.x[i,0], &dtmax);
 
   /* topographic source term */
   if (eta <= dry) eta = 0.;
@@ -156,8 +156,8 @@ static double flux (Point point, int i, double dtmax)
 static void update (scalar hu2, scalar hu1, scalar h2, scalar h1, double dt)
 {
   foreach() {
-    h1[] = h2[] - dt*(fh.x[] - fh.x[1,0])/DX;
-    hu1[] = hu2[] - dt*(fhu.x[] - fhu.x[1,0] + Sb.x[])/DX;
+    h1[] = h2[] + dt*(fh.x[] - fh.x[1,0])/DX;
+    hu1[] = hu2[] + dt*(fhu.x[] - fhu.x[1,0] + Sb.x[])/DX;
     Sb.x[] = 0.;
   }
   boundary (h1);
