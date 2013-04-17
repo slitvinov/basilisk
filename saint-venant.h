@@ -98,8 +98,10 @@ void run (void)
   events_init();
   init();
   boundary (hu);
-  boundary (w);
   boundary (B);
+  foreach()
+    w[] = max(w[], (B[-1,0] + 2.*B[] + B[1,0])/4.);
+  boundary (w);
 
   timer_t start = timer_start();
   double t = 0.;

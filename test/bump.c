@@ -3,25 +3,21 @@
 
 void parameters()
 {
-  //  gradient = generalized_minmod; theta = 1.;
-  N = 200;
-  CFL = 0.5;
+  N = 500;
 }
 
 void init()
 {
   foreach() {
-    double epsilon = 1e-5;
+    double epsilon = 1e-2;
     w[] = 1. + epsilon*(-0.4 < x && x < -0.3);
     B[] = 0.25*(cos(pi*x/0.1) + 1.)*(fabs(x) < 0.1);
   }
 }
 
 event (t = 0.7) {
-  fprintf (stderr, "t: %g dt: %g\n", t, dt);
   foreach()
-    printf ("%g %g %.12f %g %g %g\n", x, y, w[], hu[], fhu.x[], fw.x[]);
-  printf ("\n");
+    fprintf (stderr, "%g %g %g %g\n", x, w[], hu[], B[]);
 }
 
 int main() { run(); }
