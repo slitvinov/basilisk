@@ -28,9 +28,14 @@ int _ig[nboundary] = {1,-1,0,0},
     _jg[nboundary] = {0,0,1,-1};
 
 typedef int scalar;
+
 typedef struct {
   scalar x, y;
 } vector;
+
+typedef struct {
+  vector x, y;
+} tensor;
 
 #define val(a,k,l) data(k,l)[a]
 
@@ -57,7 +62,7 @@ struct _Event {
 void * grid = NULL;       // the grid
 double tnext = undefined; // time of next event
 
-typedef void (* Boundary) (scalar v, int l);
+typedef void (* Boundary) (int l);
 Boundary * _boundary[nboundary]; // boundary conditions for each direction/variable
 
 void init_boundaries (int nvar)

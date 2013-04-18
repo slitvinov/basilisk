@@ -39,15 +39,18 @@ int main (int argc, char * argv[])
     fprintf (gnuplot, "%s\n", commands[i]);
   signal (SIGINT, cleanup);
   while (fread (&fn, sizeof(float), 1, stdin) == 1) {
+    int n = fn;
+    float * v = malloc (sizeof (float)*(n + 1));
+    if (v == NULL)
+      break;
     char fname[] = ".qplotXXXXXX";
-    int fd = mkstemp (fname), n = fn, nr;
+    int fd = mkstemp (fname), nr;
     if (fd < 0) {
       perror ("qplot: could not create temporary file: ");
       return 1;
     }
     FILE * fp = fdopen (fd, "w");
     fwrite (&fn, sizeof(float), 1, fp);
-    float * v = malloc (sizeof (float)*(n + 1));
     if ((nr = fread (v, sizeof (float), n, stdin)) != n) {
       fprintf (stderr, "qplot: expecting %d y-values only got %d\n", n, nr);
       remove (fname);

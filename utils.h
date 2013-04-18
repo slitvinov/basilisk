@@ -226,7 +226,7 @@ stats statsf (scalar f)
 static bool boundary_var (int b, scalar v, int l)
 {
   if (_boundary[b][v]) {
-    (* _boundary[b][v]) (v, l);
+    (* _boundary[b][v]) (l);
     return true;
   }
   return false;

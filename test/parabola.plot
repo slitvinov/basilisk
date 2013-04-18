@@ -28,7 +28,7 @@ reset
 set key top right
 set ylabel 'u0'
 set xlabel 'Time'
-plot u0(x) t 'Analytical', '< grep ^s parabola.out' u 2:(-$3) every 2 w p t 'Numerical'
+plot u0(x) t 'Analytical', '< grep ^s parabola.out' u 2:3 every 2 w p t 'Numerical'
 
 if (batch) set term pngcairo enhanced; set output "parabola_convergence.png"; else pause -1;
 reset

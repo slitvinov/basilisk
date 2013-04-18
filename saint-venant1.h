@@ -1,14 +1,19 @@
 #include "utils.h"
 #include "events.h"
 
-scalar hu = new scalar, h = new scalar, zb = new scalar;
-scalar hu1 = new scalar, h1 = new scalar;
+scalar h = new scalar, zb = new scalar;
+vector q = new vector;
+// storage for predictor/corrector
+scalar h1 = new scalar;
+vector q1 = new vector;
 // topographic source term
 vector Sb = new vector;
-// gradients of hu, h, zb
-vector ghu = new vector, gh = new vector, gzb = new vector;
+// gradients
+vector gh = new vector, gzb = new vector;
+tensor gq = new tensor;
 // fluxes
-vector fhu = new vector, fh = new vector;
+vector fh = new vector;
+tensor fq = new tensor;
 
 #include "boundary.h"
 
@@ -18,150 +23,91 @@ double G = 1.;
 // gradient
 void (* gradient) (const scalar, vector) = generalized_minmod;
 // dry
-double dry = 1e-6;
+double dry = 1e-10;
 // user-provided functions
 void parameters (void);
 void init       (void);
 
-#define SQRT3 1.73205080756888
-
-/* kinetic(), kurganov() and hllc() are all Riemann solvers */
-
-void kinetic (double hL, double hR, double uL, double uR, double delta,
-	      double * fh, double * fhu, double * dtmax)
-{
-  double ci = sqrt(G*hL/2.);
-  double Mp = max(uL + ci*SQRT3, 0.);
-  double Mm = max(uL - ci*SQRT3, 0.);
-  double cig = ci/(6.*G*SQRT3);
-  *fh = cig*3.*(Mp*Mp - Mm*Mm);
-  *fhu = cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
-  if (Mp > 0.) {
-    double dt = CFL*delta/Mp;
-    if (dt < *dtmax)
-      *dtmax = dt;
-  }
-
-  ci = sqrt(G*hR/2.);
-  Mp = min(uR + ci*SQRT3, 0.);
-  Mm = min(uR - ci*SQRT3, 0.);
-  cig = ci/(6.*G*SQRT3);
-  *fh += cig*3.*(Mp*Mp - Mm*Mm);
-  *fhu += cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
-  if (Mm < 0.) {
-    double dt = CFL*delta/-Mm;
-    if (dt < *dtmax)
-      *dtmax = dt;
-  }
-}
-
-void kurganov (double hm, double hp, double um, double up, double delta,
-	       double * fh, double * fhu, double * dtmax)
-{
-  double cp = sqrt(G*hp), cm = sqrt(G*hm);
-  double ap = max(up + cp, um + cm); ap = max(ap, 0.);
-  double am = min(up - cp, um - cm); am = min(am, 0.);
-  double hum = hm*um, hup = hp*up;
-  double a = max(ap, -am);
-  if (a > 0.) {
-    *fh = (ap*hum - am*hup + ap*am*(hp - hm))/(ap - am); // (4.5) of [1]
-    *fhu = (ap*(hum*um + G*sq(hm)/2.) - am*(hup*up + G*sq(hp)/2.) + 
-	    ap*am*(hup - hum))/(ap - am);
-    double dt = CFL*delta/a;
-    if (dt < *dtmax)
-      *dtmax = dt;
-  }
-  else
-    *fh = *fhu = 0.;
-}
-
-void hllc (double hL, double hR, double uL, double uR, double delta,
-	   double * fh, double * fhu, double * dtmax)
-{
-  double cL = sqrt (G*hL), cR = sqrt (G*hR);
-  double ustar = (uL + uR)/2. + cL - cR;
-  double cstar = (cL + cR)/2. + (uL - uR)/4.;
-  double SL = hL == 0. ? uR - 2.*cR : min (uL - cL, ustar - cstar);
-  double SR = hR == 0. ? uL + 2.*cL : max (uR + cR, ustar + cstar);
-
-  if (0. <= SL) {
-    *fh = uL*hL;
-    *fhu = hL*(uL*uL + G*hL/2.);
-  }
-  else if (0. >= SR) {
-    *fh = uR*hR;
-    *fhu = hR*(uR*uR + G*hR/2.);
-  }
-  else {
-    double fhL = uL*hL;
-    double fhuL = hL*(uL*uL + G*hL/2.);
-    double fhR = uR*hR;
-    double fhuR = hR*(uR*uR + G*hR/2.);
-    *fh = (SR*fhL - SL*fhR + SL*SR*(hR - hL))/(SR - SL);
-    *fhu = (SR*fhuL - SL*fhuR + SL*SR*(hR*uR - hL*uL))/(SR - SL);
-#if 0
-    double SM = ((SL*hR*(uR - SR) - SR*hL*(uL - SL))/
-		  (hR*(uR - SR) - hL*(uL - SL)));
-    if (SL <= 0. && 0. <= SM)
-      f[V] = uL[V]*f[H];
-    else if (SM <= 0. && 0. <= SR)
-      f[V] = uR[V]*f[H];
-    else
-      assert (false);
-#endif
-  }
-
-  double a = max(fabs(SL), fabs(SR));
-  if (a > 0.) {
-    double dt = CFL*delta/a;
-    if (dt < *dtmax)
-      *dtmax = dt;
-  }
-}
+#include "riemann.h"
 
 static double flux (Point point, int i, double dtmax)
 {
-  VARIABLES;
-  double eta = h[i,0], etan = h[i-1,0];
-  if (eta <= dry && etan <= dry) {
-    fh.x[i,0] = fhu.x[i,0] = 0.;
-    return dtmax;
+  foreach_dimension() {
+    VARIABLES;
+    double eta = h[i,0], etan = h[i-1,0];
+    if (eta <= dry && etan <= dry)
+      fh.x[i,0] = fq.x.x[i,0] = fq.y.x[i,0] = 0.;
+    else {
+      double zbL = zb[i,0] - gzb.x[i,0]/2.;
+      double zbR = zb[i-1,0] + gzb.x[i-1,0]/2.;
+      double zbLR = max(zbL, zbR);
+      
+      double etaL = eta <= dry ? 0. : eta - gh.x[i,0]/2.;
+      double uL, vL;
+      if (etaL > dry) {
+	uL = (q.x[i,0] - gq.x.x[i,0]/2.)/etaL;
+	vL = (q.y[i,0] - gq.y.x[i,0]/2.)/etaL;
+      }
+      else
+	uL = vL = 0.;
+      double hL = max(0., etaL + zbL - zbLR);
+      
+      double etaR = etan <= dry ? 0. : etan + gh.x[i-1,0]/2.;
+      double uR, vR;
+      if (etaR > dry) {
+	uR = (q.x[i-1,0] + gq.x.x[i-1,0]/2.)/etaR;
+	vR = (q.y[i-1,0] + gq.y.x[i-1,0]/2.)/etaR;
+      }
+      else
+	uR = vR = 0.;
+      double hR = max(0., etaR + zbR - zbLR);
+      
+      kurganov (hR, hL, uR, uL, DX, &fh.x[i,0], &fq.x.x[i,0], &dtmax);
+      fq.y.x[i,0] = (fh.x[i,0] > 0. ? vR : vL)*fh.x[i,0];
+
+      /* topographic source term */
+      if (eta <= dry) eta = 0.;
+      if (etan <= dry) etan = 0.;
+      Sb.x[i,0] -= G/2.*(sq(hL) - sq(etaL) + (etaL + eta)*gzb.x[i,0]/2.);
+      Sb.x[i-1,0] += G/2.*(sq(hR) - sq(etaR) - (etaR + etan)*gzb.x[i-1,0]/2.);
+    }
   }
-  
-  double zbL = zb[i,0] - gzb.x[i,0]/2.;
-  double zbR = zb[i-1,0] + gzb.x[i-1,0]/2.;
-  double zbLR = max(zbL, zbR);
-
-  double etaL = eta <= dry ? 0. : eta - gh.x[i,0]/2.;
-  double uL = etaL <= dry ? 0. : (hu[i,0] - ghu.x[i,0]/2.)/etaL;
-  double hL = max(0., etaL + zbL - zbLR);
-    
-  double etaR = etan <= dry ? 0. : etan + gh.x[i-1,0]/2.;
-  double uR = etaR <= dry ? 0. : (hu[i-1,0] + ghu.x[i-1,0]/2.)/etaR;
-  double hR = max(0., etaR + zbR - zbLR);
-
-  kurganov (hR, hL, uR, uL, DX, &fh.x[i,0], &fhu.x[i,0], &dtmax);
-
-  /* topographic source term */
-  if (eta <= dry) eta = 0.;
-  if (etan <= dry) etan = 0.;
-  Sb.x[i,0] -= G/2.*(sq(hL) - sq(etaL) + (etaL + eta)*gzb.x[i,0]/2.);
-  Sb.x[i-1,0] += G/2.*(sq(hR) - sq(etaR) - (etaR + etan)*gzb.x[i-1,0]/2.);
-
   return dtmax;
 }
 
+#define vswap(a,b) { vector tmp = a; a = b; b = tmp; }
 #define swap(a,b) { scalar tmp = a; a = b; b = tmp; }
 
-static void update (scalar hu2, scalar hu1, scalar h2, scalar h1, double dt)
+static void gradients ()
+{
+  (* gradient) (q.x, gq.x); boundary (gq.x.x); boundary (gq.x.y);
+  (* gradient) (q.y, gq.y); boundary (gq.y.x); boundary (gq.y.y);
+  (* gradient) (h, gh); boundary (gh.x); boundary (gh.y);
+}
+
+static double fluxes (double dt)
+{
+  foreach_boundary (right)
+    dt = flux (point, 1, dt);
+  foreach_boundary (top)
+    dt = flux (point, 1, dt);
+  foreach (reduction(min:dt))
+    dt = flux (point, 0, dt);
+  return dt;
+}
+
+static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
 {
   foreach() {
-    h1[] = h2[] + dt*(fh.x[] - fh.x[1,0])/DX;
-    hu1[] = hu2[] + dt*(fhu.x[] - fhu.x[1,0] + Sb.x[])/DX;
-    Sb.x[] = 0.;
+    h1[] = h2[] + dt*(fh.x[] - fh.x[1,0] + fh.y[] - fh.y[0,1])/DX;
+    foreach_dimension() {
+      q1.x[] = q2.x[] + dt*(fq.x.x[] - fq.x.x[1,0] + fq.x.y[] - fq.x.y[0,1] + Sb.x[])/DX;
+      Sb.x[] = 0.;
+    }
   }
   boundary (h1);
-  boundary (hu1);
+  foreach_dimension()
+    boundary (q1.x);
 }
 
 double dt = 0.;
@@ -173,7 +119,10 @@ void run (void)
 
   events_init();
   init();
-  boundary (hu);
+  foreach_dimension()
+    boundary (q.x);
+  foreach()
+    h[] = max(h[], 0.);
   boundary (h);
   boundary (zb);
 
@@ -181,37 +130,30 @@ void run (void)
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    (* gradient) (zb, gzb); boundary (gzb.x);
+    (* gradient) (zb, gzb); boundary (gzb.x); boundary (gzb.y);
 
-    /* 2nd-order predictor-corrector */
-    
-    /* predictor */
-    (* gradient) (hu, ghu); boundary (ghu.x);
-    (* gradient) (h, gh); boundary (gh.x);
+    gradients();
+    dt = dtnext (t, fluxes (DT));
 
-    dt = DT;
-    foreach()
-      dt = flux (point, 0, dt);
-    foreach_boundary(right)
-      dt = flux (point, 1, dt);
-    dt = dtnext (t, dt);
+    if (gradient == zero)
+      /* 1st-order time-integration for 1st-order spatial
+	 discretisation */
+      update (q, q, h, h, dt);
+    else {
+      /* 2nd-order time-integration */
+      /* predictor */
+      update (q, q1, h, h1, dt/2.);
+      
+      vswap (q, q1);
+      swap (h, h1);
+      
+      /* corrector */
+      gradients();
+      fluxes (dt);
+      update (q1, q, h1, h, dt);
+    }
 
-    update (hu, hu1, h, h1, dt/2.);
-    swap (hu, hu1);
-    swap (h, h1);
-
-    /* corrector */
-    (* gradient) (hu, ghu); boundary (ghu.x);
-    (* gradient) (h, gh); boundary (gh.x);
-
-    foreach()
-      flux (point, 0, dt);
-    foreach_boundary(right)
-      flux (point, 1, dt);
-
-    update (hu1, hu, h1, h, dt);
-
-    foreach() tnc++;
+    foreach(reduction(+:tnc)) tnc++;
     i++; t = tnext;
   }
   timer_print (start, i, tnc);

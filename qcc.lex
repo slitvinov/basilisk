@@ -111,12 +111,16 @@
     yyout = foreachdimfp;
     FILE * fp = fopen (foreachdimname, "r");
     writefile (fp, 'x', 'y');
-    fprintf (yyout, 
-	     "\n#undef val1\n"
-	     "#define val1(a,i,j) val(a,j,i)\n"
+    fprintf (yyout,
+	     "\n#undef val\n"
+	     "#define val(a,k,l) data(l,k)[a]\n"
 	     "#line %d\n", foreachdimline);
     writefile (fp, 'y', 'x');
     fclose (fp);
+    fprintf (yyout,
+	     "\n#undef val\n"
+	     "#define val(a,k,l) data(k,l)[a]\n"
+	     "#line %d\n", line);
   }
 
   void endevent() {
@@ -166,11 +170,6 @@ WS  [ \t\v\n\f]
     while ((c = fgetc (fp)) != EOF)
       fputc (c, yyout);
     fclose (fp);
-    if (varstack >= 0)
-      fprintf (yyout, 
-	       "\n#undef val1\n"
-	       "#define val1(a,i,j) val(a,i,j)\n"
-	       "#line %d\n", line);
     inforeach = 2;
   }
   else if (inevent > 0 && inevent < 4 && 
@@ -187,15 +186,6 @@ WS  [ \t\v\n\f]
     assert (nevents < 100);
     nexpr[nevents] = inevent;
     inevent = 4;
-  }
-  else if (infunction == 1 && scope == functionscope && para == functionpara) {
-    ECHO;
-    if (varstack >= 0)
-      fprintf (yyout, 
-	       "\n#undef val1\n"
-	       "#define val1(a,i,j) val(a,i,j)\n"
-	       "#line %d\n", line);
-    infunction = 2;
   }
   else
     ECHO;
@@ -281,13 +271,15 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
-[^{ID}]{WS}*(scalar|vector){WS}+[a-zA-Z0-9\[\]]+ {
+[^{ID}]{WS}*(scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+ {
   ECHO;
   if (yytext[0] == '(') para++;
   char * var = strstr(yytext,"scalar");
   vartype = variable;
   if (!var) {
     var = strstr(yytext,"vector");
+    if (!var)
+      var = strstr(yytext,"tensor");
     vartype = vector;
   }
   var = &var[7];
@@ -327,6 +319,11 @@ new{WS}+vector {
   nvar += 2;
 }
 
+new{WS}+tensor {
+  fprintf (yyout, "{{%d,%d},{%d,%d}}", nvar, nvar + 1, nvar + 2, nvar + 3);
+  nvar += 4;
+}
+
 [^{ID}]val{WS}*[(]    {
   if (yytext[0] == '(') para++;
   inval = 1; invalpara = para++;
@@ -349,9 +346,9 @@ new{WS}+vector {
 	*s = '\0';
 	if (yytext[yyleng-1] == ']')
 	  /* v[] */
-	  fprintf (yyout, "val1(%s,0,0)", yytext);
+	  fprintf (yyout, "val(%s,0,0)", yytext);
 	else {
-	  fprintf (yyout, "val1(%s", yytext);
+	  fprintf (yyout, "val(%s", yytext);
 	  if (_varstack[i].args > 0) {
 	    /* v[...][... */
 	    fputc ('[', yyout);
@@ -416,19 +413,26 @@ new{WS}+vector {
       char * b = s;
       while (!strchr(" \t\v\n\f]", *s)) s++;
       *s++ = '\0';
-      fprintf (yyout, "_boundary[%s][%s] = _%s%s;", b, yytext, yytext, b);
+      char * func = malloc ((strlen (yytext) + 1)*sizeof (char));
+      strcpy (func, yytext);
+      char * s1 = func; 
+      while (*s1 != '\0') {
+	if (*s1 == '.')
+	  *s1 = '_';
+	s1++;
+      }
+      fprintf (yyout, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
       FILE * tmp = yyout; yyout = boundary; boundary = tmp;
       fprintf (yyout,
-	       "static void _%s%s (scalar %s, int l) {\n"
+	       "static void _%s%s (int l) {\n"
 	       "  foreach_boundary_level (%s, l)\n"
-	       "#undef val1\n"
-	       "#define val1(a,i,j) val(a,i,j)\n"
 	       "#line %d \"%s\"\n"
 	       "    val(%s,ig,jg) =",
-	       yytext, b, yytext, 
+	       func, b,
 	       b,
 	       line, fname,
 	       yytext);
+      free (func);
       inboundary = inforeach = inforeach_boundary = 1;
     }
   if (!found)
@@ -491,16 +495,12 @@ ghost {
 }
 
 foreach_dimension{WS}*[(]{WS}*[)] {
-  if (!inforeach)
-    ECHO;
-  else {
-    foreachdimline = line;
-    foreachdim = scope; foreachdimpara = para;
-    foreachdimfp = yyout;
-    strcpy (foreachdimname, dir);
-    strcat (foreachdimname, "/dimension.h");
-    yyout = fopen (foreachdimname, "w");
-  }
+  foreachdimline = line;
+  foreachdim = scope; foreachdimpara = para;
+  foreachdimfp = yyout;
+  strcpy (foreachdimname, dir);
+  strcat (foreachdimname, "/dimension.h");
+  yyout = fopen (foreachdimname, "w");
 }
 
 reduction[(](min|max):{ID}+[)] {

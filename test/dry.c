@@ -8,7 +8,7 @@ void parameters()
 
 void init()
 {
-  hu[left] = - hu[];
+  q.x[left] = - q.x[];
   h[right] = 0.;
   foreach() {
     zb[] = 0.25*(cos(pi*x/0.1) + 1.)*(fabs(x) < 0.1);
@@ -18,7 +18,7 @@ void init()
 
 event (t = {0.5, 0.75, 1, 3, 50}) {
   foreach()
-    fprintf (stderr, "%g %g %g %g\n", x, h[], hu[], zb[]);
+    fprintf (stderr, "%g %g %g %g\n", x, h[], q.x[], zb[]);
   fprintf (stderr, "\n");
 }
 

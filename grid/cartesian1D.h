@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #define I     (point.i - 1)
-#define J     0
+#define J     ((point.n - 1)/2.)
 #define DELTA (1./point.n)
 
 typedef struct {
@@ -11,7 +11,7 @@ typedef struct {
   int i, n;
 } Point;
 
-#define data(k,l) ((double *)&point.data[(point.i + k)*datasize + (l - l)])
+#define data(k,l) ((double *)&point.data[(point.i + k)*datasize + (l) - (l)])
 
 #define foreach(clause)							\
   OMP_PARALLEL()							\
