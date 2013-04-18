@@ -154,7 +154,7 @@ void run (void)
       update (q1, q, h1, h, dt);
     }
 
-    foreach(reduction(+:tnc)) tnc++;
+    foreach (reduction(+:tnc)) tnc++;
     i++; t = tnext;
   }
   timer_print (start, i, tnc);

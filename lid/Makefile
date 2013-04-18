@@ -3,7 +3,7 @@ CFLAGS += -std=c99 -O2 -MD -g -Wall
 lid.log: lid
 	./lid 2> lid.log | ../qplot lid.qplot
 	gnuplot -e "set term pngcairo; set output 'lid.png';" lid.plot
-	-diff lid.log lid.ref
+	diff lid.log lid.ref
 
 -include lid.d
 lid: lid.c Makefile ../qcc

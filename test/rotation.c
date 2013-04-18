@@ -52,7 +52,7 @@ void initial_conditions ()
     f[] = bump(x,y);
 }
 
-event (i++) {
+int event (i++) {
 #if ADAPT
   scalar w = new scalar;
   restriction (f, f);
@@ -107,7 +107,7 @@ event (i++) {
 /*   output_matrix (w, N, stdout, false); */
 /* } */
 
-event (i++) {
+int event (i++) {
   foreach() {
     u[] = -8.*yu;
     v[] =  8.*xv;
@@ -115,7 +115,7 @@ event (i++) {
   boundary_u_v (u, v);
 }
 
-event (t = {0,end}) {
+int event (t = {0,end}) {
   double sum = 0., min = 1e100, max = -1e100;
   foreach(reduction(+:sum) reduction(max:max) reduction(min:min)) {
     sum += f[]*delta*delta;
@@ -125,7 +125,7 @@ event (t = {0,end}) {
   fprintf (stderr, "# %f %.12f %g %g\n", t, sum, min, max);  
 }
 
-event (t = end) {
+int event (t = end) {
   double max = 0., norm1 = 0., norm2 = 0., area = 0.;
   scalar e = new scalar;
   foreach(reduction(max:max) reduction(+:norm1) reduction(+:norm2) reduction(+:area)) {

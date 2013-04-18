@@ -2,10 +2,11 @@
 #include "events.h"
 #include "wavelet.h"
 #include "mg.h"
-#include "boundary.h"
 
 scalar u = new scalar, v = new scalar, p = new scalar;
 scalar Sxx = new scalar, Syy = new scalar, Sxy = new scalar;
+
+#include "boundary.h"
 
 // Default parameters
 // Viscosity

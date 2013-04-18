@@ -64,7 +64,7 @@ void initial_conditions ()
     f[] = bump(x,y);
 }
 
-event (i++) {
+int event (i++) {
 #if ADAPT
   scalar w = new scalar;
   restriction (f, f);
@@ -117,7 +117,7 @@ event (i++) {
 /*   output_matrix (w, N, stdout, false); */
 /* } */
 
-event (i++) {
+int event (i++) {
   foreach() {
     u[] = 1.5*sin(2.*pi*t/5.)*sin((xu + 0.5)*pi)*cos((yu + 0.5)*pi);
     v[] = - 1.5*sin(2.*pi*t/5.)*cos((xv + 0.5)*pi)*sin((yv + 0.5)*pi);
@@ -125,12 +125,12 @@ event (i++) {
   boundary_u_v (u, v);
 }
 
-event (t = {0,5}) {
+int event (t = {0,5}) {
   stats s = statsf (f);
   fprintf (stderr, "# %f %.12f %g %g\n", t, s.sum, s.min, s.max);
 }
 
-event (t = 5) {
+int event (t = 5) {
   scalar e = new scalar;
   foreach()
     e[] = f[] - bump(x,y);
