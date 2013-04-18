@@ -38,25 +38,26 @@ static double flux (Point point, int i, double dtmax)
     if (eta <= dry && etan <= dry)
       fh.x[i,0] = fq.x.x[i,0] = fq.y.x[i,0] = 0.;
     else {
-      double zbL = zb[i,0] - gzb.x[i,0]/2.;
-      double zbR = zb[i-1,0] + gzb.x[i-1,0]/2.;
+      delta /= 2.;
+      double zbL = zb[i,0] - delta*gzb.x[i,0];
+      double zbR = zb[i-1,0] + delta*gzb.x[i-1,0];
       double zbLR = max(zbL, zbR);
       
-      double etaL = eta <= dry ? 0. : eta - gh.x[i,0]/2.;
+      double etaL = eta <= dry ? 0. : eta - delta*gh.x[i,0];
       double uL, vL;
       if (etaL > dry) {
-	uL = (q.x[i,0] - gq.x.x[i,0]/2.)/etaL;
-	vL = (q.y[i,0] - gq.y.x[i,0]/2.)/etaL;
+	uL = (q.x[i,0] - delta*gq.x.x[i,0])/etaL;
+	vL = (q.y[i,0] - delta*gq.y.x[i,0])/etaL;
       }
       else
 	uL = vL = 0.;
       double hL = max(0., etaL + zbL - zbLR);
       
-      double etaR = etan <= dry ? 0. : etan + gh.x[i-1,0]/2.;
+      double etaR = etan <= dry ? 0. : etan + delta*gh.x[i-1,0];
       double uR, vR;
       if (etaR > dry) {
-	uR = (q.x[i-1,0] + gq.x.x[i-1,0]/2.)/etaR;
-	vR = (q.y[i-1,0] + gq.y.x[i-1,0]/2.)/etaR;
+	uR = (q.x[i-1,0] + delta*gq.x.x[i-1,0])/etaR;
+	vR = (q.y[i-1,0] + delta*gq.y.x[i-1,0])/etaR;
       }
       else
 	uR = vR = 0.;
@@ -68,8 +69,8 @@ static double flux (Point point, int i, double dtmax)
       /* topographic source term */
       if (eta <= dry) eta = 0.;
       if (etan <= dry) etan = 0.;
-      Sb.x[i,0] -= G/2.*(sq(hL) - sq(etaL) + (etaL + eta)*gzb.x[i,0]/2.);
-      Sb.x[i-1,0] += G/2.*(sq(hR) - sq(etaR) - (etaR + etan)*gzb.x[i-1,0]/2.);
+      Sb.x[i,0] -= G/2.*(sq(hL) - sq(etaL) + delta*(etaL + eta)*gzb.x[i,0]);
+      Sb.x[i-1,0] += G/2.*(sq(hR) - sq(etaR) - delta*(etaR + etan)*gzb.x[i-1,0]);
     }
   }
   return dtmax;

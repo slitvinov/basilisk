@@ -293,14 +293,14 @@ void centered (const scalar f, vector g)
 {
   foreach()
     foreach_dimension()
-      g.x[] = (f[1,0] - f[-1,0])/2.;
+      g.x[] = (f[1,0] - f[-1,0])/2./delta;
 }
 
 void minmod (const scalar f, vector g)
 {
   foreach()
     foreach_dimension()
-      g.x[] = minmod1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0]);
+      g.x[] = minmod1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
 }
 
 double theta = 1.3;
@@ -324,21 +324,21 @@ void generalized_minmod (const scalar f, vector g)
     foreach_dimension()
       g.x[] = minmod2 (theta*(f[] - f[-1,0]), 
 		       (f[1,0] - f[-1,0])/2., 
-		       theta*(f[1,0] - f[]));
+		       theta*(f[1,0] - f[]))/delta;
 }
 
 void superbee (const scalar f, vector g)
 {
   foreach()
     foreach_dimension()
-      g.x[] = superbee1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0]);
+      g.x[] = superbee1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
 }
 
 void sweby (const scalar f, vector g)
 {
   foreach()
     foreach_dimension()
-      g.x[] = sweby1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0]);
+      g.x[] = sweby1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
 }
 
 void zero (const scalar f, vector g)

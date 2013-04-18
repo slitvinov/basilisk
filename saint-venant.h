@@ -34,10 +34,10 @@ static void positivity()
 {
   /* ensure positivity of reconstruction: see section 2.2 of [2] */
   foreach() {
-    if (w[] + gw.x[]/2. < (B[1,0] + B[])/2.)
-      gw.x[] = B[1,0] + B[] - 2.*w[]; // (2.15) of [2]
-    else if (w[] - gw.x[]/2. < (B[-1,0] + B[])/2.)
-      gw.x[] = 2.*w[] - B[-1,0] - B[]; // (2.16) of [2]
+    if (w[] + delta*gw.x[]/2. < (B[1,0] + B[])/2.)
+      gw.x[] = (B[1,0] + B[] - 2.*w[])/delta; // (2.15) of [2]
+    else if (w[] - delta*gw.x[]/2. < (B[-1,0] + B[])/2.)
+      gw.x[] = (2.*w[] - B[-1,0] - B[])/delta; // (2.16) of [2]
   }
 }
 
@@ -51,8 +51,9 @@ static double hu_over_h (double hu, double h, double epsilon)
 static double flux (Point point, int i, double dtmax)
 {
   VARIABLES;
-  double hup = hu[i,0] - ghu.x[i,0]/2., hum = hu[i-1,0] + ghu.x[i-1,0]/2.;
-  double wp  = w[i,0] - gw.x[i,0]/2., wm = w[i-1,0] + gw.x[i-1,0]/2.;
+  delta /= 2.;
+  double hup = hu[i,0] - delta*ghu.x[i,0], hum = hu[i-1,0] + delta*ghu.x[i-1,0];
+  double wp  = w[i,0] - delta*gw.x[i,0], wm = w[i-1,0] + delta*gw.x[i-1,0];
   double Bpm = (B[i,0] + B[i-1,0])/2.;
   double hp = wp - Bpm, hm = wm - Bpm;
   double epsilon = 1e-6;
