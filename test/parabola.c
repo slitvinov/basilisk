@@ -30,7 +30,7 @@ void init()
   }
 }
 
-event(i++) {
+int event (i++) {
   // linear friction (implicit scheme)
   foreach()
     q.x[] /= 1. + tau*dt;
@@ -42,7 +42,7 @@ scalar e = new scalar;
 double e1 = 0., e2 = 0., emax = 0.;
 int ne = 0;
 
-event (i++) {
+int event (i++) {
   foreach()
     e[] = h[] - max(h0 + Psi(x,t) - zb[], 0.);
   norm n = normf (e);
@@ -54,7 +54,7 @@ event (i++) {
   printf ("e %g %g %g %g\n", t, n.avg, n.rms, n.max);
 }
 
-event (t = 1500) {
+int event (t = 1500) {
   if (N == 64) {
     foreach()
       printf ("p %g %g %g %g %g\n", x, h[], q.x[], zb[], e[]);
@@ -62,7 +62,7 @@ event (t = 1500) {
   }
 }
 
-event (t += 50; t <= 6000) {
+int event (t += 50; t <= 6000) {
   if (N == 128) {
     double sq = 0., sh = 0.;
     foreach() {

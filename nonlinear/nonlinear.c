@@ -75,7 +75,7 @@ double energy()
   return se*L0*L0;
 }
 
-event (i += 10; t <= 5.)
+int event (i += 10; t <= 5.)
   fprintf (stderr, "t: %g %g %g\n", t, error(), energy());
 
 int main() { run(); }

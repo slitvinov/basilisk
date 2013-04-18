@@ -470,7 +470,7 @@ ghost {
   fputc (yytext[0], yyout);
   /* event (... */
   fprintf (yyout, 
-	   "static int event_expr%d%d (int * ip, double * tp) {\n"
+	   "event_expr%d%d (int * ip, double * tp) {\n"
 	   "  int i = *ip; double t = *tp;\n"
 	   "  #line %d\n"
 	   "  int ret = (", nevents, inevent++, line);

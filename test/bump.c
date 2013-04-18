@@ -15,7 +15,7 @@ void init()
   }
 }
 
-event (t = 0.7) {
+int event (t = 0.7) {
   foreach()
     fprintf (stderr, "%g %g %g %g\n", x, w[], hu[], B[]);
 }

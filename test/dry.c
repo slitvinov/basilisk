@@ -16,7 +16,7 @@ void init()
   }
 }
 
-event (t = {0.5, 0.75, 1, 3, 50}) {
+int event (t = {0.5, 0.75, 1, 3, 50}) {
   foreach()
     fprintf (stderr, "%g %g %g %g\n", x, h[], q.x[], zb[]);
   fprintf (stderr, "\n");

@@ -30,14 +30,14 @@ static double energy()
 
 scalar un = new scalar; /* we need another scalar */
 
-event (i += 10) {
+int event (i += 10) {
   double du = change (u, un);
   if (i > 0 && du < 1e-4)
     return 1; /* stop */
   fprintf (stderr, "%f %.9f %g\n", t, energy(), du);
 }
 
-event (i += 100) output_matrix (u, N, stdout, true);
+int event (i += 100) output_matrix (u, N, stdout, true);
 
 void end()
 {
