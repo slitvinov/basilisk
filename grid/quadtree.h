@@ -216,19 +216,20 @@ enum {
     VARIABLES;
 #define end_foreach()         } OMP_END_PARALLEL() }
 
-#define foreach_boundary(dir)     foreach_boundary_cell(dir)
-#define end_foreach_boundary()    if (cell.flags & leaf) continue; end_foreach_boundary_cell()
+#define foreach_fine_to_coarse()           foreach_cell_post(!(cell.flags & leaf))
+#define end_foreach_fine_to_coarse()       end_foreach_cell_post()
 
-#define foreach_fine_to_coarse()     foreach_cell_post(!(cell.flags & leaf))
-#define end_foreach_fine_to_coarse() end_foreach_cell_post()
-
-#define foreach_level(l)            foreach_cell() { \
-                                      if (level == l || cell.flags & leaf) {
-#define end_foreach_level()           continue; } } end_foreach_cell()
-
-#define foreach_boundary_level(dir,l)      foreach_boundary(dir) {	\
+#define foreach_level(l)                   foreach_cell() { \
                                              if (level == l || cell.flags & leaf) {
-#define end_foreach_boundary_level()         continue; } } end_foreach_boundary()
+#define end_foreach_level()                  continue; } } end_foreach_cell()
+
+#define foreach_boundary(dir)              foreach_boundary_cell(dir) { \
+                                             if (cell.flags & leaf) {
+#define end_foreach_boundary()               continue; } } end_foreach_boundary_cell()
+
+#define foreach_boundary_level(dir,l)      foreach_boundary_cell(dir) {	\
+                                             if (level == l || cell.flags & leaf) {
+#define end_foreach_boundary_level()         continue; } } end_foreach_boundary_cell()
 
 void alloc_layer (Quadtree * p)
 {
