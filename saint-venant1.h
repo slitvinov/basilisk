@@ -30,55 +30,6 @@ void init       (void);
 
 #include "riemann.h"
 
-static double flux (Point point, int i, double dtmax)
-{
-  foreach_dimension() {
-    VARIABLES;
-    double eta = h[i,0], etan = h[i-1,0];
-    if (eta <= dry && etan <= dry)
-      fh.x[i,0] = fq.x.x[i,0] = fq.y.x[i,0] = 0.;
-    else {
-      delta /= 2.;
-      double zbL = zb[i,0] - delta*gzb.x[i,0];
-      double zbR = zb[i-1,0] + delta*gzb.x[i-1,0];
-      double zbLR = max(zbL, zbR);
-      
-      double etaL = eta <= dry ? 0. : eta - delta*gh.x[i,0];
-      double uL, vL;
-      if (etaL > dry) {
-	uL = (q.x[i,0] - delta*gq.x.x[i,0])/etaL;
-	vL = (q.y[i,0] - delta*gq.y.x[i,0])/etaL;
-      }
-      else
-	uL = vL = 0.;
-      double hL = max(0., etaL + zbL - zbLR);
-      
-      double etaR = etan <= dry ? 0. : etan + delta*gh.x[i-1,0];
-      double uR, vR;
-      if (etaR > dry) {
-	uR = (q.x[i-1,0] + delta*gq.x.x[i-1,0])/etaR;
-	vR = (q.y[i-1,0] + delta*gq.y.x[i-1,0])/etaR;
-      }
-      else
-	uR = vR = 0.;
-      double hR = max(0., etaR + zbR - zbLR);
-      
-      kurganov (hR, hL, uR, uL, DX, &fh.x[i,0], &fq.x.x[i,0], &dtmax);
-      fq.y.x[i,0] = (fh.x[i,0] > 0. ? vR : vL)*fh.x[i,0];
-
-      /* topographic source term */
-      if (eta <= dry) eta = 0.;
-      if (etan <= dry) etan = 0.;
-      Sb.x[i,0] -= G/2.*(sq(hL) - sq(etaL) + delta*(etaL + eta)*gzb.x[i,0]);
-      Sb.x[i-1,0] += G/2.*(sq(hR) - sq(etaR) - delta*(etaR + etan)*gzb.x[i-1,0]);
-    }
-  }
-  return dtmax;
-}
-
-#define vswap(a,b) { vector tmp = a; a = b; b = tmp; }
-#define swap(a,b) { scalar tmp = a; a = b; b = tmp; }
-
 static void gradients ()
 {
   (* gradient) (q.x, gq.x); boundary (gq.x.x); boundary (gq.x.y);
@@ -86,15 +37,49 @@ static void gradients ()
   (* gradient) (h, gh); boundary (gh.x); boundary (gh.y);
 }
 
-static double fluxes (double dt)
+static double fluxes (double dtmax)
 {
-  foreach_boundary (right)
-    dt = flux (point, 1, dt);
-  foreach_boundary (top)
-    dt = flux (point, 1, dt);
-  foreach (reduction(min:dt))
-    dt = flux (point, 0, dt);
-  return dt;
+  foreach_face() {
+    double eta = h[], etan = h[-1,0];
+    if (eta <= dry && etan <= dry)
+      fh.x[] = fq.x.x[] = fq.y.x[] = 0.;
+    else {
+      double dx = delta/2.;
+      double zbL = zb[] - dx*gzb.x[];
+      double zbR = zb[-1,0] + dx*gzb.x[-1,0];
+      double zbLR = max(zbL, zbR);
+      
+      double etaL = eta <= dry ? 0. : eta - dx*gh.x[];
+      double uL, vL;
+      if (etaL > dry) {
+	uL = (q.x[] - dx*gq.x.x[])/etaL;
+	vL = (q.y[] - dx*gq.y.x[])/etaL;
+      }
+      else
+	uL = vL = 0.;
+      double hL = max(0., etaL + zbL - zbLR);
+      
+      double etaR = etan <= dry ? 0. : etan + dx*gh.x[-1,0];
+      double uR, vR;
+      if (etaR > dry) {
+	uR = (q.x[-1,0] + dx*gq.x.x[-1,0])/etaR;
+	vR = (q.y[-1,0] + dx*gq.y.x[-1,0])/etaR;
+      }
+      else
+	uR = vR = 0.;
+      double hR = max(0., etaR + zbR - zbLR);
+      
+      kurganov (hR, hL, uR, uL, DX, &fh.x[], &fq.x.x[], &dtmax);
+      fq.y.x[] = (fh.x[] > 0. ? vR : vL)*fh.x[];
+
+      /* topographic source term */
+      if (eta <= dry) eta = 0.;
+      if (etan <= dry) etan = 0.;
+      Sb.x[] -= G/2.*(sq(hL) - sq(etaL) + dx*(etaL + eta)*gzb.x[]);
+      Sb.x[-1,0] += G/2.*(sq(hR) - sq(etaR) - dx*(etaR + etan)*gzb.x[-1,0]);
+    }
+  }
+  return dtmax;
 }
 
 static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
@@ -144,9 +129,8 @@ void run (void)
       /* 2nd-order time-integration */
       /* predictor */
       update (q, q1, h, h1, dt/2.);
-      
-      vswap (q, q1);
-      swap (h, h1);
+      swap (vector, q, q1);
+      swap (scalar, h, h1);
       
       /* corrector */
       gradients();

@@ -117,11 +117,9 @@ void recursive (Point point)
       _pop (point.level, point.i, point.j, stage);			\
       switch (stage) {							\
       case 0: {								\
-        QUADTREE_VARIABLES;						\
-	VARIABLES;							\
 	/* do something */
 #define end_foreach_boundary_cell()					\
-      if (point.level < point.depth) {					\
+        if (point.level < point.depth) {				\
 	  _push (point.level, point.i, point.j, 1);			\
 	  int k = _d > left ? _LEFT : _RIGHT - _d;			\
 	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;			\
@@ -139,7 +137,9 @@ void recursive (Point point)
     }                                                                   \
   }
 
-#define foreach_cell() foreach_boundary_cell(0)
+#define foreach_cell() foreach_boundary_cell(0)				\
+  QUADTREE_VARIABLES;							\
+  VARIABLES;
 #define end_foreach_cell()						\
       if (point.level < point.depth) {					\
 	  _push (point.level, point.i, point.j, 1);			\
@@ -203,9 +203,6 @@ enum {
   halo   = 1 << 2
 };
 
-#define foreach_leaf()            foreach_cell() if (cell.flags & leaf) {
-#define end_foreach_leaf()        continue; } end_foreach_cell()
-
 #define foreach(clause)     { update_cache();				\
   OMP_PARALLEL()							\
   Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid); \
@@ -216,20 +213,15 @@ enum {
     VARIABLES;
 #define end_foreach()         } OMP_END_PARALLEL() }
 
-#define foreach_fine_to_coarse()           foreach_cell_post(!(cell.flags & leaf))
-#define end_foreach_fine_to_coarse()       end_foreach_cell_post()
+#define foreach_leaf()            foreach_cell() if (cell.flags & leaf) {
+#define end_foreach_leaf()        continue; } end_foreach_cell()
 
-#define foreach_level(l)                   foreach_cell() { \
-                                             if (level == l || cell.flags & leaf) {
-#define end_foreach_level()                  continue; } } end_foreach_cell()
-
-#define foreach_boundary(dir)              foreach_boundary_cell(dir) { \
-                                             if (cell.flags & leaf) {
-#define end_foreach_boundary()               continue; } } end_foreach_boundary_cell()
-
-#define foreach_boundary_level(dir,l)      foreach_boundary_cell(dir) {	\
-                                             if (level == l || cell.flags & leaf) {
-#define end_foreach_boundary_level()         continue; } } end_foreach_boundary_cell()
+#define foreach_boundary_ghost(dir)        foreach_boundary_cell(dir)	     \
+                                             if (cell.flags & leaf) {	     \
+					       point.i += ig; point.j += jg; \
+                                               QUADTREE_VARIABLES;	     \
+					       VARIABLES;
+#define end_foreach_boundary_ghost()         continue; } end_foreach_boundary_cell()
 
 void alloc_layer (Quadtree * p)
 {
@@ -397,7 +389,27 @@ void check_two_one (void)
 	}
 }
 
-// The functions below should be independent from the details of the implementation
+// The macros and functions below should be independent from the
+// details of the implementation
+
+#define foreach_fine_to_coarse()           foreach_cell_post(!(cell.flags & leaf))
+#define end_foreach_fine_to_coarse()       end_foreach_cell_post()
+
+#define foreach_level(l)                   foreach_cell() { \
+                                             if (level == l || cell.flags & leaf) {
+#define end_foreach_level()                  continue; } } end_foreach_cell()
+
+#define foreach_boundary(dir)              foreach_boundary_cell(dir)	\
+                                             if (cell.flags & leaf) {	\
+                                               QUADTREE_VARIABLES;	\
+					       VARIABLES;
+#define end_foreach_boundary()               continue; } end_foreach_boundary_cell()
+
+#define foreach_boundary_level(dir,l)      foreach_boundary_cell(dir)               \
+                                             QUADTREE_VARIABLES;	            \
+                                             if (level == l || cell.flags & leaf) { \
+					       VARIABLES;
+#define end_foreach_boundary_level()         continue; } end_foreach_boundary_cell()
 
 Point locate (double xp, double yp)
 {

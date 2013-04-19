@@ -22,14 +22,21 @@ typedef struct {
     VARIABLES
 #define end_foreach() } OMP_END_PARALLEL()
 
-#define foreach_boundary(d) 						\
-  OMP_PARALLEL()							\
+#define foreach_boundary(d) {						\
   int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
   {									\
     point.i = d == right ? point.n : 1;					\
     VARIABLES
-#define end_foreach_boundary() } OMP_END_PARALLEL()
+#define end_foreach_boundary() }}
+
+#define foreach_boundary_ghost(d) {					\
+  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
+  Point point = *((Point *)grid);					\
+  {									\
+    point.i = (d == right ? point.n : 1) + ig;				\
+    VARIABLES
+#define end_foreach_boundary_ghost() }}
 
 #define foreach_boundary_level(d,l) foreach_boundary(d)
 #define end_foreach_boundary_level() end_foreach_boundary()

@@ -13,7 +13,7 @@
 
   int nvar = 0, nevents = 0;
   int line;
-  int scope, para, inforeach, foreachscope, foreachpara, inforeach_boundary;
+  int scope, para, inforeach, foreachscope, foreachpara, inforeach_boundary, inforeach_face;
   int invardecl, vartype;
   int inval, invalpara;
   int brack, inarray;
@@ -23,11 +23,9 @@
   int nexpr[100];
 
   int foreachdim, foreachdimpara, foreachdimline;
-  char foreachdimname[80];
   FILE * foreachdimfp;
 
   char foreachs[80], * fname;
-  char foreachname[80];
   FILE * foreachfp;
   char reduction[10][4], reductvar[10][80];
   int nreduct;
@@ -36,6 +34,9 @@
   int inboundary;
   
   int infunction, functionscope, functionpara;
+  FILE * dopen (const char * fname, const char * mode);
+
+  int foreach_face_line;
 
   struct { char * v; int type, args, scope; } _varstack[100]; int varstack = -1;
   void varpush (const char * s, int type, int scope) {
@@ -58,28 +59,6 @@
       free (_varstack[varstack--].v);
   }
   
-  void endforeach () {
-    inforeach = inforeach_boundary = 0;
-    if (nreduct > 0) {
-      fputs ("\n#undef _OMPEND\n#define _OMPEND ", yyout);
-      int i;
-      for (i = 0; i < nreduct; i++)
-	fprintf (yyout, "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
-		 reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
-		 reductvar[i], reductvar[i], reductvar[i]);
-      fprintf (yyout,
-	       "\nend_%s();\n"
-	       "#undef _OMPSTART\n"
-	       "#undef _OMPEND\n"
-	       "#define _OMPSTART\n"
-	       "#define _OMPEND\n"
-	       "#line %d\n",
-	       foreachs, line);
-    }
-    else
-      fprintf (yyout, " end_%s();", foreachs);
-  }
-
   int identifier (int c) {
     return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'));
   }
@@ -109,7 +88,7 @@
     foreachdim = 0;
     fclose (yyout);
     yyout = foreachdimfp;
-    FILE * fp = fopen (foreachdimname, "r");
+    FILE * fp = dopen ("dimension.h", "r");
     writefile (fp, 'x', 'y');
     fprintf (yyout,
 	     "\n#undef val\n"
@@ -121,6 +100,54 @@
 	     "\n#undef val\n"
 	     "#define val(a,k,l) data(k,l)[a]\n"
 	     "#line %d\n", line);
+  }
+
+  void endforeach () {
+    if (inforeach_face) {
+      fclose (yyout);
+      yyout = foreachfp;
+      FILE * fp = dopen ("foreach_face.h", "r");
+      fputs ("foreach()", yyout);
+      writefile (fp, 'x', 'y');
+      fprintf (yyout,
+	       "\n#undef val\n"
+	       "#define val(a,k,l) data(l,k)[a]\n"
+	       "#line %d\n", foreach_face_line);
+      writefile (fp, 'y', 'x');
+      fprintf (yyout,
+	       " end_foreach()\n"
+	       "foreach_boundary_ghost (top)\n"
+	       "#line %d\n", foreach_face_line);
+      writefile (fp, 'y', 'x');
+      fprintf (yyout,
+	       " end_foreach_boundary_ghost()\n"
+	       "#undef val\n"
+	       "#define val(a,k,l) data(k,l)[a]\n"
+	       "foreach_boundary_ghost (right)\n"
+	       "#line %d\n", foreach_face_line);
+      writefile (fp, 'x', 'y');
+      fprintf (yyout, " end_foreach_boundary_ghost()");
+      fclose (fp);
+    }
+    else if (nreduct > 0) {
+      fputs ("\n#undef _OMPEND\n#define _OMPEND ", yyout);
+      int i;
+      for (i = 0; i < nreduct; i++)
+	fprintf (yyout, "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
+		 reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
+		 reductvar[i], reductvar[i], reductvar[i]);
+      fprintf (yyout,
+	       "\nend_%s();\n"
+	       "#undef _OMPSTART\n"
+	       "#undef _OMPEND\n"
+	       "#define _OMPSTART\n"
+	       "#define _OMPEND\n"
+	       "#line %d\n",
+	       foreachs, line);
+    }
+    else
+      fprintf (yyout, " end_%s();", foreachs);
+    inforeach = inforeach_boundary = inforeach_face = 0;
   }
 
   void endevent() {
@@ -156,20 +183,27 @@ WS  [ \t\v\n\f]
     return yyerror ("mismatched ')'");
   if (inforeach == 1 && scope == foreachscope && para == foreachpara) {
     ECHO;
-    fclose (yyout);
-    yyout = foreachfp;
-    if (nreduct > 0) {
-      fprintf (yyout, "\n#undef _OMPSTART\n#define _OMPSTART ");
-      int i;
-      for (i = 0; i < nreduct; i++)
-	fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
-      fprintf (yyout, "\n#line %d\n", line);
+    if (inforeach_face) {
+      fclose (yyout);
+      yyout = dopen ("foreach_face.h", "w");
+      foreach_face_line = line;
     }
-    FILE * fp = fopen (foreachname, "r");
-    int c;
-    while ((c = fgetc (fp)) != EOF)
-      fputc (c, yyout);
-    fclose (fp);
+    else {
+      fclose (yyout);
+      yyout = foreachfp;
+      if (nreduct > 0) {
+	fprintf (yyout, "\n#undef _OMPSTART\n#define _OMPSTART ");
+	int i;
+	for (i = 0; i < nreduct; i++)
+	  fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
+	fprintf (yyout, "\n#line %d\n", line);
+      }
+      FILE * fp = dopen ("foreach.h", "r");
+      int c;
+      while ((c = fgetc (fp)) != EOF)
+	fputc (c, yyout);
+      fclose (fp);
+    }
     inforeach = 2;
   }
   else if (inevent > 0 && inevent < 4 && 
@@ -215,10 +249,9 @@ foreach{ID}* {
   inforeach = 1; foreachscope = scope; foreachpara = para;
   nreduct = 0;
   foreachfp = yyout;
-  strcpy (foreachname, dir);
-  strcat (foreachname, "/foreach.h");
-  yyout = fopen (foreachname, "w");
+  yyout = dopen ("foreach.h", "w");
   inforeach_boundary = (!strncmp(foreachs, "foreach_boundary", 16));
+  inforeach_face = (!strcmp(foreachs, "foreach_face"));
   ECHO;
 }
 
@@ -498,9 +531,7 @@ foreach_dimension{WS}*[(]{WS}*[)] {
   foreachdimline = line;
   foreachdim = scope; foreachdimpara = para;
   foreachdimfp = yyout;
-  strcpy (foreachdimname, dir);
-  strcat (foreachdimname, "/dimension.h");
-  yyout = fopen (foreachdimname, "w");
+  yyout = dopen ("dimension.h", "w");
 }
 
 reduction[(](min|max):{ID}+[)] {
@@ -582,7 +613,7 @@ int endfor (char * file, FILE * fin, FILE * fout)
   yyin = fin;
   yyout = fout;
   line = 1, scope = para = 0;
-  inforeach = foreachscope = foreachpara = inforeach_boundary = 0;
+  inforeach = foreachscope = foreachpara = inforeach_boundary = inforeach_face = 0;
   invardecl = 0;
   inval = invalpara = 0;
   brack = inarray = 0;
@@ -623,18 +654,18 @@ void cleanup (int status)
   exit (status);
 }
 
-FILE * dopen (const char * fname)
+FILE * dopen (const char * fname, const char * mode)
 {
   char * out = malloc (sizeof (char)*(strlen (dir) + strlen (fname) + 2));
   strcpy (out, dir); strcat (out, "/"); strcat (out, fname);
-  FILE * fout = fopen (out, "w");
+  FILE * fout = fopen (out, mode);
   free (out);
   return fout;
 }
 
 void compdir (char * file, char ** in, int nin, char * grid)
 {
-  boundary = dopen ("boundary.h");
+  boundary = dopen ("boundary.h", "w");
   int i;
   for (i = nin - 1; i >= 0; i--) {
     char * path = in[i];
@@ -665,7 +696,7 @@ void compdir (char * file, char ** in, int nin, char * grid)
   }
   fclose (boundary);
 
-  FILE * fout = dopen ("grid.h");
+  FILE * fout = dopen ("grid.h", "w");
   /* new variables */
   fprintf (fout,
 	   "#include \"common.h\"\n"
