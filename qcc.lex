@@ -116,17 +116,15 @@
       writefile (fp, 'y', 'x');
       fprintf (yyout,
 	       " end_foreach()\n"
-	       "foreach_boundary_ghost (top)\n"
-	       "#line %d\n", foreach_face_line);
+	       "boundary_ghost (top, (");
       writefile (fp, 'y', 'x');
       fprintf (yyout,
-	       " end_foreach_boundary_ghost()\n"
+	       "));\n"
 	       "#undef val\n"
 	       "#define val(a,k,l) data(k,l)[a]\n"
-	       "foreach_boundary_ghost (right)\n"
-	       "#line %d\n", foreach_face_line);
+	       "boundary_ghost (right, (");
       writefile (fp, 'x', 'y');
-      fprintf (yyout, " end_foreach_boundary_ghost()");
+      fprintf (yyout, "));\n#line %d\n", line);
       fclose (fp);
     }
     else if (nreduct > 0) {

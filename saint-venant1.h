@@ -1,6 +1,9 @@
 #include "utils.h"
 #include "events.h"
 
+// h: water depth
+// zb: bathymetry
+// q: flow rate
 scalar h = new scalar, zb = new scalar;
 vector q = new vector;
 // storage for predictor/corrector
@@ -30,14 +33,14 @@ void init       (void);
 
 #include "riemann.h"
 
-static void gradients ()
+static void gradients()
 {
   (* gradient) (q.x, gq.x); boundary (gq.x.x); boundary (gq.x.y);
   (* gradient) (q.y, gq.y); boundary (gq.y.x); boundary (gq.y.y);
   (* gradient) (h, gh); boundary (gh.x); boundary (gh.y);
 }
 
-static double fluxes (double dtmax)
+static double flux (double dtmax)
 {
   foreach_face() {
     double eta = h[], etan = h[-1,0];
@@ -68,17 +71,21 @@ static double fluxes (double dtmax)
       else
 	uR = vR = 0.;
       double hR = max(0., etaR + zbR - zbLR);
-      
+
+      // Riemann solver
       kurganov (hR, hL, uR, uL, DX, &fh.x[], &fq.x.x[], &dtmax);
       fq.y.x[] = (fh.x[] > 0. ? vR : vL)*fh.x[];
 
-      /* topographic source term */
+      // topographic source term
       if (eta <= dry) eta = 0.;
       if (etan <= dry) etan = 0.;
       Sb.x[] -= G/2.*(sq(hL) - sq(etaL) + dx*(etaL + eta)*gzb.x[]);
       Sb.x[-1,0] += G/2.*(sq(hR) - sq(etaR) - dx*(etaR + etan)*gzb.x[-1,0]);
     }
   }
+  boundary_flux (fh);
+  foreach_dimension()
+    boundary_flux (fq.x);
   return dtmax;
 }
 
@@ -98,7 +105,7 @@ static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
 
 double dt = 0.;
 
-void run (void)
+void run()
 {
   parameters();
   init_grid(N);
@@ -119,7 +126,7 @@ void run (void)
     (* gradient) (zb, gzb); boundary (gzb.x); boundary (gzb.y);
 
     gradients();
-    dt = dtnext (t, fluxes (DT));
+    dt = dtnext (t, flux (DT));
 
     if (gradient == zero)
       /* 1st-order time-integration for 1st-order spatial
@@ -134,7 +141,7 @@ void run (void)
       
       /* corrector */
       gradients();
-      fluxes (dt);
+      flux (dt);
       update (q1, q, h1, h, dt);
     }
 

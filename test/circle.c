@@ -5,9 +5,7 @@
 #include <time.h>
 #include "grid/quadtree.h"
 #include "utils.h"
-#include "wavelet.h"
 #include "mg.h"
-#include "adapt.h"
 
 scalar a = new scalar, b = new scalar, res = new scalar, dp = new scalar;
 

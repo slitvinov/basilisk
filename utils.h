@@ -240,11 +240,6 @@ void boundary_level (scalar p, int l)
 	p[ghost] = p[]; /* default is symmetry */
 }
 
-void boundary (scalar p)
-{
-  boundary_level (p, depth());
-}
-
 void boundary_uv (scalar u, scalar v)
 {
   /* slip walls (symmetry) by default */

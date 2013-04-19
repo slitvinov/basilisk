@@ -48,6 +48,7 @@ size_t _size (size_t l)
 /***** Quadtree macros ****/
 #define _n (1 << point.level) /* fixme */
 #define cell               CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
+#define neighbor(k,l)      CELL(point.m, point.level, (point.i + k)*(_n + 2*GHOSTS) + point.j + l)
 #define parent             aparent(0,0)
 #define alloc_children()   { point.back->dirty = true; \
                              if (point.level == point.depth) alloc_layer(&point); }
@@ -389,40 +390,4 @@ void check_two_one (void)
 	}
 }
 
-// The macros and functions below should be independent from the
-// details of the implementation
-
-#define foreach_fine_to_coarse()           foreach_cell_post(!(cell.flags & leaf))
-#define end_foreach_fine_to_coarse()       end_foreach_cell_post()
-
-#define foreach_level(l)                   foreach_cell() { \
-                                             if (level == l || cell.flags & leaf) {
-#define end_foreach_level()                  continue; } } end_foreach_cell()
-
-#define foreach_boundary(dir)              foreach_boundary_cell(dir)	\
-                                             if (cell.flags & leaf) {	\
-                                               QUADTREE_VARIABLES;	\
-					       VARIABLES;
-#define end_foreach_boundary()               continue; } end_foreach_boundary_cell()
-
-#define foreach_boundary_level(dir,l)      foreach_boundary_cell(dir)               \
-                                             QUADTREE_VARIABLES;	            \
-                                             if (level == l || cell.flags & leaf) { \
-					       VARIABLES;
-#define end_foreach_boundary_level()         continue; } end_foreach_boundary_cell()
-
-Point locate (double xp, double yp)
-{
-  foreach_cell () {
-    double delta = DELTA;
-    double x = (point.i - GHOSTS + 0.5)*delta - 0.5;
-    double y = (point.j - GHOSTS + 0.5)*delta - 0.5;
-    delta /= 2.;
-    if (xp < x - delta || xp > x + delta || yp < y - delta || yp > y + delta)
-      continue;
-    if (cell.flags & leaf)
-      return point;
-  }
-  Point point = {-1, NULL, NULL, -1, -1, -1}; // not found
-  return point;
-}
+#include "quadtree-common.h"

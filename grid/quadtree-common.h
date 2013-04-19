@@ -1,5 +1,50 @@
 #include <math.h>
 
+#define foreach_fine_to_coarse()           foreach_cell_post(!(cell.flags & leaf))
+#define end_foreach_fine_to_coarse()       end_foreach_cell_post()
+
+#define foreach_level(l)                   foreach_cell() { \
+                                             if (level == l || cell.flags & leaf) {
+#define end_foreach_level()                  continue; } } end_foreach_cell()
+
+#define foreach_boundary(dir)              foreach_boundary_cell(dir)	\
+                                             if (cell.flags & leaf) {	\
+                                               QUADTREE_VARIABLES;	\
+					       VARIABLES;
+#define end_foreach_boundary()               continue; } end_foreach_boundary_cell()
+
+#define foreach_boundary_level(dir,l)      foreach_boundary_cell(dir)               \
+                                             QUADTREE_VARIABLES;	            \
+                                             if (level == l || cell.flags & leaf) { \
+					       VARIABLES;
+#define end_foreach_boundary_level()         continue; } end_foreach_boundary_cell()
+
+#undef boundary_ghost
+#define boundary_ghost(d, x) {						\
+    foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
+    int _in = -_ig[d], _jn = -_jg[d];					\
+    foreach_halo() if (neighbor(_in,_jn).flags & leaf) { x; }		\
+    end_foreach_halo();							\
+  }
+
+Point locate (double xp, double yp)
+{
+  foreach_cell () {
+    double delta = DELTA;
+    double x = (point.i - GHOSTS + 0.5)*delta - 0.5;
+    double y = (point.j - GHOSTS + 0.5)*delta - 0.5;
+    delta /= 2.;
+    if (xp < x - delta || xp > x + delta || yp < y - delta || yp > y + delta)
+      continue;
+    if (cell.flags & leaf)
+      return point;
+  }
+  Point point = {-1, NULL, NULL, -1, -1, -1}; // not found
+  return point;
+}
+
+#include "multigrid-common.h"
+
 bool coarsen_cell (Point point)
 {
   QUADTREE_VARIABLES;
@@ -183,5 +228,32 @@ void update_halo_u_v (int depth, scalar u, scalar v)
     else
       v[] = (3.*coarse(v,0,0) + coarse(v,childx,0) + 
 	     3.*coarse(v,0,1) + coarse(v,childx,1))/8.;
+  }
+}
+
+#undef boundary
+void boundary (scalar p)
+{
+  boundary_level (p, depth());
+  restriction (p, p);
+  update_halo (-1, p, p);
+}
+
+#undef boundary_flux
+void boundary_flux (vector f)
+{
+  restriction_flux (f);
+  foreach_cell() {
+    if (!(cell.flags & halo))
+      continue;
+    else if (cell.flags & leaf) {
+      if (child(0,0).flags & halo) {
+	if (child(0,1).flags & halo)
+	  f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+	if (child(1,0).flags & halo)
+	  f.y[] = (fine(f.y,0,0) + fine(f.y,1,0))/2.;
+      }
+      continue;
+    }
   }
 }

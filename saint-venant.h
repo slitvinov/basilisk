@@ -74,8 +74,6 @@ static double flux (Point point, int i, double dtmax)
   return dtmax;
 }
 
-#define swap(a,b) { scalar tmp = a; a = b; b = tmp; }
-
 static void update (scalar hu2, scalar hu1, scalar w2, scalar w1, double dt)
 {
   foreach() {
@@ -122,8 +120,8 @@ void run (void)
     dt = dtnext (t, dt);
 
     update (hu, hu1, w, w1, dt/2.);
-    swap (hu, hu1);
-    swap (w, w1);
+    swap (scalar, hu, hu1);
+    swap (scalar, w, w1);
 
     /* corrector */
     (* gradient) (hu, ghu); boundary (ghu.x);

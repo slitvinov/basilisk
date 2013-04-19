@@ -3,8 +3,6 @@
 #include <assert.h>
 #include "grid/quadtree.h"
 #include "utils.h"
-#include "wavelet.h"
-#include "adapt.h"
 
 scalar h = new scalar, w = new scalar;
 

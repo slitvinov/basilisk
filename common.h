@@ -77,3 +77,12 @@ void free_boundaries ()
   for (int b = 0; b < nboundary; b++)
     free (_boundary[b]);
 }
+
+void boundary_level (scalar p, int l);
+
+#define boundary_ghost(d, x) {						\
+    foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
+  }
+
+#define boundary(p) boundary_level (p, depth())
+#define boundary_flux(fh)
