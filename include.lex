@@ -129,9 +129,8 @@ static int include (char * file, FILE * fin)
   return ret;
 }
 
-static int compdir (char * file, char ** out)
+static int compdir (char * file, char ** out, int nout)
 {
-  int nout = 0;
   push (file);
   while (stack >= 0) {
     char * path = pop();
@@ -187,7 +186,7 @@ int includes (int argc, char ** argv, char ** out, char ** grid1)
     fprintf (fdepend, "%s:\t\\\n", output);
   }
   if (file) {
-    nout = compdir (file, out);
+    nout = compdir (file, out, 0);
     if (!hasgrid) {
       char * path, gridpath[80] = "grid/";
       strcat (gridpath, grid); strcat (gridpath, ".h");
@@ -197,8 +196,9 @@ int includes (int argc, char ** argv, char ** out, char ** grid1)
 	perror ("");
 	exit (1);
       }
-      out[nout++] = path;
       fclose (fp);
+      nout = compdir (path, out, nout);
+      hasgrid = 0;
     }
     char * path;    
     FILE * fp = openpath ("common.h", "r", &path);
