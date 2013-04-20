@@ -1,6 +1,9 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <math.h>
+
 #ifdef _OPENMP
 # include <omp.h>
 # define OMP(x) _Pragma(#x)
@@ -60,10 +63,10 @@ struct _Event {
   int i, a;
 };
 
-void * grid = NULL;       // the grid
 double tnext = undefined; // time of next event
-
+void * grid = NULL;       // the grid
 typedef void (* Boundary) (int l);
+
 Boundary * _boundary[nboundary]; // boundary conditions for each direction/variable
 
 void init_boundaries (int nvar)
@@ -77,12 +80,3 @@ void free_boundaries ()
   for (int b = 0; b < nboundary; b++)
     free (_boundary[b]);
 }
-
-void boundary_level (scalar p, int l);
-
-#define boundary_ghost(d, x) {						\
-    foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
-  }
-
-#define boundary(p) boundary_level (p, depth())
-#define boundary_flux(fh)

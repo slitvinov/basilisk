@@ -1,5 +1,3 @@
-#include "events.h"
-
 int event (t = 4; t <= 12.23; t += 0.1)
 {
   fprintf (stderr, "t: %g i: %d\n", t, i);

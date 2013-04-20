@@ -1,7 +1,6 @@
 #define GRIDNAME "Multigrid"
 
 #include <stdio.h>
-#include <math.h>
 #include <assert.h>
 
 #define I      (point.i - GHOSTS)

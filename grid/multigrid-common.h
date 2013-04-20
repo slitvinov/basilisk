@@ -1,3 +1,5 @@
+#include "cartesian-common.h"
+
 void restriction (scalar start, scalar end)
 {
   foreach_fine_to_coarse()

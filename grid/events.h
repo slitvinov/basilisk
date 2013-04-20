@@ -1,5 +1,3 @@
-#include <math.h>
-
 #define INIT ev->expr[0]
 #define COND ev->expr[1]
 #define INC  ev->expr[2]

@@ -66,3 +66,5 @@ Point locate (double x, double y)
   point.i = (x + 0.5)*point.n + GHOSTS;
   return point;
 }
+
+#include "cartesian-common.h"

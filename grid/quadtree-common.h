@@ -1,5 +1,3 @@
-#include <math.h>
-
 #define foreach_fine_to_coarse()           foreach_cell_post(!(cell.flags & leaf))
 #define end_foreach_fine_to_coarse()       end_foreach_cell_post()
 
@@ -18,6 +16,8 @@
                                              if (level == l || cell.flags & leaf) { \
 					       VARIABLES;
 #define end_foreach_boundary_level()         continue; } end_foreach_boundary_cell()
+
+#include "multigrid-common.h"
 
 #undef boundary_ghost
 #define boundary_ghost(d, x) {						\
@@ -42,8 +42,6 @@ Point locate (double xp, double yp)
   Point point = {-1, NULL, NULL, -1, -1, -1}; // not found
   return point;
 }
-
-#include "multigrid-common.h"
 
 bool coarsen_cell (Point point)
 {
