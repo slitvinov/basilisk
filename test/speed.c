@@ -22,7 +22,7 @@ int main (int argc, char ** argv)
   int i;
   for (i = 0; i < 31; i++) {
     /* coarsening */
-    restriction (h, h);
+    restriction (scalars (h));
     wavelet (h, w);
     coarsen_wavelet (w, 1e-5);
     flag_halo_cells (grid);
@@ -49,7 +49,7 @@ int main (int argc, char ** argv)
 
   start = clock ();
   for (i = 0; i < 200; i++)
-    update_halo (-1, h, h);
+    update_halo (-1, scalars(h));
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "---- update_halos ----\n");

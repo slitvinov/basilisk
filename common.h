@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <assert.h>
 #include <math.h>
 
 #ifdef _OPENMP
@@ -18,8 +19,8 @@
 #define _OMPEND
 
 #define GHOSTS  1 // number of ghost layers
-#define TRASH   1 // whether to 'trash' uninitialised data (useful for debugging)
-#define TWO_ONE 1 // enforce 2:1 refinement ratio
+#define TRASH   1 // whether to 'trash' uninitialised data 
+                  // (useful for debugging)
 
 #define NOT_UNUSED(x) (x = x)
 
@@ -40,7 +41,11 @@ typedef struct {
   vector x, y;
 } tensor;
 
+#define scalars(...) (scalar []){__VA_ARGS__,-1}
+#define vectors(...) (vector []){__VA_ARGS__,{-1}}
 #define val(a,k,l) data(k,l)[a]
+#define fine(a,k,l)    _fine(a,k,l)
+#define coarse(a,k,l)  _coarse(a,k,l)
 
 #define pi 3.14159265358979
 #define undefined 1e100
@@ -67,7 +72,8 @@ double tnext = undefined; // time of next event
 void * grid = NULL;       // the grid
 typedef void (* Boundary) (int l);
 
-Boundary * _boundary[nboundary]; // boundary conditions for each direction/variable
+// boundary conditions for each direction/variable
+Boundary * _boundary[nboundary];
 
 void init_boundaries (int nvar)
 {

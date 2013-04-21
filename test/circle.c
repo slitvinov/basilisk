@@ -25,20 +25,21 @@ void boundary_dirichlet (scalar v)
     v[ghost] = 2.*solution(x, y + delta/2.) - v[];
   foreach_boundary (bottom)
     v[ghost] = 2.*solution(x, y - delta/2.) - v[];
-  restriction (v, v);
-  update_halo (-1, v, v);
+  restriction (scalars (v));
+  update_halo (-1, scalars (v));
 }
 
-void homogeneous_boundary (scalar v, int l)
+void homogeneous_boundary (scalar * v, int l)
 {
   /* Homogeneous Dirichlet condition on all boundaries */
-  foreach_boundary_level (right, l)  v[ghost] = - v[];
-  foreach_boundary_level (left, l)   v[ghost] = - v[];
-  foreach_boundary_level (top, l)    v[ghost] = - v[];
-  foreach_boundary_level (bottom, l) v[ghost] = - v[];
+  scalar p = *v;
+  foreach_boundary_level (right, l)  p[ghost] = - p[];
+  foreach_boundary_level (left, l)   p[ghost] = - p[];
+  foreach_boundary_level (top, l)    p[ghost] = - p[];
+  foreach_boundary_level (bottom, l) p[ghost] = - p[];
   /* we don't need to restrict because the solution is already defined
      on coarse levels */
-  update_halo (l, v, v);
+  update_halo (l, scalars (p));
 }
 
 void relax (scalar a, scalar b, int l)

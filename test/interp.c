@@ -18,14 +18,14 @@ int main (int argc, char ** argv)
   boundary (h);
   
   /* initial coarsening (see halo.c) */
-  restriction (h, h);
+  restriction (scalars (h));
   wavelet (h, w);
   double tolerance = 1e-4;
   coarsen_wavelet (w, tolerance);
   flag_halo_cells (grid);
 
-  restriction (h, h);
-  update_halo (-1, h, h);
+  restriction (scalars (h));
+  update_halo (-1, scalars (h));
 
   double max = 0.;
   foreach_halo() {

@@ -259,36 +259,47 @@ static double minmod2 (double a, double b, double c)
   return 0.;
 }
 
-void generalized_minmod (const scalar f, vector g)
+void generalized_minmod (scalar * f, vector * g)
 {
   /* see (A.6) in 
    *    Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
    *    Saint-Venant system. Mathematical Modelling and Numerical
    *    Analysis, 36(3), 397-425.*/
-  foreach()
-    foreach_dimension()
-      g.x[] = minmod2 (theta*(f[] - f[-1,0]), 
-		       (f[1,0] - f[-1,0])/2., 
-		       theta*(f[1,0] - f[]))/delta;
+  foreach() {
+    scalar s; vector v;
+    for (s,v in f,g)
+      foreach_dimension()
+	v.x[] = minmod2 (theta*(s[] - s[-1,0]), 
+			 (s[1,0] - s[-1,0])/2., 
+			 theta*(s[1,0] - s[]))/delta;
+  }
 }
 
-void superbee (const scalar f, vector g)
+void superbee (scalar * f, vector * g)
 {
-  foreach()
-    foreach_dimension()
-      g.x[] = superbee1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
+  foreach() {
+    scalar s; vector v;
+    for (s,v in f,g)
+      foreach_dimension()
+	v.x[] = superbee1 ((s[1,0] - s[])/(s[] - s[-1,0]))*(s[] - s[-1,0])
+	/delta;
+  }
 }
 
-void sweby (const scalar f, vector g)
+void sweby (scalar * f, vector * g)
 {
-  foreach()
-    foreach_dimension()
-      g.x[] = sweby1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
+  foreach() {
+    scalar s; vector v;
+    for (s,v in f,g)
+      foreach_dimension()
+	v.x[] = sweby1 ((s[1,0] - s[])/(s[] - s[-1,0]))*(s[] - s[-1,0])/delta;
+  }
 }
 
-void zero (const scalar f, vector g)
+void zero (scalar * f, vector * g)
 {
   foreach()
-    foreach_dimension()
-      g.x[] = 0.;
+    for (vector v in g)
+      foreach_dimension()
+	v.x[] = 0.;
 }

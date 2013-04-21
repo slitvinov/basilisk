@@ -200,14 +200,14 @@ int flag_halo_cells ()
     } end_foreach_cell();				                \
 }
 
-void update_halo (int depth, scalar start, scalar end)
+void update_halo (int depth, scalar * list)
 {
   foreach_halo_coarse_fine (depth)
     /* bilinear interpolation from coarser level */
-    for (scalar v = start; v <= end; v++)
-      val(v,0,0) = (9.*coarse(v,0,0) + 
-		    3.*(coarse(v,childx,0) + coarse(v,0,childy)) + 
-		    coarse(v,childx,childy))/16.;
+    for (scalar s in list)
+      s[] = (9.*coarse(s,0,0) + 
+	     3.*(coarse(s,childx,0) + coarse(s,0,childy)) + 
+	     coarse(s,childx,childy))/16.;
 }
 
 void update_halo_u_v (int depth, scalar u, scalar v)
@@ -230,26 +230,30 @@ void update_halo_u_v (int depth, scalar u, scalar v)
 }
 
 #undef boundary
-void boundary (scalar p)
+#define boundary(...) boundary_a(scalars(__VA_ARGS__))
+void boundary_a (scalar * list)
 {
-  boundary_level (p, depth());
-  restriction (p, p);
-  update_halo (-1, p, p);
+  boundary_level (list, depth());
+  restriction (list);
+  update_halo (-1, list);
 }
 
 #undef boundary_flux
-void boundary_flux (vector f)
+#define boundary_flux(...) boundary_flux_a(vectors(__VA_ARGS__))
+void boundary_flux_a (vector * list)
 {
-  restriction_flux (f);
+  restriction_flux (list);
   foreach_cell() {
     if (!(cell.flags & halo))
       continue;
     else if (cell.flags & leaf) {
       if (child(0,0).flags & halo) {
 	if (child(0,1).flags & halo)
-	  f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+	  for (vector v in list)
+	    v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
 	if (child(1,0).flags & halo)
-	  f.y[] = (fine(f.y,0,0) + fine(f.y,1,0))/2.;
+	  for (vector v in list)
+	    v.y[] = (fine(v.y,0,0) + fine(v.y,1,0))/2.;
       }
       continue;
     }

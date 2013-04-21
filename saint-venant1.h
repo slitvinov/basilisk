@@ -23,7 +23,7 @@ tensor fq = new tensor;
 // acceleration of gravity
 double G = 1.;
 // gradient
-void (* gradient) (const scalar, vector) = generalized_minmod;
+void (* gradient) (scalar *, vector *) = generalized_minmod;
 // dry
 double dry = 1e-10;
 // user-provided functions
@@ -31,13 +31,6 @@ void parameters (void);
 void init       (void);
 
 #include "riemann.h"
-
-static void gradients()
-{
-  (* gradient) (q.x, gq.x); boundary (gq.x.x); boundary (gq.x.y);
-  (* gradient) (q.y, gq.y); boundary (gq.y.x); boundary (gq.y.y);
-  (* gradient) (h, gh); boundary (gh.x); boundary (gh.y);
-}
 
 static double flux (double dtmax)
 {
@@ -82,9 +75,7 @@ static double flux (double dtmax)
       Sb.x[-1,0] += G/2.*(sq(hR) - sq(etaR) - dx*(etaR + etan)*gzb.x[-1,0]);
     }
   }
-  boundary_flux (fh);
-  foreach_dimension()
-    boundary_flux (fq.x);
+  boundary_flux (fh, fq.x, fq.y);
   return dtmax;
 }
 
@@ -93,13 +84,12 @@ static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
   foreach() {
     h1[] = h2[] + dt*(fh.x[] - fh.x[1,0] + fh.y[] - fh.y[0,1])/DX;
     foreach_dimension() {
-      q1.x[] = q2.x[] + dt*(fq.x.x[] - fq.x.x[1,0] + fq.x.y[] - fq.x.y[0,1] + Sb.x[])/DX;
+      q1.x[] = q2.x[] + dt*(fq.x.x[] - fq.x.x[1,0] + fq.x.y[] - fq.x.y[0,1] 
+			    + Sb.x[])/DX;
       Sb.x[] = 0.;
     }
   }
-  boundary (h1);
-  foreach_dimension()
-    boundary (q1.x);
+  boundary (h1, q1.x, q1.y);
 }
 
 double dt = 0.;
@@ -111,20 +101,16 @@ void run()
 
   events_init();
   init();
-  foreach_dimension()
-    boundary (q.x);
-  foreach()
-    h[] = max(h[], 0.);
-  boundary (h);
-  boundary (zb);
+  boundary (h, zb, q.x, q.y);
 
   timer_t start = timer_start();
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    (* gradient) (zb, gzb); boundary (gzb.x); boundary (gzb.y);
+    (* gradient) (scalars (q.x, q.y, h, zb), 
+		  vectors (gq.x, gq.y, gh, gzb));
+    boundary (gq.x.x, gq.x.y, gq.y.x, gq.y.y, gh.x, gh.y, gzb.x, gzb.y);
 
-    gradients();
     dt = dtnext (t, flux (DT));
 
     if (gradient == zero)
@@ -139,7 +125,9 @@ void run()
       swap (scalar, h, h1);
       
       /* corrector */
-      gradients();
+      (* gradient) (scalars (q.x, q.y, h), 
+		    vectors (gq.x, gq.y, gh));
+      boundary (gq.x.x, gq.x.y, gq.y.x, gq.y.y, gh.x, gh.y);
       flux (dt);
       update (q1, q, h1, h, dt);
     }

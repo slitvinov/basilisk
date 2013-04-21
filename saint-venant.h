@@ -24,7 +24,7 @@ vector fhu = new vector, fw = new vector;
 // acceleration of gravity
 double G = 1.;
 // gradient
-void (* gradient) (const scalar, vector) = generalized_minmod;
+void (* gradient) (scalar *, vector *) = generalized_minmod;
 // user-provided functions
 void parameters (void);
 void init       (void);
@@ -108,8 +108,8 @@ void run (void)
     /* 2nd-order predictor-corrector */
 
     /* predictor */
-    (* gradient) (hu, ghu); boundary (ghu.x);
-    (* gradient) (w, gw); positivity(); boundary (gw.x);
+    (* gradient) (scalars (hu, w), vectors (ghu, gw));
+    boundary (ghu.x, gw.x);
 
     dt = DT;
     foreach()
@@ -123,8 +123,9 @@ void run (void)
     swap (scalar, w, w1);
 
     /* corrector */
-    (* gradient) (hu, ghu); boundary (ghu.x);
-    (* gradient) (w, gw); positivity(); boundary (gw.x);
+    (* gradient) (scalars (hu, w), vectors (ghu, gw));
+    positivity();
+    boundary (ghu.x, gw.x);
 
     foreach()
       flux (point, 0, dt);

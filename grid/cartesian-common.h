@@ -4,8 +4,8 @@
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
   }
 
-#define boundary(p) boundary_level (p, depth())
-#define boundary_flux(fh)
+#define boundary(...) boundary_level (scalars(__VA_ARGS__), depth())
+#define boundary_flux(...)
 
 static bool boundary_var (int b, scalar v, int l)
 {
@@ -16,12 +16,14 @@ static bool boundary_var (int b, scalar v, int l)
   return false;
 }
 
-void boundary_level (scalar p, int l)
+void boundary_level (scalar * list, int l)
 {
   for (int b = 0; b < nboundary; b++)
-    if (!boundary_var (b, p, l))
-      foreach_boundary_level (b, l)
-	p[ghost] = p[]; /* default is symmetry */
+    for (scalar s in list) {
+      if (!boundary_var (b, s, l))
+	foreach_boundary_level (b, l)
+	  s[ghost] = s[]; /* default is symmetry */
+    }
 }
 
 void boundary_uv (scalar u, scalar v)

@@ -1,7 +1,6 @@
 #define GRIDNAME "Quadtree"
 
-#include <stdio.h>
-#include <assert.h>
+#define TWO_ONE 1 // enforce 2:1 refinement ratio
 
 #define I     (point.i - GHOSTS)
 #define J     (point.j - GHOSTS)
@@ -64,8 +63,8 @@ size_t _size (size_t l)
 #define data(k,l)  ((double *) &point.m[point.level][((point.i + k)*(_n + 2*GHOSTS) + \
 			       (point.j + l))*(sizeof(Cell) + datasize) + sizeof(Cell)])
 #define field(cell) ((double *)(((char *) &cell) + sizeof(Cell)))
-#define fine(a,k,l) field(child(k,l))[a]
-#define coarse(a,k,l) field(aparent(k,l))[a]
+#define _fine(a,k,l) field(child(k,l))[a]
+#define _coarse(a,k,l) field(aparent(k,l))[a]
 
 /* ===============================================================
  *                    Quadtree traversal

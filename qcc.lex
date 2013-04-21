@@ -6,7 +6,7 @@
   #include <sys/wait.h>
   #include <assert.h>
 
-  enum { variable, vector };
+  enum { scalar, vector };
 
   int debug = 0;
   char dir[] = ".qccXXXXXX";
@@ -38,7 +38,8 @@
 
   int foreach_face_line;
 
-  struct { char * v; int type, args, scope; } _varstack[100]; int varstack = -1;
+  typedef struct { char * v; int type, args, scope; } var_t;
+  var_t _varstack[100]; int varstack = -1;
   void varpush (const char * s, int type, int scope) {
     if (s[0] != '\0') {
       char * f = malloc (sizeof (char)*(strlen (s) + 1));
@@ -60,10 +61,39 @@
   }
   
   int identifier (int c) {
-    return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'));
+    return ((c >= 'a' && c <= 'z') || 
+	    (c >= 'A' && c <= 'Z') || 
+	    (c >= '0' && c <= '9'));
   }
 
-  void writefile (FILE * fp, char x, char y) {
+  var_t * varlookup (char * s, int len) {
+    int i;
+    for (i = varstack; i >= 0; i--)
+      if (strlen(_varstack[i].v) == len && 
+	  !strncmp(s, _varstack[i].v, len) &&
+	  (s[len-1] != '.' || _varstack[i].type == vector))
+	return &_varstack[i];
+    return NULL;
+  }
+
+  void writefile (FILE * fp, char x, char y, int line1) {
+    fputs ("\n"
+	   "#undef val\n"
+	   "#undef fine\n"
+	   "#undef coarse\n",
+	   yyout);
+    if (x == 'x')
+      fputs ("#define val(a,k,l) data(k,l)[a]\n"
+	     "#define fine(a,k,l) _fine(a,k,l)\n"
+	     "#define coarse(a,k,l) _coarse(a,k,l)\n",
+	     yyout);
+    else
+      fputs ("#define val(a,k,l) data(l,k)[a]\n"
+	     "#define fine(a,k,l) _fine(a,l,k)\n"
+	     "#define coarse(a,k,l) _coarse(a,l,k)\n",
+	     yyout);
+    fprintf (yyout, "#line %d\n", line1);
+
     rewind (fp);
     char s[] = "123";
     int c, i = 0;
@@ -88,42 +118,30 @@
     foreachdim = 0;
     fclose (yyout);
     yyout = foreachdimfp;
+    fputc ('{', yyout);
     FILE * fp = dopen ("dimension.h", "r");
-    writefile (fp, 'x', 'y');
-    fprintf (yyout,
-	     "\n#undef val\n"
-	     "#define val(a,k,l) data(l,k)[a]\n"
-	     "#line %d\n", foreachdimline);
-    writefile (fp, 'y', 'x');
+    writefile (fp, 'y', 'x', foreachdimline);
+    writefile (fp, 'x', 'y', foreachdimline);
     fclose (fp);
-    fprintf (yyout,
-	     "\n#undef val\n"
-	     "#define val(a,k,l) data(k,l)[a]\n"
-	     "#line %d\n", line);
+    fputc ('}', yyout);
+    fprintf (yyout, "\n#line %d\n", line);
   }
 
   void endforeach () {
     if (inforeach_face) {
       fclose (yyout);
       yyout = foreachfp;
-      FILE * fp = dopen ("foreach_face.h", "r");
       fputs ("foreach()", yyout);
-      writefile (fp, 'x', 'y');
-      fprintf (yyout,
-	       "\n#undef val\n"
-	       "#define val(a,k,l) data(l,k)[a]\n"
-	       "#line %d\n", foreach_face_line);
-      writefile (fp, 'y', 'x');
+      FILE * fp = dopen ("foreach_face.h", "r");
+      writefile (fp, 'y', 'x', foreach_face_line);
+      writefile (fp, 'x', 'y', foreach_face_line);
       fprintf (yyout,
 	       " end_foreach()\n"
 	       "boundary_ghost (top, (");
-      writefile (fp, 'y', 'x');
-      fprintf (yyout,
-	       "));\n"
-	       "#undef val\n"
-	       "#define val(a,k,l) data(k,l)[a]\n"
-	       "boundary_ghost (right, (");
-      writefile (fp, 'x', 'y');
+      writefile (fp, 'y', 'x', foreach_face_line);
+      fputs ("));", yyout);
+      fputs ("boundary_ghost (right, (", yyout);
+      writefile (fp, 'x', 'y', foreach_face_line);
       fprintf (yyout, "));\n#line %d\n", line);
       fclose (fp);
     }
@@ -153,6 +171,8 @@
     inevent = 0;
     nevents++;
   }
+
+#define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
 
 #define YY_INPUT(buf,result,max_size)			      \
   {							      \
@@ -306,7 +326,7 @@ end_foreach{ID}*{SP}*"()" {
   ECHO;
   if (yytext[0] == '(') para++;
   char * var = strstr(yytext,"scalar");
-  vartype = variable;
+  vartype = scalar;
   if (!var) {
     var = strstr(yytext,"vector");
     if (!var)
@@ -314,7 +334,7 @@ end_foreach{ID}*{SP}*"()" {
     vartype = vector;
   }
   var = &var[7];
-  while (strchr (" \t\v\n\f", *var)) var++;
+  nonspace (var);
   if (para == 0) { /* declaration */
     if (debug)
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
@@ -331,7 +351,7 @@ end_foreach{ID}*{SP}*"()" {
 ,{WS}*{ID}+ {
   if (invardecl == scope + 1) {
     char * var = &yytext[1];
-    while (strchr (" \t\v\n\f", *var)) var++;
+    nonspace (var);
     if (debug)
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
     varpush (var, vartype, scope);
@@ -363,110 +383,101 @@ new{WS}+tensor {
 
 [a-zA-Z_0-9\.]+{WS}*\[{WS}*. {
   /* v[... */
-  int found = 0;
+  var_t * var = NULL;
   if ((inforeach || infunction) && !inval) {
     char * s = yytext;
     while (!strchr(" \t\v\n\f[.", *s)) s++;
-    int i, len = s - yytext;
-    for (i = varstack; i >= 0 && !found; i--)
-      if (strlen(_varstack[i].v) == len && !strncmp(yytext, _varstack[i].v, len) &&
-	  (*s != '.' || _varstack[i].type == vector)) {
-	found = 1;
-	s = yytext;
-	while (!strchr(" \t\v\n\f[", *s)) s++;
-	*s = '\0';
-	if (yytext[yyleng-1] == ']')
-	  /* v[] */
-	  fprintf (yyout, "val(%s,0,0)", yytext);
-	else {
-	  fprintf (yyout, "val(%s", yytext);
-	  if (_varstack[i].args > 0) {
-	    /* v[...][... */
-	    fputc ('[', yyout);
-	    fputc (yytext[yyleng-1], yyout);
-	    inarray = brack++;
-	    int j = _varstack[i].args;
-	    while (j) {
-	      int c = getput();
-	      if (c == EOF)
-		return yyerror ("unexpected EOF");
-	      if (c == '[') brack++;
-	      if (c == ']') {
-		brack--;
-		if (brack == inarray)
-		  j--;
-	      }
-	    }
-	    int c = input();
-	    if (c != '[') {
-	      fprintf (stderr, "%s:%d: error: expecting '[' not '", fname, line);
-	      fputc (c, stderr);
-	      fputs ("'\n", stderr);
-	      return 1;
-	    }
-	    fputc (',', yyout);
-	    c = input();
-	    if (c == ']')
-	      /* v[...][] */
-	      fputs ("0,0)", yyout);
-	    else {
-	      fputc (c, yyout);
-	      inarray = ++brack;
+    if ((var = varlookup (yytext, s - yytext))) {
+      s = yytext;
+      while (!strchr(" \t\v\n\f[", *s)) s++;
+      *s = '\0';
+      if (yytext[yyleng-1] == ']')
+	/* v[] */
+	fprintf (yyout, "val(%s,0,0)", yytext);
+      else {
+	fprintf (yyout, "val(%s", yytext);
+	if (var->args > 0) {
+	  /* v[...][... */
+	  fputc ('[', yyout);
+	  fputc (yytext[yyleng-1], yyout);
+	  inarray = brack++;
+	  int j = var->args;
+	  while (j) {
+	    int c = getput();
+	    if (c == EOF)
+	      return yyerror ("unexpected EOF");
+	    if (c == '[') brack++;
+	    if (c == ']') {
+	      brack--;
+	      if (brack == inarray)
+		j--;
 	    }
 	  }
+	  int c = input();
+	  if (c != '[') {
+	    fprintf (stderr, "%s:%d: error: expecting '[' not '", fname, line);
+	    fputc (c, stderr);
+	    fputs ("'\n", stderr);
+	    return 1;
+	  }
+	  fputc (',', yyout);
+	  c = input();
+	  if (c == ']')
+	    /* v[...][] */
+	    fputs ("0,0)", yyout);
 	  else {
-	    /* v[...] */
-	    fputc (',', yyout);
-	    unput (yytext[yyleng-1]);
+	    fputc (c, yyout);
 	    inarray = ++brack;
 	  }
 	}
+	else {
+	  /* v[...] */
+	  fputc (',', yyout);
+	  unput (yytext[yyleng-1]);
+	  inarray = ++brack;
+	}
       }
+    }
   }
-  if (!found)
+  if (!var)
     REJECT;
 }
 
 [a-zA-Z_0-9\.]+{WS}*\[{WS}*(left|right|top|bottom){WS}*\]{WS}*= {
   /* v[top] = */
-  int found = 0;
   char * s = yytext;
   while (!strchr(" \t\v\n\f[.", *s)) s++;
-  int i, len = s - yytext;
-  for (i = varstack; i >= 0 && !found; i--)
-    if (strlen(_varstack[i].v) == len && !strncmp(yytext, _varstack[i].v, len) &&
-	(*s != '.' || _varstack[i].type == vector)) {
-      found = 1;
-      s = yytext;
-      while (!strchr(" \t\v\n\f[", *s)) s++;
-      *s++ = '\0';
-      while (strchr(" \t\v\n\f", *s)) s++;
-      char * b = s;
-      while (!strchr(" \t\v\n\f]", *s)) s++;
-      *s++ = '\0';
-      char * func = malloc ((strlen (yytext) + 1)*sizeof (char));
-      strcpy (func, yytext);
-      char * s1 = func; 
-      while (*s1 != '\0') {
-	if (*s1 == '.')
-	  *s1 = '_';
-	s1++;
-      }
-      fprintf (yyout, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
-      FILE * tmp = yyout; yyout = boundary; boundary = tmp;
-      fprintf (yyout,
-	       "static void _%s%s (int l) {\n"
-	       "  foreach_boundary_level (%s, l)\n"
-	       "#line %d \"%s\"\n"
-	       "    val(%s,ig,jg) =",
-	       func, b,
-	       b,
-	       line, fname,
-	       yytext);
-      free (func);
-      inboundary = inforeach = inforeach_boundary = 1;
+  if (varlookup (yytext, s - yytext)) {
+    s = yytext;
+    while (!strchr(" \t\v\n\f[", *s)) s++;
+    *s++ = '\0';
+    nonspace (s);
+    char * b = s;
+    while (!strchr(" \t\v\n\f]", *s)) s++;
+    *s++ = '\0';
+    char * func = malloc ((strlen (yytext) + 1)*sizeof (char));
+    strcpy (func, yytext);
+    char * s1 = func; 
+    while (*s1 != '\0') {
+      if (*s1 == '.')
+	*s1 = '_';
+      s1++;
     }
-  if (!found)
+    fprintf (yyout, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
+    FILE * tmp = yyout; yyout = boundary; boundary = tmp;
+    fprintf (yyout,
+	     "static void _%s%s (int l) {\n"
+	     "  foreach_boundary_level (%s, l)\n"
+	     "#line %d \"%s\"\n"
+	     "    val(%s,ig,jg) =",
+	     func, b,
+	     b,
+	     line, fname,
+	     yytext);
+    free (func);
+    inboundary = inforeach = inforeach_boundary = 1;
+  }
+  else
     REJECT;
 }
 
@@ -481,6 +492,79 @@ ghost {
   /* (Point, ... */
   infunction = 1; functionscope = scope; functionpara = para;
   ECHO; para++;
+}
+
+for{WS}*[(]{WS}*(scalar|vector){WS}+{ID}+{WS}+in{WS}+{ID}+{WS}*[)] {
+  /* for (scalar .. in .. ) */
+  char * s = strchr (&yytext[3], 'r'); s++;
+  int vartype = s[-2] == 'o' ? vector : scalar;
+  nonspace (s);
+  char * id = s;
+  while (!strchr (" \t\v\n\f", *s)) s++;
+  *s++ = '\0';
+  s = strchr (s, 'n'); s++;
+  nonspace (s);
+  char * list = s;
+  while (!strchr (" \t\v\n\f)", *s)) s++;
+  *s++ = '\0';
+  static int i = 0;
+  if (vartype == scalar)
+    fprintf (yyout,
+	     "for (scalar %s = *%s, *_i%d = %s; %s >= 0; %s = *++_i%d)",
+	     id, list, i, list, id, id, i);
+  else
+    fprintf (yyout,
+	     "for (vector %s = *%s, *_i%d = %s; %s.x >= 0; %s = *++_i%d)",
+	     id, list, i, list, id, id, i);
+  i++;
+  varpush (id, vartype, scope);
+}
+
+for{WS}*[(][^)]+{WS}+in{WS}+[^)]+[)] {
+  /* for (a,b in c,d) */
+  char * id[10], * list[10];
+  int nid = 0, nlist = 0, inin = 0;
+  char * s = strchr (yytext, '('); s++;
+  s = strtok (s, " \t\v\n\f,");
+  while (s) {
+    if (!strcmp (s, "in"))
+      inin = 1;
+    else if (inin)
+      list[nlist++] = s;
+    else
+      id[nid++] = s;
+    s = strtok (NULL, " \t\v\n\f,)");
+  }
+  if (nlist != nid)
+    return yyerror ("lists must be the same size");
+  int i;
+  static int index = 0;
+  char * sc = NULL, * vc = NULL;
+  for (i = 0; i < nid; i++) {
+    var_t * var = varlookup (id[i], strlen(id[i]));
+    if (!var) {
+      fprintf (stderr, "%s:%d: error: '%s' is not a scalar or vector\n", 
+	       fname, line, id[i]);
+      return 1;
+    }
+    fprintf (yyout, "%s * _i%d = %s; ", 
+	     var->type == vector ? "vector" : "scalar",
+	     index + i, list[i]);
+    if (!sc && var->type == scalar) sc = id[i];
+    if (!vc && var->type == vector) vc = id[i];
+  }
+  fprintf (yyout, "for (%s = *%s", id[0], list[0]);
+  for (i = 1; i < nid; i++)
+    fprintf (yyout, ", %s = *%s", id[i], list[i]);
+  if (sc)
+    fprintf (yyout, "; %s >= 0; ", sc);
+  else
+    fprintf (yyout, "; %s.x >= 0; ", vc);
+  fprintf (yyout, "%s = *++_i%d", id[0], index);
+  for (i = 1; i < nid; i++)
+    fprintf (yyout, ", %s = *++_i%d", id[i], index + i);
+  fputc (')', yyout);
+  index += nid;
 }
 
 [\n]       ECHO;

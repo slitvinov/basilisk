@@ -24,13 +24,14 @@ void boundary_dirichlet (scalar v)
     v[ghost] = 2.*solution(x, y - delta/2.) - v[];
 }
 
-void homogeneous_boundary (scalar v, int l)
+void homogeneous_boundary (scalar * v, int l)
 {
   /* Homogeneous Dirichlet condition on all boundaries */
-  foreach_boundary_level (right, l)  v[ghost] = - v[];
-  foreach_boundary_level (left, l)   v[ghost] = - v[];
-  foreach_boundary_level (top, l)    v[ghost] = - v[];
-  foreach_boundary_level (bottom, l) v[ghost] = - v[];
+  scalar p = *v;
+  foreach_boundary_level (right, l)  p[ghost] = - p[];
+  foreach_boundary_level (left, l)   p[ghost] = - p[];
+  foreach_boundary_level (top, l)    p[ghost] = - p[];
+  foreach_boundary_level (bottom, l) p[ghost] = - p[];
 }
 
 void relax (scalar a, scalar b, int l)

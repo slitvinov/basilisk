@@ -96,7 +96,8 @@ double residual (scalar a, scalar b, scalar res)
 {
   double maxres = 0.;
   foreach(reduction(max:maxres)) {
-    res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(L0*L0*delta*delta);
+    res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])
+      /(L0*L0*delta*delta);
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
@@ -117,11 +118,13 @@ void projection (scalar u, scalar v, scalar p,
     mg_cycle (p, res, dp,
 	      relax, boundary_level,
 	      4, 0);
-    boundary_level (p, depth());
+    boundary_level (scalars (p), depth());
     maxres = residual (p, div, res);
   }
   if (i == NITERMAX)
-    fprintf (stderr, "WARNING: convergence not reached after %d iterations\n  sum: %g\n", 
+    fprintf (stderr, 
+	     "WARNING: convergence not reached after %d iterations\n"
+	     "  sum: %g\n", 
 	     NITERMAX, sum);
   foreach() {
     delta *= L0;
