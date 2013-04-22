@@ -5,6 +5,18 @@
 #include <assert.h>
 #include <math.h>
 
+#define GHOSTS  1 // number of ghost layers
+#define TRASH   1 // whether to 'trash' uninitialised data 
+                  // (useful for debugging)
+
+#define pi 3.14159265358979
+#define undefined 1e100
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#define sq(x) ((x)*(x))
+#define sign(x) ((x) > 0 ? 1 : -1)
+#define swap(type,a,b) { type tmp = a; a = b; b = tmp; }
+
 #ifdef _OPENMP
 # include <omp.h>
 # define OMP(x) _Pragma(#x)
@@ -18,18 +30,11 @@
 #define _OMPSTART
 #define _OMPEND
 
-#define GHOSTS  1 // number of ghost layers
-#define TRASH   1 // whether to 'trash' uninitialised data 
-                  // (useful for debugging)
-
 #define NOT_UNUSED(x) (x = x)
 
 #define VARIABLES
 
-enum { right, left, top, bottom, nboundary };
-// ghost cell coordinates for each direction
-int _ig[nboundary] = {1,-1,0,0}, 
-    _jg[nboundary] = {0,0,1,-1};
+void * grid = NULL;       // the grid
 
 typedef int scalar;
 
@@ -47,13 +52,7 @@ typedef struct {
 #define fine(a,k,l)    _fine(a,k,l)
 #define coarse(a,k,l)  _coarse(a,k,l)
 
-#define pi 3.14159265358979
-#define undefined 1e100
-#define max(a,b) ((a) > (b) ? (a) : (b))
-#define min(a,b) ((a) < (b) ? (a) : (b))
-#define sq(x) ((x)*(x))
-#define sign(x) ((x) > 0 ? 1 : -1)
-#define swap(type,a,b) { type tmp = a; a = b; b = tmp; }
+// events 
 
 typedef struct _Event Event;
 typedef int (* Expr) (int *, double *);
@@ -69,10 +68,17 @@ struct _Event {
 };
 
 double tnext = undefined; // time of next event
-void * grid = NULL;       // the grid
-typedef void (* Boundary) (int l);
+void init_events (void);
 
 // boundary conditions for each direction/variable
+
+enum { right, left, top, bottom, nboundary };
+// ghost cell coordinates for each direction
+int _ig[nboundary] = {1,-1,0,0}, 
+    _jg[nboundary] = {0,0,1,-1};
+
+typedef void (* Boundary) (int l);
+
 Boundary * _boundary[nboundary];
 
 void init_boundaries (int nvar)

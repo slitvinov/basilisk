@@ -39,29 +39,36 @@ size_t _size (size_t l)
 
 /***** Multigrid macros *****/
 #define depth()      (((Quadtree *)grid)->depth)
-#define aparent(k,l) CELL(point.m, point.level-1, ((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
-			  (point.j+GHOSTS)/2+l)
-#define child(k,l)   CELL(point.m, point.level+1, (2*point.i-GHOSTS+k)*2*(_n + GHOSTS) + \
-			  (2*point.j-GHOSTS+l))
+#define aparent(k,l) \
+  CELL(point.m, point.level-1, ((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
+       (point.j+GHOSTS)/2+l)
+#define child(k,l)   \
+  CELL(point.m, point.level+1, (2*point.i-GHOSTS+k)*2*(_n + GHOSTS) +	\
+       (2*point.j-GHOSTS+l))
 
 /***** Quadtree macros ****/
 #define _n (1 << point.level) /* fixme */
-#define cell               CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
-#define neighbor(k,l)      CELL(point.m, point.level, (point.i + k)*(_n + 2*GHOSTS) + point.j + l)
+#define cell							\
+  CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
+#define neighbor(k,l)							\
+  CELL(point.m, point.level, (point.i + k)*(_n + 2*GHOSTS) + point.j + l)
 #define parent             aparent(0,0)
-#define alloc_children()   { point.back->dirty = true; \
-                             if (point.level == point.depth) alloc_layer(&point); }
+#define alloc_children()						\
+  { point.back->dirty = true;						\
+    if (point.level == point.depth) alloc_layer(&point); }
 #define free_children()    { point.back->dirty = true; }
 
 /***** Quadtree variables *****/
 #define QUADTREE_VARIABLES \
-  int    level = point.level;                                   NOT_UNUSED(level);   \
-  int    childx = 2*((point.i+GHOSTS)%2)-1;                     NOT_UNUSED(childx);  \
-  int    childy = 2*((point.j+GHOSTS)%2)-1;                     NOT_UNUSED(childy);
+  int    level = point.level;                  NOT_UNUSED(level);   \
+  int    childx = 2*((point.i+GHOSTS)%2)-1;    NOT_UNUSED(childx);  \
+  int    childy = 2*((point.j+GHOSTS)%2)-1;    NOT_UNUSED(childy);
 
 /***** Data macros *****/
-#define data(k,l)  ((double *) &point.m[point.level][((point.i + k)*(_n + 2*GHOSTS) + \
-			       (point.j + l))*(sizeof(Cell) + datasize) + sizeof(Cell)])
+#define data(k,l)							\
+  ((double *) &point.m[point.level][((point.i + k)*(_n + 2*GHOSTS) +	\
+				     (point.j + l))*(sizeof(Cell) + datasize) \
+				    + sizeof(Cell)])
 #define field(cell) ((double *)(((char *) &cell) + sizeof(Cell)))
 #define _fine(a,k,l) field(child(k,l))[a]
 #define _coarse(a,k,l) field(aparent(k,l))[a]
@@ -100,10 +107,12 @@ void recursive (Point point)
 }
 
 #define STACKSIZE 20
-#define _push(b,c,d,e)						\
-  { _s++; stack[_s].l = b; stack[_s].i = c; stack[_s].j = d; stack[_s].stage = e; }
+#define _push(b,c,d,e)					                \
+  { _s++; stack[_s].l = b; stack[_s].i = c; stack[_s].j = d;		\
+    stack[_s].stage = e; }
 #define _pop(b,c,d,e)							\
-  { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j; e = stack[_s].stage; _s--; }
+  { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j;			\
+    e = stack[_s].stage; _s--; }
 
 #define foreach_boundary_cell(dir)					\
   {									\
@@ -208,7 +217,8 @@ enum {
   Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid); \
   OMP(omp for schedule(static) clause)					\
   for (int _k = 0; _k < point.nleaves; _k++) {				\
-    point.i = point.index[_k].i; point.j = point.index[_k].j; point.level = point.index[_k].level; \
+    point.i = point.index[_k].i; point.j = point.index[_k].j;		\
+    point.level = point.index[_k].level;				\
     QUADTREE_VARIABLES;							\
     VARIABLES;
 #define end_foreach()         } OMP_END_PARALLEL() }
@@ -221,7 +231,7 @@ enum {
 					       point.i += ig; point.j += jg; \
                                                QUADTREE_VARIABLES;	     \
 					       VARIABLES;
-#define end_foreach_boundary_ghost()         continue; } end_foreach_boundary_cell()
+#define end_foreach_boundary_ghost()   continue; } end_foreach_boundary_cell()
 
 void alloc_layer (Quadtree * p)
 {
@@ -281,7 +291,8 @@ void init_grid (int n)
   Quadtree * q = malloc(sizeof (Quadtree));
   q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
   q->m = malloc(sizeof (char *)*2);
-  q->m[0] = NULL; q->m = &(q->m[1]); /* make sure we don't try to access level -1 */
+  /* make sure we don't try to access level -1 */
+  q->m[0] = NULL; q->m = &(q->m[1]);
   /* initialise the root cell */
   q->m[0] = calloc (_size(0), sizeof (Cell) + datasize);
   CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
@@ -294,6 +305,7 @@ void init_grid (int n)
       point = refine_cell (point, 0, nvar - 1);
   update_cache();
   init_boundaries (nvar);
+  init_events();
 }
 
 void free_grid (void)

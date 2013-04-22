@@ -44,7 +44,7 @@ static int event_do (Event * ev, int i, double t)
   return 0;
 }
 
-void events_init (void)
+void init_events (void)
 {
   for (Event * ev = Events; !ev->last; ev++) 
     if (ev->arrayi || ev->arrayt) {
@@ -73,7 +73,8 @@ void events_init (void)
 	    int i1 = i; double t1 = t;
 	    (* ev->expr[j]) (&i1, &t1);
 	    if (i1 == i && t1 == t) {
-	      /* applying twice does not change anything: this is an initialisation */
+	      /* applying twice does not change anything: this is an
+		 initialisation */
 	      if (init)
 		fprintf (stderr, "warning: event initialisation redefined\n");
 	      init = ev->expr[j];

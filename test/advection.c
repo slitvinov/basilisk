@@ -1,10 +1,4 @@
-#if ADAPT
-# include "grid/quadtree.h"
-# include "wavelet.h"
-# include "adapt.h"
-#else
-# include "grid/cartesian.h"
-#endif
+#include "grid/cartesian.h"
 #include "advection.h"
 
 int refine_right (Point point, void * data)
@@ -19,33 +13,7 @@ int refine_circle (Point point, void * data)
   return x*x + y*y < 0.25*0.25;
 }
 
-void boundary_f (scalar f)
-{
-  boundary (f);
-#if ADAPT
-  restriction (f, f);
-  update_halo (-1, f, f);
-#endif
-}
-
-void boundary_u_v (scalar u, scalar v)
-{
-  boundary_uv (u, v);
-#if ADAPT
-  restriction_u_v (u, v);
-  update_halo_u_v (-1, u, v);
-#endif
-}
-
-void boundary_gradient (scalar fx, scalar fy)
-{
-#if ADAPT
-  restriction (fx, fy);
-  update_halo (-1, fx, fy);
-#endif
-}
-
-void parameters ()
+void parameters()
 {
   // maximum timestep
   DT = .1;
@@ -55,7 +23,7 @@ void parameters ()
 
 #define bump(x,y) (exp(-100.*(sq(x + 0.2) + sq(y + .236338))))
 
-void initial_conditions ()
+void init()
 {
   //  refine_function (0, -1, refine_circle, NULL);
   //  flag_halo_cells ();
@@ -118,11 +86,11 @@ int event (i++) {
 /* } */
 
 int event (i++) {
-  foreach() {
-    u[] = 1.5*sin(2.*pi*t/5.)*sin((xu + 0.5)*pi)*cos((yu + 0.5)*pi);
-    v[] = - 1.5*sin(2.*pi*t/5.)*cos((xv + 0.5)*pi)*sin((yv + 0.5)*pi);
-  }
-  boundary_u_v (u, v);
+  foreach_face (x)
+    u.x[] = 1.5*sin(2.*pi*t/5.)*sin((xu + 0.5)*pi)*cos((yu + 0.5)*pi);
+  foreach_face (y)
+    u.y[] = - 1.5*sin(2.*pi*t/5.)*cos((xv + 0.5)*pi)*sin((yv + 0.5)*pi);
+  boundary_flux (u);
 }
 
 int event (t = {0,5}) {

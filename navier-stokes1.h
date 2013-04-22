@@ -137,7 +137,6 @@ void run (void)
 {
   parameters ();
   init_grid (N);
-  events_init ();
   init ();
   boundary_uv (u, v);
   projection (u, v, p, Sxx, Syy, Sxy);

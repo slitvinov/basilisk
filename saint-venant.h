@@ -92,8 +92,6 @@ void run (void)
 {
   parameters();
   init_grid(N);
-
-  events_init();
   init();
   boundary (hu);
   boundary (B);

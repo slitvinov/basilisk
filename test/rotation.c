@@ -1,40 +1,10 @@
-#if ADAPT
-# include "grid/quadtree.h"
-# include "wavelet.h"
-# include "adapt.h"
-#else
-# include "grid/cartesian.h"
-#endif
+#include "grid/cartesian.h"
 #include "advection.h"
 
-void boundary_f (scalar f)
+void parameters()
 {
-  boundary (f);
-#if ADAPT
-  restriction (f, f);
-  update_halo (-1, f, f);
-#endif
-}
-
-void boundary_u_v (scalar u, scalar v)
-{
-  boundary_uv (u, v);
-#if ADAPT
-  restriction_u_v (u, v);
-  update_halo_u_v (-1, u, v);
-#endif
-}
-
-void boundary_gradient (scalar fx, scalar fy)
-{
-#if ADAPT
-  restriction (fx, fy);
-  update_halo (-1, fx, fy);
-#endif
-}
-
-void parameters ()
-{
+  // maximum timestep
+  DT = .1;
   // CFL number
   CFL = 0.8;
 }
@@ -46,7 +16,7 @@ double bump (double x, double y)
   return (1. + cos(20.*x)*cos(20.*y))*exp(-coeff*r2)/2.;
 }
 
-void initial_conditions ()
+void init()
 {
   foreach()
     f[] = bump(x,y);
@@ -108,36 +78,26 @@ int event (i++) {
 /* } */
 
 int event (i++) {
-  foreach() {
-    u[] = -8.*yu;
-    v[] =  8.*xv;
-  }
-  boundary_u_v (u, v);
+  foreach_face (x)
+    u.x[] = -8.*yu;
+  foreach_face (y)
+    u.y[] =  8.*xv;
+  //  boundary_flux (u);
+  boundary_uv (u.x, u.y);
 }
 
 int event (t = {0,end}) {
-  double sum = 0., min = 1e100, max = -1e100;
-  foreach(reduction(+:sum) reduction(max:max) reduction(min:min)) {
-    sum += f[]*delta*delta;
-    if (f[] > max) max = f[];
-    if (f[] < min) min = f[];
-  }
-  fprintf (stderr, "# %f %.12f %g %g\n", t, sum, min, max);  
+  stats s = statsf (f);
+  fprintf (stderr, "# %f %.12f %g %g\n", t, s.sum, s.min, s.max);
 }
 
 int event (t = end) {
-  double max = 0., norm1 = 0., norm2 = 0., area = 0.;
   scalar e = new scalar;
-  foreach(reduction(max:max) reduction(+:norm1) reduction(+:norm2) reduction(+:area)) {
+  foreach()
     e[] = f[] - bump(x,y);
-    if (fabs(e[]) > max) max = fabs(e[]);
-    double a = sq(delta);
-    norm1 += a*fabs(e[]);
-    norm2 += a*e[]*e[];
-    area  += a;
-  }
-  fprintf (stderr, "%d %g %g %g\n", N, norm1/area, sqrt(norm2/area), max);
-  
+  norm n = normf (e);
+  fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
+
   if (N == 256)
     output_matrix (e, N, stdout, false);
 }

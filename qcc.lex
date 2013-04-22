@@ -13,7 +13,8 @@
 
   int nvar = 0, nevents = 0;
   int line;
-  int scope, para, inforeach, foreachscope, foreachpara, inforeach_boundary, inforeach_face;
+  int scope, para, inforeach, foreachscope, foreachpara, 
+    inforeach_boundary, inforeach_face;
   int invardecl, vartype;
   int inval, invalpara;
   int brack, inarray;
@@ -37,6 +38,8 @@
   FILE * dopen (const char * fname, const char * mode);
 
   int foreach_face_line;
+  enum { face_x, face_y, face_xy };
+  int foreach_face_xy;
 
   typedef struct { char * v; int type, args, scope; } var_t;
   var_t _varstack[100]; int varstack = -1;
@@ -133,16 +136,24 @@
       yyout = foreachfp;
       fputs ("foreach()", yyout);
       FILE * fp = dopen ("foreach_face.h", "r");
-      writefile (fp, 'y', 'x', foreach_face_line);
+      if (foreach_face_xy == face_xy)
+	writefile (fp, 'y', 'x', foreach_face_line);
       writefile (fp, 'x', 'y', foreach_face_line);
-      fprintf (yyout,
-	       " end_foreach()\n"
-	       "boundary_ghost (top, (");
-      writefile (fp, 'y', 'x', foreach_face_line);
-      fputs ("));", yyout);
-      fputs ("boundary_ghost (right, (", yyout);
-      writefile (fp, 'x', 'y', foreach_face_line);
-      fprintf (yyout, "));\n#line %d\n", line);
+      fputs (" end_foreach()\n", yyout);
+      if (foreach_face_xy != face_x) {
+	fputs ("boundary_ghost (top, ({", yyout);
+	if (foreach_face_xy == face_xy)
+	  writefile (fp, 'y', 'x', foreach_face_line);
+	else
+	  writefile (fp, 'x', 'y', foreach_face_line);
+	fputs ("}));\n", yyout);
+      }
+      if (foreach_face_xy != face_y) {
+	fputs ("boundary_ghost (right, ({", yyout);
+	writefile (fp, 'x', 'y', foreach_face_line);
+	fputs ("}));\n", yyout);
+      }
+      fprintf (yyout, "#line %d\n", line);
       fclose (fp);
     }
     else if (nreduct > 0) {
@@ -205,6 +216,15 @@ WS  [ \t\v\n\f]
       fclose (yyout);
       yyout = dopen ("foreach_face.h", "w");
       foreach_face_line = line;
+      foreach_face_xy = face_xy;
+      FILE * fp = dopen ("foreach.h", "r");
+      int c;
+      while ((c = fgetc (fp)) != EOF)
+	if (c == 'x')
+	  foreach_face_xy = face_x;
+	else if (c == 'y')
+	  foreach_face_xy = face_y;
+      fclose (fp);
     }
     else {
       fclose (yyout);
@@ -695,7 +715,8 @@ int endfor (char * file, FILE * fin, FILE * fout)
   yyin = fin;
   yyout = fout;
   line = 1, scope = para = 0;
-  inforeach = foreachscope = foreachpara = inforeach_boundary = inforeach_face = 0;
+  inforeach = foreachscope = foreachpara = 
+    inforeach_boundary = inforeach_face = 0;
   invardecl = 0;
   inval = invalpara = 0;
   brack = inarray = 0;

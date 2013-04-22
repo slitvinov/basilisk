@@ -234,18 +234,24 @@ static double minmod1   (double r) { return generic_limiter (r, 1.);  }
 static double superbee1 (double r) { return generic_limiter (r, 2.);  }
 static double sweby1    (double r) { return generic_limiter (r, 1.5); }
 
-void centered (const scalar f, vector g)
+void centered (scalar * f, vector * g)
 {
-  foreach()
-    foreach_dimension()
-      g.x[] = (f[1,0] - f[-1,0])/2./delta;
+  foreach() {
+    scalar s; vector v;
+    for (s,v in f,g)
+      foreach_dimension()
+	v.x[] = (s[1,0] - s[-1,0])/2./delta;
+  }
 }
 
-void minmod (const scalar f, vector g)
+void minmod (scalar * f, vector * g)
 {
-  foreach()
-    foreach_dimension()
-      g.x[] = minmod1 ((f[1,0] - f[])/(f[] - f[-1,0]))*(f[] - f[-1,0])/delta;
+  foreach() {
+    scalar s; vector v;
+    for (s,v in f,g)
+      foreach_dimension()
+	v.x[] = minmod1 ((s[1,0] - s[])/(s[] - s[-1,0]))*(s[] - s[-1,0])/delta;
+  }
 }
 
 double theta = 1.3;

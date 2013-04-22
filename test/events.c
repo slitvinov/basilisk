@@ -13,7 +13,7 @@ int event (t += 1; t <= 20) fprintf (stderr, "t++: %g\n", t);
 
 int main (int argc, char * argv[])
 {
-  events_init ();
+  init_events();
   double t = 0.;
   int i = 0;
   while (events (i, t)) {
