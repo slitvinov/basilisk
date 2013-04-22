@@ -18,8 +18,6 @@ vector ghu = new vector, gw = new vector;
 // fluxes
 vector fhu = new vector, fw = new vector;
 
-#include "boundary.h"
-
 // Default parameters
 // acceleration of gravity
 double G = 1.;

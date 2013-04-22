@@ -81,12 +81,6 @@ typedef void (* Boundary) (int l);
 
 Boundary * _boundary[nboundary];
 
-void init_boundaries (int nvar)
-{
-  for (int b = 0; b < nboundary; b++)
-    _boundary[b] = calloc (nvar, sizeof (Boundary));
-}
-
 void free_boundaries ()
 {
   for (int b = 0; b < nboundary; b++)

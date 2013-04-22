@@ -31,9 +31,10 @@
   char reduction[10][4], reductvar[10][80];
   int nreduct;
 
-  FILE * boundary = NULL;
   int inboundary;
-  
+  char * boundaryfunc;
+  int nboundary = 0;
+
   int infunction, functionscope, functionpara;
   FILE * dopen (const char * fname, const char * mode);
 
@@ -178,7 +179,7 @@
   }
 
   void endevent() {
-    fprintf (yyout, "\n  return 0;\n}\n#line %d\n", line);
+    fprintf (yyout, "  return 0; } ");
     inevent = 0;
     nevents++;
   }
@@ -247,14 +248,13 @@ WS  [ \t\v\n\f]
   else if (inevent > 0 && inevent < 4 && 
 	   scope == eventscope && eventpara == para + 1) {
     if (!eventarray[nevents])
-      fprintf (yyout, ");\n"
-	       "  *ip = i; *tp = t;\n"
-	       "  return ret;\n"
-	       "}\n");
+      fprintf (yyout, "); "
+	       "  *ip = i; *tp = t; "
+	       "  return ret; "
+	       "} ");
     fprintf (yyout, 
-	     "static int event_%d (int i, double t) {\n"
-	     "  #line %d\n",
-	     nevents, line);
+	     "static int event_%d (int i, double t) { ",
+	     nevents);
     assert (nevents < 100);
     nexpr[nevents] = inevent;
     inevent = 4;
@@ -312,10 +312,16 @@ end_foreach{ID}*{SP}*"()" {
     infunction = 0;
   if (inboundary) {
     ECHO;
-    fputs ("\n  end_foreach_boundary_level();\n}\n\n", yyout);
-    FILE * tmp = yyout; yyout = boundary; boundary = tmp;
-    fprintf (yyout, "\n#line %d\n", line - 1);
-    inboundary = inforeach = inforeach_boundary = 0;
+    fputs (" end_foreach_boundary_level(); } ", yyout);
+    if (scope == 0)
+      /* file scope */
+      fprintf (yyout, "static void _boundary%d (void) { %s } ",
+	       nboundary++, boundaryfunc);
+    else
+      /* function scope */
+      fputs (boundaryfunc, yyout);
+    free (boundaryfunc);
+    inboundary = inforeach_boundary = inforeach = 0;
   }
   else if (inforeach && scope == foreachscope && para == foreachpara) {
     ECHO;
@@ -324,14 +330,13 @@ end_foreach{ID}*{SP}*"()" {
   else if (inevent > 0 && inevent < 3 && para == eventpara) {
     if (eventarray[nevents])
       return yyerror ("cannot mix arrays and expressions");
-    fprintf (yyout, ");\n"
-	     "  *ip = i; *tp = t;\n"
-	     "  return ret;\n"
-	     "}\n"
-	     "static int event_expr%d%d (int * ip, double * tp) {\n"
-	     "  int i = *ip; double t = *tp;\n"
-	     "  #line %d\n"
-	     "  int ret = (", nevents, inevent++, line);
+    fprintf (yyout, "); "
+	     "  *ip = i; *tp = t; "
+	     "  return ret; "
+	     "} "
+	     "static int event_expr%d%d (int * ip, double * tp) { "
+	     "  int i = *ip; double t = *tp; "
+	     "  int ret = (", nevents, inevent++);
   }
   else if (inevent == 4 && scope == eventscope && para == eventpara - 1) {
     ECHO;
@@ -477,25 +482,27 @@ new{WS}+tensor {
     *s++ = '\0';
     char * func = malloc ((strlen (yytext) + 1)*sizeof (char));
     strcpy (func, yytext);
-    char * s1 = func; 
+    char * s1 = func;
     while (*s1 != '\0') {
       if (*s1 == '.')
 	*s1 = '_';
       s1++;
     }
-    fprintf (yyout, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
-    FILE * tmp = yyout; yyout = boundary; boundary = tmp;
+    boundaryfunc = malloc ((strlen ("_boundary[][] = _;") + 
+			    2*strlen (b) + 
+			    strlen(yytext) + 
+			    strlen (func) + 1)*sizeof (char));
+    sprintf (boundaryfunc, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
     fprintf (yyout,
-	     "static void _%s%s (int l) {\n"
-	     "  foreach_boundary_level (%s, l)\n"
-	     "#line %d \"%s\"\n"
+	     "void _%s%s (int l) {"
+	     "  foreach_boundary_level (%s, l)"
 	     "    val(%s,ig,jg) =",
 	     func, b,
 	     b,
-	     line, fname,
 	     yytext);
     free (func);
-    inboundary = inforeach = inforeach_boundary = 1;
+    inboundary = inforeach_boundary = 1;
+    inforeach = 2;
   }
   else
     REJECT;
@@ -605,10 +612,9 @@ for{WS}*[(][^)]+{WS}+in{WS}+[^)]+[)] {
   fputc (yytext[0], yyout);
   /* event (... */
   fprintf (yyout, 
-	   "event_expr%d%d (int * ip, double * tp) {\n"
-	   "  int i = *ip; double t = *tp;\n"
-	   "  #line %d\n"
-	   "  int ret = (", nevents, inevent++, line);
+	   "event_expr%d%d (int * ip, double * tp) {"
+	   "  int i = *ip; double t = *tp;"
+	   "  int ret = (", nevents, inevent++);
   eventscope = scope; eventpara = ++para;
   eventarray[nevents] = 0;
 }
@@ -617,13 +623,13 @@ for{WS}*[(][^)]+{WS}+in{WS}+[^)]+[)] {
   if (inevent == 1) {
     eventarray[nevents] = yytext[0];
     yytext[yyleng-1] = '\0';
-    fprintf (yyout, "1);\n"
-	     "  *ip = i; *tp = t;\n"
-	     "  return ret;\n"
-	     "}\n"
-	     "#line %d\n"
-	     "static %s event_array%d[] = %s,-1};\n",
-	     line, yytext[0] == 'i' ? "int" : "double", nevents, strchr (yytext, '{'));
+    fprintf (yyout, "1); "
+	     "  *ip = i; *tp = t; "
+	     "  return ret; "
+	     "} "
+	     "static %s event_array%d[] = %s,-1}; ",
+	     yytext[0] == 'i' ? "int" : "double", 
+	     nevents, strchr (yytext, '{'));
   }
   else
     REJECT;
@@ -768,7 +774,6 @@ FILE * dopen (const char * fname, const char * mode)
 
 void compdir (char * file, char ** in, int nin, char * grid)
 {
-  boundary = dopen ("boundary.h", "w");
   int i;
   for (i = nin - 1; i >= 0; i--) {
     char * path = in[i];
@@ -797,7 +802,6 @@ void compdir (char * file, char ** in, int nin, char * grid)
     fclose (fin);
     free (path);
   }
-  fclose (boundary);
 
   FILE * fout = dopen ("grid.h", "w");
   /* new variables */
@@ -813,7 +817,8 @@ void compdir (char * file, char ** in, int nin, char * grid)
 	       "static int event_expr%d%d (int * ip, double * tp);\n",
 	       i, j);
     if (eventarray[i])
-      fprintf (fout, "static %s event_array%d[];\n", eventarray[i] == 'i' ? "int" : "double", i);
+      fprintf (fout, "static %s event_array%d[];\n", 
+	       eventarray[i] == 'i' ? "int" : "double", i);
   }
   fputs ("Event Events[] = {\n", fout);
   for (i = 0; i < nevents; i++) {
@@ -831,6 +836,16 @@ void compdir (char * file, char ** in, int nin, char * grid)
       fprintf (fout, "NULL},\n");
   }
   fputs ("  { true }\n};\n", fout);
+  /* boundaries */
+  for (i = 0; i < nboundary; i++)
+    fprintf (fout, "static void _boundary%d (void);\n", i);
+  fputs ("static void init_boundaries (int nvar) {\n"
+	 "  for (int b = 0; b < nboundary; b++)\n"
+	 "    _boundary[b] = calloc (nvar, sizeof (Boundary));\n",
+	 fout);
+  for (i = 0; i < nboundary; i++)
+    fprintf (fout, "  _boundary%d();\n", i);
+  fputs ("}\n", fout);
   /* grid */
   if (grid)
     fprintf (fout, "#include \"grid/%s.h\"\n", grid);
@@ -851,7 +866,8 @@ int main (int argc, char ** argv)
       ;
     else if (!strcmp (argv[i], "-debug"))
       debug = 1;
-    else if (argv[i][0] != '-' && !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
+    else if (argv[i][0] != '-' && 
+	     !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
       if (file) {
 	fprintf (stderr, "usage: qcc -grid=[GRID] [OPTIONS] FILE.c\n");
 	return 1;
@@ -889,7 +905,8 @@ int main (int argc, char ** argv)
     fprintf (stderr, "command: %s\n", command);
   status = system (command);
   if (status == -1 ||
-      (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT)))
+      (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || 
+				WTERMSIG (status) == SIGQUIT)))
     cleanup (1);
   cleanup (WEXITSTATUS (status));
   return 0;

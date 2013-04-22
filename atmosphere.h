@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "boundary.h"
 
 scalar u = new scalar, v = new scalar, h = new scalar, b = new scalar;
 scalar ke = new scalar, psi = new scalar;

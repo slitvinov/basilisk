@@ -4,8 +4,6 @@
 scalar u = new scalar, v = new scalar, p = new scalar;
 scalar Sxx = new scalar, Syy = new scalar, Sxy = new scalar;
 
-#include "boundary.h"
-
 // Default parameters
 // Viscosity
 double NU = 0.;

@@ -17,8 +17,6 @@ tensor gq = new tensor;
 vector fh = new vector;
 tensor fq = new tensor;
 
-#include "boundary.h"
-
 // Default parameters
 // acceleration of gravity
 double G = 1.;
