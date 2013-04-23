@@ -15,8 +15,8 @@ void mg_cycle (scalar a, scalar res, scalar dp,
       /* bilinear interpolation from coarser level */
       foreach_level (l)
 	dp[] = (9.*coarse(dp,0,0) + 
-		3.*(coarse(dp,childx,0) + coarse(dp,0,childy)) + 
-		coarse(dp,childx,childy))/16.;
+		3.*(coarse(dp,child.x,0) + coarse(dp,0,child.y)) + 
+		coarse(dp,child.x,child.y))/16.;
     (*boundary) (scalars (dp), l);
     for (int i = 0; i < nrelax; i++) {
       (*relax) (dp, res, l);

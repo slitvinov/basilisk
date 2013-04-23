@@ -25,15 +25,15 @@ double CFL = 0.5;
 #define YV(j) ((j)*DX + X0*L0)
 
 #undef VARIABLES
-#define VARIABLES					       \
-  double delta = DELTA;          /* cell size */	       \
+#define VARIABLES							\
+  double delta = DELTA;          /* cell size */			\
   double x  = XC(ig/2. + I), y  = YC(jg/2. + J); /* cell/face center */	\
-  double xu = XU(I), yu = YU(J); /* staggered u-coordinates */ \
-  double xv = XV(I), yv = YV(J); /* staggered v-coordinates */ \
-  /* we need this to avoid compiler warnings */	               \
-  NOT_UNUSED(x);  NOT_UNUSED(y);        \
-  NOT_UNUSED(xu); NOT_UNUSED(yu);	\
-  NOT_UNUSED(xv); NOT_UNUSED(yv);	\
+  double xu = XU(I), yu = YU(J); /* staggered u-coordinates */		\
+  double xv = XV(I), yv = YV(J); /* staggered v-coordinates */          \
+  /* we need this to avoid compiler warnings */	                        \
+  NOT_UNUSED(x);  NOT_UNUSED(y);	                                \
+  NOT_UNUSED(xu); NOT_UNUSED(yu);	                                \
+  NOT_UNUSED(xv); NOT_UNUSED(yv);	                                \
   NOT_UNUSED(delta);
 
 void runge_kutta (int stages,
@@ -86,8 +86,6 @@ double change (scalar v, scalar vn)
 double interpolate (scalar v, double xp, double yp)
 {
   Point point = locate (xp, yp);
-  int ig = 0, jg = 0;
-  VARIABLES;
   x = (xp - x)/delta;
   y = (yp - y)/delta;
   assert (x >= -0.5 && x <= 0.5);

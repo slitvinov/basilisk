@@ -13,6 +13,8 @@ typedef struct {
 
 #define data(k,l) ((double *)&point.data[(point.i + k)*datasize + (l) - (l)])
 
+#define POINT_VARIABLES VARIABLES
+
 #define foreach(clause)							\
   OMP_PARALLEL()							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
@@ -20,7 +22,7 @@ typedef struct {
   OMP(omp for schedule(static) clause)					\
   for (int _k = 1; _k <= point.n; _k++) {				\
     point.i = _k;							\
-    VARIABLES
+    POINT_VARIABLES
 #define end_foreach() } OMP_END_PARALLEL()
 
 #define foreach_boundary(d) {						\
@@ -28,7 +30,7 @@ typedef struct {
   Point point = *((Point *)grid);					\
   {									\
     point.i = d == right ? point.n : 1;					\
-    VARIABLES
+    POINT_VARIABLES
 #define end_foreach_boundary() }}
 
 #define foreach_boundary_ghost(d) {					\
@@ -36,7 +38,7 @@ typedef struct {
   Point point = *((Point *)grid);					\
   {									\
     point.i = (d == right ? point.n : 1) + ig;				\
-    VARIABLES
+    POINT_VARIABLES
 #define end_foreach_boundary_ghost() }}
 
 #define foreach_boundary_level(d,l) foreach_boundary(d)

@@ -47,8 +47,6 @@ static double hu_over_h (double hu, double h, double epsilon)
 
 static double flux (Point point, int i, double dtmax)
 {
-  int ig = 0, jg = 0;
-  VARIABLES;
   delta /= 2.;
   double hup = hu[i,0] - delta*ghu.x[i,0], hum = hu[i-1,0] + delta*ghu.x[i-1,0];
   double wp  = w[i,0] - delta*gw.x[i,0], wm = w[i-1,0] + delta*gw.x[i-1,0];

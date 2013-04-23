@@ -60,9 +60,6 @@ void residual (scalar a, scalar b, scalar res)
 int refine_circle (Point point, void * data)
 {
   int depth = *((int *)data);
-  QUADTREE_VARIABLES;
-  int ig = 0, jg = 0;
-  VARIABLES;
   return (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)));
 }
 

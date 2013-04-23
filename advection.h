@@ -3,8 +3,6 @@
 scalar f = new scalar; // tracer
 vector u = new vector; // velocity
 
-#include "boundary.h"
-
 // Default parameters
 // gradient
 void (* gradient) (scalar *, vector *) = centered;

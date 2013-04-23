@@ -36,10 +36,12 @@ size_t _size (size_t l)
   ((double *)								\
    &point.d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) + \
 			    (point.j+GHOSTS)/2+l)*datasize])[a]
-#define MULTIGRID_VARIABLES					     \
-  int    level = point.level;                   NOT_UNUSED(level);   \
-  int    childx = 2*((point.i+GHOSTS)%2)-1;     NOT_UNUSED(childx);  \
-  int    childy = 2*((point.j+GHOSTS)%2)-1;     NOT_UNUSED(childy);
+#define POINT_VARIABLES						     \
+  VARIABLES							     \
+  int level = point.level; NOT_UNUSED(level);			     \
+  struct { int x, y; } child = {				     \
+    2*((point.i+GHOSTS)%2)-1, 2*((point.j+GHOSTS)%2)-1		     \
+  }; NOT_UNUSED(child);
 
 #define foreach_level(l,...) 						\
   OMP_PARALLEL()							\
@@ -50,8 +52,7 @@ size_t _size (size_t l)
   for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
     point.i = _k;							\
     for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
-      MULTIGRID_VARIABLES						\
-      VARIABLES								\
+      POINT_VARIABLES							\
 
 #define end_foreach_level() }} OMP_END_PARALLEL()
 
@@ -67,8 +68,7 @@ size_t _size (size_t l)
   for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS; \
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS; \
-    MULTIGRID_VARIABLES							\
-    VARIABLES
+    POINT_VARIABLES
 
 #define end_foreach_boundary_level() } OMP_END_PARALLEL()
 
@@ -86,8 +86,7 @@ size_t _size (size_t l)
     for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {		\
       point.i = _k;							\
       for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
-        MULTIGRID_VARIABLES						\
-        VARIABLES
+        POINT_VARIABLES
 
 #define end_foreach_fine_to_coarse() }} OMP_END_PARALLEL() }
 

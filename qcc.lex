@@ -184,6 +184,13 @@
     nevents++;
   }
 
+  void infunction_declarations() {
+    if (debug)
+      fprintf (stderr, "%s:%d: function declarations\n", fname, line);
+    fputs (" int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
+	   " POINT_VARIABLES; ", yyout);
+  }
+
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
 
 #define YY_INPUT(buf,result,max_size)			      \
@@ -264,7 +271,10 @@ WS  [ \t\v\n\f]
 }
 
 "{" {
-  ECHO; scope++;
+  ECHO;
+  if (infunction && functionpara == 1 && scope == functionscope)
+    infunction_declarations();
+  scope++;
 }
 
 "}" {
@@ -308,8 +318,13 @@ end_foreach{ID}*{SP}*"()" {
     ECHO;
     endforeachdim ();
   }
-  if (infunction && scope == functionscope)
+  if (infunction && scope == functionscope) {
+    if (scope > 0) {
+      fputs ("; ", yyout);
+      infunction_declarations();
+    }
     infunction = 0;
+  }
   if (inboundary) {
     ECHO;
     fputs (" end_foreach_boundary_level(); } ", yyout);
@@ -515,10 +530,12 @@ ghost {
     ECHO;
 }
 
-[(]{WS}*Point{WS}+point{WS}*, {
-  /* (Point, ... */
+[^{ID}]Point{WS}+point[^{ID}] {
+  /* Point point */
+  if (yytext[0] == '(') para++;
   infunction = 1; functionscope = scope; functionpara = para;
-  ECHO; para++;
+  if (yytext[yyleng-1] == ')') para--;
+  ECHO;
 }
 
 for{WS}*[(]{WS}*(scalar|vector){WS}+{ID}+{WS}+in{WS}+{ID}+{WS}*[)] {

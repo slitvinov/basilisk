@@ -3,13 +3,11 @@
 
 int refine_right (Point point, void * data)
 {
-  VARIABLES;
   return x < -0.1;
 }
 
 int refine_circle (Point point, void * data)
 {
-  VARIABLES;
   return x*x + y*y < 0.25*0.25;
 }
 

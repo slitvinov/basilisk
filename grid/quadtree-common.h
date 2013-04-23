@@ -1,21 +1,27 @@
-#define foreach_fine_to_coarse()           foreach_cell_post(!(cell.flags & leaf))
-#define end_foreach_fine_to_coarse()       end_foreach_cell_post()
+#define foreach_fine_to_coarse()		\
+  foreach_cell_post(!(cell.flags & leaf))
+#define end_foreach_fine_to_coarse()		\
+  end_foreach_cell_post()
+#define foreach_level(l)		        \
+  foreach_cell() {				\
+  if (level == l || cell.flags & leaf) {
+#define end_foreach_level()			\
+  continue; } } end_foreach_cell()
 
-#define foreach_level(l)                   foreach_cell() { \
-                                             if (level == l || cell.flags & leaf) {
-#define end_foreach_level()                  continue; } } end_foreach_cell()
+#define foreach_boundary(dir)		        \
+  foreach_boundary_cell(dir)			\
+  if (cell.flags & leaf) {			\
+    POINT_VARIABLES;
+#define end_foreach_boundary()			\
+  continue; } end_foreach_boundary_cell()
 
-#define foreach_boundary(dir)              foreach_boundary_cell(dir)	\
-                                             if (cell.flags & leaf) {	\
-                                               QUADTREE_VARIABLES;	\
-					       VARIABLES;
-#define end_foreach_boundary()               continue; } end_foreach_boundary_cell()
-
-#define foreach_boundary_level(dir,l)      foreach_boundary_cell(dir)               \
-                                             QUADTREE_VARIABLES;	            \
-                                             if (level == l || cell.flags & leaf) { \
-					       VARIABLES;
-#define end_foreach_boundary_level()         continue; } end_foreach_boundary_cell()
+#define foreach_boundary_level(dir,l)		\
+  foreach_boundary_cell(dir)			\
+    POINT_VARIABLES;				\
+    if (level == l || cell.flags & leaf) {	\
+      POINT_VARIABLES;
+#define end_foreach_boundary_level()            \
+    continue; } end_foreach_boundary_cell()
 
 #include "multigrid-common.h"
 
@@ -45,8 +51,6 @@ Point locate (double xp, double yp)
 
 bool coarsen_cell (Point point)
 {
-  QUADTREE_VARIABLES;
-
 #if TWO_ONE
   /* check that neighboring cells are not too fine */
   for (int k = -1; k < 3; k++)
@@ -206,26 +210,26 @@ void update_halo (int depth, scalar * list)
     /* bilinear interpolation from coarser level */
     for (scalar s in list)
       s[] = (9.*coarse(s,0,0) + 
-	     3.*(coarse(s,childx,0) + coarse(s,0,childy)) + 
-	     coarse(s,childx,childy))/16.;
+	     3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+	     coarse(s,child.x,child.y))/16.;
 }
 
 void update_halo_u_v (int depth, scalar u, scalar v)
 {
   foreach_halo_coarse_fine (depth) {
     /* linear interpolation from coarser level */
-    if (childx < 0)
+    if (child.x < 0)
       /* conservative interpolation */
-      u[] = coarse(u,0,0) + (coarse(u,0,1) - coarse(u,0,-1))*childy/8.;
+      u[] = coarse(u,0,0) + (coarse(u,0,1) - coarse(u,0,-1))*child.y/8.;
     else
-      u[] = (3.*coarse(u,0,0) + coarse(u,0,childy) + 
-	     3.*coarse(u,1,0) + coarse(u,1,childy))/8.;
-    if (childy < 0)
+      u[] = (3.*coarse(u,0,0) + coarse(u,0,child.y) + 
+	     3.*coarse(u,1,0) + coarse(u,1,child.y))/8.;
+    if (child.y < 0)
       /* conservative interpolation */
-      v[] = coarse(v,0,0) + (coarse(v,1,0) - coarse(v,-1,0))*childx/8.;
+      v[] = coarse(v,0,0) + (coarse(v,1,0) - coarse(v,-1,0))*child.x/8.;
     else
-      v[] = (3.*coarse(v,0,0) + coarse(v,childx,0) + 
-	     3.*coarse(v,0,1) + coarse(v,childx,1))/8.;
+      v[] = (3.*coarse(v,0,0) + coarse(v,child.x,0) + 
+	     3.*coarse(v,0,1) + coarse(v,child.x,1))/8.;
   }
 }
 
