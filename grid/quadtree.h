@@ -119,7 +119,7 @@ void recursive (Point point)
     int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
     Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid); \
     int _d = dir; NOT_UNUSED(_d);					\
-    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
     while (_s >= 0) {							\
       int stage;							\
@@ -146,7 +146,7 @@ void recursive (Point point)
     }                                                                   \
   }
 
-#define foreach_cell() foreach_boundary_cell(0)				\
+#define foreach_cell() foreach_boundary_cell(nboundary)			\
   QUADTREE_VARIABLES;							\
   VARIABLES;
 #define end_foreach_cell()						\
@@ -167,8 +167,8 @@ void recursive (Point point)
 
 #define foreach_cell_post(condition)					\
   {									\
-    Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid);	\
-    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1; /* the stack */  \
+    Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid); \
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
     while (_s >= 0) {							\
       int stage;							\
@@ -214,6 +214,7 @@ enum {
 
 #define foreach(clause)     { update_cache();				\
   OMP_PARALLEL()							\
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   Quadtree point = *((Quadtree *)grid); point.back = ((Quadtree *)grid); \
   OMP(omp for schedule(static) clause)					\
   for (int _k = 0; _k < point.nleaves; _k++) {				\

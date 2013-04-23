@@ -43,6 +43,7 @@ size_t _size (size_t l)
 
 #define foreach_level(l,...) 						\
   OMP_PARALLEL()							\
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   Point point = *((Point *)grid);					\
   point.level = l; point.n = 1 << point.level;				\
   OMP(omp for schedule(static) __VA_ARGS__)				\
@@ -75,6 +76,7 @@ size_t _size (size_t l)
 #define end_foreach_boundary() end_foreach_boundary_level()
 
 #define foreach_fine_to_coarse() {					\
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   Point _p = *((Point *)grid);						\
   _p.level = _p.depth - 1; _p.n = 1 << _p.level;			\
   for (; _p.level > 0; _p.n /= 2, _p.level--)				\

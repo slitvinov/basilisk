@@ -16,6 +16,7 @@ typedef struct {
 
 #define foreach(clause)							\
   OMP_PARALLEL()							\
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   Point point = *((Point *)grid);					\
   OMP(omp for schedule(static) clause)					\
   for (int _k = 1; _k <= point.n; _k++) {				\

@@ -11,18 +11,11 @@ double solution (double x, double y)
   return sin(3.*pi*x)*sin(3.*pi*y);
 }
 
-void boundary_dirichlet (scalar v)
-{
-  /* Dirichlet condition on all boundaries */
-  foreach_boundary (right)
-    v[ghost] = 2.*solution(x + delta/2., y) - v[];
-  foreach_boundary (left)
-    v[ghost] = 2.*solution(x - delta/2., y) - v[];
-  foreach_boundary (top)
-    v[ghost] = 2.*solution(x, y + delta/2.) - v[];
-  foreach_boundary (bottom)
-    v[ghost] = 2.*solution(x, y - delta/2.) - v[];
-}
+/* Dirichlet condition on all boundaries */
+a[right]  = 2.*solution(x, y) - a[];
+a[left]   = 2.*solution(x, y) - a[];
+a[top]    = 2.*solution(x, y) - a[];
+a[bottom] = 2.*solution(x, y) - a[];
 
 void homogeneous_boundary (scalar * v, int l)
 {
@@ -47,14 +40,14 @@ void residual (scalar a, scalar b, scalar res)
     (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(delta*delta);
 }
 
-int main(int argc, char ** argv)
+int main (int argc, char ** argv)
 {
   int depth = argc < 2 ? 9 : atoi(argv[1]), nrelax = 4;
   init_grid(1 << depth);
 
   foreach()
     b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);
-  boundary_dirichlet (a);
+  boundary (a);
 
   #define NITER 15
   clock_t start = clock(), iter[NITER];
@@ -64,7 +57,7 @@ int main(int argc, char ** argv)
     mg_cycle (a, res, dp,
 	      relax, homogeneous_boundary,
 	      nrelax, 0);
-    boundary_dirichlet (a);
+    boundary (a);
     residual (a, b, res);
     double max = 0.;
     foreach()
@@ -75,7 +68,8 @@ int main(int argc, char ** argv)
   }
   for (int i = 0; i < NITER; i++) {
     fprintf (stderr, "%d %g\n", i, maxres[i]);
-    printf ("%d %g %g\n", i, (iter[i] - start)/(double)CLOCKS_PER_SEC, maxres[i]);
+    printf ("%d %g %g\n", i, (iter[i] - start)/(double)CLOCKS_PER_SEC, 
+	    maxres[i]);
   }
   double max = 0;
   foreach() {

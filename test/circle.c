@@ -15,10 +15,10 @@ double solution (double x, double y)
 }
 
 /* Dirichlet condition on all boundaries */
-a[right]  = 2.*solution(x + delta/2., y) - a[];
-a[left]   = 2.*solution(x - delta/2., y) - a[];
-a[top]    = 2.*solution(x, y + delta/2.) - a[];
-a[bottom] = 2.*solution(x, y - delta/2.) - a[];
+a[right]  = 2.*solution(x, y) - a[];
+a[left]   = 2.*solution(x, y) - a[];
+a[top]    = 2.*solution(x, y) - a[];
+a[bottom] = 2.*solution(x, y) - a[];
 
 void homogeneous_boundary (scalar * v, int l)
 {
@@ -61,6 +61,7 @@ int refine_circle (Point point, void * data)
 {
   int depth = *((int *)data);
   QUADTREE_VARIABLES;
+  int ig = 0, jg = 0;
   VARIABLES;
   return (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)));
 }

@@ -27,7 +27,7 @@ double CFL = 0.5;
 #undef VARIABLES
 #define VARIABLES					       \
   double delta = DELTA;          /* cell size */	       \
-  double x  = XC(I), y  = YC(J); /* cell center */	       \
+  double x  = XC(ig/2. + I), y  = YC(jg/2. + J); /* cell/face center */	\
   double xu = XU(I), yu = YU(J); /* staggered u-coordinates */ \
   double xv = XV(I), yv = YV(J); /* staggered v-coordinates */ \
   /* we need this to avoid compiler warnings */	               \
@@ -86,6 +86,7 @@ double change (scalar v, scalar vn)
 double interpolate (scalar v, double xp, double yp)
 {
   Point point = locate (xp, yp);
+  int ig = 0, jg = 0;
   VARIABLES;
   x = (xp - x)/delta;
   y = (yp - y)/delta;
@@ -132,8 +133,7 @@ void output_matrix (scalar f, int n, FILE * fp, bool linear)
 	v = interpolate (f, x, y);
       else {
 	Point point = locate (x, y);
-	VARIABLES;
-	v = val (f, 0, 0);
+	v = val(f,0,0);
       }
       fwrite (&v, sizeof(float), 1, fp);
     }
@@ -173,7 +173,8 @@ void timer_print (timer_t t, int i, int tnc)
   struct timeval tvend;
   gettimeofday (&tvend, NULL);
   double cpu = ((double) (end - t.c))/CLOCKS_PER_SEC;
-  double real = (tvend.tv_sec - t.tv.tv_sec) + (tvend.tv_usec - t.tv.tv_usec)/1e6;
+  double real = ((tvend.tv_sec - t.tv.tv_sec) + 
+		 (tvend.tv_usec - t.tv.tv_usec)/1e6);
   if (tnc < 0) {
     tnc = 0;
     foreach(reduction(+:tnc)) tnc++;
@@ -190,7 +191,8 @@ typedef struct {
 norm normf (scalar f)
 {
   double avg = 0., rms = 0., max = 0., area = 0.;
-  foreach(reduction(max:max) reduction(+:avg) reduction(+:rms) reduction(+:area)) {
+  foreach(reduction(max:max) reduction(+:avg) 
+	  reduction(+:rms) reduction(+:area)) {
     double v = fabs(f[]);
     if (v > max) max = v;
     double a = sq(delta);
