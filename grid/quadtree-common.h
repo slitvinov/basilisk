@@ -1,16 +1,20 @@
+#define is_leaf(cell)   ((cell).flags & leaf)
+#define is_active(cell) ((cell).flags & active)
+#define is_halo(cell)   ((cell).flags & halo)
+
 #define foreach_fine_to_coarse()		\
-  foreach_cell_post(!(cell.flags & leaf))
+  foreach_cell_post(!is_leaf(cell))
 #define end_foreach_fine_to_coarse()		\
   end_foreach_cell_post()
 #define foreach_level(l)		        \
   foreach_cell() {				\
-  if (level == l || cell.flags & leaf) {
+  if (level == l || is_leaf(cell)) {
 #define end_foreach_level()			\
   continue; } } end_foreach_cell()
 
 #define foreach_boundary(dir)		        \
   foreach_boundary_cell(dir)			\
-  if (cell.flags & leaf) {			\
+  if (is_leaf(cell)) {				\
     POINT_VARIABLES;
 #define end_foreach_boundary()			\
   continue; } end_foreach_boundary_cell()
@@ -18,7 +22,7 @@
 #define foreach_boundary_level(dir,l)		\
   foreach_boundary_cell(dir)			\
     POINT_VARIABLES;				\
-    if (level == l || cell.flags & leaf) {	\
+    if (level == l || is_leaf(cell)) {		\
       POINT_VARIABLES;
 #define end_foreach_boundary_level()            \
     continue; } end_foreach_boundary_cell()
@@ -29,7 +33,7 @@
 #define boundary_ghost(d, x) {						\
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
     int _in = -_ig[d], _jn = -_jg[d];					\
-    foreach_halo() if (neighbor(_in,_jn).flags & leaf) { x; }		\
+    foreach_halo() if (is_leaf(neighbor(_in,_jn))) { x; }		\
     end_foreach_halo();							\
   }
 
@@ -42,7 +46,7 @@ Point locate (double xp, double yp)
     delta /= 2.;
     if (xp < x - delta || xp > x + delta || yp < y - delta || yp > y + delta)
       continue;
-    if (cell.flags & leaf)
+    if (is_leaf (cell))
       return point;
   }
   Point point = {-1, NULL, NULL, -1, -1, -1}; // not found
@@ -55,7 +59,7 @@ bool coarsen_cell (Point point)
   /* check that neighboring cells are not too fine */
   for (int k = -1; k < 3; k++)
     for (int l = -1; l < 3; l++)
-      if ((child(k,l).flags & active) && !(child(k,l).flags & leaf))
+      if (is_active (child(k,l)) && !is_leaf (child(k,l)))
 	return false; // cannot coarsen
 #endif
 
@@ -83,7 +87,7 @@ int coarsen_function (int (* func) (Point p))
   int nc = 0;
   for (int l = depth() - 1; l >= 0; l--)
     foreach_cell() {
-      if (cell.flags & leaf)
+      if (is_leaf (cell))
 	continue;
       else if (level == l) {
 	if ((*func) (point) && coarsen_cell (point))
@@ -99,7 +103,7 @@ int coarsen_wavelet (scalar w, double max, int minlevel)
   int nc = 0;
   for (int l = depth() - 1; l >= 0; l--)
     foreach_cell() {
-      if (cell.flags & leaf)
+      if (is_leaf (cell))
 	continue;
       else if (level == l) {
 	double error = 0.;
@@ -153,12 +157,12 @@ int flag_halo_cells ()
 
   /* reset old halos first */
   foreach_cell() {
-    if (!(cell.flags & halo))
+    if (!is_halo (cell))
       continue;
     else {
       cell.flags &= ~halo;
 #if TRASH
-      if (!(cell.flags & active))
+      if (!is_active (cell))
 	for (scalar v = 0; v < nvar; v++)
 	  val(v,0,0) = undefined;
 #endif
@@ -166,15 +170,15 @@ int flag_halo_cells ()
   }
 
   /* from the bottom up */
-  foreach_cell_post (cell.neighbors > 0 || (cell.flags & active)) {
-    if (!(cell.flags & active)) {
+  foreach_cell_post (cell.neighbors > 0 || is_active (cell)) {
+    if (!is_active (cell)) {
       /* inactive and neighbors > 0 => this is a halo cell */
       cell.flags |= halo;
       /* propagate to parent */
       parent.flags |= halo;
       nh++;
     }
-    else if ((cell.flags & halo) && level > 0)
+    else if (is_halo (cell) && level > 0)
       /* propagate to parent */
       parent.flags |= halo;
   }
@@ -183,9 +187,9 @@ int flag_halo_cells ()
 }
 
 #define foreach_halo() foreach_cell() { \
-  if (!(cell.flags & halo))		      \
+  if (!is_halo (cell))			      \
     continue;				      \
-  else if (!(cell.flags & active)) {
+  else if (!is_active (cell)) {
 #define end_foreach_halo()  }} end_foreach_cell();
 
 /* breadth-first traversal of halos from coarse to fine */
@@ -193,11 +197,12 @@ int flag_halo_cells ()
   int _depth = depth1 < 0 ? depth() : depth1;				\
   for (int _l = 0; _l <= _depth; _l++)                                  \
     foreach_cell() {							\
-      if (!(cell.flags & halo))                                         \
+      if (!is_halo (cell))						\
       	continue; /* no more halos, skip the rest of this branch */     \
       if (level == _l) {                                                \
-	if (!(cell.flags & active))
+        if (!is_active (cell)) {
 #define end_foreach_halo_coarse_fine()                                  \
+        }							        \
 	continue; /* already at level l, skip the deeper branches */    \
       }                                                                 \
     } end_foreach_cell();				                \
@@ -247,7 +252,7 @@ void boundary_flux_a (vector * list)
 {
   restriction_flux (list);
   foreach_cell() {
-    if (!(cell.flags & halo))
+    if (!is_halo (cell))
       continue;
     else if (cell.flags & leaf) {
       if (child(0,0).flags & halo) {
