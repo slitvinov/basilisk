@@ -824,7 +824,12 @@ void compdir (char * file, char ** in, int nin, char * grid)
   /* new variables */
   fprintf (fout,
 	   "#include \"common.h\"\n"
-	   "int nvar = %d, datasize = %d*sizeof (double);\n", nvar, nvar);
+	   "int nvar = %d, datasize = %d*sizeof (double);\n"
+	   "scalar all[] = {",
+	   nvar, nvar);
+  for (i = 0; i < nvar; i++)
+    fprintf (fout, "%d,", i);
+  fputs ("-1};\n", fout);
   /* events */
   int j;
   for (i = 0; i < nevents; i++) {

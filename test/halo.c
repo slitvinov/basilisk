@@ -18,7 +18,7 @@ int main (int argc, char ** argv)
   /* initial coarsening */
   restriction (scalars(h));
   wavelet (h, w);
-  coarsen_wavelet (w, 1e-2);
+  coarsen_wavelet (w, 1e-2, 0);
   flag_halo_cells ();
 
   foreach_cell () {

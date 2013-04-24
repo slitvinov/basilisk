@@ -94,7 +94,7 @@ int coarsen_function (int (* func) (Point p))
   return nc;
 }
 
-int coarsen_wavelet (scalar w, double max)
+int coarsen_wavelet (scalar w, double max, int minlevel)
 {
   int nc = 0;
   for (int l = depth() - 1; l >= 0; l--)
@@ -109,7 +109,7 @@ int coarsen_wavelet (scalar w, double max)
 	    if (e > error)
 	      error = e;
 	  }
-	if (error < max && coarsen_cell(point))
+	if (error < max && level >= minlevel && coarsen_cell(point))
 	  nc++;
 	/* propagate the error to coarser levels */
 	w[] = fabs(w[]) + error;	
@@ -119,27 +119,26 @@ int coarsen_wavelet (scalar w, double max)
   return nc;
 }
 
-int refine_function (scalar start, scalar end,
-		     int (* func) (Point p, void * data), 
-		     void * data)
+int refine_function (int (* func) (Point p, void * data), 
+		     void * data,
+		     scalar * list)
 {
   int nf = 0;
   foreach_leaf()
     if ((*func) (point, data)) {
-      point = refine_cell (point, start, end);
+      point = refine_cell (point, list);
       nf++;
     }
   return nf;
 }
 
-int refine_wavelet (scalar start, scalar end,
-		    scalar w, double max)
+int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
 {
   int nf = 0;
   foreach_leaf()
     /* fixme: w[] should be explicitly defined */
-    if (w[] != undefined && fabs(w[]) >= max) {
-      point = refine_cell (point, start, end);
+    if (w[] != undefined && fabs(w[]) >= max && level < maxlevel) {
+      point = refine_cell (point, list);
       for (int k = 0; k < 2; k++)
 	for (int l = 0; l < 2; l++)
 	  fine(w,k,l) = undefined;

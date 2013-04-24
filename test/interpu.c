@@ -21,7 +21,7 @@ int main (int argc, char ** argv)
   restriction (scalars (h));
   wavelet (h, w);
   double tolerance = 1e-4;
-  coarsen_wavelet (w, tolerance);
+  coarsen_wavelet (w, tolerance, 0);
   flag_halo_cells (grid);
 
   foreach() {

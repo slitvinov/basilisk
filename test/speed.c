@@ -24,7 +24,7 @@ int main (int argc, char ** argv)
     /* coarsening */
     restriction (scalars (h));
     wavelet (h, w);
-    coarsen_wavelet (w, 1e-5);
+    coarsen_wavelet (w, 1e-5, 0);
     flag_halo_cells (grid);
     if (i == 0)
       end0 = clock();

@@ -18,7 +18,7 @@ void refineiter ()
     restriction (scalars (h));
     wavelet (h, w);
 
-    int nf = refine_wavelet (h, h, w, 1e-2);
+    int nf = refine_wavelet (w, 1e-2, 12, scalars (h));
     flag_halo_cells (grid);
 
     fprintf (stderr, "refined %d cells\n", nf);
@@ -41,7 +41,7 @@ int main (int argc, char ** argv)
 
   restriction (scalars (h));
   wavelet (h, w);
-  fprintf (stderr, "\ncoarsened %d cells back\n", coarsen_wavelet (w, 1e-2));
+  fprintf (stderr, "\ncoarsened %d cells back\n", coarsen_wavelet (w, 1e-2, 0));
   flag_halo_cells (grid);
 
   foreach_halo()

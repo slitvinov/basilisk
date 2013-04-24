@@ -68,7 +68,7 @@ void solve (int depth)
   int nrelax = 4;
   init_grid(1);
 
-  while (refine_function (0, nvar - 1, refine_circle, &depth));
+  while (refine_function (refine_circle, &depth, all));
   flag_halo_cells();
   foreach()
     b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);

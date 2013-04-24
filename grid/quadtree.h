@@ -249,7 +249,7 @@ void alloc_layer (Quadtree * p)
 #endif
 }
 
-Point refine_cell (Point point, scalar start, scalar end);
+Point refine_cell (Point point, scalar * list);
 
 void update_cache (void)
 {
@@ -297,7 +297,7 @@ void init_grid (int n)
   grid = q;
   while (depth--)
     foreach_leaf()
-      point = refine_cell (point, 0, nvar - 1);
+      point = refine_cell (point, all);
   update_cache();
   init_boundaries (nvar);
   init_events();
@@ -315,7 +315,7 @@ void free_grid (void)
   free_boundaries();
 }
 
-Point refine_cell (Point point, scalar start, scalar end)
+Point refine_cell (Point point, scalar * list)
 {
 #if TWO_ONE
   /* refine neighborhood if required */
@@ -329,7 +329,7 @@ Point refine_cell (Point point, scalar start, scalar end)
 	  p.level = point.level - 1;
 	  p.i = (point.i + GHOSTS)/2 + k;
 	  p.j = (point.j + GHOSTS)/2 + l;
-	  p = refine_cell (p, start, end);
+	  p = refine_cell (p, list);
 	  assert (p.m == point.m);
 	}
 #endif
@@ -346,14 +346,14 @@ Point refine_cell (Point point, scalar start, scalar end)
 	  child(k+o,l+p).neighbors++;
 #if 0
       /* bilinear interpolation from coarser level */
-      for (scalar v = start; v <= end; v++)
+      for (scalar v in list)
 	fine(v,k,l) = 
-	  (9.*val(v,0,0) + 3.*(val(v,2*k-1,0) + val(v,0,2*l-1)) + val(v,2*k-1,2*l-1))/16.;
+	  (9.*v[] + 3.*(v[2*k-1,0] + v[0,2*l-1]) + v[2*k-1,2*l-1])/16.;
 #else
       /* linear interpolation from coarser level (conservative) */
-      for (scalar v = start; v <= end; v++)
-	fine(v,k,l) = val(v,0,0) + ((val(v,1,0) - val(v,-1,0))*(2*k-1)/8. +
-				    (val(v,0,1) - val(v,0,-1))*(2*l-1)/8.);
+      for (scalar v in list)
+	fine(v,k,l) = v[] + ((v[1,0] - v[-1,0])*(2*k-1)/8. +
+			     (v[0,1] - v[0,-1])*(2*l-1)/8.);
 #endif
     }
 
