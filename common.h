@@ -47,10 +47,11 @@ typedef struct {
 } tensor;
 
 #define scalars(...) (scalar []){__VA_ARGS__,-1}
-#define vectors(...) (vector []){__VA_ARGS__,{-1}}
+#define vectors(...) (vector []){__VA_ARGS__,{-1,-1}}
 #define val(a,k,l) data(k,l)[a]
 #define fine(a,k,l)    _fine(a,k,l)
 #define coarse(a,k,l)  _coarse(a,k,l)
+#define neighbor(k,l)  _neighbor(k,l)
 
 // events 
 

@@ -58,7 +58,7 @@ size_t _size (size_t l)
 #define _n (1 << point.level) /* fixme */
 #define cell							\
   CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
-#define neighbor(k,l)							\
+#define _neighbor(k,l)							\
   CELL(point.m, point.level, (point.i + k)*(_n + 2*GHOSTS) + point.j + l)
 #define parent             aparent(0,0)
 #define alloc_children()						\

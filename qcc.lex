@@ -84,17 +84,20 @@
     fputs ("\n"
 	   "#undef val\n"
 	   "#undef fine\n"
-	   "#undef coarse\n",
+	   "#undef coarse\n"
+	   "#undef neighbor\n",
 	   yyout);
     if (x == 'x')
       fputs ("#define val(a,k,l) data(k,l)[a]\n"
 	     "#define fine(a,k,l) _fine(a,k,l)\n"
-	     "#define coarse(a,k,l) _coarse(a,k,l)\n",
+	     "#define coarse(a,k,l) _coarse(a,k,l)\n"
+	     "#define neighbor(k,l) _neighbor(k,l)\n",
 	     yyout);
     else
       fputs ("#define val(a,k,l) data(l,k)[a]\n"
 	     "#define fine(a,k,l) _fine(a,l,k)\n"
-	     "#define coarse(a,k,l) _coarse(a,l,k)\n",
+	     "#define coarse(a,k,l) _coarse(a,l,k)\n"
+	     "#define neighbor(k,l) _neighbor(l,k)\n",
 	     yyout);
     fprintf (yyout, "#line %d\n", line1);
 

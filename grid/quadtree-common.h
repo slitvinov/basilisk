@@ -29,7 +29,7 @@
 #define boundary_ghost(d, x) {						\
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
     int _in = -_ig[d], _jn = -_jg[d];					\
-    foreach_halo() if (is_leaf(neighbor(_in,_jn))) { x; }		\
+    foreach_halo() if (is_leaf(_neighbor(_in,_jn))) { x; }		\
     end_foreach_halo();							\
   }
 
@@ -190,14 +190,10 @@ void boundary_a (scalar * list)
 void boundary_flux_a (vector * list)
 {
   restriction_flux (list);
-  foreach() {
-    if (is_active(neighbor(-1,0)) && !is_leaf (neighbor(-1,0))) {
-      for (vector v in list)
-	v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-    }
-    if (is_active(neighbor(0,-1)) && !is_leaf (neighbor(0,-1))) {
-      for (vector v in list)
-	v.y[] = (fine(v.y,0,0) + fine(v.y,1,0))/2.;
-    }
-  }
+  foreach()
+    foreach_dimension()
+      if (is_active(neighbor(-1,0)) && !is_leaf (neighbor(-1,0))) {
+	for (vector v in list)
+	  v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+      }
 }
