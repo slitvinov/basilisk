@@ -212,13 +212,11 @@ void recursive (Point point)
 
 enum {
   active = 1 << 0,
-  leaf   = 1 << 1,
-  halo   = 1 << 2
+  leaf   = 1 << 1
 };
 
 #define is_leaf(cell)   ((cell).flags & leaf)
 #define is_active(cell) ((cell).flags & active)
-#define is_halo(cell)   ((cell).flags & halo)
 
 #define foreach(clause)     {						\
   update_cache();							\
@@ -317,55 +315,37 @@ static void update_cache (void)
   if (!q->dirty)
     return;
 
-  /* reset old halos first */
+  /* from the bottom up */
+  int n = 0, * nh = calloc (depth() + 1, sizeof (int));
   foreach_cell() {
-    if (!is_halo (cell))
-      continue;
-    else {
-      cell.flags &= ~halo;
-#if TRASH
-      if (!is_active (cell))
-	for (scalar v = 0; v < nvar; v++)
-	  val(v,0,0) = undefined;
-#endif
+    if (!is_active (cell)) {
+      if (cell.neighbors > 0) {
+	/* update halo cache */
+	if (nh[level] >= q->nhalos[level]) {
+	  q->nhalos[level] += 100;
+	  q->hindex[level] = realloc (q->hindex[level],
+				      sizeof (HIndex)*q->nhalos[level]);
+	}
+	q->hindex[level][nh[level]].i = point.i;
+	q->hindex[level][nh[level]].j = point.j;
+	nh[level]++;
+      }
+      else
+	continue;
+    }
+    else if (is_leaf (cell)) {
+      /* update leaf cache */
+      if (n >= q->nleaves) {
+	q->nleaves += 100;
+	q->index = realloc (q->index, sizeof (Index)*q->nleaves);
+      }
+      q->index[n].i = point.i;
+      q->index[n].j = point.j;
+      q->index[n].level = point.level;
+      n++;
     }
   }
 
-  /* from the bottom up */
-  int n = 0, * nh = calloc (depth() + 1, sizeof (int));
-  foreach_cell_post (cell.neighbors > 0 || is_active (cell)) {
-    if (!is_active (cell)) {
-      /* inactive and neighbors > 0 => this is a halo cell */
-      cell.flags |= halo;
-      /* propagate to parent */
-      parent.flags |= halo;
-      /* update halo cache */
-      if (nh[level] >= q->nhalos[level]) {
-	q->nhalos[level] += 100;
-	q->hindex[level] = realloc (q->hindex[level],
-				    sizeof (HIndex)*q->nhalos[level]);
-      }
-      q->hindex[level][nh[level]].i = point.i;
-      q->hindex[level][nh[level]].j = point.j;
-      nh[level]++;
-    }
-    else {
-      if (is_halo (cell) && level > 0)
-	/* propagate to parent */
-	parent.flags |= halo;
-      if (is_leaf (cell)) {
-	/* update leaf cache */
-	if (n >= q->nleaves) {
-	  q->nleaves += 100;
-	  q->index = realloc (q->index, sizeof (Index)*q->nleaves);
-	}
-	q->index[n].i = point.i;
-	q->index[n].j = point.j;
-	q->index[n].level = point.level;
-	n++;
-      }
-    }
-  }
   /* update leaf cache size */
   q->nleaves = n;
   q->index = realloc (q->index, sizeof (Index)*q->nleaves);

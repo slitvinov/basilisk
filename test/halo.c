@@ -19,21 +19,10 @@ int main (int argc, char ** argv)
   restriction (scalars(h));
   wavelet (h, w);
   coarsen_wavelet (w, 1e-2, 0);
-  update_cache();
 
-  foreach_cell () {
-    fprintf (stderr, "%g %g %d %d traversed\n", x, y, level, cell.neighbors);
-    printf ("%g %g %d %d 1\n", x, y, level, cell.neighbors);
-    if (!(cell.flags & halo))
-      continue;
-    else if (!(cell.flags & active)) {
-      fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
-      printf ("%g %g %d %d 2\n", x, y, level, cell.neighbors);
-    }
-    else {
-      fprintf (stderr, "%g %g %d %d flagged\n", x, y, level, cell.neighbors);
-      printf ("%g %g %d %d 3\n", x, y, level, cell.neighbors);
-    }
+  foreach_halo () {
+    fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
+    printf ("%g %g %d %d 2\n", x, y, level, cell.neighbors);
   }
 
   free_grid ();

@@ -146,7 +146,6 @@ set fit noerrorvariables
 GNUTERM = "wxt"
 plot \
      '< awk "(\$3==5 && \$5==2){print \$0}" halo.out' pt 7 lc 1 t 'halo 5', \
-     '< awk "(\$3==4 && \$5==2){print \$0}" halo.out' pt 7 lc 2 t 'halo 4', \
-     '< awk "(\$5==3){print \$0}" halo.out' pt 1 lc 7 t 'flagged'
+     '< awk "(\$3==4 && \$5==2){print \$0}" halo.out' pt 7 lc 2 t 'halo 4'
 
 #    EOF

@@ -51,14 +51,8 @@ int main (int argc, char ** argv)
 
   refineiter();
 
-  foreach_cell() {
-    if (!(cell.flags & halo))
-      continue;
-    else if (!(cell.flags & active))
-      fprintf (stderr, "%g %g %d %d halo4\n", x, y, level, cell.neighbors);
-    else
-      fprintf (stderr, "%g %g %d %d flagged\n", x, y, level, cell.neighbors);
-  }
+  foreach_halo()
+    fprintf (stderr, "%g %g %d %d halo4\n", x, y, level, cell.neighbors);
 
   foreach_halo()
     printf ("%g %g %d %d %g %g halo3\n", x, y, level, cell.neighbors, h[],

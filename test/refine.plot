@@ -149,5 +149,5 @@ R0 = 0.1
 GPFUN_r = "r(x,y)=sqrt(x*x+y*y)"
 GPFUN_f = "f(x)=exp(-(x*x)/(R0*R0))"
 GPFUN_e = "e(a,x,y)=a-f(r(x,y))"
-plot '< grep halo3 refine.out' t 'halo', '< grep flagged refine.vlog' t 'flagged'
+plot '< grep halo3 refine.out' t 'halo'
 #    EOF
