@@ -254,14 +254,18 @@ void boundary_flux_a (vector * list)
   foreach_cell() {
     if (!is_halo (cell))
       continue;
-    else if (cell.flags & leaf) {
-      if (child(0,0).flags & halo) {
-	if (child(0,1).flags & halo)
+    else if (is_leaf (cell)) {
+      if (is_halo (child(0,0))) {
+	if (is_active(neighbor(-1,0)) && !is_leaf (neighbor(-1,0))) {
+	  assert (is_halo (child(0,1)));
 	  for (vector v in list)
 	    v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-	if (child(1,0).flags & halo)
+	}
+	if (is_active(neighbor(0,-1)) && !is_leaf (neighbor(0,-1))) {
+	  assert (is_halo (child(1,0)));
 	  for (vector v in list)
 	    v.y[] = (fine(v.y,0,0) + fine(v.y,1,0))/2.;
+	}
       }
       continue;
     }
