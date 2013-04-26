@@ -22,7 +22,6 @@ int main (int argc, char ** argv)
   wavelet (h, w);
   double tolerance = 1e-4;
   coarsen_wavelet (w, tolerance, 0);
-  flag_halo_cells (grid);
 
   restriction (scalars (h));
   update_halo (-1, scalars (h));

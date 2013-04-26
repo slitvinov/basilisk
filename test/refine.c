@@ -19,7 +19,6 @@ void refineiter ()
     wavelet (h, w);
 
     int nf = refine_wavelet (w, 1e-2, 12, scalars (h));
-    flag_halo_cells (grid);
 
     fprintf (stderr, "refined %d cells\n", nf);
   }
@@ -42,7 +41,6 @@ int main (int argc, char ** argv)
   restriction (scalars (h));
   wavelet (h, w);
   fprintf (stderr, "\ncoarsened %d cells back\n", coarsen_wavelet (w, 1e-2, 0));
-  flag_halo_cells (grid);
 
   foreach_halo()
     printf ("%g %g %d %d %g %g halo2\n", x, y, level, cell.neighbors, h[],

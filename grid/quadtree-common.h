@@ -1,7 +1,3 @@
-#define is_leaf(cell)   ((cell).flags & leaf)
-#define is_active(cell) ((cell).flags & active)
-#define is_halo(cell)   ((cell).flags & halo)
-
 #define foreach_fine_to_coarse()		\
   foreach_cell_post(!is_leaf(cell))
 #define end_foreach_fine_to_coarse()		\
@@ -151,63 +147,6 @@ int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
   return nf;
 }
 
-int flag_halo_cells ()
-{
-  int nh = 0;
-
-  /* reset old halos first */
-  foreach_cell() {
-    if (!is_halo (cell))
-      continue;
-    else {
-      cell.flags &= ~halo;
-#if TRASH
-      if (!is_active (cell))
-	for (scalar v = 0; v < nvar; v++)
-	  val(v,0,0) = undefined;
-#endif
-    }
-  }
-
-  /* from the bottom up */
-  foreach_cell_post (cell.neighbors > 0 || is_active (cell)) {
-    if (!is_active (cell)) {
-      /* inactive and neighbors > 0 => this is a halo cell */
-      cell.flags |= halo;
-      /* propagate to parent */
-      parent.flags |= halo;
-      nh++;
-    }
-    else if (is_halo (cell) && level > 0)
-      /* propagate to parent */
-      parent.flags |= halo;
-  }
-
-  return nh;
-}
-
-#define foreach_halo() foreach_cell() { \
-  if (!is_halo (cell))			      \
-    continue;				      \
-  else if (!is_active (cell)) {
-#define end_foreach_halo()  }} end_foreach_cell();
-
-/* breadth-first traversal of halos from coarse to fine */
-#define foreach_halo_coarse_fine(depth1)    {				\
-  int _depth = depth1 < 0 ? depth() : depth1;				\
-  for (int _l = 0; _l <= _depth; _l++)                                  \
-    foreach_cell() {							\
-      if (!is_halo (cell))						\
-      	continue; /* no more halos, skip the rest of this branch */     \
-      if (level == _l) {                                                \
-        if (!is_active (cell)) {
-#define end_foreach_halo_coarse_fine()                                  \
-        }							        \
-	continue; /* already at level l, skip the deeper branches */    \
-      }                                                                 \
-    } end_foreach_cell();				                \
-}
-
 void update_halo (int depth, scalar * list)
 {
   foreach_halo_coarse_fine (depth)
@@ -251,6 +190,7 @@ void boundary_a (scalar * list)
 void boundary_flux_a (vector * list)
 {
   restriction_flux (list);
+  update_cache(); // we need this to make sure halos are up to date
   foreach_cell() {
     if (!is_halo (cell))
       continue;

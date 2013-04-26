@@ -69,7 +69,6 @@ void solve (int depth)
   init_grid(1);
 
   while (refine_function (refine_circle, &depth, all));
-  flag_halo_cells();
   foreach()
     b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);
   boundary (a);

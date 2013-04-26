@@ -22,7 +22,6 @@ int main (int argc, char ** argv)
   wavelet (h, w);
   double tolerance = 1e-4;
   coarsen_wavelet (w, tolerance, 0);
-  flag_halo_cells (grid);
 
   foreach() {
     u[] = exp(-(xu*xu + yu*yu)/(R0*R0));

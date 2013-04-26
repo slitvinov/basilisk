@@ -19,7 +19,7 @@ int main (int argc, char ** argv)
   restriction (scalars(h));
   wavelet (h, w);
   coarsen_wavelet (w, 1e-2, 0);
-  flag_halo_cells ();
+  update_cache();
 
   foreach_cell () {
     fprintf (stderr, "%g %g %d %d traversed\n", x, y, level, cell.neighbors);

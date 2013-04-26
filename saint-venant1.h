@@ -103,8 +103,7 @@ void run()
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    (* gradient) (scalars (q.x, q.y, h, zb), 
-		  vectors (gq.x, gq.y, gh, gzb));
+    (* gradient) (scalars (q.x, q.y, h, zb), vectors (gq.x, gq.y, gh, gzb));
     boundary (gq.x.x, gq.x.y, gq.y.x, gq.y.y, gh.x, gh.y, gzb.x, gzb.y);
 
     dt = dtnext (t, flux (DT));
@@ -121,8 +120,7 @@ void run()
       swap (scalar, h, h1);
       
       /* corrector */
-      (* gradient) (scalars (q.x, q.y, h), 
-		    vectors (gq.x, gq.y, gh));
+      (* gradient) (scalars (q.x, q.y, h), vectors (gq.x, gq.y, gh));
       boundary (gq.x.x, gq.x.y, gq.y.x, gq.y.y, gh.x, gh.y);
       flux (dt);
       update (q1, q, h1, h, dt);
