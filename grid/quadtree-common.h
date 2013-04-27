@@ -1,12 +1,18 @@
-#define foreach_fine_to_coarse()		\
-  foreach_cell_post(!is_leaf(cell))
-#define end_foreach_fine_to_coarse()		\
-  end_foreach_cell_post()
-#define foreach_level(l)		        \
-  foreach_cell() {				\
-  if (level == l || is_leaf(cell)) {
-#define end_foreach_level()			\
-  continue; } } end_foreach_cell()
+#ifndef foreach
+# define foreach foreach_leaf
+# define end_foreach end_foreach_leaf
+#endif
+
+#ifndef foreach_fine_to_coarse
+# define foreach_fine_to_coarse()      foreach_cell_post(!is_leaf(cell))
+# define end_foreach_fine_to_coarse()  end_foreach_cell_post()
+#endif
+
+#ifndef foreach_level
+# define foreach_level(l)     foreach_cell() { \
+                                if (level == l || is_leaf(cell)) {
+# define end_foreach_level()	continue; } } end_foreach_cell()
+#endif
 
 #define foreach_boundary(dir)		        \
   foreach_boundary_cell(dir)			\

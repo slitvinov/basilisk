@@ -47,7 +47,7 @@ set grid xtics nomxtics ytics nomytics noztics nomztics \
  nox2tics nomx2tics noy2tics nomy2tics nocbtics nomcbtics
 set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
 set key title ""
-set key inside top left vertical Right noreverse enhanced autotitles nobox
+set key inside top right vertical Right noreverse enhanced autotitles nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
 unset label
 unset arrow
@@ -101,7 +101,7 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq  norangelimit
-set title "Speed of elementary operations on a regular grid" 
+set title "Relative speed of elementary operations on a regular grid" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
@@ -116,7 +116,7 @@ set x2label ""
 set x2label  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set xrange [ * : * ] noreverse nowriteback  # (currently [6.00000:11.0000] )
 set x2range [ * : * ] noreverse nowriteback  # (currently [6.00000:11.0000] )
-set ylabel "nanosecond / point" 
+set ylabel "Cartesian speed / Quadtree speed" 
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by -270
@@ -156,5 +156,7 @@ FIT_NDF = 2
 FIT_STDFIT = 0.0555182308282567
 FIT_WSSR = 0.00616454790859917
 batch = 0
-plot './laplacian.slog' w lp t '5-points Laplacian: quadtree', './laplacian.out' w lp t 'sum: quadtree', './laplacian.clog' w lp t '5-points Laplacian: cartesian', './laplacian.cout' w lp t 'sum: cartesian'
+plot '< paste laplacian.slog laplacian.clog' u 1:($2/$4) w lp t '5-points Laplacian', \
+     '< paste laplacian.out laplacian.cout | grep sum' u 2:($3/$7) w lp t 'Sum', \
+  '< paste laplacian.out laplacian.cout | grep res' u 2:($3/$7) w lp t 'Restriction'         
 #    EOF

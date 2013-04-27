@@ -60,3 +60,9 @@ clean:
 %.prof: %.pgexe
 	./$< 2> $*.log > $*.out
 	gprof $< > $@
+
+%.dot: %.prof
+	gprof2dot.py < $< > $@
+
+%.dot.png: %.dot
+	dot -Tpng -o $@ < $<
