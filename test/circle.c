@@ -30,7 +30,7 @@ void homogeneous_boundary (scalar * v, int l)
   foreach_boundary_level (bottom, l) p[ghost] = - p[];
   /* we don't need to restrict because the solution is already defined
      on coarse levels */
-  update_halo (l, scalars (p));
+  halo_interpolation (l, scalars (p));
 }
 
 void relax (scalar a, scalar b, int l)

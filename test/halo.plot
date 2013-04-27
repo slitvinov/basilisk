@@ -145,7 +145,9 @@ set fontpath
 set fit noerrorvariables
 GNUTERM = "wxt"
 plot \
-     '< awk "(\$3==5 && \$5==2){print \$0}" halo.out' pt 7 lc 1 t 'halo 5', \
-     '< awk "(\$3==4 && \$5==2){print \$0}" halo.out' pt 7 lc 2 t 'halo 4'
-
+     'halo.out' w l t "" lc 0, \
+     '< grep halo halo.vlog | awk "(\$3==5){print \$0}"' pt 7 lc 1 t 'halo 5', \
+     '< grep halo halo.vlog | awk "(\$3==4){print \$0}"' pt 7 lc 2 t 'halo 4', \
+     '< grep res halo.vlog | awk "(\$3==4){print \$0}"' pt 5 lc 3 t 'res 4', \
+     '< grep res halo.vlog | awk "(\$3==3){print \$0}"' pt 5 lc 4 t 'res 3'
 #    EOF

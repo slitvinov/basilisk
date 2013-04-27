@@ -48,7 +48,7 @@ int main (int argc, char ** argv)
 
   start = clock ();
   for (i = 0; i < 200; i++)
-    update_halo (-1, scalars(h));
+    halo_interpolation (-1, scalars(h));
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "---- update_halos ----\n");

@@ -20,10 +20,12 @@ int main (int argc, char ** argv)
   wavelet (h, w);
   coarsen_wavelet (w, 1e-2, 0);
 
-  foreach_halo () {
+  foreach_halo_coarse_to_fine(-1)
     fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
-    printf ("%g %g %d %d 2\n", x, y, level, cell.neighbors);
-  }
+  foreach_halo_fine_to_coarse()
+    fprintf (stderr, "%g %g %d %d res\n", x, y, level, cell.neighbors);
+
+  output_cells (stdout);
 
   free_grid ();
 }

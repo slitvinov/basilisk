@@ -7,7 +7,7 @@
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  char flags, neighbors;
+  char flags, neighbors; // number of neighboring leaves
 } Cell;
 
 enum {
@@ -85,10 +85,6 @@ size_t _size (size_t l)
 #define _neighbor(k,l)							\
   CELL(point.m, point.level, (point.i + k)*(_n + 2*GHOSTS) + point.j + l)
 #define parent             aparent(0,0)
-#define alloc_children()						\
-  { point.back->dirty = true;						\
-    if (point.level == point.depth) alloc_layer(&point); }
-#define free_children()    { point.back->dirty = true; }
 
 /***** Data macros *****/
 #define data(k,l)							\
@@ -330,8 +326,16 @@ Point refine_cell (Point point, scalar * list)
 	}
 #endif
 
-  alloc_children();
+  /* refine */
+  point.back->dirty = true;
+  if (point.level == point.depth) alloc_layer(&point);
   cell.flags &= ~leaf;
+  /* update neighborhood */
+  for (int o = -GHOSTS; o <= GHOSTS; o++)
+    for (int p = -GHOSTS; p <= GHOSTS; p++)
+      neighbor(o,p).neighbors--;
+
+  /* for each child */
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
       assert(!(child(k,l).flags & active));
@@ -356,6 +360,41 @@ Point refine_cell (Point point, scalar * list)
   return point;
 }
 
+bool coarsen_cell (Point point)
+{
+#if TWO_ONE
+  /* check that neighboring cells are not too fine */
+  for (int k = -1; k < 3; k++)
+    for (int l = -1; l < 3; l++)
+      if (is_active (child(k,l)) && !is_leaf (child(k,l)))
+	return false; // cannot coarsen
+#endif
+
+  /* coarsen */
+  point.back->dirty = true;
+  cell.flags |= leaf;
+  /* update neighborhood */
+  for (int o = -GHOSTS; o <= GHOSTS; o++)
+    for (int p = -GHOSTS; p <= GHOSTS; p++)
+      neighbor(o,p).neighbors++;
+
+  /* for each child */
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++) {
+      child(k,l).flags &= ~(leaf|active);
+#if TRASH
+      /* trash the data just to make sure it's never touched */
+      for (scalar v = 0; v < nvar; v++)
+	fine(v,k,l) = undefined;
+#endif
+      /* update neighborhood */
+      for (int o = -GHOSTS; o <= GHOSTS; o++)
+	for (int p = -GHOSTS; p <= GHOSTS; p++)
+	  child(k+o,l+p).neighbors--;
+    }
+  return true;
+}
+
 static void update_cache (void)
 {
   Quadtree * q = grid;
@@ -374,16 +413,20 @@ static void update_cache (void)
       else
 	continue;
     }
-    else
+    else {
+      if (!is_leaf (cell) && cell.neighbors > 0)
+	/* update halo cache */
+	cache_append (&q->halo[level], point);
       /* update active cache */
       cache_append (&q->active[level], point);
+    }
   }
 
   q->dirty = false;
 }
 
 /* breadth-first traversal of halos from coarse to fine */
-#define foreach_halo_coarse_fine(depth1)    {				\
+#define foreach_halo_coarse_to_fine(depth1)    {			\
   update_cache();							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   int _depth = depth1 < 0 ? depth() : depth1;				\
@@ -395,12 +438,27 @@ static void update_cache (void)
       point.i = point.halo[_l].p[_k].i;					\
       point.j = point.halo[_l].p[_k].j;					\
       point.level = _l;							\
-      POINT_VARIABLES;
-#define end_foreach_halo_coarse_fine()                                  \
-  } OMP_END_PARALLEL() }
+      POINT_VARIABLES;							\
+      if (!is_active(cell)) {
+#define end_foreach_halo_coarse_to_fine()	\
+  } } OMP_END_PARALLEL() }
 
-#define foreach_halo()     foreach_halo_coarse_fine(-1)
-#define end_foreach_halo() end_foreach_halo_coarse_fine()
+/* breadth-first traversal of halos from fine to coarse */
+#define foreach_halo_fine_to_coarse()    {				\
+  update_cache();							\
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
+  OMP_PARALLEL()							\
+  Quadtree point = *((Quadtree *)grid); point.back = grid;		\
+  for (int _l = depth() - 1; _l >= 0; _l--)				\
+    OMP(omp for schedule(static))					\
+    for (int _k = 0; _k < point.halo[_l].n; _k++) {			\
+      point.i = point.halo[_l].p[_k].i;					\
+      point.j = point.halo[_l].p[_k].j;					\
+      point.level = _l;							\
+      POINT_VARIABLES;							\
+      if (is_active(cell)) {
+#define end_foreach_halo_fine_to_coarse()	\
+  } } OMP_END_PARALLEL() }
 
 void init_grid (int n)
 {

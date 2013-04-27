@@ -28,8 +28,11 @@ int main (int argc, char ** argv)
     v[] = exp(-(xv*xv + yv*yv)/(R0*R0));
   }
 
-  restriction_u_v (u, v);
-  update_halo_u_v (-1, u, v);
+  vector uv = {u,v};
+  foreach_halo_fine_to_coarse()
+    foreach_dimension()
+      uv.x[] = (fine(uv.x,0,0) + fine(uv.x,0,1))/2.;
+  halo_interpolation_u_v (-1, u, v);
 
   double max = 0., maxv = 0;
   foreach_halo() {

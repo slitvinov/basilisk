@@ -23,8 +23,8 @@ int main (int argc, char ** argv)
   double tolerance = 1e-4;
   coarsen_wavelet (w, tolerance, 0);
 
-  restriction (scalars (h));
-  update_halo (-1, scalars (h));
+  halo_restriction (scalars (h));
+  halo_interpolation (-1, scalars (h));
 
   double max = 0.;
   foreach_halo() {

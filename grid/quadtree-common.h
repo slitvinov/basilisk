@@ -14,6 +14,9 @@
 # define end_foreach_level()	continue; } } end_foreach_cell()
 #endif
 
+#define foreach_halo()     foreach_halo_coarse_to_fine(-1)
+#define end_foreach_halo() end_foreach_halo_coarse_to_fine()
+
 #define foreach_boundary(dir)		        \
   foreach_boundary_cell(dir)			\
   if (is_leaf(cell)) {				\
@@ -53,35 +56,6 @@ Point locate (double xp, double yp)
   }
   Point point = {-1, NULL, NULL, -1, -1, -1}; // not found
   return point;
-}
-
-bool coarsen_cell (Point point)
-{
-#if TWO_ONE
-  /* check that neighboring cells are not too fine */
-  for (int k = -1; k < 3; k++)
-    for (int l = -1; l < 3; l++)
-      if (is_active (child(k,l)) && !is_leaf (child(k,l)))
-	return false; // cannot coarsen
-#endif
-
-  /* coarsen */
-  free_children();
-  cell.flags |= leaf;
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++) {
-      child(k,l).flags &= ~(leaf|active);
-#if TRASH
-      /* trash the data just to make sure it's never touched */
-      for (scalar v = 0; v < nvar; v++)
-	fine(v,k,l) = undefined;
-#endif
-      /* update neighborhood */
-      for (int o = -GHOSTS; o <= GHOSTS; o++)
-	for (int p = -GHOSTS; p <= GHOSTS; p++)
-	  child(k+o,l+p).neighbors--;
-    }
-  return true;
 }
 
 int coarsen_function (int (* func) (Point p))
@@ -153,9 +127,30 @@ int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
   return nf;
 }
 
-void update_halo (int depth, scalar * list)
+void halo_restriction (scalar * list)
 {
-  foreach_halo_coarse_fine (depth)
+  foreach_halo_fine_to_coarse ()
+    for (scalar s in list)
+      s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+}
+
+void halo_restriction_flux (vector * list)
+{
+  foreach_halo_fine_to_coarse() {
+    for (vector f in list)
+      foreach_dimension()
+	f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+    foreach_dimension()
+      if (is_leaf (neighbor(1,0))) {
+	for (vector f in list)
+	  f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
+      }
+  }
+}
+
+void halo_interpolation (int depth, scalar * list)
+{
+  foreach_halo_coarse_to_fine (depth)
     /* bilinear interpolation from coarser level */
     for (scalar s in list)
       s[] = (9.*coarse(s,0,0) + 
@@ -163,9 +158,9 @@ void update_halo (int depth, scalar * list)
 	     coarse(s,child.x,child.y))/16.;
 }
 
-void update_halo_u_v (int depth, scalar u, scalar v)
+void halo_interpolation_u_v (int depth, scalar u, scalar v)
 {
-  foreach_halo_coarse_fine (depth) {
+  foreach_halo_coarse_to_fine (depth) {
     /* linear interpolation from coarser level */
     if (child.x < 0)
       /* conservative interpolation */
@@ -187,19 +182,9 @@ void update_halo_u_v (int depth, scalar u, scalar v)
 void boundary_a (scalar * list)
 {
   boundary_level (list, depth());
-  restriction (list);
-  update_halo (-1, list);
+  halo_restriction (list);
+  halo_interpolation (-1, list);
 }
 
 #undef boundary_flux
-#define boundary_flux(...) boundary_flux_a(vectors(__VA_ARGS__))
-void boundary_flux_a (vector * list)
-{
-  restriction_flux (list);
-  foreach()
-    foreach_dimension()
-      if (is_active(neighbor(-1,0)) && !is_leaf (neighbor(-1,0))) {
-	for (vector v in list)
-	  v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-      }
-}
+#define boundary_flux(...) halo_restriction_flux (vectors (__VA_ARGS__))

@@ -13,7 +13,6 @@ void refineiter ()
     foreach()
       h[] = exp(-(x*x + y*y)/(0.01));
     boundary (h);
-    update_halo (-1, scalars (h));
 
     restriction (scalars (h));
     wavelet (h, w);
@@ -22,7 +21,7 @@ void refineiter ()
 
     fprintf (stderr, "refined %d cells\n", nf);
   }
-  update_halo (-1, scalars (h));
+  boundary (h);
 }
 
 int main (int argc, char ** argv)
