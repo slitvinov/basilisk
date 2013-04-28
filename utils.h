@@ -99,14 +99,21 @@ double interpolate (scalar v, double xp, double yp)
 	  val(v,i,j)*x*y);
 }
 
-void output_field (scalar f, int n, FILE * fp)
+void output_field (scalar f, int n, FILE * fp, bool linear)
 {
   fprintf (fp, "# 1:x 2:y 3:F\n");
   double delta = 1./n;
   for (int i = 0; i < n; i++) {
+    double x = delta*i - 0.5 + delta/2.;
     for (int j = 0; j < n; j++) {
-      double x = delta*i - 0.5 + delta/2., y = delta*j - 0.5 + delta/2.;
-      fprintf (fp, "%g %g %g\n", x, y, interpolate (f, x, y));
+      double y = delta*j - 0.5 + delta/2., v;
+      if (linear)
+	v = interpolate (f, x, y);
+      else {
+	Point point = locate (x, y);
+	v = val(f,0,0);
+      }
+      fprintf (fp, "%g %g %g\n", x, y, v);
     }
     fputc ('\n', fp);
   }

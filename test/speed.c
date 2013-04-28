@@ -31,7 +31,8 @@ int main (int argc, char ** argv)
   end = clock ();
   double cpu0 = ((double) (end0 - start))/CLOCKS_PER_SEC;
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
-  fprintf (stderr, "---- restriction + wavelet + coarsen_wavelet + flag_halo_cells ----\n");
+  fprintf (stderr
+, "---- restriction + wavelet + coarsen_wavelet + flag_halo_cells ----\n");
   int leaves = 0, maxlevel = 0;
   foreach() { leaves++; if (level > maxlevel) maxlevel = level; }
   fprintf (stderr, "after coarsening: %d leaves, maximum level %d\n", leaves, maxlevel);
@@ -47,7 +48,7 @@ int main (int argc, char ** argv)
   }
 
   start = clock ();
-  for (i = 0; i < 200; i++)
+  for (i = 0; i < 2000; i++)
     halo_interpolation (-1, scalars(h));
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
