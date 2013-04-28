@@ -1,8 +1,9 @@
 #include "utils.h"
 #include "mg.h"
 
-scalar u = new scalar, v = new scalar, p = new scalar;
-scalar Sxx = new scalar, Syy = new scalar, Sxy = new scalar;
+scalar p = new scalar;
+vector u = new vector;
+tensor S = new tensor;
 
 // Default parameters
 // Viscosity
@@ -16,72 +17,55 @@ void parameters (void);
 void init       (void);
 void end        (void);
 
+// slip-walls by default
+u.x[right]  = 0.;
+// u.x[left]   = 0.;
+u.y[top]    = 0.;
+// u.y[bottom] = 0.;
+
+static void boundary_uv (vector u)
+{
+  boundary (u.x, u.y);
+  /* fixme */
+  foreach_boundary (left)
+    u.x[] = 0.;
+  foreach_boundary (bottom)
+    u.y[] = 0.;
+}
+
 double timestep ()
 {
   double dtmax = DT/CFL;
   foreach(reduction(min:dtmax)) {
     double dx = L0*delta;
-    if (u[] != 0.) {
-      double dt = dx/fabs(u[]);
-      if (dt < dtmax) dtmax = dt;
-    }
-    if (v[] != 0.) {
-      double dt = dx/fabs(v[]);
-      if (dt < dtmax) dtmax = dt;
-    }
+    foreach_dimension()
+      if (u.x[] != 0.) {
+	double dt = dx/fabs(u.x[]);
+	if (dt < dtmax) dtmax = dt;
+      }
   }
   return dtmax*CFL;
 }
 
 #define sq(x) ((x)*(x))
 
-void stresses ()
+void stresses()
 {
-  foreach() {
-    delta *= L0;
-    Sxx[] = 
-      - sq(u[] + u[1,0])/4. 
-      + 2.*NU*(u[1,0] - u[])/delta;
-    Syy[] = 
-      - sq(v[] + v[0,1])/4. 
-      + 2.*NU*(v[0,1] - v[])/delta;
-    Sxy[] = 
-      - (u[] + u[0,-1])*(v[] + v[-1,0])/4. +
-      NU*(u[] - u[0,-1] + v[] - v[-1,0])/delta;
-  }
-  foreach_boundary (left) {
-    delta *= L0;
-    Sxx[-1,0] = 
-      - sq(u[-1,0] + u[])/4. 
-      + 2.*NU*(u[] - u[-1,0])/delta;
-  }
-  foreach_boundary (top) {
-    delta *= L0;
-    Sxy[0,1] = 
-      - (u[0,1] + u[])*(v[0,1] + v[-1,1])/4. +
-      NU*(u[0,1] - u[] + v[0,1] - v[-1,1])/delta;
-  }
-  foreach_boundary (right) {
-    delta *= L0;
-    Sxy[1,0] = 
-      - (u[1,0] + u[1,-1])*(v[1,0] + v[])/4. +
-      NU*(u[1,0] - u[1,-1] + v[1,0] - v[])/delta;
-  }
-  foreach_boundary (bottom) {
-    delta *= L0;
-    Syy[0,-1] = 
-      - sq(v[0,-1] + v[])/4. 
-      + 2.*NU*(v[] - v[0,-1])/delta;
-  }
+  foreach()
+    foreach_dimension()
+      S.x.x[] = - sq(u.x[] + u.x[1,0])/4. + 2.*NU*(u.x[1,0] - u.x[])/DX;
+
+  S.x.y = S.y.x; // fixme: the tensor is symmetric
+  foreach_face() // this does too much work
+    S.x.y[] = 
+      - (u.x[] + u.x[0,-1])*(u.y[] + u.y[-1,0])/4. +
+      NU*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/DX;
 }
 
 void advance (double dt)
 {
-  foreach() {
-    delta *= L0;
-    u[] += dt*(Sxx[] - Sxx[-1,0] + Sxy[0,1] - Sxy[])/delta;
-    v[] += dt*(Syy[] - Syy[0,-1] + Sxy[1,0] - Sxy[])/delta;
-  }
+  foreach_face()
+    u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/DX;
 }
 
 void relax (scalar a, scalar b, int l)
@@ -102,12 +86,12 @@ double residual (scalar a, scalar b, scalar res)
   return maxres;
 }
 
-void projection (scalar u, scalar v, scalar p, 
+void projection (vector u, scalar p, 
 		 scalar div, scalar res, scalar dp)
 {
   double sum = 0.;
   foreach(reduction(+:sum)) {
-    div[] = (u[1,0] - u[] + v[0,1] - v[])/(L0*delta);
+    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/(L0*delta);
     sum += div[];
   }
   double maxres = residual (p, div, res);
@@ -124,11 +108,8 @@ void projection (scalar u, scalar v, scalar p,
 	     "WARNING: convergence not reached after %d iterations\n"
 	     "  sum: %g\n", 
 	     NITERMAX, sum);
-  foreach() {
-    delta *= L0;
-    u[] -= (p[] - p[-1,0])/delta;
-    v[] -= (p[] - p[0,-1])/delta;
-  }
+  foreach_face()
+    u.x[] -= (p[] - p[-1,0])/DX;
 }
 
 void run (void)
@@ -136,9 +117,9 @@ void run (void)
   parameters ();
   init_grid (N);
   init ();
-  boundary_uv (u, v);
-  projection (u, v, p, Sxx, Syy, Sxy);
-  boundary_uv (u, v);
+  boundary_uv (u);
+  projection (u, p, S.x.y, S.y.y, S.x.x);
+  boundary_uv (u);
 
   timer_t start = timer_start();
   double t = 0;
@@ -147,9 +128,9 @@ void run (void)
     double dt = dtnext (t, timestep ());
     stresses ();
     advance (dt);
-    boundary_uv (u, v);
-    projection (u, v, p, Sxx, Syy, Sxy);
-    boundary_uv (u, v);
+    boundary_uv (u);
+    projection (u, p, S.x.y, S.y.y, S.x.x);
+    boundary_uv (u);
     i++; t = tnext;
   }
   end ();

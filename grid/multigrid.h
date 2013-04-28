@@ -109,8 +109,7 @@ void init_grid (int n)
   for (int l = 0; l <= r; l++)
     m->d[l] = calloc (_size(l), datasize);
   grid = m;
-  init_boundaries (nvar);
-  init_events();
+  init_solver();
 }
 
 void free_grid (void)

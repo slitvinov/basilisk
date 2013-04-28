@@ -7,7 +7,7 @@ fast: halo.vlog speed.slog interp.log interpu.log refine.vlog \
 	rk2.vlog poisson.log circle.log \
 	laplacian.slog interpolate.vlog events.vlog \
 	transcritical.log parabola.log bump.log \
-	dry.log
+	dry.log faces.vlog
 	cat *.d > Makefile.deps
 
 slow: advection.log rotation.log
@@ -15,7 +15,7 @@ slow: advection.log rotation.log
 plots: halo.png speed.png interp.png interpu.png refine.png \
 	rk2.png poisson.png circle.png \
 	laplacian.png interpolate.png \
-	transcritical.png parabola.png dry.png
+	transcritical.png parabola.png dry.png faces.png
 
 -include Makefile.deps
 

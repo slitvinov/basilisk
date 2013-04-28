@@ -78,12 +78,9 @@ int event (i++) {
 /* } */
 
 int event (i++) {
-  foreach_face (x)
-    u.x[] = -8.*yu;
-  foreach_face (y)
-    u.y[] =  8.*xv;
-  //  boundary_flux (u);
-  boundary_uv (u.x, u.y);
+  foreach_face(x) u.x[] = -8.*y;
+  foreach_face(y) u.y[] =  8.*x;
+  boundary_flux (u);
 }
 
 int event (t = {0,end}) {
@@ -99,7 +96,7 @@ int event (t = end) {
   fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
 
   if (N == 256)
-    output_matrix (e, N, stdout, false);
+    output_field (e, N, stdout, false);
 }
 
 int main() {

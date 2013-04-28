@@ -51,8 +51,7 @@ void init_grid (int n)
   p->n = n;
   p->data = calloc ((n + 2)*(n + 2), datasize);
   grid = p;
-  init_boundaries (nvar);
-  init_events();
+  init_solver();
 }
 
 void free_grid (void)

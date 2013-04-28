@@ -46,11 +46,12 @@ scalar h1 = new scalar;
 
 void init()
 {
-  foreach() {
+  foreach()
     h1[] = h[] = (H0 + h0(sqrt (x*x + y*y)));
-    u[] = - vtheta(sqrt (xu*xu + yu*yu))*yu/sqrt (xu*xu + yu*yu);
-    v[] =   vtheta(sqrt (xv*xv + yv*yv))*xv/sqrt (xv*xv + yv*yv);
-  }
+  foreach_face(x)
+    u[] = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
+  foreach_face(y)
+    v[] =   vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
 }
 
 /* ------------------ Output helper functions --------------- */

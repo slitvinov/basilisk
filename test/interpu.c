@@ -23,10 +23,8 @@ int main (int argc, char ** argv)
   double tolerance = 1e-4;
   coarsen_wavelet (w, tolerance, 0);
 
-  foreach() {
-    u[] = exp(-(xu*xu + yu*yu)/(R0*R0));
-    v[] = exp(-(xv*xv + yv*yv)/(R0*R0));
-  }
+  foreach_face(x) u[] = exp(-(x*x + y*y)/(R0*R0));
+  foreach_face(y) v[] = exp(-(x*x + y*y)/(R0*R0));
 
   vector uv = {u,v};
   foreach_halo_fine_to_coarse()
@@ -36,6 +34,8 @@ int main (int argc, char ** argv)
 
   double max = 0., maxv = 0;
   foreach_halo() {
+    double xu = x - delta/2., yu = y;
+    double xv = x, yv = y - delta/2.;
     double e = exp(-(xu*xu+yu*yu)/(R0*R0)) - u[];
     if (fabs(e) > max)
       max = fabs(e);

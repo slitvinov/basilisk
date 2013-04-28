@@ -84,10 +84,10 @@ int event (i++) {
 /* } */
 
 int event (i++) {
-  foreach_face (x)
-    u.x[] = 1.5*sin(2.*pi*t/5.)*sin((xu + 0.5)*pi)*cos((yu + 0.5)*pi);
-  foreach_face (y)
-    u.y[] = - 1.5*sin(2.*pi*t/5.)*cos((xv + 0.5)*pi)*sin((yv + 0.5)*pi);
+  foreach_face(x)
+    u.x[] = 1.5*sin(2.*pi*t/5.)*sin((x + 0.5)*pi)*cos((y + 0.5)*pi);
+  foreach_face(y)
+    u.y[] = - 1.5*sin(2.*pi*t/5.)*cos((x + 0.5)*pi)*sin((y + 0.5)*pi);
   boundary_flux (u);
 }
 
@@ -104,7 +104,7 @@ int event (t = 5) {
   fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
   
   if (N == 256)
-    output_matrix (e, N, stdout, false);
+    output_field (e, N, stdout, false);
 }
 
 int main() {

@@ -46,6 +46,10 @@ typedef struct {
   vector x, y;
 } tensor;
 
+scalar new_scalar (scalar s);
+vector new_vector (vector v);
+tensor new_tensor (tensor t);
+
 #define scalars(...) (scalar []){__VA_ARGS__,-1}
 #define vectors(...) (vector []){__VA_ARGS__,{-1,-1}}
 #define val(a,k,l) data(k,l)[a]
@@ -78,9 +82,7 @@ enum { right, left, top, bottom, nboundary };
 int _ig[nboundary] = {1,-1,0,0}, 
     _jg[nboundary] = {0,0,1,-1};
 
-typedef void (* Boundary) (int l);
-
-Boundary * _boundary[nboundary];
+void ** _boundary[nboundary];
 
 void free_boundaries ()
 {

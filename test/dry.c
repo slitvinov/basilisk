@@ -8,8 +8,8 @@ void parameters()
 
 void init()
 {
-  q.x[left] = - q.x[];
   h[right] = 0.;
+  q.x[right] = q.x[];
   foreach() {
     zb[] = 0.25*(cos(pi*x/0.1) + 1.)*(fabs(x) < 0.1);
     h[] = 0.8 - zb[];

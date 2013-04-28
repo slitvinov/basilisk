@@ -15,6 +15,31 @@ double NU = 0.;
 void parameters (void);
 void init       (void);
 
+void boundary_uv (scalar u, scalar v)
+{
+  /* slip walls (symmetry) by default */
+  foreach_boundary (right)
+    u[ghost] = 0.;
+  foreach_boundary (right)
+    v[ghost] = v[];
+  foreach_boundary (left) {
+    u[ghost] = - u[1,0];
+    u[] = 0.;
+  }
+  foreach_boundary (left)
+    v[ghost] = v[];
+  foreach_boundary (top)
+    u[ghost] = u[];
+  foreach_boundary (top)
+    v[ghost] = 0.;
+  foreach_boundary (bottom)
+    u[ghost] = u[];
+  foreach_boundary (bottom) {
+    v[ghost] = - v[0,1];
+    v[] = 0.;
+  }
+}
+
 void advection_centered (scalar f, scalar u, scalar v, scalar df)
 {
   foreach()

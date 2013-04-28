@@ -514,8 +514,7 @@ void init_grid (int n)
     foreach_leaf()
       point = refine_cell (point, all);
   update_cache();
-  init_boundaries (nvar);
-  init_events();
+  init_solver();
 }
 
 void free_grid (void)

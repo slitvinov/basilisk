@@ -28,13 +28,8 @@ double CFL = 0.5;
 #define VARIABLES							\
   double delta = DELTA;          /* cell size */			\
   double x  = XC(ig/2. + I), y  = YC(jg/2. + J); /* cell/face center */	\
-  double xu = XU(I), yu = YU(J); /* staggered u-coordinates */		\
-  double xv = XV(I), yv = YV(J); /* staggered v-coordinates */          \
   /* we need this to avoid compiler warnings */	                        \
-  NOT_UNUSED(x);  NOT_UNUSED(y);	                                \
-  NOT_UNUSED(xu); NOT_UNUSED(yu);	                                \
-  NOT_UNUSED(xv); NOT_UNUSED(yv);	                                \
-  NOT_UNUSED(delta);
+  NOT_UNUSED(delta); NOT_UNUSED(x); NOT_UNUSED(y);
 
 void runge_kutta (int stages,
 		  double t, double dt,

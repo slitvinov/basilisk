@@ -8,10 +8,18 @@
 
   enum { scalar, vector };
 
+  typedef int Scalar;
+  typedef struct { Scalar x, y; } Vector;
+  typedef struct { Vector x, y; } Tensor;
+
   int debug = 0;
   char dir[] = ".qccXXXXXX";
 
   int nvar = 0, nevents = 0;
+  int nscalars = 0, nvectors = 0, ntensors = 0;
+  Scalar * scalars = NULL;
+  Vector * vectors = NULL;
+  Tensor * tensors = NULL;
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
     inforeach_boundary, inforeach_face;
@@ -109,7 +117,7 @@
 	s[i++] = c; s[i] = '\0';
       }
       else {
-	if (!identifier(s[0]) && !identifier(s[2])) {
+	if (s[0] == '.' && !identifier(s[2])) {
 	  if      (s[1] == 'x') s[1] = x;
 	  else if (s[1] == 'y') s[1] = y;
 	}
@@ -140,9 +148,23 @@
       yyout = foreachfp;
       fputs ("foreach()", yyout);
       FILE * fp = dopen ("foreach_face.h", "r");
-      if (foreach_face_xy == face_xy)
+      if (foreach_face_xy == face_xy) {
+	fputs (" { int jg = -1; VARIABLES; ", yyout);
 	writefile (fp, 'y', 'x', foreach_face_line);
-      writefile (fp, 'x', 'y', foreach_face_line);
+	fputs (" } { int ig = -1; VARIABLES; ", yyout);
+	writefile (fp, 'x', 'y', foreach_face_line);
+	fputs (" } ", yyout);
+      }
+      else if (foreach_face_xy == face_x) {
+	fputs (" { int ig = -1; VARIABLES; ", yyout);
+	writefile (fp, 'x', 'y', foreach_face_line);
+	fputs (" } ", yyout);
+      }
+      else {
+	fputs (" { int jg = -1; VARIABLES; ", yyout);
+	writefile (fp, 'x', 'y', foreach_face_line);
+	fputs (" } ", yyout);
+      }
       fputs (" end_foreach()\n", yyout);
       if (foreach_face_xy != face_x) {
 	fputs ("boundary_ghost (top, ({", yyout);
@@ -330,7 +352,7 @@ end_foreach{ID}*{SP}*"()" {
   }
   if (inboundary) {
     ECHO;
-    fputs (" end_foreach_boundary_level(); } ", yyout);
+    fputs (" } ", yyout);
     if (scope == 0)
       /* file scope */
       fprintf (yyout, "static void _boundary%d (void) { %s } ",
@@ -365,7 +387,7 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
-[^{ID}]{WS}*(scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+ {
+[^{ID}](scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+ {
   ECHO;
   if (yytext[0] == '(') para++;
   char * var = strstr(yytext,"scalar");
@@ -405,16 +427,40 @@ end_foreach{ID}*{SP}*"()" {
 }
 
 new{WS}+scalar {
-  fprintf (yyout, "%d", nvar++);
+  if (scope > 0)
+    fprintf (yyout, "new_scalar (%d)", nvar);
+  else {
+    fprintf (yyout, "%d", nvar);
+    nscalars++;
+    scalars = realloc (scalars, sizeof (Scalar)*nscalars);
+    scalars[nscalars-1] = nvar;
+  }
+  nvar++;
 }
 
 new{WS}+vector {
-  fprintf (yyout, "{%d,%d}", nvar, nvar + 1);
+  if (scope > 0)
+    fprintf (yyout, "new_vector ((vector){%d,%d})", nvar, nvar + 1);
+  else {
+    fprintf (yyout, "{%d,%d}", nvar, nvar + 1);
+    nvectors++;
+    vectors = realloc (vectors, sizeof (Vector)*nvectors);
+    vectors[nvectors-1] = (Vector){nvar,nvar + 1};
+  }
   nvar += 2;
 }
 
 new{WS}+tensor {
-  fprintf (yyout, "{{%d,%d},{%d,%d}}", nvar, nvar + 1, nvar + 2, nvar + 3);
+  if (scope > 0)
+    fprintf (yyout, "new_tensor ((tensor){{%d,%d},{%d,%d}})",
+	     nvar, nvar + 1, nvar + 2, nvar + 3);
+  else {
+    fprintf (yyout, "{{%d,%d},{%d,%d}}",
+	     nvar, nvar + 1, nvar + 2, nvar + 3);
+    ntensors++;
+    tensors = realloc (tensors, sizeof (Tensor)*ntensors);
+    tensors[ntensors-1] = (Tensor){{nvar,nvar + 1},{nvar + 2, nvar + 3}};
+  }  
   nvar += 4;
 }
 
@@ -511,13 +557,12 @@ new{WS}+tensor {
 			    strlen(yytext) + 
 			    strlen (func) + 1)*sizeof (char));
     sprintf (boundaryfunc, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
-    fprintf (yyout,
-	     "void _%s%s (int l) {"
-	     "  foreach_boundary_level (%s, l)"
-	     "    val(%s,ig,jg) =",
-	     func, b,
-	     b,
-	     yytext);
+    fprintf (yyout, 
+	     "double _%s%s (Point point, scalar s) {"
+	     " int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
+	     " POINT_VARIABLES; "
+	     " return ", 
+	     func, b);
     free (func);
     inboundary = inforeach_boundary = 1;
     inforeach = 2;
@@ -864,13 +909,22 @@ void compdir (char * file, char ** in, int nin, char * grid)
   /* boundaries */
   for (i = 0; i < nboundary; i++)
     fprintf (fout, "static void _boundary%d (void);\n", i);
-  fputs ("static void init_boundaries (int nvar) {\n"
+  fputs ("static void init_solver (void) {\n"
 	 "  for (int b = 0; b < nboundary; b++)\n"
-	 "    _boundary[b] = calloc (nvar, sizeof (Boundary));\n",
+	 "    _boundary[b] = calloc (nvar, sizeof (void *));\n",
 	 fout);
+  for (i = 0; i < nscalars; i++)
+    fprintf (fout, "  new_scalar (%d);\n", scalars[i]);
+  for (i = 0; i < nvectors; i++)
+    fprintf (fout, "  new_vector ((vector){%d,%d});\n", 
+	     vectors[i].x, vectors[i].y);
+  for (i = 0; i < ntensors; i++)
+    fprintf (fout, "  new_tensor ((tensor){{%d,%d},{%d,%d}});\n", 
+	     tensors[i].x.x, tensors[i].x.y,
+	     tensors[i].y.x, tensors[i].y.y);
   for (i = 0; i < nboundary; i++)
     fprintf (fout, "  _boundary%d();\n", i);
-  fputs ("}\n", fout);
+  fputs ("  init_events();\n}\n", fout);
   /* grid */
   if (grid)
     fprintf (fout, "#include \"grid/%s.h\"\n", grid);
