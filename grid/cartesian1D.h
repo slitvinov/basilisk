@@ -41,7 +41,7 @@ typedef struct {
     POINT_VARIABLES
 #define end_foreach_boundary_ghost() }}
 
-#define foreach_boundary_level(d,l) foreach_boundary(d)
+#define foreach_boundary_level(d,l,...) foreach_boundary(d)
 #define end_foreach_boundary_level() end_foreach_boundary()
 
 #define depth() 0

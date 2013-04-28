@@ -59,17 +59,19 @@ size_t _size (size_t l)
 #define foreach(clause) foreach_level(point.depth, clause)
 #define end_foreach()   end_foreach_level()
 
-#define foreach_boundary_level(d,l) 					\
+#define foreach_boundary_level(d,l,...) 				\
   OMP_PARALLEL()							\
   int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
   point.level = l; point.n = 1 << point.level;				\
+  int _start = GHOSTS, _end = point.n + GHOSTS;				\
+  /* also traverse corners if __VA_ARGS__ is true */			\
+  if (__VA_ARGS__+0) { _start -= GHOSTS; _end += GHOSTS; }		\
   OMP(omp for schedule(static))						\
-  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
+  for (int _k = _start; _k < _end; _k++) {				\
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS; \
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS; \
     POINT_VARIABLES
-
 #define end_foreach_boundary_level() } OMP_END_PARALLEL()
 
 #define foreach_boundary(d)    foreach_boundary_level(d,point.depth)

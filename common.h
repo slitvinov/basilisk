@@ -75,8 +75,8 @@ void init_events (void);
 
 enum { right, left, top, bottom, nboundary };
 // ghost cell coordinates for each direction
-int _ig[nboundary+1] = {1,-1,0,0,0}, 
-    _jg[nboundary+1] = {0,0,1,-1,0};
+int _ig[nboundary] = {1,-1,0,0}, 
+    _jg[nboundary] = {0,0,1,-1};
 
 typedef void (* Boundary) (int l);
 

@@ -17,20 +17,15 @@
 #define foreach_halo()     foreach_halo_coarse_to_fine(-1)
 #define end_foreach_halo() end_foreach_halo_coarse_to_fine()
 
-#define foreach_boundary(dir)		        \
-  foreach_boundary_cell(dir)			\
-  if (is_leaf(cell)) {				\
-    POINT_VARIABLES;
-#define end_foreach_boundary()			\
-  continue; } end_foreach_boundary_cell()
+#define foreach_boundary(dir,...) \
+  foreach_boundary_cell(dir, is_leaf(cell), __VA_ARGS__)
+#define end_foreach_boundary()	\
+  end_foreach_boundary_cell()
 
-#define foreach_boundary_level(dir,l)		\
-  foreach_boundary_cell(dir)			\
-    POINT_VARIABLES;				\
-    if (level == l || is_leaf(cell)) {		\
-      POINT_VARIABLES;
-#define end_foreach_boundary_level()            \
-    continue; } end_foreach_boundary_cell()
+#define foreach_boundary_level(dir,l,...)			\
+  foreach_boundary_cell(dir, level == l || is_leaf(cell), __VA_ARGS__)
+#define end_foreach_boundary_level()  \
+  end_foreach_boundary_cell()
 
 #include "multigrid-common.h"
 

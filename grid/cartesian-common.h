@@ -1,5 +1,14 @@
 #include "events.h"
 
+#ifndef foreach_boundary_ghost
+# define foreach_boundary_ghost(dir)					\
+  foreach_boundary(dir) {						\
+    point.i += ig; point.j += jg;					\
+    POINT_VARIABLES;
+# define end_foreach_boundary_ghost() } \
+  end_foreach_boundary()
+#endif
+
 #define boundary_ghost(d, x) {						\
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
   }
@@ -21,7 +30,7 @@ void boundary_level (scalar * list, int l)
   for (int b = 0; b < nboundary; b++)
     for (scalar s in list) {
       if (!boundary_var (b, s, l))
-	foreach_boundary_level (b, l)
+	foreach_boundary_level (b, l, true) // also traverse corners
 	  s[ghost] = s[]; /* default is symmetry */
     }
 }

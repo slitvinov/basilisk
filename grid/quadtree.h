@@ -15,8 +15,10 @@ enum {
   leaf   = 1 << 1
 };
 
+#define _CORNER 4
 #define is_leaf(cell)   ((cell).flags & leaf)
 #define is_active(cell) ((cell).flags & active)
+#define is_corner(cell) (stage == _CORNER)
 
 typedef struct _Quadtree Point;
 typedef struct _Quadtree Quadtree;
@@ -141,11 +143,10 @@ void recursive (Point point)
   { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j;			\
     e = stack[_s].stage; _s--; }
 
-#define foreach_boundary_cell(dir)					\
+#define foreach_cell()							\
   {									\
-    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
+    int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);			\
     Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-    int _d = dir; NOT_UNUSED(_d);					\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
     while (_s >= 0) {							\
@@ -153,34 +154,14 @@ void recursive (Point point)
       _pop (point.level, point.i, point.j, stage);			\
       switch (stage) {							\
       case 0: {								\
+        POINT_VARIABLES;						\
 	/* do something */
-#define end_foreach_boundary_cell()					\
+#define end_foreach_cell()						\
         if (point.level < point.depth) {				\
 	  _push (point.level, point.i, point.j, 1);			\
-	  int k = _d > left ? _LEFT : _RIGHT - _d;			\
-	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;			\
-          _push (point.level + 1, k, l, 0);				\
-        }								\
-	break;								\
-      }								        \
-      case 1: {								\
-	  int k = _d > left ? _RIGHT : _RIGHT - _d;			\
-	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;			\
-          _push (point.level + 1, k, l, 0);				\
-          break;                                                        \
-        }								\
-      }									\
-    }                                                                   \
-  }
-
-#define foreach_cell() foreach_boundary_cell(nboundary)			\
-  POINT_VARIABLES;
-#define end_foreach_cell()						\
-      if (point.level < point.depth) {					\
-	  _push (point.level, point.i, point.j, 1);			\
           _push (point.level + 1, _LEFT, _TOP, 0);			\
-      }									\
-      break;								\
+        }								\
+        break;								\
       }									\
       case 1: _push (point.level, point.i, point.j, 2);			\
               _push (point.level + 1, _RIGHT, _TOP,    0); break;	\
@@ -225,6 +206,57 @@ void recursive (Point point)
 #define end_foreach_cell_post()						\
       }									\
       }								        \
+    }                                                                   \
+  }
+
+#define foreach_boundary_cell(dir,condition,...)			\
+  {									\
+    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
+    Quadtree point = *((Quadtree *)grid); point.back = grid;		\
+    int _d = dir; NOT_UNUSED(_d);					\
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
+    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
+    while (_s >= 0) {							\
+      int stage;							\
+      _pop (point.level, point.i, point.j, stage);			\
+      switch (stage) {							\
+      case 0: case _CORNER: {						\
+        POINT_VARIABLES;						\
+        if (stage == _CORNER || (condition)) {				\
+	  if ((__VA_ARGS__+0) && stage == 0) {				\
+	    /* corners */						\
+	    if (_d < top) {						\
+	      if (point.j == GHOSTS)					\
+		_push (point.level, point.i, point.j - 1, _CORNER)	\
+	      if (point.j == _n + 2*GHOSTS - 2)			        \
+		_push (point.level, point.i, point.j + 1, _CORNER)	\
+	    } else {						        \
+	      if (point.i == GHOSTS)					\
+		_push (point.level, point.i - 1, point.j, _CORNER)	\
+	      if (point.i == _n + 2*GHOSTS - 2)			        \
+		_push (point.level, point.i + 1, point.j, _CORNER)	\
+	    }							        \
+	  }								\
+  	  /* do something */
+#define end_foreach_boundary_cell()					\
+          continue;							\
+        }								\
+        /* children */							\
+        if (point.level < point.depth) {                                \
+	  _push (point.level, point.i, point.j, 1);			\
+	  int k = _d > left ? _LEFT : _RIGHT - _d;			\
+	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;			\
+	  _push (point.level + 1, k, l, 0);				\
+	}								\
+	break;								\
+      }								        \
+      case 1: {								\
+	  int k = _d > left ? _RIGHT : _RIGHT - _d;			\
+	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;			\
+          _push (point.level + 1, k, l, 0);				\
+          break;                                                        \
+        }								\
+      }									\
     }                                                                   \
   }
 
@@ -273,14 +305,8 @@ void recursive (Point point)
       if (_l == l || is_leaf (cell)) {
 #define end_foreach_level() } } OMP_END_PARALLEL() }
 
-#define foreach_leaf()            foreach_cell() if (cell.flags & leaf) {
+#define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
-
-#define foreach_boundary_ghost(dir)        foreach_boundary_cell(dir)	     \
-                                             if (cell.flags & leaf) {	     \
-					       point.i += ig; point.j += jg; \
-					       POINT_VARIABLES;
-#define end_foreach_boundary_ghost()   continue; } end_foreach_boundary_cell()
 
 void alloc_layer (Quadtree * p)
 {
