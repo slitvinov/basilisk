@@ -1,7 +1,5 @@
 VALGRIND = valgrind -q --tool=memcheck
-# the 'sse' stuff is a trick to turn off 'extended precision', 
-# see: http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html
-CFLAGS += -std=c99 -g -O2 -MD -Wall -msse2 -mfpmath=sse
+CFLAGS += -g -O2 -MD
 
 fast: halo.vlog speed.slog interp.log interpu.log refine.vlog \
 	rk2.vlog poisson.log circle.log \

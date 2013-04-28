@@ -12,7 +12,7 @@
   typedef struct { Scalar x, y; } Vector;
   typedef struct { Vector x, y; } Tensor;
 
-  int debug = 0;
+  int debug = 0, fpe = 0;
   char dir[] = ".qccXXXXXX";
 
   int nvar = 0, nevents = 0;
@@ -858,8 +858,12 @@ void compdir (char * file, char ** in, int nin, char * grid)
       perror (out);
       cleanup (1);
     }
-    if (i == 0)
+    if (i == 0) {
+      if (fpe)
+	fputs ("#define _GNU_SOURCE 1\n"
+	       "#include <fenv.h>\n", fout);
       fputs ("#include \"grid.h\"\n", fout);
+    }
     if (endfor (path, fin, fout))
       cleanup (1);
     fclose (fout);
@@ -913,6 +917,8 @@ void compdir (char * file, char ** in, int nin, char * grid)
 	 "  for (int b = 0; b < nboundary; b++)\n"
 	 "    _boundary[b] = calloc (nvar, sizeof (void *));\n",
 	 fout);
+  if (fpe)
+    fputs ("  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n", fout);
   for (i = 0; i < nscalars; i++)
     fprintf (fout, "  new_scalar (%d);\n", scalars[i]);
   for (i = 0; i < nvectors; i++)
@@ -945,6 +951,8 @@ int main (int argc, char ** argv)
       ;
     else if (!strcmp (argv[i], "-debug"))
       debug = 1;
+    else if (!strcmp (argv[i], "-fpe"))
+      fpe = 1;
     else if (argv[i][0] != '-' && 
 	     !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
       if (file) {

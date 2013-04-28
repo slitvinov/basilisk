@@ -142,5 +142,5 @@ set loadpath
 set fontpath 
 set fit noerrorvariables
 GNUTERM = "wxt"
-plot [-0.5:0.5]'yprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'yprof' w l title "atmosphere", '/home/popinet/local/src/gerris-stable/test/lid/explicit/yprof' u 2:8 w l t "Gerris"
+plot [-0.5:0.5]'yprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'yprof' w l title "atmosphere"
 #    EOF

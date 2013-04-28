@@ -47,7 +47,7 @@ void run (void)
   init();
   boundary (f, u.x, u.y);
 
-  timer_t start = timer_start();
+  timer start = timer_start();
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {

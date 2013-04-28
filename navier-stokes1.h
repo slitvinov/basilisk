@@ -121,7 +121,7 @@ void run (void)
   projection (u, p, S.x.y, S.y.y, S.x.x);
   boundary_uv (u);
 
-  timer_t start = timer_start();
+  timer start = timer_start();
   double t = 0;
   int i = 0;
   while (events (i, t)) {

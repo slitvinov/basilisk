@@ -157,17 +157,17 @@ void output_cells (FILE * fp)
 typedef struct {
   clock_t c;
   struct timeval tv;
-} timer_t;
+} timer;
 
-timer_t timer_start (void)
+timer timer_start (void)
 {
-  timer_t t;
+  timer t;
   t.c = clock();
   gettimeofday (&t.tv, NULL);
   return t;
 }
 
-void timer_print (timer_t t, int i, int tnc)
+void timer_print (timer t, int i, int tnc)
 {
   clock_t end = clock ();
   struct timeval tvend;

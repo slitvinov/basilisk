@@ -148,7 +148,7 @@ void run (void)
   boundary_uv (u, v);
   ke_psi (u, v);
 
-  timer_t start = timer_start();
+  timer start = timer_start();
   double t = 0;
   int i = 0;
   while (events (i, t)) {
