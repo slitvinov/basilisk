@@ -44,6 +44,7 @@
 Point locate (double xp, double yp)
 {
   foreach_cell () {
+    /* fixme: this should use coordinates as defined in utils.h etc... */
     double delta = DELTA;
     double x = (point.i - GHOSTS + 0.5)*delta - 0.5;
     double y = (point.j - GHOSTS + 0.5)*delta - 0.5;
@@ -53,7 +54,7 @@ Point locate (double xp, double yp)
     if (is_leaf (cell))
       return point;
   }
-  Point point = {-1, NULL, NULL, -1, -1, -1}; // not found
+  Point point = { level: -1 };
   return point;
 }
 

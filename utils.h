@@ -81,6 +81,8 @@ double change (scalar v, scalar vn)
 double interpolate (scalar v, double xp, double yp)
 {
   Point point = locate (xp, yp);
+  if (point.level < 0)
+    return undefined;
   x = (xp - x)/delta;
   y = (yp - y)/delta;
   assert (x >= -0.5 && x <= 0.5);
@@ -106,6 +108,7 @@ void output_field (scalar f, int n, FILE * fp, bool linear)
 	v = interpolate (f, x, y);
       else {
 	Point point = locate (x, y);
+	assert (point.level >= 0);
 	v = val(f,0,0);
       }
       fprintf (fp, "%g %g %g\n", x, y, v);
@@ -133,6 +136,7 @@ void output_matrix (scalar f, int n, FILE * fp, bool linear)
 	v = interpolate (f, x, y);
       else {
 	Point point = locate (x, y);
+	assert (point.level >= 0);
 	v = val(f,0,0);
       }
       fwrite (&v, sizeof(float), 1, fp);

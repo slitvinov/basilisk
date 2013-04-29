@@ -124,10 +124,12 @@ void free_grid (void)
 Point locate (double x, double y)
 {
   Point point = *((Point *)grid);
-  point.level = point.depth;
-  point.n = 1 << point.level;
+  point.n = 1 << point.depth;
   point.i = (x + 0.5)*point.n + GHOSTS;
   point.j = (y + 0.5)*point.n + GHOSTS;
+  point.level = 
+    (point.i >= GHOSTS && point.i < point.n + GHOSTS &&
+     point.j >= GHOSTS && point.j < point.n + GHOSTS) ? point.depth : - 1;
   return point;
 }
 

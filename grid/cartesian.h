@@ -9,6 +9,7 @@
 typedef struct {
   char * data;
   int i, j, n;
+  int level; // only to return level in locate()
 } Point;
 
 #define data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) + \
@@ -65,8 +66,10 @@ void free_grid (void)
 Point locate (double x, double y)
 {
   Point point = *((Point *)grid);
-  point.i = (x + 0.5)*point.n + GHOSTS;
-  point.j = (y + 0.5)*point.n + GHOSTS;
+  point.i = (x + 0.5)*point.n + 1;
+  point.j = (y + 0.5)*point.n + 1;
+  point.level = (point.i >= 1 && point.i <= point.n &&
+		 point.j >= 1 && point.j <= point.n) ? 0 : - 1;
   return point;
 }
 
