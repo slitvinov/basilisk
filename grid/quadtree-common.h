@@ -27,13 +27,17 @@
 #define end_foreach_boundary_level()  \
   end_foreach_boundary_cell()
 
+#define is_face_x() !is_refined(neighbor(-1,0))
+#define is_face_y() !is_refined(neighbor(0,-1))
+
 #include "multigrid-common.h"
 
 #undef boundary_ghost
 #define boundary_ghost(d, x) {						\
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
     int _in = -_ig[d], _jn = -_jg[d];					\
-    foreach_halo() if (is_leaf(_neighbor(_in,_jn))) { x; }		\
+    foreach_halo() if (is_leaf(_neighbor(_in,_jn))) {			\
+      ig = _in; jg = _jn; VARIABLES; x; }				\
     end_foreach_halo();							\
   }
 

@@ -1,5 +1,10 @@
 #include "events.h"
 
+#ifndef is_face_x
+# define is_face_x() true
+# define is_face_y() true
+#endif
+
 #ifndef foreach_boundary_ghost
 # define foreach_boundary_ghost(dir)					\
   foreach_boundary(dir) {						\

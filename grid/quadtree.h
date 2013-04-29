@@ -16,9 +16,10 @@ enum {
 };
 
 #define _CORNER 4
-#define is_leaf(cell)   ((cell).flags & leaf)
-#define is_active(cell) ((cell).flags & active)
-#define is_corner(cell) (stage == _CORNER)
+#define is_leaf(cell)    ((cell).flags & leaf)
+#define is_active(cell)  ((cell).flags & active)
+#define is_refined(cell) (is_active(cell) && !is_leaf(cell))
+#define is_corner(cell)  (stage == _CORNER)
 
 typedef struct _Quadtree Point;
 typedef struct _Quadtree Quadtree;

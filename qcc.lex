@@ -88,7 +88,8 @@
     return NULL;
   }
 
-  void writefile (FILE * fp, char x, char y, int line1) {
+  void writefile (FILE * fp, char x, char y, int line1,
+		  const char * condition) {
     fputs ("\n"
 	   "#undef val\n"
 	   "#undef fine\n"
@@ -107,6 +108,8 @@
 	     "#define coarse(a,k,l) _coarse(a,l,k)\n"
 	     "#define neighbor(k,l) _neighbor(l,k)\n",
 	     yyout);
+    if (condition)
+      fprintf (yyout, "if (%s) {\n", condition);
     fprintf (yyout, "#line %d\n", line1);
 
     rewind (fp);
@@ -127,6 +130,8 @@
     }
     if (i > 0)
       fputs (s, yyout);
+    if (condition)
+      fputs (" } ", yyout);
   }
 
   void endforeachdim () {
@@ -135,8 +140,8 @@
     yyout = foreachdimfp;
     fputc ('{', yyout);
     FILE * fp = dopen ("dimension.h", "r");
-    writefile (fp, 'y', 'x', foreachdimline);
-    writefile (fp, 'x', 'y', foreachdimline);
+    writefile (fp, 'y', 'x', foreachdimline, NULL);
+    writefile (fp, 'x', 'y', foreachdimline, NULL);
     fclose (fp);
     fputc ('}', yyout);
     fprintf (yyout, "\n#line %d\n", line);
@@ -150,33 +155,33 @@
       FILE * fp = dopen ("foreach_face.h", "r");
       if (foreach_face_xy == face_xy) {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
-	writefile (fp, 'y', 'x', foreach_face_line);
+	writefile (fp, 'y', 'x', foreach_face_line, "is_face_x()");
 	fputs (" } { int ig = -1; VARIABLES; ", yyout);
-	writefile (fp, 'x', 'y', foreach_face_line);
+	writefile (fp, 'x', 'y', foreach_face_line, "is_face_x()");
 	fputs (" } ", yyout);
       }
       else if (foreach_face_xy == face_x) {
 	fputs (" { int ig = -1; VARIABLES; ", yyout);
-	writefile (fp, 'x', 'y', foreach_face_line);
+	writefile (fp, 'x', 'y', foreach_face_line, "is_face_x()");
 	fputs (" } ", yyout);
       }
       else {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
-	writefile (fp, 'x', 'y', foreach_face_line);
+	writefile (fp, 'x', 'y', foreach_face_line, "is_face_y()");
 	fputs (" } ", yyout);
       }
       fputs (" end_foreach()\n", yyout);
       if (foreach_face_xy != face_x) {
 	fputs ("boundary_ghost (top, ({", yyout);
 	if (foreach_face_xy == face_xy)
-	  writefile (fp, 'y', 'x', foreach_face_line);
+	  writefile (fp, 'y', 'x', foreach_face_line, NULL);
 	else
-	  writefile (fp, 'x', 'y', foreach_face_line);
+	  writefile (fp, 'x', 'y', foreach_face_line, NULL);
 	fputs ("}));\n", yyout);
       }
       if (foreach_face_xy != face_y) {
 	fputs ("boundary_ghost (right, ({", yyout);
-	writefile (fp, 'x', 'y', foreach_face_line);
+	writefile (fp, 'x', 'y', foreach_face_line, NULL);
 	fputs ("}));\n", yyout);
       }
       fprintf (yyout, "#line %d\n", line);
