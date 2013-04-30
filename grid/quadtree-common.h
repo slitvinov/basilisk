@@ -17,15 +17,13 @@
 #define foreach_halo()     foreach_halo_coarse_to_fine(-1)
 #define end_foreach_halo() end_foreach_halo_coarse_to_fine()
 
-#define foreach_boundary(dir,...) \
-  foreach_boundary_cell(dir, is_leaf(cell), __VA_ARGS__)
-#define end_foreach_boundary()	\
-  end_foreach_boundary_cell()
+#define foreach_boundary(dir)				\
+  foreach_boundary_cell(dir) if (is_leaf (cell)) {
+#define end_foreach_boundary()  continue; } end_foreach_boundary_cell()
 
-#define foreach_boundary_level(dir,l,...)			\
-  foreach_boundary_cell(dir, level == l || is_leaf(cell), __VA_ARGS__)
-#define end_foreach_boundary_level()  \
-  end_foreach_boundary_cell()
+#define foreach_boundary_level(dir,l)				\
+  foreach_boundary_cell(dir) if (level == l || is_leaf(cell)) {
+#define end_foreach_boundary_level() continue; } end_foreach_boundary_cell()
 
 #define is_face_x() !is_refined(neighbor(-1,0))
 #define is_face_y() !is_refined(neighbor(0,-1))
@@ -181,9 +179,30 @@ void halo_interpolation_u_v (int depth, scalar u, scalar v)
 #define boundary(...) boundary_a(scalars(__VA_ARGS__))
 void boundary_a (scalar * list)
 {
-  boundary_level (list, depth());
   halo_restriction (list);
+
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell (b) {
+      if (is_active (cell)) {
+	if (cell.neighbors > 0)
+	  for (scalar s in list)
+	    s[ghost] = (*boundary[b][s]) (point, s);
+      }
+      else
+	continue;
+    }
+
   halo_interpolation (-1, list);
+
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell(b)
+      if (!is_active (cell)) {
+	if (cell.neighbors > 0)
+	  for (scalar s in list)
+	    s[ghost] = (*boundary[b][s]) (point, s);
+	else
+	  continue;
+      }
 }
 
 #undef boundary_flux

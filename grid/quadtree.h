@@ -210,7 +210,7 @@ void recursive (Point point)
     }                                                                   \
   }
 
-#define foreach_boundary_cell(dir,condition,...)			\
+#define foreach_boundary_cell(dir)					\
   {									\
     int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
     Quadtree point = *((Quadtree *)grid); point.back = grid;		\
@@ -221,27 +221,26 @@ void recursive (Point point)
       int stage;							\
       _pop (point.level, point.i, point.j, stage);			\
       switch (stage) {							\
-      case 0: case _CORNER: {						\
-        POINT_VARIABLES;						\
-        if (stage == _CORNER || (condition)) {				\
-	  if ((__VA_ARGS__+0) && stage == 0) {				\
-	    /* corners */						\
-	    if (_d < top) {						\
-	      if (point.j == GHOSTS)					\
-		_push (point.level, point.i, point.j - 1, _CORNER)	\
-	      if (point.j == _n + 2*GHOSTS - 2)			        \
-		_push (point.level, point.i, point.j + 1, _CORNER)	\
-	    } else {						        \
-	      if (point.i == GHOSTS)					\
-		_push (point.level, point.i - 1, point.j, _CORNER)	\
-	      if (point.i == _n + 2*GHOSTS - 2)			        \
-		_push (point.level, point.i + 1, point.j, _CORNER)	\
-	    }							        \
-	  }								\
+      case 0:								\
+        /* corners */							\
+        if (_d < top) {							\
+  	  if (point.j == GHOSTS)					\
+	    _push (point.level, point.i, point.j - 1, _CORNER);		\
+	  if (point.j == _n + 2*GHOSTS - 2)			        \
+	    _push (point.level, point.i, point.j + 1, _CORNER);		\
+	} else {							\
+	  if (point.i == GHOSTS)					\
+	    _push (point.level, point.i - 1, point.j, _CORNER);		\
+	  if (point.i == _n + 2*GHOSTS - 2)			        \
+	    _push (point.level, point.i + 1, point.j, _CORNER);		\
+        }							        \
+	/* fall through */						\
+      case _CORNER: {							\
+          POINT_VARIABLES;						\
   	  /* do something */
 #define end_foreach_boundary_cell()					\
-          continue;							\
         }								\
+	if (stage == _CORNER) continue;				        \
         /* children */							\
         if (point.level < point.depth) {                                \
 	  _push (point.level, point.i, point.j, 1);			\
@@ -250,12 +249,11 @@ void recursive (Point point)
 	  _push (point.level + 1, k, l, 0);				\
 	}								\
 	break;								\
-      }								        \
       case 1: {								\
-	  int k = _d > left ? _RIGHT : _RIGHT - _d;			\
+  	  int k = _d > left ? _RIGHT : _RIGHT - _d;			\
 	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;			\
-          _push (point.level + 1, k, l, 0);				\
-          break;                                                        \
+	  _push (point.level + 1, k, l, 0);				\
+	  break;							\
         }								\
       }									\
     }                                                                   \
@@ -435,14 +433,14 @@ static void update_cache (void)
   foreach_cell() {
     if (!is_active (cell)) {
       if (cell.neighbors > 0)
-	/* update halo cache */
+	/* update halo cache (prolongation) */
 	cache_append (&q->halo[level], point);
       else
 	continue;
     }
     else {
       if (!is_leaf (cell) && cell.neighbors > 0)
-	/* update halo cache */
+	/* update halo cache (restriction) */
 	cache_append (&q->halo[level], point);
       /* update active cache */
       cache_append (&q->active[level], point);
