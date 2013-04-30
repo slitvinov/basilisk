@@ -37,6 +37,7 @@
 %}
 
 SP  [ \t]
+WS  [ \t\v\n\f]
 
 %%
 
@@ -56,7 +57,13 @@ SP  [ \t]
   }
 }
 
-^{SP}*#{SP}*define{SP}+foreach[ \t(]    { hasgrid = 1; }
+^{SP}*#{SP}*define{SP}+GRIDNAME{WS}+ {
+    hasgrid = 1;
+    char * s = fname;
+    while (strchr (s, '/')) s = strchr (s, '/') + 1;
+    strcpy (grid, s);
+    if ((s = strchr (grid, '.'))) *s = '\0';
+}
 
 "/*"                                    { if (comment()) return 1; }
 "//".*                                  { /* consume //-comment */ }
@@ -147,7 +154,8 @@ static int compdir (char * file, char ** out, int nout)
   return nout;
 }
 
-int includes (int argc, char ** argv, char ** out, char ** grid1)
+int includes (int argc, char ** argv, char ** out, 
+	      char ** grid1, int * default_grid)
 {
   int depend = 0, nout = 0;
   char * file = NULL, * output = NULL;
@@ -210,6 +218,7 @@ int includes (int argc, char ** argv, char ** out, char ** grid1)
     fputc ('\n', fdepend);
     fclose (fdepend);
   }
-  *grid1 = hasgrid ? NULL : grid;
+  *grid1 = grid;
+  *default_grid = !hasgrid;
   return nout;
 }

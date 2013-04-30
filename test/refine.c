@@ -39,7 +39,8 @@ int main (int argc, char ** argv)
 
   restriction (scalars (h));
   wavelet (h, w);
-  fprintf (stderr, "\ncoarsened %d cells back\n", coarsen_wavelet (w, 1e-2, 0));
+  fprintf (stderr, "\ncoarsened %d cells back\n", 
+	   coarsen_wavelet (w, 1e-2, 0, none));
 
   foreach_halo()
     printf ("%g %g %d %d %g %g halo2\n", x, y, level, cell.neighbors, h[],

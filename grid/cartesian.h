@@ -1,4 +1,4 @@
-#define GRIDNAME "Cartesian grid"
+#define GRIDNAME "Cartesian"
 
 #include <stdlib.h>
 

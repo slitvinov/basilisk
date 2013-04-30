@@ -21,7 +21,7 @@ int main (int argc, char ** argv)
   restriction (scalars (h));
   wavelet (h, w);
   double tolerance = 1e-4;
-  coarsen_wavelet (w, tolerance, 0);
+  coarsen_wavelet (w, tolerance, 0, none);
 
   foreach_face(x) u[] = exp(-(x*x + y*y)/(R0*R0));
   foreach_face(y) v[] = exp(-(x*x + y*y)/(R0*R0));

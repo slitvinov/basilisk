@@ -782,7 +782,8 @@ int getput(void)
 
 void stripname (char * path);
 char * stripslash (char * path);
-int includes (int argc, char ** argv, char ** out, char ** grid);
+int includes (int argc, char ** argv, char ** out, 
+	      char ** grid, int * default_grid);
 
 int endfor (char * file, FILE * fin, FILE * fout)
 {
@@ -842,7 +843,7 @@ FILE * dopen (const char * fname, const char * mode)
   return fout;
 }
 
-void compdir (char * file, char ** in, int nin, char * grid)
+void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 {
   int i;
   for (i = nin - 1; i >= 0; i--) {
@@ -918,10 +919,21 @@ void compdir (char * file, char ** in, int nin, char * grid)
   /* boundaries */
   for (i = 0; i < nboundary; i++)
     fprintf (fout, "static void _boundary%d (void);\n", i);
+  /* methods */
+  fprintf (fout,
+	   "scalar %s_new_scalar (scalar);\n"
+	   "#define new_scalar %s_new_scalar\n"
+	   "vector %s_new_vector (vector);\n"
+	   "#define new_vector %s_new_vector\n"
+	   "tensor %s_new_tensor (tensor);\n"
+	   "#define new_tensor %s_new_tensor\n",
+	   grid, grid, grid, grid, grid, grid);
   fputs ("static void init_solver (void) {\n"
 	 "  for (int b = 0; b < nboundary; b++)\n"
-	 "    _boundary[b] = calloc (nvar, sizeof (void *));\n",
+	 "    boundary[b] = calloc (nvar, sizeof (BoundaryFunc));\n",
 	 fout);
+  /* refinement functions */
+  fputs ("  refine = calloc (nvar, sizeof (RefineFunc));\n", fout);
   if (fpe)
     fputs ("  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n", fout);
   for (i = 0; i < nscalars; i++)
@@ -937,7 +949,7 @@ void compdir (char * file, char ** in, int nin, char * grid)
     fprintf (fout, "  _boundary%d();\n", i);
   fputs ("  init_events();\n}\n", fout);
   /* grid */
-  if (grid)
+  if (default_grid)
     fprintf (fout, "#include \"grid/%s.h\"\n", grid);
   fclose (fout);
 }
@@ -985,8 +997,8 @@ int main (int argc, char ** argv)
   }
   if (file) {
     char * out[100], * grid = NULL;
-    int nout = includes (argc, argv, out, &grid);
-    compdir (file, out, nout, grid);
+    int default_grid, nout = includes (argc, argv, out, &grid, &default_grid);
+    compdir (file, out, nout, grid, default_grid);
     strcat (command, " ");
     strcat (command, dir);
     strcat (command, "/");

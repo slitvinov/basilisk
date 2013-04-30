@@ -21,11 +21,10 @@ enum {
 #define is_refined(cell) (is_active(cell) && !is_leaf(cell))
 #define is_corner(cell)  (stage == _CORNER)
 
-typedef struct _Quadtree Point;
-typedef struct _Quadtree Quadtree;
-typedef struct _Cache    Cache;
+typedef struct _Point Quadtree;
+typedef struct _Cache Cache;
 
-struct _Quadtree {
+struct _Point {
   int depth;        /* the maximum depth of the tree */
 
   Quadtree * back;  /* back pointer to the "parent" quadtree */
@@ -325,8 +324,8 @@ void alloc_layer (Quadtree * p)
      initialised or never touched */
   foreach_cell()
     if (level == q->depth) {
-      for (scalar v = 0; v < nvar; v++)
-	val(v,0,0) = undefined;
+      for (scalar s in all)
+	s[] = undefined;
       continue;
     }
 #endif
@@ -369,23 +368,16 @@ Point refine_cell (Point point, scalar * list)
       for (int o = -GHOSTS; o <= GHOSTS; o++)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)
 	  child(k+o,l+p).neighbors++;
-#if 0
-      /* bilinear interpolation from coarser level */
-      for (scalar v in list)
-	fine(v,k,l) = 
-	  (9.*v[] + 3.*(v[2*k-1,0] + v[0,2*l-1]) + v[2*k-1,2*l-1])/16.;
-#else
-      /* linear interpolation from coarser level (conservative) */
-      for (scalar v in list)
-	fine(v,k,l) = v[] + ((v[1,0] - v[-1,0])*(2*k-1)/8. +
-			     (v[0,1] - v[0,-1])*(2*l-1)/8.);
-#endif
     }
+
+  /* initialise scalars */
+  for (scalar s in list)
+    (*refine[s]) (point, s);
 
   return point;
 }
 
-bool coarsen_cell (Point point)
+bool coarsen_cell (Point point, scalar * list)
 {
 #if TWO_ONE
   /* check that neighboring cells are not too fine */
@@ -394,6 +386,10 @@ bool coarsen_cell (Point point)
       if (is_active (child(k,l)) && !is_leaf (child(k,l)))
 	return false; // cannot coarsen
 #endif
+
+  /* restriction */
+  for (scalar s in list)
+    s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
 
   /* coarsen */
   point.back->dirty = true;
@@ -409,8 +405,8 @@ bool coarsen_cell (Point point)
       child(k,l).flags &= ~(leaf|active);
 #if TRASH
       /* trash the data just to make sure it's never touched */
-      for (scalar v = 0; v < nvar; v++)
-	fine(v,k,l) = undefined;
+      for (scalar s in all)
+	fine(s,k,l) = undefined;
 #endif
       /* update neighborhood */
       for (int o = -GHOSTS; o <= GHOSTS; o++)
@@ -511,7 +507,7 @@ void init_grid (int n)
   grid = q;
   while (depth--)
     foreach_leaf()
-      point = refine_cell (point, all);
+      point = refine_cell (point, none);
   update_cache();
   init_solver();
 }
@@ -529,7 +525,7 @@ void free_grid (void)
   free(q->halo);
   free(q->active);
   free(q);
-  free_boundaries();
+  free_solver();
 }
 
 void output_cells (FILE * fp);

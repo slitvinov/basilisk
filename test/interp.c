@@ -21,7 +21,7 @@ int main (int argc, char ** argv)
   restriction (scalars (h));
   wavelet (h, w);
   double tolerance = 1e-4;
-  coarsen_wavelet (w, tolerance, 0);
+  coarsen_wavelet (w, tolerance, 0, none);
 
   halo_restriction (scalars (h));
   halo_interpolation (-1, scalars (h));

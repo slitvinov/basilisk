@@ -56,7 +56,32 @@ Point locate (double xp, double yp)
   return point;
 }
 
-int coarsen_function (int (* func) (Point p))
+scalar quadtree_new_scalar (scalar s)
+{
+  s = cartesian_new_scalar (s);
+  refine[s] = refine_linear;
+  return s;
+}
+
+vector quadtree_new_vector (vector v)
+{
+  v = cartesian_new_vector (v);
+  foreach_dimension()
+    refine[v.x] = refine_linear;
+  return v;
+}
+
+tensor quadtree_new_tensor (tensor t)
+{
+  t = cartesian_new_tensor (t);
+  foreach_dimension()
+    refine[t.x.x] = refine_linear;
+  foreach_dimension()
+    refine[t.x.y] = refine_linear;
+  return t;
+}
+
+int coarsen_function (int (* func) (Point p), scalar * list)
 {
   int nc = 0;
   for (int l = depth() - 1; l >= 0; l--)
@@ -64,7 +89,7 @@ int coarsen_function (int (* func) (Point p))
       if (is_leaf (cell))
 	continue;
       else if (level == l) {
-	if ((*func) (point) && coarsen_cell (point))
+	if ((*func) (point) && coarsen_cell (point, list))
 	  nc++;
 	continue;
       }
@@ -72,7 +97,7 @@ int coarsen_function (int (* func) (Point p))
   return nc;
 }
 
-int coarsen_wavelet (scalar w, double max, int minlevel)
+int coarsen_wavelet (scalar w, double max, int minlevel, scalar * list)
 {
   int nc = 0;
   for (int l = depth() - 1; l >= 0; l--)
@@ -87,10 +112,10 @@ int coarsen_wavelet (scalar w, double max, int minlevel)
 	    if (e > error)
 	      error = e;
 	  }
-	if (error < max && level >= minlevel && coarsen_cell(point))
+	if (error < max && level >= minlevel && coarsen_cell (point, list))
 	  nc++;
 	/* propagate the error to coarser levels */
-	w[] = fabs(w[]) + error;	
+	w[] = fabs(w[]) + error;
 	continue;
       }
     }
@@ -110,18 +135,48 @@ int refine_function (int (* func) (Point p, void * data),
   return nf;
 }
 
+static void huge (Point point, scalar w)
+{
+  // prevents coarsening of newly created cells (when combined
+  // with coarsen_wavelet())
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++)
+      fine(w,k,l) = HUGE;  
+}
+
+scalar * list_append (scalar * list, scalar a)
+{
+  int ns = 0;
+  for (scalar s in list) {
+    assert (s != a); // a is already in the list
+    ns++;
+  }
+  scalar * list1 = malloc ((ns + 2)*sizeof (scalar));
+  ns = 0;
+  for (scalar s in list)
+    list1[ns++] = s;
+  list1[ns++] = a;
+  list1[ns] = -1;
+  return list1;
+}
+
 int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
 {
+  // overload the refine function for w
+  RefineFunc f = refine[w];
+  refine[w] = huge;
+  // add s to the list of variables to refine
+  scalar * list1 = list_append (list, w);
+  // refine
   int nf = 0;
   foreach_leaf()
-    /* fixme: w[] should be explicitly defined */
-    if (w[] != undefined && fabs(w[]) >= max && level < maxlevel) {
-      point = refine_cell (point, list);
-      for (int k = 0; k < 2; k++)
-	for (int l = 0; l < 2; l++)
-	  fine(w,k,l) = undefined;
+    if (level < maxlevel && w[] != HUGE && fabs(w[]) >= max) {
+      point = refine_cell (point, list1);
       nf++;
     }
+  free (list1);
+  // restore refine function
+  refine[w] = f;
   return nf;
 }
 
