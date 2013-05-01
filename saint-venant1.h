@@ -8,14 +8,12 @@ vector q = new vector;
 // storage for predictor/corrector
 scalar h1 = new scalar;
 vector q1 = new vector;
-// topographic source term
-vector Sb = new vector;
 // gradients
 vector gh = new vector, gzb = new vector;
 tensor gq = new tensor;
-// fluxes
-vector fh = new vector;
-tensor fq = new tensor;
+// tendencies
+scalar dh = new scalar;
+vector dq = new vector;
 
 // Default parameters
 // acceleration of gravity
@@ -30,13 +28,40 @@ void init       (void);
 
 #include "riemann.h"
 
+#if !QUADTREE
+# define trash(x)
+#else
+static void trash (scalar * list)
+{
+  foreach_cell()
+    for (scalar s in list)
+      s[] = undefined;
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell(b,true)
+      for (scalar s in list)
+	s[] = undefined;
+}
+#endif
+
 static double flux (double dtmax)
 {
+  scalar * list = scalars(dh, dq);
+  trash (list);
+
+#if QUADTREE
+  foreach_halo()
+    for (scalar ds in list) {
+      coarse(ds,0,0) = 0.;
+      ds[] = 0.;
+    }
+#endif
+  foreach_face()
+    for (scalar ds in list)
+      ds[] = ds[-1,0] = 0.;
+
   foreach_face() {
     double eta = h[], etan = h[-1,0];
-    if (eta <= dry && etan <= dry)
-      fh.x[] = fq.x.x[] = fq.y.x[] = 0.;
-    else {
+    if (eta > dry || etan > dry) {
       double dx = delta/2.;
       double zbL = zb[] - dx*gzb.x[];
       double zbR = zb[-1,0] + dx*gzb.x[-1,0];
@@ -63,31 +88,46 @@ static double flux (double dtmax)
       double hR = max(0., etaR + zbR - zbLR);
 
       // Riemann solver
-      kurganov (hR, hL, uR, uL, DX, &fh.x[], &fq.x.x[], &dtmax);
-      fq.y.x[] = (fh.x[] > 0. ? vR : vL)*fh.x[];
+      double fh, fu, fv;
+      kurganov (hR, hL, uR, uL, DX, &fh, &fu, &dtmax);
+      fv = (fh > 0. ? vR : vL)*fh;
 
       // topographic source term
       if (eta <= dry) eta = 0.;
       if (etan <= dry) etan = 0.;
-      Sb.x[] -= G/2.*(sq(hL) - sq(etaL) + dx*(etaL + eta)*gzb.x[]);
-      Sb.x[-1,0] += G/2.*(sq(hR) - sq(etaR) - dx*(etaR + etan)*gzb.x[-1,0]);
+      double SbL = G/2.*(sq(hL) - sq(etaL) + dx*(etaL + eta)*gzb.x[]);
+      double SbR = G/2.*(sq(hR) - sq(etaR) - dx*(etaR + etan)*gzb.x[-1,0]);
+
+      // update tendencies
+        dh[] += fh;           dh[-1,0] -= fh;
+      dq.y[] += fv;         dq.y[-1,0] -= fv;
+      dq.x[] += fu - SbL;   dq.x[-1,0] -= fu - SbR;
     }
   }
-  boundary_flux (fh, fq.x, fq.y);
+
+#if QUADTREE
+  foreach_halo()
+    for (scalar ds in list) {
+      coarse(ds,0,0) += ds[]/2.;
+      ds[] = undefined;
+    }
+#endif
+
   return dtmax;
 }
 
 static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
 {
+  trash (scalars (h1, q1));
   foreach() {
-    h1[] = h2[] + dt*(fh.x[] - fh.x[1,0] + fh.y[] - fh.y[0,1])/DX;
+    h1[] = h2[] + dt*dh[]/DX;
+    dh[] = undefined;
     foreach_dimension() {
-      q1.x[] = q2.x[] + dt*(fq.x.x[] - fq.x.x[1,0] + fq.x.y[] - fq.x.y[0,1] 
-			    + Sb.x[])/DX;
-      Sb.x[] = 0.;
+      q1.x[] = q2.x[] + dt*dq.x[]/DX;
+      dq.x[] = undefined;
     }
   }
-  boundary (h1, q1.x, q1.y);
+  boundary (h1, q1);
 }
 
 double dt = 0.;
@@ -96,15 +136,20 @@ void run()
 {
   parameters();
   init_grid(N);
+
+  foreach() {
+    zb[] = q.x[] = q.y[] = 0.;
+    h[] = 1.;
+  }
   init();
-  boundary (h, zb, q.x, q.y);
+  boundary (h, zb, q);
 
   timer start = timer_start();
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    (* gradient) (scalars (q.x, q.y, h, zb), vectors (gq.x, gq.y, gh, gzb));
-    boundary (gq.x.x, gq.x.y, gq.y.x, gq.y.y, gh.x, gh.y, gzb.x, gzb.y);
+    trash (scalars (gh, gzb, gq));
+    (* gradient) (scalars (h, zb, q), vectors (gh, gzb, gq));
 
     dt = dtnext (t, flux (DT));
 
@@ -116,12 +161,12 @@ void run()
       /* 2nd-order time-integration */
       /* predictor */
       update (q, q1, h, h1, dt/2.);
-      swap (vector, q, q1);
+      swap (vector, q, q1); // fixme: boundary conditions?
       swap (scalar, h, h1);
       
       /* corrector */
-      (* gradient) (scalars (q.x, q.y, h), vectors (gq.x, gq.y, gh));
-      boundary (gq.x.x, gq.x.y, gq.y.x, gq.y.y, gh.x, gh.y);
+      trash (scalars (gh, gq));
+      (* gradient) (scalars (h, q), vectors (gh, gq));
       flux (dt);
       update (q1, q, h1, h, dt);
     }

@@ -1,6 +1,6 @@
 #include "saint-venant1.h"
 
-#define LEVEL 8
+#define LEVEL 7
 
 void parameters()
 {
@@ -16,16 +16,25 @@ void init()
 scalar w = new scalar;
 
 int event (i++) {
-  scalar * list = scalars (h, zb, q.x, q.y);
-  restriction (list);
-  for (int l = 0; l <= depth() - 1; l++)
-    boundary_level (scalars (h), l);
+  //  scalar * list = scalars (h, zb, q, dh, dq);
+
+  restriction (scalars (h));
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell (b, true) {
+      if (is_leaf (cell))
+	continue;
+      else 
+	h[ghost] = _boundary[b][h] (point, h);
+    }
   wavelet (h, w);
+
+  scalar * list = scalars (h, zb, q);
   double cmax = 1e-3;
   int nf = refine_wavelet (w, cmax, LEVEL, list);
-  int nc = coarsen_wavelet (w, cmax/4., 0);
-  boundary_level (list, depth());
-  halo_interpolation (-1, list);
+  int nc = coarsen_wavelet (w, cmax/4., 0, list);
+  if (nf || nc)
+    boundary (h, zb, q.x, q.y);
+
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }
 
@@ -34,7 +43,7 @@ int event (i++) {
   fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
 }
 
-int event (t += 0.0; t <= 2.5; t += 2.5/8) {
+int event (t <= 2.5; t += 2.5/8) {
   scalar eta = new scalar;
   foreach()
     eta[] = h[] > 1e-3 ? h[] + zb[] : 0.;

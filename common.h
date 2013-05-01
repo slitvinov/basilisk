@@ -46,15 +46,44 @@ typedef struct {
   vector x, y;
 } tensor;
 
-#define scalars(...) (scalar []){__VA_ARGS__,-1}
-#define vectors(...) (vector []){__VA_ARGS__,{-1,-1}}
-#define none         (scalar []){-1}
-#define val(a,k,l) data(k,l)[a]
+#define val(a,k,l)     data(k,l)[a]
 #define fine(a,k,l)    _fine(a,k,l)
 #define coarse(a,k,l)  _coarse(a,k,l)
 #define neighbor(k,l)  _neighbor(k,l)
 
-// methods
+#define scalars(...) (scalar []){__VA_ARGS__,-1}
+#define vectors(...) (vector []){__VA_ARGS__,{-1,-1}}
+#define none         (scalar []){-1}
+
+int vectors_len (vector * list)
+{
+  int nv = 0;
+  for (vector v in list) nv++;
+  return nv;
+}
+
+int scalars_len (scalar * list)
+{
+  int ns = 0;
+  for (scalar s in list) ns++;
+  return ns;
+}
+
+scalar * scalars_append (scalar * list, scalar a)
+{
+  int ns = scalars_len (list);
+  scalar * list1 = malloc ((ns + 2)*sizeof (scalar));
+  ns = 0;
+  for (scalar s in list) {
+    assert (s != a); // a is already in the list
+    list1[ns++] = s;
+  }
+  list1[ns++] = a;
+  list1[ns] = -1;
+  return list1;
+}
+
+// basic methods
 
 scalar (* new_scalar) (scalar);
 vector (* new_vector) (vector);
@@ -91,12 +120,12 @@ typedef struct _Point Point;
 typedef double (* BoundaryFunc) (Point, scalar);
 typedef void   (* RefineFunc)   (Point, scalar);
 
-BoundaryFunc * boundary[nboundary]; // boundary conditions for each variable
-RefineFunc   * refine;              // refinement function for each variable
+BoundaryFunc * _boundary[nboundary]; // boundary conditions for each scalar
+RefineFunc   * _refine;              // refinement function for each scalar
 
 void free_solver()
 {
   for (int b = 0; b < nboundary; b++)
-    free (boundary[b]);
-  free (refine);
+    free (_boundary[b]);
+  free (_refine);
 }

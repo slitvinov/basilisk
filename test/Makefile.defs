@@ -1,5 +1,7 @@
 # -*-Makefile-*-
 
+CFLAGS += -MD
+
 include Makefile.tests
 
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(ALLTESTS))) Makefile.deps
@@ -40,8 +42,8 @@ clean:
 %.exe: %.c ../qcc
 	../qcc $(CFLAGS) -o $@ -lm $<
 
-%.exe.d: %.c ../qcc
-	../qcc $(CFLAGS) -o $*.exe -lm $<
+%.exe.d: %.exe
+	@true
 
 %.cexe: %.c ../qcc
 	../qcc -grid=multigrid $(CFLAGS) -o $@ -lm $<

@@ -1,4 +1,5 @@
 #include <gsl/gsl_integration.h>
+#include "grid/cartesian.h"
 #include "atmosphere.h"
 
 void parameters() {

@@ -6,7 +6,7 @@
   #include <sys/wait.h>
   #include <assert.h>
 
-  enum { scalar, vector };
+  enum { scalar, vector, tensor };
 
   typedef int Scalar;
   typedef struct { Scalar x, y; } Vector;
@@ -230,6 +230,8 @@
     if (c == '\n') line++;				      \
   }
 
+  int list_member (char * s, int dim);
+  int scalar_list (int, int);
   int yyerror(const char * s);
   int getput(void);
   int comment(void);
@@ -398,9 +400,11 @@ end_foreach{ID}*{SP}*"()" {
   vartype = scalar;
   if (!var) {
     var = strstr(yytext,"vector");
-    if (!var)
-      var = strstr(yytext,"tensor");
     vartype = vector;
+    if (!var) {
+      var = strstr(yytext,"tensor");
+      vartype = tensor;
+    }
   }
   var = &var[7];
   nonspace (var);
@@ -428,6 +432,19 @@ end_foreach{ID}*{SP}*"()" {
   else
     REJECT;
   ECHO;
+}
+
+[^{ID}](scalars|vectors|boundary){WS}*[(] {
+    // scalars(...
+    ECHO;
+    if (yytext[0] == '(') para++;
+    int listype = scalar, boundary = 0;
+    if (strstr (yytext, "vectors"))
+      listype = vector;
+    else if (!strstr (yytext, "scalars"))
+      boundary = 1;
+    if (scalar_list (listype, boundary))
+      return 1;
 }
 
 new{WS}+scalar {
@@ -556,11 +573,11 @@ new{WS}+tensor {
 	*s1 = '_';
       s1++;
     }
-    boundaryfunc = malloc ((strlen ("boundary[][] = _;") + 
+    boundaryfunc = malloc ((strlen ("_boundary[][] = _;") + 
 			    2*strlen (b) + 
 			    strlen(yytext) + 
 			    strlen (func) + 1)*sizeof (char));
-    sprintf (boundaryfunc, "boundary[%s][%s] = _%s%s;", b, yytext, func, b);
+    sprintf (boundaryfunc, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
     fprintf (yyout, 
 	     "double _%s%s (Point point, scalar s) {"
 	     " int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
@@ -824,6 +841,99 @@ FILE * writepath (char * path, const char * mode)
   return fopen (path, mode);
 }
 
+int list_member (char * s, int dim)
+{
+  char * dot = strchr (s, '.');
+  var_t * var = varlookup (s, dot ? dot - s : strlen (s));
+  if (var == NULL) {
+    fprintf (stderr, 
+	     "%s:%d: error: '%s' is not a scalar, vector or tensor\n", 
+	     fname, line, s);
+    return 1;
+  }
+  int ndim = var->type - dim;
+  switch (ndim) {
+  case 0: fputs(s, yyout); break;
+  case 1: fprintf (yyout, "%s.x,%s.y", s, s); break;
+  case 2: fprintf (yyout, "%s.x.x,%s.x.y,%s.y.x,%s.y.y", 
+		   s, s, s, s); break;
+  default:
+    fprintf (stderr, 
+	     "%s:%d: error: the dimension of '%s' is too low/high\n", 
+	     fname, line, s);
+    return 1;	    
+  }
+  return 0;
+}
+
+int scalar_list (int listype, int boundary)
+{
+  int pscope = 1;
+  char s[80] = "", * e = s;
+  int c, ndot = 0, narg = 0;
+  while ((c = input()) != EOF) {
+    if (c == '\n')
+      fputc (c, yyout);
+    if (pscope == 1 && strchr(" \t\v\n\f,)", c)) {
+      if (e != s) {
+	if (boundary && narg == 0) {
+	  if (!strcmp (s, "scalars")) {
+	    /* boundary (scalars... */
+	    fputs ("scalars", yyout);
+	    while (strchr(" \t\v\n\f,", c)) {
+	      fputc (c, yyout);
+	      c = input();
+	    }
+	    if (c != '(')
+	      return yyerror ("expecting '('");
+	    para++;
+	    fputc (c, yyout);
+	    boundary = 0;
+	  }
+	  else if (!varlookup (s, ndot ? strchr (s, '.') - s : strlen (s))) {
+	    /* not a scalar -> give up */
+	    para += pscope - (c == ')');
+	    fputs (s, yyout);
+	    fputc (c, yyout);
+	    return 0;
+	  }
+	  else {
+	    /* OK assuming list of scalars */
+	    fputs ("scalars (", yyout);
+	    if (list_member (s, ndot + listype))
+	      return 1;
+	    if (c != ')')
+	      fputc (',', yyout);
+	  }
+	}
+	/* regular list member */
+	else {
+	  if (list_member (s, ndot + listype))
+	    return 1;
+	  if (c != ')')
+	    fputc (',', yyout);
+	}
+	e = s; *e = '\0'; ndot = 0; narg++;
+      }
+      if (c == ')') {
+	fputc (c, yyout);
+	if (boundary)
+	  fputc (')', yyout);	
+	return 0;
+      }	
+    }
+    else {
+      if (c == '(') pscope++;
+      else if (c == ')') pscope--;
+      else if (c == '.' && pscope == 1) ndot++;
+      if (pscope > 0) {
+	*e++ = c; *e = '\0';
+      }
+    }
+  }
+  return yyerror ("expecting ')'");
+}
+  
 void cleanup (int status)
 {
   if (!debug) {
@@ -926,10 +1036,10 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   fprintf (fout, "void %s_methods(void);\n", grid);
   fputs ("static void init_solver (void) {\n"
 	 "  for (int b = 0; b < nboundary; b++)\n"
-	 "    boundary[b] = calloc (nvar, sizeof (BoundaryFunc));\n",
+	 "    _boundary[b] = calloc (nvar, sizeof (BoundaryFunc));\n",
 	 fout);
   /* refinement functions */
-  fputs ("  refine = calloc (nvar, sizeof (RefineFunc));\n", fout);
+  fputs ("  _refine = calloc (nvar, sizeof (RefineFunc));\n", fout);
   if (fpe)
     /* Initialises unused memory with "signaling NaNs".  
      * This is probably not very portable, tested with
@@ -966,8 +1076,6 @@ int main (int argc, char ** argv)
   char * cc = getenv ("CC"), command[1000];
   if (cc == NULL) cc = "cc";
   strcpy (command, cc);
-  strcat (command, " ");
-  strcat (command, CFLAGS);
   char * file = NULL;
   int i;
   for (i = 1; i < argc; i++) {

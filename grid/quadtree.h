@@ -382,7 +382,7 @@ Point refine_cell (Point point, scalar * list)
 
   /* initialise scalars */
   for (scalar s in list)
-    (*refine[s]) (point, s);
+    _refine[s] (point, s);
 
   return point;
 }

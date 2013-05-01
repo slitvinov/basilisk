@@ -273,6 +273,7 @@ static double minmod2 (double a, double b, double c)
 
 void generalized_minmod (scalar * f, vector * g)
 {
+  assert (scalars_len(f) == vectors_len(g));
   /* see (A.6) in 
    *    Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
    *    Saint-Venant system. Mathematical Modelling and Numerical
@@ -285,10 +286,12 @@ void generalized_minmod (scalar * f, vector * g)
 			 (s[1,0] - s[-1,0])/2., 
 			 theta*(s[1,0] - s[]))/delta;
   }
+  boundary ((scalar *) g);
 }
 
 void superbee (scalar * f, vector * g)
 {
+  assert (scalars_len(f) == vectors_len(g));
   foreach() {
     scalar s; vector v;
     for (s,v in f,g)
@@ -296,22 +299,27 @@ void superbee (scalar * f, vector * g)
 	v.x[] = superbee1 ((s[1,0] - s[])/(s[] - s[-1,0]))*(s[] - s[-1,0])
 	/delta;
   }
+  boundary ((scalar *) g);
 }
 
 void sweby (scalar * f, vector * g)
 {
+  assert (scalars_len(f) == vectors_len(g));
   foreach() {
     scalar s; vector v;
     for (s,v in f,g)
       foreach_dimension()
 	v.x[] = sweby1 ((s[1,0] - s[])/(s[] - s[-1,0]))*(s[] - s[-1,0])/delta;
   }
+  boundary ((scalar *) g);
 }
 
 void zero (scalar * f, vector * g)
 {
+  assert (scalars_len(f) == vectors_len(g));
   foreach()
     for (vector v in g)
       foreach_dimension()
 	v.x[] = 0.;
+  boundary ((scalar *) g);
 }

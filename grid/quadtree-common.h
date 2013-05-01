@@ -1,3 +1,5 @@
+#define QUADTREE 1
+
 #ifndef foreach
 # define foreach foreach_leaf
 # define end_foreach end_foreach_leaf
@@ -119,29 +121,13 @@ static void huge (Point point, scalar w)
       fine(w,k,l) = HUGE;  
 }
 
-scalar * list_append (scalar * list, scalar a)
-{
-  int ns = 0;
-  for (scalar s in list) {
-    assert (s != a); // a is already in the list
-    ns++;
-  }
-  scalar * list1 = malloc ((ns + 2)*sizeof (scalar));
-  ns = 0;
-  for (scalar s in list)
-    list1[ns++] = s;
-  list1[ns++] = a;
-  list1[ns] = -1;
-  return list1;
-}
-
 int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
 {
   // overload the refine function for w
-  RefineFunc f = refine[w];
-  refine[w] = huge;
-  // add s to the list of variables to refine
-  scalar * list1 = list_append (list, w);
+  RefineFunc f = _refine[w];
+  _refine[w] = huge;
+  // add w to the list of variables to refine
+  scalar * list1 = scalars_append (list, w);
   // refine
   int nf = 0;
   foreach_leaf()
@@ -151,7 +137,7 @@ int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
     }
   free (list1);
   // restore refine function
-  refine[w] = f;
+  _refine[w] = f;
   return nf;
 }
 
@@ -205,9 +191,7 @@ void halo_interpolation_u_v (int depth, scalar u, scalar v)
   }
 }
 
-#undef boundary
-#define boundary(...) boundary_a(scalars(__VA_ARGS__))
-void boundary_a (scalar * list)
+void quadtree_boundary (scalar * list)
 {
   halo_restriction (list);
 
@@ -216,7 +200,7 @@ void boundary_a (scalar * list)
       if (is_active (cell)) {
 	if (cell.neighbors > 0)
 	  for (scalar s in list)
-	    s[ghost] = (*boundary[b][s]) (point, s);
+	    s[ghost] = _boundary[b][s] (point, s);
       }
       else
 	continue;
@@ -229,7 +213,7 @@ void boundary_a (scalar * list)
       if (!is_active (cell)) {
 	if (cell.neighbors > 0)
 	  for (scalar s in list)
-	    s[ghost] = (*boundary[b][s]) (point, s);
+	    s[ghost] = _boundary[b][s] (point, s);
 	else
 	  continue;
       }
@@ -241,7 +225,7 @@ void boundary_a (scalar * list)
 scalar quadtree_new_scalar (scalar s)
 {
   s = cartesian_new_scalar (s);
-  refine[s] = refine_linear;
+  _refine[s] = refine_linear;
   return s;
 }
 
@@ -249,7 +233,7 @@ vector quadtree_new_vector (vector v)
 {
   v = cartesian_new_vector (v);
   foreach_dimension()
-    refine[v.x] = refine_linear;
+    _refine[v.x] = refine_linear;
   return v;
 }
 
@@ -257,9 +241,9 @@ tensor quadtree_new_tensor (tensor t)
 {
   t = cartesian_new_tensor (t);
   foreach_dimension()
-    refine[t.x.x] = refine_linear;
+    _refine[t.x.x] = refine_linear;
   foreach_dimension()
-    refine[t.x.y] = refine_linear;
+    _refine[t.x.y] = refine_linear;
   return t;
 }
 
@@ -269,4 +253,5 @@ void quadtree_methods()
   new_scalar = quadtree_new_scalar;
   new_vector = quadtree_new_vector;
   new_tensor = quadtree_new_tensor;
+  boundary =   quadtree_boundary;
 }
