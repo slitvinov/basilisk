@@ -44,6 +44,12 @@ static int event_do (Event * ev, int i, double t)
   return 0;
 }
 
+static void event_error (Event * ev, const char * s)
+{
+  fprintf (stderr, "%s:%d: error: %s\n", ev->file, ev->line, s);
+  exit (1);
+}
+
 void init_events (void)
 {
   for (Event * ev = Events; !ev->last; ev++) 
@@ -65,7 +71,7 @@ void init_events (void)
 	  if (i == -123456 && t == -123456) {
 	    /* nothing done to i and t: this must be the condition */
 	    if (cond)
-	      fprintf (stderr, "warning: event condition redefined\n");
+	      event_error (ev, "events can only use a single condition");
 	    cond = ev->expr[j];
 	  }
 	  else {
@@ -76,13 +82,13 @@ void init_events (void)
 	      /* applying twice does not change anything: this is an
 		 initialisation */
 	      if (init)
-		fprintf (stderr, "warning: event initialisation redefined\n");
+		event_error (ev, "events can only use a single initialisation");
 	      init = ev->expr[j];
 	    }
 	    else {
 	      /* this is the increment */
 	      if (inc)
-		fprintf (stderr, "warning: event increment redefined\n");
+		event_error (ev, "events can only use a single increment");
 	      inc = ev->expr[j];
 	    }
 	  }

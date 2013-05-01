@@ -71,6 +71,8 @@ struct _Event {
   Expr expr[3];
   int * arrayi;
   double * arrayt;
+  char * file;
+  int line;
   double t;
   int i, a;
 };

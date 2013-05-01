@@ -27,16 +27,18 @@
   int inval, invalpara;
   int brack, inarray;
 
+  #define EVMAX 100
   int inevent, eventscope, eventpara;
-  char eventarray[100];
-  int nexpr[100];
+  char eventarray[EVMAX], * eventfile[EVMAX];
+  int nexpr[EVMAX], eventline[EVMAX];
 
   int foreachdim, foreachdimpara, foreachdimline;
   FILE * foreachdimfp;
 
+  #define REDUCTMAX 10
   char foreachs[80], * fname;
   FILE * foreachfp;
-  char reduction[10][4], reductvar[10][80];
+  char reduction[REDUCTMAX][4], reductvar[REDUCTMAX][80];
   int nreduct;
 
   int inboundary;
@@ -289,7 +291,7 @@ WS  [ \t\v\n\f]
     fprintf (yyout, 
 	     "static int event_%d (int i, double t) { ",
 	     nevents);
-    assert (nevents < 100);
+    assert (nevents < EVMAX);
     nexpr[nevents] = inevent;
     inevent = 4;
   }
@@ -683,6 +685,9 @@ for{WS}*[(][^)]+{WS}+in{WS}+[^)]+[)] {
 	   "  int ret = (", nevents, inevent++);
   eventscope = scope; eventpara = ++para;
   eventarray[nevents] = 0;
+  eventfile[nevents] = malloc (sizeof(char)*(strlen(fname) + 1));
+  strcpy (eventfile[nevents], fname);
+  eventline[nevents] = line;
 }
 
 [it]{WS}*={WS}*[{][^}]*[}] {
@@ -711,7 +716,7 @@ foreach_dimension{WS}*[(]{WS}*[)] {
 reduction[(](min|max):{ID}+[)] {
   char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':');
   *s1 = '\0'; s1++;
-  assert (nreduct < 10);
+  assert (nreduct < REDUCTMAX);
   strcpy (reduction[nreduct], ++s);
   yytext[yyleng-1] = '\0';
   strcpy (reductvar[nreduct++], s1);
@@ -908,9 +913,10 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
     else
       fprintf (fout, "NULL, ");
     if (eventarray[i] == 't')
-      fprintf (fout, "event_array%d},\n", i);
+      fprintf (fout, "event_array%d,\n", i);
     else
-      fprintf (fout, "NULL},\n");
+      fprintf (fout, "NULL,\n");
+    fprintf (fout, "    \"%s\", %d},\n", eventfile[i], eventline[i]);
   }
   fputs ("  { true }\n};\n", fout);
   /* boundaries */
