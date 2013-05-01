@@ -9,7 +9,7 @@ void parameters() {
   // acceleration of gravity
   G = 1.;
   // Coriolis parameter
-  F0 = 2.*OMEGA;
+  F0 = 0.;
   // Viscosity
   //  NU = 7e-5;
   NU = 0.;
@@ -29,7 +29,7 @@ double vtheta (double r) {
 
 double h0p (double r, void * p) {
   double vt = vtheta(r);
-  return vt*(2.*OMEGA + vt/r)/G;
+  return vt*(F0 + vt/r)/G;
 }
 
 double h0 (double r) {

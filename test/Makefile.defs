@@ -10,26 +10,26 @@ clean:
 .PRECIOUS: %.exe %.cexe %.pgexe
 
 %.tst: %.exe
-	@echo [$@]
+	@echo \[$@\]
 	@-rm -f $*.png
 	@./$< 2> $*.log > $*.out
 	diff $*.log $*.ref
 	@touch $@
 
 %.stst: %.exe
-	@echo [$@]
+	@echo \[$@\]
 	@-rm -f $*.png
 	@./$< 2> $*.slog > $*.out
 	-diff $*.slog $*.ref
 	@touch $@
 
 %.ctst: %.cexe
-	@echo [$@]
+	@echo \[$@\]
 	@./$< 2> $*.clog > $*.cout
 	@touch $@
 
 %.vtst: %.exe
-	@echo [$@]
+	@echo \[$@\]
 	@-rm -f $*.png
 	@$(VALGRIND) ./$< 2> $*.log > $*.out
 	diff $*.log $*.ref
@@ -61,24 +61,25 @@ clean:
 	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $< || rm -f $@
 
 Makefile.tests: Makefile
-	echo "# Automatically generated using 'make Makefile.tests'" \
+	@echo "updating Makefile.tests"
+	@echo "# Automatically generated using 'make Makefile.tests'" \
 	     > Makefile.tests
-	echo "ALLTESTS = \\" >> Makefile.tests
-	darcs show files | grep './test/.*\.c' | \
+	@echo "ALLTESTS = \\" >> Makefile.tests
+	@darcs show files | grep './test/.*\.c' | \
 		sed 's/.\/test\/\(.*\)/\t\1 \\/g' >> Makefile.tests
-	echo "" >> Makefile.tests
-	echo "PLOTS = \\" >> Makefile.tests
-	darcs show files | grep './test/.*\.plot' | \
+	@echo "" >> Makefile.tests
+	@echo "PLOTS = \\" >> Makefile.tests
+	@darcs show files | grep './test/.*\.plot' | \
 		sed 's/.\/test\/\(.*\)/\t\1 \\/g' >> Makefile.tests
-	echo "" >> Makefile.tests
-	echo "TESTS = \\" >> Makefile.tests
-	sed ':x; /\\$$/ { N; s/\\\n//; tx }' < Makefile | \
+	@echo "" >> Makefile.tests
+	@echo "TESTS = \\" >> Makefile.tests
+	@sed ':x; /\\$$/ { N; s/\\\n//; tx }' < Makefile | \
 	    grep '^check:' | grep -o '[a-zA-Z_0-9]*\..tst' | \
 	    sed 's/\(.*\)\..tst/\t\1.c \\/g' >> Makefile.tests
-	sed ':x; /\\$$/ { N; s/\\\n//; tx }' < Makefile | \
+	@sed ':x; /\\$$/ { N; s/\\\n//; tx }' < Makefile | \
 	    grep -v '^check:' | grep -o ':.*' | grep -o '[a-zA-Z_0-9]*\.tst' | \
 	    sed 's/\(.*\)\.tst/\t\1.c \\/g' >> Makefile.tests
-	echo "" >> Makefile.tests
+	@echo "" >> Makefile.tests
 
 Makefile.deps: $(subst .c,.exe.d,$(ALLTESTS))
 	@cat $^ > Makefile.deps

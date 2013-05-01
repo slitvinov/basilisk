@@ -28,12 +28,13 @@ struct _Point {
       POINT_VARIABLES
 #define end_foreach() }} OMP_END_PARALLEL()
 
-#define foreach_boundary(d,...) 					\
+#define foreach_boundary(d,corners)					\
   OMP_PARALLEL()							\
   int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
   int _start = 1, _end = point.n;					\
-  if (__VA_ARGS__+0) { _start--; _end++; } /* also traverse corners */	\
+  /* traverse corners only for top and bottom */			\
+  if (corners && d > left) { _start--; _end++; }			\
   OMP(omp for schedule(static))						\
   for (int _k = _start; _k <= _end; _k++) {				\
     point.i = d > left ? _k : d == right ? point.n : 1;			\
@@ -41,7 +42,7 @@ struct _Point {
     POINT_VARIABLES
 #define end_foreach_boundary() } OMP_END_PARALLEL()
 
-#define foreach_boundary_level(d,l,...) foreach_boundary(d, __VA_ARGS__)
+#define foreach_boundary_level(d,l,corners) foreach_boundary(d,corners)
 #define end_foreach_boundary_level() end_foreach_boundary()
 
 #define depth() 0

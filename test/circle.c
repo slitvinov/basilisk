@@ -24,10 +24,10 @@ void homogeneous_boundary (scalar * v, int l)
 {
   /* Homogeneous Dirichlet condition on all boundaries */
   scalar p = *v;
-  foreach_boundary_level (right, l)  p[ghost] = - p[];
-  foreach_boundary_level (left, l)   p[ghost] = - p[];
-  foreach_boundary_level (top, l)    p[ghost] = - p[];
-  foreach_boundary_level (bottom, l) p[ghost] = - p[];
+  foreach_boundary_level (right, l, false)  p[ghost] = - p[];
+  foreach_boundary_level (left, l,  false)  p[ghost] = - p[];
+  foreach_boundary_level (top, l, false)    p[ghost] = - p[];
+  foreach_boundary_level (bottom, l, false) p[ghost] = - p[];
   /* we don't need to restrict because the solution is already defined
      on coarse levels */
   halo_interpolation (l, scalars (p));

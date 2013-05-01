@@ -56,4 +56,5 @@ TESTS = \
 	rotation.c \
 	bump2D.c \
 	lid.c \
+	nonlinear.c \
 

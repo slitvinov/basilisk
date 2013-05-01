@@ -27,9 +27,9 @@ static void boundary_uv (vector u)
 {
   boundary (u.x, u.y);
   /* fixme */
-  foreach_boundary (left)
+  foreach_boundary (left,true)
     u.x[] = 0.;
-  foreach_boundary (bottom)
+  foreach_boundary (bottom,true)
     u.y[] = 0.;
 }
 

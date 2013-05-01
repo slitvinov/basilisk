@@ -21,10 +21,10 @@ void homogeneous_boundary (scalar * v, int l)
 {
   /* Homogeneous Dirichlet condition on all boundaries */
   scalar p = *v;
-  foreach_boundary_level (right, l)  p[ghost] = - p[];
-  foreach_boundary_level (left, l)   p[ghost] = - p[];
-  foreach_boundary_level (top, l)    p[ghost] = - p[];
-  foreach_boundary_level (bottom, l) p[ghost] = - p[];
+  foreach_boundary_level (right, l, true)  p[ghost] = - p[];
+  foreach_boundary_level (left, l,  true)  p[ghost] = - p[];
+  foreach_boundary_level (top, l, true)    p[ghost] = - p[];
+  foreach_boundary_level (bottom, l, true) p[ghost] = - p[];
 }
 
 void relax (scalar a, scalar b, int l)

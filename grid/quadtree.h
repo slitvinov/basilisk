@@ -209,19 +209,8 @@ void recursive (Point point)
     }                                                                   \
   }
 
-#define foreach_boundary_cell(dir)					\
-  {									\
-    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
-    Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-    int _d = dir; NOT_UNUSED(_d);					\
-    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
-    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
-    while (_s >= 0) {							\
-      int stage;							\
-      _pop (point.level, point.i, point.j, stage);			\
-      switch (stage) {							\
-      case 0:								\
-        /* corners */							\
+#define _CORNERS							\
+      if (_corners) {							\
         if (_d < top) {							\
   	  if (point.j == GHOSTS)					\
 	    _push (point.level, point.i, point.j - 1, _CORNER);		\
@@ -232,9 +221,22 @@ void recursive (Point point)
 	    _push (point.level, point.i - 1, point.j, _CORNER);		\
 	  if (point.i == _n + 2*GHOSTS - 2)			        \
 	    _push (point.level, point.i + 1, point.j, _CORNER);		\
-        }							        \
-	/* fall through */						\
-      case _CORNER: {							\
+        }								\
+      }
+
+#define foreach_boundary_cell(dir,corners)				\
+  {									\
+    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
+    Quadtree point = *((Quadtree *)grid); point.back = grid;		\
+    int _d = dir; NOT_UNUSED(_d);					\
+    int _corners = corners;						\
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
+    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
+    while (_s >= 0) {							\
+      int stage;							\
+      _pop (point.level, point.i, point.j, stage);			\
+      switch (stage) {							\
+      case 0: case _CORNER: {						\
           POINT_VARIABLES;						\
   	  /* do something */
 #define end_foreach_boundary_cell()					\
@@ -246,12 +248,13 @@ void recursive (Point point)
 	  int k = _d > left ? _LEFT : _RIGHT - _d;			\
 	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;			\
 	  _push (point.level + 1, k, l, 0);				\
-	}								\
+	} else _CORNERS;						\
 	break;								\
       case 1: {								\
   	  int k = _d > left ? _RIGHT : _RIGHT - _d;			\
 	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;			\
 	  _push (point.level + 1, k, l, 0);				\
+	  _CORNERS;							\
 	  break;							\
         }								\
       }									\

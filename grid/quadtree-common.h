@@ -17,12 +17,12 @@
 #define foreach_halo()     foreach_halo_coarse_to_fine(-1)
 #define end_foreach_halo() end_foreach_halo_coarse_to_fine()
 
-#define foreach_boundary(dir)				\
-  foreach_boundary_cell(dir) if (is_leaf (cell)) {
+#define foreach_boundary(dir,corners)				\
+  foreach_boundary_cell(dir,corners) if (is_leaf (cell)) {
 #define end_foreach_boundary()  continue; } end_foreach_boundary_cell()
 
-#define foreach_boundary_level(dir,l)				\
-  foreach_boundary_cell(dir) if (level == l || is_leaf(cell)) {
+#define foreach_boundary_level(dir,l,corners)				\
+  foreach_boundary_cell(dir,corners) if (level == l || is_leaf(cell)) {
 #define end_foreach_boundary_level() continue; } end_foreach_boundary_cell()
 
 #define is_face_x() !is_refined(neighbor(-1,0))
@@ -212,7 +212,7 @@ void boundary_a (scalar * list)
   halo_restriction (list);
 
   for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell (b) {
+    foreach_boundary_cell (b, true) {
       if (is_active (cell)) {
 	if (cell.neighbors > 0)
 	  for (scalar s in list)
@@ -225,7 +225,7 @@ void boundary_a (scalar * list)
   halo_interpolation (-1, list);
 
   for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell(b)
+    foreach_boundary_cell (b, true)
       if (!is_active (cell)) {
 	if (cell.neighbors > 0)
 	  for (scalar s in list)

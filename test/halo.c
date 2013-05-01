@@ -25,7 +25,7 @@ int main (int argc, char ** argv)
   foreach_halo_fine_to_coarse()
     fprintf (stderr, "%g %g %d %d res\n", x, y, level, cell.neighbors);
   for (int d = 0; d < nboundary; d++)
-    foreach_boundary(d,true)
+    foreach_boundary (d, true)
       fprintf (stderr, "%g %g %d %d boundary\n", x, y, level, cell.neighbors);
   output_cells (stdout);
 

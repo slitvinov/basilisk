@@ -18,23 +18,23 @@ void init       (void);
 void boundary_uv (scalar u, scalar v)
 {
   /* slip walls (symmetry) by default */
-  foreach_boundary (right)
+  foreach_boundary (right, true)
     u[ghost] = 0.;
-  foreach_boundary (right)
+  foreach_boundary (right, true)
     v[ghost] = v[];
-  foreach_boundary (left) {
+  foreach_boundary (left, true) {
     u[ghost] = - u[1,0];
     u[] = 0.;
   }
-  foreach_boundary (left)
+  foreach_boundary (left, true)
     v[ghost] = v[];
-  foreach_boundary (top)
+  foreach_boundary (top, true)
     u[ghost] = u[];
-  foreach_boundary (top)
+  foreach_boundary (top, true)
     v[ghost] = 0.;
-  foreach_boundary (bottom)
+  foreach_boundary (bottom, true)
     u[ghost] = u[];
-  foreach_boundary (bottom) {
+  foreach_boundary (bottom, true) {
     v[ghost] = - v[0,1];
     v[] = 0.;
   }
@@ -111,13 +111,13 @@ void ke_psi (scalar u, scalar v)
 #endif
     psi[] = (v[] - v[-1,0] + u[0,-1] - u[])/DX;
   }
-  foreach_boundary (top)
-    psi[0,1] = (v[0,1] - v[-1,1] + u[] - u[0,1])/DX;
-  foreach_boundary (right)
+  foreach_boundary (right, true)
     psi[1,0] = (v[1,0] - v[] + u[1,-1] - u[1,0])/DX;
-  foreach_boundary (left)
+  foreach_boundary (left, true)
     ke[-1,0] = (sq(u[-1,0] + u[]) + sq(v[-1,0] + v[-1,1]))/8.;
-  foreach_boundary (bottom)
+  foreach_boundary (top, true)
+    psi[0,1] = (v[0,1] - v[-1,1] + u[] - u[0,1])/DX;
+  foreach_boundary (bottom, true)
     ke[0,-1] = (sq(u[0,-1] + u[1,-1]) + sq(v[0,-1] + v[]))/8.;
 }
 
