@@ -1,0 +1,86 @@
+include Makefile.tests
+
+check: $(subst .c,.tst,$(filter-out $(TESTS),$(ALLTESTS))) Makefile.deps
+
+plots: $(subst .plot,.png,$(PLOTS))
+
+clean:
+	rm -f *.*tst *.d *.*log *.*out *.png *.*exe *.prof Makefile.deps
+
+.PRECIOUS: %.exe %.cexe %.pgexe
+
+%.tst: %.exe
+	@echo [$@]
+	@-rm -f $*.png
+	@./$< 2> $*.log > $*.out
+	diff $*.log $*.ref
+	@touch $@
+
+%.stst: %.exe
+	@echo [$@]
+	@-rm -f $*.png
+	@./$< 2> $*.slog > $*.out
+	-diff $*.slog $*.ref
+	@touch $@
+
+%.ctst: %.cexe
+	@echo [$@]
+	@./$< 2> $*.clog > $*.cout
+	@touch $@
+
+%.vtst: %.exe
+	@echo [$@]
+	@-rm -f $*.png
+	@$(VALGRIND) ./$< 2> $*.log > $*.out
+	diff $*.log $*.ref
+	@touch $@
+
+%.exe: %.c ../qcc
+	../qcc $(CFLAGS) -o $@ -lm $<
+
+%.exe.d: %.c ../qcc
+	../qcc $(CFLAGS) -o $*.exe -lm $<
+
+%.cexe: %.c ../qcc
+	../qcc -grid=multigrid $(CFLAGS) -o $@ -lm $<
+
+%.pgexe: %.c ../qcc
+	../qcc $(CFLAGS) -pg -o $@ -lm $<
+
+%.prof: %.pgexe
+	./$< 2> $*.log > $*.out
+	gprof $< > $@
+
+%.dot: %.prof
+	gprof2dot.py < $< > $@
+
+%.dot.png: %.dot
+	dot -Tpng -o $@ < $<
+
+%.png: %.plot
+	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $< || rm -f $@
+
+Makefile.tests: Makefile
+	echo "# Automatically generated using 'make Makefile.tests'" \
+	     > Makefile.tests
+	echo "ALLTESTS = \\" >> Makefile.tests
+	darcs show files | grep './test/.*\.c' | \
+		sed 's/.\/test\/\(.*\)/\t\1 \\/g' >> Makefile.tests
+	echo "" >> Makefile.tests
+	echo "PLOTS = \\" >> Makefile.tests
+	darcs show files | grep './test/.*\.plot' | \
+		sed 's/.\/test\/\(.*\)/\t\1 \\/g' >> Makefile.tests
+	echo "" >> Makefile.tests
+	echo "TESTS = \\" >> Makefile.tests
+	sed ':x; /\\$$/ { N; s/\\\n//; tx }' < Makefile | \
+	    grep '^check:' | grep -o '[a-zA-Z_0-9]*\..tst' | \
+	    sed 's/\(.*\)\..tst/\t\1.c \\/g' >> Makefile.tests
+	sed ':x; /\\$$/ { N; s/\\\n//; tx }' < Makefile | \
+	    grep -v '^check:' | grep -o ':.*' | grep -o '[a-zA-Z_0-9]*\.tst' | \
+	    sed 's/\(.*\)\.tst/\t\1.c \\/g' >> Makefile.tests
+	echo "" >> Makefile.tests
+
+Makefile.deps: $(subst .c,.exe.d,$(ALLTESTS))
+	@cat $^ > Makefile.deps
+
+include Makefile.deps

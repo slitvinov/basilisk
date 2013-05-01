@@ -27,9 +27,7 @@ int main (int argc, char ** argv)
   foreach_face(y) v[] = exp(-(x*x + y*y)/(R0*R0));
 
   vector uv = {u,v};
-  foreach_halo_fine_to_coarse()
-    foreach_dimension()
-      uv.x[] = (fine(uv.x,0,0) + fine(uv.x,0,1))/2.;
+  halo_restriction_flux (vectors (uv));
   halo_interpolation_u_v (-1, u, v);
 
   double max = 0., maxv = 0;

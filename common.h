@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <float.h>
 #include <assert.h>
 #include <math.h>
 
@@ -10,7 +11,6 @@
                   // (useful for debugging)
 
 #define pi 3.14159265358979
-#define undefined 1e100
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define sq(x) ((x)*(x))
@@ -75,7 +75,7 @@ struct _Event {
   int i, a;
 };
 
-double tnext = undefined; // time of next event
+double tnext = INFINITY; // time of next event
 void init_events (void);
 
 // boundary conditions for each direction/variable

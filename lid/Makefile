@@ -1,4 +1,4 @@
-CFLAGS += -std=c99 -O2 -MD -g -Wall
+CFLAGS += -fpe -MD -g
 
 lid.log: lid
 	./lid 2> lid.log | ../qplot lid.qplot

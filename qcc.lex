@@ -79,8 +79,7 @@
   }
 
   var_t * varlookup (char * s, int len) {
-    int i;
-    for (i = varstack; i >= 0; i--)
+    for (int i = varstack; i >= 0; i--)
       if (strlen(_varstack[i].v) == len && 
 	  !strncmp(s, _varstack[i].v, len) &&
 	  (s[len-1] != '.' || _varstack[i].type == vector))
@@ -189,8 +188,7 @@
     }
     else if (nreduct > 0) {
       fputs ("\n#undef _OMPEND\n#define _OMPEND ", yyout);
-      int i;
-      for (i = 0; i < nreduct; i++)
+      for (int i = 0; i < nreduct; i++)
 	fprintf (yyout, "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
 		 reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
 		 reductvar[i], reductvar[i], reductvar[i]);
@@ -269,8 +267,7 @@ WS  [ \t\v\n\f]
       yyout = foreachfp;
       if (nreduct > 0) {
 	fprintf (yyout, "\n#undef _OMPSTART\n#define _OMPSTART ");
-	int i;
-	for (i = 0; i < nreduct; i++)
+	for (int i = 0; i < nreduct; i++)
 	  fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
 	fprintf (yyout, "\n#line %d\n", line);
       }
@@ -634,10 +631,9 @@ for{WS}*[(][^)]+{WS}+in{WS}+[^)]+[)] {
   }
   if (nlist != nid)
     return yyerror ("lists must be the same size");
-  int i;
   static int index = 0;
   char * sc = NULL, * vc = NULL;
-  for (i = 0; i < nid; i++) {
+  for (int i = 0; i < nid; i++) {
     var_t * var = varlookup (id[i], strlen(id[i]));
     if (!var) {
       fprintf (stderr, "%s:%d: error: '%s' is not a scalar or vector\n", 
@@ -651,14 +647,14 @@ for{WS}*[(][^)]+{WS}+in{WS}+[^)]+[)] {
     if (!vc && var->type == vector) vc = id[i];
   }
   fprintf (yyout, "for (%s = *%s", id[0], list[0]);
-  for (i = 1; i < nid; i++)
+  for (int i = 1; i < nid; i++)
     fprintf (yyout, ", %s = *%s", id[i], list[i]);
   if (sc)
     fprintf (yyout, "; %s >= 0; ", sc);
   else
     fprintf (yyout, "; %s.x >= 0; ", vc);
   fprintf (yyout, "%s = *++_i%d", id[0], index);
-  for (i = 1; i < nid; i++)
+  for (int i = 1; i < nid; i++)
     fprintf (yyout, ", %s = *++_i%d", id[i], index + i);
   fputc (')', yyout);
   index += nid;
@@ -723,8 +719,7 @@ reduction[(](min|max):{ID}+[)] {
 
 {ID}+ {
   if (inforeach) {
-    int i;
-    for (i = 0; i < nreduct; i++)
+    for (int i = 0; i < nreduct; i++)
       if (!strcmp (yytext, reductvar[i])) {
 	fputc ('_', yyout);
 	break;
@@ -845,8 +840,7 @@ FILE * dopen (const char * fname, const char * mode)
 
 void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 {
-  int i;
-  for (i = nin - 1; i >= 0; i--) {
+  for (int i = nin - 1; i >= 0; i--) {
     char * path = in[i];
     FILE * fin = fopen (path, "r");
     if (fin == NULL) {
@@ -867,7 +861,9 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
     if (i == 0) {
       if (fpe)
 	fputs ("#define _GNU_SOURCE 1\n"
-	       "#include <fenv.h>\n", fout);
+	       "#include <string.h>\n"
+	       "#include <fenv.h>\n", 
+	       fout);
       fputs ("#include \"grid.h\"\n", fout);
     }
     if (endfor (path, fin, fout))
@@ -882,17 +878,17 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   /* new variables */
   fprintf (fout,
 	   "#include \"common.h\"\n"
-	   "int nvar = %d, datasize = %d*sizeof (double);\n"
-	   "scalar all[] = {",
+	   "int nvar = %d, datasize = %d*sizeof (double);\n",
 	   nvar, nvar);
-  for (i = 0; i < nvar; i++)
-    fprintf (fout, "%d,", i);
-  fputs ("-1};\n", fout);
+  /* undefined value */
+  if (fpe)
+    fputs ("double undefined;\n", fout);
+  else
+    fputs ("#define undefined DBL_MAX\n", fout);
   /* events */
-  int j;
-  for (i = 0; i < nevents; i++) {
+  for (int i = 0; i < nevents; i++) {
     fprintf (fout, "static int event_%d (int i, double t);\n", i);
-    for (j = 0; j < nexpr[i]; j++)
+    for (int j = 0; j < nexpr[i]; j++)
       fprintf (fout,
 	       "static int event_expr%d%d (int * ip, double * tp);\n",
 	       i, j);
@@ -901,8 +897,9 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 	       eventarray[i] == 'i' ? "int" : "double", i);
   }
   fputs ("Event Events[] = {\n", fout);
-  for (i = 0; i < nevents; i++) {
+  for (int i = 0; i < nevents; i++) {
     fprintf (fout, "  { false, %d, event_%d, {", nexpr[i], i);
+    int j;
     for (j = 0; j < nexpr[i] - 1; j++)
       fprintf (fout, "event_expr%d%d, ", i, j);
     fprintf (fout, "event_expr%d%d}, ", i, j);
@@ -917,7 +914,7 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   }
   fputs ("  { true }\n};\n", fout);
   /* boundaries */
-  for (i = 0; i < nboundary; i++)
+  for (int i = 0; i < nboundary; i++)
     fprintf (fout, "static void _boundary%d (void);\n", i);
   /* methods */
   fprintf (fout, "void %s_methods(void);\n", grid);
@@ -928,17 +925,28 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   /* refinement functions */
   fputs ("  refine = calloc (nvar, sizeof (RefineFunc));\n", fout);
   if (fpe)
-    fputs ("  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n", fout);
-  for (i = 0; i < nscalars; i++)
+    /* Initialises unused memory with "signaling NaNs".  
+     * This is probably not very portable, tested with
+     * gcc (Debian 4.4.5-8) 4.4.5 on Linux 2.6.32-5-amd64.
+     * This blog was useful:
+     *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
+     */
+    fputs ("  long lnan = 0x7ff0000000000001;\n"
+	   "  assert (sizeof (long) == sizeof (double));\n"
+	   "  memcpy (&undefined, &lnan, sizeof (long));\n"
+	   "  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n", 
+	   fout);
+  fprintf (fout, "  %s_methods();\n", grid);
+  for (int i = 0; i < nscalars; i++)
     fprintf (fout, "  new_scalar (%d);\n", scalars[i]);
-  for (i = 0; i < nvectors; i++)
+  for (int i = 0; i < nvectors; i++)
     fprintf (fout, "  new_vector ((vector){%d,%d});\n", 
 	     vectors[i].x, vectors[i].y);
-  for (i = 0; i < ntensors; i++)
+  for (int i = 0; i < ntensors; i++)
     fprintf (fout, "  new_tensor ((tensor){{%d,%d},{%d,%d}});\n", 
 	     tensors[i].x.x, tensors[i].x.y,
 	     tensors[i].y.x, tensors[i].y.y);
-  for (i = 0; i < nboundary; i++)
+  for (int i = 0; i < nboundary; i++)
     fprintf (fout, "  _boundary%d();\n", i);
   fputs ("  init_events();\n}\n", fout);
   /* grid */
@@ -952,6 +960,8 @@ int main (int argc, char ** argv)
   char * cc = getenv ("CC"), command[1000];
   if (cc == NULL) cc = "cc";
   strcpy (command, cc);
+  strcat (command, " ");
+  strcat (command, CFLAGS);
   char * file = NULL;
   int i;
   for (i = 1; i < argc; i++) {

@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <time.h>
+#include "utils.h"
 
 scalar a = new scalar, b = new scalar;
 
@@ -10,6 +11,10 @@ int main ()
     init_grid (1 << l);
     int nloops, i;
     clock_t start, end;
+
+    foreach()
+      a[] = cos(2.*pi*x)*sin(2.*pi*y);
+    boundary (a);
 
     nloops = i = (1 << 25) >> 2*l;
     start = clock();

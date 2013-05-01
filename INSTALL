@@ -12,3 +12,9 @@ gcc + bash on 32-bits system:
 
 This is a trick to turn off 'extended precision',
 see: http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html
+
+== Useful additional packages ==
+
+gnuplot (> 4.2)
+graphiz
+http://code.google.com/p/jrfonseca/wiki/Gprof2Dot

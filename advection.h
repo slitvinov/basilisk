@@ -32,10 +32,11 @@ double timestep (const vector u)
   double dtmax = DT/CFL;
   foreach(reduction(min:dtmax)) {
     double dx = L0*delta;
-    foreach_dimension() {
-      double dt = dx/fabs(u.x[]);
-      if (dt < dtmax) dtmax = dt;
-    }
+    foreach_dimension()
+      if (u.x[] != 0.) {
+	double dt = dx/fabs(u.x[]);
+	if (dt < dtmax) dtmax = dt;
+      }
   }
   return dtmax*CFL;
 }
@@ -44,6 +45,8 @@ void run (void)
 {
   parameters();
   init_grid (N);
+  foreach()
+    f[] = u.x[] = u.y[] = 0.;
   init();
   boundary (f, u.x, u.y);
 

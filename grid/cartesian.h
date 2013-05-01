@@ -48,11 +48,19 @@ struct _Point {
 
 void init_grid (int n)
 {
-  Point * p = malloc(sizeof(Point));
-  p->n = n;
-  p->data = calloc ((n + 2)*(n + 2), datasize);
-  grid = p;
   init_solver();
+  Point * p = malloc(sizeof(Point));
+  size_t len = (n + 2)*(n + 2)*datasize;
+  p->n = n;
+  p->data = malloc (len);
+#if TRASH
+  /* trash the data just to make sure it's either explicitly
+     initialised or never touched */
+  double * v = (double *) p->data;
+  for (int i = 0; i < len/sizeof(double); i++)
+    v[i] = undefined;
+#endif
+  grid = p;
 }
 
 void free_grid (void)

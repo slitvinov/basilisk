@@ -111,7 +111,7 @@ int events (int i, double t)
   for (Event * ev = Events; !ev->last && !cond; ev++)
     if (COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt)
       cond = 1;
-  tnext = undefined;
+  tnext = INFINITY;
   for (Event * ev = Events; !ev->last; ev++) {
     if (event_do (ev, i, t))
       return 0;
@@ -120,12 +120,12 @@ int events (int i, double t)
     if (ev->i > i && (!INC || COND || !cond))
       inext = 1;
   }
-  return tnext != undefined || inext;
+  return tnext != INFINITY || inext;
 }
 
 double dtnext (double t, double dt)
 {
-  if (tnext != undefined) {
+  if (tnext != INFINITY) {
     int n = (tnext - t)/dt;
     dt = (tnext - t)/(n + 1);
     if (n > 0)

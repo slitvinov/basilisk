@@ -1,67 +1,15 @@
 VALGRIND = valgrind -q --tool=memcheck
-CFLAGS += -g -O2 -MD
+CFLAGS += -fpe -g -MD
 
-fast: halo.vlog speed.slog interp.log interpu.log refine.vlog \
-	rk2.vlog poisson.log circle.log \
-	laplacian.slog interpolate.vlog events.vlog \
-	transcritical.log parabola.log bump.log \
-	dry.log faces.vlog
-	cat *.d > Makefile.deps
+# list only non-default (!.tst) tests
+check: halo.vtst speed.stst refine.vtst rk2.vtst \
+       laplacian.stst interpolate.vtst events.vtst \
+       faces.vtst
 
-slow: advection.log rotation.log bump2D.log
+slow: advection.tst rotation.tst bump2D.tst lid.tst
 
-plots: halo.png speed.png interp.png interpu.png refine.png \
-	rk2.png poisson.png circle.png \
-	laplacian.png interpolate.png \
-	transcritical.png parabola.png dry.png faces.png \
-	advection.png rotation.png bump2D.png
+poisson.tst: poisson.ctst
 
--include Makefile.deps
+laplacian.stst: laplacian.ctst
 
-poisson.log: poisson.clog
-
-laplacian.slog: laplacian.clog
-
-clean:
-	rm -f *.d *.log *.vlog *.slog *.clog *.out *.png \
-	*.exe *.cexe *.pgexe *.prof Makefile.deps
-
-%.png: %.plot
-	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $<
-
-%.log: %.exe
-	-rm -f $*.png
-	./$< 2> $@ > $*.out
-	diff $@ $*.ref
-
-%.slog: %.exe
-	-rm -f $*.png
-	./$< 2> $@ > $*.out
-	-diff $@ $*.ref
-
-%.clog: %.cexe
-	./$< 2> $@ > $*.cout
-
-%.vlog: %.exe
-	-rm -f $*.png
-	$(VALGRIND) ./$< 2> $@ > $*.out
-	diff $@ $*.ref
-
-%.exe: %.c ../qcc
-	../qcc $(CFLAGS) -o $@ -lm $<
-
-%.cexe: %.c ../qcc
-	../qcc -grid=multigrid $(CFLAGS) -o $@ -lm $<
-
-%.pgexe: %.c ../qcc
-	../qcc $(CFLAGS) -pg -o $@ -lm $<
-
-%.prof: %.pgexe
-	./$< 2> $*.log > $*.out
-	gprof $< > $@
-
-%.dot: %.prof
-	gprof2dot.py < $< > $@
-
-%.dot.png: %.dot
-	dot -Tpng -o $@ < $<
+include Makefile.defs

@@ -116,8 +116,13 @@ void run (void)
 {
   parameters ();
   init_grid (N);
+
+  foreach()
+    u.x[] = u.y[] = p[] = 0.;
   init ();
   boundary_uv (u);
+  boundary (p);
+
   projection (u, p, S.x.y, S.y.y, S.x.x);
   boundary_uv (u);
 

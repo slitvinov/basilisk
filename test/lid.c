@@ -1,3 +1,4 @@
+#include "grid/quadtree.h"
 #include "navier-stokes1.h"
 
 void parameters()
@@ -12,14 +13,13 @@ void parameters()
   CFL = 0.8;
 }
 
-void init()
-{
-  u.x[top] = 2. - u.x[]; // u.x[] = 1. on top boundary
-  // no slip walls on all other boundaries */
-  u.x[bottom] = - u.x[];
-  u.y[left] = - u.y[];
-  u.y[right] = - u.y[];
-}
+u.x[top]    = 2. - u.x[]; // u.x[] = 1. on top boundary
+// no slip walls on all other boundaries */
+u.x[bottom] = - u.x[];
+u.y[left]   = - u.y[];
+u.y[right]  = - u.y[];
+
+void init() {}
 
 static double energy()
 {
@@ -31,7 +31,12 @@ static double energy()
 
 scalar un = new scalar; /* we need another scalar */
 
-int event (i += 10) {
+int event (i = 0) {
+  foreach()
+    un[] = u.x[];
+}
+
+int event (i += 10; i <= 10000) {
   double du = change (u.x, un);
   if (i > 0 && du < 1e-4)
     return 1; /* stop */

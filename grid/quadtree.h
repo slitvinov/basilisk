@@ -324,10 +324,17 @@ void alloc_layer (Quadtree * p)
      initialised or never touched */
   foreach_cell()
     if (level == q->depth) {
-      for (scalar s in all)
-	s[] = undefined;
+      for (scalar v = 0; v < nvar; v++)
+	val(v,0,0) = undefined;
       continue;
     }
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell (b, true)
+      if (level == q->depth) {
+	for (scalar v = 0; v < nvar; v++)
+	  val(v,0,0) = undefined;
+	continue;
+      }
 #endif
 }
 
@@ -405,7 +412,7 @@ bool coarsen_cell (Point point, scalar * list)
       child(k,l).flags &= ~(leaf|active);
 #if TRASH
       /* trash the data just to make sure it's never touched */
-      for (scalar s in all)
+      for (scalar s = 0; s < nvar; s++)
 	fine(s,k,l) = undefined;
 #endif
       /* update neighborhood */
@@ -483,6 +490,7 @@ static void update_cache (void)
 
 void init_grid (int n)
 {
+  init_solver();
   int depth = 0;
   while (n > 1) {
     if (n % 2) {
@@ -509,7 +517,6 @@ void init_grid (int n)
     foreach_leaf()
       point = refine_cell (point, none);
   update_cache();
-  init_solver();
 }
 
 void free_grid (void)

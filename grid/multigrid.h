@@ -81,7 +81,7 @@ size_t _size (size_t l)
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   Point _p = *((Point *)grid);						\
   _p.level = _p.depth - 1; _p.n = 1 << _p.level;			\
-  for (; _p.level > 0; _p.n /= 2, _p.level--)				\
+  for (; _p.level >= 0; _p.n /= 2, _p.level--)				\
     OMP_PARALLEL()							\
     Point point = _p;							\
     OMP(omp for schedule(static))					\
@@ -94,6 +94,7 @@ size_t _size (size_t l)
 
 void init_grid (int n)
 {
+  init_solver();
   int r = 0;
   while (n > 1) {
     if (n % 2) {
@@ -106,10 +107,18 @@ void init_grid (int n)
   Point * m = malloc(sizeof(Point));
   m->depth = r;
   m->d = malloc(sizeof(Point *)*(r + 1));
-  for (int l = 0; l <= r; l++)
-    m->d[l] = calloc (_size(l), datasize);
+  for (int l = 0; l <= r; l++) {
+    size_t len = _size(l)*datasize;
+    m->d[l] = malloc (len);
+#if TRASH
+    /* trash the data just to make sure it's either explicitly
+       initialised or never touched */
+    double * v = (double *) m->d[l];
+    for (int i = 0; i < len/sizeof(double); i++)
+      v[i] = undefined;
+#endif
+  }
   grid = m;
-  init_solver();
 }
 
 void free_grid (void)
@@ -131,6 +140,32 @@ Point locate (double x, double y)
     (point.i >= GHOSTS && point.i < point.n + GHOSTS &&
      point.j >= GHOSTS && point.j < point.n + GHOSTS) ? point.depth : - 1;
   return point;
+}
+
+void output_stencil (Point point, scalar s, FILE * fp)
+{
+  fputs ("-----------------------\n", fp);
+  for (int j = GHOSTS; j >= -GHOSTS; j--) {
+    if (point.j + j >= 0 && point.j + j < point.n + 2*GHOSTS) {
+      for (int i = -GHOSTS; i <= GHOSTS; i++)
+	if (point.i + i >= 0 && point.i + i < point.n + 2*GHOSTS) {
+	  fprintf (fp, "%5.g", s[i,j]);
+	  if ((point.i + i < GHOSTS || point.i + i >= point.n + GHOSTS) &&
+	      (point.j + j < GHOSTS || point.j + j >= point.n + GHOSTS))
+	    fputs (":C ", fp);
+	  else if (point.i + i < GHOSTS || point.i + i >= point.n + GHOSTS ||
+		   point.j + j < GHOSTS || point.j + j >= point.n + GHOSTS)
+	    fputs (":B ", fp);
+	  else
+	    fputs ("   ", fp);
+	}
+	else
+	  fputs ("   ?    ", fp);
+    }
+    else
+      fputs ("???????????????????????", fp);
+    fputc ('\n', fp);
+  }
 }
 
 #include "multigrid-common.h"

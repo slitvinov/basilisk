@@ -45,8 +45,10 @@ int main (int argc, char ** argv)
   int depth = argc < 2 ? 9 : atoi(argv[1]), nrelax = 4;
   init_grid(1 << depth);
 
-  foreach()
+  foreach() {
     b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);
+    a[] = 0.;
+  }
   boundary (a);
 
   #define NITER 15
@@ -69,7 +71,7 @@ int main (int argc, char ** argv)
   for (int i = 0; i < NITER; i++) {
     fprintf (stderr, "%d %g\n", i, maxres[i]);
     printf ("%d %g %g\n", i, (iter[i] - start)/(double)CLOCKS_PER_SEC, 
-	    maxres[i]);
+    	    maxres[i]);
   }
   double max = 0;
   foreach() {

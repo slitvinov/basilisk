@@ -89,6 +89,12 @@ void run (void)
 {
   parameters();
   init_grid(N);
+  
+  foreach() {
+    hu[] = B[] = 0.;
+    w[] = 1.;
+  }
+
   init();
   boundary (hu);
   boundary (B);

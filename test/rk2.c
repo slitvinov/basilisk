@@ -18,6 +18,7 @@ void update (double t, scalar * f) {}
 int main ()
 {
   init_grid(1);
+  foreach() a[] = 0.;
   double dt = 0.4;
   scalar f[1] = {a}, df[2][1] = {{da1},{da2}};
   int i = 0;
