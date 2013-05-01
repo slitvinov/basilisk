@@ -1,3 +1,5 @@
+# -*-Makefile-*-
+
 include Makefile.tests
 
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(ALLTESTS))) Makefile.deps
@@ -63,6 +65,8 @@ clean:
 Makefile.tests: Makefile
 	@echo "updating Makefile.tests"
 	@echo "# Automatically generated using 'make Makefile.tests'" \
+	     > Makefile.tests
+	@echo "# DO NOT EDIT, edit 'Makefile' instead" \
 	     > Makefile.tests
 	@echo "ALLTESTS = \\" >> Makefile.tests
 	@darcs show files | grep './test/.*\.c' | \

@@ -1,4 +1,4 @@
-# Automatically generated using 'make Makefile.tests'
+# DO NOT EDIT, edit 'Makefile' instead
 ALLTESTS = \
 	advection.c \
 	bump.c \
@@ -52,9 +52,9 @@ TESTS = \
 	interpolate.c \
 	events.c \
 	faces.c \
+	lid.c \
+	nonlinear.c \
 	advection.c \
 	rotation.c \
 	bump2D.c \
-	lid.c \
-	nonlinear.c \
 
