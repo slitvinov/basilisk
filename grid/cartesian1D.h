@@ -6,11 +6,11 @@
 #define J     ((point.n - 1)/2.)
 #define DELTA (1./point.n)
 
-typedef struct {
+struct _Point {
   char * data;
   int i, n;
   int level; // only to return level in locate()
-} Point;
+};
 
 #define data(k,l) ((double *)&point.data[(point.i + k)*datasize + (l) - (l)])
 
@@ -61,7 +61,7 @@ void free_grid (void)
   Point * p = grid;
   free (p->data);
   free (p);
-  free_boundaries ();
+  free_solver();
 }
 
 Point locate (double x, double y)
@@ -73,3 +73,8 @@ Point locate (double x, double y)
 }
 
 #include "cartesian-common.h"
+
+void cartesian1D_methods()
+{
+  cartesian_methods();
+}

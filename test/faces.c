@@ -1,6 +1,6 @@
 #include "utils.h"
 
-static int refine (Point point, void * data)
+static int refine_func (Point point, void * data)
 {
   return x*x + y*y < 0.25*0.25;
 }
@@ -8,7 +8,7 @@ static int refine (Point point, void * data)
 int main()
 {
   init_grid(4);
-  refine_function (refine, NULL, all);
+  refine_function (refine_func, NULL, none);
   foreach_face(x)
     fprintf (stderr, "%g %g\n", x, y);
   foreach_face(y)

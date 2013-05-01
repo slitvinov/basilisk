@@ -56,31 +56,6 @@ Point locate (double xp, double yp)
   return point;
 }
 
-scalar quadtree_new_scalar (scalar s)
-{
-  s = cartesian_new_scalar (s);
-  refine[s] = refine_linear;
-  return s;
-}
-
-vector quadtree_new_vector (vector v)
-{
-  v = cartesian_new_vector (v);
-  foreach_dimension()
-    refine[v.x] = refine_linear;
-  return v;
-}
-
-tensor quadtree_new_tensor (tensor t)
-{
-  t = cartesian_new_tensor (t);
-  foreach_dimension()
-    refine[t.x.x] = refine_linear;
-  foreach_dimension()
-    refine[t.x.y] = refine_linear;
-  return t;
-}
-
 int coarsen_function (int (* func) (Point p), scalar * list)
 {
   int nc = 0;
@@ -262,3 +237,36 @@ void boundary_a (scalar * list)
 
 #undef boundary_flux
 #define boundary_flux(...) halo_restriction_flux (vectors (__VA_ARGS__))
+
+scalar quadtree_new_scalar (scalar s)
+{
+  s = cartesian_new_scalar (s);
+  refine[s] = refine_linear;
+  return s;
+}
+
+vector quadtree_new_vector (vector v)
+{
+  v = cartesian_new_vector (v);
+  foreach_dimension()
+    refine[v.x] = refine_linear;
+  return v;
+}
+
+tensor quadtree_new_tensor (tensor t)
+{
+  t = cartesian_new_tensor (t);
+  foreach_dimension()
+    refine[t.x.x] = refine_linear;
+  foreach_dimension()
+    refine[t.x.y] = refine_linear;
+  return t;
+}
+
+void quadtree_methods()
+{
+  multigrid_methods();
+  new_scalar = quadtree_new_scalar;
+  new_vector = quadtree_new_vector;
+  new_tensor = quadtree_new_tensor;
+}

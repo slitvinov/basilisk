@@ -7,7 +7,7 @@
 
 #ifndef foreach_boundary_ghost
 # define foreach_boundary_ghost(dir)					\
-  foreach_boundary(dir) {						\
+  foreach_boundary(dir,false) {						\
     point.i += ig; point.j += jg;					\
     ig = -ig; jg = -jg;							\
     POINT_VARIABLES;
@@ -67,4 +67,11 @@ tensor cartesian_new_tensor (tensor t)
     boundary[b][t.x.y] = boundary[b][t.y.x] = antisymmetry;
   }
   return t;
+}
+
+void cartesian_methods()
+{
+  new_scalar = cartesian_new_scalar;
+  new_vector = cartesian_new_vector;
+  new_tensor = cartesian_new_tensor;
 }

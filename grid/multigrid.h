@@ -7,11 +7,11 @@
 #define J      (point.j - GHOSTS)
 #define DELTA  (1./point.n)
 
-typedef struct {
+struct _Point {
   char ** d;
   int level, depth;
   int i, j, n;
-} Point;
+};
 
 size_t _size (size_t l)
 {
@@ -118,7 +118,7 @@ void free_grid (void)
   for (int l = 0; l <= m->depth; l++)
     free (m->d[l]);
   free(m->d);
-  free_boundaries();
+  free_solver();
 }
 
 Point locate (double x, double y)

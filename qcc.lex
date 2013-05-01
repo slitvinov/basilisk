@@ -433,7 +433,7 @@ end_foreach{ID}*{SP}*"()" {
 
 new{WS}+scalar {
   if (scope > 0)
-    fprintf (yyout, "new_scalar (%d)", nvar);
+    fprintf (yyout, "(*new_scalar)(%d)", nvar);
   else {
     fprintf (yyout, "%d", nvar);
     nscalars++;
@@ -557,11 +557,11 @@ new{WS}+tensor {
 	*s1 = '_';
       s1++;
     }
-    boundaryfunc = malloc ((strlen ("_boundary[][] = _;") + 
+    boundaryfunc = malloc ((strlen ("boundary[][] = _;") + 
 			    2*strlen (b) + 
 			    strlen(yytext) + 
 			    strlen (func) + 1)*sizeof (char));
-    sprintf (boundaryfunc, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
+    sprintf (boundaryfunc, "boundary[%s][%s] = _%s%s;", b, yytext, func, b);
     fprintf (yyout, 
 	     "double _%s%s (Point point, scalar s) {"
 	     " int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
@@ -920,14 +920,7 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   for (i = 0; i < nboundary; i++)
     fprintf (fout, "static void _boundary%d (void);\n", i);
   /* methods */
-  fprintf (fout,
-	   "scalar %s_new_scalar (scalar);\n"
-	   "#define new_scalar %s_new_scalar\n"
-	   "vector %s_new_vector (vector);\n"
-	   "#define new_vector %s_new_vector\n"
-	   "tensor %s_new_tensor (tensor);\n"
-	   "#define new_tensor %s_new_tensor\n",
-	   grid, grid, grid, grid, grid, grid);
+  fprintf (fout, "void %s_methods(void);\n", grid);
   fputs ("static void init_solver (void) {\n"
 	 "  for (int b = 0; b < nboundary; b++)\n"
 	 "    boundary[b] = calloc (nvar, sizeof (BoundaryFunc));\n",

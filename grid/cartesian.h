@@ -6,11 +6,11 @@
 #define J     (point.j - 1)
 #define DELTA (1./point.n)
 
-typedef struct {
+struct _Point {
   char * data;
   int i, j, n;
   int level; // only to return level in locate()
-} Point;
+};
 
 #define data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) + \
 					  (point.j + l))*datasize])
@@ -60,7 +60,7 @@ void free_grid (void)
   Point * p = grid;
   free (p->data);
   free (p);
-  free_boundaries ();
+  free_solver();
 }
 
 Point locate (double x, double y)

@@ -54,6 +54,12 @@ typedef struct {
 #define coarse(a,k,l)  _coarse(a,k,l)
 #define neighbor(k,l)  _neighbor(k,l)
 
+// methods
+
+scalar (* new_scalar) (scalar);
+vector (* new_vector) (vector);
+tensor (* new_tensor) (tensor);
+
 // events 
 
 typedef struct _Event Event;

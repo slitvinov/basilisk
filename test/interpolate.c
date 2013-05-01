@@ -6,7 +6,7 @@ scalar v = new scalar;
 
 double radius;
 
-int refine (Point point, void * data) {
+int refine_func (Point point, void * data) {
   return x*x + y*y > radius*radius;
 }
 
@@ -15,12 +15,11 @@ int main (int argc, char ** argv)
   for (int n = 8; n <= 64; n *= 2) {
     init_grid (n);
 
-#if 1
     radius = 0.49;
-    refine_function (refine, NULL, none);
+    refine_function (refine_func, NULL, none);
     radius = 0.55;
-    refine_function (refine, NULL, none);
-#endif
+    refine_function (refine_func, NULL, none);
+
     foreach()
       v[] = cos(2.*pi*x)*cos(2.*pi*y);
     boundary (v);

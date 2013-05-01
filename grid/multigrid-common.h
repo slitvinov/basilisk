@@ -44,3 +44,8 @@ void refine_linear (Point point, scalar v)
       fine(v,k,l) = v[] + ((v[1,0] - v[-1,0])*(2*k-1)/8. +
 			   (v[0,1] - v[0,-1])*(2*l-1)/8.);
 }
+
+void multigrid_methods()
+{
+  cartesian_methods();
+}
