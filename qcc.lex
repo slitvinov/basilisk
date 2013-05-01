@@ -1074,15 +1074,20 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 int main (int argc, char ** argv)
 {
   char * cc = getenv ("CC"), command[1000];
-  if (cc == NULL) cc = "cc";
-  strcpy (command, cc);
+  if (cc == NULL) {
+    strcpy (command, CC);
+    strcat (command, " ");
+    strcat (command, C99FLAGS);
+  }
+  else
+    strcpy (command, cc);
   char * file = NULL;
-  int i;
+  int i, dep = 0;
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
       ;
     else if (!strcmp (argv[i], "-MD"))
-      ;
+      dep = 1;
     else if (!strcmp (argv[i], "-debug"))
       debug = 1;
     else if (!strcmp (argv[i], "-fpe"))
@@ -1115,20 +1120,28 @@ int main (int argc, char ** argv)
   if (file) {
     char * out[100], * grid = NULL;
     int default_grid, nout = includes (argc, argv, out, &grid, &default_grid);
-    compdir (file, out, nout, grid, default_grid);
-    strcat (command, " ");
-    strcat (command, dir);
-    strcat (command, "/");
-    strcat (command, file);
+    if (!dep) {
+      compdir (file, out, nout, grid, default_grid);
+      strcat (command, " ");
+      strcat (command, dir);
+      strcat (command, "/");
+      strcat (command, file);
+    }
+  }
+  else if (dep) {
+    fprintf (stderr, "usage: qcc -grid=[GRID] [OPTIONS] FILE.c\n");
+    cleanup (1);
   }
   /* compilation */
-  if (debug)
-    fprintf (stderr, "command: %s\n", command);
-  status = system (command);
-  if (status == -1 ||
-      (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || 
-				WTERMSIG (status) == SIGQUIT)))
-    cleanup (1);
-  cleanup (WEXITSTATUS (status));
-  return 0;
+  if (!dep) {
+    if (debug)
+      fprintf (stderr, "command: %s\n", command);
+    status = system (command);
+    if (status == -1 ||
+	(WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || 
+				  WTERMSIG (status) == SIGQUIT)))
+      cleanup (1);
+    cleanup (WEXITSTATUS (status));
+  }
+  cleanup (0);
 }

@@ -1,7 +1,5 @@
 # -*-Makefile-*-
 
-CFLAGS += -MD
-
 include Makefile.tests
 
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(ALLTESTS))) Makefile.deps
@@ -14,26 +12,26 @@ clean:
 .PRECIOUS: %.exe %.cexe %.pgexe
 
 %.tst: %.exe
-	@echo \[$@\]
+	@echo \[$*.log\]
 	@-rm -f $*.png
 	@./$< 2> $*.log > $*.out
 	diff $*.log $*.ref
 	@touch $@
 
 %.stst: %.exe
-	@echo \[$@\]
+	@echo \[$*.slog\]
 	@-rm -f $*.png
 	@./$< 2> $*.slog > $*.out
 	-diff $*.slog $*.ref
 	@touch $@
 
 %.ctst: %.cexe
-	@echo \[$@\]
+	@echo \[$*.clog\]
 	@./$< 2> $*.clog > $*.cout
 	@touch $@
 
 %.vtst: %.exe
-	@echo \[$@\]
+	@echo \[$*.log\]
 	@-rm -f $*.png
 	@$(VALGRIND) ./$< 2> $*.log > $*.out
 	diff $*.log $*.ref
@@ -41,9 +39,6 @@ clean:
 
 %.exe: %.c ../qcc
 	../qcc $(CFLAGS) -o $@ -lm $<
-
-%.exe.d: %.exe
-	@true
 
 %.cexe: %.c ../qcc
 	../qcc -grid=multigrid $(CFLAGS) -o $@ -lm $<
@@ -64,7 +59,7 @@ clean:
 %.png: %.plot
 	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $< || rm -f $@
 
-Makefile.tests: Makefile
+Makefile.tests: Makefile Makefile.defs
 	@echo "updating Makefile.tests"
 	@echo "# Automatically generated using 'make Makefile.tests'" \
 	     > Makefile.tests
@@ -86,8 +81,19 @@ Makefile.tests: Makefile
 	    grep -v '^check:' | grep -o ':.*' | grep -o '[a-zA-Z_0-9]*\.tst' | \
 	    sed 's/\(.*\)\.tst/\t\1.c \\/g' >> Makefile.tests
 	@echo "" >> Makefile.tests
+	@echo "SPECIAL_TESTS = \\" >> Makefile.tests
+	@grep -o '[a-zA-Z_0-9]*\.ctst' Makefile | sort | uniq | \
+	    sed 's/\(.*\)/\t\1 \\/g' >> Makefile.tests
+	@echo "" >> Makefile.tests
 
-Makefile.deps: $(subst .c,.exe.d,$(ALLTESTS))
+%.exe.d: %.c ../qcc
+	../qcc -MD -o $@ $<
+
+%.cexe.d: %.c ../qcc
+	../qcc -MD -grid=multigrid -o $@ $<
+
+Makefile.deps: 	$(subst .c,.exe.d,$(ALLTESTS)) \
+		$(subst .ctst,.cexe.d,$(SPECIAL_TESTS))
 	@cat $^ > Makefile.deps
 
 include Makefile.deps

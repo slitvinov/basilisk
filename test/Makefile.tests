@@ -58,3 +58,7 @@ TESTS = \
 	rotation.c \
 	bump2D.c \
 
+SPECIAL_TESTS = \
+	laplacian.ctst \
+	poisson.ctst \
+

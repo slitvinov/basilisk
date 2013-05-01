@@ -1,9 +1,10 @@
-CFLAGS += -O2
+CFLAGS += -O2 $(C99FLAGS)
 
 all: qcc qplot
 
 qcc: qcc.c include.o
-	$(CC) $(CFLAGS) qcc.c include.o -o qcc
+	$(CC) $(CFLAGS) -DCC=\"$(CC)\" -DC99FLAGS=\"$(C99FLAGS)\" \
+		qcc.c include.o -o qcc
 
 include.o: include.c
 	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" -c include.c

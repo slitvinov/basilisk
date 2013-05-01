@@ -167,7 +167,8 @@ int includes (int argc, char ** argv, char ** out,
       depend = 1;
     else if (!strcmp (argv[i], "-o"))
       output = argv[i + 1];
-    else if (argv[i][0] != '-' && !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
+    else if (argv[i][0] != '-' && \
+	     !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
       if (file) {
 	fprintf (stderr, "usage: include [OPTIONS] FILE.c\n");
 	exit (1);
@@ -175,17 +176,22 @@ int includes (int argc, char ** argv, char ** out,
       file = argv[i];
     }
   }
-  if (depend && output && file) {
+  if (depend && file) {
+    if (!output) output = file;
     char ndep[80], * s = &output[strlen(output)-1];
     while (*s != '.' && s != output) s--;
-    if (1/*s == output*/) /* always generate dep files with suffixes included */
+    if (output != file || s == output)
+      /* generate dep files with suffixes included for -o option */
       strcpy (ndep, output);
     else {
       *s = '\0';
       strcpy (ndep, output);
       *s = '.';
     }
-    strcat (ndep, ".d");
+    if (strlen(ndep) < 2 || strcmp (&ndep[strlen(ndep)-2], ".d"))
+      strcat (ndep, ".d");
+    else
+      output[strlen(ndep)-2] = '\0'; // strip trailing ".d";
     fdepend = fopen (ndep, "w");
     if (!fdepend) {
       perror (ndep);

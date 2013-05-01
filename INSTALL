@@ -1,14 +1,10 @@
-To compile you need to setup CFLAGS according to your compiler.
+To compile you need to setup C99FLAGS according to your compiler.
 
 Examples:
 
-gcc + bash on 64-bits system:
+gcc + bash:
 
- % export CFLAGS="-std=c99 -Wall"
-
-gcc + bash on 32-bits system:
-
- % export CFLAGS="-std=c99 -Wall -msse2 -mfpmath=sse"
+ % CC=gcc C99FLAGS="-std=c99" make
 
 This is a trick to turn off 'extended precision',
 see: http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html

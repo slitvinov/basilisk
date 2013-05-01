@@ -1,5 +1,5 @@
 VALGRIND = valgrind -q --tool=memcheck
-CFLAGS += -fpe -g
+CFLAGS += -fpe -g -O2
 
 # list only non-default (!.tst) tests
 check: halo.vtst speed.stst refine.vtst rk2.vtst \
