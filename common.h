@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <string.h>
 #include <float.h>
 #include <assert.h>
 #include <math.h>
@@ -11,6 +12,8 @@
                   // (useful for debugging)
 
 #define pi 3.14159265358979
+#undef HUGE
+#define HUGE 1e30
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define sq(x) ((x)*(x))

@@ -14,7 +14,7 @@ void refineiter ()
       h[] = exp(-(x*x + y*y)/(0.01));
     boundary (h);
 
-    restriction (scalars (h));
+    restriction (h);
     wavelet (h, w);
 
     int nf = refine_wavelet (w, 1e-2, 12, scalars (h));
@@ -37,7 +37,7 @@ int main (int argc, char ** argv)
     printf ("%g %g %d %d %g %g leaf1\n", x, y, level, cell.neighbors, h[],
 	    fabs(h[] - exp(-(x*x + y*y)/(0.01))));
 
-  restriction (scalars (h));
+  restriction (h);
   wavelet (h, w);
   fprintf (stderr, "\ncoarsened %d cells back\n", 
 	   coarsen_wavelet (w, 1e-2, 0, none));

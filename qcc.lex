@@ -393,6 +393,7 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
+^(scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+       |
 [^{ID}](scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+ {
   ECHO;
   if (yytext[0] == '(') para++;
@@ -434,7 +435,7 @@ end_foreach{ID}*{SP}*"()" {
   ECHO;
 }
 
-[^{ID}](scalars|vectors|boundary){WS}*[(] {
+[^{ID}](scalars|vectors|boundary|restriction){WS}*[(] {
     // scalars(...
     ECHO;
     if (yytext[0] == '(') para++;

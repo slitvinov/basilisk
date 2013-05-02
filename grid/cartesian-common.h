@@ -22,6 +22,37 @@
 
 #define boundary_flux(...)
 
+#define output_stencil(v,fp) _output_stencil(point,v,#v,fp)
+void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
+{
+  int width = 25, len = (width - strlen(name))/2. - 1;
+  for (int i = 0; i < len; i++) fputc ('-', fp);
+  fputc (' ', fp); fputs (name, fp); fputc (' ', fp);
+  for (int i = 0; i < len; i++) fputc ('-', fp);
+  fputc ('\n', fp);
+  for (int j = GHOSTS; j >= -GHOSTS; j--) {
+    if (J + j >= - GHOSTS && J + j < _n + GHOSTS) {
+      for (int i = - GHOSTS; i <= GHOSTS; i++)
+	if (I + i >= - GHOSTS && I + i < _n + GHOSTS) {
+	  fprintf (fp, "%5.g", s[i,j]);
+	  if ((I + i < 0 || I + i >= _n) &&
+	      (J + j < 0 || J + j >= _n))
+	    fputs (":C ", fp);
+	  else if (I + i < 0 || I + i >= _n ||
+		   J + j < 0 || J + j >= _n)
+	    fputs (":B ", fp);
+	  else
+	    fputs ("   ", fp);
+	}
+	else
+	  fputs ("   ?    ", fp);
+    }
+    else
+      fputs ("???????????????????????", fp);
+    fputc ('\n', fp);
+  }
+}
+
 void boundary_level (scalar * list, int l)
 {
   for (int b = 0; b < nboundary; b++)

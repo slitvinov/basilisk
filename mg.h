@@ -5,7 +5,7 @@ void mg_cycle (scalar a, scalar res, scalar dp,
 	       void (* boundary) (scalar * dp, int depth),
 	       int nrelax, int minlevel)
 {
-  restriction (scalars (res));
+  restriction (res);
   for (int l = minlevel; l <= depth(); l++) {
     if (l == minlevel) {
       foreach_level (l)

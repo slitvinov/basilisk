@@ -12,26 +12,26 @@ clean:
 .PRECIOUS: %.exe %.cexe %.pgexe
 
 %.tst: %.exe
-	@echo \[$*.log\]
+	@echo \[$@\]
 	@-rm -f $*.png
 	@./$< 2> $*.log > $*.out
 	diff $*.log $*.ref
 	@touch $@
 
 %.stst: %.exe
-	@echo \[$*.slog\]
+	@echo \[$@\]
 	@-rm -f $*.png
 	@./$< 2> $*.slog > $*.out
 	-diff $*.slog $*.ref
 	@touch $@
 
 %.ctst: %.cexe
-	@echo \[$*.clog\]
+	@echo \[$@\]
 	@./$< 2> $*.clog > $*.cout
 	@touch $@
 
 %.vtst: %.exe
-	@echo \[$*.log\]
+	@echo \[$@\]
 	@-rm -f $*.png
 	@$(VALGRIND) ./$< 2> $*.log > $*.out
 	diff $*.log $*.ref

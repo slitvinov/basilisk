@@ -18,7 +18,7 @@ scalar w = new scalar;
 int event (i++) {
   //  scalar * list = scalars (h, zb, q, dh, dq);
 
-  restriction (scalars (h));
+  restriction (h);
   for (int b = 0; b < nboundary; b++)
     foreach_boundary_cell (b, true) {
       if (is_leaf (cell))

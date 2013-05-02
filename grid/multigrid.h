@@ -12,6 +12,7 @@ struct _Point {
   int level, depth;
   int i, j, n;
 };
+#define _n point.n // for output_stencil()
 
 size_t _size (size_t l)
 {
@@ -142,32 +143,6 @@ Point locate (double x, double y)
     (point.i >= GHOSTS && point.i < point.n + GHOSTS &&
      point.j >= GHOSTS && point.j < point.n + GHOSTS) ? point.depth : - 1;
   return point;
-}
-
-void output_stencil (Point point, scalar s, FILE * fp)
-{
-  fputs ("-----------------------\n", fp);
-  for (int j = GHOSTS; j >= -GHOSTS; j--) {
-    if (point.j + j >= 0 && point.j + j < point.n + 2*GHOSTS) {
-      for (int i = -GHOSTS; i <= GHOSTS; i++)
-	if (point.i + i >= 0 && point.i + i < point.n + 2*GHOSTS) {
-	  fprintf (fp, "%5.g", s[i,j]);
-	  if ((point.i + i < GHOSTS || point.i + i >= point.n + GHOSTS) &&
-	      (point.j + j < GHOSTS || point.j + j >= point.n + GHOSTS))
-	    fputs (":C ", fp);
-	  else if (point.i + i < GHOSTS || point.i + i >= point.n + GHOSTS ||
-		   point.j + j < GHOSTS || point.j + j >= point.n + GHOSTS)
-	    fputs (":B ", fp);
-	  else
-	    fputs ("   ", fp);
-	}
-	else
-	  fputs ("   ?    ", fp);
-    }
-    else
-      fputs ("???????????????????????", fp);
-    fputc ('\n', fp);
-  }
 }
 
 #include "multigrid-common.h"

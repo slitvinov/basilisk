@@ -11,6 +11,7 @@ struct _Point {
   int i, n;
   int level; // only to return level in locate()
 };
+#define _n point.n // for output_stencil()
 
 #define data(k,l) ((double *)&point.data[(point.i + k)*datasize + (l) - (l)])
 

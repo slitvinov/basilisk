@@ -16,7 +16,7 @@ int main (int argc, char ** argv)
   boundary (h);
   
   /* initial coarsening */
-  restriction (scalars(h));
+  restriction (h);
   wavelet (h, w);
   coarsen_wavelet (w, 1e-2, 0, none);
 
