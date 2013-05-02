@@ -25,7 +25,6 @@ void init()
 int event (i++) {
 #if ADAPT
   scalar w = new scalar;
-  restriction (f, f);
   wavelet (f, w);
 
   double cmax = 1e-3;
@@ -72,8 +71,7 @@ int event (i++) {
 /* } */
 
 /* event (t += 0.1; t <= 5.) { */
-/*   restriction (f, f); */
-/*   wavelet (f, w); */
+/*   /*   wavelet (f, w); */
 /*   output_matrix (w, N, stdout, false); */
 /* } */
 

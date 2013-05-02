@@ -115,7 +115,7 @@ void run (void)
     dt = DT;
     foreach()
       dt = flux (point, 0, dt);
-    foreach_boundary(right)
+    foreach_boundary(right,true)
       dt = flux (point, 1, dt);
     dt = dtnext (t, dt);
 
@@ -130,7 +130,7 @@ void run (void)
 
     foreach()
       flux (point, 0, dt);
-    foreach_boundary(right)
+    foreach_boundary(right,true)
       flux (point, 1, dt);
 
     update (hu1, hu, w1, w, dt);

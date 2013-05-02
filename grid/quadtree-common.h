@@ -37,31 +37,7 @@
 
 #include "multigrid-common.h"
 
-#undef boundary_ghost
-#define boundary_ghost(d, x) {						\
-    foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
-    int _in = -_ig[d], _jn = -_jg[d];					\
-    foreach_halo() if (is_leaf(_neighbor(_in,_jn))) {			\
-      ig = _in; jg = _jn; VARIABLES; x; }				\
-    end_foreach_halo();							\
-  }
-
-Point locate (double xp, double yp)
-{
-  foreach_cell () {
-    /* fixme: this should use coordinates as defined in utils.h etc... */
-    double delta = DELTA;
-    double x = (point.i - GHOSTS + 0.5)*delta - 0.5;
-    double y = (point.j - GHOSTS + 0.5)*delta - 0.5;
-    delta /= 2.;
-    if (xp < x - delta || xp > x + delta || yp < y - delta || yp > y + delta)
-      continue;
-    if (is_leaf (cell))
-      return point;
-  }
-  Point point = { level: -1 };
-  return point;
-}
+// Quadtree methods
 
 int coarsen_function (int (* func) (Point p), scalar * list)
 {
@@ -196,6 +172,35 @@ void halo_prolongation_u_v (int depth, scalar u, scalar v)
   }
 }
 
+// Multigrid methods
+
+void quadtree_boundary_restriction (scalar * list)
+{
+  // traverse the boundaries of all coarse levels (i.e. not the leaves)
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell (b, true) {
+      if (is_leaf (cell))
+	continue;
+      else
+	for (scalar s in list)
+	  s[ghost] = _boundary[b][s] (point, s);
+    }
+}
+
+// Cartesian methods
+
+#undef boundary_ghost
+#define boundary_ghost(d, x) {						\
+    foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
+    int _in = -_ig[d], _jn = -_jg[d];					\
+    foreach_halo() if (is_leaf(_neighbor(_in,_jn))) {			\
+      ig = _in; jg = _jn; VARIABLES; x; }				\
+    end_foreach_halo();							\
+  }
+
+#undef boundary_flux
+#define boundary_flux(...) halo_restriction_flux (vectors (__VA_ARGS__))
+
 void quadtree_boundary (scalar * list)
 {
   halo_restriction (list);
@@ -224,21 +229,22 @@ void quadtree_boundary (scalar * list)
       }
 }
 
-void boundary_all (scalar * list)
+Point locate (double xp, double yp)
 {
-  /* apply boundary conditions on all levels */
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell (b, true) {
-      if (is_leaf (cell))
-	continue;
-      else
-	for (scalar s in list)
-	  s[ghost] = _boundary[b][s] (point, s);
-    }
+  foreach_cell () {
+    /* fixme: this should use coordinates as defined in utils.h etc... */
+    double delta = DELTA;
+    double x = (point.i - GHOSTS + 0.5)*delta - 0.5;
+    double y = (point.j - GHOSTS + 0.5)*delta - 0.5;
+    delta /= 2.;
+    if (xp < x - delta || xp > x + delta || yp < y - delta || yp > y + delta)
+      continue;
+    if (is_leaf (cell))
+      return point;
+  }
+  Point point = { level: -1 };
+  return point;
 }
-
-#undef boundary_flux
-#define boundary_flux(...) halo_restriction_flux (vectors (__VA_ARGS__))
 
 scalar quadtree_new_scalar (scalar s)
 {
@@ -271,5 +277,6 @@ void quadtree_methods()
   new_scalar = quadtree_new_scalar;
   new_vector = quadtree_new_vector;
   new_tensor = quadtree_new_tensor;
-  boundary =   quadtree_boundary;
+  boundary   = quadtree_boundary;
+  boundary_restriction = quadtree_boundary_restriction;
 }

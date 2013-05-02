@@ -27,7 +27,7 @@ struct _Point {
     POINT_VARIABLES
 #define end_foreach() } OMP_END_PARALLEL()
 
-#define foreach_boundary(d) {						\
+#define foreach_boundary(d,corners) {					\
   int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
   {									\
@@ -42,11 +42,6 @@ struct _Point {
     point.i = (d == right ? point.n : 1) + ig;				\
     POINT_VARIABLES
 #define end_foreach_boundary_ghost() }}
-
-#define foreach_boundary_level(d,l,...) foreach_boundary(d)
-#define end_foreach_boundary_level() end_foreach_boundary()
-
-#define depth() 0
 
 void init_grid (int n)
 {

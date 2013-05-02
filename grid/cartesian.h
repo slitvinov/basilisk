@@ -43,11 +43,6 @@ struct _Point {
     POINT_VARIABLES
 #define end_foreach_boundary() } OMP_END_PARALLEL()
 
-#define foreach_boundary_level(d,l,corners) foreach_boundary(d,corners)
-#define end_foreach_boundary_level() end_foreach_boundary()
-
-#define depth() 0
-
 void init_grid (int n)
 {
   init_solver();

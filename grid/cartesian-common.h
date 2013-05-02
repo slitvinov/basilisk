@@ -53,21 +53,16 @@ void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
   }
 }
 
-void boundary_level (scalar * list, int l)
-{
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_level (b, l, true) // also traverse corners
-      for (scalar s in list)
-	s[ghost] = _boundary[b][s] (point, s);
-}
-
 // Cartesian methods
 
 void (* boundary) (scalar *);
 
 void cartesian_boundary (scalar * list)
 {
-  boundary_level (list, depth());
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary (b, true) // also traverse corners
+      for (scalar s in list)
+	s[ghost] = _boundary[b][s] (point, s);
 }
 
 static double symmetry (Point point, scalar s)

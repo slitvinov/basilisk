@@ -22,18 +22,10 @@ scalar w = new scalar;
 
 int event (i++) {
 
-  restriction (h);
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell (b, true) {
-      if (is_leaf (cell))
-	continue;
-      else 
-	h[ghost] = _boundary[b][h] (point, h);
-    }
   wavelet (h, w);
 
-  scalar * list = scalars (h, zb, q, dh, dq);
   double cmax = 1e-3;
+  scalar * list = scalars (h, zb, q, dh, dq);
   int nf = refine_wavelet (w, cmax, LEVEL, list);
   int nc = coarsen_wavelet (w, cmax/4., 0, list);
   if (nf || nc)

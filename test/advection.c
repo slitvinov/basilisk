@@ -33,7 +33,6 @@ void init()
 int event (i++) {
 #if ADAPT
   scalar w = new scalar;
-  restriction (f, f);
   wavelet (f, w);
 
   double cmax = 1e-3;

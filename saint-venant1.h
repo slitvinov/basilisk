@@ -122,7 +122,7 @@ void run()
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    (* gradient) (scalars (h, zb, q), vectors (gh, gzb, gq));
+    gradient (scalars (h, zb, q), vectors (gh, gzb, gq));
 
     dt = dtnext (t, flux (DT));
 
@@ -138,7 +138,7 @@ void run()
       swap (scalar, h, h1);
       
       /* corrector */
-      (* gradient) (scalars (h, q), vectors (gh, gq));
+      gradient (scalars (h, q), vectors (gh, gq));
       flux (dt);
       update (q1, q, h1, h, dt);
     }
