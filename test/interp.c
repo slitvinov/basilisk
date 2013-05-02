@@ -25,7 +25,7 @@ int main (int argc, char ** argv)
   coarsen_wavelet (w, tolerance, 0, none);
 
   halo_restriction (scalars (h));
-  halo_interpolation (-1, scalars (h));
+  halo_prolongation (-1, scalars (h));
 
   double max = 0.;
   foreach_halo() {

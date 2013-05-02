@@ -309,11 +309,27 @@ void recursive (Point point)
 #define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
 
+#if TRASH
+# undef trash
+# define trash(list) quadtree_trash(list)
+#endif
+
+void quadtree_trash (scalar * list)
+{
+  Quadtree * q = grid;
+  int cellsize = sizeof(Cell) + datasize;;
+  for (int l = 0; l <= q->depth; l++) {
+    char * data = q->m[l] + sizeof(Cell);
+    for (int i = 0; i < _size(l); i++, data += cellsize)
+      for (scalar s in list)
+	((double *)data)[s] = undefined;
+  }
+}
+
 char * alloc_cells (int l)
 {
   int len = _size(l), cellsize = sizeof(Cell) + datasize;
   char * m = calloc (len, cellsize);
-#if TRASH
   /* trash the data just to make sure it's either explicitly
      initialised or never touched */
   char * data = m + sizeof(Cell);
@@ -321,7 +337,6 @@ char * alloc_cells (int l)
   for (int i = 0; i < len; i++, data += cellsize)
     for (int j = 0; j < nv; j++)
       ((double *)data)[j] = undefined;
-#endif
   return m;
 }
 
@@ -412,11 +427,6 @@ bool coarsen_cell (Point point, scalar * list)
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
       child(k,l).flags &= ~(leaf|active);
-#if TRASH
-      /* trash the data just to make sure it's never touched */
-      for (scalar s = 0; s < nvar; s++)
-	fine(s,k,l) = undefined;
-#endif
       /* update neighborhood */
       for (int o = -GHOSTS; o <= GHOSTS; o++)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)

@@ -242,22 +242,28 @@ static double sweby1    (double r) { return generic_limiter (r, 1.5); }
 
 void centered (scalar * f, vector * g)
 {
+  assert (scalars_len(f) == vectors_len(g));
+  trash ((scalar *) g);
   foreach() {
     scalar s; vector v;
     for (s,v in f,g)
       foreach_dimension()
 	v.x[] = (s[1,0] - s[-1,0])/2./delta;
   }
+  boundary ((scalar *) g);
 }
 
 void minmod (scalar * f, vector * g)
 {
+  assert (scalars_len(f) == vectors_len(g));
+  trash ((scalar *) g);
   foreach() {
     scalar s; vector v;
     for (s,v in f,g)
       foreach_dimension()
 	v.x[] = minmod1 ((s[1,0] - s[])/(s[] - s[-1,0]))*(s[] - s[-1,0])/delta;
   }
+  boundary ((scalar *) g);
 }
 
 double theta = 1.3;
@@ -274,6 +280,7 @@ static double minmod2 (double a, double b, double c)
 void generalized_minmod (scalar * f, vector * g)
 {
   assert (scalars_len(f) == vectors_len(g));
+  trash ((scalar *) g);
   /* see (A.6) in 
    *    Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
    *    Saint-Venant system. Mathematical Modelling and Numerical
@@ -292,6 +299,7 @@ void generalized_minmod (scalar * f, vector * g)
 void superbee (scalar * f, vector * g)
 {
   assert (scalars_len(f) == vectors_len(g));
+  trash ((scalar *) g);
   foreach() {
     scalar s; vector v;
     for (s,v in f,g)
@@ -305,6 +313,7 @@ void superbee (scalar * f, vector * g)
 void sweby (scalar * f, vector * g)
 {
   assert (scalars_len(f) == vectors_len(g));
+  trash ((scalar *) g);
   foreach() {
     scalar s; vector v;
     for (s,v in f,g)
@@ -317,6 +326,7 @@ void sweby (scalar * f, vector * g)
 void zero (scalar * f, vector * g)
 {
   assert (scalars_len(f) == vectors_len(g));
+  trash ((scalar *) g);
   foreach()
     for (vector v in g)
       foreach_dimension()

@@ -8,8 +8,8 @@
 #include <math.h>
 
 #define GHOSTS  1 // number of ghost layers
-#define TRASH   1 // whether to 'trash' uninitialised data 
-                  // (useful for debugging)
+#define trash(x)  // data trashing is disabled by default. Turn it on with
+                  // -DTRASH=1
 
 #define pi 3.14159265358979
 #undef HUGE

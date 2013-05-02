@@ -41,7 +41,7 @@ int main (int argc, char ** argv)
       else
 	continue;
     }
-  halo_interpolation_u_v (-1, u, v);
+  halo_prolongation_u_v (-1, u, v);
 
   double max = 0., maxv = 0;
   foreach_halo() {

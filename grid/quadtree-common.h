@@ -167,7 +167,7 @@ void halo_restriction_flux (vector * list)
   }
 }
 
-void halo_interpolation (int depth, scalar * list)
+void halo_prolongation (int depth, scalar * list)
 {
   foreach_halo_coarse_to_fine (depth)
     /* bilinear interpolation from coarser level */
@@ -177,7 +177,7 @@ void halo_interpolation (int depth, scalar * list)
 	     coarse(s,child.x,child.y))/16.;
 }
 
-void halo_interpolation_u_v (int depth, scalar u, scalar v)
+void halo_prolongation_u_v (int depth, scalar u, scalar v)
 {
   foreach_halo_coarse_to_fine (depth) {
     /* linear interpolation from coarser level */
@@ -211,7 +211,7 @@ void quadtree_boundary (scalar * list)
 	continue;
     }
 
-  halo_interpolation (-1, list);
+  halo_prolongation (-1, list);
 
   for (int b = 0; b < nboundary; b++)
     foreach_boundary_cell (b, true)

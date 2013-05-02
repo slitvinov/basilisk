@@ -55,13 +55,11 @@ void init_grid (int n)
   size_t len = (n + 2)*datasize;
   p->n = n;
   p->data = malloc (len);
-#if TRASH
   /* trash the data just to make sure it's either explicitly
      initialised or never touched */
   double * v = (double *) p->data;
   for (int i = 0; i < len/sizeof(double); i++)
     v[i] = undefined;
-#endif
   grid = p;
 }
 

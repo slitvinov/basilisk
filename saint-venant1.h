@@ -30,24 +30,13 @@ void init       (void);
 
 #if !QUADTREE
 # define trash(x)
-#else
-static void trash (scalar * list)
-{
-  foreach_cell()
-    for (scalar s in list)
-      s[] = undefined;
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell(b,true)
-      for (scalar s in list)
-	s[] = undefined;
-}
 #endif
 
 static double flux (double dtmax)
 {
-  scalar * list = scalars(dh, dq);
-  trash (list);
+  trash (dh, dq);
 
+  scalar * list = scalars(dh, dq);
 #if QUADTREE
   foreach_halo()
     for (scalar ds in list) {
@@ -118,7 +107,7 @@ static double flux (double dtmax)
 
 static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
 {
-  trash (scalars (h1, q1));
+  trash (h1, q1);
   foreach() {
     h1[] = h2[] + dt*dh[]/DX;
     dh[] = undefined;
@@ -148,7 +137,6 @@ void run()
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    trash (scalars (gh, gzb, gq));
     (* gradient) (scalars (h, zb, q), vectors (gh, gzb, gq));
 
     dt = dtnext (t, flux (DT));
@@ -165,7 +153,6 @@ void run()
       swap (scalar, h, h1);
       
       /* corrector */
-      trash (scalars (gh, gq));
       (* gradient) (scalars (h, q), vectors (gh, gq));
       flux (dt);
       update (q1, q, h1, h, dt);

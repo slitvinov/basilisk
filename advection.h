@@ -57,7 +57,6 @@ void run (void)
     double dt = dtnext (t, timestep (u));
     vector flux = new vector, g = new vector;
     (* gradient) (scalars (f), vectors (g));
-    boundary (g.x, g.y);
     fluxes_upwind_bcg (f, g, u, flux, dt);
     foreach()
       f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;

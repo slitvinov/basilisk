@@ -435,7 +435,7 @@ end_foreach{ID}*{SP}*"()" {
   ECHO;
 }
 
-[^{ID}](scalars|vectors|boundary|restriction){WS}*[(] {
+[^{ID}](scalars|vectors|boundary|restriction|trash){WS}*[(] {
     // scalars(...
     ECHO;
     if (yytext[0] == '(') para++;
