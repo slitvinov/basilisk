@@ -23,9 +23,14 @@
   foreach_boundary_cell(dir,corners) if (is_leaf (cell)) {
 #define end_foreach_boundary()  continue; } end_foreach_boundary_cell()
 
-#define foreach_boundary_level(dir,l,corners)				\
-  foreach_boundary_cell(dir,corners) if (level == l || is_leaf(cell)) {
-#define end_foreach_boundary_level() continue; } end_foreach_boundary_cell()
+#define foreach_boundary_level(dir,l,corners)	\
+  foreach_boundary_cell(dir,corners)		\
+    if (level == l || is_leaf(cell)) {
+#define end_foreach_boundary_level()				\
+      corners(); /* we need this otherwise we'd skip corners */	\
+      continue;							\
+    }								\
+  end_foreach_boundary_cell()
 
 #define is_face_x() !is_refined(neighbor(-1,0))
 #define is_face_y() !is_refined(neighbor(0,-1))
@@ -217,6 +222,19 @@ void quadtree_boundary (scalar * list)
 	else
 	  continue;
       }
+}
+
+void boundary_all (scalar * list)
+{
+  /* apply boundary conditions on all levels */
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell (b, true) {
+      if (is_leaf (cell))
+	continue;
+      else
+	for (scalar s in list)
+	  s[ghost] = _boundary[b][s] (point, s);
+    }
 }
 
 #undef boundary_flux

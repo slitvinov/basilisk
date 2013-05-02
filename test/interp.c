@@ -18,7 +18,8 @@ int main (int argc, char ** argv)
   boundary (h);
   
   /* initial coarsening (see halo.c) */
-  restriction (scalars (h));
+  restriction (h);
+  boundary_all (scalars (h));
   wavelet (h, w);
   double tolerance = 1e-4;
   coarsen_wavelet (w, tolerance, 0, none);

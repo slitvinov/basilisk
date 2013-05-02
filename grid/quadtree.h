@@ -81,7 +81,7 @@ size_t _size (size_t l)
        (2*point.j-GHOSTS+l))
 
 /***** Quadtree macros ****/
-#define _n (1 << point.level) /* fixme */
+#define _n (1 << point.level)
 #define cell							\
   CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
 #define _neighbor(k,l)							\
@@ -209,7 +209,7 @@ void recursive (Point point)
     }                                                                   \
   }
 
-#define _CORNERS							\
+#define corners()							\
       if (_corners) {							\
         if (_d < top) {							\
   	  if (point.j == GHOSTS)					\
@@ -248,13 +248,13 @@ void recursive (Point point)
 	  int k = _d > left ? _LEFT : _RIGHT - _d;			\
 	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;			\
 	  _push (point.level + 1, k, l, 0);				\
-	} else _CORNERS;						\
+	} else corners();						\
 	break;								\
       case 1: {								\
   	  int k = _d > left ? _RIGHT : _RIGHT - _d;			\
 	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;			\
 	  _push (point.level + 1, k, l, 0);				\
-	  _CORNERS;							\
+	  corners();							\
 	  break;							\
         }								\
       }									\
@@ -309,6 +309,22 @@ void recursive (Point point)
 #define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
 
+char * alloc_cells (int l)
+{
+  int len = _size(l), cellsize = sizeof(Cell) + datasize;
+  char * m = calloc (len, cellsize);
+#if TRASH
+  /* trash the data just to make sure it's either explicitly
+     initialised or never touched */
+  char * data = m + sizeof(Cell);
+  int nv = datasize/sizeof(double);
+  for (int i = 0; i < len; i++, data += cellsize)
+    for (int j = 0; j < nv; j++)
+      ((double *)data)[j] = undefined;
+#endif
+  return m;
+}
+
 void alloc_layer (Quadtree * p)
 {
   Quadtree * q = p->back;
@@ -317,28 +333,11 @@ void alloc_layer (Quadtree * p)
   q->m = realloc(q->m, sizeof (char *)*(q->depth + 2)); 
   q->m = &(q->m[1]);
   p->m = q->m;
-  q->m[q->depth] = calloc (_size(q->depth), sizeof (Cell) + datasize);
+  q->m[q->depth] = alloc_cells (q->depth);
   q->active = realloc (q->active, (q->depth + 1)*sizeof (Cache));
   cache_init (&q->active[q->depth]);
   q->halo = realloc (q->halo, (q->depth + 1)*sizeof (Cache));
   cache_init (&q->halo[q->depth]);
-#if TRASH
-  /* trash the data just to make sure it's either explicitly
-     initialised or never touched */
-  foreach_cell()
-    if (level == q->depth) {
-      for (scalar v = 0; v < nvar; v++)
-	val(v,0,0) = undefined;
-      continue;
-    }
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell (b, true)
-      if (level == q->depth) {
-	for (scalar v = 0; v < nvar; v++)
-	  val(v,0,0) = undefined;
-	continue;
-      }
-#endif
 }
 
 Point refine_cell (Point point, scalar * list)
@@ -509,7 +508,7 @@ void init_grid (int n)
   /* make sure we don't try to access level -1 */
   q->m[0] = NULL; q->m = &(q->m[1]);
   /* initialise the root cell */
-  q->m[0] = calloc (_size(0), sizeof (Cell) + datasize);
+  q->m[0] = alloc_cells (0);
   CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
   CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
   q->active = calloc (1, sizeof (Cache));

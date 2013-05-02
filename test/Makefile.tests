@@ -4,6 +4,7 @@ ALLTESTS = \
 	bump.c \
 	bump2D.c \
 	circle.c \
+	corners.c \
 	dry.c \
 	events.c \
 	faces.c \
@@ -52,7 +53,6 @@ TESTS = \
 	interpolate.c \
 	events.c \
 	faces.c \
-	lid.c \
 	nonlinear.c \
 	advection.c \
 	rotation.c \

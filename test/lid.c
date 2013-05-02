@@ -1,4 +1,4 @@
-#include "grid/quadtree.h"
+#include "grid/multigrid.h"
 #include "navier-stokes1.h"
 
 void parameters()

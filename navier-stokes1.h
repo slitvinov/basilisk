@@ -51,21 +51,31 @@ double timestep ()
 
 void stresses()
 {
-  foreach()
+  S.x.y = S.y.x; // fixme: the tensor is symmetric
+  foreach() {
     foreach_dimension()
       S.x.x[] = - sq(u.x[] + u.x[1,0])/4. + 2.*NU*(u.x[1,0] - u.x[])/DX;
-
-  S.x.y = S.y.x; // fixme: the tensor is symmetric
-  foreach_face() // this does too much work
     S.x.y[] = 
       - (u.x[] + u.x[0,-1])*(u.y[] + u.y[-1,0])/4. +
-      NU*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/DX;
+      NU*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/DX;    
+  }
+  foreach_boundary (left, false)
+    S.x.x[ghost] = - sq(u.x[-1,0] + u.x[])/4. + 2.*NU*(u.x[] - u.x[-1,0])/DX;
+  foreach_boundary (top, false)
+    S.x.y[ghost] = - (u.x[0,1] + u.x[])*(u.y[0,1] + u.y[-1,1])/4. +
+      NU*(u.x[0,1] - u.x[] + u.y[0,1] - u.y[-1,1])/DX;
+  foreach_boundary (right, false)
+    S.x.y[ghost] = - (u.x[1,0] + u.x[1,-1])*(u.y[1,0] + u.y[])/4. +
+      NU*(u.x[1,0] - u.x[1,-1] + u.y[1,0] - u.y[])/DX;
+  foreach_boundary (bottom, false)
+    S.y.y[ghost] = - sq(u.y[0,-1] + u.y[])/4. + 2.*NU*(u.y[] - u.y[0,-1])/DX;
 }
 
 void advance (double dt)
 {
-  foreach_face()
-    u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/DX;
+  foreach()
+    foreach_dimension()
+      u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/DX;
 }
 
 void relax (scalar a, scalar b, int l)

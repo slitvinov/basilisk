@@ -18,7 +18,8 @@ int main (int argc, char ** argv)
   boundary (h);
   
   /* initial coarsening (see halo.c) */
-  restriction (scalars (h));
+  restriction (h);
+  boundary_all (scalars (h));
   wavelet (h, w);
   double tolerance = 1e-4;
   coarsen_wavelet (w, tolerance, 0, none);
@@ -27,7 +28,19 @@ int main (int argc, char ** argv)
   foreach_face(y) v[] = exp(-(x*x + y*y)/(R0*R0));
 
   vector uv = {u,v};
+  /* see boundary_quadtree() */
   halo_restriction_flux (vectors (uv));
+  scalar * list = scalars (uv);
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell (b, true) {
+      if (is_active (cell)) {
+	if (cell.neighbors > 0)
+	  for (scalar s in list)
+	    s[ghost] = _boundary[b][s] (point, s);
+      }
+      else
+	continue;
+    }
   halo_interpolation_u_v (-1, u, v);
 
   double max = 0., maxv = 0;

@@ -24,7 +24,8 @@ int main (int argc, char ** argv)
   int i;
   for (i = 0; i < 61; i++) {
     /* coarsening */
-    restriction (scalars (h));
+    restriction (h);
+    boundary_all (scalars (h));
     wavelet (h, w);
     coarsen_wavelet (w, 1e-5, 0, none);
     if (i == 0)
