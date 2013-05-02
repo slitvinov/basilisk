@@ -28,26 +28,8 @@ void init       (void);
 
 #include "riemann.h"
 
-#if !QUADTREE
-# define trash(x)
-#endif
-
 static double flux (double dtmax)
 {
-  trash (dh, dq);
-
-  scalar * list = scalars(dh, dq);
-#if QUADTREE
-  foreach_halo()
-    for (scalar ds in list) {
-      coarse(ds,0,0) = 0.;
-      ds[] = 0.;
-    }
-#endif
-  foreach_face()
-    for (scalar ds in list)
-      ds[] = ds[-1,0] = 0.;
-
   foreach_face() {
     double eta = h[], etan = h[-1,0];
     if (eta > dry || etan > dry) {
@@ -95,10 +77,11 @@ static double flux (double dtmax)
   }
 
 #if QUADTREE
+  scalar * list = scalars(dh, dq);
   foreach_halo()
     for (scalar ds in list) {
       coarse(ds,0,0) += ds[]/2.;
-      ds[] = undefined;
+      ds[] = 0.;
     }
 #endif
 
@@ -110,10 +93,10 @@ static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
   trash (h1, q1);
   foreach() {
     h1[] = h2[] + dt*dh[]/DX;
-    dh[] = undefined;
+    dh[] = 0.;
     foreach_dimension() {
       q1.x[] = q2.x[] + dt*dq.x[]/DX;
-      dq.x[] = undefined;
+      dq.x[] = 0.;
     }
   }
   boundary (h1, q1);
@@ -126,12 +109,14 @@ void run()
   parameters();
   init_grid(N);
 
+  scalar * list = scalars (h, zb, q, dh, dq);
   foreach() {
-    zb[] = q.x[] = q.y[] = 0.;
+    for (scalar s in list)
+      s[] = 0.;
     h[] = 1.;
   }
   init();
-  boundary (h, zb, q);
+  boundary (list);
 
   timer start = timer_start();
   double t = 0.;

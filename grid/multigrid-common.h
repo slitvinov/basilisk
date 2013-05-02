@@ -45,6 +45,14 @@ void refine_linear (Point point, scalar v)
 			   (v[0,1] - v[0,-1])*(2*l-1)/8.);
 }
 
+void refine_reset (Point point, scalar v)
+{
+  /* foreach_child() */
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++)
+      fine(v,k,l) = 0.;
+}
+
 void multigrid_methods()
 {
   cartesian_methods();

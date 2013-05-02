@@ -9,6 +9,11 @@ void parameters()
 
 void init()
 {
+  /* we need the tendencies to be reinitialised during refinement */
+  scalar * tendencies = scalars (dh, dq);
+  for (scalar ds in tendencies)
+    _refine[ds] = refine_reset;
+
   foreach()
     h[] = 0.1 + 1.*exp(-200.*(x*x + y*y));
 }
@@ -16,7 +21,6 @@ void init()
 scalar w = new scalar;
 
 int event (i++) {
-  //  scalar * list = scalars (h, zb, q, dh, dq);
 
   restriction (h);
   for (int b = 0; b < nboundary; b++)
@@ -28,12 +32,12 @@ int event (i++) {
     }
   wavelet (h, w);
 
-  scalar * list = scalars (h, zb, q);
+  scalar * list = scalars (h, zb, q, dh, dq);
   double cmax = 1e-3;
   int nf = refine_wavelet (w, cmax, LEVEL, list);
   int nc = coarsen_wavelet (w, cmax/4., 0, list);
   if (nf || nc)
-    boundary (h, zb, q.x, q.y);
+    boundary (list);
 
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }
