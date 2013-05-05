@@ -1,4 +1,4 @@
-CFLAGS += -O2 $(C99FLAGS)
+CFLAGS += -O2 $(C99FLAGS) -D_POSIX_SOURCE -D_BSD_SOURCE
 
 all: qcc qplot
 

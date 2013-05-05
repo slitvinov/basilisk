@@ -12,7 +12,7 @@
   typedef struct { Scalar x, y; } Vector;
   typedef struct { Vector x, y; } Tensor;
 
-  int debug = 0, fpe = 0;
+  int debug = 0, fpe = 0, catch = 0;
   char dir[] = ".qccXXXXXX";
 
   int nvar = 0, nevents = 0;
@@ -981,6 +981,10 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 	       "#include <string.h>\n"
 	       "#include <fenv.h>\n", 
 	       fout);
+      if (catch)
+	fputs ("#define _CATCH last_point = point;\n", fout);
+      else
+	fputs ("#define _CATCH\n", fout);
       fputs ("#include \"grid.h\"\n", fout);
     }
     if (endfor (path, fin, fout))
@@ -997,6 +1001,9 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 	   "#include \"common.h\"\n"
 	   "int nvar = %d, datasize = %d*sizeof (double);\n",
 	   nvar, nvar);
+  /* catch */
+  if (catch)
+    fputs ("void catch_fpe (void);\n", fout);
   /* undefined value */
   if (fpe)
     fputs ("double undefined;\n", fout);
@@ -1054,6 +1061,8 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 	   "  memcpy (&undefined, &lnan, sizeof (long));\n"
 	   "  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n", 
 	   fout);
+  if (catch)
+    fputs ("  catch_fpe();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);
   for (int i = 0; i < nscalars; i++)
     fprintf (fout, "  new_scalar (%d);\n", scalars[i]);
@@ -1094,6 +1103,8 @@ int main (int argc, char ** argv)
       debug = 1;
     else if (!strcmp (argv[i], "-fpe"))
       fpe = 1;
+    else if (!strcmp (argv[i], "-catch"))
+      catch = 1;
     else if (argv[i][0] != '-' && 
 	     !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
       if (file) {

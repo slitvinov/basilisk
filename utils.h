@@ -9,27 +9,8 @@
 int N = 64;
 // maximum timestep
 double DT = 1e10;
-// coordinates of the center of the box
-double X0 = -0.5, Y0 = -0.5;
-// size of the box
-double L0 = 1.;
 // CFL number
 double CFL = 0.5;
-
-#define DX    (L0*delta)
-#define XC(i) ((i + 0.5)*DX + X0*L0)
-#define YC(j) ((j + 0.5)*DX + X0*L0)
-#define XU(i) ((i)*DX + X0*L0)
-#define YU(j) YC(j)
-#define XV(i) XC(i)
-#define YV(j) ((j)*DX + X0*L0)
-
-#undef VARIABLES
-#define VARIABLES							\
-  double delta = DELTA;          /* cell size */			\
-  double x  = XC(ig/2. + I), y  = YC(jg/2. + J); /* cell/face center */	\
-  /* we need this to avoid compiler warnings */	                        \
-  NOT_UNUSED(delta); NOT_UNUSED(x); NOT_UNUSED(y);
 
 void runge_kutta (int stages,
 		  double t, double dt,
@@ -143,19 +124,6 @@ void output_matrix (scalar f, int n, FILE * fp, bool linear)
     }
   }
   fflush (fp);
-}
-
-void output_cells (FILE * fp)
-{
-  foreach() {
-    delta /= 2.;
-    fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
-	     x - delta, y - delta,
-	     x - delta, y + delta,
-	     x + delta, y + delta,
-	     x + delta, y - delta,
-	     x - delta, y - delta);
-  }
 }
 
 typedef struct {

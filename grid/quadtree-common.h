@@ -232,10 +232,6 @@ void quadtree_boundary (scalar * list)
 Point locate (double xp, double yp)
 {
   foreach_cell () {
-    /* fixme: this should use coordinates as defined in utils.h etc... */
-    double delta = DELTA;
-    double x = (point.i - GHOSTS + 0.5)*delta - 0.5;
-    double y = (point.j - GHOSTS + 0.5)*delta - 0.5;
     delta /= 2.;
     if (xp < x - delta || xp > x + delta || yp < y - delta || yp > y + delta)
       continue;

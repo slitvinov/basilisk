@@ -1,5 +1,26 @@
 #include "events.h"
 
+void (* debug)    (Point);
+
+// coordinates of the center of the box
+double X0 = -0.5, Y0 = -0.5;
+// size of the box
+double L0 = 1.;
+#define DX    (L0*delta)
+#define XC(i) ((i + 0.5)*DX + X0*L0)
+#define YC(j) ((j + 0.5)*DX + X0*L0)
+
+#undef VARIABLES
+#define VARIABLES							\
+  double delta = DELTA;          /* cell size */			\
+  double x  = XC(ig/2. + I), y  = YC(jg/2. + J); /* cell/face center */	\
+  /* we need this to avoid compiler warnings */	                        \
+  NOT_UNUSED(delta); NOT_UNUSED(x); NOT_UNUSED(y);			\
+  /* and this when catching FPEs */					\
+  _CATCH
+
+#include "fpe.h"
+
 #ifndef is_face_x
 # define is_face_x() true
 # define is_face_y() true
@@ -103,10 +124,47 @@ tensor cartesian_new_tensor (tensor t)
   return t;
 }
 
+void output_cells (FILE * fp)
+{
+  foreach() {
+    delta /= 2.;
+    fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
+	     x - delta, y - delta,
+	     x - delta, y + delta,
+	     x + delta, y + delta,
+	     x + delta, y - delta,
+	     x - delta, y - delta);
+  }
+}
+
+void cartesian_debug (Point point)
+{
+  FILE * fp = fopen ("cells", "w");
+  output_cells (fp);
+  fclose (fp);
+
+  fp = fopen ("stencil", "w");
+  for (int k = -1; k <= 1; k++)
+    for (int l = -1; l <= 1; l++) {
+      fprintf (fp, "%g %g", x + k*delta, y + l*delta);
+      for (scalar v = 0; v < nvar; v++)
+	fprintf (fp, " %g", val(v,k,l));
+      fputc ('\n', fp);
+    }
+  fclose (fp);
+
+  fputs ("Last point stencils can be displayed using e.g.\n"
+	 "gnuplot> v=0\n"
+	 "gnuplot> plot 'cells' w l lc 0, "
+	 "'stencil' u 1:2:3+v w labels tc lt 1",
+	 stderr);
+}
+
 void cartesian_methods()
 {
   new_scalar = cartesian_new_scalar;
   new_vector = cartesian_new_vector;
   new_tensor = cartesian_new_tensor;
   boundary   = cartesian_boundary;
+  debug = cartesian_debug;
 }
