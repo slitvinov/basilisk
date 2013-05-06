@@ -90,7 +90,8 @@ static double flux (double dtmax)
 
 static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
 {
-  trash (h1, q1);
+  if (h1 != h2)
+    trash (h1, q1);
   foreach() {
     h1[] = h2[] + dt*dh[]/DX;
     dh[] = 0.;
@@ -115,6 +116,7 @@ void run()
       s[] = 0.;
     h[] = 1.;
   }
+  boundary (list);
   init();
   boundary (list);
 

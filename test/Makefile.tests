@@ -18,6 +18,7 @@ ALLTESTS = \
 	parabola.c \
 	poisson.c \
 	refine.c \
+	rest.c \
 	rk2.c \
 	rotation.c \
 	speed.c \
