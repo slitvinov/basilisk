@@ -9,7 +9,7 @@ plots: $(subst .plot,.png,$(PLOTS))
 clean:
 	rm -f *.*tst *.d *.*log *.*out *.png *.*exe *.prof Makefile.deps
 
-.PRECIOUS: %.exe %.cexe %.pgexe
+.PRECIOUS: %.exe %.cexe %.pgexe %.prof
 
 %.tst: %.exe
 	@echo \[$@\]

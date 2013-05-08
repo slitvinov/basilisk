@@ -71,7 +71,7 @@ int event (i++) {
 /* } */
 
 /* event (t += 0.1; t <= 5.) { */
-/*   wavelet (f, w);
+/*   wavelet (f, w); */
 /*   output_matrix (w, N, stdout, false); */
 /* } */
 

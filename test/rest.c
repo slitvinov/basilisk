@@ -8,7 +8,7 @@ void parameters()
 
 int refine (Point point, void * data)
 {
-  return x < 0.1;
+  return x < 0.1 && y < 0.1;
 }
 
 void init()
@@ -16,7 +16,7 @@ void init()
   refine_function (refine, NULL, scalars (h, zb, q, dh, dq));
 
   foreach() {
-    zb[] = 0.2*exp(-200*x*x);
+    zb[] = 0.2*exp(-200*(x*x + y*y));
     h[] = 1. - zb[];
   }
 }
@@ -24,7 +24,7 @@ void init()
 int event (i = 1)
 {
   norm n = normf (q.x);
-  fprintf (stderr, "%g %g %g\n", n.avg, n.rms, n.max);
+  fprintf (stderr, "# %g %g %g\n", n.avg, n.rms, n.max);
   foreach ()
     printf ("%g %g %g %g %g\n", x, y, h[], zb[], q.x[]);
 }

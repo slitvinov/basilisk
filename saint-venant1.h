@@ -31,52 +31,66 @@ void init       (void);
 static double flux (double dtmax)
 {
   foreach_face() {
-    double eta = h[], etan = h[-1,0];
-    if (eta > dry || etan > dry) {
+    double hi = h[], hn = h[-1,0];
+    if (hi > dry || hn > dry) {
       double dx = delta/2.;
-      double zbL = zb[] - dx*gzb.x[];
-      double zbR = zb[-1,0] + dx*gzb.x[-1,0];
-      double zbLR = max(zbL, zbR);
+      double zl = zb[] - dx*gzb.x[];
+      double zr = zb[-1,0] + dx*gzb.x[-1,0];
+      double zlr = max(zl, zr);
       
-      double etaL = eta <= dry ? 0. : eta - dx*gh.x[];
-      double uL, vL;
-      if (etaL > dry) {
-	uL = (q.x[] - dx*gq.x.x[])/etaL;
-	vL = (q.y[] - dx*gq.y.x[])/etaL;
+      double hl = hi <= dry ? 0. : hi - dx*gh.x[];
+      double up, vp;
+      if (hl > dry) {
+	up = (q.x[] - dx*gq.x.x[])/hl;
+	vp = (q.y[] - dx*gq.y.x[])/hl;
       }
       else
-	uL = vL = 0.;
-      double hL = max(0., etaL + zbL - zbLR);
+	up = vp = 0.;
+      double hp = max(0., hl + zl - zlr);
       
-      double etaR = etan <= dry ? 0. : etan + dx*gh.x[-1,0];
-      double uR, vR;
-      if (etaR > dry) {
-	uR = (q.x[-1,0] + dx*gq.x.x[-1,0])/etaR;
-	vR = (q.y[-1,0] + dx*gq.y.x[-1,0])/etaR;
+      double hr = hn <= dry ? 0. : hn + dx*gh.x[-1,0];
+      double um, vm;
+      if (hr > dry) {
+	um = (q.x[-1,0] + dx*gq.x.x[-1,0])/hr;
+	vm = (q.y[-1,0] + dx*gq.y.x[-1,0])/hr;
       }
       else
-	uR = vR = 0.;
-      double hR = max(0., etaR + zbR - zbLR);
+	um = vm = 0.;
+      double hm = max(0., hr + zr - zlr);
 
       // Riemann solver
       double fh, fu, fv;
-      kurganov (hR, hL, uR, uL, DX, &fh, &fu, &dtmax);
-      fv = (fh > 0. ? vR : vL)*fh;
+      kurganov (hm, hp, um, up, DX, &fh, &fu, &dtmax);
+      fv = (fh > 0. ? vm : vp)*fh;
 
       // topographic source term
-      if (eta <= dry) eta = 0.;
-      if (etan <= dry) etan = 0.;
-      double SbL = G/2.*(sq(hL) - sq(etaL) + dx*(etaL + eta)*gzb.x[]);
-      double SbR = G/2.*(sq(hR) - sq(etaR) - dx*(etaR + etan)*gzb.x[-1,0]);
+      double zi = zb[], zn = zb[-1,0];
+#if QUADTREE
+      // this is necessary to ensure balance at fine/coarse boundaries
+      // see notes/balanced.tm
+      if (!(cell.flags & (fghost|active))) {
+	hi = coarse(h,0,0);
+	zi = coarse(zb,0,0);
+      }
+      if (!(neighbor(-1,0).flags &(fghost|active))) {
+	hn = coarse(h,-1,0);
+	zn = coarse(zb,-1,0);
+      }
+#endif
+      if (hi <= dry) hi = 0.;
+      if (hn <= dry) hn = 0.;
+      double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
+      double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
 
       // update tendencies
         dh[] += fh;           dh[-1,0] -= fh;
       dq.y[] += fv;         dq.y[-1,0] -= fv;
-      dq.x[] += fu - SbL;   dq.x[-1,0] -= fu - SbR;
+      dq.x[] += fu - sl;   dq.x[-1,0] -= fu - sr;
     }
   }
 
 #if QUADTREE
+  // propagate updates from fine to coarse
   scalar * list = scalars(dh, dq);
   foreach_halo()
     for (scalar ds in list) {
