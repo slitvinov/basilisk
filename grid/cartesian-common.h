@@ -74,6 +74,13 @@ void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
   }
 }
 
+void clone_scalar (scalar s, scalar clone)
+{
+  for (int d = 0; d < nboundary; d++)
+    _boundary[d][clone] = _boundary[d][s];
+  _refine[clone] = _refine[s];
+}
+
 // Cartesian methods
 
 void (* boundary) (scalar *);

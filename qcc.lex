@@ -42,7 +42,7 @@
   int nreduct;
 
   int inboundary;
-  char * boundaryfunc;
+  char * boundaryfunc, boundaryvar[80];
   int nboundary = 0;
 
   int infunction, functionscope, functionpara;
@@ -219,6 +219,13 @@
       fprintf (stderr, "%s:%d: function declarations\n", fname, line);
     fputs (" int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
 	   " POINT_VARIABLES; ", yyout);
+  }
+
+  char * boundaryrep (char * name) {
+    if (!inboundary || strcmp(name, boundaryvar))
+      return name;
+    static char s[] = "_s";
+    return s;
   }
 
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
@@ -451,7 +458,7 @@ end_foreach{ID}*{SP}*"()" {
 
 new{WS}+scalar {
   if (scope > 0)
-    fprintf (yyout, "(*new_scalar)(%d)", nvar);
+    fprintf (yyout, "new_scalar (%d)", nvar);
   else {
     fprintf (yyout, "%d", nvar);
     nscalars++;
@@ -505,9 +512,9 @@ new{WS}+tensor {
       *s = '\0';
       if (yytext[yyleng-1] == ']')
 	/* v[] */
-	fprintf (yyout, "val(%s,0,0)", yytext);
+	fprintf (yyout, "val(%s,0,0)", boundaryrep(yytext));
       else {
-	fprintf (yyout, "val(%s", yytext);
+	fprintf (yyout, "val(%s", boundaryrep(yytext));
 	if (var->args > 0) {
 	  /* v[...][... */
 	  fputc ('[', yyout);
@@ -581,13 +588,14 @@ new{WS}+tensor {
 			    strlen (func) + 1)*sizeof (char));
     sprintf (boundaryfunc, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
     fprintf (yyout, 
-	     "double _%s%s (Point point, scalar s) {"
+	     "double _%s%s (Point point, scalar _s) {"
 	     " int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
 	     " POINT_VARIABLES; "
 	     " return ", 
 	     func, b);
     free (func);
     inboundary = inforeach_boundary = 1;
+    strcpy (boundaryvar, yytext);
     inforeach = 2;
   }
   else

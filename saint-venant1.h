@@ -5,7 +5,8 @@
 // q: flow rate
 scalar h = new scalar, zb = new scalar;
 vector q = new vector;
-// storage for predictor/corrector
+// extra storage for predictor/corrector
+// fixme: not needed for first-order scheme
 scalar h1 = new scalar;
 vector q1 = new vector;
 // gradients
@@ -124,6 +125,14 @@ void run()
   parameters();
   init_grid(N);
 
+#if QUADTREE
+  // we need the tendencies to be reinitialised during refinement
+  scalar * tendencies = scalars (dh, dq);
+  for (scalar ds in tendencies)
+    _refine[ds] = refine_reset;
+#endif
+
+  // default values
   scalar * list = scalars (h, zb, q, dh, dq);
   foreach() {
     for (scalar s in list)
@@ -131,9 +140,17 @@ void run()
     h[] = 1.;
   }
   boundary (list);
+
+  // user-defined initial conditions
   init();
   boundary (list);
 
+  // clone temporary storage
+  clone_scalar (h, h1);
+  foreach_dimension()
+    clone_scalar (q.x, q1.x);
+
+  // main loop
   timer start = timer_start();
   double t = 0.;
   int i = 0, tnc = 0;
@@ -150,7 +167,7 @@ void run()
       /* 2nd-order time-integration */
       /* predictor */
       update (q, q1, h, h1, dt/2.);
-      swap (vector, q, q1); // fixme: boundary conditions?
+      swap (vector, q, q1);
       swap (scalar, h, h1);
       
       /* corrector */

@@ -9,11 +9,6 @@ void parameters()
 
 void init()
 {
-  /* we need the tendencies to be reinitialised during refinement */
-  scalar * tendencies = scalars (dh, dq);
-  for (scalar ds in tendencies)
-    _refine[ds] = refine_reset;
-
   foreach()
     h[] = 0.1 + 1.*exp(-200.*(x*x + y*y));
 }

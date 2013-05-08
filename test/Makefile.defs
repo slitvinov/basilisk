@@ -37,13 +37,13 @@ clean:
 	diff $*.log $*.ref
 	@touch $@
 
-%.exe: %.c ../qcc
+%.exe: %.c ../qcc Makefile
 	../qcc $(CFLAGS) -o $@ -lm $<
 
-%.cexe: %.c ../qcc
+%.cexe: %.c ../qcc Makefile
 	../qcc -grid=multigrid $(CFLAGS) -o $@ -lm $<
 
-%.pgexe: %.c ../qcc
+%.pgexe: %.c ../qcc Makefile
 	../qcc $(CFLAGS) -pg -o $@ -lm $<
 
 %.prof: %.pgexe
