@@ -9,6 +9,7 @@ ALLTESTS = \
 	events.c \
 	faces.c \
 	halo.c \
+	hump.c \
 	interp.c \
 	interpolate.c \
 	interpu.c \
@@ -31,6 +32,7 @@ PLOTS = \
 	dry.plot \
 	faces.plot \
 	halo.plot \
+	hump.plot \
 	interp.plot \
 	interpolate.plot \
 	interpu.plot \
@@ -58,6 +60,7 @@ TESTS = \
 	advection.c \
 	rotation.c \
 	bump2D.c \
+	hump.c \
 
 SPECIAL_TESTS = \
 	laplacian.ctst \
