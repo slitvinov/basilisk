@@ -10,6 +10,7 @@ int main (int argc, char ** argv)
 {
   init_grid (32);
 
+  X0 = Y0 = -0.5;
   double R0 = 0.1;
   foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));

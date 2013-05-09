@@ -4,6 +4,7 @@
 
 void parameters()
 {
+  X0 = Y0 = -0.5;
   N = 1 << LEVEL;
 }
 
@@ -11,22 +12,6 @@ void init()
 {
   foreach()
     h[] = 0.1 + 1.*exp(-200.*(x*x + y*y));
-}
-
-scalar w = new scalar;
-
-int event (i++) {
-
-  wavelet (h, w);
-
-  double cmax = 1e-3;
-  scalar * list = scalars (h, zb, q, dh, dq);
-  int nf = refine_wavelet (w, cmax, LEVEL, list);
-  int nc = coarsen_wavelet (w, cmax/4., 0, list);
-  if (nf || nc)
-    boundary (list);
-
-  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }
 
 int event (i++) {
@@ -60,6 +45,20 @@ int event (t <= 2.5; t += 2.5/8) {
     point = locate (x, -y);
     assert (fabs(h0 - h[]) < 1e-12);
   }
+}
+
+int event (i++) {
+  scalar w = new scalar;
+  wavelet (h, w);
+
+  double cmax = 1e-3;
+  scalar * list = scalars (h, zb, q, dh, dq);
+  int nf = refine_wavelet (w, cmax, LEVEL, list);
+  int nc = coarsen_wavelet (w, cmax/4., 0, list);
+  if (nf || nc)
+    boundary (list);
+
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }
 
 int main() { run(); }

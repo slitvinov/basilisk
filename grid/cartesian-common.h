@@ -2,18 +2,12 @@
 
 void (* debug)    (Point);
 
-// coordinates of the center of the box
-double X0 = -0.5, Y0 = -0.5;
-// size of the box
-double L0 = 1.;
-#define DX    (L0*delta)
-#define XC(i) ((i + 0.5)*DX + X0*L0)
-#define YC(j) ((j + 0.5)*DX + X0*L0)
-
 #undef VARIABLES
 #define VARIABLES							\
-  double delta = DELTA;          /* cell size */			\
-  double x  = XC(ig/2. + I), y  = YC(jg/2. + J); /* cell/face center */	\
+  double delta = L0*DELTA; /* cell size */				\
+  /* cell/face center coordinates */					\
+  double x  = (ig/2. + I + 0.5)*delta + X0;				\
+  double y  = (jg/2. + J + 0.5)*delta + Y0;				\
   /* we need this to avoid compiler warnings */	                        \
   NOT_UNUSED(delta); NOT_UNUSED(x); NOT_UNUSED(y);			\
   /* and this when catching FPEs */					\

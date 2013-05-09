@@ -27,6 +27,7 @@ int main (int argc, char ** argv)
 {
   init_grid (16);
 
+  X0 = Y0 = -0.5;
   refineiter();
 
   foreach_halo()

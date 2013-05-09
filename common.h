@@ -37,7 +37,12 @@
 
 #define VARIABLES
 
-void * grid = NULL;       // the grid
+// the grid
+void * grid = NULL;
+// coordinates of the lower-left corner of the box
+double X0 = 0., Y0 = 0.;
+// size of the box
+double L0 = 1.;
 
 typedef int scalar;
 

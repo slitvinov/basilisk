@@ -3,6 +3,7 @@
 
 void parameters()
 {
+  X0 = Y0 = -0.5;
   N = 500;
 }
 

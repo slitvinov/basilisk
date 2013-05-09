@@ -3,6 +3,8 @@
 #include "atmosphere.h"
 
 void parameters() {
+  // coordinates of lower-left corner
+  X0 = Y0 = -0.5;
   // number of grid points
   N = 128;
   // size of the box

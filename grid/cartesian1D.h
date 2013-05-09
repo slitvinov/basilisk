@@ -64,10 +64,10 @@ void free_grid (void)
   free_solver();
 }
 
-Point locate (double x, double y)
+Point locate (double xp, double yp)
 {
   Point point = *((Point *)grid);
-  point.i = (x + 0.5)*point.n + 1;
+  point.i = (xp - X0)/L0*point.n + 1;
   point.level = (point.i >= 1 && point.i <= point.n) ? 0 : - 1;
   return point;
 }

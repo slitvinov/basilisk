@@ -12,6 +12,7 @@ int refine_func (Point point, void * data) {
 
 int main (int argc, char ** argv)
 {
+  X0 = Y0 = -0.5;
   for (int n = 8; n <= 64; n *= 2) {
     init_grid (n);
 

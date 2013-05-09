@@ -63,7 +63,7 @@ static double flux (Point point, int i, double dtmax)
     fw.x[i,0] = (ap*hum - am*hup + ap*am*(wp - wm))/(ap - am); // (4.5) of [1]
     fhu.x[i,0] = (ap*(hum*um + G*sq(hm)/2.) - am*(hup*up + G*sq(hp)/2.) + 
 		  ap*am*(hup - hum))/(ap - am);
-    double dt = CFL*DX/a;
+    double dt = CFL*delta/a;
     return dt < dtmax ? dt : dtmax;
   }
   fw.x[i,0] = fhu.x[i,0] = 0.;
@@ -75,10 +75,10 @@ static void update (scalar hu2, scalar hu1, scalar w2, scalar w1, double dt)
   foreach() {
     double Bp = (B[1,0] + B[])/2., Bm = (B[-1,0] + B[])/2.;
     double S = G*(w[] - (Bp + Bm)/2.)*(Bp - Bm); // (2.10) of [2]
-    hu1[] = hu2[] + dt*(fhu.x[] - fhu.x[1,0] - S)/DX;
+    hu1[] = hu2[] + dt*(fhu.x[] - fhu.x[1,0] - S)/delta;
   }
   foreach()
-    w1[] = w2[] + dt*(fw.x[] - fw.x[1,0])/DX;
+    w1[] = w2[] + dt*(fw.x[] - fw.x[1,0])/delta;
   boundary (w1);
   boundary (hu1);
 }

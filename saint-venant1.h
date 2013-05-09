@@ -61,7 +61,7 @@ static double flux (double dtmax)
 
       // Riemann solver
       double fh, fu, fv;
-      kurganov (hm, hp, um, up, DX, &fh, &fu, &dtmax);
+      kurganov (hm, hp, um, up, delta, &fh, &fu, &dtmax);
       fv = (fh > 0. ? vm : vp)*fh;
 
       // topographic source term
@@ -108,10 +108,10 @@ static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
   if (h1 != h2)
     trash (h1, q1);
   foreach() {
-    h1[] = h2[] + dt*dh[]/DX;
+    h1[] = h2[] + dt*dh[]/delta;
     dh[] = 0.;
     foreach_dimension() {
-      q1.x[] = q2.x[] + dt*dq.x[]/DX;
+      q1.x[] = q2.x[] + dt*dq.x[]/delta;
       dq.x[] = 0.;
     }
   }

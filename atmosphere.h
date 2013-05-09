@@ -109,14 +109,14 @@ void ke_psi (scalar u, scalar v)
     double vc = v[]*v[] + v[0,1]*v[0,1];
     ke[] = (uc + vc)/4.;
 #endif
-    psi[] = (v[] - v[-1,0] + u[0,-1] - u[])/DX;
+    psi[] = (v[] - v[-1,0] + u[0,-1] - u[])/delta;
   }
   foreach_boundary (right, true)
-    psi[1,0] = (v[1,0] - v[] + u[1,-1] - u[1,0])/DX;
+    psi[1,0] = (v[1,0] - v[] + u[1,-1] - u[1,0])/delta;
   foreach_boundary (left, true)
     ke[-1,0] = (sq(u[-1,0] + u[]) + sq(v[-1,0] + v[-1,1]))/8.;
   foreach_boundary (top, true)
-    psi[0,1] = (v[0,1] - v[-1,1] + u[] - u[0,1])/DX;
+    psi[0,1] = (v[0,1] - v[-1,1] + u[] - u[0,1])/delta;
   foreach_boundary (bottom, true)
     ke[0,-1] = (sq(u[0,-1] + u[1,-1]) + sq(v[0,-1] + v[]))/8.;
 }

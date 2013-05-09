@@ -80,11 +80,11 @@ double interpolate (scalar v, double xp, double yp)
 void output_field (scalar f, int n, FILE * fp, bool linear)
 {
   fprintf (fp, "# 1:x 2:y 3:F\n");
-  double delta = 1./n;
+  double delta = L0/n;
   for (int i = 0; i < n; i++) {
-    double x = delta*i - 0.5 + delta/2.;
+    double x = delta*i + X0 + delta/2.;
     for (int j = 0; j < n; j++) {
-      double y = delta*j - 0.5 + delta/2., v;
+      double y = delta*j + Y0 + delta/2., v;
       if (linear)
 	v = interpolate (f, x, y);
       else {
@@ -102,17 +102,17 @@ void output_field (scalar f, int n, FILE * fp, bool linear)
 void output_matrix (scalar f, int n, FILE * fp, bool linear)
 {
   float fn = n;
-  float delta = 1./fn;
+  float delta = L0/fn;
   fwrite (&fn, sizeof(float), 1, fp);
   for (int j = 0; j < n; j++) {
-    float y = delta*j - 0.5 + delta/2.;
+    float y = delta*j + X0 + delta/2.;
     fwrite (&y, sizeof(float), 1, fp);
   }
   for (int i = 0; i < n; i++) {
-    float x = delta*i - 0.5 + delta/2.;
+    float x = delta*i + X0 + delta/2.;
     fwrite (&x, sizeof(float), 1, fp);
     for (int j = 0; j < n; j++) {
-      float y = delta*j - 0.5 + delta/2., v;
+      float y = delta*j + Y0 + delta/2., v;
       if (linear)
 	v = interpolate (f, x, y);
       else {

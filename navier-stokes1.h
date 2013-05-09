@@ -54,28 +54,28 @@ void stresses()
   S.x.y = S.y.x; // fixme: the tensor is symmetric
   foreach() {
     foreach_dimension()
-      S.x.x[] = - sq(u.x[] + u.x[1,0])/4. + 2.*NU*(u.x[1,0] - u.x[])/DX;
+      S.x.x[] = - sq(u.x[] + u.x[1,0])/4. + 2.*NU*(u.x[1,0] - u.x[])/delta;
     S.x.y[] = 
       - (u.x[] + u.x[0,-1])*(u.y[] + u.y[-1,0])/4. +
-      NU*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/DX;    
+      NU*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/delta;
   }
   foreach_boundary (left, false)
-    S.x.x[ghost] = - sq(u.x[-1,0] + u.x[])/4. + 2.*NU*(u.x[] - u.x[-1,0])/DX;
+    S.x.x[ghost] = - sq(u.x[-1,0] + u.x[])/4. + 2.*NU*(u.x[] - u.x[-1,0])/delta;
   foreach_boundary (top, false)
     S.x.y[ghost] = - (u.x[0,1] + u.x[])*(u.y[0,1] + u.y[-1,1])/4. +
-      NU*(u.x[0,1] - u.x[] + u.y[0,1] - u.y[-1,1])/DX;
+      NU*(u.x[0,1] - u.x[] + u.y[0,1] - u.y[-1,1])/delta;
   foreach_boundary (right, false)
     S.x.y[ghost] = - (u.x[1,0] + u.x[1,-1])*(u.y[1,0] + u.y[])/4. +
-      NU*(u.x[1,0] - u.x[1,-1] + u.y[1,0] - u.y[])/DX;
+      NU*(u.x[1,0] - u.x[1,-1] + u.y[1,0] - u.y[])/delta;
   foreach_boundary (bottom, false)
-    S.y.y[ghost] = - sq(u.y[0,-1] + u.y[])/4. + 2.*NU*(u.y[] - u.y[0,-1])/DX;
+    S.y.y[ghost] = - sq(u.y[0,-1] + u.y[])/4. + 2.*NU*(u.y[] - u.y[0,-1])/delta;
 }
 
 void advance (double dt)
 {
   foreach()
     foreach_dimension()
-      u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/DX;
+      u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/delta;
 }
 
 void relax (scalar a, scalar b, int l)
@@ -119,7 +119,7 @@ void projection (vector u, scalar p,
 	     "  sum: %g\n", 
 	     NITERMAX, sum);
   foreach_face()
-    u.x[] -= (p[] - p[-1,0])/DX;
+    u.x[] -= (p[] - p[-1,0])/delta;
 }
 
 void run (void)

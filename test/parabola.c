@@ -3,6 +3,7 @@
 
 void parameters()
 {
+  X0 = -5000.;
   L0 = 10000.;
   G = 9.81;
 }
@@ -66,8 +67,8 @@ int event (t += 50; t <= 6000) {
   if (N == 128) {
     double sq = 0., sh = 0.;
     foreach() {
-      sq += DX*q.x[];
-      sh += DX*h[];
+      sq += delta*q.x[];
+      sh += delta*h[];
     }
     printf ("s %g %g %f\n", t, sq/sh, sh);
   }

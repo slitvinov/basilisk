@@ -13,6 +13,8 @@ int refine_circle (Point point, void * data)
 
 void parameters()
 {
+  // coordinates of lower-left corner
+  X0 = Y0 = -0.5;
   // maximum timestep
   DT = .1;
   // CFL number
