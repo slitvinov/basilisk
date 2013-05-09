@@ -60,6 +60,11 @@ clean:
 	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $< || rm -f $@
 
 Makefile.tests: Makefile Makefile.defs
+	@-if test ! -d ../_darcs; then 					\
+           touch Makefile.tests; 					\
+	   echo "Makefile.tests not updated (not darcs-controlled)";  	\
+	   exit 1;							\
+	 fi
 	@echo "updating Makefile.tests"
 	@echo "# Automatically generated using 'make Makefile.tests'" \
 	     > Makefile.tests

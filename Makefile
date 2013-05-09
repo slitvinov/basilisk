@@ -20,3 +20,6 @@ qcc.c: qcc.lex
 
 tags:
 	etags *.h grid/*.h
+
+dist:
+	darcs dist
