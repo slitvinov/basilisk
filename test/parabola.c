@@ -34,8 +34,8 @@ void init()
 int event (i++) {
   // linear friction (implicit scheme)
   foreach()
-    q.x[] /= 1. + tau*dt;
-  boundary (q.x);
+    u.x[] /= 1. + tau*dt;
+  boundary (u.x);
 }
 
 scalar e = new scalar;
@@ -58,7 +58,7 @@ int event (i++) {
 int event (t = 1500) {
   if (N == 64) {
     foreach()
-      printf ("p %g %g %g %g %g\n", x, h[], q.x[], zb[], e[]);
+      printf ("p %g %g %g %g %g\n", x, h[], u.x[], zb[], e[]);
     printf ("p\n");
   }
 }
@@ -67,7 +67,7 @@ int event (t += 50; t <= 6000) {
   if (N == 128) {
     double sq = 0., sh = 0.;
     foreach() {
-      sq += delta*q.x[];
+      sq += delta*h[]*u.x[];
       sh += delta*h[];
     }
     printf ("s %g %g %f\n", t, sq/sh, sh);

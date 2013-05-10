@@ -10,7 +10,7 @@ void parameters()
 void init()
 {
   h[right] = 0.;
-  q.x[right] = q.x[];
+  u.x[right] = u.x[];
   foreach() {
     zb[] = 0.25*(cos(pi*x/0.1) + 1.)*(fabs(x) < 0.1);
     h[] = 0.8 - zb[];
@@ -18,8 +18,10 @@ void init()
 }
 
 int event (t = {0.5, 0.75, 1, 3, 50}) {
-  foreach()
-    fprintf (stderr, "%g %g %g %g\n", x, h[], q.x[], zb[]);
+  foreach() {
+    fprintf (stderr, "%g %g %g %g\n", x, h[], u.x[], zb[]);
+    assert (h[] > 0.);
+  }
   fprintf (stderr, "\n");
 }
 

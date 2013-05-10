@@ -6,6 +6,7 @@ ALLTESTS = \
 	circle.c \
 	corners.c \
 	dry.c \
+	drybump2D.c \
 	events.c \
 	faces.c \
 	halo.c \
@@ -30,6 +31,7 @@ PLOTS = \
 	bump2D.plot \
 	circle.plot \
 	dry.plot \
+	drybump2D.plot \
 	faces.plot \
 	halo.plot \
 	hump.plot \
@@ -61,6 +63,7 @@ TESTS = \
 	rotation.c \
 	bump2D.c \
 	hump.c \
+	drybump2D.c \
 
 SPECIAL_TESTS = \
 	laplacian.ctst \

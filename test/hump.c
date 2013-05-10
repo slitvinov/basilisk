@@ -12,10 +12,10 @@ void parameters()
   L0 = 2.;
 }
 
-q.x[left]   = q.x[];
-q.x[right]  = q.x[];
-q.y[top]    = q.y[];
-q.y[bottom] = q.y[];
+u.x[left]   = u.x[];
+u.x[right]  = u.x[];
+u.y[top]    = u.y[];
+u.y[bottom] = u.y[];
 
 void init()
 {
@@ -60,7 +60,7 @@ int event (i++) {
   wavelet (eta, w);
 
   double cmax = 1e-4;
-  scalar * list = scalars (h, zb, q, dh, dq);
+  scalar * list = scalars (h, zb, u, dh, dq);
   int nf = refine_wavelet (w, cmax, MAXLEVEL, list);
   int nc = coarsen_wavelet (w, cmax/4., MINLEVEL, list);
   if (nf || nc)

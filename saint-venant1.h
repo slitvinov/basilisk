@@ -2,16 +2,16 @@
 
 // h: water depth
 // zb: bathymetry
-// q: flow rate
+// u: flow speed
 scalar h = new scalar, zb = new scalar;
-vector q = new vector;
+vector u = new vector;
 // extra storage for predictor/corrector
 // fixme: not needed for first-order scheme
 scalar h1 = new scalar;
-vector q1 = new vector;
+vector u1 = new vector;
 // gradients
 vector gh = new vector, gzb = new vector;
-tensor gq = new tensor;
+tensor gu = new tensor;
 // tendencies
 scalar dh = new scalar;
 vector dq = new vector;
@@ -39,30 +39,18 @@ static double flux (double dtmax)
       double zr = zb[-1,0] + dx*gzb.x[-1,0];
       double zlr = max(zl, zr);
       
-      double hl = hi <= dry ? 0. : hi - dx*gh.x[];
-      double up, vp;
-      if (hl > dry) {
-	up = (q.x[] - dx*gq.x.x[])/hl;
-	vp = (q.y[] - dx*gq.y.x[])/hl;
-      }
-      else
-	up = vp = 0.;
+      double hl = hi - dx*gh.x[];
+      double up = u.x[] - dx*gu.x.x[];
       double hp = max(0., hl + zl - zlr);
       
-      double hr = hn <= dry ? 0. : hn + dx*gh.x[-1,0];
-      double um, vm;
-      if (hr > dry) {
-	um = (q.x[-1,0] + dx*gq.x.x[-1,0])/hr;
-	vm = (q.y[-1,0] + dx*gq.y.x[-1,0])/hr;
-      }
-      else
-	um = vm = 0.;
+      double hr = hn + dx*gh.x[-1,0];
+      double um = u.x[-1,0] + dx*gu.x.x[-1,0];
       double hm = max(0., hr + zr - zlr);
 
       // Riemann solver
       double fh, fu, fv;
       kurganov (hm, hp, um, up, delta, &fh, &fu, &dtmax);
-      fv = (fh > 0. ? vm : vp)*fh;
+      fv = (fh > 0. ? u.y[-1,0] + dx*gu.y.x[-1,0] : u.y[] - dx*gu.y.x[])*fh;
 
       // topographic source term
       double zi = zb[], zn = zb[-1,0];
@@ -78,15 +66,13 @@ static double flux (double dtmax)
 	zn = coarse(zb,-1,0);
       }
 #endif
-      if (hi <= dry) hi = 0.;
-      if (hn <= dry) hn = 0.;
       double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
       double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
 
       // update tendencies
-        dh[] += fh;           dh[-1,0] -= fh;
-      dq.y[] += fv;         dq.y[-1,0] -= fv;
-      dq.x[] += fu - sl;   dq.x[-1,0] -= fu - sr;
+        dh[] += fh;         dh[-1,0] -= fh;
+      dq.y[] += fv;       dq.y[-1,0] -= fv;
+      dq.x[] += fu - sl;  dq.x[-1,0] -= fu - sr;
     }
   }
 
@@ -103,19 +89,23 @@ static double flux (double dtmax)
   return dtmax;
 }
 
-static void update (vector q2, vector q1, scalar h2, scalar h1, double dt)
+static void update (vector u2, vector u1, scalar h2, scalar h1, double dt)
 {
   if (h1 != h2)
-    trash (h1, q1);
+    trash (h1, u1);
   foreach() {
     h1[] = h2[] + dt*dh[]/delta;
     dh[] = 0.;
-    foreach_dimension() {
-      q1.x[] = q2.x[] + dt*dq.x[]/delta;
-      dq.x[] = 0.;
-    }
+    if (h1[] > dry)
+      foreach_dimension() {
+	u1.x[] = (h2[]*u2.x[] + dt*dq.x[]/delta)/h1[];
+	dq.x[] = 0.;
+      }
+    else
+      foreach_dimension()
+	u1.x[] = dq.x[] = 0.;
   }
-  boundary (h1, q1);
+  boundary (h1, u1);
 }
 
 double dt = 0.;
@@ -133,7 +123,7 @@ void run()
 #endif
 
   // default values
-  scalar * list = scalars (h, zb, q, dh, dq);
+  scalar * list = scalars (h, zb, u, dh, dq);
   foreach() {
     for (scalar s in list)
       s[] = 0.;
@@ -148,32 +138,32 @@ void run()
   // clone temporary storage
   clone_scalar (h, h1);
   foreach_dimension()
-    clone_scalar (q.x, q1.x);
+    clone_scalar (u.x, u1.x);
 
   // main loop
   timer start = timer_start();
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    gradient (scalars (h, zb, q), vectors (gh, gzb, gq));
-
+    gradient (scalars (h, zb, u), vectors (gh, gzb, gu));
     dt = dtnext (t, flux (DT));
 
     if (gradient == zero)
       /* 1st-order time-integration for 1st-order spatial
 	 discretisation */
-      update (q, q, h, h, dt);
+      update (u, u, h, h, dt);
     else {
       /* 2nd-order time-integration */
       /* predictor */
-      update (q, q1, h, h1, dt/2.);
-      swap (vector, q, q1);
+      update (u, u1, h, h1, dt/2.);
+      swap (vector, u, u1);
       swap (scalar, h, h1);
       
       /* corrector */
-      gradient (scalars (h, q), vectors (gh, gq));
-      flux (dt);
-      update (q1, q, h1, h, dt);
+      gradient (scalars (h, u), vectors (gh, gu));
+      dt = flux (dt);
+
+      update (u1, u, h1, h, dt);
     }
 
     foreach (reduction(+:tnc)) 
