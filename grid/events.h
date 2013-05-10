@@ -132,7 +132,8 @@ int events (int i, double t)
 double dtnext (double t, double dt)
 {
   if (tnext != INFINITY) {
-    int n = (tnext - t)/dt;
+    unsigned int n = (tnext - t)/dt;
+    assert (n < INT_MAX); // check that dt is not too small
     dt = (tnext - t)/(n + 1);
     if (n > 0)
       tnext = t + dt;
