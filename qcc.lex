@@ -352,13 +352,14 @@ end_foreach{ID}*{SP}*"()" {
 }
 
 ;  {
+  int insthg = 0;
   if (foreachdim && scope == foreachdim && para == foreachdimpara) {
-    ECHO;
+    ECHO; insthg = 1;
     endforeachdim ();
   }
   if (infunction && scope == functionscope) {
     if (scope > 0) {
-      fputs ("; ", yyout);
+      fputs ("; ", yyout); insthg = 1;
       infunction_declarations();
     }
     infunction = 0;
@@ -395,7 +396,7 @@ end_foreach{ID}*{SP}*"()" {
     ECHO;
     endevent ();
   }
-  else
+  else if (!insthg)
     ECHO;
   invardecl = 0;
 }
@@ -618,33 +619,66 @@ ghost {
   ECHO;
 }
 
-for{WS}*[(]{WS}*(scalar|vector){WS}+{ID}+{WS}+in{WS}+{ID}+{WS}*[)] {
-  /* for (scalar .. in .. ) */
+for{WS}*[(]{WS}*(scalar|vector){WS}+{ID}+{WS}+in{WS}+ {
+  /* for (scalar .. in .. */
   char * s = strchr (&yytext[3], 'r'); s++;
   int vartype = s[-2] == 'o' ? vector : scalar;
   nonspace (s);
   char * id = s;
   while (!strchr (" \t\v\n\f", *s)) s++;
-  *s++ = '\0';
-  s = strchr (s, 'n'); s++;
-  nonspace (s);
-  char * list = s;
-  while (!strchr (" \t\v\n\f)", *s)) s++;
-  *s++ = '\0';
+  *s = '\0';
+  char * list = malloc (sizeof(char)); list[0] = '\0';
+  int nl = 1, c;
+  char last[] = ")";
+  while ((c = input()) != EOF) {
+    if (c == ')')
+      break;
+    if (c == '(') {
+      // this is a list
+      last[0] = '\0';
+      para ++;
+      FILE * fp = yyout;
+      yyout = dopen ("for_scalar.h", "w");
+      if (scalar_list (vartype, 0))
+	return 1;
+      fclose (yyout); yyout = fp;
+      fp = dopen ("for_scalar.h", "r");
+      nl = strlen(vartype == scalar ? "scalars(" : "vectors(") + 1;
+      list = realloc (list, (nl + 1)*sizeof(char));
+      strcpy (list, vartype == scalar ? "scalars(" : "vectors(");
+      while ((c = fgetc (fp)) != ')') {
+	list = realloc (list, (nl + 1)*sizeof(char));
+	list[nl - 1] = c;
+	list[nl++] = '\0';	
+      }
+      list[nl - 1] = ')';
+      list[nl++] = '\0';
+      fclose (fp);
+      break;
+    }
+    else {
+      list = realloc (list, (nl + 1)*sizeof(char));
+      list[nl - 1] = c;
+      list[nl++] = '\0';
+    }
+  }
+  if (c != ')')
+    return yyerror ("expecting ')'");
   static int i = 0;
   if (vartype == scalar)
     fprintf (yyout,
-	     "for (scalar %s = *%s, *_i%d = %s; %s >= 0; %s = *++_i%d)",
-	     id, list, i, list, id, id, i);
+	     "for (scalar %s = *%s, *_i%d = %s; %s >= 0; %s = *++_i%d%s",
+	     id, list, i, list, id, id, i, last);
   else
     fprintf (yyout,
-	     "for (vector %s = *%s, *_i%d = %s; %s.x >= 0; %s = *++_i%d)",
-	     id, list, i, list, id, id, i);
+	     "for (vector %s = *%s, *_i%d = %s; %s.x >= 0; %s = *++_i%d%s",
+	     id, list, i, list, id, id, i, last);
+  free (list);
   i++;
   varpush (id, vartype, scope);
 }
 
-for{WS}*[(][^)]+{WS}+in{WS}+[^)]+[)] {
+for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
   /* for (a,b in c,d) */
   char * id[10], * list[10];
   int nid = 0, nlist = 0, inin = 0;
