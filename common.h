@@ -16,6 +16,7 @@
 #define pi 3.14159265358979
 #undef HUGE
 #define HUGE 1e30
+#define nodata DBL_MAX
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define sq(x) ((x)*(x))
@@ -55,6 +56,8 @@ typedef struct {
 typedef struct {
   vector x, y;
 } tensor;
+
+#define norm(v) (sqrt(sq(val(v.x,0,0)) + sq(val(v.y,0,0))))
 
 #define val(a,k,l)     data(k,l)[a]
 #define fine(a,k,l)    _fine(a,k,l)

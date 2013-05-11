@@ -161,7 +161,7 @@ void run()
       
       /* corrector */
       gradient (scalars (h, u), vectors (gh, gu));
-      dt = flux (dt);
+      flux (dt);
 
       update (u1, u, h1, h, dt);
     }

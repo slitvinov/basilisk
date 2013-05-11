@@ -1,7 +1,7 @@
 #define GRIDNAME "Cartesian 1D"
 
 #define I     (point.i - 1)
-#define J     ((point.n - 1)/2.)
+#define J     -0.5
 #define DELTA (1./point.n)
 
 struct _Point {

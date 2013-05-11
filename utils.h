@@ -63,7 +63,7 @@ double interpolate (scalar v, double xp, double yp)
 {
   Point point = locate (xp, yp);
   if (point.level < 0)
-    return undefined;
+    return nodata;
   x = (xp - x)/delta;
   y = (yp - y)/delta;
   assert (x >= -0.5 && x <= 0.5);
@@ -77,22 +77,29 @@ double interpolate (scalar v, double xp, double yp)
 	  val(v,i,j)*x*y);
 }
 
-void output_field (scalar f, int n, FILE * fp, bool linear)
+void output_field (scalar * list, int n, FILE * fp, bool linear)
 {
-  fprintf (fp, "# 1:x 2:y 3:F\n");
+  fprintf (fp, "# 1:x 2:y");
+  int i = 3;
+  for (scalar s in list)
+    fprintf (fp, " %d:%d", i++, s);
+  fputc('\n', fp);
   double delta = L0/n;
   for (int i = 0; i < n; i++) {
     double x = delta*i + X0 + delta/2.;
     for (int j = 0; j < n; j++) {
-      double y = delta*j + Y0 + delta/2., v;
-      if (linear)
-	v = interpolate (f, x, y);
+      double y = delta*j + Y0 + delta/2.;
+      fprintf (fp, "%g %g", x, y);
+      if (linear) {
+	for (scalar s in list)
+	  fprintf (fp, " %g", interpolate (s, x, y));
+      }
       else {
 	Point point = locate (x, y);
-	assert (point.level >= 0);
-	v = val(f,0,0);
+	for (scalar s in list)
+	  fprintf (fp, " %g", point.level >= 0 ? val(s,0,0) : nodata);
       }
-      fprintf (fp, "%g %g %g\n", x, y, v);
+      fputc ('\n', fp);
     }
     fputc ('\n', fp);
   }

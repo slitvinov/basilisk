@@ -24,19 +24,23 @@ void init()
 }
 
 int event (i++) {
+  foreach() {
+    x -= -0.25; y -= -0.25;
+    zb[] = 0.5*exp(-200.*(x*x + y*y));
+  }
+  boundary (zb);
+}
+
+int event (i++) {
   stats s = statsf (h);
   fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
-  assert (s.min >= -dry);
+  //  assert (s.min >= -dry);
 }
 
 int event (t <= 1.2; t += 1.2/8) {
-  scalar eta = new scalar;
-  foreach()
-    eta[] = h[] > 1e-4 ? h[] : DBL_MAX;
-  boundary (eta);
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field (eta, N, stdout, true);
+  output_field (h, N, stdout, true);
 
   scalar l = new scalar;
   foreach()
@@ -45,14 +49,14 @@ int event (t <= 1.2; t += 1.2/8) {
   output_field (l, N, stdout, false);
 }
 
-int event (i = -1) {
+int event (i++) {
   scalar w = new scalar;
   wavelet (h, w);
 
   double cmax = 1e-3;
   scalar * list = scalars (h, zb, u, dh, dq);
   int nf = refine_wavelet (w, cmax, LEVEL, list);
-  int nc = coarsen_wavelet (w, cmax/4., 5, list);
+  int nc = coarsen_wavelet (w, cmax/4., 0, list);
   if (nf || nc)
     boundary (list);
 

@@ -3,6 +3,8 @@
 set term pngcairo enhanced size 640,640
 
 set size ratio -1
+set xrange [-0.5:0.5]
+set yrange [-0.5:0.5]
 unset key
 unset xtics
 unset ytics
@@ -14,19 +16,19 @@ set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1, \
     	              0.375 0.05882 1 0.9333, 0.5 0.5647 1 0.4392, \
 		      0.625 1 0.9333 0, 0.75 1 0.4392 0, \
 		      0.875 0.9333 0 0, 1 0.498 0 0 )
-# set cbrange [0:.2]
 
 s=1.6
+dry=1e-4
 set multiplot layout 3,3 scale s,s
-splot 'eta-0'
-splot 'eta-1'
-splot 'eta-2'
-splot 'eta-3'
-splot 'eta-4'
-splot 'eta-5'
-splot 'eta-6'
-splot 'eta-7'
-splot 'eta-8'
+splot 'eta-0' u 1:2:($3 > dry ? $3 : 1e1000)
+splot 'eta-1' u 1:2:($3 > dry ? $3 : 1e1000)
+splot 'eta-2' u 1:2:($3 > dry ? $3 : 1e1000)
+splot 'eta-3' u 1:2:($3 > dry ? $3 : 1e1000)
+splot 'eta-4' u 1:2:($3 > dry ? $3 : 1e1000)
+splot 'eta-5' u 1:2:($3 > dry ? $3 : 1e1000)
+splot 'eta-6' u 1:2:($3 > dry ? $3 : 1e1000)
+splot 'eta-7' u 1:2:($3 > dry ? $3 : 1e1000)
+splot 'eta-8' u 1:2:($3 > dry ? $3 : 1e1000)
 unset multiplot
 
 set output 'drybump2D_level.png'

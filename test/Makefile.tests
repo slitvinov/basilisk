@@ -6,6 +6,7 @@ ALLTESTS = \
 	circle.c \
 	corners.c \
 	dry.c \
+	drybump.c \
 	drybump2D.c \
 	events.c \
 	faces.c \
@@ -19,6 +20,7 @@ ALLTESTS = \
 	nonlinear.c \
 	parabola.c \
 	poisson.c \
+	ponds.c \
 	refine.c \
 	rest.c \
 	rk2.c \
@@ -31,6 +33,7 @@ PLOTS = \
 	bump2D.plot \
 	circle.plot \
 	dry.plot \
+	drybump.plot \
 	drybump2D.plot \
 	faces.plot \
 	halo.plot \
@@ -43,6 +46,7 @@ PLOTS = \
 	nonlinear.plot \
 	parabola.plot \
 	poisson.plot \
+	ponds.plot \
 	refine.plot \
 	rk2.plot \
 	rotation.plot \
@@ -64,6 +68,7 @@ TESTS = \
 	bump2D.c \
 	hump.c \
 	drybump2D.c \
+	ponds.c \
 
 SPECIAL_TESTS = \
 	laplacian.ctst \

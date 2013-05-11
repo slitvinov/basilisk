@@ -12,21 +12,21 @@ void restriction (scalar * list)
       s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
 }
 
-void wavelet (scalar v, scalar w)
+void wavelet (scalar s, scalar w)
 {
-  restriction (v);
-  boundary_restriction (v);
+  restriction (s);
+  boundary_restriction (s);
   foreach_fine_to_coarse() {
     /* difference between fine value and bilinearly-interpolated
        coarse value */
-    fine(w,0,0) = fine(v,0,0) - 
-      (9.*v[] + 3.*(v[-1,0] + v[0,-1]) + v[-1,-1])/16.;
-    fine(w,0,1) = fine(v,0,1) - 
-      (9.*v[] + 3.*(v[-1,0] + v[0,+1]) + v[-1,+1])/16.;
-    fine(w,1,0) = fine(v,1,0) - 
-      (9.*v[] + 3.*(v[+1,0] + v[0,-1]) + v[+1,-1])/16.;
-    fine(w,1,1) = fine(v,1,1) - 
-      (9.*v[] + 3.*(v[+1,0] + v[0,+1]) + v[+1,+1])/16.;
+    fine(w,0,0) = fine(s,0,0) - 
+      (9.*s[] + 3.*(s[-1,0] + s[0,-1]) + s[-1,-1])/16.;
+    fine(w,0,1) = fine(s,0,1) - 
+      (9.*s[] + 3.*(s[-1,0] + s[0,+1]) + s[-1,+1])/16.;
+    fine(w,1,0) = fine(s,1,0) - 
+      (9.*s[] + 3.*(s[+1,0] + s[0,-1]) + s[+1,-1])/16.;
+    fine(w,1,1) = fine(s,1,1) - 
+      (9.*s[] + 3.*(s[+1,0] + s[0,+1]) + s[+1,+1])/16.;
   }
   /* root cell */
   foreach_level(0) w[] = 0.;

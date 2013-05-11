@@ -21,7 +21,7 @@ void init()
 
 int event (i++) {
   stats s = statsf (h);
-  fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
+  fprintf (stderr, "%g %d %g %g %.8f %g\n", t, i, s.min, s.max, s.sum, dt);
   assert (s.min >= 0.);
 }
 
