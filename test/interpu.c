@@ -34,7 +34,7 @@ int main (int argc, char ** argv)
       if (is_active (cell)) {
 	if (cell.neighbors > 0)
 	  for (scalar s in list)
-	    s[ghost] = _boundary[b][s] (point, s);
+	    s[ghost] = method[s].boundary[b] (point, s);
       }
       else
 	continue;

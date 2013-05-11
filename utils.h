@@ -211,100 +211,53 @@ static double generic_limiter (double r, double beta)
   return max (v1, v2);
 }
 
-static double minmod1   (double r) { return generic_limiter (r, 1.);  }
-static double superbee1 (double r) { return generic_limiter (r, 2.);  }
-static double sweby1    (double r) { return generic_limiter (r, 1.5); }
-
-void centered (scalar * f, vector * g)
-{
-  assert (scalars_len(f) == vectors_len(g));
-  trash ((scalar *) g);
-  foreach() {
-    scalar s; vector v;
-    for (s,v in f,g)
-      foreach_dimension()
-	v.x[] = (s[1,0] - s[-1,0])/2./delta;
-  }
-  boundary ((scalar *) g);
+double minmod (double s0, double s1, double s2) {
+  return generic_limiter ((s2 - s1)/(s1 - s0), 1.)*(s1 - s0);
 }
 
-void minmod (scalar * f, vector * g)
-{
-  assert (scalars_len(f) == vectors_len(g));
-  trash ((scalar *) g);
-  foreach() {
-    scalar s; vector v;
-    for (s,v in f,g)
-      foreach_dimension()
-	v.x[] = minmod1 ((s[1,0] - s[])/(s[] - s[-1,0]))*(s[] - s[-1,0])/delta;
-  }
-  boundary ((scalar *) g);
+double superbee (double s0, double s1, double s2) {
+  return generic_limiter ((s2 - s1)/(s1 - s0), 2.)*(s1 - s0);
+}
+
+double sweby (double s0, double s1, double s2) {
+  return generic_limiter ((s2 - s1)/(s1 - s0), 1.5)*(s1 - s0);
 }
 
 double theta = 1.3;
 
-static double minmod2 (double a, double b, double c)
+double minmod2 (double s0, double s1, double s2)
 {
-  if (a > 0. && b > 0. && c > 0.)
-    return min(min(a,b),c);
-  if (a < 0. && b < 0. && c < 0.)
-    return max(max(a,b),c);
+  if (s0 < s1 && s1 < s2) {
+    double d1 = theta*(s1 - s0), d2 = (s2 - s0)/2., d3 = theta*(s2 - s1);
+    if (d2 < d1) d1 = d2;
+    return min(d1, d3);
+  }
+  if (s0 > s1 && s1 > s2) {
+    double d1 = theta*(s1 - s0), d2 = (s2 - s0)/2., d3 = theta*(s2 - s1);
+    if (d2 > d1) d1 = d2;
+    return max(d1, d3);
+  }
   return 0.;
 }
 
-void generalized_minmod (scalar * f, vector * g)
+double zero (double s0, double s1, double s2)
 {
-  assert (scalars_len(f) == vectors_len(g));
-  trash ((scalar *) g);
-  /* see (A.6) in 
-   *    Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
-   *    Saint-Venant system. Mathematical Modelling and Numerical
-   *    Analysis, 36(3), 397-425.*/
-  foreach() {
-    scalar s; vector v;
-    for (s,v in f,g)
-      foreach_dimension()
-	v.x[] = minmod2 (theta*(s[] - s[-1,0]), 
-			 (s[1,0] - s[-1,0])/2., 
-			 theta*(s[1,0] - s[]))/delta;
-  }
-  boundary ((scalar *) g);
+  return 0.;
 }
 
-void superbee (scalar * f, vector * g)
+void gradients (scalar * f, vector * g)
 {
   assert (scalars_len(f) == vectors_len(g));
   trash ((scalar *) g);
   foreach() {
     scalar s; vector v;
     for (s,v in f,g)
-      foreach_dimension()
-	v.x[] = superbee1 ((s[1,0] - s[])/(s[] - s[-1,0]))*(s[] - s[-1,0])
-	/delta;
+      if (method[s].gradient)
+	foreach_dimension()
+	  v.x[] = method[s].gradient (s[-1,0], s[], s[1,0])/delta;
+      else // centered
+	foreach_dimension()
+	  v.x[] = (s[1,0] - s[-1,0])/(2.*delta);
   }
-  boundary ((scalar *) g);
-}
-
-void sweby (scalar * f, vector * g)
-{
-  assert (scalars_len(f) == vectors_len(g));
-  trash ((scalar *) g);
-  foreach() {
-    scalar s; vector v;
-    for (s,v in f,g)
-      foreach_dimension()
-	v.x[] = sweby1 ((s[1,0] - s[])/(s[] - s[-1,0]))*(s[] - s[-1,0])/delta;
-  }
-  boundary ((scalar *) g);
-}
-
-void zero (scalar * f, vector * g)
-{
-  assert (scalars_len(f) == vectors_len(g));
-  trash ((scalar *) g);
-  foreach()
-    for (vector v in g)
-      foreach_dimension()
-	v.x[] = 0.;
   boundary ((scalar *) g);
 }

@@ -26,13 +26,13 @@ int event (t <= 2.5; t += 2.5/8) {
   boundary (eta);
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field (eta, N, stdout, true);
+  output_field (scalars (eta), N, stdout, true);
 
   scalar l = new scalar;
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
-  output_field (l, N, stdout, false);
+  output_field (scalars (l), N, stdout, false);
 
   /* check symmetry */
   foreach() {

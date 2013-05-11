@@ -582,11 +582,12 @@ new{WS}+tensor {
 	*s1 = '_';
       s1++;
     }
-    boundaryfunc = malloc ((strlen ("_boundary[][] = _;") + 
+    boundaryfunc = malloc ((strlen ("method[].boundary[] = _;") + 
 			    2*strlen (b) + 
 			    strlen(yytext) + 
 			    strlen (func) + 1)*sizeof (char));
-    sprintf (boundaryfunc, "_boundary[%s][%s] = _%s%s;", b, yytext, func, b);
+    sprintf (boundaryfunc, "method[%s].boundary[%s] = _%s%s;", 
+	     yytext, b, func, b);
     fprintf (yyout, 
 	     "double _%s%s (Point point, scalar _s) {"
 	     " int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
@@ -1051,12 +1052,9 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
     fprintf (fout, "static void _boundary%d (void);\n", i);
   /* methods */
   fprintf (fout, "void %s_methods(void);\n", grid);
-  fputs ("static void init_solver (void) {\n"
-	 "  for (int b = 0; b < nboundary; b++)\n"
-	 "    _boundary[b] = calloc (nvar, sizeof (BoundaryFunc));\n",
-	 fout);
-  /* refinement functions */
-  fputs ("  _refine = calloc (nvar, sizeof (RefineFunc));\n", fout);
+  fputs ("static void init_solver (void) {\n", fout);
+  /* scalar methods */
+  fputs ("  method = calloc (nvar, sizeof (Methods));\n", fout);
   if (fpe)
     /* Initialises unused memory with "signaling NaNs".  
      * This is probably not very portable, tested with

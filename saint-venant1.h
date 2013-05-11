@@ -20,7 +20,7 @@ vector dq = new vector;
 // acceleration of gravity
 double G = 1.;
 // gradient
-void (* gradient) (scalar *, vector *) = generalized_minmod;
+double (* gradient) (double, double, double) = minmod2;
 // dry
 double dry = 1e-10;
 // user-provided functions
@@ -78,9 +78,8 @@ static double flux (double dtmax)
 
 #if QUADTREE
   // propagate updates from fine to coarse
-  scalar * list = scalars(dh, dq);
   foreach_halo()
-    for (scalar ds in list) {
+    for (scalar ds in (dh, dq)) {
       coarse(ds,0,0) += ds[]/2.;
       ds[] = 0.;
     }
@@ -117,10 +116,15 @@ void run()
 
 #if QUADTREE
   // we need the tendencies to be reinitialised during refinement
-  scalar * tendencies = scalars (dh, dq);
-  for (scalar ds in tendencies)
-    _refine[ds] = refine_reset;
+  for (scalar ds in (dh, dq))
+    method[ds].refine = refine_reset;
 #endif
+
+  // limiting
+  for (scalar s in (h, zb, u))
+    method[s].gradient = gradient;
+  for (scalar s in (gh, gzb, gu))
+    method[s].gradient = zero;
 
   // default values
   scalar * list = scalars (h, zb, u, dh, dq);
@@ -145,7 +149,7 @@ void run()
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    gradient (scalars (h, zb, u), vectors (gh, gzb, gu));
+    gradients (scalars (h, zb, u), vectors (gh, gzb, gu));
     dt = dtnext (t, flux (DT));
 
     if (gradient == zero)
@@ -160,7 +164,7 @@ void run()
       swap (scalar, h, h1);
       
       /* corrector */
-      gradient (scalars (h, u), vectors (gh, gu));
+      gradients (scalars (h, u), vectors (gh, gu));
       flux (dt);
 
       update (u1, u, h1, h, dt);

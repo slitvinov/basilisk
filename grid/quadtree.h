@@ -398,7 +398,7 @@ Point refine_cell (Point point, scalar * list)
 
   /* initialise scalars */
   for (scalar s in list)
-    _refine[s] (point, s);
+    method[s].refine (point, s);
 
   return point;
 }

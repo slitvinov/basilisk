@@ -5,7 +5,7 @@ vector u = new vector; // velocity
 
 // Default parameters
 // gradient
-void (* gradient) (scalar *, vector *) = centered;
+double (* gradient) (double, double, double) = NULL; // centered
 // user-provided functions
 void parameters  (void);
 void init        (void);
@@ -45,6 +45,7 @@ void run (void)
 {
   parameters();
   init_grid (N);
+  method[f].gradient = gradient;
   foreach()
     f[] = u.x[] = u.y[] = 0.;
   init();
@@ -56,7 +57,7 @@ void run (void)
   while (events (i, t)) {
     double dt = dtnext (t, timestep (u));
     vector flux = new vector, g = new vector;
-    (* gradient) (scalars (f), vectors (g));
+    gradients (scalars (f), vectors (g));
     fluxes_upwind_bcg (f, g, u, flux, dt);
     foreach()
       f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;

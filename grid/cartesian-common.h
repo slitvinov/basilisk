@@ -36,7 +36,6 @@ void (* debug)    (Point);
   }
 
 #define boundary_flux(...)
-
 #define output_stencil(v,fp) _output_stencil(point,v,#v,fp)
 void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
 {
@@ -70,9 +69,7 @@ void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
 
 void clone_scalar (scalar s, scalar clone)
 {
-  for (int d = 0; d < nboundary; d++)
-    _boundary[d][clone] = _boundary[d][s];
-  _refine[clone] = _refine[s];
+  method[clone] = method[s];
 }
 
 // Cartesian methods
@@ -84,7 +81,7 @@ void cartesian_boundary (scalar * list)
   for (int b = 0; b < nboundary; b++)
     foreach_boundary (b, true) // also traverse corners
       for (scalar s in list)
-	s[ghost] = _boundary[b][s] (point, s);
+	s[ghost] = method[s].boundary[b] (point, s);
 }
 
 static double symmetry (Point point, scalar s)
@@ -101,17 +98,17 @@ scalar cartesian_new_scalar (scalar s)
 {
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++)
-    _boundary[b][s] = symmetry;
+    method[s].boundary[b] = symmetry;
   return s;
 }
 
 vector cartesian_new_vector (vector v)
 {
   /* set default boundary conditions (symmetry) */
-  _boundary[top][v.x] = _boundary[bottom][v.x] = symmetry;
-  _boundary[right][v.y] = _boundary[left][v.y] = symmetry;
-  _boundary[right][v.x] = _boundary[left][v.x] = antisymmetry;
-  _boundary[top][v.y] = _boundary[bottom][v.y] = antisymmetry;
+  method[v.x].boundary[top] = method[v.x].boundary[bottom] = symmetry;
+  method[v.y].boundary[right] = method[v.y].boundary[left] = symmetry;
+  method[v.x].boundary[right] = method[v.x].boundary[left] = antisymmetry;
+  method[v.y].boundary[top] = method[v.y].boundary[bottom] = antisymmetry;
   return v;
 }
 
@@ -119,8 +116,8 @@ tensor cartesian_new_tensor (tensor t)
 {
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++) {
-    _boundary[b][t.x.x] = _boundary[b][t.y.y] = symmetry;
-    _boundary[b][t.x.y] = _boundary[b][t.y.x] = antisymmetry;
+    method[t.x.x].boundary[b] = method[t.y.y].boundary[b] = symmetry;
+    method[t.x.y].boundary[b] = method[t.y.x].boundary[b] = antisymmetry;
   }
   return t;
 }

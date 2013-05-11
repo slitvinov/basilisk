@@ -33,20 +33,22 @@ int event (i++) {
 
 int event (i++) {
   stats s = statsf (h);
-  fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
-  //  assert (s.min >= -dry);
+  norm n = normf (u.x);
+  fprintf (stderr, "%g %d %g %g %.8f %g %g %g\n", t, i, s.min, s.max, s.sum, 
+	   n.rms, n.max, dt);
+  assert (s.min >= 0.);
 }
 
 int event (t <= 1.2; t += 1.2/8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field (h, N, stdout, true);
+  output_field (scalars (h), N, stdout, true);
 
   scalar l = new scalar;
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
-  output_field (l, N, stdout, false);
+  output_field (scalars (l), N, stdout, false);
 }
 
 int event (i++) {

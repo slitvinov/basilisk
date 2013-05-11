@@ -130,15 +130,17 @@ int _ig[nboundary] = {1,-1,0,0},
     _jg[nboundary] = {0,0,1,-1};
 
 typedef struct _Point Point;
-typedef double (* BoundaryFunc) (Point, scalar);
-typedef void   (* RefineFunc)   (Point, scalar);
 
-BoundaryFunc * _boundary[nboundary]; // boundary conditions for each scalar
-RefineFunc   * _refine;              // refinement function for each scalar
+// methods for each scalar
+typedef struct {
+  double   (* boundary[nboundary]) (Point, scalar);
+  void     (* refine)              (Point, scalar);
+  double   (* gradient)            (double, double, double);
+} Methods;
+
+Methods * method;
 
 void free_solver()
 {
-  for (int b = 0; b < nboundary; b++)
-    free (_boundary[b]);
-  free (_refine);
+  free (method);
 }

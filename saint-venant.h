@@ -22,7 +22,7 @@ vector fhu = new vector, fw = new vector;
 // acceleration of gravity
 double G = 1.;
 // gradient
-void (* gradient) (scalar *, vector *) = generalized_minmod;
+double (* gradient) (double, double, double) = minmod2;
 // user-provided functions
 void parameters (void);
 void init       (void);
@@ -89,7 +89,11 @@ void run (void)
 {
   parameters();
   init_grid(N);
-  
+
+  // limiting
+  for (scalar s in (hu, w))
+    method[s].gradient = gradient;
+
   foreach() {
     hu[] = B[] = 0.;
     w[] = 1.;
@@ -102,6 +106,10 @@ void run (void)
     w[] = max(w[], (B[-1,0] + 2.*B[] + B[1,0])/4.);
   boundary (w);
 
+  // clone temporary storage
+  clone_scalar (hu, hu1);
+  clone_scalar (w, w1);
+
   timer start = timer_start();
   double t = 0.;
   int i = 0, tnc = 0;
@@ -109,7 +117,7 @@ void run (void)
     /* 2nd-order predictor-corrector */
 
     /* predictor */
-    (* gradient) (scalars (hu, w), vectors (ghu, gw));
+    gradients (scalars (hu, w), vectors (ghu, gw));
     boundary (ghu.x, gw.x);
 
     dt = DT;
@@ -124,7 +132,7 @@ void run (void)
     swap (scalar, w, w1);
 
     /* corrector */
-    (* gradient) (scalars (hu, w), vectors (ghu, gw));
+    gradients (scalars (hu, w), vectors (ghu, gw));
     positivity();
     boundary (ghu.x, gw.x);
 
