@@ -28,7 +28,7 @@ int event (i++) {
     x -= -0.25; y -= -0.25;
     zb[] = 0.5*exp(-200.*(x*x + y*y));
   }
-  boundary (zb);
+  boundary ({zb});
 }
 
 int event (i++) {
@@ -42,13 +42,13 @@ int event (i++) {
 int event (t <= 1.2; t += 1.2/8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field (scalars (h), N, stdout, true);
+  output_field ({h}, N, stdout, true);
 
   scalar l = new scalar;
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
-  output_field (scalars (l), N, stdout, false);
+  output_field ({l}, N, stdout, false);
 }
 
 int event (i++) {
@@ -56,7 +56,7 @@ int event (i++) {
   wavelet (h, w);
 
   double cmax = 1e-3;
-  scalar * list = scalars (h, zb, u, dh, dq);
+  scalar * list = {h, zb, u, dh, dq};
   int nf = refine_wavelet (w, cmax, LEVEL, list);
   int nc = coarsen_wavelet (w, cmax/4., 0, list);
   if (nf || nc)

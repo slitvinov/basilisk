@@ -50,7 +50,7 @@ int main (int argc, char ** argv)
     b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);
     a[] = 0.;
   }
-  boundary (a);
+  boundary ({a});
 
   #define NITER 15
   clock_t start = clock(), iter[NITER];
@@ -60,7 +60,7 @@ int main (int argc, char ** argv)
     mg_cycle (a, res, dp,
 	      relax, homogeneous_boundary,
 	      nrelax, 0);
-    boundary (a);
+    boundary ({a});
     residual (a, b, res);
     double max = 0.;
     foreach()

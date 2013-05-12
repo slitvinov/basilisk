@@ -12,15 +12,15 @@ void refineiter ()
     fprintf (stderr, "\nwavelet refinement\n");
     foreach()
       h[] = exp(-(x*x + y*y)/(0.01));
-    boundary (h);
+    boundary ({h});
 
     wavelet (h, w);
 
-    int nf = refine_wavelet (w, 1e-2, 12, scalars (h));
+    int nf = refine_wavelet (w, 1e-2, 12, {h});
 
     fprintf (stderr, "refined %d cells\n", nf);
   }
-  boundary (h);
+  boundary ({h});
 }
 
 int main (int argc, char ** argv)

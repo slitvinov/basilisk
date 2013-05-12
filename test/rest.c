@@ -14,7 +14,7 @@ int refine (Point point, void * data)
 
 void init()
 {
-  refine_function (refine, NULL, scalars (h, zb, u, dh, dq));
+  refine_function (refine, NULL, {h, zb, u, dh, dq});
 
   foreach() {
     zb[] = 0.2*exp(-200*(x*x + y*y));

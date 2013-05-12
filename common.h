@@ -64,8 +64,6 @@ typedef struct {
 #define coarse(a,k,l)  _coarse(a,k,l)
 #define neighbor(k,l)  _neighbor(k,l)
 
-#define scalars(...) (scalar []){__VA_ARGS__,-1}
-#define vectors(...) (vector []){__VA_ARGS__,{-1,-1}}
 #define none         (scalar []){-1}
 
 int vectors_len (vector * list)

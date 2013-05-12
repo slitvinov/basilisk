@@ -30,7 +30,7 @@ void homogeneous_boundary (scalar * v, int l)
   foreach_boundary_level (bottom, l, true) p[ghost] = - p[];
   /* we don't need to restrict because the solution is already defined
      on coarse levels */
-  halo_prolongation (l, scalars (p));
+  halo_prolongation (l, {p});
 }
 
 void relax (scalar a, scalar b, int l)
@@ -46,7 +46,7 @@ void residual (scalar a, scalar b, scalar res)
   vector g = new vector;
   foreach_face()
     g.x[] = (a[] - a[-1,0])/delta;
-  boundary_flux (g);
+  boundary_flux ({g});
   foreach()
     res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/delta;
 #else
@@ -74,7 +74,7 @@ void solve (int depth)
     a[] = 0.;
     b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);
   }
-  boundary (a);
+  boundary ({a});
 
   #define NITER 15
   clock_t start = clock(), iter[NITER];
@@ -84,7 +84,7 @@ void solve (int depth)
     mg_cycle (a, res, dp,
 	      relax, homogeneous_boundary,
 	      nrelax, 0);
-    boundary (a);
+    boundary ({a});
     residual (a, b, res);
     double max = 0.;
     foreach()

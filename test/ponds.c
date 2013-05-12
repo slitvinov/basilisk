@@ -24,7 +24,7 @@ void init()
 int event (i++) {
   foreach()
     zb[] = zb(x,y);
-  boundary (zb);
+  boundary ({zb});
 }
 
 int event (i++) {
@@ -34,7 +34,7 @@ int event (i++) {
     foreach_dimension()
       u.x[] /= a;
   }
-  boundary (u);
+  boundary ((scalar *){u});
 }
 
 int event (i += 10) {
@@ -48,13 +48,13 @@ int event (i += 10) {
 int event (t <= 1200.; t += 1200./8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field (scalars (h, zb, u), N, stdout, true);
+  output_field ({h, zb, u}, N, stdout, true);
 
   scalar l = new scalar;
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf);
-  output_field (scalars (h, zb, l), N, stdout, false);
+  output_field ({h, zb, l}, N, stdout, false);
 
   nf++;
 }
@@ -65,11 +65,11 @@ int event (t <= 1200.; t += 1200./8) {
 int event (i++) {
   scalar eta = new scalar, w = new scalar;
   foreach() eta[] = h[] + zb[];
-  boundary (eta);
+  boundary ({eta});
   wavelet (h, w);
 
   double cmax = 1e-2;
-  scalar * list = scalars (h, zb, u, dh, dq);
+  scalar * list = {h, zb, u, dh, dq};
   int nf = refine_wavelet (w, cmax, LEVEL, list);
   int nc = coarsen_wavelet (w, cmax/4., 4, list);
   if (nf || nc)

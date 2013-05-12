@@ -228,6 +228,74 @@
     return s;
   }
 
+  char * makelist (const char * input, int type) {
+    char * text = malloc (sizeof (char)*(strlen(input) - 1));
+    strncpy (text, &input[1], strlen (input) - 1);
+    text[strlen (input) - 2] = '\0';
+    char * s = strtok (text, " \t\v\n\f,");
+    int listtype = 100;
+    while (s) {
+      char * dot = strchr (s, '.');
+      var_t * var = varlookup (s, strlen(s) - (dot ? strlen(dot) : 0));
+      if (!var) { // not a scalar or vector list, give up
+	free (text);
+	return NULL;
+      }
+      int vtype = var->type;
+      while (dot) {
+	vtype--;
+	dot = strchr (dot+1, '.');
+      }
+      if (vtype < listtype)
+	listtype = vtype;
+      s = strtok (NULL, " \t\v\n\f,)");
+    }
+    if (listtype < type) { // incompatible list types
+      free (text);
+      return NULL;
+    }      
+    if (type >= 0)
+      listtype = type;
+    char * list = calloc (strlen("((scalar []){") + 1, sizeof (char));
+    if (listtype == scalar)
+      strcpy (list, "((scalar []){");
+    else
+      strcpy (list, "((vector []){");
+    strncpy (text, &input[1], strlen (input) - 1);
+    text[strlen (input) - 2] = '\0';
+    s = strtok (text, " \t\v\n\f,");
+    while (s) {
+      char * dot = strchr (s, '.');
+      var_t * var = varlookup (s, strlen(s) - (dot ? strlen(dot) : 0));
+      int vtype = var->type;
+      while (dot) {
+	vtype--;
+	dot = strchr (dot+1, '.');
+      }
+      char member[80];
+      switch (vtype - listtype) {
+      case 0: sprintf (member, "%s,", s); break;
+      case 1: sprintf (member, "%s.x,%s.y,", s, s); break;
+      case 2: sprintf (member, "%s.x.x,%s.x.y,%s.y.x,%s.y.y,",
+		       s, s, s, s); break;
+      default: assert (0);
+      }
+      list = realloc (list, (strlen(list) + strlen(member) + 1)*sizeof(char));
+      strcat (list, member);
+      s = strtok (NULL, " \t\v\n\f,)");
+    }
+    free (text);
+    char end[10];
+    switch (listtype) {
+    case scalar: strcpy (end, "-1})"); break;
+    case vector: strcpy (end, "{-1,-1}})"); break;
+    default: assert (0);
+    }
+    list = realloc (list, (strlen(list) + strlen(end) + 1)*sizeof(char));
+    strcat (list, end);
+    return list;
+  }
+
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
 
 #define YY_INPUT(buf,result,max_size)			      \
@@ -237,8 +305,6 @@
     if (c == '\n') line++;				      \
   }
 
-  int list_member (char * s, int dim);
-  int scalar_list (int, int);
   int yyerror(const char * s);
   int getput(void);
   int comment(void);
@@ -443,20 +509,6 @@ end_foreach{ID}*{SP}*"()" {
   ECHO;
 }
 
-[^{ID}](scalars|vectors|boundary){WS}*[(]               |
-[^{ID}](restriction|boundary_restriction|trash){WS}*[(] {
-    // scalars(...
-    ECHO;
-    if (yytext[0] == '(') para++;
-    int listype = scalar, boundary = 0;
-    if (strstr (yytext, "vectors"))
-      listype = vector;
-    else if (!strstr (yytext, "scalars"))
-      boundary = 1;
-    if (scalar_list (listype, boundary))
-      return 1;
-}
-
 new{WS}+scalar {
   if (scope > 0)
     fprintf (yyout, "new_scalar (%d)", nvar);
@@ -633,29 +685,6 @@ for{WS}*[(]{WS}*(scalar|vector){WS}+{ID}+{WS}+in{WS}+ {
   while ((c = input()) != EOF) {
     if (c == ')')
       break;
-    if (c == '(') {
-      // this is a list
-      last[0] = '\0';
-      para ++;
-      FILE * fp = yyout;
-      yyout = dopen ("for_scalar.h", "w");
-      if (scalar_list (vartype, 0))
-	return 1;
-      fclose (yyout); yyout = fp;
-      fp = dopen ("for_scalar.h", "r");
-      nl = strlen(vartype == scalar ? "scalars(" : "vectors(") + 1;
-      list = realloc (list, (nl + 1)*sizeof(char));
-      strcpy (list, vartype == scalar ? "scalars(" : "vectors(");
-      while ((c = fgetc (fp)) != ')') {
-	list = realloc (list, (nl + 1)*sizeof(char));
-	list[nl - 1] = c;
-	list[nl++] = '\0';	
-      }
-      list[nl - 1] = ')';
-      list[nl++] = '\0';
-      fclose (fp);
-      break;
-    }
     else {
       list = realloc (list, (nl + 1)*sizeof(char));
       list[nl - 1] = c;
@@ -665,6 +694,15 @@ for{WS}*[(]{WS}*(scalar|vector){WS}+{ID}+{WS}+in{WS}+ {
   if (c != ')')
     return yyerror ("expecting ')'");
   static int i = 0;
+  if (list[0] == '{') {
+    char * oldlist = list;
+    list = makelist (oldlist, vartype);
+    free (oldlist);
+    if (list == NULL)
+      return yyerror ("invalid list");
+  }
+  if (debug)
+    fprintf (stderr, "%s:%d: %s\n", fname, line, list);
   if (vartype == scalar)
     fprintf (yyout,
 	     "for (scalar %s = *%s, *_i%d = %s; %s >= 0; %s = *++_i%d%s",
@@ -784,6 +822,19 @@ reduction[(](min|max):{ID}+[)] {
   strcpy (reductvar[nreduct++], s1);
 }
 
+[{]({SP}*[a-zA-Z_0-9.]+{SP}*,{SP}*)*[a-zA-Z_0-9.]+{SP}*[}] {
+  // {h, zb, ...}
+  char * list = makelist (yytext, -1);
+  if (list == NULL)
+    ECHO;
+  else {
+    if (debug)
+      fprintf (stderr, "%s:%d: %s\n", fname, line, list);
+    fputs (list, yyout);
+    free (list);
+  }
+}
+
 {ID}+ {
   if (inforeach) {
     for (int i = 0; i < nreduct; i++)
@@ -884,99 +935,6 @@ FILE * writepath (char * path, const char * mode)
     *s++ = '/';
   }
   return fopen (path, mode);
-}
-
-int list_member (char * s, int dim)
-{
-  char * dot = strchr (s, '.');
-  var_t * var = varlookup (s, dot ? dot - s : strlen (s));
-  if (var == NULL) {
-    fprintf (stderr, 
-	     "%s:%d: error: '%s' is not a scalar, vector or tensor\n", 
-	     fname, line, s);
-    return 1;
-  }
-  int ndim = var->type - dim;
-  switch (ndim) {
-  case 0: fputs(s, yyout); break;
-  case 1: fprintf (yyout, "%s.x,%s.y", s, s); break;
-  case 2: fprintf (yyout, "%s.x.x,%s.x.y,%s.y.x,%s.y.y", 
-		   s, s, s, s); break;
-  default:
-    fprintf (stderr, 
-	     "%s:%d: error: the dimension of '%s' is too low/high\n", 
-	     fname, line, s);
-    return 1;	    
-  }
-  return 0;
-}
-
-int scalar_list (int listype, int boundary)
-{
-  int pscope = 1;
-  char s[80] = "", * e = s;
-  int c, ndot = 0, narg = 0;
-  while ((c = input()) != EOF) {
-    if (c == '\n')
-      fputc (c, yyout);
-    if (pscope == 1 && strchr(" \t\v\n\f,)", c)) {
-      if (e != s) {
-	if (boundary && narg == 0) {
-	  if (!strcmp (s, "scalars")) {
-	    /* boundary (scalars... */
-	    fputs ("scalars", yyout);
-	    while (strchr(" \t\v\n\f,", c)) {
-	      fputc (c, yyout);
-	      c = input();
-	    }
-	    if (c != '(')
-	      return yyerror ("expecting '('");
-	    para++;
-	    fputc (c, yyout);
-	    boundary = 0;
-	  }
-	  else if (!varlookup (s, ndot ? strchr (s, '.') - s : strlen (s))) {
-	    /* not a scalar -> give up */
-	    para += pscope - (c == ')');
-	    fputs (s, yyout);
-	    fputc (c, yyout);
-	    return 0;
-	  }
-	  else {
-	    /* OK assuming list of scalars */
-	    fputs ("scalars (", yyout);
-	    if (list_member (s, ndot + listype))
-	      return 1;
-	    if (c != ')')
-	      fputc (',', yyout);
-	  }
-	}
-	/* regular list member */
-	else {
-	  if (list_member (s, ndot + listype))
-	    return 1;
-	  if (c != ')')
-	    fputc (',', yyout);
-	}
-	e = s; *e = '\0'; ndot = 0; narg++;
-      }
-      if (c == ')') {
-	fputc (c, yyout);
-	if (boundary)
-	  fputc (')', yyout);	
-	return 0;
-      }	
-    }
-    else {
-      if (c == '(') pscope++;
-      else if (c == ')') pscope--;
-      else if (c == '.' && pscope == 1) ndot++;
-      if (pscope > 0) {
-	*e++ = c; *e = '\0';
-      }
-    }
-  }
-  return yyerror ("expecting ')'");
 }
   
 void cleanup (int status)

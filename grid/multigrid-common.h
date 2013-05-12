@@ -14,8 +14,8 @@ void restriction (scalar * list)
 
 void wavelet (scalar s, scalar w)
 {
-  restriction (s);
-  boundary_restriction (s);
+  restriction ({s});
+  boundary_restriction ({s});
   foreach_fine_to_coarse() {
     /* difference between fine value and bilinearly-interpolated
        coarse value */

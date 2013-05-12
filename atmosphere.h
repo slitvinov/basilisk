@@ -133,7 +133,7 @@ void advance (double t, scalar * f, scalar * df)
 void update (double t, scalar * f)
 {
   scalar u = f[0], v = f[1], h = f[2];
-  boundary (h);
+  boundary ({h});
   boundary_uv (u, v);
   ke_psi (u, v);
 }
@@ -147,8 +147,7 @@ void run (void)
     h[] = 1.;
   }
   init ();
-  boundary (b);
-  boundary (h);
+  boundary ({b,h});
   boundary_uv (u, v);
   ke_psi (u, v);
 
@@ -160,7 +159,7 @@ void run (void)
 #if 1
     advection_centered (h, u, v, hn);
     foreach() { h[] += hn[]*dt; }
-    boundary (h);
+    boundary ({h});
     momentum (u, v, h, un, vn);
     foreach() {
       u[] += un[]*dt;

@@ -96,7 +96,7 @@ int event (t = end) {
   fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
 
   if (N == 256)
-    output_field (scalars (e), N, stdout, false);
+    output_field ({e}, N, stdout, false);
 }
 
 int main() {

@@ -15,15 +15,15 @@ int main (int argc, char ** argv)
   double R0 = 0.1;
   foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));
-  boundary (h);
+  boundary ({h});
   
   /* initial coarsening (see halo.c) */
   wavelet (h, w);
   double tolerance = 1e-4;
   coarsen_wavelet (w, tolerance, 0, none);
 
-  halo_restriction (scalars (h));
-  halo_prolongation (-1, scalars (h));
+  halo_restriction ({h});
+  halo_prolongation (-1, {h});
 
   double max = 0.;
   foreach_halo() {

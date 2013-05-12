@@ -20,7 +20,8 @@ int main ()
   init_grid(1);
   foreach() a[] = 0.;
   double dt = 0.4;
-  scalar f[1] = {a}, df[2][1] = {{da1},{da2}};
+  scalar f[1], df[2][1];
+  f[0] = a; df[0][0] = da1; df[1][0] = da2;
   int i = 0;
   for (double t = 0.; t <= 6.*3.14159265359; t += dt, i++) {
     foreach()

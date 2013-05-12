@@ -209,7 +209,7 @@ void quadtree_boundary_restriction (scalar * list)
   }
 
 #undef boundary_flux
-#define boundary_flux(...) halo_restriction_flux (vectors (__VA_ARGS__))
+#define boundary_flux halo_restriction_flux
 
 void quadtree_boundary (scalar * list)
 {

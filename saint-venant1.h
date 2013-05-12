@@ -79,7 +79,7 @@ static double flux (double dtmax)
 #if QUADTREE
   // propagate updates from fine to coarse
   foreach_halo()
-    for (scalar ds in (dh, dq)) {
+    for (scalar ds in {dh, dq}) {
       coarse(ds,0,0) += ds[]/2.;
       ds[] = 0.;
     }
@@ -91,7 +91,7 @@ static double flux (double dtmax)
 static void update (vector u2, vector u1, scalar h2, scalar h1, double dt)
 {
   if (h1 != h2)
-    trash (h1, u1);
+    trash ({h1, u1});
   foreach() {
     h1[] = h2[] + dt*dh[]/delta;
     dh[] = 0.;
@@ -104,7 +104,7 @@ static void update (vector u2, vector u1, scalar h2, scalar h1, double dt)
       foreach_dimension()
 	u1.x[] = dq.x[] = 0.;
   }
-  boundary (h1, u1);
+  boundary ({h1, u1});
 }
 
 double dt = 0.;
@@ -116,18 +116,18 @@ void run()
 
 #if QUADTREE
   // we need the tendencies to be reinitialised during refinement
-  for (scalar ds in (dh, dq))
+  for (scalar ds in {dh, dq})
     method[ds].refine = refine_reset;
 #endif
 
   // limiting
-  for (scalar s in (h, zb, u))
+  for (scalar s in {h, zb, u})
     method[s].gradient = gradient;
-  for (scalar s in (gh, gzb, gu))
+  for (scalar s in {gh, gzb, gu})
     method[s].gradient = zero;
 
   // default values
-  scalar * list = scalars (h, zb, u, dh, dq);
+  scalar * list = {h, zb, u, dh, dq};
   foreach() {
     for (scalar s in list)
       s[] = 0.;
@@ -149,7 +149,7 @@ void run()
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    gradients (scalars (h, zb, u), vectors (gh, gzb, gu));
+    gradients ({h, zb, u}, {gh, gzb, gu});
     dt = dtnext (t, flux (DT));
 
     if (gradient == zero)
@@ -164,7 +164,7 @@ void run()
       swap (scalar, h, h1);
       
       /* corrector */
-      gradients (scalars (h, u), vectors (gh, gu));
+      gradients ({h, u}, {gh, gu});
       flux (dt);
 
       update (u1, u, h1, h, dt);

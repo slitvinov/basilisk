@@ -25,7 +25,7 @@ u.y[top]    = 0.;
 
 static void boundary_uv (vector u)
 {
-  boundary (u.x, u.y);
+  boundary ((scalar *){u});
   /* fixme */
   foreach_boundary (left,true)
     u.x[] = 0.;
@@ -110,7 +110,7 @@ void projection (vector u, scalar p,
     mg_cycle (p, res, dp,
 	      relax, boundary_level,
 	      4, 0);
-    boundary_level (scalars (p), depth());
+    boundary_level ({p}, depth());
     maxres = residual (p, div, res);
   }
   if (i == NITERMAX)
@@ -131,7 +131,7 @@ void run (void)
     u.x[] = u.y[] = p[] = 0.;
   init ();
   boundary_uv (u);
-  boundary (p);
+  boundary ({p});
 
   projection (u, p, S.x.y, S.y.y, S.x.x);
   boundary_uv (u);

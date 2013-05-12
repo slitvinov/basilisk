@@ -105,10 +105,10 @@ int event (t = 5) {
   fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
   
   if (N == 256)
-    output_field (scalars (e), N, stdout, false);
+    output_field ({e}, N, stdout, false);
 }
 
 int main() {
   for (N = 64; N <= 256; N *= 2)
-    run ();
+    run();
 }

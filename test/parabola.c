@@ -35,7 +35,7 @@ int event (i++) {
   // linear friction (implicit scheme)
   foreach()
     u.x[] /= 1. + tau*dt;
-  boundary (u.x);
+  boundary ({u.x});
 }
 
 scalar e = new scalar;

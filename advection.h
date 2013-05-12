@@ -49,7 +49,7 @@ void run (void)
   foreach()
     f[] = u.x[] = u.y[] = 0.;
   init();
-  boundary (f, u.x, u.y);
+  boundary ({f, u.x, u.y});
 
   timer start = timer_start();
   double t = 0.;
@@ -57,11 +57,11 @@ void run (void)
   while (events (i, t)) {
     double dt = dtnext (t, timestep (u));
     vector flux = new vector, g = new vector;
-    gradients (scalars (f), vectors (g));
+    gradients ({f}, {g});
     fluxes_upwind_bcg (f, g, u, flux, dt);
     foreach()
       f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;
-    boundary (f);
+    boundary ({f});
     foreach (reduction (+:tnc))
       tnc++;
     i++; t = tnext;

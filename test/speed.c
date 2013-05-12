@@ -18,7 +18,7 @@ int main (int argc, char ** argv)
     x -= 0.5;
     h[] = exp(-(x*x + y*y)/(R0*R0));
   }
-  boundary (h);
+  boundary ({h});
   
   clock_t start, end0, end;
   start = end0 = clock ();
@@ -53,7 +53,7 @@ int main (int argc, char ** argv)
 
   start = clock ();
   for (i = 0; i < 10000; i++)
-    halo_prolongation (-1, scalars(h));
+    halo_prolongation (-1, {h});
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   fprintf (stderr, "---- update_halos ----\n");
@@ -63,7 +63,7 @@ int main (int argc, char ** argv)
 
   start = clock ();
   for (i = 0; i < 2000; i++)
-    boundary_level (scalars (h, h, h, h, h, h, h, h, h, h), depth());
+    boundary_level ({h, h, h, h, h, h, h, h, h, h}, depth());
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
 

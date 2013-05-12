@@ -23,16 +23,16 @@ int event (t <= 2.5; t += 2.5/8) {
   scalar eta = new scalar;
   foreach()
     eta[] = h[] > 1e-3 ? h[] + zb[] : 0.;
-  boundary (eta);
+  boundary ({eta});
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field (scalars (eta), N, stdout, true);
+  output_field ({eta}, N, stdout, true);
 
   scalar l = new scalar;
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
-  output_field (scalars (l), N, stdout, false);
+  output_field ({l}, N, stdout, false);
 
   /* check symmetry */
   foreach() {
@@ -52,7 +52,7 @@ int event (i++) {
   wavelet (h, w);
 
   double cmax = 1e-3;
-  scalar * list = scalars (h, zb, u, dh, dq);
+  scalar * list = {h, zb, u, dh, dq};
   int nf = refine_wavelet (w, cmax, LEVEL, list);
   int nc = coarsen_wavelet (w, cmax/4., 0, list);
   if (nf || nc)

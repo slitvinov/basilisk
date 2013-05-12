@@ -79,8 +79,8 @@ static void update (scalar hu2, scalar hu1, scalar w2, scalar w1, double dt)
   }
   foreach()
     w1[] = w2[] + dt*(fw.x[] - fw.x[1,0])/delta;
-  boundary (w1);
-  boundary (hu1);
+  boundary ({w1});
+  boundary ({hu1});
 }
 
 double dt = 0.;
@@ -91,7 +91,7 @@ void run (void)
   init_grid(N);
 
   // limiting
-  for (scalar s in (hu, w))
+  for (scalar s in {hu, w})
     method[s].gradient = gradient;
 
   foreach() {
@@ -100,11 +100,11 @@ void run (void)
   }
 
   init();
-  boundary (hu);
-  boundary (B);
+  boundary ({hu});
+  boundary ({B});
   foreach()
     w[] = max(w[], (B[-1,0] + 2.*B[] + B[1,0])/4.);
-  boundary (w);
+  boundary ({w});
 
   // clone temporary storage
   clone_scalar (hu, hu1);
@@ -117,8 +117,8 @@ void run (void)
     /* 2nd-order predictor-corrector */
 
     /* predictor */
-    gradients (scalars (hu, w), vectors (ghu, gw));
-    boundary (ghu.x, gw.x);
+    gradients ({hu, w}, {ghu, gw});
+    boundary ({ghu.x, gw.x});
 
     dt = DT;
     foreach()
@@ -132,9 +132,9 @@ void run (void)
     swap (scalar, w, w1);
 
     /* corrector */
-    gradients (scalars (hu, w), vectors (ghu, gw));
+    gradients ({hu, w}, {ghu, gw});
     positivity();
-    boundary (ghu.x, gw.x);
+    boundary ({ghu.x, gw.x});
 
     foreach()
       flux (point, 0, dt);
