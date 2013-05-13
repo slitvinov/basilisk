@@ -311,6 +311,19 @@ void recursive (Point point)
 #define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
 
+#define foreach_child() {				\
+  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS; \
+  point.level++;					\
+  for (int _k = 0; _k < 2; _k++)			\
+    for (int _l = 0; _l < 2; _l++) {			\
+      point.i = _i + _k; point.j = _j + _l;		\
+      POINT_VARIABLES;
+#define end_foreach_child()			        \
+  }							\
+  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2; \
+  point.level--;                                        \
+}
+
 #if TRASH
 # undef trash
 # define trash(list) quadtree_trash(list)
@@ -385,7 +398,8 @@ Point refine_cell (Point point, scalar * list)
     for (int p = -GHOSTS; p <= GHOSTS; p++)
       neighbor(o,p).neighbors--;
 
-  /* for each child */
+  /* for each child: (note that using foreach_child() would be nicer
+     but it seems to be significanly slower) */
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
       assert(!(child(k,l).flags & active));

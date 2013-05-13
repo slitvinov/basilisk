@@ -13,18 +13,19 @@ void parameters()
 #define zb(x,y) ((cos(pi*x/L0)*cos(pi*y/L0) + \
 		  cos(3.*pi*x/L0)*cos(3.*pi*y/L0)) - 2.*x/1000.)
 
+void refine_zb (Point point, scalar zb)
+{
+  foreach_child()
+    zb[] = zb(x,y);
+}
+
 void init()
 {
+  zb.refine = refine_zb; // updates terrain
   foreach() {
     zb[] = zb(x,y);
     h[] = 0.1;
   }
-}
-
-int event (i++) {
-  foreach()
-    zb[] = zb(x,y);
-  boundary ({zb});
 }
 
 int event (i++) {

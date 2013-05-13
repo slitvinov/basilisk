@@ -13,22 +13,26 @@ u.x[left]   = u.x[];
 u.y[top]    = u.y[];
 u.y[bottom] = u.y[];
 
-void init()
+double terrain (double x, double y)
 {
-  foreach() {
-    h[] = exp(-200.*(x*x + y*y));
-    x -= -0.25; y -= -0.25;
-    zb[] = 0.5*exp(-200.*(x*x + y*y));
-    h[] = max(h[] - zb[], 0.);
-  }
+  x -= -0.25; y -= -0.25;
+  return 0.5*exp(-200.*(x*x + y*y));
 }
 
-int event (i++) {
+void refine_zb (Point point, scalar zb)
+{
+  foreach_child()
+    zb[] = terrain (x, y);
+}
+
+void init()
+{
+  zb.refine = refine_zb; // updates terrain
   foreach() {
-    x -= -0.25; y -= -0.25;
-    zb[] = 0.5*exp(-200.*(x*x + y*y));
+    h[] = exp(-200.*(x*x + y*y));
+    zb[] = terrain (x, y);
+    h[] = max(h[] - zb[], 0.);
   }
-  boundary ({zb});
 }
 
 int event (i++) {
