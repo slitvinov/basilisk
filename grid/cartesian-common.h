@@ -69,7 +69,9 @@ void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
 
 void clone_scalar (scalar s, scalar clone)
 {
-  method[clone] = method[s];
+  scalar i, j;
+  for (i,j in s,clone)
+    _method[j] = _method[i];
 }
 
 // Cartesian methods
@@ -81,7 +83,7 @@ void cartesian_boundary (scalar * list)
   for (int b = 0; b < nboundary; b++)
     foreach_boundary (b, true) // also traverse corners
       for (scalar s in list)
-	s[ghost] = method[s].boundary[b] (point, s);
+	s[ghost] = s.boundary[b] (point, s);
 }
 
 static double symmetry (Point point, scalar s)
@@ -98,17 +100,17 @@ scalar cartesian_new_scalar (scalar s)
 {
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++)
-    method[s].boundary[b] = symmetry;
+    s.boundary[b] = symmetry;
   return s;
 }
 
 vector cartesian_new_vector (vector v)
 {
   /* set default boundary conditions (symmetry) */
-  method[v.x].boundary[top] = method[v.x].boundary[bottom] = symmetry;
-  method[v.y].boundary[right] = method[v.y].boundary[left] = symmetry;
-  method[v.x].boundary[right] = method[v.x].boundary[left] = antisymmetry;
-  method[v.y].boundary[top] = method[v.y].boundary[bottom] = antisymmetry;
+  v.x.boundary[top] = v.x.boundary[bottom] = symmetry;
+  v.y.boundary[right] = v.y.boundary[left] = symmetry;
+  v.x.boundary[right] = v.x.boundary[left] = antisymmetry;
+  v.y.boundary[top] = v.y.boundary[bottom] = antisymmetry;
   return v;
 }
 
@@ -116,8 +118,8 @@ tensor cartesian_new_tensor (tensor t)
 {
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++) {
-    method[t.x.x].boundary[b] = method[t.y.y].boundary[b] = symmetry;
-    method[t.x.y].boundary[b] = method[t.y.x].boundary[b] = antisymmetry;
+    t.x.x.boundary[b] = t.y.y.boundary[b] = symmetry;
+    t.x.y.boundary[b] = t.y.x.boundary[b] = antisymmetry;
   }
   return t;
 }

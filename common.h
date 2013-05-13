@@ -136,9 +136,9 @@ typedef struct {
   double   (* gradient)            (double, double, double);
 } Methods;
 
-Methods * method;
+Methods * _method;
 
 void free_solver()
 {
-  free (method);
+  free (_method);
 }

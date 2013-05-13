@@ -46,9 +46,9 @@ void refine_bilinear (Point point, scalar v)
 void refine_linear (Point point, scalar s)
 {
   struct { double x, y; } g;
-  if (method[s].gradient)
+  if (s.gradient)
     foreach_dimension()
-      g.x = method[s].gradient (s[-1,0], s[0,0], s[1,0]);
+      g.x = s.gradient (s[-1,0], s[0,0], s[1,0]);
   else
     foreach_dimension()
       g.x = (s[1,0] - s[-1,0])/2.;
@@ -74,7 +74,7 @@ void multigrid_boundary_level (scalar * list, int l)
   for (int b = 0; b < nboundary; b++)
     foreach_boundary_level (b, l, true) // also traverse corners
       for (scalar s in list)
-	s[ghost] = method[s].boundary[b] (point, s);
+	s[ghost] = s.boundary[b] (point, s);
 }
 
 void multigrid_boundary_restriction (scalar * list)

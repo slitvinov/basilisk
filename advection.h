@@ -45,7 +45,7 @@ void run (void)
 {
   parameters();
   init_grid (N);
-  method[f].gradient = gradient;
+  f.gradient = gradient;
   foreach()
     f[] = u.x[] = u.y[] = 0.;
   init();

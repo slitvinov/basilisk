@@ -117,14 +117,14 @@ void run()
 #if QUADTREE
   // we need the tendencies to be reinitialised during refinement
   for (scalar ds in {dh, dq})
-    method[ds].refine = refine_reset;
+    ds.refine = refine_reset;
 #endif
 
   // limiting
   for (scalar s in {h, zb, u})
-    method[s].gradient = gradient;
+    s.gradient = gradient;
   for (scalar s in {gh, gzb, gu})
-    method[s].gradient = zero;
+    s.gradient = zero;
 
   // default values
   scalar * list = {h, zb, u, dh, dq};
@@ -140,9 +140,7 @@ void run()
   boundary (list);
 
   // clone temporary storage
-  clone_scalar (h, h1);
-  foreach_dimension()
-    clone_scalar (u.x, u1.x);
+  clone ({h,u}, {h1,u1});
 
   // main loop
   timer start = timer_start();

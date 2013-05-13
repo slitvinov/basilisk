@@ -314,6 +314,7 @@ ID  [a-zA-Z_0-9]
 SP  [ \t]
 ES  (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 WS  [ \t\v\n\f]
+SCALAR [a-zA-Z_0-9]+[.xyz]*
 
 %%
 
@@ -553,7 +554,7 @@ new{WS}+tensor {
   ECHO;
 }
 
-[a-zA-Z_0-9\.]+{WS}*\[{WS}*. {
+{SCALAR}{WS}*\[{WS}*. {
   /* v[... */
   var_t * var = NULL;
   if ((inforeach || infunction) && !inval) {
@@ -615,7 +616,7 @@ new{WS}+tensor {
     REJECT;
 }
 
-[a-zA-Z_0-9\.]+{WS}*\[{WS}*(left|right|top|bottom){WS}*\]{WS}*= {
+{SCALAR}{WS}*\[{WS}*(left|right|top|bottom){WS}*\]{WS}*= {
   /* v[top] = */
   char * s = yytext;
   while (!strchr(" \t\v\n\f[.", *s)) s++;
@@ -635,11 +636,11 @@ new{WS}+tensor {
 	*s1 = '_';
       s1++;
     }
-    boundaryfunc = malloc ((strlen ("method[].boundary[] = _;") + 
+    boundaryfunc = malloc ((strlen ("_method[].boundary[] = _;") + 
 			    2*strlen (b) + 
 			    strlen(yytext) + 
 			    strlen (func) + 1)*sizeof (char));
-    sprintf (boundaryfunc, "method[%s].boundary[%s] = _%s%s;", 
+    sprintf (boundaryfunc, "_method[%s].boundary[%s] = _%s%s;", 
 	     yytext, b, func, b);
     fprintf (yyout, 
 	     "double _%s%s (Point point, scalar _s) {"
@@ -846,6 +847,25 @@ reduction[(](min|max):{ID}+[)] {
   ECHO;
 }
 
+{SCALAR}[.][a-wA-Z_0-9]+ {
+  // scalar methods
+  char * dot1 = strchr (yytext, '.');
+  var_t * var = varlookup (yytext, strlen(yytext) - strlen(dot1));
+  if (var) {
+    char * dot = dot1;
+    while (dot1) {
+      dot = dot1;
+      dot1 = strchr (dot1 + 1, '.');
+    }
+    dot[0] = '\0'; dot++;
+    fprintf (yyout, "_method[%s].%s", yytext, dot);
+    if (debug)
+      fprintf (stderr, "%s:%d: _method[%s].%s\n", fname, line, yytext, dot);
+  }
+  else
+    ECHO;
+}
+
 "#" {
   ECHO;                     
   register int oldc = 0, c;
@@ -1046,7 +1066,7 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   fprintf (fout, "void %s_methods(void);\n", grid);
   fputs ("static void init_solver (void) {\n", fout);
   /* scalar methods */
-  fputs ("  method = calloc (nvar, sizeof (Methods));\n", fout);
+  fputs ("  _method = calloc (nvar, sizeof (Methods));\n", fout);
   if (fpe)
     /* Initialises unused memory with "signaling NaNs".  
      * This is probably not very portable, tested with

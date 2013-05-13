@@ -33,7 +33,7 @@ int main (int argc, char ** argv)
       if (is_active (cell)) {
 	if (cell.neighbors > 0)
 	  for (scalar s in {u})
-	    s[ghost] = method[s].boundary[b] (point, s);
+	    s[ghost] = s.boundary[b] (point, s);
       }
       else
 	continue;

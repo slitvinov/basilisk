@@ -104,9 +104,9 @@ static void huge (Point point, scalar w)
 
 int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
 {
-  // overload the refine function for w
-  void * f = method[w].refine;
-  method[w].refine = huge;
+  // overload the refine method for w
+  void * f = w.refine;
+  w.refine = huge;
   // add w to the list of variables to refine
   scalar * list1 = scalars_append (list, w);
   // refine
@@ -117,8 +117,8 @@ int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
       nf++;
     }
   free (list1);
-  // restore refine function
-  method[w].refine = f;
+  // restore refine method
+  w.refine = f;
   return nf;
 }
 
@@ -147,12 +147,12 @@ void halo_prolongation (int depth, scalar * list)
 {
   foreach_halo_coarse_to_fine (depth) {
     for (scalar s in list)
-      if (method[s].gradient) { // linear interpolation (e.g. with limiting)
+      if (s.gradient) { // linear interpolation (e.g. with limiting)
 	struct { double x, y; } g;
 	foreach_dimension()
-	  g.x = method[s].gradient (coarse(s,-1,0), 
-				    coarse(s,0,0), 
-				    coarse(s,1,0));
+	  g.x = s.gradient (coarse(s,-1,0), 
+			    coarse(s,0,0), 
+			    coarse(s,1,0));
 	s[] = coarse(s,0,0) + (g.x*child.x + g.y*child.y)/4.;
       }
       else
@@ -193,7 +193,7 @@ void quadtree_boundary_restriction (scalar * list)
 	continue;
       else
 	for (scalar s in list)
-	  s[ghost] = method[s].boundary[b] (point, s);
+	  s[ghost] = s.boundary[b] (point, s);
     }
 }
 
@@ -220,7 +220,7 @@ void quadtree_boundary (scalar * list)
       if (is_active (cell)) {
 	if (cell.neighbors > 0)
 	  for (scalar s in list)
-	    s[ghost] = method[s].boundary[b] (point, s);
+	    s[ghost] = s.boundary[b] (point, s);
       }
       else
 	continue;
@@ -233,7 +233,7 @@ void quadtree_boundary (scalar * list)
       if (!is_active (cell)) {
 	if (cell.neighbors > 0)
 	  for (scalar s in list)
-	    s[ghost] = method[s].boundary[b] (point, s);
+	    s[ghost] = s.boundary[b] (point, s);
 	else
 	  continue;
       }
@@ -255,7 +255,7 @@ Point locate (double xp, double yp)
 scalar quadtree_new_scalar (scalar s)
 {
   s = cartesian_new_scalar (s);
-  method[s].refine = refine_linear;
+  s.refine = refine_linear;
   return s;
 }
 
@@ -263,7 +263,7 @@ vector quadtree_new_vector (vector v)
 {
   v = cartesian_new_vector (v);
   foreach_dimension()
-    method[v.x].refine = refine_linear;
+    v.x.refine = refine_linear;
   return v;
 }
 
@@ -271,9 +271,9 @@ tensor quadtree_new_tensor (tensor t)
 {
   t = cartesian_new_tensor (t);
   foreach_dimension()
-    method[t.x.x].refine = refine_linear;
+    t.x.x.refine = refine_linear;
   foreach_dimension()
-    method[t.x.y].refine = refine_linear;
+    t.x.y.refine = refine_linear;
   return t;
 }
 

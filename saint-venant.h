@@ -92,7 +92,7 @@ void run (void)
 
   // limiting
   for (scalar s in {hu, w})
-    method[s].gradient = gradient;
+    s.gradient = gradient;
 
   foreach() {
     hu[] = B[] = 0.;

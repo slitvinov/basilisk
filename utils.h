@@ -252,9 +252,9 @@ void gradients (scalar * f, vector * g)
   foreach() {
     scalar s; vector v;
     for (s,v in f,g)
-      if (method[s].gradient)
+      if (s.gradient)
 	foreach_dimension()
-	  v.x[] = method[s].gradient (s[-1,0], s[], s[1,0])/delta;
+	  v.x[] = s.gradient (s[-1,0], s[], s[1,0])/delta;
       else // centered
 	foreach_dimension()
 	  v.x[] = (s[1,0] - s[-1,0])/(2.*delta);
