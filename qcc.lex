@@ -468,10 +468,8 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
-^(scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+       |
-[^{ID}](scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+ {
+(scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+ {
   ECHO;
-  if (yytext[0] == '(') para++;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
   if (!var) {
@@ -548,8 +546,7 @@ new{WS}+tensor {
   nvar += 4;
 }
 
-[^{ID}]val{WS}*[(]    {
-  if (yytext[0] == '(') para++;
+val{WS}*[(]    {
   inval = 1; invalpara = para++;
   ECHO;
 }
@@ -664,9 +661,8 @@ ghost {
     ECHO;
 }
 
-[^{ID}]Point{WS}+point[^{ID}] {
+Point{WS}+point[^{ID}] {
   /* Point point */
-  if (yytext[0] == '(') para++;
   infunction = 1; functionscope = scope; functionpara = para;
   if (yytext[yyleng-1] == ')') para--;
   ECHO;
@@ -777,8 +773,7 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
     return yyerror ("mismatched ']'");  
 }
 
-[^{ID}]event{WS}*[(] {
-  fputc (yytext[0], yyout);
+event{WS}*[(] {
   /* event (... */
   fprintf (yyout, 
 	   "event_expr%d%d (int * ip, double * tp) {"
