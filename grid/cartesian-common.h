@@ -67,7 +67,7 @@ void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
   }
 }
 
-void clone_scalar (scalar s, scalar clone)
+void clone (scalar * s, scalar * clone)
 {
   scalar i, j;
   for (i,j in s,clone)
