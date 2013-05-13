@@ -107,8 +107,7 @@ void run (void)
   boundary ({w});
 
   // clone temporary storage
-  clone_scalar (hu, hu1);
-  clone_scalar (w, w1);
+  clone ({hu, w}, {hu1, w1});
 
   timer start = timer_start();
   double t = 0.;

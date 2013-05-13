@@ -2,6 +2,7 @@
 ALLTESTS = \
 	advection.c \
 	bump.c \
+	bump1.c \
 	bump2D.c \
 	circle.c \
 	corners.c \
@@ -30,6 +31,7 @@ ALLTESTS = \
 
 PLOTS = \
 	advection.plot \
+	bump1.plot \
 	bump2D.plot \
 	circle.plot \
 	dry.plot \
