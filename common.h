@@ -64,41 +64,63 @@ typedef struct {
 #define coarse(a,k,l)  _coarse(a,k,l)
 #define neighbor(k,l)  _neighbor(k,l)
 
+// lists
+
 #define none         (scalar []){-1}
 
 int vectors_len (vector * list)
 {
+  if (!list) return 0;
   int nv = 0;
   for (vector v in list) nv++;
   return nv;
 }
 
-int scalars_len (scalar * list)
+vector * vectors_append (vector * list, vector v)
 {
+  int len = vectors_len (list);
+  list = realloc (list, sizeof (vector)*(len + 2));
+  list[len] = v;
+  list[len + 1] = (vector){-1,-1};
+  return list;
+}
+
+int list_len (scalar * list)
+{
+  if (!list) return 0;
   int ns = 0;
   for (scalar s in list) ns++;
   return ns;
 }
 
-scalar * scalars_append (scalar * list, scalar a)
+scalar * list_append (scalar * list, scalar s)
 {
-  int ns = scalars_len (list);
-  scalar * list1 = malloc ((ns + 2)*sizeof (scalar));
-  ns = 0;
-  for (scalar s in list) {
-    assert (s != a); // a is already in the list
-    list1[ns++] = s;
-  }
-  list1[ns++] = a;
-  list1[ns] = -1;
-  return list1;
+  int len = list_len (list);
+  list = realloc (list, sizeof (scalar)*(len + 2));
+  list[len] = s;
+  list[len + 1] = -1;
+  return list;
 }
+
+scalar * list_concat (scalar * l1, scalar * l2)
+{
+  scalar * list = malloc (sizeof(scalar)*(list_len(l1) + list_len(l2) + 1));
+  int i = 0;
+  for (scalar s in l1)
+    list[i++] = s;
+  for (scalar s in l2)
+    list[i++] = s;
+  list[i] = -1;
+  return list;
+}
+
+scalar * all = NULL; // all the scalars
 
 // basic methods
 
-scalar (* new_scalar) (scalar);
-vector (* new_vector) (vector);
-tensor (* new_tensor) (tensor);
+scalar (* init_scalar) (scalar, const char *);
+vector (* init_vector) (vector, const char *);
+tensor (* init_tensor) (tensor, const char *);
 
 // events 
 
@@ -140,5 +162,7 @@ Methods * _method;
 
 void free_solver()
 {
-  free (_method);
+  free (_method); _method = NULL;
+  free (all); all = NULL;
+  grid = NULL;
 }

@@ -64,6 +64,33 @@ void free_grid (void)
   free_solver();
 }
 
+void allocate_scalar (void)
+{
+  Point * p = grid;
+  size_t len = (p->n + 2)*datasize;
+  p->data = realloc (p->data, len);
+  int oldatasize = datasize - sizeof(double);
+  char * data = p->data + (p->n + 1)*oldatasize;
+  for (int i = p->n + 1; i > 0; i--, data -= oldatasize)
+    memmove (data + i*sizeof(double), data, oldatasize);
+}
+
+#if TRASH
+# undef trash
+# define trash(list) cartesian1D_trash(list)
+#endif
+
+void cartesian1D_trash (scalar * list)
+{
+  Point * p = grid;
+  char * data = p->data;
+  for (int i = 0; i < p->n + 2; i++, data += datasize) {
+    double * v = (double *) data;
+    for (scalar s in list)
+      v[s] = undefined;
+  }
+}
+
 Point locate (double xp, double yp)
 {
   Point point = *((Point *)grid);

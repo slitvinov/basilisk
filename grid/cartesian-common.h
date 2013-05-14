@@ -67,11 +67,81 @@ void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
   }
 }
 
-void clone (scalar * s, scalar * clone)
+scalar new_scalar (const char * name)
 {
-  scalar i, j;
-  for (i,j in s,clone)
-    _method[j] = _method[i];
+  int nvar = datasize/sizeof(double);
+  for (int i = 0; i < nvar; i++) {
+    bool found = false;
+    for (scalar s in all)
+      if (s == i) { 
+	found = true; break;
+      }
+    if (!found) { // found a previously freed slot
+      all = list_append (all, i);
+      init_scalar (i, name);
+      return i;
+    }
+  }
+  
+  // need to allocate a new slot
+  datasize += sizeof(double); nvar++;
+  _method = realloc (_method, nvar*sizeof (Methods));
+  _method[nvar - 1] = (Methods){{NULL, NULL, NULL}};
+  all = realloc (all, sizeof (scalar)*(nvar + 1));
+  all[nvar - 1] = nvar - 1;
+  all[nvar] = -1;
+  allocate_scalar(); // allocate extra space on the grid
+  init_scalar (nvar - 1, name);
+  trash (((scalar []){nvar - 1, -1}));
+  return nvar - 1;
+}
+
+vector new_vector (const char * name)
+{
+  char cname[strlen(name) + 3];
+  sprintf (cname, "%s.x", name);
+  scalar vx = new_scalar (cname);
+  sprintf (cname, "%s.y", name);
+  scalar vy = new_scalar (cname);
+  vector v;
+  v.x = vx; v.y = vy;
+  init_vector (v, name);
+  return v;
+}
+
+scalar * clone (scalar * l)
+{
+  scalar * list = NULL;
+  for (scalar s in l) {
+    scalar c = new scalar;
+    _method[c] = _method[s];
+    list = list_append (list, c);
+  }
+  return list;
+}
+
+void delete (scalar * list)
+{
+  trash (list);
+  for (scalar f in list) {
+#if 0
+    fprintf (stderr, "freeing %d\n", f);
+    for (scalar s in all)
+      fprintf (stderr, "%d ", s);
+    fprintf (stderr, "\n");
+#endif
+    scalar * s = all;
+    for (; *s >= 0 && *s != f; s++);
+    if (*s == f)
+      for (; *s >= 0; s++)
+	s[0] = s[1];
+#if 0
+    for (scalar s in all)
+      fprintf (stderr, "%d ", s);
+    fprintf (stderr, "\n");
+#endif
+  }
+  free (list);
 }
 
 // Cartesian methods
@@ -96,7 +166,7 @@ static double antisymmetry (Point point, scalar s)
   return -s[];
 }
 
-scalar cartesian_new_scalar (scalar s)
+scalar cartesian_init_scalar (scalar s, const char * name)
 {
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++)
@@ -104,7 +174,7 @@ scalar cartesian_new_scalar (scalar s)
   return s;
 }
 
-vector cartesian_new_vector (vector v)
+vector cartesian_init_vector (vector v, const char * name)
 {
   /* set default boundary conditions (symmetry) */
   v.x.boundary[top] = v.x.boundary[bottom] = symmetry;
@@ -114,7 +184,7 @@ vector cartesian_new_vector (vector v)
   return v;
 }
 
-tensor cartesian_new_tensor (tensor t)
+tensor cartesian_init_tensor (tensor t, const char * name)
 {
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++) {
@@ -147,8 +217,8 @@ void cartesian_debug (Point point)
   for (int k = -1; k <= 1; k++)
     for (int l = -1; l <= 1; l++) {
       fprintf (fp, "%g %g", x + k*delta, y + l*delta);
-      for (scalar v = 0; v < nvar; v++)
-	fprintf (fp, " %g", val(v,k,l));
+      for (scalar v in all)
+	fprintf (fp, " %g", v[k,l]);
       fputc ('\n', fp);
     }
   fclose (fp);
@@ -162,9 +232,9 @@ void cartesian_debug (Point point)
 
 void cartesian_methods()
 {
-  new_scalar = cartesian_new_scalar;
-  new_vector = cartesian_new_vector;
-  new_tensor = cartesian_new_tensor;
-  boundary   = cartesian_boundary;
-  debug = cartesian_debug;
+  init_scalar = cartesian_init_scalar;
+  init_vector = cartesian_init_vector;
+  init_tensor = cartesian_init_tensor;
+  boundary    = cartesian_boundary;
+  debug       = cartesian_debug;
 }

@@ -2,28 +2,16 @@
 #include "conservation.h"
 
 scalar h = new scalar, q = new scalar;
+scalar * conserved = {h, q};
 
-// fixme: all this should be automatic
-scalar h1 = new scalar, q1 = new scalar;
-vector gh = new vector, gq = new vector;
-scalar dh = new scalar, dq = new scalar;
-
-q[left]  = -q[];
-q[right] = -q[];
+q[left]  = - q[];
+q[right] = - q[];
 
 void parameters()
 {
   theta = 1.;
   X0 = Y0 = -0.5;
   N = 500;
-
-  conserved = list_concat (none, {h, q});
-
-  // fixme: all this should be automatic
-  conserved1 = list_concat (none, {h1, q1});
-  slopes = malloc (3*sizeof (vector));
-  slopes[0] = gh; slopes[1] = gq; slopes[2].x = slopes[2].y = -1;
-  tendencies = list_concat (none, {dh, dq});
 }
 
 double riemann (state * c, double delta, double * f, double dtmax)

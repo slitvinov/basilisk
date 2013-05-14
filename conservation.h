@@ -3,54 +3,39 @@
 
 typedef struct {
   double l, r;
-} state; // left-right Riemann states
+} state; // left-right Riemann state
 
-// primary variables (i.e. will be coarsened/refined)
-scalar * primary = NULL;
-
-// extra storage for predictor/corrector
-// fixme: not needed for first-order scheme
-scalar * conserved1 = NULL;
-
-vector * slopes = NULL;
 scalar * tendencies = NULL;
 
 // Default user-provided parameters
 // conserved quantities
-scalar * conserved = NULL;
+extern scalar * conserved;
 // gradient
-double (* gradient) (double, double, double) = minmod2;
+double (* gradient)    (double, double, double) = minmod2;
 // user-provided functions
-void   parameters   (void);
-void   init         (void);
-double riemann      (state * s, double delta, double * flux, double dtmax);
+void      parameters   (void);
+void      init         (void);
+double    riemann      (state * s, double delta, double * flux, double dtmax);
 
-int list_len (scalar * list)
+static double fluxes (scalar * conserved, double dtmax)
 {
-  int len = 0;
-  for (scalar s in list)
-    len++;
-  return len;
-}
+  // allocate space for slopes
+  vector * slopes = NULL;
+  for (scalar s in conserved) {
+    vector slope = new vector;
+    foreach_dimension()
+      slope.x.gradient = zero; // first-order interpolation only
+    slopes = vectors_append (slopes, slope);
+  }
+  // compute slopes
+  gradients (conserved, slopes);
 
-scalar * list_concat (scalar * l1, scalar * l2)
-{
-  scalar * list = malloc (sizeof(scalar)*(list_len(l1) + list_len(l2) + 1));
-  int i = 0;
-  for (scalar s in l1)
-    list[i++] = s;
-  for (scalar s in l2)
-    list[i++] = s;
-  list[i] = -1;
-  return list;
-}
-
-static double flux (double dtmax)
-{
+  // allocate space for fluxes
   int len = list_len (conserved);
-  state  c[len];
-  double f[len];
+  state  c[len]; // Riemann states for each conserved quantity
+  double f[len]; // fluxes for each conserved quantity
 
+  // compute fluxes and tendencies
   foreach_face() {
     double dx = delta/2.;
     int i = 0;
@@ -79,21 +64,24 @@ static double flux (double dtmax)
     }
 #endif
 
+  // free space for slopes
+  delete ((scalar *) slopes);
+
   return dtmax;
 }
 
-static void update (scalar * list1, scalar * list2, double dt)
+static void update (scalar * conserved1, scalar * conserved2, double dt)
 {
-  if (list1 != list2)
-    trash (list1);
+  if (conserved1 != conserved2)
+    trash (conserved1);
   foreach() {
     scalar s1, s2, ds;
-    for (s1,s2,ds in list1,list2,tendencies) {
+    for (s1,s2,ds in conserved1,conserved2,tendencies) {
       s1[] = s2[] + dt*ds[]/delta;
       ds[] = 0.;
     }
   }
-  boundary (list1);
+  boundary (conserved1);
 }
 
 double dt = 0.;
@@ -103,57 +91,50 @@ void run()
   parameters();
   init_grid(N);
 
+  // allocate tendencies
+  tendencies = NULL;
+  for (scalar s in conserved) {
+    scalar ds = new scalar;
 #if QUADTREE
-  // we need the tendencies to be reinitialised during refinement
-  for (scalar ds in tendencies)
+    // we need to reinitialise the tendencies during refinement
     ds.refine = refine_reset;
 #endif
+    tendencies = list_append (tendencies, ds);
+  }
 
   // limiting
   for (scalar s in conserved)
     s.gradient = gradient;
-  scalar * list = (scalar *) slopes;
-  for (scalar s in list)
-    s.gradient = zero;
 
   // default values
-  primary = list_concat (conserved, tendencies);
   foreach()
-    for (scalar s in primary)
+    for (scalar s in all)
       s[] = 0.;
-  boundary (primary);
+  boundary (all);
 
   // user-defined initial conditions
   init();
-  boundary (primary);
-
-  // clone temporary storage
-  clone (conserved, conserved1);
+  boundary (all);
 
   // main loop
   timer start = timer_start();
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    gradients (conserved, slopes);
-    dt = dtnext (t, flux (DT));
+    dt = dtnext (t, fluxes (conserved, DT));
 
-    if (gradient == zero)
-      /* 1st-order time-integration for 1st-order spatial
-	 discretisation */
-      update (conserved, conserved, dt);
-    else {
+    if (gradient != zero) {
       /* 2nd-order time-integration */
+      // temporary storage
+      scalar * conserved1 = clone (conserved);
       /* predictor */
       update (conserved1, conserved, dt/2.);
-      swap (scalar *, conserved, conserved1);
-      
       /* corrector */
-      gradients (conserved, slopes);
-      flux (dt);
-
-      update (conserved, conserved1, dt);
+      fluxes (conserved1, dt);
+      delete (conserved1);
     }
+
+    update (conserved, conserved, dt);
 
     foreach (reduction(+:tnc))
       tnc++;
@@ -161,6 +142,6 @@ void run()
   }
   timer_print (start, i, tnc);
 
-  free (primary);
+  delete (tendencies);
   free_grid ();
 }

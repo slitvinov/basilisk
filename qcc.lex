@@ -8,9 +8,9 @@
 
   enum { scalar, vector, tensor };
 
-  typedef int Scalar;
-  typedef struct { Scalar x, y; } Vector;
-  typedef struct { Vector x, y; } Tensor;
+  typedef struct { int i; char * name; } Scalar;
+  typedef struct { int x, y; char * name; } Vector;
+  typedef struct { Vector x, y; char * name; } Tensor;
 
   int debug = 0, fpe = 0, catch = 0;
   char dir[] = ".qccXXXXXX";
@@ -52,11 +52,11 @@
   enum { face_x, face_y, face_xy };
   int foreach_face_xy;
 
-  typedef struct { char * v; int type, args, scope; } var_t;
+  typedef struct { char * v; int type, args, scope; int i[4]; } var_t;
   var_t _varstack[100]; int varstack = -1;
   void varpush (const char * s, int type, int scope) {
     if (s[0] != '\0') {
-      char * f = malloc (sizeof (char)*(strlen (s) + 1));
+      char * f = malloc (strlen (s) + 1);
       strcpy (f, s);
       char * q = f;
       int na = 0;
@@ -67,13 +67,18 @@
       _varstack[varstack].scope = scope;
       _varstack[varstack].args = na;
       _varstack[varstack].type = type;
+      _varstack[varstack].i[0] = -1;
     }
   }
   void varpop () {
-    while (varstack >= 0 && _varstack[varstack].scope > scope)
-      free (_varstack[varstack--].v);
+    while (varstack >= 0 && _varstack[varstack].scope > scope) {
+      var_t var = _varstack[varstack--];
+      free (var.v);
+    }
   }
-  
+  var_t * vartop() {
+    return varstack >= 0 ? &_varstack[varstack] : NULL;
+  }
   int identifier (int c) {
     return ((c >= 'a' && c <= 'z') || 
 	    (c >= 'A' && c <= 'Z') || 
@@ -229,7 +234,7 @@
   }
 
   char * makelist (const char * input, int type) {
-    char * text = malloc (sizeof (char)*(strlen(input) - 1));
+    char * text = malloc (strlen(input) - 1);
     strncpy (text, &input[1], strlen (input) - 1);
     text[strlen (input) - 2] = '\0';
     char * s = strtok (text, " \t\v\n\f,");
@@ -257,10 +262,12 @@
     if (type >= 0)
       listtype = type;
     char * list = calloc (strlen("((scalar []){") + 1, sizeof (char));
-    if (listtype == scalar)
-      strcpy (list, "((scalar []){");
-    else
-      strcpy (list, "((vector []){");
+    switch (listtype) {
+    case scalar: strcpy (list, "((scalar []){"); break;
+    case vector: strcpy (list, "((vector []){"); break;
+    case tensor: strcpy (list, "((tensor []){"); break;
+    default: assert (0); break;
+    }
     strncpy (text, &input[1], strlen (input) - 1);
     text[strlen (input) - 2] = '\0';
     s = strtok (text, " \t\v\n\f,");
@@ -273,22 +280,44 @@
 	dot = strchr (dot+1, '.');
       }
       char member[80];
-      switch (vtype - listtype) {
-      case 0: sprintf (member, "%s,", s); break;
-      case 1: sprintf (member, "%s.x,%s.y,", s, s); break;
-      case 2: sprintf (member, "%s.x.x,%s.x.y,%s.y.x,%s.y.y,",
-		       s, s, s, s); break;
-      default: assert (0);
+      if (var->i[0] < 0) { // dynamic allocation
+	switch (vtype - listtype) {
+	case 0: sprintf (member, "%s,", s); break;
+	case 1: sprintf (member, "%s.x,%s.y,", s, s); break;
+	case 2: sprintf (member, "%s.x.x,%s.x.y,%s.y.x,%s.y.y,",
+			 s, s, s, s); break;
+	default: assert (0);
+	}
       }
+      else if (listtype == scalar) { // static scalar allocation
+	switch (vtype - listtype) {
+	case 0: sprintf (member, "%d,", var->i[0]); break;
+	case 1: sprintf (member, "%d,%d,", var->i[0], var->i[1]); break;
+	case 2: sprintf (member, "%d,%d,%d,%d,",
+			 var->i[0], var->i[1], var->i[2], var->i[3]); break;
+	default: assert (0);
+	}
+      }
+      else if (listtype == vector) { // static vector allocation
+	switch (vtype - listtype) {
+	case 0: sprintf (member, "{%d,%d},", var->i[0], var->i[1]); break;
+	case 1: sprintf (member, "{%d,%d},{%d,%d},",
+			 var->i[0], var->i[1], var->i[2], var->i[3]); break;
+	default: assert (0);
+	}
+      }
+      else
+	assert (0); // static tensor allocation not done yet
       list = realloc (list, (strlen(list) + strlen(member) + 1)*sizeof(char));
       strcat (list, member);
       s = strtok (NULL, " \t\v\n\f,)");
     }
     free (text);
-    char end[10];
+    char end[20];
     switch (listtype) {
     case scalar: strcpy (end, "-1})"); break;
     case vector: strcpy (end, "{-1,-1}})"); break;
+    case tensor: strcpy (end, "{{-1,-1},{-1,-1}}})"); break;
     default: assert (0);
     }
     list = realloc (list, (strlen(list) + strlen(end) + 1)*sizeof(char));
@@ -297,6 +326,7 @@
   }
 
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
+#define space(s) { while (!strchr(" \t\v\n\f", *s)) s++; }
 
 #define YY_INPUT(buf,result,max_size)			      \
   {							      \
@@ -468,6 +498,69 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
+{ID}+{WS}*[=]{WS}*new{WS}+(scalar|vector|tensor) |
+[=]{WS}*new{WS}+(scalar|vector|tensor) {
+  char * type = strchr (yytext, '=');
+  type = strstr (type, "new"); space(type); nonspace(type); 
+  int vartype = (!strcmp (type, "scalar") ? scalar :
+		 !strcmp (type, "vector") ? vector :
+		 !strcmp (type, "tensor") ? tensor :
+		 -1);
+  var_t * var;
+  if (yytext[0] == '=') {
+    var = vartop();
+    assert (var && var->scope == scope);
+    if (var->type != vartype)
+      return yyerror ("type mismatch in new");
+  }
+  else {
+    char * s = yytext; space (s); *s = '\0';
+    var = varlookup (yytext, strlen(yytext));
+    if (!var) {
+      fprintf (stderr, "undeclared %s '%s'", type, yytext);
+      return 1;
+    }
+    if (var->type != vartype)
+      return yyerror ("type mismatch in new");
+    fprintf (yyout, "%s ", yytext);
+  }
+  if (scope > 0)
+    fprintf (yyout, "= new_%s(\"%s\")", type, var->v);
+  else if (vartype == scalar) {
+    fprintf (yyout, "= %d", nvar);
+    var->i[0] = nvar;
+    nscalars++;
+    scalars = realloc (scalars, sizeof (Scalar)*nscalars);
+    scalars[nscalars-1].i = nvar++;
+    scalars[nscalars-1].name = strdup (var->v);
+  }
+  else if (vartype == vector) {
+    fprintf (yyout, "= {%d,%d}", nvar, nvar + 1);    
+    for (int i = 0; i < 2; i++)
+      var->i[i] = nvar + i;
+    nvectors++;
+    vectors = realloc (vectors, sizeof (Vector)*nvectors);
+    vectors[nvectors-1] = (Vector){nvar,nvar+1};
+    vectors[nvectors-1].name = strdup (var->v);
+    nvar += 2;
+  }
+  else if (vartype == tensor) {
+    fprintf (yyout, "= {{%d,%d},{%d,%d}}",
+	     nvar, nvar + 1, nvar + 2, nvar + 3);
+    for (int i = 0; i < 4; i++)
+      var->i[i] = nvar + i;
+    ntensors++;
+    tensors = realloc (tensors, sizeof (Tensor)*ntensors);
+    tensors[ntensors-1] = (Tensor){{nvar,nvar+1},{nvar+2, nvar+3}};
+    tensors[ntensors-1].name = strdup (var->v);
+    nvar += 4;
+  }
+  else
+    assert (0);
+  if (debug)
+    fprintf (stderr, "%s:%d: new %s: %s\n", fname, line, type, var->v);
+}
+
 (scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+ {
   ECHO;
   char * var = strstr(yytext,"scalar");
@@ -492,6 +585,7 @@ end_foreach{ID}*{SP}*"()" {
     if (debug)
       fprintf (stderr, "%s:%d: proto: %s\n", fname, line, var);
     varpush (var, vartype, scope + 1);
+    invardecl = 0;
   }
 }
 
@@ -506,44 +600,6 @@ end_foreach{ID}*{SP}*"()" {
   else
     REJECT;
   ECHO;
-}
-
-new{WS}+scalar {
-  if (scope > 0)
-    fprintf (yyout, "new_scalar (%d)", nvar);
-  else {
-    fprintf (yyout, "%d", nvar);
-    nscalars++;
-    scalars = realloc (scalars, sizeof (Scalar)*nscalars);
-    scalars[nscalars-1] = nvar;
-  }
-  nvar++;
-}
-
-new{WS}+vector {
-  if (scope > 0)
-    fprintf (yyout, "new_vector ((vector){%d,%d})", nvar, nvar + 1);
-  else {
-    fprintf (yyout, "{%d,%d}", nvar, nvar + 1);
-    nvectors++;
-    vectors = realloc (vectors, sizeof (Vector)*nvectors);
-    vectors[nvectors-1] = (Vector){nvar,nvar + 1};
-  }
-  nvar += 2;
-}
-
-new{WS}+tensor {
-  if (scope > 0)
-    fprintf (yyout, "new_tensor ((tensor){{%d,%d},{%d,%d}})",
-	     nvar, nvar + 1, nvar + 2, nvar + 3);
-  else {
-    fprintf (yyout, "{{%d,%d},{%d,%d}}",
-	     nvar, nvar + 1, nvar + 2, nvar + 3);
-    ntensors++;
-    tensors = realloc (tensors, sizeof (Tensor)*ntensors);
-    tensors[ntensors-1] = (Tensor){{nvar,nvar + 1},{nvar + 2, nvar + 3}};
-  }  
-  nvar += 4;
 }
 
 val{WS}*[(]    {
@@ -625,7 +681,7 @@ val{WS}*[(]    {
     char * b = s;
     while (!strchr(" \t\v\n\f]", *s)) s++;
     *s++ = '\0';
-    char * func = malloc ((strlen (yytext) + 1)*sizeof (char));
+    char * func = malloc (strlen (yytext) + 1);
     strcpy (func, yytext);
     char * s1 = func;
     while (*s1 != '\0') {
@@ -633,10 +689,10 @@ val{WS}*[(]    {
 	*s1 = '_';
       s1++;
     }
-    boundaryfunc = malloc ((strlen ("_method[].boundary[] = _;") + 
-			    2*strlen (b) + 
-			    strlen(yytext) + 
-			    strlen (func) + 1)*sizeof (char));
+    boundaryfunc = malloc (strlen ("_method[].boundary[] = _;") + 
+			   2*strlen (b) + 
+			   strlen(yytext) + 
+			   strlen (func) + 1);
     sprintf (boundaryfunc, "_method[%s].boundary[%s] = _%s%s;", 
 	     yytext, b, func, b);
     fprintf (yyout, 
@@ -809,7 +865,7 @@ foreach_dimension{WS}*[(]{WS}*[)] {
   yyout = dopen ("dimension.h", "w");
 }
 
-reduction[(](min|max):{ID}+[)] {
+reduction{WS}*[(](min|max):{ID}+[)] {
   char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':');
   *s1 = '\0'; s1++;
   assert (nreduct < REDUCTMAX);
@@ -964,7 +1020,7 @@ void cleanup (int status)
 
 FILE * dopen (const char * fname, const char * mode)
 {
-  char * out = malloc (sizeof (char)*(strlen (dir) + strlen (fname) + 2));
+  char * out = malloc (strlen (dir) + strlen (fname) + 2);
   strcpy (out, dir); strcat (out, "/"); strcat (out, fname);
   FILE * fout = fopen (out, mode);
   free (out);
@@ -982,7 +1038,7 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
     }
     char * file = strstr (path, "//"); 
     if (file) file += 2; else file = path;
-    char * out = malloc (sizeof (char)*(strlen (dir) + strlen (file) + 2));
+    char * out = malloc (strlen (dir) + strlen (file) + 2);
     strcpy (out, dir);
     strcat (out, "/");
     strcat (out, file);
@@ -1014,9 +1070,9 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   FILE * fout = dopen ("grid.h", "w");
   /* new variables */
   fprintf (fout,
-	   "#include \"common.h\"\n"
-	   "int nvar = %d, datasize = %d*sizeof (double);\n",
-	   nvar, nvar);
+	   "int datasize = %d*sizeof (double);\n"
+	   "#include \"common.h\"\n",
+	   nvar);
   /* catch */
   if (catch)
     fputs ("void catch_fpe (void);\n", fout);
@@ -1061,7 +1117,13 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   fprintf (fout, "void %s_methods(void);\n", grid);
   fputs ("static void init_solver (void) {\n", fout);
   /* scalar methods */
-  fputs ("  _method = calloc (nvar, sizeof (Methods));\n", fout);
+  fprintf (fout, "  _method = calloc (%d, sizeof (Methods));\n", nvar);
+  /* list of all scalars */
+  fprintf (fout, 
+	   "  all = malloc (sizeof (scalar)*%d);\n"
+	   "  for (int i = 0; i < %d; i++)\n"
+	   "    all[i] = i;\n"
+	   "  all[%d] = -1;\n", nvar + 1, nvar, nvar);
   if (fpe)
     /* Initialises unused memory with "signaling NaNs".  
      * This is probably not very portable, tested with
@@ -1078,14 +1140,15 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
     fputs ("  catch_fpe();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);
   for (int i = 0; i < nscalars; i++)
-    fprintf (fout, "  new_scalar (%d);\n", scalars[i]);
+    fprintf (fout, "  init_scalar (%d, \"%s\");\n", 
+	     scalars[i].i, scalars[i].name);
   for (int i = 0; i < nvectors; i++)
-    fprintf (fout, "  new_vector ((vector){%d,%d});\n", 
-	     vectors[i].x, vectors[i].y);
+    fprintf (fout, "  init_vector ((vector){%d,%d}, \"%s\");\n", 
+	     vectors[i].x, vectors[i].y, vectors[i].name);
   for (int i = 0; i < ntensors; i++)
-    fprintf (fout, "  new_tensor ((tensor){{%d,%d},{%d,%d}});\n", 
+    fprintf (fout, "  init_tensor ((tensor){{%d,%d},{%d,%d}}, \"%s\");\n", 
 	     tensors[i].x.x, tensors[i].x.y,
-	     tensors[i].y.x, tensors[i].y.y);
+	     tensors[i].y.x, tensors[i].y.y, tensors[i].name);
   for (int i = 0; i < nboundary; i++)
     fprintf (fout, "  _boundary%d();\n", i);
   fputs ("  init_events();\n}\n", fout);

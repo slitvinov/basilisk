@@ -252,24 +252,24 @@ Point locate (double xp, double yp)
   return point;
 }
 
-scalar quadtree_new_scalar (scalar s)
+scalar quadtree_init_scalar (scalar s, const char * name)
 {
-  s = cartesian_new_scalar (s);
+  s = cartesian_init_scalar (s, name);
   s.refine = refine_linear;
   return s;
 }
 
-vector quadtree_new_vector (vector v)
+vector quadtree_init_vector (vector v, const char * name)
 {
-  v = cartesian_new_vector (v);
+  v = cartesian_init_vector (v, name);
   foreach_dimension()
     v.x.refine = refine_linear;
   return v;
 }
 
-tensor quadtree_new_tensor (tensor t)
+tensor quadtree_init_tensor (tensor t, const char * name)
 {
-  t = cartesian_new_tensor (t);
+  t = cartesian_init_tensor (t, name);
   foreach_dimension()
     t.x.x.refine = refine_linear;
   foreach_dimension()
@@ -280,9 +280,9 @@ tensor quadtree_new_tensor (tensor t)
 void quadtree_methods()
 {
   multigrid_methods();
-  new_scalar = quadtree_new_scalar;
-  new_vector = quadtree_new_vector;
-  new_tensor = quadtree_new_tensor;
+  init_scalar = quadtree_init_scalar;
+  init_vector = quadtree_init_vector;
+  init_tensor = quadtree_init_tensor;
   boundary   = quadtree_boundary;
   boundary_restriction = quadtree_boundary_restriction;
 }

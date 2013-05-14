@@ -10,14 +10,14 @@
   static int npath = 1, hasgrid = 0;
 
   static char * _stack[100]; int stack = -1;
-  #define push(s) { char * f = malloc (sizeof (char)*(strlen (s) + 1));	\
+  #define push(s) { char * f = malloc (strlen (s) + 1);	\
                     strcpy (f, s); _stack[++stack] = f; }
   #define pop()  _stack[stack--];
 
   static FILE * openpath (const char * name, const char * mode, char ** path) {
     int i;
     for (i = 0; i <= npath; i++) {
-      char * p = malloc (sizeof (char)*(strlen (paths[i]) + strlen (name) + 3));
+      char * p = malloc (strlen (paths[i]) + strlen (name) + 3);
       strcpy (p, paths[i]); strcat (p, "//"); strcat (p, name);
       FILE * fp = fopen (p, mode);
       if (fp) {
@@ -107,7 +107,7 @@ void stripname (char * path)
 
 char * stripslash (char * path)
 {
-  char * strip = malloc (sizeof (char)*(strlen (path) + 1)), * s = path, * o = strip;
+  char * strip = malloc (strlen (path) + 1), * s = path, * o = strip;
   int slash = 0;
   do {
     if (*s == '/') {
@@ -126,7 +126,7 @@ char * stripslash (char * path)
 static int include (char * file, FILE * fin)
 {
   fname = stripslash (file);
-  paths[npath] = malloc (sizeof (char)*(strlen (file) + 1));
+  paths[npath] = malloc (strlen (file) + 1);
   strcpy (paths[npath], file);
   stripname (paths[npath]);
   yyin = fin;
