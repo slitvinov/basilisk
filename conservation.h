@@ -1,10 +1,6 @@
 // generic solver for system of conservation laws
 #include "utils.h"
 
-typedef struct {
-  double l, r;
-} state; // left-right Riemann state
-
 scalar * tendencies = NULL;
 
 // Default user-provided parameters
@@ -15,7 +11,35 @@ double (* gradient)    (double, double, double) = minmod2;
 // user-provided functions
 void      parameters   (void);
 void      init         (void);
-double    riemann      (state * s, double delta, double * flux, double dtmax);
+void      flux         (const double *, double *, double *);
+
+/* generic central-upwind scheme: see e.g. section 3.1 in
+ *    [1] Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
+ *    Saint-Venant system. Mathematical Modelling and Numerical
+ *    Analysis, 36(3), 397-425.
+ */ 
+double riemann (const double * right, const double * left,
+		double delta, double * f, int len, 
+		double dtmax)
+{
+  double fm[len], fp[len], em[2], ep[2];
+  flux (right, fm, em);
+  flux (left,  fp, ep);
+  double ap = max(ep[1], em[1]); ap = max(ap, 0.);
+  double am = min(ep[0], em[0]); am = min(am, 0.);
+  double a = max(ap, -am);
+  if (a > 0.) {
+    for (int i = 0; i < len; i++)
+      f[i] = (ap*fm[i] - am*fp[i] + ap*am*(left[i] - right[i]))/(ap - am);
+    double dt = CFL*delta/a;
+    if (dt < dtmax)
+      dtmax = dt;
+  }
+  else
+    for (int i = 0; i < len; i++)
+      f[i] = 0.;
+  return dtmax;
+}
 
 static double fluxes (scalar * conserved, double dtmax)
 {
@@ -32,8 +56,8 @@ static double fluxes (scalar * conserved, double dtmax)
 
   // allocate space for fluxes
   int len = list_len (conserved);
-  state  c[len]; // Riemann states for each conserved quantity
-  double f[len]; // fluxes for each conserved quantity
+  double r[len], l[len]; // right/left Riemann states
+  double f[len];         // fluxes for each conserved quantity
 
   // compute fluxes and tendencies
   foreach_face() {
@@ -42,11 +66,11 @@ static double fluxes (scalar * conserved, double dtmax)
     scalar s;
     vector g;
     for (s,g in conserved,slopes) {
-      c[i].l = s[] - dx*g.x[];
-      c[i++].r = s[-1,0] + dx*g.x[-1,0];
+      l[i] = s[] - dx*g.x[];
+      r[i++] = s[-1,0] + dx*g.x[-1,0];
     }
     // Riemann solver
-    dtmax = riemann (c, delta, f, dtmax);
+    dtmax = riemann (r, l, delta, f, len, dtmax);
     // update tendencies
     i = 0;
     for (scalar ds in tendencies) {

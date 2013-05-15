@@ -14,27 +14,17 @@ void parameters()
   N = 500;
 }
 
-double riemann (state * c, double delta, double * f, double dtmax)
+double G = 1.;
+
+void flux (const double * s, double * f, double e[2])
 {
-  double G = 1.;
-  double hm = c[0].r, hp = c[0].l;
-  double qm = c[1].r, qp = c[1].l;
-  double um = qm/hm, up = qp/hp;
-  double cp = sqrt(G*hp), cm = sqrt(G*hm);
-  double ap = max(up + cp, um + cm); ap = max(ap, 0.);
-  double am = min(up - cp, um - cm); am = min(am, 0.);
-  double a = max(ap, -am);
-  if (a > 0.) {
-    f[0] = (ap*qm - am*qp + ap*am*(hp - hm))/(ap - am); // (4.5) of [1]
-    f[1] = (ap*(qm*um + G*sq(hm)/2.) - am*(qp*up + G*sq(hp)/2.) + 
-	    ap*am*(qp - qm))/(ap - am);
-    double dt = CFL*delta/a;
-    if (dt < dtmax)
-      dtmax = dt;
-  }
-  else
-    f[0] = f[1] = 0.;
-  return dtmax;
+  double h = s[0], q = s[1], u = q/h;
+  f[0] = q;
+  f[1] = q*u + G*h*h/2.;
+  // min/max eigenvalues
+  double c = sqrt(G*h);
+  e[0] = u - c; // min
+  e[1] = u + c; // max
 }
 
 void init()
