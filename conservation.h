@@ -90,6 +90,7 @@ static double fluxes (scalar * conserved, double dtmax)
 
   // free space for slopes
   delete ((scalar *) slopes);
+  free (slopes);
 
   return dtmax;
 }
@@ -156,6 +157,7 @@ void run()
       /* corrector */
       fluxes (conserved1, dt);
       delete (conserved1);
+      free (conserved1);
     }
 
     update (conserved, conserved, dt);
@@ -166,6 +168,6 @@ void run()
   }
   timer_print (start, i, tnc);
 
-  delete (tendencies);
+  free (tendencies);
   free_grid ();
 }

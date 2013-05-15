@@ -49,6 +49,7 @@ void residual (scalar a, scalar b, scalar res)
   boundary_flux ({g});
   foreach()
     res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/delta;
+  delete ((scalar *) {g});
 #else
   /* "naive" discretisation (1st order) */
   foreach()

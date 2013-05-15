@@ -64,7 +64,7 @@ void free_grid (void)
   free_solver();
 }
 
-void allocate_scalar (void)
+void realloc_scalar (void)
 {
   Point * p = grid;
   size_t len = (p->n + 2)*datasize;

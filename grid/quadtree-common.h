@@ -108,7 +108,10 @@ int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
   void * f = w.refine;
   w.refine = huge;
   // add w to the list of variables to refine
-  scalar * list1 = scalars_append (list, w);
+  scalar * list1 = NULL;
+  for (scalar s in list)
+    list1 = list_append (list1, s);
+  list1 = list_append (list1, w);
   // refine
   int nf = 0;
   foreach_leaf()

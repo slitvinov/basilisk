@@ -94,7 +94,7 @@ void multigrid_debug (Point point)
     for (int k = 0; k <= 1; k++)
       for (int l = 0; l <= 1; l++) {
 	fprintf (fp, "%g %g", xf + k*delta/2., yf + l*delta/2.);
-	for (scalar v = 0; v < nvar; v++)
+	for (scalar v in all)
 	  fprintf (fp, " %g", fine(v,k,l));
 	fputc ('\n', fp);
       }
@@ -108,7 +108,7 @@ void multigrid_debug (Point point)
     for (int k = 0; k <= 1; k++)
       for (int l = 0; l <= 1; l++) {
 	fprintf (fp, "%g %g", xc + k*child.x*delta*2., yc + l*child.y*delta*2.);
-	for (scalar v = 0; v < nvar; v++)
+	for (scalar v in all)
 	  fprintf (fp, " %g", coarse(v,k*child.x,l*child.y));
 	fputc ('\n', fp);
       }

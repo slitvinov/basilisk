@@ -62,6 +62,7 @@ void run (void)
     foreach()
       f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;
     boundary ({f});
+    delete ((scalar *){flux, g});
     foreach (reduction (+:tnc))
       tnc++;
     i++; t = tnext;

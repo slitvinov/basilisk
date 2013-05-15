@@ -90,7 +90,7 @@ scalar new_scalar (const char * name)
   all = realloc (all, sizeof (scalar)*(nvar + 1));
   all[nvar - 1] = nvar - 1;
   all[nvar] = -1;
-  allocate_scalar(); // allocate extra space on the grid
+  realloc_scalar(); // allocate extra space on the grid
   init_scalar (nvar - 1, name);
   trash (((scalar []){nvar - 1, -1}));
   return nvar - 1;
@@ -107,6 +107,19 @@ vector new_vector (const char * name)
   v.x = vx; v.y = vy;
   init_vector (v, name);
   return v;
+}
+
+tensor new_tensor (const char * name)
+{
+  char cname[strlen(name) + 3];
+  sprintf (cname, "%s.x", name);
+  vector tx = new_vector (cname);
+  sprintf (cname, "%s.y", name);
+  vector ty = new_vector (cname);
+  tensor t;
+  t.x = tx; t.y = ty;
+  init_tensor (t, name);
+  return t;
 }
 
 scalar * clone (scalar * l)
@@ -141,7 +154,6 @@ void delete (scalar * list)
     fprintf (stderr, "\n");
 #endif
   }
-  free (list);
 }
 
 // Cartesian methods

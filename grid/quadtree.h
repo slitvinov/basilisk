@@ -370,6 +370,19 @@ void alloc_layer (Quadtree * p)
   cache_init (&q->halo[q->depth]);
 }
 
+void realloc_scalar (void)
+{
+  Quadtree * q = grid;
+  size_t oldatasize = sizeof(Cell) + datasize - sizeof(double);
+  for (int l = 0; l <= q->depth; l++) {
+    size_t len = _size(l);
+    q->m[l] = realloc (q->m[l], len*(sizeof(Cell) + datasize));
+    char * data = q->m[l] + (len - 1)*oldatasize;
+    for (int i = len - 1; i > 0; i--, data -= oldatasize)
+      memmove (data + i*sizeof(double), data, oldatasize);
+  }    
+}
+
 Point refine_cell (Point point, scalar * list)
 {
 #if TWO_ONE

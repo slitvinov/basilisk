@@ -29,7 +29,7 @@ void init       (void);
 
 #include "riemann.h"
 
-static double flux (double dtmax)
+static double flux (scalar h, vector u, double dtmax)
 {
   foreach_face() {
     double hi = h[], hn = h[-1,0];
@@ -93,11 +93,12 @@ static void update (vector u2, vector u1, scalar h2, scalar h1, double dt)
   if (h1 != h2)
     trash ({h1, u1});
   foreach() {
-    h1[] = h2[] + dt*dh[]/delta;
+    double h = h2[];
+    h1[] = h + dt*dh[]/delta;
     dh[] = 0.;
     if (h1[] > dry)
       foreach_dimension() {
-	u1.x[] = (h2[]*u2.x[] + dt*dq.x[]/delta)/h1[];
+	u1.x[] = (h*u2.x[] + dt*dq.x[]/delta)/h1[];
 	dq.x[] = 0.;
       }
     else
@@ -140,7 +141,9 @@ void run()
   boundary (list);
 
   // clone temporary storage
-  clone ({h,u}, {h1,u1});
+  _method[h1]   = _method[h];
+  _method[u1.x] = _method[u.x];
+  _method[u1.y] = _method[u.y];
 
   // main loop
   timer start = timer_start();
@@ -148,25 +151,17 @@ void run()
   int i = 0, tnc = 0;
   while (events (i, t)) {
     gradients ({h, zb, u}, {gh, gzb, gu});
-    dt = dtnext (t, flux (DT));
+    dt = dtnext (t, flux (h, u, DT));
 
-    if (gradient == zero)
-      /* 1st-order time-integration for 1st-order spatial
-	 discretisation */
-      update (u, u, h, h, dt);
-    else {
+    if (gradient != zero) {
       /* 2nd-order time-integration */
       /* predictor */
       update (u, u1, h, h1, dt/2.);
-      swap (vector, u, u1);
-      swap (scalar, h, h1);
-      
       /* corrector */
-      gradients ({h, u}, {gh, gu});
-      flux (dt);
-
-      update (u1, u, h1, h, dt);
+      gradients ({h1, u1}, {gh, gu});
+      flux (h1, u1, dt);
     }
+    update (u, u, h, h, dt);
 
     foreach (reduction(+:tnc)) 
       tnc++;

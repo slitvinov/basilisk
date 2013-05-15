@@ -27,12 +27,14 @@ int event (t <= 2.5; t += 2.5/8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
   output_field ({eta}, N, stdout, true);
+  delete ({eta});
 
   scalar l = new scalar;
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
   output_field ({l}, N, stdout, false);
+  delete ({l});
 
   /* check symmetry */
   foreach() {
@@ -57,6 +59,7 @@ int event (i++) {
   int nc = coarsen_wavelet (w, cmax/4., 0, list);
   if (nf || nc)
     boundary (list);
+  delete ({w});
 
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }

@@ -56,6 +56,7 @@ int event (t <= 1200.; t += 1200./8) {
     l[] = level;
   printf ("file: level-%d\n", nf);
   output_field ({h, zb, l}, N, stdout, false);
+  delete ({l});
 
   nf++;
 }
@@ -75,6 +76,7 @@ int event (i++) {
   int nc = coarsen_wavelet (w, cmax/4., 4, list);
   if (nf || nc)
     boundary (list);
+  delete ({eta, w});
 
   //  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }

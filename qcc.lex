@@ -280,7 +280,7 @@
 	dot = strchr (dot+1, '.');
       }
       char member[80];
-      if (var->i[0] < 0) { // dynamic allocation
+      if (scope > 0 || var->i[0] < 0) { // dynamic allocation
 	switch (vtype - listtype) {
 	case 0: sprintf (member, "%s,", s); break;
 	case 1: sprintf (member, "%s.x,%s.y,", s, s); break;
@@ -1117,7 +1117,8 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   fprintf (fout, "void %s_methods(void);\n", grid);
   fputs ("static void init_solver (void) {\n", fout);
   /* scalar methods */
-  fprintf (fout, "  _method = calloc (%d, sizeof (Methods));\n", nvar);
+  fputs ("  _method = calloc (datasize/sizeof(double), sizeof (Methods));\n", 
+	 fout);
   /* list of all scalars */
   fprintf (fout, 
 	   "  all = malloc (sizeof (scalar)*%d);\n"

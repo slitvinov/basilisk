@@ -1,4 +1,7 @@
-/* An implementation of:
+/* Note that this is largely obsolete: for more recent versions see
+ * saint-venant1.h and conservation.h.
+ *
+ *  An implementation of:
  *    [1] Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
  *    Saint-Venant system. Mathematical Modelling and Numerical
  *    Analysis, 36(3), 397-425.
@@ -107,7 +110,8 @@ void run (void)
   boundary ({w});
 
   // clone temporary storage
-  clone ({hu, w}, {hu1, w1});
+  _method[hu1] = _method[hu];
+  _method[w1]  = _method[w];
 
   timer start = timer_start();
   double t = 0.;

@@ -34,6 +34,7 @@ int event (i++) {
   int nc = coarsen_wavelet (w, cmax/4.);
   flag_halo_cells ();
   boundary_f (f);
+  delete ({w});
 #if 0
   fprintf (stderr, "%d refined %d cells coarsened %d cells\n", i, nf, nc);
   check_two_one();
@@ -97,6 +98,7 @@ int event (t = end) {
 
   if (N == 256)
     output_field ({e}, N, stdout, false);
+  delete ({e});
 }
 
 int main() {

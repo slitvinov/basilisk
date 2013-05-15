@@ -58,6 +58,17 @@ void init_grid (int n)
   grid = p;
 }
 
+void realloc_scalar (void)
+{
+  Point * p = grid;
+  size_t oldatasize = datasize - sizeof(double);
+  size_t len = (p->n + 2)*(p->n + 2);
+  p->data = realloc (p->data, len*datasize);
+  char * data = p->data + (len - 1)*oldatasize;
+  for (int i = len - 1; i > 0; i--, data -= oldatasize)
+    memmove (data + i*sizeof(double), data, oldatasize);  
+}
+
 void free_grid (void)
 {
   Point * p = grid;
