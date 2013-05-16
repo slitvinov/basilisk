@@ -1,0 +1,7 @@
+# -*-Makefile-*-
+
+# how to launch the C99 compiler
+CC99 = gcc -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_GNU_SOURCE
+
+# other useful flags
+CFLAGS += -O2 -Wall -g

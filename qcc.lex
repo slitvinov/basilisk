@@ -1232,12 +1232,9 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 
 int main (int argc, char ** argv)
 {
-  char * cc = getenv ("CC"), command[1000];
-  if (cc == NULL) {
-    strcpy (command, CC);
-    strcat (command, " ");
-    strcat (command, C99FLAGS);
-  }
+  char * cc = getenv ("CC99"), command[1000];
+  if (cc == NULL)
+    strcpy (command, CC99);
   else
     strcpy (command, cc);
   char * file = NULL;

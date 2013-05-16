@@ -1,5 +1,6 @@
 VALGRIND = valgrind -q --tool=memcheck
-CFLAGS += -fpe -DTRASH=1 -g -Wall -O2
+# the default CFLAGS are set in ../config
+CFLAGS += -fpe -DTRASH=1
 
 # list only non-default (!.tst) tests
 check: halo.vtst speed.stst refine.vtst rk2.vtst \

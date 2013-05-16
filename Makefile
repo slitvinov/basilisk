@@ -1,16 +1,16 @@
-CFLAGS += -O2 $(C99FLAGS) -D_POSIX_SOURCE -D_BSD_SOURCE
+# edit config (not this file) to tune compiler options etc..
+include config
 
 all: qcc qplot
 
 qcc: qcc.c include.o
-	$(CC) $(CFLAGS) -DCC=\"$(CC)\" -DC99FLAGS=\"$(C99FLAGS)\" \
-		qcc.c include.o -o qcc
+	$(CC99) $(CFLAGS) -DCC99="\"$(CC99)\"" qcc.c include.o -o qcc
 
 include.o: include.c
-	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" -c include.c
+	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" -c include.c
 
 qplot.o: qplot.c
-	$(CC) $(CFLAGS) -c qplot.c
+	$(CC99) $(CFLAGS) -c qplot.c
 
 include.c: include.lex
 	flex -P inc -o include.c include.lex
@@ -23,3 +23,6 @@ tags:
 
 dist:
 	darcs dist
+
+clean:
+	rm -f *.o

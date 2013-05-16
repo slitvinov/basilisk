@@ -1,5 +1,6 @@
 # -*-Makefile-*-
 
+include ../config
 include Makefile.tests
 
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(ALLTESTS))) Makefile.deps
