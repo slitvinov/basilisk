@@ -5,10 +5,6 @@
 // u: flow speed
 scalar h = new scalar, zb = new scalar;
 vector u = new vector;
-// extra storage for predictor/corrector
-// fixme: not needed for first-order scheme
-scalar h1 = new scalar;
-vector u1 = new vector;
 // gradients
 vector gh = new vector, gzb = new vector;
 tensor gu = new tensor;
@@ -140,11 +136,6 @@ void run()
   init();
   boundary (list);
 
-  // clone temporary storage
-  _method[h1]   = _method[h];
-  _method[u1.x] = _method[u.x];
-  _method[u1.y] = _method[u.y];
-
   // main loop
   timer start = timer_start();
   double t = 0.;
@@ -155,6 +146,12 @@ void run()
 
     if (gradient != zero) {
       /* 2nd-order time-integration */
+      scalar h1[];
+      vector u1[];
+      // clone temporary storage
+      _method[h1]   = _method[h];
+      _method[u1.x] = _method[u.x];
+      _method[u1.y] = _method[u.y];
       /* predictor */
       update (u, u1, h, h1, dt/2.);
       /* corrector */

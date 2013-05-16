@@ -52,7 +52,11 @@
   enum { face_x, face_y, face_xy };
   int foreach_face_xy;
 
-  typedef struct { char * v; int type, args, scope; int i[4]; } var_t;
+  typedef struct { 
+    char * v; 
+    int type, args, scope, automatic; 
+    int i[4];
+  } var_t;
   var_t _varstack[100]; int varstack = -1;
   void varpush (const char * s, int type, int scope) {
     if (s[0] != '\0') {
@@ -63,22 +67,45 @@
       while ((q = strchr (q, '['))) {
 	*q++ = '\0'; na++;
       }
-      _varstack[++varstack].v = f;
-      _varstack[varstack].scope = scope;
-      _varstack[varstack].args = na;
-      _varstack[varstack].type = type;
-      _varstack[varstack].i[0] = -1;
+      _varstack[++varstack] = (var_t) { f, type, na, scope, 0, {-1} };
     }
   }
+
+  char * makelist (const char * input, int type);
+
   void varpop () {
-    while (varstack >= 0 && _varstack[varstack].scope > scope) {
-      var_t var = _varstack[varstack--];
-      free (var.v);
+    char * list = NULL;
+    for (int i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
+      var_t var = _varstack[i];
+      if (var.automatic) {
+	if (list == NULL) {
+	  list = malloc (strlen (var.v) + 3);
+	  strcpy (list, "{");
+	}
+	else {
+	  list = realloc (list, strlen (list) + strlen (var.v) + 3);
+	  strcat (list, ",");
+	}
+	strcat (list, var.v);
+      }
     }
+    if (list) {
+      strcat (list, "}");
+      char * slist = makelist (list, scalar);
+      if (debug)
+	fprintf (stderr, "%s:%d: deleting %s\n", fname, line, list);
+      fprintf (yyout, " delete (%s); ", slist);
+      free (slist);
+      free (list);
+    }
+    while (varstack >= 0 && _varstack[varstack].scope > scope)
+      free (_varstack[varstack--].v);
   }
+
   var_t * vartop() {
     return varstack >= 0 ? &_varstack[varstack] : NULL;
   }
+
   int identifier (int c) {
     return ((c >= 'a' && c <= 'z') || 
 	    (c >= 'A' && c <= 'Z') || 
@@ -325,6 +352,47 @@
     return list;
   }
 
+  void new_field (var_t * var) {
+    if (scope > 0)
+      fprintf (yyout, "= new_%s(\"%s\")",
+	       var->type == scalar ? "scalar" : 
+	       var->type == vector ? "vector" : 
+	       var->type == tensor ? "tensor" :
+	       "internal_error",
+	       var->v);
+    else if (var->type == scalar) {
+      fprintf (yyout, "= %d", nvar);
+      var->i[0] = nvar;
+      nscalars++;
+      scalars = realloc (scalars, sizeof (Scalar)*nscalars);
+      scalars[nscalars-1].i = nvar++;
+      scalars[nscalars-1].name = strdup (var->v);
+    }
+    else if (var->type == vector) {
+      fprintf (yyout, "= {%d,%d}", nvar, nvar + 1);    
+      for (int i = 0; i < 2; i++)
+	var->i[i] = nvar + i;
+      nvectors++;
+      vectors = realloc (vectors, sizeof (Vector)*nvectors);
+      vectors[nvectors-1] = (Vector){nvar,nvar+1};
+      vectors[nvectors-1].name = strdup (var->v);
+      nvar += 2;
+    }
+    else if (var->type == tensor) {
+      fprintf (yyout, "= {{%d,%d},{%d,%d}}",
+	       nvar, nvar + 1, nvar + 2, nvar + 3);
+      for (int i = 0; i < 4; i++)
+	var->i[i] = nvar + i;
+      ntensors++;
+      tensors = realloc (tensors, sizeof (Tensor)*ntensors);
+      tensors[ntensors-1] = (Tensor){{nvar,nvar+1},{nvar+2, nvar+3}};
+      tensors[ntensors-1].name = strdup (var->v);
+      nvar += 4;
+    }
+    else
+      assert (0);
+  }
+  
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
 #define space(s) { while (!strchr(" \t\v\n\f", *s)) s++; }
 
@@ -413,10 +481,11 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 }
 
 "}" {
-  ECHO; scope--;
+  scope--;
   if (scope < 0)
     return yyerror ("mismatched '}'");
   varpop();
+  ECHO;
   if (foreachdim && scope == foreachdim)
     endforeachdim ();
   if (infunction && scope == functionscope)
@@ -502,15 +571,15 @@ end_foreach{ID}*{SP}*"()" {
 [=]{WS}*new{WS}+(scalar|vector|tensor) {
   char * type = strchr (yytext, '=');
   type = strstr (type, "new"); space(type); nonspace(type); 
-  int vartype = (!strcmp (type, "scalar") ? scalar :
-		 !strcmp (type, "vector") ? vector :
-		 !strcmp (type, "tensor") ? tensor :
-		 -1);
+  int newvartype = (!strcmp (type, "scalar") ? scalar :
+		    !strcmp (type, "vector") ? vector :
+		    !strcmp (type, "tensor") ? tensor :
+		    -1);
   var_t * var;
   if (yytext[0] == '=') {
     var = vartop();
     assert (var && var->scope == scope);
-    if (var->type != vartype)
+    if (var->type != newvartype)
       return yyerror ("type mismatch in new");
   }
   else {
@@ -520,49 +589,16 @@ end_foreach{ID}*{SP}*"()" {
       fprintf (stderr, "undeclared %s '%s'", type, yytext);
       return 1;
     }
-    if (var->type != vartype)
+    if (var->type != newvartype)
       return yyerror ("type mismatch in new");
     fprintf (yyout, "%s ", yytext);
   }
-  if (scope > 0)
-    fprintf (yyout, "= new_%s(\"%s\")", type, var->v);
-  else if (vartype == scalar) {
-    fprintf (yyout, "= %d", nvar);
-    var->i[0] = nvar;
-    nscalars++;
-    scalars = realloc (scalars, sizeof (Scalar)*nscalars);
-    scalars[nscalars-1].i = nvar++;
-    scalars[nscalars-1].name = strdup (var->v);
-  }
-  else if (vartype == vector) {
-    fprintf (yyout, "= {%d,%d}", nvar, nvar + 1);    
-    for (int i = 0; i < 2; i++)
-      var->i[i] = nvar + i;
-    nvectors++;
-    vectors = realloc (vectors, sizeof (Vector)*nvectors);
-    vectors[nvectors-1] = (Vector){nvar,nvar+1};
-    vectors[nvectors-1].name = strdup (var->v);
-    nvar += 2;
-  }
-  else if (vartype == tensor) {
-    fprintf (yyout, "= {{%d,%d},{%d,%d}}",
-	     nvar, nvar + 1, nvar + 2, nvar + 3);
-    for (int i = 0; i < 4; i++)
-      var->i[i] = nvar + i;
-    ntensors++;
-    tensors = realloc (tensors, sizeof (Tensor)*ntensors);
-    tensors[ntensors-1] = (Tensor){{nvar,nvar+1},{nvar+2, nvar+3}};
-    tensors[ntensors-1].name = strdup (var->v);
-    nvar += 4;
-  }
-  else
-    assert (0);
+  new_field (var);
   if (debug)
     fprintf (stderr, "%s:%d: new %s: %s\n", fname, line, type, var->v);
 }
 
-(scalar|vector|tensor){WS}+[a-zA-Z0-9\[\]]+ {
-  ECHO;
+(scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ {
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
   if (!var) {
@@ -576,20 +612,35 @@ end_foreach{ID}*{SP}*"()" {
   var = &var[7];
   nonspace (var);
   if (para == 0) { /* declaration */
+    if (!strcmp (&var[strlen(var)-2], "[]")) {
+      // automatic
+      var[strlen(var)-2] = '\0';
+      varpush (var, vartype, scope);
+      var_t * v = varlookup (var, strlen(var));
+      v->automatic = 1;
+      fputs (yytext, yyout);
+      new_field (v);
+    }
+    else {
+      varpush (var, vartype, scope);
+      ECHO;
+    }
     if (debug)
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
-    varpush (var, vartype, scope);
     invardecl = scope + 1;
   }
   else if (para == 1) { /* function prototype (no nested functions) */
+    ECHO;
     if (debug)
       fprintf (stderr, "%s:%d: proto: %s\n", fname, line, var);
     varpush (var, vartype, scope + 1);
     invardecl = 0;
   }
+  else
+    ECHO;
 }
 
-,{WS}*{ID}+ {
+,{WS}*[a-zA-Z0-9_\[\]]+ {
   if (invardecl == scope + 1) {
     char * var = &yytext[1];
     nonspace (var);
