@@ -32,24 +32,6 @@ void init()
     f[] = bump(x,y);
 }
 
-int event (i++) {
-#if ADAPT
-  scalar w = new scalar;
-  wavelet (f, w);
-
-  double cmax = 1e-3;
-  int nf = refine_wavelet (f, f, w, cmax);
-  int nc = coarsen_wavelet (w, cmax/4.);
-  flag_halo_cells ();
-  boundary_f (f);
-  delete ({w});
-#if 0
-  fprintf (stderr, "%d refined %d cells coarsened %d cells\n", i, nf, nc);
-  check_two_one();
-#endif
-#endif
-}
-
 /* event (t += 0.1; t <= 5.) output_matrix (f, N, stdout, true); */
 
 /* event (t += 0.1; t <= 5.) { */
@@ -99,7 +81,7 @@ int event (t = {0,5}) {
 }
 
 int event (t = 5) {
-  scalar e = new scalar;
+  scalar e[];
   foreach()
     e[] = f[] - bump(x,y);
   norm n = normf (e);
@@ -107,8 +89,6 @@ int event (t = 5) {
   
   if (N == 256)
     output_field ({e}, N, stdout, false);
-
-  delete ({e});
 }
 
 int main() {

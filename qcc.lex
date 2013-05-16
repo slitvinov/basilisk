@@ -26,6 +26,7 @@
   int invardecl, vartype;
   int inval, invalpara;
   int brack, inarray;
+  int inreturn;
 
   #define EVMAX 100
   int inevent, eventscope, eventpara;
@@ -73,7 +74,7 @@
 
   char * makelist (const char * input, int type);
 
-  void varpop () {
+  void delete_automatic (int scope) {
     char * list = NULL;
     for (int i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
       var_t var = _varstack[i];
@@ -98,6 +99,10 @@
       free (slist);
       free (list);
     }
+  }
+
+  void varpop () {
+    delete_automatic (scope);
     while (varstack >= 0 && _varstack[varstack].scope > scope)
       free (_varstack[varstack--].v);
   }
@@ -392,6 +397,24 @@
     else
       assert (0);
   }
+
+  void declaration (char * var) {
+    if (!strcmp (&var[strlen(var)-2], "[]")) {
+      // automatic
+      var[strlen(var)-2] = '\0';
+      varpush (var, vartype, scope);
+      var_t * v = varlookup (var, strlen(var));
+      v->automatic = 1;
+      fputs (yytext, yyout);
+      new_field (v);
+    }
+    else {
+      varpush (var, vartype, scope);
+      fputs (yytext, yyout);
+    }
+    if (debug)
+      fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
+  }
   
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
 #define space(s) { while (!strchr(" \t\v\n\f", *s)) s++; }
@@ -562,6 +585,10 @@ end_foreach{ID}*{SP}*"()" {
     ECHO;
     endevent ();
   }
+  else if (inreturn) {
+    fputs ("; }", yyout);
+    inreturn = 0;
+  }
   else if (!insthg)
     ECHO;
   invardecl = 0;
@@ -612,21 +639,7 @@ end_foreach{ID}*{SP}*"()" {
   var = &var[7];
   nonspace (var);
   if (para == 0) { /* declaration */
-    if (!strcmp (&var[strlen(var)-2], "[]")) {
-      // automatic
-      var[strlen(var)-2] = '\0';
-      varpush (var, vartype, scope);
-      var_t * v = varlookup (var, strlen(var));
-      v->automatic = 1;
-      fputs (yytext, yyout);
-      new_field (v);
-    }
-    else {
-      varpush (var, vartype, scope);
-      ECHO;
-    }
-    if (debug)
-      fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
+    declaration (var);
     invardecl = scope + 1;
   }
   else if (para == 1) { /* function prototype (no nested functions) */
@@ -644,12 +657,19 @@ end_foreach{ID}*{SP}*"()" {
   if (invardecl == scope + 1) {
     char * var = &yytext[1];
     nonspace (var);
-    if (debug)
-      fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
-    varpush (var, vartype, scope);
+    declaration (var);
   }
   else
     REJECT;
+}
+
+return{WS} {
+  // returning from a function: delete automatic fields before returning
+  // note that this assumes that the function scope is always 1 
+  // (i.e. no nested functions allowed).
+  inreturn = 1;
+  fputs ("{ ", yyout);
+  delete_automatic (0);
   ECHO;
 }
 
@@ -1032,7 +1052,7 @@ int endfor (char * file, FILE * fin, FILE * fout)
   invardecl = 0;
   inval = invalpara = 0;
   brack = inarray = 0;
-  inevent = 0;
+  inevent = inreturn = 0;
   foreachdim = 0;
   inboundary = 0;
   infunction = 0;

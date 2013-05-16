@@ -4,7 +4,7 @@
 #include "grid/quadtree.h"
 #include "utils.h"
 
-scalar h = new scalar, w = new scalar;
+scalar h[], w[];
 
 void refineiter ()
 {

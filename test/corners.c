@@ -1,7 +1,7 @@
 int main ()
 {
   init_grid(2);
-  scalar s = new scalar;
+  scalar s[];
   foreach()
     s[] = 1.;
   restriction ({s});

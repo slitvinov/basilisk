@@ -45,7 +45,7 @@ double h0 (double r) {
   return result;
 }
 
-scalar h1 = new scalar;
+scalar h1[];
 
 void init()
 {
@@ -59,7 +59,7 @@ void init()
 
 /* ------------------ Output helper functions --------------- */
 
-scalar e = new scalar;
+scalar e[];
 
 double error()
 {

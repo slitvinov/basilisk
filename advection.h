@@ -1,7 +1,7 @@
 #include "utils.h"
 
-scalar f = new scalar; // tracer
-vector u = new vector; // velocity
+scalar f[]; // tracer
+vector u[]; // velocity
 
 // Default parameters
 // gradient
@@ -56,13 +56,12 @@ void run (void)
   int i = 0, tnc = 0;
   while (events (i, t)) {
     double dt = dtnext (t, timestep (u));
-    vector flux = new vector, g = new vector;
+    vector flux[], g[];
     gradients ({f}, {g});
     fluxes_upwind_bcg (f, g, u, flux, dt);
     foreach()
       f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;
     boundary ({f});
-    delete ((scalar *){flux, g});
     foreach (reduction (+:tnc))
       tnc++;
     i++; t = tnext;

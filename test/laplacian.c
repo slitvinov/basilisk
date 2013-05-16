@@ -3,7 +3,7 @@
 #include <time.h>
 #include "utils.h"
 
-scalar a = new scalar, b = new scalar;
+scalar a[], b[];
 
 int main ()
 {

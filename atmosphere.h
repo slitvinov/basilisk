@@ -1,8 +1,8 @@
 #include "utils.h"
 
-scalar u = new scalar, v = new scalar, h = new scalar, b = new scalar;
-scalar ke = new scalar, psi = new scalar;
-scalar un = new scalar, vn = new scalar, hn = new scalar;
+scalar u[], v[], h[], b[];
+scalar ke[], psi[];
+scalar un[], vn[], hn[];
 
 // Default parameters
 // Coriolis parameter

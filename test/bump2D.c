@@ -20,16 +20,15 @@ int event (i++) {
 }
 
 int event (t <= 2.5; t += 2.5/8) {
-  scalar eta = new scalar;
+  scalar eta[];
   foreach()
     eta[] = h[] > 1e-3 ? h[] + zb[] : 0.;
   boundary ({eta});
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
   output_field ({eta}, N, stdout, true);
-  delete ({eta});
 
-  scalar l = new scalar;
+  scalar l = eta;
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
@@ -50,7 +49,7 @@ int event (t <= 2.5; t += 2.5/8) {
 }
 
 int event (i++) {
-  scalar w = new scalar;
+  scalar w[];
   wavelet (h, w);
 
   double cmax = 1e-3;
@@ -59,7 +58,6 @@ int event (i++) {
   int nc = coarsen_wavelet (w, cmax/4., 0, list);
   if (nf || nc)
     boundary (list);
-  delete ({w});
 
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }

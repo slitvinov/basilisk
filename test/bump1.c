@@ -1,7 +1,7 @@
 #include "grid/cartesian1D.h"
 #include "conservation.h"
 
-scalar h = new scalar, q = new scalar;
+scalar h[], q[];
 scalar * conserved = {h, q};
 
 q[left]  = - q[];

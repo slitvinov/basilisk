@@ -5,8 +5,8 @@
 #include "grid/quadtree.h"
 #include "utils.h"
 
-scalar h = new scalar, w = new scalar;
-vector u = new vector;
+scalar h[], w[];
+vector u[];
 
 int main (int argc, char ** argv)
 {

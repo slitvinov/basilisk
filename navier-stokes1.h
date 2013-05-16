@@ -1,9 +1,9 @@
 #include "utils.h"
 #include "mg.h"
 
-scalar p = new scalar;
-vector u = new vector;
-tensor S = new tensor;
+scalar p[];
+vector u[];
+tensor S[];
 
 // Default parameters
 // Viscosity

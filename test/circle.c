@@ -7,7 +7,7 @@
 #include "utils.h"
 #include "mg.h"
 
-scalar a = new scalar, b = new scalar, res = new scalar, dp = new scalar;
+scalar a[], b[], res[], dp[];
 
 double solution (double x, double y)
 {
@@ -43,13 +43,12 @@ void residual (scalar a, scalar b, scalar res)
 {
 #if 1
   /* conservative coarse/fine discretisation (2nd order) */
-  vector g = new vector;
+  vector g[];
   foreach_face()
     g.x[] = (a[] - a[-1,0])/delta;
   boundary_flux ({g});
   foreach()
     res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/delta;
-  delete ((scalar *) {g});
 #else
   /* "naive" discretisation (1st order) */
   foreach()

@@ -26,7 +26,7 @@ void init()
   }
 }
 
-scalar eta = new scalar;
+scalar eta[];
 
 int event (t = {0.6, 0.9, 1.2, 1.5, 1.8})
 {
@@ -39,12 +39,11 @@ int event (t = {0.6, 0.9, 1.2, 1.5, 1.8})
   printf ("file: eta-%d\n", nf);
   output_field ({eta}, N, stdout, true);
 
-  scalar l = new scalar;
+  scalar l[];
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
   output_field ({l}, N, stdout, false);
-  delete ({l});
 }
 
 int event (i++) {
@@ -57,7 +56,7 @@ int event (i++) {
     eta[] = h[] + zb[];
   boundary ({eta});
 
-  scalar w = new scalar;
+  scalar w[];
   wavelet (eta, w);
 
   double cmax = 1e-4;
@@ -66,7 +65,6 @@ int event (i++) {
   int nc = coarsen_wavelet (w, cmax/4., MINLEVEL, list);
   if (nf || nc)
     boundary (list);
-  delete ({w});
 
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }

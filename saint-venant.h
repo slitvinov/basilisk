@@ -14,12 +14,12 @@
 
 #include "utils.h"
 
-scalar hu = new scalar, w = new scalar, B = new scalar;
-scalar hu1 = new scalar, w1 = new scalar;
+scalar hu[], w[], B[];
+scalar hu1[], w1[];
 // gradients of hu, w
-vector ghu = new vector, gw = new vector;
+vector ghu[], gw[];
 // fluxes
-vector fhu = new vector, fw = new vector;
+vector fhu[], fw[];
 
 // Default parameters
 // acceleration of gravity

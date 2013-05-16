@@ -135,6 +135,8 @@ scalar * clone (scalar * l)
 
 void delete (scalar * list)
 {
+  if (all == NULL) // everything has already been freed
+    return;
   trash (list);
   for (scalar f in list) {
 #if 0

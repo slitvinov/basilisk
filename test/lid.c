@@ -31,7 +31,7 @@ static double energy()
   return se*L0*L0;
 }
 
-scalar un = new scalar; /* we need another scalar */
+scalar un[]; /* we need another scalar */
 
 int event (i = 0) {
   foreach()

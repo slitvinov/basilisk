@@ -4,7 +4,7 @@
 #include "utils.h"
 #include "mg.h"
 
-scalar a = new scalar, b = new scalar, res = new scalar, dp = new scalar;
+scalar a[], b[], res[], dp[];
 
 double solution (double x, double y)
 {

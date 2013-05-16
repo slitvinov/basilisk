@@ -5,7 +5,7 @@
 
 #define A 0.2
 
-scalar a = new scalar, da1 = new scalar, da2 = new scalar;
+scalar a[], da1[], da2[];
 
 void advance (double t, scalar * f, scalar * df)
 {

@@ -3,14 +3,11 @@
 // h: water depth
 // zb: bathymetry
 // u: flow speed
-scalar h = new scalar, zb = new scalar;
-vector u = new vector;
-// gradients
-vector gh = new vector, gzb = new vector;
-tensor gu = new tensor;
+scalar h[], zb[];
+vector u[];
 // tendencies
-scalar dh = new scalar;
-vector dq = new vector;
+scalar dh[];
+vector dq[];
 
 // Default parameters
 // acceleration of gravity
@@ -27,6 +24,13 @@ void init       (void);
 
 static double flux (scalar h, vector u, double dtmax)
 {
+  vector gh[], gzb[];
+  tensor gu[];
+  // first-order gradient reconstruction (for consistent limiting)
+  for (scalar s in {gh, gzb, gu})
+    s.gradient = zero;
+  gradients ({h, zb, u}, {gh, gzb, gu});
+
   foreach_face() {
     double hi = h[], hn = h[-1,0];
     if (hi > dry || hn > dry) {
@@ -120,8 +124,6 @@ void run()
   // limiting
   for (scalar s in {h, zb, u})
     s.gradient = gradient;
-  for (scalar s in {gh, gzb, gu})
-    s.gradient = zero;
 
   // default values
   scalar * list = {h, zb, u, dh, dq};
@@ -141,9 +143,7 @@ void run()
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    gradients ({h, zb, u}, {gh, gzb, gu});
     dt = dtnext (t, flux (h, u, DT));
-
     if (gradient != zero) {
       /* 2nd-order time-integration */
       scalar h1[];
@@ -155,7 +155,6 @@ void run()
       /* predictor */
       update (u, u1, h, h1, dt/2.);
       /* corrector */
-      gradients ({h1, u1}, {gh, gu});
       flux (h1, u1, dt);
     }
     update (u, u, h, h, dt);

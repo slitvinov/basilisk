@@ -2,7 +2,7 @@
 
 #include "utils.h"
 
-scalar v = new scalar;
+scalar v[];
 
 double radius;
 

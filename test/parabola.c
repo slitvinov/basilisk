@@ -38,7 +38,7 @@ int event (i++) {
   boundary ({u.x});
 }
 
-scalar e = new scalar;
+scalar e[];
 
 double e1 = 0., e2 = 0., emax = 0.;
 int ne = 0;
