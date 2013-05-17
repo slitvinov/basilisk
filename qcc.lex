@@ -225,12 +225,7 @@
       fprintf (yyout, "#line %d\n", line);
       fclose (fp);
     }
-    else if (nreduct > 0) {
-      fputs ("\n#undef _OMPEND\n#define _OMPEND ", yyout);
-      for (int i = 0; i < nreduct; i++)
-	fprintf (yyout, "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
-		 reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
-		 reductvar[i], reductvar[i], reductvar[i]);
+    if (nreduct > 0)
       fprintf (yyout,
 	       "\nend_%s();\n"
 	       "#undef _OMPSTART\n"
@@ -239,7 +234,6 @@
 	       "#define _OMPEND\n"
 	       "#line %d\n",
 	       foreachs, line);
-    }
     else
       fprintf (yyout, " end_%s();", foreachs);
     inforeach = inforeach_boundary = inforeach_face = 0;
@@ -447,29 +441,35 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     return yyerror ("mismatched ')'");
   if (inforeach == 1 && scope == foreachscope && para == foreachpara) {
     ECHO;
+    fclose (yyout);
+    yyout = foreachfp;
+    if (nreduct > 0) {
+      fputs ("\n#undef _OMPSTART\n#define _OMPSTART ", yyout);
+      for (int i = 0; i < nreduct; i++)
+	fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
+      fputs ("\n#undef _OMPEND\n#define _OMPEND ", yyout);
+      for (int i = 0; i < nreduct; i++)
+	fprintf (yyout, "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
+		 reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
+		 reductvar[i], reductvar[i], reductvar[i]);
+      fprintf (yyout, "\n#line %d\n", line);
+    }
     if (inforeach_face) {
-      fclose (yyout);
       yyout = dopen ("foreach_face.h", "w");
       foreach_face_line = line;
       foreach_face_xy = face_xy;
-      FILE * fp = dopen ("foreach.h", "r");
-      int c;
-      while ((c = fgetc (fp)) != EOF)
-	if (c == 'x')
-	  foreach_face_xy = face_x;
-	else if (c == 'y')
-	  foreach_face_xy = face_y;
-      fclose (fp);
+      if (nreduct == 0) { // foreach_face (x)
+	FILE * fp = dopen ("foreach.h", "r");
+	int c;
+	while ((c = fgetc (fp)) != EOF)
+	  if (c == 'x')
+	    foreach_face_xy = face_x;
+	  else if (c == 'y')
+	    foreach_face_xy = face_y;
+	fclose (fp);
+      }
     }
     else {
-      fclose (yyout);
-      yyout = foreachfp;
-      if (nreduct > 0) {
-	fprintf (yyout, "\n#undef _OMPSTART\n#define _OMPSTART ");
-	for (int i = 0; i < nreduct; i++)
-	  fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
-	fprintf (yyout, "\n#line %d\n", line);
-      }
       FILE * fp = dopen ("foreach.h", "r");
       int c;
       while ((c = fgetc (fp)) != EOF)

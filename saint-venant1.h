@@ -34,7 +34,7 @@ double tendencies (scalar * evolution, scalar * evolving, double dtmax)
   gradients ({h, zb, u}, {gh, gzb, gu});
 
   // fluxes
-  foreach_face() {
+  foreach_face (reduction (min:dtmax)) {
     double hi = h[], hn = h[-1,0];
     if (hi > dry || hn > dry) {
       double dx = delta/2.;

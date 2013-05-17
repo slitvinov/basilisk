@@ -35,6 +35,8 @@ void (* debug)    (Point);
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
   }
 
+#define end_foreach_face()
+
 #define boundary_flux(...)
 #define output_stencil(v,fp) _output_stencil(point,v,#v,fp)
 void _output_stencil (Point point, scalar s, const char * name, FILE * fp)

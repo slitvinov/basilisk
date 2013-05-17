@@ -227,7 +227,7 @@ void recursive (Point point)
       }
 
 #define foreach_boundary_cell(dir,corners)				\
-  {									\
+  { _OMPSTART /* for face reduction */					\
     int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
     Quadtree point = *((Quadtree *)grid); point.back = grid;		\
     int _d = dir; NOT_UNUSED(_d);					\
@@ -260,7 +260,7 @@ void recursive (Point point)
 	  break;							\
         }								\
       }									\
-    }                                                                   \
+    }  _OMPEND                                                          \
   }
 
 #define foreach(clause)     {						\
