@@ -1,4 +1,3 @@
-#define _GNU_SOURCE 1
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -102,19 +101,25 @@ scalar * list_append (scalar * list, scalar s)
   return list;
 }
 
-scalar * list_concat (scalar * l1, scalar * l2)
+int list_lookup (scalar * l, scalar s)
 {
-  scalar * list = malloc (sizeof(scalar)*(list_len(l1) + list_len(l2) + 1));
-  int i = 0;
-  for (scalar s in l1)
-    list[i++] = s;
-  for (scalar s in l2)
-    list[i++] = s;
-  list[i] = -1;
+  if (l != NULL)
+    for (scalar s1 in l)
+      if (s1 == s)
+	return true;
+  return false;
+}
+
+scalar * list_copy (scalar * l)
+{
+  scalar * list = NULL;
+  if (l != NULL)
+    for (scalar s in l)
+      list = list_append (list, s);
   return list;
 }
 
-scalar * all = NULL; // all the scalars
+scalar * all = NULL; // all the fields
 
 // basic methods
 

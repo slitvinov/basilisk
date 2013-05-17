@@ -64,17 +64,14 @@ int event (t <= 1200.; t += 1200./8) {
 //  output_matrix (h, N, stdout, true);
 
 int event (i++) {
-  scalar eta[], w[];
-  foreach() eta[] = h[] + zb[];
-  boundary ({eta});
+  scalar w[];
   wavelet (h, w);
 
   double cmax = 1e-2;
-  scalar * list = {h, zb, u, dh, dq};
-  int nf = refine_wavelet (w, cmax, LEVEL, list);
-  int nc = coarsen_wavelet (w, cmax/4., 4, list);
+  int nf = refine_wavelet (w, cmax, LEVEL, all);
+  int nc = coarsen_wavelet (w, cmax/4., 4, all);
   if (nf || nc)
-    boundary (list);
+    boundary (all);
 
   //  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }

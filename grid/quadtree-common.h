@@ -70,10 +70,11 @@ int coarsen_wavelet (scalar w, double max, int minlevel, scalar * list)
 	    if (e > error)
 	      error = e;
 	  }
+	// propagate the error to coarser levels
+	double wc = fabs(w[]) + error;
 	if (error < max && level >= minlevel && coarsen_cell (point, list))
 	  nc++;
-	/* propagate the error to coarser levels */
-	w[] = fabs(w[]) + error;
+	w[] = wc;
 	continue;
       }
     }
@@ -107,11 +108,10 @@ int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
   // overload the refine method for w
   void * f = w.refine;
   w.refine = huge;
-  // add w to the list of variables to refine
-  scalar * list1 = NULL;
-  for (scalar s in list)
-    list1 = list_append (list1, s);
-  list1 = list_append (list1, w);
+  scalar * list1 = list;
+  if (!list_lookup (list1, w))
+    // add w to the list of variables to refine
+    list1 = list_append (list_copy (list), w);
   // refine
   int nf = 0;
   foreach_leaf()
@@ -119,7 +119,8 @@ int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
       point = refine_cell (point, list1);
       nf++;
     }
-  free (list1);
+  if (list1 != list)
+    free (list1);
   // restore refine method
   w.refine = f;
   return nf;

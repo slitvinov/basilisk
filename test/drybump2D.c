@@ -60,11 +60,10 @@ int event (i++) {
   wavelet (h, w);
 
   double cmax = 1e-3;
-  scalar * list = {h, zb, u, dh, dq};
-  int nf = refine_wavelet (w, cmax, LEVEL, list);
-  int nc = coarsen_wavelet (w, cmax/4., 0, list);
+  int nf = refine_wavelet (w, cmax, LEVEL, all);
+  int nc = coarsen_wavelet (w, cmax/4., 0, all);
   if (nf || nc)
-    boundary (list);
+    boundary (all);
 
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }

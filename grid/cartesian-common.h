@@ -70,18 +70,12 @@ void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
 scalar new_scalar (const char * name)
 {
   int nvar = datasize/sizeof(double);
-  for (int i = 0; i < nvar; i++) {
-    bool found = false;
-    for (scalar s in all)
-      if (s == i) { 
-	found = true; break;
-      }
-    if (!found) { // found a previously freed slot
+  for (int i = 0; i < nvar; i++)
+    if (!list_lookup (all, i)) { // found a previously freed slot
       all = list_append (all, i);
       init_scalar (i, name);
       return i;
     }
-  }
   
   // need to allocate a new slot
   datasize += sizeof(double); nvar++;

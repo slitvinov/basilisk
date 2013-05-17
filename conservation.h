@@ -1,26 +1,20 @@
 // generic solver for system of conservation laws
 #include "utils.h"
 
-scalar * tendencies = NULL;
-
-// Default user-provided parameters
-// conserved quantities
-extern scalar * conserved;
-// gradient
-double (* gradient)    (double, double, double) = minmod2;
-// user-provided functions
-void      parameters   (void);
-void      init         (void);
-void      flux         (const double *, double *, double *);
+// user-provided parameters and functions:
+// list of conserved quantities
+#define evolving conserved
+// fluxes/eigenvalues for each conserved quantity
+void flux (const double *, double *, double *);
 
 /* generic central-upwind scheme: see e.g. section 3.1 in
  *    [1] Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
  *    Saint-Venant system. Mathematical Modelling and Numerical
  *    Analysis, 36(3), 397-425.
  */ 
-double riemann (const double * right, const double * left,
-		double delta, double * f, int len, 
-		double dtmax)
+static double riemann (const double * right, const double * left,
+		       double delta, double * f, int len, 
+		       double dtmax)
 {
   double fm[len], fp[len], em[2], ep[2];
   flux (right, fm, em);
@@ -41,7 +35,7 @@ double riemann (const double * right, const double * left,
   return dtmax;
 }
 
-static double fluxes (scalar * conserved, double dtmax)
+double tendencies (scalar * evolution, scalar * conserved, double dtmax)
 {
   // allocate space for slopes
   vector * slopes = NULL;
@@ -73,16 +67,16 @@ static double fluxes (scalar * conserved, double dtmax)
     dtmax = riemann (r, l, delta, f, len, dtmax);
     // update tendencies
     i = 0;
-    for (scalar ds in tendencies) {
+    for (scalar ds in evolution) {
       ds[] += f[i];
       ds[-1,0] -= f[i++];
     }
   }
 
 #if QUADTREE
-  // propagate updates from fine to coarse
+  // propagate tendencies from fine to coarse
   foreach_halo()
-    for (scalar ds in tendencies) {
+    for (scalar ds in evolution) {
       coarse(ds,0,0) += ds[]/2.;
       ds[] = 0.;
     }
@@ -95,13 +89,14 @@ static double fluxes (scalar * conserved, double dtmax)
   return dtmax;
 }
 
-static void update (scalar * conserved1, scalar * conserved2, double dt)
+void update (scalar * conserved1, 
+	     scalar * conserved2, scalar * evolution, double dt)
 {
   if (conserved1 != conserved2)
     trash (conserved1);
   foreach() {
     scalar s1, s2, ds;
-    for (s1,s2,ds in conserved1,conserved2,tendencies) {
+    for (s1,s2,ds in conserved1,conserved2,evolution) {
       s1[] = s2[] + dt*ds[]/delta;
       ds[] = 0.;
     }
@@ -109,65 +104,5 @@ static void update (scalar * conserved1, scalar * conserved2, double dt)
   boundary (conserved1);
 }
 
-double dt = 0.;
+#include "predictor-corrector.h"
 
-void run()
-{
-  parameters();
-  init_grid(N);
-
-  // allocate tendencies
-  tendencies = NULL;
-  for (scalar s in conserved) {
-    scalar ds = new scalar;
-#if QUADTREE
-    // we need to reinitialise the tendencies during refinement
-    ds.refine = refine_reset;
-#endif
-    tendencies = list_append (tendencies, ds);
-  }
-
-  // limiting
-  for (scalar s in conserved)
-    s.gradient = gradient;
-
-  // default values
-  foreach()
-    for (scalar s in all)
-      s[] = 0.;
-  boundary (all);
-
-  // user-defined initial conditions
-  init();
-  boundary (all);
-
-  // main loop
-  timer start = timer_start();
-  double t = 0.;
-  int i = 0, tnc = 0;
-  while (events (i, t)) {
-    dt = dtnext (t, fluxes (conserved, DT));
-
-    if (gradient != zero) {
-      /* 2nd-order time-integration */
-      // temporary storage
-      scalar * conserved1 = clone (conserved);
-      /* predictor */
-      update (conserved1, conserved, dt/2.);
-      /* corrector */
-      fluxes (conserved1, dt);
-      delete (conserved1);
-      free (conserved1);
-    }
-
-    update (conserved, conserved, dt);
-
-    foreach (reduction(+:tnc))
-      tnc++;
-    i++; t = tnext;
-  }
-  timer_print (start, i, tnc);
-
-  free (tendencies);
-  free_grid ();
-}

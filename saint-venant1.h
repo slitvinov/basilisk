@@ -5,25 +5,27 @@
 // u: flow speed
 scalar h[], zb[];
 vector u[];
-// tendencies
-scalar dh[];
-vector dq[];
 
 // Default parameters
 // acceleration of gravity
 double G = 1.;
-// gradient
-double (* gradient) (double, double, double) = minmod2;
 // dry
 double dry = 1e-10;
-// user-provided functions
-void parameters (void);
-void init       (void);
+
+// fields updated by time-integration
+scalar * evolving = {h, u};
 
 #include "riemann.h"
 
-static double flux (scalar h, vector u, double dtmax)
+double tendencies (scalar * evolution, scalar * evolving, double dtmax)
 {
+  // recover scalar and vector fields from lists
+  scalar h = evolving[0];
+  vector u = { evolving[1], evolving[2] };
+  scalar dh = evolution[0];
+  vector dq = { evolution[1], evolution[2] };
+
+  // gradients
   vector gh[], gzb[];
   tensor gu[];
   // first-order gradient reconstruction (for consistent limiting)
@@ -31,6 +33,7 @@ static double flux (scalar h, vector u, double dtmax)
     s.gradient = zero;
   gradients ({h, zb, u}, {gh, gzb, gu});
 
+  // fluxes
   foreach_face() {
     double hi = h[], hn = h[-1,0];
     if (hi > dry || hn > dry) {
@@ -61,7 +64,7 @@ static double flux (scalar h, vector u, double dtmax)
 	hi = coarse(h,0,0);
 	zi = coarse(zb,0,0);
       }
-      if (!(neighbor(-1,0).flags &(fghost|active))) {
+      if (!(neighbor(-1,0).flags & (fghost|active))) {
 	hn = coarse(h,-1,0);
 	zn = coarse(zb,-1,0);
       }
@@ -77,9 +80,9 @@ static double flux (scalar h, vector u, double dtmax)
   }
 
 #if QUADTREE
-  // propagate updates from fine to coarse
+  // propagate tendencies from fine to coarse
   foreach_halo()
-    for (scalar ds in {dh, dq}) {
+    for (scalar ds in evolution) {
       coarse(ds,0,0) += ds[]/2.;
       ds[] = 0.;
     }
@@ -88,82 +91,31 @@ static double flux (scalar h, vector u, double dtmax)
   return dtmax;
 }
 
-static void update (vector u2, vector u1, scalar h2, scalar h1, double dt)
+void update (scalar * evolving1, 
+	     scalar * evolving, scalar * evolution, double dt)
 {
-  if (h1 != h2)
-    trash ({h1, u1});
+  // recover scalar and vector fields from lists
+  scalar h = evolving[0], h1 = evolving1[0];
+  vector u = { evolving[1], evolving[2] }, u1 = { evolving1[1], evolving1[2] };
+  scalar dh = evolution[0];
+  vector dq = { evolution[1], evolution[2] };
+
+  if (evolving1 != evolving)
+    trash (evolving1);
   foreach() {
-    double h = h2[];
-    h1[] = h + dt*dh[]/delta;
+    double hold = h[];
+    h1[] = hold + dt*dh[]/delta;
     dh[] = 0.;
     if (h1[] > dry)
       foreach_dimension() {
-	u1.x[] = (h*u2.x[] + dt*dq.x[]/delta)/h1[];
+	u1.x[] = (hold*u.x[] + dt*dq.x[]/delta)/h1[];
 	dq.x[] = 0.;
       }
     else
       foreach_dimension()
 	u1.x[] = dq.x[] = 0.;
   }
-  boundary ({h1, u1});
+  boundary (evolving1);
 }
 
-double dt = 0.;
-
-void run()
-{
-  parameters();
-  init_grid(N);
-
-#if QUADTREE
-  // we need the tendencies to be reinitialised during refinement
-  for (scalar ds in {dh, dq})
-    ds.refine = refine_reset;
-#endif
-
-  // limiting
-  for (scalar s in {h, zb, u})
-    s.gradient = gradient;
-
-  // default values
-  scalar * list = {h, zb, u, dh, dq};
-  foreach() {
-    for (scalar s in list)
-      s[] = 0.;
-    h[] = 1.;
-  }
-  boundary (list);
-
-  // user-defined initial conditions
-  init();
-  boundary (list);
-
-  // main loop
-  timer start = timer_start();
-  double t = 0.;
-  int i = 0, tnc = 0;
-  while (events (i, t)) {
-    dt = dtnext (t, flux (h, u, DT));
-    if (gradient != zero) {
-      /* 2nd-order time-integration */
-      scalar h1[];
-      vector u1[];
-      // clone temporary storage
-      _method[h1]   = _method[h];
-      _method[u1.x] = _method[u.x];
-      _method[u1.y] = _method[u.y];
-      /* predictor */
-      update (u, u1, h, h1, dt/2.);
-      /* corrector */
-      flux (h1, u1, dt);
-    }
-    update (u, u, h, h, dt);
-
-    foreach (reduction(+:tnc)) 
-      tnc++;
-    i++; t = tnext;
-  }
-  timer_print (start, i, tnc);
-
-  free_grid ();
-}
+#include "predictor-corrector.h"

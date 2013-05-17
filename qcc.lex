@@ -1120,8 +1120,7 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
     }
     if (i == 0) {
       if (fpe)
-	fputs ("#define _GNU_SOURCE 1\n"
-	       "#include <string.h>\n"
+	fputs ("#include <string.h>\n"
 	       "#include <fenv.h>\n", 
 	       fout);
       if (catch)
