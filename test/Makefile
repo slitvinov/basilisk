@@ -14,5 +14,8 @@ poisson.tst: poisson.ctst
 laplacian.stst: laplacian.ctst
 nonlinear.exe: nonlinear.c ../qcc
 	../qcc $(CFLAGS) -o nonlinear.exe nonlinear.c -lgsl -lgslcblas -lm
+terrain.exe: terrain.c ../qcc
+	../qcc $(CFLAGS) -I`pwd`/../kdt -o terrain.exe terrain.c \
+		`pwd`/../kdt/kdt.o -lm
 
 include Makefile.defs

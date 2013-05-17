@@ -613,7 +613,7 @@ end_foreach{ID}*{SP}*"()" {
     char * s = yytext; space (s); *s = '\0';
     var = varlookup (yytext, strlen(yytext));
     if (!var) {
-      fprintf (stderr, "undeclared %s '%s'", type, yytext);
+      fprintf (stderr, "%s:%d: undeclared %s '%s'", fname, line, type, yytext);
       return 1;
     }
     if (var->type != newvartype)

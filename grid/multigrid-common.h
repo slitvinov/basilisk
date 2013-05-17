@@ -68,6 +68,10 @@ void refine_reset (Point point, scalar v)
       fine(v,k,l) = 0.;
 }
 
+void refine_none (Point point, scalar v)
+{
+}
+
 void multigrid_boundary_level (scalar * list, int l)
 {
   // traverse the boundaries of a given level
