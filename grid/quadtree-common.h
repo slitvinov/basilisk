@@ -135,16 +135,14 @@ void halo_restriction (scalar * list)
 
 void halo_restriction_flux (vector * list)
 {
-  foreach_halo_fine_to_coarse() {
-    for (vector f in list)
-      foreach_dimension()
-	f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
-    foreach_dimension()
-      if (is_leaf (neighbor(1,0))) {
+  foreach_halo_fine_to_coarse()
+    foreach_dimension() {
+      for (vector f in list)
+        f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+      if (is_leaf (neighbor(1,0)))
 	for (vector f in list)
 	  f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
-      }
-  }
+    }
 }
 
 void halo_prolongation (int depth, scalar * list)

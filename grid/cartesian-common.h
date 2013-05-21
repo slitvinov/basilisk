@@ -135,22 +135,11 @@ void delete (scalar * list)
     return;
   trash (list);
   for (scalar f in list) {
-#if 0
-    fprintf (stderr, "freeing %d\n", f);
-    for (scalar s in all)
-      fprintf (stderr, "%d ", s);
-    fprintf (stderr, "\n");
-#endif
     scalar * s = all;
     for (; *s >= 0 && *s != f; s++);
     if (*s == f)
       for (; *s >= 0; s++)
 	s[0] = s[1];
-#if 0
-    for (scalar s in all)
-      fprintf (stderr, "%d ", s);
-    fprintf (stderr, "\n");
-#endif
   }
 }
 
@@ -215,6 +204,7 @@ void output_cells (FILE * fp)
 	     x + delta, y - delta,
 	     x - delta, y - delta);
   }
+  fflush (fp);
 }
 
 void cartesian_debug (Point point)

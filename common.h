@@ -25,8 +25,10 @@
 #ifdef _OPENMP
 # include <omp.h>
 # define OMP(x) _Pragma(#x)
+# define pid() omp_get_thread_num()
 #else
 # define OMP(x)
+# define pid() 0
 #endif
 // fixme: _OMPSTART and _OMPEND are only used for working around the
 // lack of min|max reduction operations in OpenMP < 3.1

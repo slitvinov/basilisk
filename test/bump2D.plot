@@ -41,4 +41,18 @@ splot 'level-7'
 splot 'level-8'
 unset multiplot
 
-! rm -f eta-? level-?
+set output 'bump2D_pid.png'
+
+set multiplot layout 3,3 scale 1.6,1.6
+splot 'pid-0'
+splot 'pid-1'
+splot 'pid-2'
+splot 'pid-3'
+splot 'pid-4'
+splot 'pid-5'
+splot 'pid-6'
+splot 'pid-7'
+splot 'pid-8'
+unset multiplot
+
+! rm -f eta-? level-? pid-?
