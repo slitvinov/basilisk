@@ -17,7 +17,11 @@ scalar * evolving = {h, u};
 
 #include "riemann.h"
 
-double fluxes (scalar * evolving, vector Fh, vector S, tensor Fq, double dtmax)
+// fluxes
+vector Fh, S;
+tensor Fq;
+
+double fluxes (scalar * evolving, double dtmax)
 {
   // recover scalar and vector fields from lists
   scalar h = evolving[0];
@@ -32,6 +36,8 @@ double fluxes (scalar * evolving, vector Fh, vector S, tensor Fq, double dtmax)
   gradients ({h, zb, u}, {gh, gzb, gu});
 
   // fluxes
+  Fh = new vector; S = new vector;
+  Fq = new tensor;
   foreach_face (reduction (min:dtmax)) {
     double hi = h[], hn = h[-1,0];
     if (hi > dry || hn > dry) {
@@ -96,87 +102,30 @@ double fluxes (scalar * evolving, vector Fh, vector S, tensor Fq, double dtmax)
   return dtmax;
 }
 
-void update (scalar * evolving1, scalar * evolving, 
-	     vector Fh, vector S, tensor Fq, double dt)
+void update (scalar * output, scalar * input, double dt)
 {
   // recover scalar and vector fields from lists
-  scalar h = evolving[0], h1 = evolving1[0];
+  scalar h = input[0], ho = output[0];
   vector 
-    u = { evolving[1], evolving[2] },
-    u1 = { evolving1[1], evolving1[2] };
+    u = { input[1], input[2] },
+    uo = { output[1], output[2] };
 
-  if (h1 != h)
-    trash ({h1, u1});
+  if (ho != h)
+    trash ({ho, uo});
   foreach() {
     double hold = h[];
-    h1[] = hold + dt*(Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/delta;
-    if (h1[] > dry)
+    ho[] = hold + dt*(Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/delta;
+    if (ho[] > dry)
       foreach_dimension()
-	u1.x[] = (hold*u.x[] + dt*(Fq.x.x[] + Fq.x.y[] - 
-				   S.x[1,0] - Fq.x.y[0,1])/delta)/h1[];
+	uo.x[] = (hold*u.x[] + dt*(Fq.x.x[] + Fq.x.y[] - 
+				   S.x[1,0] - Fq.x.y[0,1])/delta)/ho[];
     else
       foreach_dimension()
-	u1.x[] = 0.;
+	uo.x[] = 0.;
   }
-  boundary (evolving1);
+  boundary (output);
+
+  delete ((scalar *){Fh, S, Fq});
 }
 
-// Generic predictor/corrector time-integration
-
-// User-provided parameters/functions
-// gradient
-double (* gradient)  (double, double, double) = minmod2;
-void      parameters (void);
-void      init       (void);
-
-double dt = 0.;
-
-void run()
-{
-  parameters();
-  init_grid(N);
-
-  // limiting
-  for (scalar s in all)
-    s.gradient = gradient;
-
-  // default values
-  foreach()
-    for (scalar s in all)
-      s[] = 0.;
-  boundary (all);
-
-  // user-defined initial conditions
-  init();
-  boundary (all);
-
-  // main loop
-  timer start = timer_start();
-  double t = 0.;
-  int i = 0, tnc = 0;
-  while (events (i, t)) {
-    vector Fh[], S[];
-    tensor Fq[];
-    dt = dtnext (t, fluxes (evolving, Fh, S, Fq, DT));
-    if (gradient != zero) {
-      /* 2nd-order time-integration */
-      // temporary storage
-      scalar * temporary = clone (evolving);
-      /* predictor */
-      update (temporary, evolving, Fh, S, Fq, dt/2.);
-      /* corrector */
-      fluxes (temporary, Fh, S, Fq, dt);
-      // free temporary storage
-      delete (temporary);
-      free (temporary);
-    }
-    update (evolving, evolving, Fh, S, Fq, dt);
-
-    foreach (reduction(+:tnc)) 
-      tnc++;
-    i++; t = tnext;
-  }
-  timer_print (start, i, tnc);
-
-  free_grid ();
-}
+#include "predictor-corrector.h"

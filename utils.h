@@ -159,7 +159,8 @@ void timer_print (timer t, int i, int tnc)
     foreach(reduction(+:tnc)) tnc++;
     tnc *= i;
   }
-  printf ("# " GRIDNAME ", %d steps, %g CPU, %.4g real, %.3g p.s/s, %ld var\n",
+  printf ("# " GRIDNAME 
+	  ", %d steps, %g CPU, %.4g real, %.3g points.step/s, %ld var\n",
 	  i, cpu, real, tnc/real, datasize/sizeof(double));
 }
 

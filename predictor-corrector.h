@@ -3,11 +3,10 @@
 // Required from solver
 // fields updated by time-integration
 extern scalar * evolving;
-// how to compute tendencies
-double tendencies (scalar * evolution, scalar * evolving, double dtmax);
-// how to update evolving fields from tendencies
-void update (scalar * evolving1, 
-	     scalar * evolving, scalar * evolution, double dt);
+// how to compute fluxes
+double fluxes (scalar * evolving, double dtmax);
+// how to update evolving fields
+void   update (scalar * output, scalar * input, double dt);
 
 // User-provided parameters/functions
 // gradient
@@ -26,18 +25,6 @@ void run()
   for (scalar s in all)
     s.gradient = gradient;
 
-  // allocate tendencies
-  scalar * evolution = NULL;
-  for (scalar s in evolving) {
-    scalar t = new scalar;
-    evolution = list_append (evolution, t);
-  }
-#if QUADTREE
-  // we need the tendencies to be reinitialised during refinement
-  for (scalar ds in evolution)
-    ds.refine = refine_reset;
-#endif
-
   // default values
   foreach()
     for (scalar s in all)
@@ -53,20 +40,20 @@ void run()
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    dt = dtnext (t, tendencies (evolution, evolving, DT));
+    dt = dtnext (t, fluxes (evolving, DT));
     if (gradient != zero) {
       /* 2nd-order time-integration */
       // temporary storage
       scalar * temporary = clone (evolving);
       /* predictor */
-      update (temporary, evolving, evolution, dt/2.);
+      update (temporary, evolving, dt/2.);
       /* corrector */
-      tendencies (evolution, temporary, dt);
+      fluxes (temporary, dt);
       // free temporary storage
       delete (temporary);
       free (temporary);
     }
-    update (evolving, evolving, evolution, dt);
+    update (evolving, evolving, dt);
 
     foreach (reduction(+:tnc)) 
       tnc++;
@@ -74,6 +61,5 @@ void run()
   }
   timer_print (start, i, tnc);
 
-  free (evolution);
   free_grid ();
 }

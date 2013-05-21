@@ -35,7 +35,10 @@ static double riemann (const double * right, const double * left,
   return dtmax;
 }
 
-double tendencies (scalar * evolution, scalar * conserved, double dtmax)
+// fluxes
+vector * lflux = NULL;
+
+double fluxes (scalar * conserved, double dtmax)
 {
   // allocate space for slopes
   vector * slopes = NULL;
@@ -52,8 +55,12 @@ double tendencies (scalar * evolution, scalar * conserved, double dtmax)
   int len = list_len (conserved);
   double r[len], l[len]; // right/left Riemann states
   double f[len];         // fluxes for each conserved quantity
+  for (scalar s in conserved) {
+    vector f1 = new vector;
+    lflux = vectors_append (lflux, f1);
+  }
 
-  // compute fluxes and tendencies
+  // compute fluxes
   foreach_face() {
     double dx = delta/2.;
     int i = 0;
@@ -65,22 +72,11 @@ double tendencies (scalar * evolution, scalar * conserved, double dtmax)
     }
     // Riemann solver
     dtmax = riemann (r, l, delta, f, len, dtmax);
-    // update tendencies
+    // update fluxes
     i = 0;
-    for (scalar ds in evolution) {
-      ds[] += f[i];
-      ds[-1,0] -= f[i++];
-    }
+    for (vector f1 in lflux)
+      f1.x[] = f[i++];
   }
-
-#if QUADTREE
-  // propagate tendencies from fine to coarse
-  foreach_halo()
-    for (scalar ds in evolution) {
-      coarse(ds,0,0) += ds[]/2.;
-      ds[] = 0.;
-    }
-#endif
 
   // free space for slopes
   delete ((scalar *) slopes);
@@ -89,20 +85,19 @@ double tendencies (scalar * evolution, scalar * conserved, double dtmax)
   return dtmax;
 }
 
-void update (scalar * conserved1, 
-	     scalar * conserved2, scalar * evolution, double dt)
+void update (scalar * output, scalar * input, double dt)
 {
-  if (conserved1 != conserved2)
-    trash (conserved1);
+  if (output != input)
+    trash (output);
   foreach() {
-    scalar s1, s2, ds;
-    for (s1,s2,ds in conserved1,conserved2,evolution) {
-      s1[] = s2[] + dt*ds[]/delta;
-      ds[] = 0.;
-    }
+    scalar o, i;
+    vector f;
+    for (o,i,f in output,input,lflux)
+      o[] = i[] + dt*(f.x[] - f.x[1,0])/delta;
   }
-  boundary (conserved1);
+  boundary (output);
+  delete ((scalar *)lflux);
+  lflux = NULL;
 }
 
 #include "predictor-corrector.h"
-
