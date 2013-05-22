@@ -2,6 +2,8 @@ VALGRIND = valgrind -q --tool=memcheck
 # the default CFLAGS are set in ../config
 CFLAGS += -fpe -DTRASH=1
 
+all: check slow
+
 # list only non-default (!.tst) tests
 check: halo.vtst speed.stst refine.vtst rk2.vtst \
        laplacian.stst interpolate.vtst events.vtst \
@@ -15,7 +17,8 @@ laplacian.stst: laplacian.ctst
 nonlinear.exe: nonlinear.c ../qcc
 	../qcc $(CFLAGS) -o nonlinear.exe nonlinear.c -lgsl -lgslcblas -lm
 terrain.exe: terrain.c ../qcc
-	../qcc $(CFLAGS) -I`pwd`/../kdt -o terrain.exe terrain.c \
-		`pwd`/../kdt/kdt.o -lm
+	../qcc $(CFLAGS) -o terrain.exe terrain.c `pwd`/../kdt/kdt.o -lm
+ponds.exe: ponds.c ../qcc
+	../qcc $(CFLAGS) -o ponds.exe ponds.c `pwd`/../kdt/kdt.o -lm
 
 include Makefile.defs

@@ -8,12 +8,12 @@ void mg_cycle (scalar a, scalar res, scalar dp,
   restriction ({res});
   for (int l = minlevel; l <= depth(); l++) {
     if (l == minlevel) {
-      foreach_level (l)
+      foreach_level_or_leaf (l)
 	dp[] = 0.;
     }
     else 
       /* bilinear interpolation from coarser level */
-      foreach_level (l)
+      foreach_level_or_leaf (l)
 	dp[] = (9.*coarse(dp,0,0) + 
 		3.*(coarse(dp,child.x,0) + coarse(dp,0,child.y)) + 
 		coarse(dp,child.x,child.y))/16.;

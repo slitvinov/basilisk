@@ -162,6 +162,7 @@ typedef struct _Point Point;
 typedef struct {
   double   (* boundary[nboundary]) (Point, scalar);
   void     (* refine)              (Point, scalar);
+  void     (* coarsen)             (Point, scalar);
   double   (* gradient)            (double, double, double);
 } Methods;
 

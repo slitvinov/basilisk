@@ -12,7 +12,7 @@ double G = 1.;
 // dry
 double dry = 1e-10;
 
-// fields updated by time-integration
+// fields updated by time-integration (in "predictor-corrector.h")
 scalar * evolving = {h, u};
 
 #include "riemann.h"
@@ -87,6 +87,7 @@ double fluxes (scalar * evolving, double dtmax)
   }
 
 #if QUADTREE
+  // fixme: all this should be halo_restriction_flux()
   vector * list = {Fh, S, Fq};
   foreach_halo_fine_to_coarse()
     foreach_dimension() {
@@ -112,6 +113,7 @@ void update (scalar * output, scalar * input, double dt)
 
   if (ho != h)
     trash ({ho, uo});
+  // new fields in ho[], uo[]
   foreach() {
     double hold = h[];
     ho[] = hold + dt*(Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/delta;

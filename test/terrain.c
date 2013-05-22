@@ -1,11 +1,6 @@
 #include "terrain.h"
 #include "utils.h"
 
-static int refine (Point point, void * data)
-{
-  return level < *((int *) data);
-}
-
 int main ()
 {
   FILE * fp = popen ("../kdt/xyz2kdt terrain", "w");
@@ -15,11 +10,9 @@ int main ()
   fclose (fp);
 
   for (int l = 4; l <= 7; l++) {
-    init_grid (0);
+    init_grid (1 << l);
     scalar zb[];
     terrain (zb, "terrain");
-    while (refine_function (refine, &l, all))
-      boundary ({zb});
     scalar e[];
     foreach()
       e[] = zb[] - sin(3.*pi*x)*cos(2.*pi*y);

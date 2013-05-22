@@ -53,8 +53,7 @@ size_t _size (size_t l)
   for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
     point.i = _k;							\
     for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
-      POINT_VARIABLES							\
-
+      POINT_VARIABLES
 #define end_foreach_level() }} OMP_END_PARALLEL()
 
 #define foreach(clause) foreach_level(point.depth, clause)
@@ -92,8 +91,20 @@ size_t _size (size_t l)
       point.i = _k;							\
       for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
         POINT_VARIABLES
-
 #define end_foreach_fine_to_coarse() }} OMP_END_PARALLEL() }
+
+#define foreach_child() {				\
+  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS; \
+  point.level++;					\
+  for (int _k = 0; _k < 2; _k++)			\
+    for (int _l = 0; _l < 2; _l++) {			\
+      point.i = _i + _k; point.j = _j + _l;		\
+      POINT_VARIABLES;
+#define end_foreach_child()			        \
+  }							\
+  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2; \
+  point.level--;                                        \
+}
 
 void init_grid (int n)
 {

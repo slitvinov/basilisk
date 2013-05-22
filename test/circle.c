@@ -35,7 +35,7 @@ void homogeneous_boundary (scalar * v, int l)
 
 void relax (scalar a, scalar b, int l)
 {
-  foreach_level (l)
+  foreach_level_or_leaf (l)
     a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - delta*delta*b[])/4.;
 }
 

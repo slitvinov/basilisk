@@ -80,7 +80,7 @@ void advance (double dt)
 
 void relax (scalar a, scalar b, int l)
 {
-  foreach_level (l)
+  foreach_level_or_leaf (l)
     a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - L0*L0*delta*delta*b[])/4.;
 }
 

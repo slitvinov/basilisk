@@ -1,9 +1,19 @@
 #include "cartesian-common.h"
 
+#ifndef foreach_level_or_leaf
+# define foreach_level_or_leaf     foreach_level
+# define end_foreach_level_or_leaf end_foreach_level
+#endif
+
 // Multigrid methods
 
 void (* boundary_level)       (scalar *, int);
 void (* boundary_restriction) (scalar *);
+
+void coarsen_average (Point point, scalar s)
+{
+  s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+}
 
 void restriction (scalar * list)
 {

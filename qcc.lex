@@ -825,16 +825,16 @@ for{WS}*[(]{WS}*(scalar|vector){WS}+{ID}+{WS}+in{WS}+ {
     if (list == NULL)
       return yyerror ("invalid list");
   }
+  else
+    fprintf (yyout, "if (%s) ", list);
   if (debug)
     fprintf (stderr, "%s:%d: %s\n", fname, line, list);
-  if (vartype == scalar)
-    fprintf (yyout,
-	     "for (scalar %s = *%s, *_i%d = %s; %s >= 0; %s = *++_i%d%s",
-	     id, list, i, list, id, id, i, last);
-  else
-    fprintf (yyout,
-	     "for (vector %s = *%s, *_i%d = %s; %s.x >= 0; %s = *++_i%d%s",
-	     id, list, i, list, id, id, i, last);
+  fprintf (yyout,
+	   "for (%s %s = *%s, *_i%d = %s; %s%s >= 0; %s = *++_i%d%s",
+	   vartype == scalar ? "scalar" : "vector", id,
+	   list, i, list, 
+	   id, vartype == scalar ? "" : ".x", 
+	   id, i, last);
   free (list);
   i++;
   varpush (id, vartype, scope);
@@ -1236,6 +1236,8 @@ int main (int argc, char ** argv)
     strcpy (command, CC99);
   else
     strcpy (command, cc);
+  strcat (command, " -I");
+  strcat (command, LIBDIR);
   char * file = NULL;
   int i, dep = 0;
   for (i = 1; i < argc; i++) {

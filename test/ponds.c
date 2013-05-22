@@ -1,10 +1,18 @@
+// Bumps uniformly covered with water create ponds and streams (i.e. a
+// lot of wetting/drying going on)
+
+// use KDT database rather than analytical function
+#define KDT 1
+
 #include "saint-venant1.h"
+#if KDT
+# include "terrain.h"
+#endif
 
 #define LEVEL 7
 
 void parameters()
 {
-  X0 = Y0 = -0.5;
   N = 1 << LEVEL;
   G = 9.81;
   L0 = 1000.;
@@ -13,19 +21,32 @@ void parameters()
 #define zb(x,y) ((cos(pi*x/L0)*cos(pi*y/L0) + \
 		  cos(3.*pi*x/L0)*cos(3.*pi*y/L0)) - 2.*x/1000.)
 
+#if !KDT
 void refine_zb (Point point, scalar zb)
 {
   foreach_child()
     zb[] = zb(x,y);
 }
+#endif
 
 void init()
 {
+#if !KDT
   zb.refine = refine_zb; // updates terrain
   foreach() {
     zb[] = zb(x,y);
     h[] = 0.1;
   }
+#else
+  FILE * fp = popen ("../kdt/xyz2kdt ponds", "w");
+  for (double x = 0.; x <= 1000; x += 1.)
+    for (double y = 0.; y <= 1000.; y += 1.)
+      fprintf (fp, "%g %g %g\n", x, y, zb(x,y));
+  fclose (fp);
+  terrain (zb, "ponds");
+  foreach()
+    h[] = 0.1;
+#endif
 }
 
 int event (i++) {

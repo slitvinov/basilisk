@@ -11,9 +11,18 @@
 #endif
 
 #ifndef foreach_level
-# define foreach_level(l)     foreach_cell() { \
-                                if (level == l || is_leaf(cell)) {
-# define end_foreach_level()	continue; } } end_foreach_cell()
+# define foreach_level(l)						\
+  foreach_cell() {							\
+    if (!is_active (cell))						\
+      continue;								\
+    else if (level == l) {
+# define end_foreach_level()    continue; } } end_foreach_cell()
+#endif
+
+#ifndef foreach_level_or_leaf
+# define foreach_level_or_leaf(l)   foreach_cell() { \
+                                      if (level == l || is_leaf(cell)) {
+# define end_foreach_level_or_leaf()  continue; } } end_foreach_cell()
 #endif
 
 #define foreach_halo()     foreach_halo_coarse_to_fine(-1)
@@ -58,6 +67,10 @@ int coarsen_function (int (* func) (Point p), scalar * list)
 int coarsen_wavelet (scalar w, double max, int minlevel, scalar * list)
 {
   int nc = 0;
+  scalar * listc = NULL;
+  for (scalar s in list)
+    if (s.coarsen != refine_none)
+      listc = list_append (listc, s);
   for (int l = depth() - 1; l >= 0; l--)
     foreach_cell() {
       if (is_leaf (cell))
@@ -72,12 +85,13 @@ int coarsen_wavelet (scalar w, double max, int minlevel, scalar * list)
 	  }
 	// propagate the error to coarser levels
 	double wc = fabs(w[]) + error;
-	if (error < max && level >= minlevel && coarsen_cell (point, list))
+	if (error < max && level >= minlevel && coarsen_cell (point, listc))
 	  nc++;
 	w[] = wc;
 	continue;
       }
     }
+  free (listc);
   return nc;
 }
 
@@ -108,10 +122,13 @@ int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
   // overload the refine method for w
   void * f = w.refine;
   w.refine = huge;
-  scalar * list1 = list;
+  scalar * list1 = NULL;
+  for (scalar s in list)
+    if (s.refine != refine_none)
+      list1 = list_append (list1, s);
   if (!list_lookup (list1, w))
     // add w to the list of variables to refine
-    list1 = list_append (list_copy (list), w);
+    list1 = list_append (list1, w);
   // refine
   int nf = 0;
   foreach_leaf()
@@ -119,18 +136,20 @@ int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
       point = refine_cell (point, list1);
       nf++;
     }
-  if (list1 != list)
-    free (list1);
+  free (list1);
   // restore refine method
   w.refine = f;
   return nf;
 }
 
-void halo_restriction (scalar * list)
+void halo_restriction (scalar * def, scalar * list)
 {
-  foreach_halo_fine_to_coarse ()
-    for (scalar s in list)
+  foreach_halo_fine_to_coarse () {
+    for (scalar s in def)
       s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+    for (scalar s in list)
+      s.coarsen (point, s);
+  }
 }
 
 void halo_restriction_flux (vector * list)
@@ -157,7 +176,7 @@ void halo_prolongation (int depth, scalar * list)
 			    coarse(s,1,0));
 	s[] = coarse(s,0,0) + (g.x*child.x + g.y*child.y)/4.;
       }
-      else
+      else // fixme: should use s.refine
 	/* bilinear interpolation from coarser level */
 	s[] = (9.*coarse(s,0,0) + 
 	       3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
@@ -215,30 +234,51 @@ void quadtree_boundary_restriction (scalar * list)
 
 void quadtree_boundary (scalar * list)
 {
-  halo_restriction (list);
+  scalar * listdef = NULL, * listc = NULL;
+  for (scalar s in list)
+    if (s.coarsen == coarsen_average)
+      listdef = list_append (listdef, s);
+    else if (s.coarsen != refine_none)
+      listc = list_append (listc, s);
 
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell (b, true) {
-      if (is_active (cell)) {
-	if (cell.neighbors > 0)
-	  for (scalar s in list)
-	    s[ghost] = s.boundary[b] (point, s);
-      }
-      else
-	continue;
-    }
-
-  halo_prolongation (-1, list);
-
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell (b, true)
-      if (!is_active (cell)) {
-	if (cell.neighbors > 0)
-	  for (scalar s in list)
-	    s[ghost] = s.boundary[b] (point, s);
+  if (listdef || listc) {
+    halo_restriction (listdef, listc);
+    for (int b = 0; b < nboundary; b++)
+      foreach_boundary_cell (b, true) {
+	if (is_active (cell)) {
+	  if (cell.neighbors > 0) {
+	    for (scalar s in listdef)
+	      s[ghost] = s.boundary[b] (point, s);
+	    for (scalar s in listc)
+	      s[ghost] = s.boundary[b] (point, s);
+	  }
+	}
 	else
 	  continue;
       }
+    free (listdef);
+    free (listc);
+  }
+
+  scalar * listr = NULL;
+  for (scalar s in list)
+    if (s.refine != refine_none)
+      listr = list_append (listr, s);
+
+  if (listr) {
+    halo_prolongation (-1, listr);
+    for (int b = 0; b < nboundary; b++)
+      foreach_boundary_cell (b, true)
+	if (!is_active (cell)) {
+	  if (cell.neighbors > 0) {
+	    for (scalar s in listr)
+	      s[ghost] = s.boundary[b] (point, s);
+	  }
+	  else
+	    continue;
+	}
+    free (listr);
+  }
 }
 
 Point locate (double xp, double yp)
@@ -258,33 +298,14 @@ scalar quadtree_init_scalar (scalar s, const char * name)
 {
   s = cartesian_init_scalar (s, name);
   s.refine = refine_linear;
+  s.coarsen = coarsen_average;
   return s;
-}
-
-vector quadtree_init_vector (vector v, const char * name)
-{
-  v = cartesian_init_vector (v, name);
-  foreach_dimension()
-    v.x.refine = refine_linear;
-  return v;
-}
-
-tensor quadtree_init_tensor (tensor t, const char * name)
-{
-  t = cartesian_init_tensor (t, name);
-  foreach_dimension()
-    t.x.x.refine = refine_linear;
-  foreach_dimension()
-    t.x.y.refine = refine_linear;
-  return t;
 }
 
 void quadtree_methods()
 {
   multigrid_methods();
-  init_scalar = quadtree_init_scalar;
-  init_vector = quadtree_init_vector;
-  init_tensor = quadtree_init_tensor;
-  boundary   = quadtree_boundary;
+  init_scalar          = quadtree_init_scalar;
+  boundary             = quadtree_boundary;
   boundary_restriction = quadtree_boundary_restriction;
 }

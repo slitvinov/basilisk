@@ -22,7 +22,7 @@ int main (int argc, char ** argv)
   double tolerance = 1e-4;
   coarsen_wavelet (w, tolerance, 0, none);
 
-  halo_restriction ({h});
+  halo_restriction ({h}, NULL);
   halo_prolongation (-1, {h});
 
   double max = 0.;

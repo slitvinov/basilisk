@@ -175,9 +175,9 @@ scalar cartesian_init_scalar (scalar s, const char * name)
 
 vector cartesian_init_vector (vector v, const char * name)
 {
+  foreach_dimension()
+    init_scalar (v.x, name);
   /* set default boundary conditions (symmetry) */
-  v.x.boundary[top] = v.x.boundary[bottom] = symmetry;
-  v.y.boundary[right] = v.y.boundary[left] = symmetry;
   v.x.boundary[right] = v.x.boundary[left] = antisymmetry;
   v.y.boundary[top] = v.y.boundary[bottom] = antisymmetry;
   return v;
@@ -185,6 +185,8 @@ vector cartesian_init_vector (vector v, const char * name)
 
 tensor cartesian_init_tensor (tensor t, const char * name)
 {
+  foreach_dimension()
+    init_vector (t.x, name);
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++) {
     t.x.x.boundary[b] = t.y.y.boundary[b] = symmetry;

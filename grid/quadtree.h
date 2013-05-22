@@ -283,30 +283,44 @@ void recursive (Point point)
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   OMP_PARALLEL()							\
   Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-  for (int _l = depth() - 1; _l >= 0; _l--)				\
+  for (int _l = depth() - 1; _l >= 0; _l--) {				\
+    point.level = _l;							\
     OMP(omp for schedule(static) clause)				\
     for (int _k = 0; _k < point.active[_l].n; _k++) {			\
       point.i = point.active[_l].p[_k].i;			        \
       point.j = point.active[_l].p[_k].j;				\
-      point.level = _l;							\
       POINT_VARIABLES;							\
       if (!is_leaf (cell)) {
-#define end_foreach_fine_to_coarse() } } OMP_END_PARALLEL() }
+#define end_foreach_fine_to_coarse() } } } OMP_END_PARALLEL() }
 
-#define foreach_level(l)     {						\
+#define foreach_level_or_leaf(l)     {					\
   update_cache();							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   OMP_PARALLEL()							\
   Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-  for (int _l = l; _l >= 0; _l--)					\
+  for (int _l = l; _l >= 0; _l--) {					\
+    point.level = _l;							\
     OMP(omp for schedule(static))					\
     for (int _k = 0; _k < point.active[_l].n; _k++) {			\
       point.i = point.active[_l].p[_k].i;				\
       point.j = point.active[_l].p[_k].j;				\
-      point.level = _l;							\
       POINT_VARIABLES;							\
       if (_l == l || is_leaf (cell)) {
-#define end_foreach_level() } } OMP_END_PARALLEL() }
+#define end_foreach_level_or_leaf() } } } OMP_END_PARALLEL() }
+
+#define foreach_level(l)     {						\
+  update_cache();							\
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
+  int _l = l;								\
+  OMP_PARALLEL()							\
+  Quadtree point = *((Quadtree *)grid); point.back = grid;		\
+  point.level = _l;							\
+  OMP(omp for schedule(static))						\
+  for (int _k = 0; _k < point.active[_l].n; _k++) {			\
+    point.i = point.active[_l].p[_k].i;					\
+    point.j = point.active[_l].p[_k].j;					\
+    POINT_VARIABLES;
+#define end_foreach_level() } OMP_END_PARALLEL() }
 
 #define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
 #define end_foreach_leaf()        continue; } end_foreach_cell()
@@ -442,7 +456,7 @@ bool coarsen_cell (Point point, scalar * list)
 
   /* restriction */
   for (scalar s in list)
-    s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+    s.coarsen (point, s);
 
   /* coarsen */
   point.back->dirty = true;

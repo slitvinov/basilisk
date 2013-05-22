@@ -4,7 +4,8 @@ include config
 all: qcc qplot
 
 qcc: qcc.c include.o
-	$(CC99) $(CFLAGS) -DCC99="\"$(CC99)\"" qcc.c include.o -o qcc
+	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" -DCC99="\"$(CC99)\"" \
+		qcc.c include.o -o qcc
 
 include.o: include.c
 	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" -c include.c

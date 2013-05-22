@@ -61,7 +61,7 @@ void momentum (void * grid, var u, var v, var du, var dv)
 
 void relax (void * grid, var a, var b, int l)
 {
-  foreach_level (grid, l)
+  foreach_level_or_leaf (grid, l)
     a(0,0) = (a(1,0) + a(-1,0) +
 		  a(0,1) + a(0,-1) 
 		  - L0*L0*delta*delta*b(0,0))/4.;
