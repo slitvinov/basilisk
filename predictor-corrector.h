@@ -14,10 +14,11 @@ double (* gradient)  (double, double, double) = minmod2;
 void      parameters (void);
 void      init       (void);
 
-double dt = 0.;
+double t = 0., dt = 0.;
 
 void run()
 {
+  t = 0.;
   parameters();
   init_grid(N);
 
@@ -37,7 +38,6 @@ void run()
 
   // main loop
   timer start = timer_start();
-  double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
     dt = dtnext (t, fluxes (evolving, DT));

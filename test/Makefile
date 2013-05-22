@@ -10,7 +10,7 @@ check: halo.vtst speed.stst refine.vtst rk2.vtst \
        faces.vtst
 
 slow: nonlinear.tst advection.tst rotation.tst \
-	bump2D.tst hump.tst drybump2D.tst ponds.tst
+	bump2D.tst hump.tst drybump2D.tst ponds.tst conical.tst
 
 poisson.tst: poisson.ctst
 laplacian.stst: laplacian.ctst

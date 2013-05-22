@@ -5,6 +5,7 @@ ALLTESTS = \
 	bump1.c \
 	bump2D.c \
 	circle.c \
+	conical.c \
 	corners.c \
 	dry.c \
 	drybump.c \
@@ -35,6 +36,7 @@ PLOTS = \
 	bump1.plot \
 	bump2D.plot \
 	circle.plot \
+	conical.plot \
 	dry.plot \
 	drybump.plot \
 	drybump2D.plot \
@@ -72,6 +74,7 @@ TESTS = \
 	hump.c \
 	drybump2D.c \
 	ponds.c \
+	conical.c \
 
 SPECIAL_TESTS = \
 	laplacian.ctst \
