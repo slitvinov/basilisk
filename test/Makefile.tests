@@ -25,6 +25,7 @@ ALLTESTS = \
 	ponds.c \
 	refine.c \
 	rest.c \
+	rest1.c \
 	rk2.c \
 	rotation.c \
 	speed.c \
