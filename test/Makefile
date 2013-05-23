@@ -14,11 +14,11 @@ slow: nonlinear.tst advection.tst rotation.tst \
 
 poisson.tst: poisson.ctst
 laplacian.stst: laplacian.ctst
-nonlinear.exe: nonlinear.c ../qcc
+nonlinear.exe: nonlinear.c ../qcc Makefile
 	../qcc $(CFLAGS) -o nonlinear.exe nonlinear.c -lgsl -lgslcblas -lm
-terrain.exe: terrain.c ../qcc
+terrain.exe: terrain.c ../qcc Makefile
 	../qcc $(CFLAGS) -o terrain.exe terrain.c `pwd`/../kdt/kdt.o -lm
-ponds.exe: ponds.c ../qcc
+ponds.exe: ponds.c ../qcc Makefile
 	../qcc $(CFLAGS) -o ponds.exe ponds.c `pwd`/../kdt/kdt.o -lm
 
 include Makefile.defs
