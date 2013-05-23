@@ -69,7 +69,7 @@ void solve (int depth)
   int nrelax = 4;
   init_grid(1);
 
-  while (refine_function (refine_circle, &depth, none));
+  while (refine_function (refine_circle, &depth, NULL));
   foreach() {
     a[] = 0.;
     b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);

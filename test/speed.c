@@ -26,7 +26,7 @@ int main (int argc, char ** argv)
   for (i = 0; i < 61; i++) {
     /* coarsening */
     wavelet (h, w);
-    coarsen_wavelet (w, 1e-5, 0, none);
+    coarsen_wavelet (w, 1e-5, 0, NULL);
     if (i == 0)
       end0 = clock();
   }

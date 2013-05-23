@@ -176,7 +176,7 @@ void halo_prolongation (int depth, scalar * list)
 			    coarse(s,1,0));
 	s[] = coarse(s,0,0) + (g.x*child.x + g.y*child.y)/4.;
       }
-      else // fixme: should use s.refine
+      else // fixme: should this use s.refine?
 	/* bilinear interpolation from coarser level */
 	s[] = (9.*coarse(s,0,0) + 
 	       3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 

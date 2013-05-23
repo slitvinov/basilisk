@@ -578,7 +578,7 @@ void init_grid (int n)
   grid = q;
   while (depth--)
     foreach_leaf()
-      point = refine_cell (point, none);
+      point = refine_cell (point, NULL);
   update_cache();
 }
 

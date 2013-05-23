@@ -34,15 +34,19 @@ double fluxes (scalar * evolving, double dtmax)
   vector gh[], gzb[];
   tensor gu[];
   for (scalar s in {gh, gzb, gu})
-    s.gradient = zero;
-  gradients ({h, u}, {gh, gu});
-  // reconstruct zb + h rather than zb: see theorem 3.1 of Audusse et al, 2004
+    s.gradient = zero; // first-order gradient reconstruction
   foreach()
-    foreach_dimension()
+    foreach_dimension() {
+      gh.x[]   = gradient (h[-1,0], h[], h[1,0])/delta;
+      gu.x.x[] = gradient (u.x[-1,0], u.x[], u.x[1,0])/delta;
+      gu.y.x[] = gradient (u.y[-1,0], u.y[], u.y[1,0])/delta;
+      // reconstruct zb + h rather than zb: 
+      // see theorem 3.1 of Audusse et al, 2004
       gzb.x[] = gradient (zb[-1,0] + h[-1,0], 
 			  zb[] + h[], 
 			  zb[1,0] + h[1,0])/delta - gh.x[];
-  boundary ((scalar *) {gzb});
+    }
+  boundary ((scalar *) {gh, gzb, gu});
 
   // fluxes
   Fh = new vector; S = new vector;
@@ -138,3 +142,44 @@ void update (scalar * output, scalar * input, double dt)
 
   delete ((scalar *){Fh, S, Fq});
 }
+
+#if QUADTREE
+void elevation (Point point, scalar h)
+{
+  // reconstruction of fine cells using elevation (rather than water depth)
+  // (default refinement conserves mass but not lake-at-rest)
+  if (h[] >= dry) {
+    // wet cell
+    double eta = zb[] + h[];   // water surface elevation  
+    struct { double x, y; } g; // gradient of eta
+    foreach_dimension() {
+      if (h[-1,0] >= dry && h[1,0] >= dry)
+	g.x = gradient (zb[-1,0] + h[-1,0], eta, zb[1,0] + h[1,0])/4.;
+      else
+	g.x = 0.;
+    }
+    // reconstruct water depth h from eta and zb
+    foreach_child()
+      h[] = max(0, eta + g.x*child.x + g.y*child.y - zb[]);
+  }
+  else {
+    // dry cell
+    double v = 0., eta = 0.; // water surface elevation
+    // 3x3 neighbourhood
+    for (int i = -1; i <= 1; i++)
+      for (int j = -1; j <= 1; j++)
+	if (h[i,j] >= dry) {
+	  eta += h[i,j]*(zb[i,j] + h[i,j]);
+	  v += h[i,j];
+	}
+    if (v > 0.)
+      eta /= v; // volume-averaged eta of neighbouring wet cells
+    else
+      eta = 0.; // surrounded by dry cells => set eta to default "sealevel"
+
+    // reconstruct water depth h from eta and zb
+    foreach_child()
+      h[] = max(0, eta - zb[]);
+  }
+}
+#endif

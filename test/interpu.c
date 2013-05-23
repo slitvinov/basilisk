@@ -21,7 +21,7 @@ int main (int argc, char ** argv)
   /* initial coarsening (see halo.c) */
   wavelet (h, w);
   double tolerance = 1e-4;
-  coarsen_wavelet (w, tolerance, 0, none);
+  coarsen_wavelet (w, tolerance, 0, NULL);
 
   foreach_face(x) u.x[] = exp(-(x*x + y*y)/(R0*R0));
   foreach_face(y) u.y[] = exp(-(x*x + y*y)/(R0*R0));

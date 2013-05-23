@@ -20,7 +20,7 @@ int main (int argc, char ** argv)
   /* initial coarsening (see halo.c) */
   wavelet (h, w);
   double tolerance = 1e-4;
-  coarsen_wavelet (w, tolerance, 0, none);
+  coarsen_wavelet (w, tolerance, 0, NULL);
 
   halo_restriction ({h}, NULL);
   halo_prolongation (-1, {h});

@@ -17,9 +17,9 @@ int main (int argc, char ** argv)
     init_grid (n);
 
     radius = 0.49;
-    refine_function (refine_func, NULL, none);
+    refine_function (refine_func, NULL, NULL);
     radius = 0.55;
-    refine_function (refine_func, NULL, none);
+    refine_function (refine_func, NULL, NULL);
 
     foreach()
       v[] = cos(2.*pi*x)*cos(2.*pi*y);

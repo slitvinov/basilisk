@@ -18,7 +18,7 @@ int main (int argc, char ** argv)
   
   /* initial coarsening */
   wavelet (h, w);
-  coarsen_wavelet (w, 1e-2, 0, none);
+  coarsen_wavelet (w, 1e-2, 0, NULL);
 
   foreach_halo_coarse_to_fine(-1)
     fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);

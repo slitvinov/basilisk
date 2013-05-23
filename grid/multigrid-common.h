@@ -58,7 +58,7 @@ void refine_linear (Point point, scalar s)
   struct { double x, y; } g;
   if (s.gradient)
     foreach_dimension()
-      g.x = s.gradient (s[-1,0], s[0,0], s[1,0]);
+      g.x = s.gradient (s[-1,0], s[], s[1,0]);
   else
     foreach_dimension()
       g.x = (s[1,0] - s[-1,0])/2.;

@@ -9,7 +9,7 @@ int main()
 {
   X0 = Y0 = -0.5;
   init_grid(4);
-  refine_function (refine_func, NULL, none);
+  refine_function (refine_func, NULL, NULL);
   foreach_face(x)
     fprintf (stderr, "%g %g\n", x, y);
   foreach_face(y)

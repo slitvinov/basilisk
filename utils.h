@@ -66,8 +66,6 @@ double interpolate (scalar v, double xp, double yp)
     return nodata;
   x = (xp - x)/delta;
   y = (yp - y)/delta;
-  assert (x >= -0.5 && x <= 0.5);
-  assert (y >= -0.5 && y <= 0.5);
   int i = sign(x), j = sign(y);
   x = fabs(x); y = fabs(y);
   /* bilinear interpolation */

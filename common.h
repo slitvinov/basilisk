@@ -67,8 +67,6 @@ typedef struct {
 
 // lists
 
-#define none         (scalar []){-1}
-
 int vectors_len (vector * list)
 {
   if (!list) return 0;
