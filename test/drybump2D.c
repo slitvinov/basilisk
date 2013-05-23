@@ -40,7 +40,7 @@ int event (i++) {
   norm n = normf (u.x);
   fprintf (stderr, "%g %d %g %g %.8f %g %g %g\n", t, i, s.min, s.max, s.sum, 
 	   n.rms, n.max, dt);
-  assert (s.min >= 0.);
+  //  assert (s.min >= -dry);
 }
 
 int event (t <= 1.2; t += 1.2/8) {

@@ -1,15 +1,18 @@
 #include "utils.h"
+#include "predictor-corrector.h"
 
 // h: water depth
 // zb: bathymetry
 // u: flow speed
-scalar h[], zb[];
+
+ // note: the order is important as zb needs to be refined before h
+scalar zb[], h[];
 vector u[];
 
 // Default parameters
 // acceleration of gravity
 double G = 1.;
-// dry
+// cells are "dry" when water depth is less than...
 double dry = 1e-10;
 
 // fields updated by time-integration (in "predictor-corrector.h")
@@ -30,10 +33,16 @@ double fluxes (scalar * evolving, double dtmax)
   // gradients
   vector gh[], gzb[];
   tensor gu[];
-  // first-order gradient reconstruction (for consistent limiting)
   for (scalar s in {gh, gzb, gu})
     s.gradient = zero;
-  gradients ({h, zb, u}, {gh, gzb, gu});
+  gradients ({h, u}, {gh, gu});
+  // reconstruct zb + h rather than zb: see theorem 3.1 of Audusse et al, 2004
+  foreach()
+    foreach_dimension()
+      gzb.x[] = gradient (zb[-1,0] + h[-1,0], 
+			  zb[] + h[], 
+			  zb[1,0] + h[1,0])/delta - gh.x[];
+  boundary ((scalar *) {gzb});
 
   // fluxes
   Fh = new vector; S = new vector;
@@ -129,5 +138,3 @@ void update (scalar * output, scalar * input, double dt)
 
   delete ((scalar *){Fh, S, Fq});
 }
-
-#include "predictor-corrector.h"
