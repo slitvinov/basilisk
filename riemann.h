@@ -7,6 +7,7 @@
  */
 
 #define SQRT3 1.73205080756888
+#define epsilon 1e-30
 
 void kinetic (double hm, double hp, double um, double up, double delta,
 	      double * fh, double * fq, double * dtmax)
@@ -29,7 +30,7 @@ void kinetic (double hm, double hp, double um, double up, double delta,
   cig = ci/(6.*G*SQRT3);
   *fh += cig*3.*(Mp*Mp - Mm*Mm);
   *fq += cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
-  if (Mm < 0.) {
+  if (Mm < - epsilon) {
     double dt = CFL*delta/-Mm;
     if (dt < *dtmax)
       *dtmax = dt;
@@ -44,7 +45,7 @@ void kurganov (double hm, double hp, double um, double up, double delta,
   double am = min(up - cp, um - cm); am = min(am, 0.);
   double qm = hm*um, qp = hp*up;
   double a = max(ap, -am);
-  if (a > 0.) {
+  if (a > epsilon) {
     *fh = (ap*qm - am*qp + ap*am*(hp - hm))/(ap - am); // (4.5) of [1]
     *fq = (ap*(qm*um + G*sq(hm)/2.) - am*(qp*up + G*sq(hp)/2.) + 
 	    ap*am*(qp - qm))/(ap - am);
@@ -83,7 +84,7 @@ void hllc (double hm, double hp, double um, double up, double delta,
   }
 
   double a = max(fabs(SL), fabs(SR));
-  if (a > 0.) {
+  if (a > epsilon) {
     double dt = CFL*delta/a;
     if (dt < *dtmax)
       *dtmax = dt;

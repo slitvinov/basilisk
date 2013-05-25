@@ -1,0 +1,146 @@
+#include "grid/multigrid.h"
+#include "saint-venant1.h"
+#include "terrain.h"
+#include "okada.h"
+
+// metres to degrees
+double mtd = 360./40075e3;
+
+void parameters()
+{
+  N = 512;
+  L0 = 54.;
+  X0 = 94 - L0/2.;
+  Y0 = 8. - L0/2.;
+  /* rescale G so that time is in minutes, horizontal length scales in
+     degrees and vertical length scales in metres */
+  G = 9.81*sq(mtd)*sq(60.);
+}
+
+u.x[left]   = - 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
+u.x[right]  = + 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
+u.y[bottom] = - 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
+
+scalar hmax[];
+
+void init()
+{
+  terrain (zb, "/home/popinet/terrain/etopo2");
+  //  zb.refine = elevation;
+  scalar d[];
+  foreach()
+    d[] = hmax[] = 0.;
+  okada (d, 
+	 .x = 94.57, .y = 3.83,
+	 .depth = 11.4857e3,
+	 .strike = 323, .dip = 12, .rake = 90,
+	 .length = 220e3, .width = 130e3,
+	 .U = 18);
+  foreach() {
+    h[] = max(0., - zb[]);
+    if (h[] > dry)
+      h[] = max (0., h[] + d[]);
+  }    
+}
+
+int event (t = 272./60.)
+{
+  scalar d[];
+  foreach()
+    d[] = 0.;
+  okada (d,
+	 .x = 93.90, .y = 5.22,
+	 .depth = 11.4857e3,
+	 .strike = 348, .dip = 12, .rake = 90,
+	 .length = 150e3, .width = 130e3,
+	 .U = 23);
+  foreach()
+    if (h[] > dry)
+      h[] = max (0., h[] + d[]);
+}
+
+int event (t = 588./60.)
+{
+  scalar d[];
+  foreach()
+    d[] = 0.;
+  okada (d,
+	 .x = 93.21, .y = 7.41,
+	 .depth = 12.525e3,
+	 .strike = 338, .dip = 12, .rake = 90,
+	 .length = 390e3, .width = 120e3,
+	 .U = 12);
+  foreach()
+    if (h[] > dry)
+      h[] = max (0., h[] + d[]);
+}
+
+int event (t = 913./60.)
+{
+  scalar d[];
+  foreach()
+    d[] = 0.;
+  okada (d,
+	 .x = 92.60, .y = 9.70,
+	 .depth = 15.12419e3,
+	 .strike = 356, .dip = 12, .rake = 90,
+	 .length = 150e3, .width = 95e3,
+	 .U = 12);
+  foreach()
+    if (h[] > dry)
+      h[] = max (0., h[] + d[]);
+}
+
+int event (t = 1273./60.)
+{
+  scalar d[];
+  foreach()
+    d[] = 0.;
+  okada (d,
+	 .x = 92.87, .y = 11.70,
+	 .depth = 15.12419e3,
+	 .strike = 10, .dip = 12, .rake = 90,
+	 .length = 350e3, .width = 95e3,
+	 .U = 12);
+  foreach()
+    if (h[] > dry)
+      h[] = max (0., h[] + d[]);
+}
+
+int event (i++) {
+  stats s = statsf (h);
+  norm n = normf (u.x);
+  fprintf (stderr, "%g %d %g %g %.8f %g %g %g\n", t, i, s.min, s.max, s.sum, 
+	   n.rms, n.max, dt);
+
+  // hmax
+  foreach()
+    if (h[] > dry && h[] + zb[] > hmax[])
+      hmax[] = h[] + zb[];
+
+  // quadratic bottom friction, coefficient 1e-4 (dimensionless)
+  foreach() {
+    double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(u)/(h[]*mtd);
+    foreach_dimension()
+      u.x[] /= a;
+  }
+  boundary ((scalar *){u});
+}
+
+int event (t += 60; t <= 600) {
+  static int nf = 0;
+  printf ("file: file-%d\n", nf++);
+  output_field ({h, zb, hmax}, N, stdout, true);
+}
+
+int event (t++) {
+  static FILE * ppm = NULL;
+  if (!ppm) ppm = popen ("ppm2mpeg > eta.mpg", "w");
+  scalar eta[];
+  foreach()
+    eta[] = h[] > dry ? h[] + zb[] : nodata;
+  boundary ({eta});
+  output_ppm (eta, -2, 2, 512, ppm, false);
+}
+
+int main() { run(); }
