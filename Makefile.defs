@@ -3,6 +3,8 @@
 include ../config
 include Makefile.tests
 
+DIR = $(notdir $(CURDIR))
+
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(ALLTESTS))) Makefile.deps
 
 plots: $(subst .plot,.png,$(PLOTS))
@@ -60,7 +62,7 @@ clean:
 %.png: %.plot
 	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $< || rm -f $@
 
-Makefile.tests: Makefile Makefile.defs
+Makefile.tests: Makefile
 	@-if test ! -d ../_darcs; then 					\
            touch Makefile.tests; 					\
 	   echo "Makefile.tests not updated (not darcs-controlled)";  	\
@@ -72,12 +74,12 @@ Makefile.tests: Makefile Makefile.defs
 	@echo "# DO NOT EDIT, edit 'Makefile' instead" \
 	     > Makefile.tests
 	@echo "ALLTESTS = \\" >> Makefile.tests
-	@darcs show files | grep './test/.*\.c' | \
-		sed 's/.\/test\/\(.*\)/\t\1 \\/g' >> Makefile.tests
+	@darcs show files | grep $(DIR)'/.*\.c' | \
+		sed 's/.\/'$(DIR)'\/\(.*\)/\t\1 \\/g' >> Makefile.tests
 	@echo "" >> Makefile.tests
 	@echo "PLOTS = \\" >> Makefile.tests
-	@darcs show files | grep './test/.*\.plot' | \
-		sed 's/.\/test\/\(.*\)/\t\1 \\/g' >> Makefile.tests
+	@darcs show files | grep $(DIR)'/.*\.plot' | \
+		sed 's/.\/'$(DIR)'\/\(.*\)/\t\1 \\/g' >> Makefile.tests
 	@echo "" >> Makefile.tests
 	@echo "TESTS = \\" >> Makefile.tests
 	@sed ':x; /\\$$/ { N; s/\\\n//; tx }' < Makefile | \

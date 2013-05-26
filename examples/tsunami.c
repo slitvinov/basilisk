@@ -17,10 +17,12 @@ void parameters()
   G = 9.81*sq(mtd)*sq(60.);
 }
 
+// "radiation" boundary conditions
 u.x[left]   = - 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
 u.x[right]  = + 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
 u.y[bottom] = - 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
 
+// extra storage for hmax
 scalar hmax[];
 
 void init()
@@ -113,16 +115,14 @@ int event (i++) {
   fprintf (stderr, "%g %d %g %g %.8f %g %g %g\n", t, i, s.min, s.max, s.sum, 
 	   n.rms, n.max, dt);
 
-  // hmax
-  foreach()
-    if (h[] > dry && h[] + zb[] > hmax[])
-      hmax[] = h[] + zb[];
-
-  // quadratic bottom friction, coefficient 1e-4 (dimensionless)
   foreach() {
+    // quadratic bottom friction, coefficient 1e-4 (dimensionless)
     double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(u)/(h[]*mtd);
     foreach_dimension()
       u.x[] /= a;
+    // hmax
+    if (h[] > dry && h[] + zb[] > hmax[])
+      hmax[] = h[] + zb[];
   }
   boundary ((scalar *){u});
 }

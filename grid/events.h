@@ -9,39 +9,41 @@ static int event_cond (Event * ev, int i, double t)
   return (* COND) (&i, &t);
 }
 
-static void event_finished (Event * ev)
+enum { event_done, event_alive, event_stop };
+
+static int event_finished (Event * ev)
 {
   ev->t = ev->i = -1;
+  return event_done;
 }
 
 static int event_do (Event * ev, int i, double t)
 {
-  if ((i > ev->i && t > ev->t) || !event_cond (ev, i, t)) {
-    event_finished (ev);
-    return 0;
-  }
+  if ((i > ev->i && t > ev->t) || !event_cond (ev, i, t))
+    return event_finished (ev);
   if (i == ev->i || fabs (t - ev->t) <= 1e-9) {
     if ((* ev->action) (i, t)) {
       event_finished (ev);
-      return 1;
+      return event_stop;
     }
     if (ev->arrayi) { /* i = {...} */
       ev->i = ev->arrayi[ev->a++];
       if (ev->i < 0)
-	event_finished (ev);
+	return event_finished (ev);
     }
     if (ev->arrayt) { /* t = {...} */
       ev->t = ev->arrayt[ev->a++];
       if (ev->t < 0)
-	event_finished (ev);
+	return event_finished (ev);
     }
     else if (INC) {
       (* INC) (&ev->i, &ev->t);
       if (!event_cond (ev, i + 1, ev->t))
-	event_finished (ev);
+	return event_finished (ev);
     }
+    return event_alive;
   }
-  return 0;
+  return event_alive;
 }
 
 static void event_error (Event * ev, const char * s)
@@ -113,20 +115,24 @@ void init_events (void)
 
 int events (int i, double t)
 {
-  int inext = 0, cond = 0;
+  int inext = 0, cond = 0, cond1 = 0;
+  tnext = INFINITY;
   for (Event * ev = Events; !ev->last && !cond; ev++)
     if (COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt)
       cond = 1;
-  tnext = INFINITY;
   for (Event * ev = Events; !ev->last; ev++) {
-    if (event_do (ev, i, t))
+    int status = event_do (ev, i, t);
+    if (status == event_stop)
       return 0;
+    if (status == event_alive &&
+	(COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt))
+      cond1 = 1;
     if (ev->t > t && ev->t < tnext)
       tnext = ev->t;
-    if (ev->i > i && (!INC || COND || !cond))
+    if (ev->i > i)
       inext = 1;
   }
-  return tnext != INFINITY || inext;
+  return (!cond || cond1) && (tnext != INFINITY || inext);
 }
 
 double dtnext (double t, double dt)

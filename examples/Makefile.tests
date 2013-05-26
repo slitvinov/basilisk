@@ -1,0 +1,11 @@
+# DO NOT EDIT, edit 'Makefile' instead
+ALLTESTS = \
+	tsunami.c \
+
+PLOTS = \
+	tsunami.plot \
+
+TESTS = \
+
+SPECIAL_TESTS = \
+

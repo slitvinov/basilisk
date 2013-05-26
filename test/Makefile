@@ -21,4 +21,4 @@ terrain.exe: terrain.c ../qcc Makefile
 ponds.exe: ponds.c ../qcc Makefile
 	../qcc $(CFLAGS) -o ponds.exe ponds.c `pwd`/../kdt/kdt.o -lm
 
-include Makefile.defs
+include ../Makefile.defs
