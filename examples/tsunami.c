@@ -8,8 +8,11 @@ double mtd = 360./40075e3;
 
 void parameters()
 {
-  N = 512;
+  // 1024^2 grid points
+  N = 1024;
+  // the domain is 54 degrees squared
   L0 = 54.;
+  // centered on 94,8 longitude,latitude
   X0 = 94 - L0/2.;
   Y0 = 8. - L0/2.;
   /* rescale G so that time is in minutes, horizontal length scales in
@@ -17,27 +20,30 @@ void parameters()
   G = 9.81*sq(mtd)*sq(60.);
 }
 
-// "radiation" boundary conditions
+// "radiation" boundary conditions on left,right,bottom
 u.x[left]   = - 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
 u.x[right]  = + 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
 u.y[bottom] = - 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
 
-// extra storage for hmax
+// extra storage for hmax (maximum wave elevation)
 scalar hmax[];
 
 void init()
 {
+  // use etopo2 kdt terrain database for topography zb
   terrain (zb, "/home/popinet/terrain/etopo2");
   //  zb.refine = elevation;
   scalar d[];
   foreach()
     d[] = hmax[] = 0.;
+  // initial deformation
   okada (d, 
 	 .x = 94.57, .y = 3.83,
 	 .depth = 11.4857e3,
 	 .strike = 323, .dip = 12, .rake = 90,
 	 .length = 220e3, .width = 130e3,
 	 .U = 18);
+  // sealevel at z = 0 + initial deformation
   foreach() {
     h[] = max(0., - zb[]);
     if (h[] > dry)
@@ -45,6 +51,7 @@ void init()
   }    
 }
 
+// second fault segment is triggered at t = 272 seconds
 int event (t = 272./60.)
 {
   scalar d[];
@@ -56,11 +63,13 @@ int event (t = 272./60.)
 	 .strike = 348, .dip = 12, .rake = 90,
 	 .length = 150e3, .width = 130e3,
 	 .U = 23);
+  //deformation is added to h[] (water depth) only in wet areas
   foreach()
     if (h[] > dry)
       h[] = max (0., h[] + d[]);
 }
 
+// third fault segment is triggered at t = 588 seconds
 int event (t = 588./60.)
 {
   scalar d[];
@@ -77,6 +86,7 @@ int event (t = 588./60.)
       h[] = max (0., h[] + d[]);
 }
 
+// fourth fault segment is triggered at t = 913 seconds
 int event (t = 913./60.)
 {
   scalar d[];
@@ -93,6 +103,7 @@ int event (t = 913./60.)
       h[] = max (0., h[] + d[]);
 }
 
+// fifth fault segment is triggered at t = 1273 seconds
 int event (t = 1273./60.)
 {
   scalar d[];
@@ -109,9 +120,12 @@ int event (t = 1273./60.)
       h[] = max (0., h[] + d[]);
 }
 
+// at every timestep
 int event (i++) {
   stats s = statsf (h);
   norm n = normf (u.x);
+  if (i == 0)
+    fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
   fprintf (stderr, "%g %d %g %g %.8f %g %g %g\n", t, i, s.min, s.max, s.sum, 
 	   n.rms, n.max, dt);
 
@@ -127,12 +141,14 @@ int event (i++) {
   boundary ((scalar *){u});
 }
 
+// snapshots every hour
 int event (t += 60; t <= 600) {
   static int nf = 0;
   printf ("file: file-%d\n", nf++);
   output_field ({h, zb, hmax}, N, stdout, true);
 }
 
+// movie every minute
 int event (t++) {
   static FILE * ppm = NULL;
   if (!ppm) ppm = popen ("ppm2mpeg > eta.mpg", "w");

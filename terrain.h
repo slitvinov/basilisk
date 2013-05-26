@@ -1,7 +1,12 @@
 #include <kdt/kdt.h>
+#ifdef _OPENMP
+# define NPROC omp_get_max_threads()
+#else
+# define NPROC 1
+#endif
 
 typedef struct {
-  Kdt * kdt;
+  Kdt ** kdt;
   scalar n, dmin, dmax;
 } Terrain;
 
@@ -31,7 +36,7 @@ static void reconstruct_terrain (Point point, scalar zb)
   delta /= 2.;
   KdtRect rect = {{x - delta, x + delta},
 		  {y - delta, y + delta}};
-  kdt_query_sum (_terrain[zb].kdt,
+  kdt_query_sum (_terrain[zb].kdt[pid()],
 		 (KdtCheck) includes,
 		 (KdtCheck) intersects, &point,
 		 rect, &s);
@@ -67,10 +72,13 @@ void terrain (scalar zb, const char * name)
     _terrain = realloc (_terrain, sizeof (Terrain)*(zb + 1));
     _nterrain = zb + 1;
   }
-  _terrain[zb].kdt = kdt_new();
-  if (kdt_open (_terrain[zb].kdt, name)) {
-    fprintf (stderr, "terrain: could not open terrain database '%s'\n", name);
-    exit (1);
+  _terrain[zb].kdt = malloc (NPROC*sizeof (Kdt *));
+  for (int i = 0; i < NPROC; i++) {
+    _terrain[zb].kdt[i] = kdt_new();
+    if (kdt_open (_terrain[zb].kdt[i], name)) {
+      fprintf (stderr, "terrain: could not open terrain database '%s'\n", name);
+      exit (1);
+    }
   }
 
   zb.refine = refine_terrain;
