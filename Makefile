@@ -13,6 +13,9 @@ include.o: include.c
 qplot.o: qplot.c
 	$(CC99) $(CFLAGS) -c qplot.c
 
+qplot: qplot.o
+	$(CC99) $(CFLAGS) qplot.o -o qplot
+
 include.c: include.lex
 	flex -P inc -o include.c include.lex
 

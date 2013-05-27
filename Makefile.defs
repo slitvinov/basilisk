@@ -41,13 +41,13 @@ clean:
 	@touch $@
 
 %.exe: %.c ../qcc Makefile
-	../qcc $(CFLAGS) -o $@ -lm $<
+	../qcc $(CFLAGS) -o $@ $< -lm
 
 %.cexe: %.c ../qcc Makefile
-	../qcc -grid=multigrid $(CFLAGS) -o $@ -lm $<
+	../qcc -grid=multigrid $(CFLAGS) -o $@ $< -lm
 
 %.pgexe: %.c ../qcc Makefile
-	../qcc $(CFLAGS) -pg -o $@ -lm $<
+	../qcc $(CFLAGS) -pg -o $@ $< -lm
 
 %.prof: %.pgexe
 	./$< 2> $*.log > $*.out

@@ -1231,7 +1231,7 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 
 int main (int argc, char ** argv)
 {
-  char * cc = getenv ("CC99"), command[1000];
+  char * cc = getenv ("CC99"), command[1000], command1[1000] = "";
   if (cc == NULL)
     strcpy (command, CC99);
   else
@@ -1259,9 +1259,13 @@ int main (int argc, char ** argv)
       }
       file = argv[i];
     }
-    else {
+    else if (!file) { 
       strcat (command, " ");
       strcat (command, argv[i]);
+    }
+    else {
+      strcat (command1, " ");
+      strcat (command1, argv[i]);
     }
   }
   int status;
@@ -1285,6 +1289,7 @@ int main (int argc, char ** argv)
       strcat (command, dir);
       strcat (command, "/");
       strcat (command, file);
+      strcat (command, command1);
     }
   }
   else if (dep) {
