@@ -96,15 +96,6 @@ static void okada_rectangular_source (const double U[3],
   u[2] -= u1[2];
 }
 
-typedef struct {
-  scalar d;
-  double x, y, depth;
-  double strike, dip, rake;
-  double mu, lambda;
-  double length, width, vU[3], U;
-  double R;
-} Okada;
-
 static double dtheta (double theta1, double theta2)
 {
   double d = theta1 - theta2;
@@ -113,7 +104,16 @@ static double dtheta (double theta1, double theta2)
   return d;
 }
 
-args void okada (Okada p)
+struct Okada {
+  scalar d;
+  double x, y, depth;
+  double strike, dip, rake;
+  double mu, lambda;
+  double length, width, vU[3], U;
+  double R;
+};
+
+void okada (struct Okada p)
 {
   // default settings
   if (p.mu == 0.)     p.mu = 1.;
@@ -130,6 +130,8 @@ args void okada (Okada p)
   double sind = sin (p.dip*dtr);
   /* depth of the bottom edge */
   double depth = sind > 0. ? p.depth + p.width*sind : p.depth;
+  /* origin to the centroid */
+  double x0 = p.length/2., y0 = p.width/2.*cos (p.dip*dtr);
   
   foreach() {
     x = p.R*cos(y*dtr)*dtheta(x, p.x)*dtr;
@@ -137,13 +139,10 @@ args void okada (Okada p)
     double x1 =   cosa*x + sina*y;
     double y1 = - sina*x + cosa*y;
     double oka[3];
-    /* shift origin to the centroid */
-    x1 += p.length/2.;
-    y1 += p.width/2.*cos (p.dip*dtr);
     okada_rectangular_source (p.vU, p.length, p.width, depth, 
 			      p.dip*dtr,
 			      p.mu/p.lambda,
-			      x1, y1,
+			      x0 + x1, y0 + y1,
 			      oka);
     val(p.d,0,0) += oka[2];
   }

@@ -54,7 +54,7 @@
   enum { face_x, face_y, face_xy };
   int foreach_face_xy;
 
-  char ** args = NULL;
+  char ** args = NULL, ** argss = NULL;
   int nargs = 0, inarg;
 
   typedef struct { 
@@ -996,16 +996,21 @@ reduction{WS}*[(](min|max):{ID}+[)] {
     ECHO;
 }
 
-args{WS}+{ID}+{WS}+{ID}+ {
-  // args function declaration
+{ID}+{WS}+{ID}+{WS}*[(]{WS}*struct{WS}+{ID}+{WS}+{ID}+{WS}*[)] {
+  // function declaration with struct argument
+  ECHO;
   char * s = yytext;
   space (s); nonspace (s);
-  fputs (s, yyout);
-  space (s); nonspace (s);
   args = realloc (args, sizeof (char *)*++nargs);
+  argss = realloc (argss, sizeof (char *)*nargs);
+  char * s1 = s; while (!strchr(" \t\v\n\f(", *s1)) s1++;
+  *s1++ = '\0'; s1 = strstr (s1, "struct"); space (s1); nonspace (s1);
+  char * s2 = s1; space (s2); *s2 = '\0';
   args[nargs-1] = strdup (s);
+  argss[nargs-1] = strdup (s1);
   if (debug)
-    fprintf (stderr, "%s:%d: args %s\n", fname, line, s);
+    fprintf (stderr, "%s:%d: function '%s' with struct '%s'\n", 
+	     fname, line, s, s1);
 }
 
 {ID}+{WS}*[(] {
@@ -1016,9 +1021,7 @@ args{WS}+{ID}+{WS}+{ID}+ {
     if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {      
       ECHO; para++;
       inarg = para;
-      fputc ('(', yyout); fputc (toupper (yytext[0]), yyout); 
-      *s = '\0';
-      fputs (&yytext[1], yyout); fputs ("){", yyout);
+      fprintf (yyout, "(struct %s){", argss[i]);
     }
   if (!inarg)
     REJECT;
