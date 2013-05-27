@@ -144,7 +144,7 @@ void update (scalar * output, scalar * input, double dt)
 }
 
 #if QUADTREE
-void elevation (Point point, scalar h)
+void refine_elevation (Point point, scalar h)
 {
   // reconstruction of fine cells using elevation (rather than water depth)
   // (default refinement conserves mass but not lake-at-rest)
@@ -181,5 +181,19 @@ void elevation (Point point, scalar h)
     foreach_child()
       h[] = max(0, eta - zb[]);
   }
+}
+
+void coarsen_elevation (Point point, scalar h)
+{
+  double eta = 0., v = 0.;
+  foreach_child()
+    if (h[] > dry) {
+      eta += h[]*(zb[] + h[]);
+      v += h[];
+    }
+  if (v > 0.)
+    h[] = max(0., eta/v - zb[]);
+  else // dry cell
+    h[] = 0.;
 }
 #endif

@@ -3,6 +3,9 @@
 #include "terrain.h"
 #include "okada.h"
 
+#define MAXLEVEL 10
+#define MINLEVEL 5
+
 // metres to degrees
 double mtd = 360./40075e3;
 
@@ -21,9 +24,9 @@ void parameters()
 }
 
 // "radiation" boundary conditions on left,right,bottom
-u.x[left]   = - 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
-u.x[right]  = + 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
-u.y[bottom] = - 2.*(sqrt (G*h[]) - sqrt(G*max(-zb[], 0.)));
+u.x[left]   = - (sqrt (G*h[]) - sqrt(G*max(- zb[], 0.)));
+u.x[right]  = + (sqrt (G*h[]) - sqrt(G*max(- zb[], 0.)));
+u.y[bottom] = - (sqrt (G*h[]) - sqrt(G*max(- zb[], 0.)));
 
 // extra storage for hmax (maximum wave elevation)
 scalar hmax[];
@@ -32,7 +35,8 @@ void init()
 {
   // use etopo2 kdt terrain database for topography zb
   terrain (zb, "/home/popinet/terrain/etopo2");
-  //  zb.refine = elevation;
+  h.refine  = refine_elevation;
+  h.coarsen = coarsen_elevation;
   scalar d[];
   foreach()
     d[] = hmax[] = 0.;
@@ -120,7 +124,7 @@ int event (t = 1273./60.)
       h[] = max (0., h[] + d[]);
 }
 
-// at every timestep
+// every timestep
 int event (i++) {
   stats s = statsf (h);
   norm n = normf (u.x);
@@ -147,15 +151,27 @@ int event (t += 60; t <= 600) {
   output_field ({h, zb, hmax}, N, stdout, true);
 }
 
-// movie every minute
+// movies every minute
 int event (t++) {
-  static FILE * ppm = NULL;
-  if (!ppm) ppm = popen ("ppm2mpeg > eta.mpg", "w");
+  static FILE * fp = NULL;
+  if (!fp) fp = popen ("ppm2mpeg > eta.mpg", "w");
   scalar eta[];
   foreach()
-    eta[] = h[] > dry ? h[] + zb[] : nodata;
+    eta[] = h[] > dry ? h[] + zb[] : 0.;
   boundary ({eta});
-  output_ppm (eta, -2, 2, 512, ppm, false);
+  output_ppm (eta, fp, min = -2, max = 2, n = 512, linear = true);
+
+  static FILE * fp2 = NULL;
+  if (!fp2) fp2 = popen ("ppm2mpeg > eta-zoom.mpg", "w");
+  output_ppm (eta, fp2, min = -2, max = 2, n = 512, linear = false,
+	      box = {{89,8},{98,16}});
+
+  static FILE * fp1 = NULL;
+  if (!fp1) fp1 = popen ("ppm2mpeg > level.mpg", "w");
+  scalar l = eta;
+  foreach()
+    l[] = level;
+  output_ppm (l, fp1, min = MINLEVEL, max = MAXLEVEL, n = 512);
 }
 
 // tide gauges
@@ -202,6 +218,24 @@ int event (i++)
       fprintf (g->fp, "%g %g\n", t,
 	       val + interpolate (h, g->x, g->y));
   }
+}
+
+int event (i++) {
+  scalar eta[];
+  foreach()
+    eta[] = h[] > dry ? h[] + zb[] : 0;
+  boundary ({eta});
+
+  scalar w[];
+  wavelet (eta, w);
+
+  double cmax = 1e-2;
+  int nf = refine_wavelet (w, cmax, MAXLEVEL, all);
+  int nc = coarsen_wavelet (w, cmax/4., MINLEVEL, all);
+  if (nf || nc)
+    boundary (all);
+
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }
 
 int main() { run(); }
