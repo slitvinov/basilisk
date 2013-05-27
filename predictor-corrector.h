@@ -38,7 +38,7 @@ void run()
 
   // main loop
   timer start = timer_start();
-  int i = 0, tnc = 0;
+  int i = 0; long tnc = 0;
   while (events (i, t)) {
     dt = dtnext (t, fluxes (evolving, DT));
     if (gradient != zero) {

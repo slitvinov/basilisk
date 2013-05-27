@@ -93,9 +93,6 @@ void init()
     h[] = max(0., D - zb[]);
     hmax[] = 0.;
   }
-  // initialise gauges
-  for (Gauge * g = gauges; g->name; g++)
-    g->fp = fopen (g->name, "w");
 }
 
 int event (i++) {
@@ -109,10 +106,13 @@ int event (i++) {
       hmax[] = h[];
 
   // output of point gauges
-  for (Gauge * g = gauges; g->name; g++)
+  for (Gauge * g = gauges; g->name; g++) {
+    if (!g->fp)
+      g->fp = fopen (g->name, "w");
     fprintf (g->fp, "%g %g\n", t,
 	     interpolate (zb, g->x, g->y) + 
 	     interpolate (h, g->x, g->y));
+  }
 }
 
 int event (t = {9, 12, 13, 14, 20})

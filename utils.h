@@ -208,7 +208,7 @@ timer timer_start (void)
   return t;
 }
 
-void timer_print (timer t, int i, int tnc)
+void timer_print (timer t, int i, long tnc)
 {
   clock_t end = clock ();
   struct timeval tvend;

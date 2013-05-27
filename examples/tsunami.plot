@@ -9,6 +9,6 @@ set yrange [-10:25]
 set pm3d map
 set logscale cb
 set cbrange [0.1:10]
-splot 'file-10' u 1:2:5
+splot 't-600' u 1:2:($3 > 1e-3 ? $5 : 1e1000)
 
-! rm -f file-?
+! rm -f t-?
