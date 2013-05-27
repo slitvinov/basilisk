@@ -1,6 +1,7 @@
 %option noyywrap
 %{
   #include <unistd.h>
+  #include <ctype.h>
   #include <sys/stat.h>
   #include <sys/types.h>
   #include <sys/wait.h>
@@ -52,6 +53,9 @@
   int foreach_face_line;
   enum { face_x, face_y, face_xy };
   int foreach_face_xy;
+
+  char ** args = NULL;
+  int nargs = 0, inarg;
 
   typedef struct { 
     char * v; 
@@ -492,6 +496,10 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     nexpr[nevents] = inevent;
     inevent = 4;
   }
+  else if (inarg == para + 1) {
+    fputs ("})", yyout);
+    inarg = 0;
+   }
   else
     ECHO;
 }
@@ -988,6 +996,44 @@ reduction{WS}*[(](min|max):{ID}+[)] {
     ECHO;
 }
 
+args{WS}+{ID}+{WS}+{ID}+ {
+  // args function declaration
+  char * s = yytext;
+  space (s); nonspace (s);
+  fputs (s, yyout);
+  space (s); nonspace (s);
+  args = realloc (args, sizeof (char *)*++nargs);
+  args[nargs-1] = strdup (s);
+  if (debug)
+    fprintf (stderr, "%s:%d: args %s\n", fname, line, s);
+}
+
+{ID}+{WS}*[(] {
+  // function call with 'args' assignment
+  char * s = yytext; space (s);
+  int len = s - yytext;
+  for (int i = 0; i < nargs && !inarg; i++)
+    if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {      
+      ECHO; para++;
+      inarg = para;
+      fputc ('(', yyout); fputc (toupper (yytext[0]), yyout); 
+      *s = '\0';
+      fputs (&yytext[1], yyout); fputs ("){", yyout);
+    }
+  if (!inarg)
+    REJECT;
+}
+
+{ID}+{WS}*=[^=] {
+  // arguments of function call with 'args' assignment
+  if (inarg && para == inarg) {
+    fputc('.', yyout);
+    ECHO;
+  }
+  else
+    REJECT;
+}
+
 "#" {
   ECHO;                     
   register int oldc = 0, c;
@@ -1056,6 +1102,7 @@ int endfor (char * file, FILE * fin, FILE * fout)
   foreachdim = 0;
   inboundary = 0;
   infunction = 0;
+  inarg = 0;
   int ret = yylex();
   if (!ret) {
     if (scope > 0)

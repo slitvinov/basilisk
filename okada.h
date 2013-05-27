@@ -97,6 +97,7 @@ static void okada_rectangular_source (const double U[3],
 }
 
 typedef struct {
+  scalar d;
   double x, y, depth;
   double strike, dip, rake;
   double mu, lambda;
@@ -112,7 +113,7 @@ static double dtheta (double theta1, double theta2)
   return d;
 }
 
-void okada_s (scalar s, Okada p)
+args void okada (Okada p)
 {
   // default settings
   if (p.mu == 0.)     p.mu = 1.;
@@ -144,8 +145,6 @@ void okada_s (scalar s, Okada p)
 			      p.mu/p.lambda,
 			      x1, y1,
 			      oka);
-    s[] += oka[2];
+    val(p.d,0,0) += oka[2];
   }
 }
-
-#define okada(s,...) okada_s(s, (Okada) { __VA_ARGS__ })

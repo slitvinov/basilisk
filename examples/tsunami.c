@@ -38,11 +38,11 @@ void init()
     d[] = hmax[] = 0.;
   // initial deformation
   okada (d, 
-	 .x = 94.57, .y = 3.83,
-	 .depth = 11.4857e3,
-	 .strike = 323, .dip = 12, .rake = 90,
-	 .length = 220e3, .width = 130e3,
-	 .U = 18);
+	 x = 94.57, y = 3.83,
+	 depth = 11.4857e3,
+	 strike = 323, dip = 12, rake = 90,
+	 length = 220e3, width = 130e3,
+	 U = 18);
   // sealevel at z = 0 + initial deformation
   foreach() {
     h[] = max(0., - zb[]);
@@ -58,11 +58,11 @@ int event (t = 272./60.)
   foreach()
     d[] = 0.;
   okada (d,
-	 .x = 93.90, .y = 5.22,
-	 .depth = 11.4857e3,
-	 .strike = 348, .dip = 12, .rake = 90,
-	 .length = 150e3, .width = 130e3,
-	 .U = 23);
+	 x = 93.90, y = 5.22,
+	 depth = 11.4857e3,
+	 strike = 348, dip = 12, rake = 90,
+	 length = 150e3, width = 130e3,
+	 U = 23);
   //deformation is added to h[] (water depth) only in wet areas
   foreach()
     if (h[] > dry)
@@ -76,11 +76,11 @@ int event (t = 588./60.)
   foreach()
     d[] = 0.;
   okada (d,
-	 .x = 93.21, .y = 7.41,
-	 .depth = 12.525e3,
-	 .strike = 338, .dip = 12, .rake = 90,
-	 .length = 390e3, .width = 120e3,
-	 .U = 12);
+	 x = 93.21, y = 7.41,
+	 depth = 12.525e3,
+	 strike = 338, dip = 12, rake = 90,
+	 length = 390e3, width = 120e3,
+	 U = 12);
   foreach()
     if (h[] > dry)
       h[] = max (0., h[] + d[]);
@@ -93,11 +93,11 @@ int event (t = 913./60.)
   foreach()
     d[] = 0.;
   okada (d,
-	 .x = 92.60, .y = 9.70,
-	 .depth = 15.12419e3,
-	 .strike = 356, .dip = 12, .rake = 90,
-	 .length = 150e3, .width = 95e3,
-	 .U = 12);
+	 x = 92.60, y = 9.70,
+	 depth = 15.12419e3,
+	 strike = 356, dip = 12, rake = 90,
+	 length = 150e3, width = 95e3,
+	 U = 12);
   foreach()
     if (h[] > dry)
       h[] = max (0., h[] + d[]);
@@ -110,11 +110,11 @@ int event (t = 1273./60.)
   foreach()
     d[] = 0.;
   okada (d,
-	 .x = 92.87, .y = 11.70,
-	 .depth = 15.12419e3,
-	 .strike = 10, .dip = 12, .rake = 90,
-	 .length = 350e3, .width = 95e3,
-	 .U = 12);
+	 x = 92.87, y = 11.70,
+	 depth = 15.12419e3,
+	 strike = 10, dip = 12, rake = 90,
+	 length = 350e3, width = 95e3,
+	 U = 12);
   foreach()
     if (h[] > dry)
       h[] = max (0., h[] + d[]);
