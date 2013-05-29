@@ -169,14 +169,12 @@ void halo_prolongation (int depth, scalar * list)
   foreach_halo_coarse_to_fine (depth) {
     for (scalar s in list)
       if (s.gradient) { // linear interpolation (e.g. with limiting)
-	struct { double x, y; } g;
+	Vector g = s.gradient (parent, s);
+	s[] = coarse(s,0,0);
 	foreach_dimension()
-	  g.x = s.gradient (coarse(s,-1,0), 
-			    coarse(s,0,0), 
-			    coarse(s,1,0));
-	s[] = coarse(s,0,0) + (g.x*child.x + g.y*child.y)/4.;
+	  s[] += g.x*child.x/4.;
       }
-      else // fixme: should this use s.refine?
+      else
 	/* bilinear interpolation from coarser level */
 	s[] = (9.*coarse(s,0,0) + 
 	       3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 

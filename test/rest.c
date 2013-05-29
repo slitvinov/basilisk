@@ -9,7 +9,7 @@ void parameters()
 
 int refine (Point point, void * data)
 {
-  return x < 0.1 && y < 0.1;
+  return x < -0.1 && y < -0.1;
 }
 
 void init()
@@ -17,9 +17,10 @@ void init()
   refine_function (refine, NULL, all);
 
   foreach() {
-    zb[] = 0.2*exp(-200*(x*x + y*y));
+    zb[] = 0.2*exp(-100*(x*x + y*y));
     h[] = 1. - zb[];
   }
+  zb.gradient = zb_gradient;
 }
 
 int event (i = 1)

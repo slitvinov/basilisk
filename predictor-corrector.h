@@ -16,6 +16,14 @@ void      init       (void);
 
 double t = 0., dt = 0.;
 
+Vector gradient_vector (Point point, scalar s)
+{
+  Vector g;
+  foreach_dimension()
+    g.x = gradient (s[-1,0], s[], s[1,0]);
+  return g;
+}
+
 void run()
 {
   t = 0.;
@@ -24,7 +32,7 @@ void run()
 
   // limiting
   for (scalar s in all)
-    s.gradient = gradient;
+    s.gradient = gradient_vector;
 
   // default values
   foreach()

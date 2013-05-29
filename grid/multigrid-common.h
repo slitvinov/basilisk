@@ -55,10 +55,9 @@ void refine_bilinear (Point point, scalar v)
 
 void refine_linear (Point point, scalar s)
 {
-  struct { double x, y; } g;
+  Vector g;
   if (s.gradient)
-    foreach_dimension()
-      g.x = s.gradient (s[-1,0], s[], s[1,0]);
+    g = s.gradient (point, s);
   else
     foreach_dimension()
       g.x = (s[1,0] - s[-1,0])/2.;

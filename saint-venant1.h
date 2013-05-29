@@ -24,29 +24,38 @@ scalar * evolving = {h, u};
 vector Fh, S;
 tensor Fq;
 
+Vector vector_zero (Point point, scalar s)
+{
+  Vector g;
+  foreach_dimension()
+    g.x = 0.;
+  return g;
+}
+
+// reconstruct zb + h rather than zb: 
+// see theorem 3.1 of Audusse et al, 2004
+Vector zb_gradient (Point point, scalar zb)
+{
+  Vector gzb;
+  foreach_dimension()
+    gzb.x = (gradient (zb[-1,0] + h[-1,0], zb[] + h[], zb[1,0] + h[1,0]) -
+	     gradient (h[-1,0], h[], h[1,0]));
+  return gzb;
+}
+
 double fluxes (scalar * evolving, double dtmax)
 {
-  // recover scalar and vector fields from lists
-  scalar h = evolving[0];
-  vector u = { evolving[1], evolving[2] };
+  // recover scalar and vector fields from list
+  swap (scalar, h,   evolving[0]);
+  swap (scalar, u.x, evolving[1]);
+  swap (scalar, u.y, evolving[2]);
 
   // gradients
   vector gh[], gzb[];
   tensor gu[];
   for (scalar s in {gh, gzb, gu})
-    s.gradient = zero; // first-order gradient reconstruction
-  foreach()
-    foreach_dimension() {
-      gh.x[]   = gradient (h[-1,0], h[], h[1,0])/delta;
-      gu.x.x[] = gradient (u.x[-1,0], u.x[], u.x[1,0])/delta;
-      gu.y.x[] = gradient (u.y[-1,0], u.y[], u.y[1,0])/delta;
-      // reconstruct zb + h rather than zb: 
-      // see theorem 3.1 of Audusse et al, 2004
-      gzb.x[] = gradient (zb[-1,0] + h[-1,0], 
-			  zb[] + h[], 
-			  zb[1,0] + h[1,0])/delta - gh.x[];
-    }
-  boundary ((scalar *) {gh, gzb, gu});
+    s.gradient = vector_zero; // first-order gradient reconstruction
+  gradients ({h, zb, u}, {gh, gzb, gu});
 
   // fluxes
   Fh = new vector; S = new vector;
@@ -112,6 +121,11 @@ double fluxes (scalar * evolving, double dtmax)
 	  f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
     }
 #endif
+  
+  // restore scalar and vector fields
+  swap (scalar, h,   evolving[0]);
+  swap (scalar, u.x, evolving[1]);
+  swap (scalar, u.y, evolving[2]);
 
   return dtmax;
 }

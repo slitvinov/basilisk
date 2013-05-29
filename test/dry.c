@@ -15,6 +15,7 @@ void init()
     zb[] = 0.25*(cos(pi*x/0.1) + 1.)*(fabs(x) < 0.1);
     h[] = 0.8 - zb[];
   }
+  zb.gradient = zb_gradient;
 }
 
 int event (t = {0.5, 0.75, 1, 3, 50}) {

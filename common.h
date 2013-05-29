@@ -157,11 +157,16 @@ int _ig[nboundary] = {1,-1,0,0},
 typedef struct _Point Point;
 
 // methods for each scalar
+
 typedef struct {
-  double   (* boundary[nboundary]) (Point, scalar);
-  void     (* refine)              (Point, scalar);
-  void     (* coarsen)             (Point, scalar);
-  double   (* gradient)            (double, double, double);
+  double x, y;
+} Vector;
+
+typedef struct {
+  double (* boundary[nboundary]) (Point, scalar);
+  void   (* refine)              (Point, scalar);
+  void   (* coarsen)             (Point, scalar);
+  Vector (* gradient)            (Point, scalar);
 } Methods;
 
 Methods * _method;

@@ -85,7 +85,9 @@ void init()
 {
 #if QUADTREE
   zb.refine = refine_zb; // updates terrain
-  h.refine = elevation;  // h refinement preserves elevation
+  h.refine = refine_elevation;  // h refinement preserves elevation
+  h.coarsen = coarsen_elevation;
+  zb.gradient = zb_gradient;
 #endif
   // initial conditions
   foreach() {
@@ -99,6 +101,7 @@ int event (i++) {
   // stats on water depth
   stats s = statsf (h);
   fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
+  assert (s.min >= 0.);
 
   // store hmax
   foreach()

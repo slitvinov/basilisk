@@ -88,7 +88,6 @@ size_t _size (size_t l)
   CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
 #define _neighbor(k,l)							\
   CELL(point.m, point.level, (point.i + k)*(_n + 2*GHOSTS) + point.j + l)
-#define parent             aparent(0,0)
 
 /***** Data macros *****/
 #define data(k,l)							\
@@ -104,7 +103,10 @@ size_t _size (size_t l)
   int level = point.level; NOT_UNUSED(level);			     \
   struct { int x, y; } child = {				     \
     2*((point.i+GHOSTS)%2)-1, 2*((point.j+GHOSTS)%2)-1		     \
-  }; NOT_UNUSED(child);
+  }; NOT_UNUSED(child);						     \
+  Point parent = point;	NOT_UNUSED(parent);   			     \
+  parent.level--;						     \
+  parent.i = (point.i + GHOSTS)/2; parent.j = (point.j + GHOSTS)/2;
 
 /* ===============================================================
  *                    Quadtree traversal

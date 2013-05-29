@@ -17,6 +17,7 @@ void init()
     zb[] = exp(-200.*(x*x));
     h[] = max(h[] - zb[], 0.);
   }
+  zb.gradient = zb_gradient;
 }
 
 int event (i++) {
