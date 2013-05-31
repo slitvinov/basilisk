@@ -26,15 +26,8 @@ void init()
   }
 }
 
-scalar eta[];
-
 int event (t = {0.6, 0.9, 1.2, 1.5, 1.8})
 {
-  foreach()
-    eta[] = h[] + zb[];
-
-  boundary ({eta});
-
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
   output_field ({eta}, N, stdout, true);
@@ -52,10 +45,6 @@ int event (i++) {
 }
 
 int event (i++) {
-  foreach()
-    eta[] = h[] + zb[];
-  boundary ({eta});
-
   scalar w[];
   wavelet (eta, w);
 

@@ -29,7 +29,6 @@ void init()
     zb[] = h0*(x/a)*(x/a);
     h[] = max(h0 + Psi(x,0) - zb[], 0.);
   }
-  zb.gradient = zb_gradient;
 }
 
 int event (i++) {

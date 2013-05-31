@@ -42,7 +42,7 @@ int event (i++) {
     fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
   fprintf (stderr, "%g %d %g %g %.8f %g %g %g\n", t, i, s.min, s.max, s.sum, 
 	   n.rms, n.max, dt);
-  assert (s.min >= 0.);
+  //  assert (s.min >= 0.);
 }
 
 int event (t <= 1.2; t += 1.2/8) {

@@ -20,13 +20,12 @@ void init()
     zb[] = 0.2*exp(-100*(x*x + y*y));
     h[] = 1. - zb[];
   }
-  zb.gradient = zb_gradient;
 }
 
 int event (i = 1)
 {
   norm n = normf (u.x);
-  fprintf (stderr, "# %g %g %g\n", n.avg, n.rms, n.max);
+  fprintf (stderr, "# %.10f %.10f %.10f\n", n.avg, n.rms, n.max);
   foreach ()
     printf ("%g %g %g %g %g\n", x, y, h[], zb[], u.x[]);
 }

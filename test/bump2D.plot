@@ -41,6 +41,8 @@ splot 'level-7'
 splot 'level-8'
 unset multiplot
 
+exit 0
+
 set output 'bump2D_pid.png'
 
 set multiplot layout 3,3 scale 1.6,1.6

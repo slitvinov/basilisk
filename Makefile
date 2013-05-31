@@ -1,7 +1,10 @@
 # edit config (not this file) to tune compiler options etc..
 include config
 
-all: qcc qplot
+all: qcc qplot libkdt
+
+libkdt:
+	cd kdt && make
 
 qcc: qcc.c include.o
 	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" -DCC99="\"$(CC99)\"" \
@@ -27,6 +30,9 @@ tags:
 
 dist:
 	darcs dist
+
+diff.tgz:
+	tar czvf diff.tgz `darcs whatsnew -s | awk '{print $$2}'`
 
 clean:
 	rm -f *.o

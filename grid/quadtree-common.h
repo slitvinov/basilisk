@@ -169,10 +169,10 @@ void halo_prolongation (int depth, scalar * list)
   foreach_halo_coarse_to_fine (depth) {
     for (scalar s in list)
       if (s.gradient) { // linear interpolation (e.g. with limiting)
-	Vector g = s.gradient (parent, s);
-	s[] = coarse(s,0,0);
+	double sc = coarse(s,0,0);
+	s[] = sc;
 	foreach_dimension()
-	  s[] += g.x*child.x/4.;
+	  s[] += s.gradient (coarse(s,-1,0), sc, coarse(s,1,0))*child.x/4.;
       }
       else
 	/* bilinear interpolation from coarser level */

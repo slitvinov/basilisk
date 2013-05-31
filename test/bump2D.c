@@ -20,20 +20,15 @@ int event (i++) {
 }
 
 int event (t <= 2.5; t += 2.5/8) {
-  scalar eta[];
-  foreach()
-    eta[] = h[] > 1e-3 ? h[] + zb[] : 0.;
-  boundary ({eta});
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
   output_field ({eta}, N, stdout, true);
 
-  scalar l = eta;
+  scalar l[];
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
   output_field ({l}, N, stdout, false);
-  delete ({l});
 
   /* check symmetry */
   foreach() {

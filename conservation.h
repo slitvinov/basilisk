@@ -6,6 +6,14 @@
 #define evolving conserved
 // fluxes/eigenvalues for each conserved quantity
 void flux (const double *, double *, double *);
+// user-provided initial conditions
+void init (void);
+
+void init_internal (void)
+{
+  init();
+  boundary (all);
+}
 
 /* generic central-upwind scheme: see e.g. section 3.1 in
  *    [1] Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the

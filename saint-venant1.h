@@ -6,7 +6,7 @@
 // u: flow speed
 
  // note: the order is important as zb needs to be refined before h
-scalar zb[], h[];
+scalar zb[], h[], eta[];
 vector u[];
 
 // Default parameters
@@ -14,48 +14,56 @@ vector u[];
 double G = 1.;
 // cells are "dry" when water depth is less than...
 double dry = 1e-10;
+// user-provided initial conditions
+void init (void);
 
 // fields updated by time-integration (in "predictor-corrector.h")
 scalar * evolving = {h, u};
 
-#include "riemann.h"
+// make sure eta[] is always zb[] + h[]
+#if QUADTREE
+static void refine_eta (Point point, scalar eta)
+{
+  foreach_child()
+    eta[] = zb[] + h[];
+}
+
+static void coarsen_eta (Point point, scalar eta)
+{
+  eta[] = zb[] + h[];
+}
+#endif
+
+void init_internal (void)
+{
+#if QUADTREE
+  eta.refine  = refine_eta;
+  eta.coarsen = coarsen_eta;
+#endif
+  init();
+  foreach()
+    eta[] = zb[] + h[];
+  boundary (all);
+}
 
 // fluxes
 vector Fh, S;
 tensor Fq;
 
-Vector vector_zero (Point point, scalar s)
-{
-  Vector g;
-  foreach_dimension()
-    g.x = 0.;
-  return g;
-}
-
-// reconstruct zb + h rather than zb: 
-// see theorem 3.1 of Audusse et al, 2004
-Vector zb_gradient (Point point, scalar zb)
-{
-  Vector gzb;
-  foreach_dimension()
-    gzb.x = (gradient (zb[-1,0] + h[-1,0], zb[] + h[], zb[1,0] + h[1,0]) -
-	     gradient (h[-1,0], h[], h[1,0]));
-  return gzb;
-}
+#include "riemann.h"
 
 double fluxes (scalar * evolving, double dtmax)
 {
   // recover scalar and vector fields from list
-  swap (scalar, h,   evolving[0]);
-  swap (scalar, u.x, evolving[1]);
-  swap (scalar, u.y, evolving[2]);
+  scalar h = evolving[0];
+  vector u = { evolving[1], evolving[2] };
 
   // gradients
-  vector gh[], gzb[];
+  vector gh[], geta[];
   tensor gu[];
-  for (scalar s in {gh, gzb, gu})
-    s.gradient = vector_zero; // first-order gradient reconstruction
-  gradients ({h, zb, u}, {gh, gzb, gu});
+  for (scalar s in {gh, geta, gu})
+    s.gradient = zero; // first-order gradient reconstruction
+  gradients ({h, eta, u}, {gh, geta, gu});
 
   // fluxes
   Fh = new vector; S = new vector;
@@ -64,8 +72,10 @@ double fluxes (scalar * evolving, double dtmax)
     double hi = h[], hn = h[-1,0];
     if (hi > dry || hn > dry) {
       double dx = delta/2.;
-      double zl = zb[] - dx*gzb.x[];
-      double zr = zb[-1,0] + dx*gzb.x[-1,0];
+      double zi = eta[] - hi;
+      double zl = zi - dx*(geta.x[] - gh.x[]);
+      double zn = eta[-1,0] - hn;
+      double zr = zn + dx*(geta.x[-1,0] - gh.x[-1,0]);
       double zlr = max(zl, zr);
       
       double hl = hi - dx*gh.x[];
@@ -82,7 +92,6 @@ double fluxes (scalar * evolving, double dtmax)
       fv = (fh > 0. ? u.y[-1,0] + dx*gu.y.x[-1,0] : u.y[] - dx*gu.y.x[])*fh;
 
       // topographic source term
-      double zi = zb[], zn = zb[-1,0];
 #if QUADTREE
       // this is necessary to ensure balance at fine/coarse boundaries
       // see notes/balanced.tm
@@ -121,11 +130,6 @@ double fluxes (scalar * evolving, double dtmax)
 	  f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
     }
 #endif
-  
-  // restore scalar and vector fields
-  swap (scalar, h,   evolving[0]);
-  swap (scalar, u.x, evolving[1]);
-  swap (scalar, u.y, evolving[2]);
 
   return dtmax;
 }
@@ -133,32 +137,34 @@ double fluxes (scalar * evolving, double dtmax)
 void update (scalar * output, scalar * input, double dt)
 {
   // recover scalar and vector fields from lists
-  scalar h = input[0], ho = output[0];
+  scalar hi = input[0], ho = output[0];
   vector 
-    u = { input[1], input[2] },
+    ui = { input[1], input[2] },
     uo = { output[1], output[2] };
 
-  if (ho != h)
+  if (ho != hi)
     trash ({ho, uo});
+  trash ({eta});
   // new fields in ho[], uo[]
   foreach() {
-    double hold = h[];
+    double hold = hi[];
     ho[] = hold + dt*(Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/delta;
+    eta[] = ho[] + zb[];
     if (ho[] > dry)
       foreach_dimension()
-	uo.x[] = (hold*u.x[] + dt*(Fq.x.x[] + Fq.x.y[] - 
+	uo.x[] = (hold*ui.x[] + dt*(Fq.x.x[] + Fq.x.y[] - 
 				   S.x[1,0] - Fq.x.y[0,1])/delta)/ho[];
     else
       foreach_dimension()
 	uo.x[] = 0.;
   }
-  boundary (output);
+  boundary ({ho, eta, uo});
 
   delete ((scalar *){Fh, S, Fq});
 }
 
 #if QUADTREE
-void refine_elevation (Point point, scalar h)
+static void refine_elevation (Point point, scalar h)
 {
   // reconstruction of fine cells using elevation (rather than water depth)
   // (default refinement conserves mass but not lake-at-rest)
@@ -166,12 +172,8 @@ void refine_elevation (Point point, scalar h)
     // wet cell
     double eta = zb[] + h[];   // water surface elevation  
     struct { double x, y; } g; // gradient of eta
-    foreach_dimension() {
-      if (h[-1,0] >= dry && h[1,0] >= dry)
-	g.x = gradient (zb[-1,0] + h[-1,0], eta, zb[1,0] + h[1,0])/4.;
-      else
-	g.x = 0.;
-    }
+    foreach_dimension()
+      g.x = gradient (zb[-1,0] + h[-1,0], eta, zb[1,0] + h[1,0])/4.;
     // reconstruct water depth h from eta and zb
     foreach_child()
       h[] = max(0, eta + g.x*child.x + g.y*child.y - zb[]);
@@ -197,7 +199,7 @@ void refine_elevation (Point point, scalar h)
   }
 }
 
-void coarsen_elevation (Point point, scalar h)
+static void coarsen_elevation (Point point, scalar h)
 {
   double eta = 0., v = 0.;
   foreach_child()
@@ -210,4 +212,12 @@ void coarsen_elevation (Point point, scalar h)
   else // dry cell
     h[] = 0.;
 }
+
+void conserve_elevation (void)
+{
+  h.refine  = refine_elevation;
+  h.coarsen = coarsen_elevation;
+}
+#else // Cartesian
+void conserve_elevation (void) {}
 #endif

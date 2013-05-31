@@ -3,6 +3,8 @@
 // Required from solver
 // fields updated by time-integration
 extern scalar * evolving;
+// initial conditions
+void init_internal (void);
 // how to compute fluxes
 double fluxes (scalar * evolving, double dtmax);
 // how to update evolving fields
@@ -12,17 +14,8 @@ void   update (scalar * output, scalar * input, double dt);
 // gradient
 double (* gradient)  (double, double, double) = minmod2;
 void      parameters (void);
-void      init       (void);
 
 double t = 0., dt = 0.;
-
-Vector gradient_vector (Point point, scalar s)
-{
-  Vector g;
-  foreach_dimension()
-    g.x = gradient (s[-1,0], s[], s[1,0]);
-  return g;
-}
 
 void run()
 {
@@ -32,7 +25,7 @@ void run()
 
   // limiting
   for (scalar s in all)
-    s.gradient = gradient_vector;
+    s.gradient = gradient;
 
   // default values
   foreach()
@@ -40,9 +33,8 @@ void run()
       s[] = 0.;
   boundary (all);
 
-  // user-defined initial conditions
-  init();
-  boundary (all);
+  // initial conditions
+  init_internal();
 
   // main loop
   timer start = timer_start();

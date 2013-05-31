@@ -88,14 +88,6 @@ static void update (scalar hu2, scalar hu1, scalar w2, scalar w1, double dt)
 
 double dt = 0.;
 
-Vector gradient_vector (Point point, scalar s)
-{
-  Vector g;
-  foreach_dimension()
-    g.x = gradient (s[-1,0], s[], s[1,0]);
-  return g;
-}
-
 void run (void)
 {
   parameters();
@@ -103,7 +95,7 @@ void run (void)
 
   // limiting
   for (scalar s in {hu, w})
-    s.gradient = gradient_vector;
+    s.gradient = gradient;
 
   foreach() {
     hu[] = B[] = 0.;

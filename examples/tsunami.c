@@ -1,4 +1,3 @@
-#include "grid/multigrid.h"
 #include "saint-venant1.h"
 #include "terrain.h"
 #include "okada.h"
@@ -12,7 +11,7 @@ double mtd = 360./40075e3;
 void parameters()
 {
   // 1024^2 grid points
-  N = 1024;
+  N = 1 << MAXLEVEL;
   // the domain is 54 degrees squared
   L0 = 54.;
   // centered on 94,8 longitude,latitude
@@ -35,8 +34,9 @@ void init()
 {
   // use etopo2 kdt terrain database for topography zb
   terrain (zb, "/home/popinet/terrain/etopo2");
-  h.refine  = refine_elevation;
-  h.coarsen = coarsen_elevation;
+  // ensure that water level is conserved during refinement/coarsening
+  // the default is to conserve volume
+  conserve_elevation();
   scalar d[];
   foreach()
     d[] = hmax[] = 0.;
@@ -52,7 +52,7 @@ void init()
     h[] = max(0., - zb[]);
     if (h[] > dry)
       h[] = max (0., h[] + d[]);
-  }    
+  }
 }
 
 // second fault segment is triggered at t = 272 seconds
@@ -130,7 +130,7 @@ int event (i++) {
   norm n = normf (u.x);
   if (i == 0)
     fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
-  fprintf (stderr, "%g %d %g %g %.8f %g %g %g\n", t, i, s.min, s.max, s.sum, 
+  fprintf (stderr, "%g %d %g %g %g %g %g %g\n", t, i, s.min, s.max, s.sum, 
 	   n.rms, n.max, dt);
 
   foreach() {
@@ -213,10 +213,9 @@ int event (i++)
   for (Gauge * g = gauges; g->name; g++) {
     if (!g->fp)
       g->fp = fopen (g->name, "w");
-    double val = interpolate (zb, g->x, g->y);
-    if (val != nodata)
-      fprintf (g->fp, "%g %g\n", t,
-	       val + interpolate (h, g->x, g->y));
+    Point point = locate (g->x, g->y);
+    if (point.level >= 0 && val(h,0,0) > dry)
+      fprintf (g->fp, "%g %g\n", t, val(eta,0,0));
   }
 }
 

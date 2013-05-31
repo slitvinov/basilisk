@@ -159,14 +159,10 @@ typedef struct _Point Point;
 // methods for each scalar
 
 typedef struct {
-  double x, y;
-} Vector;
-
-typedef struct {
   double (* boundary[nboundary]) (Point, scalar);
   void   (* refine)              (Point, scalar);
   void   (* coarsen)             (Point, scalar);
-  Vector (* gradient)            (Point, scalar);
+  double (* gradient)            (double, double, double);
 } Methods;
 
 Methods * _method;

@@ -28,7 +28,7 @@ double sech2 (double x)
   return s*s;
 }
 
-double eta (double t)
+double eta0 (double t)
 {
   // eq (17) of [2]
   return H*sech2 (sqrt(3.*H/(4.*D*D*D))*C*(t - T));
@@ -36,12 +36,12 @@ double eta (double t)
 
 double uleft (double t)
 {
-  double e = eta (t);
+  double e = eta0 (t);
   return C*e/(D + e);
 }
 
 // wave paddle is on the left side
-h[left] = D + eta(t);
+h[left] = D + eta0(t);
 u.x[left] = uleft (t);
 u.y[left] = 0.;
 
@@ -85,9 +85,8 @@ void init()
 {
 #if QUADTREE
   zb.refine = refine_zb; // updates terrain
-  h.refine = refine_elevation;  // h refinement preserves elevation
-  h.coarsen = coarsen_elevation;
-  zb.gradient = zb_gradient;
+  // h refinement conserves elevation
+  conserve_elevation();
 #endif
   // initial conditions
   foreach() {
@@ -112,6 +111,7 @@ int event (i++) {
   for (Gauge * g = gauges; g->name; g++) {
     if (!g->fp)
       g->fp = fopen (g->name, "w");
+    // fix this
     fprintf (g->fp, "%g %g\n", t,
 	     interpolate (zb, g->x, g->y) + 
 	     interpolate (h, g->x, g->y));
