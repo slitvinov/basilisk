@@ -11,4 +11,29 @@ set logscale cb
 set cbrange [0.1:10]
 splot 't-600' u 1:2:($3 > 1e-3 ? $5 : 1e1000)
 
+reset
+set term pngcairo enhanced size 800,1024 font ",10"
+set output 'tsunami_gauges.png'
+set multiplot layout 5,1 scale 1,1.1
+set xrange [3:8]
+set key bottom right
+set title 'Hanimaadhoo, Maldives'
+plot 'hani' u ($1/60.):2 w l t 'modelled', \
+     'hanires.txt' u 1:($2/100.) w lp t 'observed'
+unset key
+set title 'Male, Maldives'
+plot 'male' u ($1/60.):2 w l t 'modelled', \
+     'maleres.txt' u 1:($2/100.) w lp t 'observed'
+set title 'Gan, Maldives'
+plot 'gana' u ($1/60.):2 w l t 'modelled', \
+     'ganares.txt' u 1:($2/100.) w lp t 'observed'
+set title 'Diego Garcia'
+plot 'dieg' u ($1/60.):2 w l t 'modelled', \
+     'diegres.txt' u 1:($2/100.) w lp t 'observed'
+set title 'Columbo, Sri Lanka'
+set xrange [2.5:8]
+plot 'colo' u ($1/60.):2 w l t 'modelled', \
+     'colores.txt' u 1:($2/100.) w lp t 'observed'
+unset multiplot
+
 ! rm -f t-?

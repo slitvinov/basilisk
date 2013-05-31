@@ -244,7 +244,7 @@ void output_gauges (Gauge * gauges, scalar * list)
       fprintf (g->fp, "%g", t);
       for (scalar s in list)
 	fprintf (g->fp, " %g", s[]);
-      fputc ('\n', g->fp);
     }
+    fputc ('\n', g->fp);
   }
 }
