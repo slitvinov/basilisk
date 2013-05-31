@@ -16,7 +16,7 @@ void init()
   }
 }
 
-int event (t = 0.7) {
+event logfile (t = 0.7) {
   foreach()
     fprintf (stderr, "%g %g %g %g\n", x, w[], hu[], B[]);
 }

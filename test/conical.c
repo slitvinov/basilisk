@@ -91,7 +91,7 @@ Gauge gauges[] = {
   {NULL}
 };
 
-int event (i++) {
+event logfile (i++) {
   // stats on water depth
   stats s = statsf (h);
   fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
@@ -106,7 +106,7 @@ int event (i++) {
   output_gauges (gauges, {eta});
 }
 
-int event (t = {9, 12, 13, 14, 20})
+event outputfile (t = {9, 12, 13, 14, 20})
 {
   static int nf = 0;
   printf ("file: conical-%d\n", nf);
@@ -120,7 +120,7 @@ int event (t = {9, 12, 13, 14, 20})
 }
 
 #if QUADTREE
-int event (i++) {
+event adapt (i++) {
   scalar eta[];
   foreach()
     eta[] = h[] > dry ? h[] + zb[] : 0;

@@ -60,18 +60,18 @@ void init()
 /*   output_matrix (w, N, stdout, false); */
 /* } */
 
-int event (i++) {
+event velocity (i++) {
   foreach_face(x) u.x[] = -8.*y;
   foreach_face(y) u.y[] =  8.*x;
   boundary_flux (u);
 }
 
-int event (t = {0,end}) {
+event logfile (t = {0,end}) {
   stats s = statsf (f);
   fprintf (stderr, "# %f %.12f %g %g\n", t, s.sum, s.min, s.max);
 }
 
-int event (t = end) {
+event field (t = end) {
   scalar e[];
   foreach()
     e[] = f[] - bump(x,y);

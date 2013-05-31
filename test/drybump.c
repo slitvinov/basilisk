@@ -19,13 +19,13 @@ void init()
   }
 }
 
-int event (i++) {
+event logfile (i++) {
   stats s = statsf (h);
   fprintf (stderr, "%g %d %g %g %.8f %g\n", t, i, s.min, s.max, s.sum, dt);
   assert (s.min >= 0.);
 }
 
-int event (t <= 0.6; t += 0.6/8) {
+event outputfile (t <= 0.6; t += 0.6/8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf++);
   foreach()

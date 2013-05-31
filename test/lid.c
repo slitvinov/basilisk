@@ -33,19 +33,19 @@ static double energy()
 
 scalar un[]; /* we need another scalar */
 
-int event (i = 0) {
+event init_un (i = 0) {
   foreach()
     un[] = u.x[];
 }
 
-int event (i += 10; i <= 10000) {
+event logfile (i += 10; i <= 10000) {
   double du = change (u.x, un);
   if (i > 0 && du < 1e-4)
     return 1; /* stop */
   fprintf (stderr, "%f %.9f %g\n", t, energy(), du);
 }
 
-int event (i += 100) output_matrix (u.x, N, stdout, true);
+event outputfile (i += 100) output_matrix (u.x, N, stdout, true);
 
 void end()
 {

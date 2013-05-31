@@ -26,7 +26,7 @@ void init()
   }
 }
 
-int event (t = {0.6, 0.9, 1.2, 1.5, 1.8})
+event outputfile (t = {0.6, 0.9, 1.2, 1.5, 1.8})
 {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
@@ -39,12 +39,12 @@ int event (t = {0.6, 0.9, 1.2, 1.5, 1.8})
   output_field ({l}, N, stdout, false);
 }
 
-int event (i++) {
+event logfile (i++) {
   stats s = statsf (h);
   fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
 }
 
-int event (i++) {
+event adapt (i++) {
   scalar w[];
   wavelet (eta, w);
 

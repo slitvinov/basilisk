@@ -18,7 +18,7 @@ void init()
   }
 }
 
-int event (t = {0.5, 0.75, 1, 3, 50}) {
+event logfile (t = {0.5, 0.75, 1, 3, 50}) {
   foreach() {
     fprintf (stderr, "%g %g %g %g\n", x, h[], u.x[], zb[]);
     assert (h[] > 0.);

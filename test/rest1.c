@@ -22,7 +22,7 @@ void init()
   }
 }
 
-int event (i = 1)
+event logfile (i = 1)
 {
   norm n = normf (u.x);
   fprintf (stderr, "# %.10f %.10f %.10f\n", n.avg, n.rms, n.max);

@@ -49,7 +49,7 @@ void init()
 #endif
 }
 
-int event (i++) {
+event friction (i++) {
   // quadratic bottom friction, coefficient 1e-4 (dimensionless)
   foreach() {
     double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(u)/h[];
@@ -59,7 +59,7 @@ int event (i++) {
   boundary ((scalar *){u});
 }
 
-int event (i += 10) {
+event logfile (i += 10) {
   stats s = statsf (h);
   norm n = normf (u.x);
   if (i == 0)
@@ -69,7 +69,7 @@ int event (i += 10) {
   assert (s.min > 0.);
 }
 
-int event (t <= 1200.; t += 1200./8) {
+event outputfile (t <= 1200.; t += 1200./8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
   output_field ({h, zb, u}, N, stdout, true);
@@ -86,7 +86,7 @@ int event (t <= 1200.; t += 1200./8) {
 // int event (t += 100)
 //  output_matrix (h, N, stdout, true);
 
-int event (i++) {
+event adapt (i++) {
   scalar w[];
   wavelet (h, w);
 

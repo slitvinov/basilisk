@@ -35,7 +35,7 @@ void init()
   }
 }
 
-int event (i++) {
+event logfile (i++) {
   stats s = statsf (h);
   norm n = normf (u.x);
   if (i == 0)
@@ -45,7 +45,7 @@ int event (i++) {
   //  assert (s.min >= 0.);
 }
 
-int event (t <= 1.2; t += 1.2/8) {
+event outputfile (t <= 1.2; t += 1.2/8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
   output_field ({h}, N, stdout, true);
@@ -57,7 +57,7 @@ int event (t <= 1.2; t += 1.2/8) {
   output_field ({l}, N, stdout, false);
 }
 
-int event (i++) {
+event adapt (i++) {
   scalar w[];
   wavelet (h, w);
 

@@ -14,12 +14,12 @@ void init()
     h[] = 0.1 + 1.*exp(-200.*(x*x + y*y));
 }
 
-int event (i++) {
+event logfile (i++) {
   stats s = statsf (h);
   fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
 }
 
-int event (t <= 2.5; t += 2.5/8) {
+event outputfile (t <= 2.5; t += 2.5/8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
   output_field ({eta}, N, stdout, true);
@@ -43,7 +43,7 @@ int event (t <= 2.5; t += 2.5/8) {
   }
 }
 
-int event (i++) {
+event adapt (i++) {
   scalar w[];
   wavelet (h, w);
 

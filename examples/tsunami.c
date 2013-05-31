@@ -54,7 +54,7 @@ void init()
 }
 
 // second fault segment is triggered at t = 272 seconds
-int event (t = 272./60.)
+event fault2 (t = 272./60.)
 {
   scalar d[];
   okada (d,
@@ -70,7 +70,7 @@ int event (t = 272./60.)
 }
 
 // third fault segment is triggered at t = 588 seconds
-int event (t = 588./60.)
+event fault3 (t = 588./60.)
 {
   scalar d[];
   okada (d,
@@ -85,7 +85,7 @@ int event (t = 588./60.)
 }
 
 // fourth fault segment is triggered at t = 913 seconds
-int event (t = 913./60.)
+event fault4 (t = 913./60.)
 {
   scalar d[];
   okada (d,
@@ -100,7 +100,7 @@ int event (t = 913./60.)
 }
 
 // fifth fault segment is triggered at t = 1273 seconds
-int event (t = 1273./60.)
+event fault5 (t = 1273./60.)
 {
   scalar d[];
   okada (d,
@@ -115,7 +115,7 @@ int event (t = 1273./60.)
 }
 
 // every timestep
-int event (i++) {
+event logfile (i++) {
   stats s = statsf (h);
   norm n = normf (u.x);
   if (i == 0)
@@ -136,13 +136,13 @@ int event (i++) {
 }
 
 // snapshots every hour
-int event (t += 60; t <= 600) {
+event snapshots (t += 60; t <= 600) {
   printf ("file: t-%g\n", t);
   output_field ({h, zb, hmax}, N, stdout, true);
 }
 
 // movies every minute
-int event (t++) {
+event movies (t++) {
   static FILE * fp = NULL;
   if (!fp) fp = popen ("ppm2mpeg > eta.mpg", "w");
   scalar eta[];
@@ -193,9 +193,9 @@ Gauge gauges[] = {
   {NULL}
 };
 
-int event (i++) output_gauges (gauges, {eta});
+event gauges1 (i++) output_gauges (gauges, {eta});
 
-int event (i++) {
+event adapt (i++) {
   scalar eta[];
   foreach()
     eta[] = h[] > dry ? h[] + zb[] : 0;

@@ -31,7 +31,7 @@
 
   #define EVMAX 100
   int inevent, eventscope, eventpara;
-  char eventarray[EVMAX], * eventfile[EVMAX];
+  char eventarray[EVMAX], * eventfile[EVMAX], * eventid[EVMAX];
   int nexpr[EVMAX], eventline[EVMAX];
 
   int foreachdim, foreachdimpara, foreachdimline;
@@ -493,8 +493,8 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 	       "  return ret; "
 	       "} ");
     fprintf (yyout, 
-	     "static int event_%d (int i, double t) { ",
-	     nevents);
+	     "static int %s (int i, double t) { ",
+	     eventid[nevents]);
     assert (nevents < EVMAX);
     nexpr[nevents] = inevent;
     inevent = 4;
@@ -588,9 +588,9 @@ end_foreach{ID}*{SP}*"()" {
 	     "  *ip = i; *tp = t; "
 	     "  return ret; "
 	     "} "
-	     "static int event_expr%d%d (int * ip, double * tp) { "
+	     "static int %s_expr%d (int * ip, double * tp) { "
 	     "  int i = *ip; double t = *tp; "
-	     "  int ret = (", nevents, inevent++);
+	     "  int ret = (", eventid[nevents], inevent++);
   }
   else if (inevent == 4 && scope == eventscope && para == eventpara - 1) {
     ECHO;
@@ -914,16 +914,19 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
     return yyerror ("mismatched ']'");  
 }
 
-event{WS}*[(] {
+event{WS}+{ID}+{WS}*[(] {
   /* event (... */
+  char * id = yytext;
+  space (id); nonspace (id);
+  char * s = id; while (!strchr(" \t\v\n\f(", *s)) s++; *s = '\0';
   fprintf (yyout, 
-	   "event_expr%d%d (int * ip, double * tp) {"
+	   "static int %s_expr%d (int * ip, double * tp) {"
 	   "  int i = *ip; double t = *tp;"
-	   "  int ret = (", nevents, inevent++);
+	   "  int ret = (", id, inevent++);
   eventscope = scope; eventpara = ++para;
   eventarray[nevents] = 0;
-  eventfile[nevents] = malloc (sizeof(char)*(strlen(fname) + 1));
-  strcpy (eventfile[nevents], fname);
+  eventfile[nevents] = strdup (fname);
+  eventid[nevents] = strdup (id);
   eventline[nevents] = line;
 }
 
@@ -935,9 +938,9 @@ event{WS}*[(] {
 	     "  *ip = i; *tp = t; "
 	     "  return ret; "
 	     "} "
-	     "static %s event_array%d[] = %s,-1}; ",
+	     "static %s %s_array[] = %s,-1}; ",
 	     yytext[0] == 'i' ? "int" : "double", 
-	     nevents, strchr (yytext, '{'));
+	     eventid[nevents], strchr (yytext, '{'));
   }
   else
     REJECT;
@@ -1209,28 +1212,30 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
     fputs ("#define undefined DBL_MAX\n", fout);
   /* events */
   for (int i = 0; i < nevents; i++) {
-    fprintf (fout, "static int event_%d (int i, double t);\n", i);
+    char * id = eventid[i];
+    fprintf (fout, "static int %s (int i, double t);\n", id);
     for (int j = 0; j < nexpr[i]; j++)
       fprintf (fout,
-	       "static int event_expr%d%d (int * ip, double * tp);\n",
-	       i, j);
+	       "static int %s_expr%d (int * ip, double * tp);\n",
+	       id, j);
     if (eventarray[i])
-      fprintf (fout, "static %s event_array%d[];\n", 
-	       eventarray[i] == 'i' ? "int" : "double", i);
+      fprintf (fout, "static %s %s_array[];\n", 
+	       eventarray[i] == 'i' ? "int" : "double", id);
   }
   fputs ("Event Events[] = {\n", fout);
   for (int i = 0; i < nevents; i++) {
-    fprintf (fout, "  { false, %d, event_%d, {", nexpr[i], i);
+    char * id = eventid[i];
+    fprintf (fout, "  { false, %d, %s, {", nexpr[i], id);
     int j;
     for (j = 0; j < nexpr[i] - 1; j++)
-      fprintf (fout, "event_expr%d%d, ", i, j);
-    fprintf (fout, "event_expr%d%d}, ", i, j);
+      fprintf (fout, "%s_expr%d, ", id, j);
+    fprintf (fout, "%s_expr%d}, ", id, j);
     if (eventarray[i] == 'i')
-      fprintf (fout, "event_array%d, ", i);
+      fprintf (fout, "%s_array, ", id);
     else
       fprintf (fout, "NULL, ");
     if (eventarray[i] == 't')
-      fprintf (fout, "event_array%d,\n", i);
+      fprintf (fout, "%s_array,\n", id);
     else
       fprintf (fout, "NULL,\n");
     fprintf (fout, "    \"%s\", %d},\n", eventfile[i], eventline[i]);

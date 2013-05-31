@@ -33,7 +33,7 @@ void init()
     h[] = 0.1 + exp(-200*x*x);
 }
 
-int event (t += 0.1; t <= 0.7) {
+event logfile (t += 0.1; t <= 0.7) {
   foreach()
     fprintf (stderr, "%g %g %g\n", x, h[], q[]);
   fprintf (stderr, "\n");

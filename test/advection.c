@@ -67,7 +67,7 @@ void init()
 /*   output_matrix (w, N, stdout, false); */
 /* } */
 
-int event (i++) {
+event velocity (i++) {
   foreach_face(x)
     u.x[] = 1.5*sin(2.*pi*t/5.)*sin((x + 0.5)*pi)*cos((y + 0.5)*pi);
   foreach_face(y)
@@ -75,12 +75,12 @@ int event (i++) {
   boundary_flux (u);
 }
 
-int event (t = {0,5}) {
+event logfile (t = {0,5}) {
   stats s = statsf (f);
   fprintf (stderr, "# %f %.12f %g %g\n", t, s.sum, s.min, s.max);
 }
 
-int event (t = 5) {
+event field (t = 5) {
   scalar e[];
   foreach()
     e[] = f[] - bump(x,y);
