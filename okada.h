@@ -144,6 +144,6 @@ void okada (struct Okada p)
 			      p.mu/p.lambda,
 			      x0 + x1, y0 + y1,
 			      oka);
-    val(p.d,0,0) += oka[2];
+    val(p.d,0,0) = oka[2];
   }
 }

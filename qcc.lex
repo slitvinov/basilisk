@@ -47,7 +47,7 @@
   char * boundaryfunc, boundaryvar[80];
   int nboundary = 0;
 
-  int infunction, functionscope, functionpara;
+  int infunction, infunctiondecl, functionscope, functionpara;
   FILE * dopen (const char * fname, const char * mode);
 
   int foreach_face_line;
@@ -250,10 +250,13 @@
   }
 
   void infunction_declarations() {
-    if (debug)
-      fprintf (stderr, "%s:%d: function declarations\n", fname, line);
-    fputs (" int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
-	   " POINT_VARIABLES; ", yyout);
+    if (!infunctiondecl) {
+      if (debug)
+	fprintf (stderr, "%s:%d: function declarations\n", fname, line);
+      fputs (" int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
+	     " POINT_VARIABLES; ", yyout);
+      infunctiondecl = 1;
+    }
   }
 
   char * boundaryrep (char * name) {
@@ -519,8 +522,11 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   ECHO;
   if (foreachdim && scope == foreachdim)
     endforeachdim ();
-  if (infunction && scope == functionscope)
+  if (infunction && scope <= functionscope) {
     infunction = 0;
+    if (debug)
+      fprintf (stderr, "%s:%d: outfunction\n", fname, line);
+  }
   if (inforeach && scope == foreachscope)
     endforeach ();
   else if (inevent && scope == eventscope)
@@ -554,12 +560,9 @@ end_foreach{ID}*{SP}*"()" {
     ECHO; insthg = 1;
     endforeachdim ();
   }
-  if (infunction && scope == functionscope) {
-    if (scope > 0) {
-      fputs ("; ", yyout); insthg = 1;
-      infunction_declarations();
-    }
-    infunction = 0;
+  if (infunction && scope == functionscope && scope > 0 && !infunctiondecl) {
+    fputs ("; ", yyout); insthg = 1;
+    infunction_declarations();
   }
   if (inboundary) {
     ECHO;
@@ -798,7 +801,10 @@ ghost {
 
 Point{WS}+point[^{ID}] {
   /* Point point */
-  infunction = 1; functionscope = scope; functionpara = para;
+  if (debug)
+    fprintf (stderr, "%s:%d: infunction\n", fname, line);
+  infunction = 1; infunctiondecl = 0;
+  functionscope = scope; functionpara = para;
   if (yytext[yyleng-1] == ')') para--;
   ECHO;
 }

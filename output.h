@@ -18,7 +18,7 @@ void output_field (scalar * list, int n, FILE * fp, bool linear)
       else {
 	Point point = locate (x, y);
 	for (scalar s in list)
-	  fprintf (fp, " %g", point.level >= 0 ? val(s,0,0) : nodata);
+	  fprintf (fp, " %g", point.level >= 0 ? s[] : nodata);
       }
       fputc ('\n', fp);
     }
@@ -46,7 +46,7 @@ void output_matrix (scalar f, int n, FILE * fp, bool linear)
       else {
 	Point point = locate (x, y);
 	assert (point.level >= 0);
-	v = val(f,0,0);
+	v = f[];
       }
       fwrite (&v, sizeof(float), 1, fp);
     }

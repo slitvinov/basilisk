@@ -38,8 +38,6 @@ void init()
   // the default is to conserve volume
   conserve_elevation();
   scalar d[];
-  foreach()
-    d[] = hmax[] = 0.;
   // initial deformation
   okada (d, 
 	 x = 94.57, y = 3.83,
@@ -59,15 +57,13 @@ void init()
 int event (t = 272./60.)
 {
   scalar d[];
-  foreach()
-    d[] = 0.;
   okada (d,
 	 x = 93.90, y = 5.22,
 	 depth = 11.4857e3,
 	 strike = 348, dip = 12, rake = 90,
 	 length = 150e3, width = 130e3,
 	 U = 23);
-  //deformation is added to h[] (water depth) only in wet areas
+  // deformation is added to h[] (water depth) only in wet areas
   foreach()
     if (h[] > dry)
       h[] = max (0., h[] + d[]);
@@ -77,8 +73,6 @@ int event (t = 272./60.)
 int event (t = 588./60.)
 {
   scalar d[];
-  foreach()
-    d[] = 0.;
   okada (d,
 	 x = 93.21, y = 7.41,
 	 depth = 12.525e3,
@@ -94,8 +88,6 @@ int event (t = 588./60.)
 int event (t = 913./60.)
 {
   scalar d[];
-  foreach()
-    d[] = 0.;
   okada (d,
 	 x = 92.60, y = 9.70,
 	 depth = 15.12419e3,
@@ -111,8 +103,6 @@ int event (t = 913./60.)
 int event (t = 1273./60.)
 {
   scalar d[];
-  foreach()
-    d[] = 0.;
   okada (d,
 	 x = 92.87, y = 11.70,
 	 depth = 15.12419e3,
@@ -175,49 +165,35 @@ int event (t++) {
 }
 
 // tide gauges
-typedef struct {
-  double x, y;
-  char * name, * desc;
-  FILE * fp;
-} Gauge;
 
 Gauge gauges[] = {
-  {96.88,  -12.13, "coco", "Cocos Islands, Australia"},
-  {79.83,    6.93, "colo", "Colombo, Sri Lanka"},
-  {73.18,    6.77, "hani", "Hanimaadhoo, Maldives"},
-  {73.52,    4.18, "male", "Male, Maldives"},
-  {73.17,   -0.68, "gana", "Gan, Maldives"},
-  {72.38,    -7.3, "dieg", "Diego Garcia, UK"},
-  {63.42,  -19.67, "rodr", "Rodriguez I., Mauritius"},
-  {57.5,   -20.15, "loui", "Port Louis, Mauritius"},
-  {55.3,   -20.92, "lare", "La Reunion, France"},
-  {115.73, -31.82, "hill", "Hillarys, Australia"},
-  {54,         17, "sala", "Salalah, Oman"},
-  {55.53,   -4.68, "laru", "Pointe La Rue, Seychelles"},
-  {40.9,    -2.27, "lamu", "Lamu, Kenya"},
-  {39.18,   -6.15, "zanz", "Zanzibar, Tanzania"},
-  {80.3,     13.1, "chen", "Chennai, India"},
-  {86.7,    20.26, "para", "Paradip, India"},
-  {83.28,   17.68, "visa", "Visakhapatnam, India"},
-  {76.26,    9.96, "koch", "Kochi, India"},
-  {73.8,    15.42, "morm", "Mormugao, India"},
-  {69.08,   22.47, "okha", "Okha, India"},
-  {78.15,     8.8, "tuti", "Tuticorin, India"},
-  {99.65,   6.702, "taru", "Tarutao, Thailand"},
-  {98.425,  7.765, "tapa", "Tapaonoi, Thailand"},
-  {0, 0, NULL}
+  {"coco", 96.88,  -12.13, "Cocos Islands, Australia"},
+  {"colo", 79.83,    6.93, "Colombo, Sri Lanka"},
+  {"hani", 73.18,    6.77, "Hanimaadhoo, Maldives"},
+  {"male", 73.52,    4.18, "Male, Maldives"},
+  {"gana", 73.17,   -0.68, "Gan, Maldives"},
+  {"dieg", 72.38,    -7.3, "Diego Garcia, UK"},
+  {"rodr", 63.42,  -19.67, "Rodriguez I., Mauritius"},
+  {"loui", 57.5,   -20.15, "Port Louis, Mauritius"},
+  {"lare", 55.3,   -20.92, "La Reunion, France"},
+  {"hill", 115.73, -31.82, "Hillarys, Australia"},
+  {"sala", 54,         17, "Salalah, Oman"},
+  {"laru", 55.53,   -4.68, "Pointe La Rue, Seychelles"},
+  {"lamu", 40.9,    -2.27, "Lamu, Kenya"},
+  {"zanz", 39.18,   -6.15, "Zanzibar, Tanzania"},
+  {"chen", 80.3,     13.1, "Chennai, India"},
+  {"para", 86.7,    20.26, "Paradip, India"},
+  {"visa", 83.28,   17.68, "Visakhapatnam, India"},
+  {"koch", 76.26,    9.96, "Kochi, India"},
+  {"morm", 73.8,    15.42, "Mormugao, India"},
+  {"okha", 69.08,   22.47, "Okha, India"},
+  {"tuti", 78.15,     8.8, "Tuticorin, India"},
+  {"taru", 99.65,   6.702, "Tarutao, Thailand"},
+  {"tapa", 98.425,  7.765, "Tapaonoi, Thailand"},
+  {NULL}
 };
 
-int event (i++)
-{
-  for (Gauge * g = gauges; g->name; g++) {
-    if (!g->fp)
-      g->fp = fopen (g->name, "w");
-    Point point = locate (g->x, g->y);
-    if (point.level >= 0 && val(h,0,0) > dry)
-      fprintf (g->fp, "%g %g\n", t, val(eta,0,0));
-  }
-}
+int event (i++) output_gauges (gauges, {eta});
 
 int event (i++) {
   scalar eta[];

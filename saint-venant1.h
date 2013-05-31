@@ -221,3 +221,30 @@ void conserve_elevation (void)
 #else // Cartesian
 void conserve_elevation (void) {}
 #endif
+
+// tide gauges
+
+typedef struct {
+  char * name;
+  double x, y;
+  char * desc;
+  FILE * fp;
+} Gauge;
+
+void output_gauges (Gauge * gauges, scalar * list)
+{
+  for (Gauge * g = gauges; g->name; g++) {
+    if (!g->fp) {
+      g->fp = fopen (g->name, "w");
+      if (g->desc)
+	fprintf (g->fp, "%s\n", g->desc);
+    }
+    Point point = locate (g->x, g->y);
+    if (point.level >= 0 && h[] > dry) {
+      fprintf (g->fp, "%g", t);
+      for (scalar s in list)
+	fprintf (g->fp, " %g", s[]);
+      fputc ('\n', g->fp);
+    }
+  }
+}

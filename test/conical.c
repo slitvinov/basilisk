@@ -65,22 +65,6 @@ void refine_zb (Point point, scalar zb)
 // storage for maximum wave height
 scalar hmax[];
 
-// wave gauges
-typedef struct {
-  char * name;
-  double x, y;
-  FILE * fp;
-} Gauge;
-
-Gauge gauges[] = {
-  {"WG3",   6.82, 13.05},
-  {"WG6",   9.36, 13.80},
-  {"WG9",  10.36, 13.80},
-  {"WG16", 12.96, 11.22},
-  {"WG22", 15.56, 13.80},
-  {NULL}
-};
-
 void init()
 {
 #if QUADTREE
@@ -96,6 +80,17 @@ void init()
   }
 }
 
+// wave gauges
+
+Gauge gauges[] = {
+  {"WG3",   6.82, 13.05},
+  {"WG6",   9.36, 13.80},
+  {"WG9",  10.36, 13.80},
+  {"WG16", 12.96, 11.22},
+  {"WG22", 15.56, 13.80},
+  {NULL}
+};
+
 int event (i++) {
   // stats on water depth
   stats s = statsf (h);
@@ -108,14 +103,7 @@ int event (i++) {
       hmax[] = h[];
 
   // output of point gauges
-  for (Gauge * g = gauges; g->name; g++) {
-    if (!g->fp)
-      g->fp = fopen (g->name, "w");
-    // fix this
-    fprintf (g->fp, "%g %g\n", t,
-	     interpolate (zb, g->x, g->y) + 
-	     interpolate (h, g->x, g->y));
-  }
+  output_gauges (gauges, {eta});
 }
 
 int event (t = {9, 12, 13, 14, 20})

@@ -69,10 +69,10 @@ double interpolate (scalar v, double xp, double yp)
   int i = sign(x), j = sign(y);
   x = fabs(x); y = fabs(y);
   /* bilinear interpolation */
-  return (val(v,0,0)*(1. - x)*(1. - y) + 
-	  val(v,i,0)*x*(1. - y) + 
-	  val(v,0,j)*(1. - x)*y + 
-	  val(v,i,j)*x*y);
+  return (v[]*(1. - x)*(1. - y) + 
+	  v[i,0]*x*(1. - y) + 
+	  v[0,j]*(1. - x)*y + 
+	  v[i,j]*x*y);
 }
 
 typedef struct {
