@@ -23,43 +23,52 @@ size_t _size (size_t l)
 #define CELL(m,level,i)  (*((Cell *) &m[level][(i)*datasize]))
 
 /***** Cartesian macros *****/
-#define data(k,l)  \
+@define data(k,l)  \
   ((double *)&point.d[point.level][((point.i + k)*(point.n + 2*GHOSTS) + \
 				    point.j + l)*datasize])
 
 /***** Multigrid variables and macros *****/
-#define depth()       (((Point *)grid)->depth)
-#define _fine(a,k,l)   \
+@define depth()       (((Point *)grid)->depth)
+@define _fine(a,k,l)   \
   ((double *)								\
    &point.d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) + \
 			    (2*point.j-GHOSTS+l))*datasize])[a]
-#define _coarse(a,k,l) \
+@define _coarse(a,k,l) \
   ((double *)								\
    &point.d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) + \
 			    (point.j+GHOSTS)/2+l)*datasize])[a]
-#define POINT_VARIABLES						     \
+@define POINT_VARIABLES						     \
   VARIABLES							     \
   int level = point.level; NOT_UNUSED(level);			     \
   struct { int x, y; } child = {				     \
     2*((point.i+GHOSTS)%2)-1, 2*((point.j+GHOSTS)%2)-1		     \
   }; NOT_UNUSED(child);
 
-#define foreach_level(l,...) 						\
+@define foreach_level(l) 						\
   OMP_PARALLEL()							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   Point point = *((Point *)grid);					\
   point.level = l; point.n = 1 << point.level;				\
-  OMP(omp for schedule(static) __VA_ARGS__)				\
+  OMP(omp for schedule(static))						\
   for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
     point.i = _k;							\
     for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
       POINT_VARIABLES
-#define end_foreach_level() }} OMP_END_PARALLEL()
+@define end_foreach_level() }} OMP_END_PARALLEL()
 
-#define foreach(clause) foreach_level(point.depth, clause)
-#define end_foreach()   end_foreach_level()
+@define foreach(clause) 						\
+  OMP_PARALLEL()							\
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
+  Point point = *((Point *)grid);					\
+  point.level = point.depth; point.n = 1 << point.level;		\
+  OMP(omp for schedule(static) clause)					\
+  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
+    point.i = _k;							\
+    for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
+      POINT_VARIABLES
+@define end_foreach() }} OMP_END_PARALLEL()
 
-#define foreach_boundary_level(d,l,corners)				\
+@define foreach_boundary_level(d,l,corners)				\
   OMP_PARALLEL()							\
   int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
@@ -72,14 +81,14 @@ size_t _size (size_t l)
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS; \
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS; \
     POINT_VARIABLES
-#define end_foreach_boundary_level() } OMP_END_PARALLEL()
+@define end_foreach_boundary_level() } OMP_END_PARALLEL()
 
-#define foreach_boundary(d,corners) \
+@define foreach_boundary(d,corners) \
   foreach_boundary_level(d,point.depth,corners)
-#define end_foreach_boundary() \
+@define end_foreach_boundary() \
   end_foreach_boundary_level()
 
-#define foreach_fine_to_coarse() {					\
+@define foreach_fine_to_coarse() {					\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   Point _p = *((Point *)grid);						\
   _p.level = _p.depth - 1; _p.n = 1 << _p.level;			\
@@ -91,16 +100,16 @@ size_t _size (size_t l)
       point.i = _k;							\
       for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
         POINT_VARIABLES
-#define end_foreach_fine_to_coarse() }} OMP_END_PARALLEL() }
+@define end_foreach_fine_to_coarse() }} OMP_END_PARALLEL() }
 
-#define foreach_child() {				\
+@define foreach_child() {				\
   int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS; \
   point.level++;					\
   for (int _k = 0; _k < 2; _k++)			\
     for (int _l = 0; _l < 2; _l++) {			\
       point.i = _i + _k; point.j = _j + _l;		\
       POINT_VARIABLES;
-#define end_foreach_child()			        \
+@define end_foreach_child()			        \
   }							\
   point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2; \
   point.level--;                                        \

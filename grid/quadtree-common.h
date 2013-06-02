@@ -1,48 +1,48 @@
 #define QUADTREE 1
 
-#ifndef foreach
-# define foreach foreach_leaf
-# define end_foreach end_foreach_leaf
-#endif
+@ifndef foreach
+@ define foreach foreach_leaf
+@ define end_foreach end_foreach_leaf
+@endif
 
-#ifndef foreach_fine_to_coarse
-# define foreach_fine_to_coarse()      foreach_cell_post(!is_leaf(cell))
-# define end_foreach_fine_to_coarse()  end_foreach_cell_post()
-#endif
+@ifndef foreach_fine_to_coarse
+@ define foreach_fine_to_coarse()      foreach_cell_post(!is_leaf(cell))
+@ define end_foreach_fine_to_coarse()  end_foreach_cell_post()
+@endif
 
-#ifndef foreach_level
-# define foreach_level(l)						\
+@ifndef foreach_level
+@ define foreach_level(l)						\
   foreach_cell() {							\
     if (!is_active (cell))						\
       continue;								\
     else if (level == l) {
-# define end_foreach_level()    continue; } } end_foreach_cell()
-#endif
+@ define end_foreach_level()    continue; } } end_foreach_cell()
+@endif
 
-#ifndef foreach_level_or_leaf
-# define foreach_level_or_leaf(l)   foreach_cell() { \
+@ifndef foreach_level_or_leaf
+@ define foreach_level_or_leaf(l)   foreach_cell() { \
                                       if (level == l || is_leaf(cell)) {
-# define end_foreach_level_or_leaf()  continue; } } end_foreach_cell()
-#endif
+@ define end_foreach_level_or_leaf()  continue; } } end_foreach_cell()
+@endif
 
-#define foreach_halo()     foreach_halo_coarse_to_fine(-1)
-#define end_foreach_halo() end_foreach_halo_coarse_to_fine()
+@define foreach_halo()     foreach_halo_coarse_to_fine(-1)
+@define end_foreach_halo() end_foreach_halo_coarse_to_fine()
 
-#define foreach_boundary(dir,corners)				\
+@define foreach_boundary(dir,corners)				\
   foreach_boundary_cell(dir,corners) if (is_leaf (cell)) {
-#define end_foreach_boundary()  continue; } end_foreach_boundary_cell()
+@define end_foreach_boundary()  continue; } end_foreach_boundary_cell()
 
-#define foreach_boundary_level(dir,l,corners)	\
+@define foreach_boundary_level(dir,l,corners)	\
   foreach_boundary_cell(dir,corners)		\
     if (level == l || is_leaf(cell)) {
-#define end_foreach_boundary_level()				\
+@define end_foreach_boundary_level()				\
       corners(); /* we need this otherwise we'd skip corners */	\
       continue;							\
     }								\
   end_foreach_boundary_cell()
 
-#define is_face_x() !is_refined(neighbor(-1,0))
-#define is_face_y() !is_refined(neighbor(0,-1))
+@define is_face_x() !is_refined(neighbor(-1,0))
+@define is_face_y() !is_refined(neighbor(0,-1))
 
 #include "multigrid-common.h"
 
@@ -218,8 +218,8 @@ void quadtree_boundary_restriction (scalar * list)
 
 // Cartesian methods
 
-#undef boundary_ghost
-#define boundary_ghost(d, x) {						\
+@undef boundary_ghost
+@define boundary_ghost(d, x) {						\
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
     int _in = -_ig[d], _jn = -_jg[d];					\
     foreach_halo() if (is_leaf(_neighbor(_in,_jn))) {			\

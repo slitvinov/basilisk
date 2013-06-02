@@ -1046,8 +1046,21 @@ reduction{WS}*[(](min|max):{ID}+[)] {
     REJECT;
 }
 
-"#" {
-  ECHO;                     
+"# "[0-9]+" "({SP}?\"([^\"\\\n]|{ES})*\")+ {
+  // line numbers
+  ECHO;
+  char * ln = yytext;
+  space (ln); nonspace(ln);
+  char * name = ln; space (name); *name++ = '\0'; nonspace(name);
+  line = atoi(ln) - 1;
+  free (fname);
+  name[strlen(name)-1] = '\0'; name++;
+  fname = strdup (name);
+}
+
+^{WS}*@{WS}*{ID}+ {
+  yytext = strchr(yytext, '@'); yytext++;
+  fprintf (yyout, "#%s", yytext);
   register int oldc = 0, c;
   for (;;) {
     while ((c = getput()) != '\n' && c != EOF)
@@ -1055,9 +1068,22 @@ reduction{WS}*[(](min|max):{ID}+[)] {
     if (c == EOF || oldc != '\\')
       break;
   }
-  fprintf (yyout, "\n#line %d\n", line);
 }
 
+^{WS}*@.*" Pragma(" {
+  yytext = strchr(yytext, '@'); yytext++;
+  char * s = strstr (yytext, "Pragma("); *s++ = '\0';
+  fprintf (yyout, "#%s", yytext);
+  fputs ("_Pragma(", yyout);
+  register int oldc = 0, c;
+  for (;;) {
+    while ((c = getput()) != '\n' && c != EOF)
+      oldc = c;    /* eat up text of preproc */
+    if (c == EOF || oldc != '\\')
+      break;
+  }  
+}
+  
 "/*"                                    { ECHO; if (comment()) return 1; }
 "//".*                                  { ECHO; /* consume //-comment */ }
 ({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+	{ ECHO; /* STRING_LITERAL */ }
@@ -1098,13 +1124,11 @@ char * stripslash (char * path);
 int includes (int argc, char ** argv, char ** out, 
 	      char ** grid, int * default_grid);
 
-int endfor (char * file, FILE * fin, FILE * fout)
+int endfor (FILE * fin, FILE * fout)
 {
-  fname = stripslash (file);
-  fprintf (fout, "# 1 \"%s\"\n", fname);
   yyin = fin;
   yyout = fout;
-  line = 1, scope = para = 0;
+  line = 0, scope = para = 0;
   inforeach = foreachscope = foreachpara = 
     inforeach_boundary = inforeach_face = 0;
   invardecl = 0;
@@ -1122,7 +1146,6 @@ int endfor (char * file, FILE * fin, FILE * fout)
     else if (para > 0)
       ret = yyerror ("mismatched '('");
   }
-  free (fname);
   return ret;
 }
 
@@ -1157,59 +1180,17 @@ FILE * dopen (const char * fname, const char * mode)
   return fout;
 }
 
-void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
+void compdir (FILE * fin, FILE * fout, char * grid)
 {
-  for (int i = nin - 1; i >= 0; i--) {
-    char * path = in[i];
-    FILE * fin = fopen (path, "r");
-    if (fin == NULL) {
-      perror (path);
-      cleanup (1);
-    }
-    char * file = strstr (path, "//"); 
-    if (file) file += 2; else file = path;
-    char * out = malloc (strlen (dir) + strlen (file) + 2);
-    strcpy (out, dir);
-    strcat (out, "/");
-    strcat (out, file);
-    FILE * fout = writepath (out, "w");
-    if (fout == NULL) {
-      perror (out);
-      cleanup (1);
-    }
-    if (i == 0) {
-      if (fpe)
-	fputs ("#include <string.h>\n"
-	       "#include <fenv.h>\n", 
-	       fout);
-      if (catch)
-	fputs ("#define _CATCH last_point = point;\n", fout);
-      else
-	fputs ("#define _CATCH\n", fout);
-      fputs ("#include \"grid.h\"\n", fout);
-    }
-    if (endfor (path, fin, fout))
-      cleanup (1);
-    fclose (fout);
-    free (out);
-    fclose (fin);
-    free (path);
-  }
+  if (endfor (fin, fout))
+    cleanup (1);
+  fclose (fout);
 
-  FILE * fout = dopen ("grid.h", "w");
+  fout = dopen ("grid.h", "w");
   /* new variables */
   fprintf (fout,
-	   "int datasize = %d*sizeof (double);\n"
-	   "#include \"common.h\"\n",
+	   "int datasize = %d*sizeof (double);\n",
 	   nvar);
-  /* catch */
-  if (catch)
-    fputs ("void catch_fpe (void);\n", fout);
-  /* undefined value */
-  if (fpe)
-    fputs ("double undefined;\n", fout);
-  else
-    fputs ("#define undefined DBL_MAX\n", fout);
   /* events */
   for (int i = 0; i < nevents; i++) {
     char * id = eventid[i];
@@ -1225,7 +1206,7 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   fputs ("Event Events[] = {\n", fout);
   for (int i = 0; i < nevents; i++) {
     char * id = eventid[i];
-    fprintf (fout, "  { false, %d, %s, {", nexpr[i], id);
+    fprintf (fout, "  { 0, %d, %s, {", nexpr[i], id);
     int j;
     for (j = 0; j < nexpr[i] - 1; j++)
       fprintf (fout, "%s_expr%d, ", id, j);
@@ -1233,14 +1214,14 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
     if (eventarray[i] == 'i')
       fprintf (fout, "%s_array, ", id);
     else
-      fprintf (fout, "NULL, ");
+      fprintf (fout, "((void *)0), ");
     if (eventarray[i] == 't')
       fprintf (fout, "%s_array,\n", id);
     else
-      fprintf (fout, "NULL,\n");
+      fprintf (fout, "((void *)0),\n");
     fprintf (fout, "    \"%s\", %d},\n", eventfile[i], eventline[i]);
   }
-  fputs ("  { true }\n};\n", fout);
+  fputs ("  { 1 }\n};\n", fout);
   /* boundaries */
   for (int i = 0; i < nboundary; i++)
     fprintf (fout, "static void _boundary%d (void);\n", i);
@@ -1257,17 +1238,7 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
 	   "    all[i] = i;\n"
 	   "  all[%d] = -1;\n", nvar + 1, nvar, nvar);
   if (fpe)
-    /* Initialises unused memory with "signaling NaNs".  
-     * This is probably not very portable, tested with
-     * gcc (Debian 4.4.5-8) 4.4.5 on Linux 2.6.32-5-amd64.
-     * This blog was useful:
-     *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
-     */
-    fputs ("  long lnan = 0x7ff0000000000001;\n"
-	   "  assert (sizeof (long) == sizeof (double));\n"
-	   "  memcpy (&undefined, &lnan, sizeof (long));\n"
-	   "  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n", 
-	   fout);
+    fputs ("  set_fpe();\n", fout);
   if (catch)
     fputs ("  catch_fpe();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);
@@ -1284,9 +1255,6 @@ void compdir (char * file, char ** in, int nin, char * grid, int default_grid)
   for (int i = 0; i < nboundary; i++)
     fprintf (fout, "  _boundary%d();\n", i);
   fputs ("  init_events();\n}\n", fout);
-  /* grid */
-  if (default_grid)
-    fprintf (fout, "#include \"grid/%s.h\"\n", grid);
   fclose (fout);
 }
 
@@ -1312,6 +1280,14 @@ int main (int argc, char ** argv)
       fpe = 1;
     else if (!strcmp (argv[i], "-catch"))
       catch = 1;
+    else if (!strcmp (argv[i], "-o")) {
+      strcat (command1, " ");
+      strcat (command1, argv[i++]);
+      if (i < argc) {
+	strcat (command1, " ");
+	strcat (command1, argv[i]);
+      }
+    }
     else if (argv[i][0] != '-' && 
 	     !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
       if (file) {
@@ -1343,14 +1319,101 @@ int main (int argc, char ** argv)
   }
   if (file) {
     char * out[100], * grid = NULL;
-    int default_grid, nout = includes (argc, argv, out, &grid, &default_grid);
+    int default_grid;
+    includes (argc, argv, out, &grid, &default_grid);
     if (!dep) {
-      compdir (file, out, nout, grid, default_grid);
+      char * basename = strdup (file), * ext = basename;
+      while (*ext != '\0' && *ext != '.') ext++;
+      char * cpp = malloc (strlen(dir) + strlen(basename) + 
+			   strlen("-cpp") + strlen(ext) + 2);
+      strcpy (cpp, dir);
+      strcat (cpp, "/");
+      if (*ext == '.') {
+	*ext = '\0';
+	strcat (cpp, basename);
+	strcat (cpp, "-cpp");
+	*ext = '.';
+	strcat (cpp, ext);
+      }
+      else {
+	strcpy (cpp, basename);
+	strcat (cpp, "-cpp");
+      }
+      FILE * fin = fopen (file, "r");
+      if (!fin) {
+	perror (file);
+	cleanup (1);
+      }
+      FILE * fout = fopen (cpp, "w");
+      if (fpe)
+	fputs ("#include <string.h>\n"
+	       "#include <fenv.h>\n", 
+	       fout);
+      if (catch)
+	fputs ("#define _CATCH last_point = point;\n", fout);
+      else
+	fputs ("#define _CATCH\n", fout);
+      fputs ("#include \"common.h\"\n", fout);
+      /* catch */
+      if (catch)
+	fputs ("void catch_fpe (void);\n", fout);
+      /* undefined value */
+      if (fpe)
+	/* Initialises unused memory with "signaling NaNs".  
+	 * This is probably not very portable, tested with
+	 * gcc (Debian 4.4.5-8) 4.4.5 on Linux 2.6.32-5-amd64.
+	 * This blog was useful:
+	 *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
+	 */
+	fputs ("double undefined;\n"
+	       "static void set_fpe (void) {\n"
+	       "  long lnan = 0x7ff0000000000001;\n"
+	       "  assert (sizeof (long) == sizeof (double));\n"
+	       "  memcpy (&undefined, &lnan, sizeof (long));\n"
+	       "  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n"
+	       "}\n",
+	       fout);
+      else
+	fputs ("#define undefined DBL_MAX\n", fout);
+      fputs ("@include \"grid.h\"\n", fout);
+      /* grid */
+      if (default_grid)
+	fprintf (fout, "#include \"grid/%s.h\"\n", grid);
+      fprintf (fout, "# 1 \"%s\"\n", file);
+      int c;
+      while ((c = fgetc (fin)) != EOF)
+	fputc (c, fout);
+      fclose (fout);
+      fclose (fin);
+      fout = dopen (file, "w");
+      if (!fout) {
+	perror (file);
+	cleanup (1);
+      }
+
+      char preproc[1000];
+      strcpy (preproc, command);
+      strcat (preproc, " -E ");
+      strcat (preproc, cpp);
+
+      fin = popen (preproc, "r");
+      if (!fin) {
+	perror (preproc);
+	cleanup (1);
+      }
+
+      compdir (fin, fout, grid);
+      int status = pclose (fin);
+      if (status == -1 ||
+	  (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || 
+				    WTERMSIG (status) == SIGQUIT)))
+	cleanup (1);
+
       strcat (command, " ");
       strcat (command, dir);
       strcat (command, "/");
-      strcat (command, file);
-      strcat (command, command1);
+      strcat (command, file); 
+     strcat (command, command1);
     }
   }
   else if (dep) {

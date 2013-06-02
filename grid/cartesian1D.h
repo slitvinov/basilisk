@@ -11,11 +11,11 @@ struct _Point {
 };
 #define _n point.n // for output_stencil()
 
-#define data(k,l) ((double *)&point.data[(point.i + k)*datasize + (l) - (l)])
+@define data(k,l) ((double *)&point.data[(point.i + k)*datasize + (l) - (l)])
 
-#define POINT_VARIABLES VARIABLES
+@define POINT_VARIABLES VARIABLES
 
-#define foreach(clause)							\
+@define foreach(clause)							\
   OMP_PARALLEL()							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   Point point = *((Point *)grid);					\
@@ -23,24 +23,24 @@ struct _Point {
   for (int _k = 1; _k <= point.n; _k++) {				\
     point.i = _k;							\
     POINT_VARIABLES
-#define end_foreach() } OMP_END_PARALLEL()
+@define end_foreach() } OMP_END_PARALLEL()
 
-#define foreach_boundary(d,corners)					\
+@define foreach_boundary(d,corners)					\
   {									\
   int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
   {									\
     point.i = d == right ? point.n : 1;					\
     POINT_VARIABLES
-#define end_foreach_boundary() }}
+@define end_foreach_boundary() }}
 
-#define foreach_boundary_ghost(d) { _OMPSTART /* for face reduction */	\
+@define foreach_boundary_ghost(d) { _OMPSTART /* for face reduction */	\
   int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
   {									\
     point.i = (d == right ? point.n : 1) + ig;				\
     POINT_VARIABLES
-#define end_foreach_boundary_ghost() } _OMPEND }
+@define end_foreach_boundary_ghost() } _OMPEND }
 
 void init_grid (int n)
 {
@@ -78,7 +78,7 @@ void realloc_scalar (void)
 
 #if TRASH
 # undef trash
-# define trash(list) cartesian1D_trash(list)
+# define trash cartesian1D_trash
 #endif
 
 void cartesian1D_trash (scalar * list)
@@ -92,6 +92,8 @@ void cartesian1D_trash (scalar * list)
   }
 }
 
+#include "cartesian-common.h"
+
 Point locate (double xp, double yp)
 {
   Point point = *((Point *)grid);
@@ -99,8 +101,6 @@ Point locate (double xp, double yp)
   point.level = (point.i >= 1 && point.i <= point.n) ? 0 : - 1;
   return point;
 }
-
-#include "cartesian-common.h"
 
 void cartesian1D_methods()
 {

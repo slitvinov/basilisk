@@ -13,12 +13,12 @@ struct _Point {
 };
 #define _n point.n // for output_stencil()
 
-#define data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) + \
+@define data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) + \
 					  (point.j + l))*datasize])
 
-#define POINT_VARIABLES VARIABLES
+@define POINT_VARIABLES VARIABLES
 
-#define foreach(clause)							\
+@define foreach(clause)							\
   OMP_PARALLEL()							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   Point point = *((Point *)grid);					\
@@ -27,9 +27,9 @@ struct _Point {
     point.i = _k;							\
     for (point.j = 1; point.j <= point.n; point.j++) {			\
       POINT_VARIABLES
-#define end_foreach() }} OMP_END_PARALLEL()
+@define end_foreach() }} OMP_END_PARALLEL()
 
-#define foreach_boundary(d,corners)					\
+@define foreach_boundary(d,corners)					\
   OMP_PARALLEL()							\
   int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
   Point point = *((Point *)grid);					\
@@ -41,7 +41,7 @@ struct _Point {
     point.i = d > left ? _k : d == right ? point.n : 1;			\
     point.j = d < top  ? _k : d == top   ? point.n : 1;			\
     POINT_VARIABLES
-#define end_foreach_boundary() } OMP_END_PARALLEL()
+@define end_foreach_boundary() } OMP_END_PARALLEL()
 
 void init_grid (int n)
 {

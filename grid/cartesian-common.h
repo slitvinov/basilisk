@@ -2,8 +2,8 @@
 
 void (* debug)    (Point);
 
-#undef VARIABLES
-#define VARIABLES							\
+@undef VARIABLES
+@define VARIABLES							\
   double delta = L0*DELTA; /* cell size */				\
   /* cell/face center coordinates */					\
   double x  = (ig/2. + I + 0.5)*delta + X0;				\
@@ -15,27 +15,27 @@ void (* debug)    (Point);
 
 #include "fpe.h"
 
-#ifndef is_face_x
-# define is_face_x() true
-# define is_face_y() true
-#endif
+@ifndef is_face_x
+@ define is_face_x() true
+@ define is_face_y() true
+@endif
 
-#ifndef foreach_boundary_ghost
-# define foreach_boundary_ghost(dir)					\
+@ifndef foreach_boundary_ghost
+@ define foreach_boundary_ghost(dir)					\
   foreach_boundary(dir,false) {						\
     point.i += ig; point.j += jg;					\
     ig = -ig; jg = -jg;							\
     POINT_VARIABLES;
-# define end_foreach_boundary_ghost()					\
+@ define end_foreach_boundary_ghost()					\
     ig = -ig; jg = -jg;							\
   } end_foreach_boundary()
-#endif
+@endif
 
-#define boundary_ghost(d, x) {						\
+@define boundary_ghost(d, x) {						\
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
   }
 
-#define end_foreach_face()
+@define end_foreach_face()
 
 #define boundary_flux(...)
 #define output_stencil(v,fp) _output_stencil(point,v,#v,fp)

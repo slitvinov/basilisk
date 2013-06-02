@@ -1,9 +1,9 @@
 #include "cartesian-common.h"
 
-#ifndef foreach_level_or_leaf
-# define foreach_level_or_leaf     foreach_level
-# define end_foreach_level_or_leaf end_foreach_level
-#endif
+@ifndef foreach_level_or_leaf
+@ define foreach_level_or_leaf     foreach_level
+@ define end_foreach_level_or_leaf end_foreach_level
+@endif
 
 // Multigrid methods
 

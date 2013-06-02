@@ -71,34 +71,34 @@ size_t _size (size_t l)
   return n*n;
 }
 
-#define CELL(m,level,i)  (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
+@define CELL(m,level,i)  (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
 
 /***** Multigrid macros *****/
-#define depth()      (((Quadtree *)grid)->depth)
-#define aparent(k,l) \
+@define depth()      (((Quadtree *)grid)->depth)
+@define aparent(k,l) \
   CELL(point.m, point.level-1, ((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
        (point.j+GHOSTS)/2+l)
-#define child(k,l)   \
+@define child(k,l)   \
   CELL(point.m, point.level+1, (2*point.i-GHOSTS+k)*2*(_n + GHOSTS) +	\
        (2*point.j-GHOSTS+l))
 
 /***** Quadtree macros ****/
-#define _n (1 << point.level)
-#define cell							\
+@define _n (1 << point.level)
+@define cell							\
   CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
-#define _neighbor(k,l)							\
+@define _neighbor(k,l)							\
   CELL(point.m, point.level, (point.i + k)*(_n + 2*GHOSTS) + point.j + l)
 
 /***** Data macros *****/
-#define data(k,l)							\
+@define data(k,l)							\
   ((double *) &point.m[point.level][((point.i + k)*(_n + 2*GHOSTS) +	\
 				     (point.j + l))*(sizeof(Cell) + datasize) \
 				    + sizeof(Cell)])
-#define field(cell) ((double *)(((char *) &cell) + sizeof(Cell)))
-#define _fine(a,k,l) field(child(k,l))[a]
-#define _coarse(a,k,l) field(aparent(k,l))[a]
+@define field(cell) ((double *)(((char *) &cell) + sizeof(Cell)))
+@define _fine(a,k,l) field(child(k,l))[a]
+@define _coarse(a,k,l) field(aparent(k,l))[a]
 
-#define POINT_VARIABLES						     \
+@define POINT_VARIABLES						     \
   VARIABLES							     \
   int level = point.level; NOT_UNUSED(level);			     \
   struct { int x, y; } child = {				     \
@@ -147,7 +147,7 @@ void recursive (Point point)
   { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j;			\
     e = stack[_s].stage; _s--; }
 
-#define foreach_cell()							\
+@define foreach_cell()							\
   {									\
     int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);			\
     Quadtree point = *((Quadtree *)grid); point.back = grid;		\
@@ -160,7 +160,7 @@ void recursive (Point point)
       case 0: {								\
         POINT_VARIABLES;						\
 	/* do something */
-#define end_foreach_cell()						\
+@define end_foreach_cell()						\
         if (point.level < point.depth) {				\
 	  _push (point.level, point.i, point.j, 1);			\
           _push (point.level + 1, _LEFT, _TOP, 0);			\
@@ -176,7 +176,7 @@ void recursive (Point point)
     }                                                                   \
   }
 
-#define foreach_cell_post(condition)					\
+@define foreach_cell_post(condition)					\
   {									\
     Quadtree point = *((Quadtree *)grid); point.back = grid;		\
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
@@ -207,7 +207,7 @@ void recursive (Point point)
       case 4: {								\
         POINT_VARIABLES;						\
 	/* do something */
-#define end_foreach_cell_post()						\
+@define end_foreach_cell_post()						\
       }									\
       }								        \
     }                                                                   \
@@ -228,7 +228,7 @@ void recursive (Point point)
         }								\
       }
 
-#define foreach_boundary_cell(dir,corners)				\
+@define foreach_boundary_cell(dir,corners)				\
   { _OMPSTART /* for face reduction */					\
     int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
     Quadtree point = *((Quadtree *)grid); point.back = grid;		\
@@ -243,7 +243,7 @@ void recursive (Point point)
       case 0: case _CORNER: {						\
           POINT_VARIABLES;						\
   	  /* do something */
-#define end_foreach_boundary_cell()					\
+@define end_foreach_boundary_cell()					\
         }								\
 	if (stage == _CORNER) continue;				        \
         /* children */							\
@@ -265,7 +265,7 @@ void recursive (Point point)
     }  _OMPEND                                                          \
   }
 
-#define foreach(clause)     {						\
+@define foreach(clause)     {						\
   update_cache();							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   OMP_PARALLEL()							\
@@ -278,9 +278,9 @@ void recursive (Point point)
       point.level = _l;							\
       POINT_VARIABLES;							\
       if (is_leaf (cell)) {
-#define end_foreach() } } OMP_END_PARALLEL() }
+@define end_foreach() } } OMP_END_PARALLEL() }
 
-#define foreach_fine_to_coarse(clause)     {				\
+@define foreach_fine_to_coarse(clause)     {				\
   update_cache();							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   OMP_PARALLEL()							\
@@ -293,9 +293,9 @@ void recursive (Point point)
       point.j = point.active[_l].p[_k].j;				\
       POINT_VARIABLES;							\
       if (!is_leaf (cell)) {
-#define end_foreach_fine_to_coarse() } } } OMP_END_PARALLEL() }
+@define end_foreach_fine_to_coarse() } } } OMP_END_PARALLEL() }
 
-#define foreach_level_or_leaf(l)     {					\
+@define foreach_level_or_leaf(l)     {					\
   update_cache();							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   OMP_PARALLEL()							\
@@ -308,9 +308,9 @@ void recursive (Point point)
       point.j = point.active[_l].p[_k].j;				\
       POINT_VARIABLES;							\
       if (_l == l || is_leaf (cell)) {
-#define end_foreach_level_or_leaf() } } } OMP_END_PARALLEL() }
+@define end_foreach_level_or_leaf() } } } OMP_END_PARALLEL() }
 
-#define foreach_level(l)     {						\
+@define foreach_level(l)     {						\
   update_cache();							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   int _l = l;								\
@@ -322,19 +322,19 @@ void recursive (Point point)
     point.i = point.active[_l].p[_k].i;					\
     point.j = point.active[_l].p[_k].j;					\
     POINT_VARIABLES;
-#define end_foreach_level() } OMP_END_PARALLEL() }
+@define end_foreach_level() } OMP_END_PARALLEL() }
 
-#define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
-#define end_foreach_leaf()        continue; } end_foreach_cell()
+@define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
+@define end_foreach_leaf()        continue; } end_foreach_cell()
 
-#define foreach_child() {				\
+@define foreach_child() {				\
   int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS; \
   point.level++;					\
   for (int _k = 0; _k < 2; _k++)			\
     for (int _l = 0; _l < 2; _l++) {			\
       point.i = _i + _k; point.j = _j + _l;		\
       POINT_VARIABLES;
-#define end_foreach_child()			        \
+@define end_foreach_child()			        \
   }							\
   point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2; \
   point.level--;                                        \
@@ -342,7 +342,7 @@ void recursive (Point point)
 
 #if TRASH
 # undef trash
-# define trash(list) quadtree_trash(list)
+# define trash quadtree_trash
 #endif
 
 void quadtree_trash (scalar * list)
@@ -519,7 +519,7 @@ static void update_cache (void)
 }
 
 /* breadth-first traversal of halos from coarse to fine */
-#define foreach_halo_coarse_to_fine(depth1)    {			\
+@define foreach_halo_coarse_to_fine(depth1)    {			\
   update_cache();							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   int _depth = depth1 < 0 ? depth() : depth1;				\
@@ -533,11 +533,11 @@ static void update_cache (void)
       point.level = _l;							\
       POINT_VARIABLES;							\
       if (!is_active(cell)) {
-#define end_foreach_halo_coarse_to_fine()	\
+@define end_foreach_halo_coarse_to_fine()	\
   } } OMP_END_PARALLEL() }
 
 /* breadth-first traversal of halos from fine to coarse */
-#define foreach_halo_fine_to_coarse()    {				\
+@define foreach_halo_fine_to_coarse()    {				\
   update_cache();							\
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   OMP_PARALLEL()							\
@@ -550,7 +550,7 @@ static void update_cache (void)
       point.level = _l;							\
       POINT_VARIABLES;							\
       if (is_active(cell)) {
-#define end_foreach_halo_fine_to_coarse()	\
+@define end_foreach_halo_fine_to_coarse()	\
   } } OMP_END_PARALLEL() }
 
 void init_grid (int n)

@@ -8,38 +8,43 @@
 #include <assert.h>
 #include <math.h>
 
-#define GHOSTS  1 // number of ghost layers
-#define trash(x)  // data trashing is disabled by default. Turn it on with
-                  // -DTRASH=1
-
 #define pi 3.14159265358979
 #undef HUGE
 #define HUGE 1e30
 #define nodata DBL_MAX
-#define max(a,b) ((a) > (b) ? (a) : (b))
-#define min(a,b) ((a) < (b) ? (a) : (b))
-#define sq(x) ((x)*(x))
-#define sign(x) ((x) > 0 ? 1 : -1)
-#define swap(type,a,b) { type tmp = a; a = b; b = tmp; }
 
-#ifdef _OPENMP
-# include <omp.h>
-# define OMP(x) _Pragma(#x)
-# define pid() omp_get_thread_num()
-#else
-# define OMP(x)
-# define pid() 0
-#endif
+@define max(a,b) ((a) > (b) ? (a) : (b))
+@define min(a,b) ((a) < (b) ? (a) : (b))
+@define sq(x) ((x)*(x))
+@define sign(x) ((x) > 0 ? 1 : -1)
+@define swap(type,a,b) { type tmp = a; a = b; b = tmp; }
+
+@define GHOSTS  1 // number of ghost layers
+@define trash(x)  // data trashing is disabled by default. Turn it on with
+                  // -DTRASH=1
+
+@if _OPENMP
+@ include <omp.h>
+@ define OMP(x) Pragma(#x)
+@ define pid() omp_get_thread_num()
+@else
+@ define OMP(x)
+@ define pid() 0
+@endif
 // fixme: _OMPSTART and _OMPEND are only used for working around the
 // lack of min|max reduction operations in OpenMP < 3.1
-#define OMP_PARALLEL()     OMP(omp parallel) { _OMPSTART
-#define OMP_END_PARALLEL() _OMPEND }
-#define _OMPSTART
-#define _OMPEND
+@define OMP_PARALLEL()     OMP(omp parallel) { _OMPSTART
+@define OMP_END_PARALLEL() _OMPEND }
+@define _OMPSTART
+@define _OMPEND
 
-#define NOT_UNUSED(x) (x = x)
+@define NOT_UNUSED(x) (x = x)
 
-#define VARIABLES
+@define VARIABLES
+@define val(a,k,l)     data(k,l)[a]
+@define fine(a,k,l)    _fine(a,k,l)
+@define coarse(a,k,l)  _coarse(a,k,l)
+@define neighbor(k,l)  _neighbor(k,l)
 
 // the grid
 void * grid = NULL;
@@ -58,12 +63,7 @@ typedef struct {
   vector x, y;
 } tensor;
 
-#define norm(v) (sqrt(sq(val(v.x,0,0)) + sq(val(v.y,0,0))))
-
-#define val(a,k,l)     data(k,l)[a]
-#define fine(a,k,l)    _fine(a,k,l)
-#define coarse(a,k,l)  _coarse(a,k,l)
-#define neighbor(k,l)  _neighbor(k,l)
+#define norm(v) (sqrt(sq(v.x[]) + sq(v.y[])))
 
 // lists
 

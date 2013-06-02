@@ -47,8 +47,6 @@ double timestep ()
   return dtmax*CFL;
 }
 
-#define sq(x) ((x)*(x))
-
 void stresses()
 {
   S.x.y = S.y.x; // fixme: the tensor is symmetric
