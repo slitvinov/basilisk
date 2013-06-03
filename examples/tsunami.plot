@@ -36,4 +36,4 @@ plot 'colo' u ($1/60.):2 w l t 'modelled', \
      'colores.txt' u 1:($2/100.) w lp t 'observed'
 unset multiplot
 
-! rm -f t-?
+! rm -f t-*

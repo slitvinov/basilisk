@@ -138,27 +138,29 @@ event logfile (i++) {
 // snapshots every hour
 event snapshots (t += 60; t <= 600) {
   printf ("file: t-%g\n", t);
-  output_field ({h, zb, hmax}, N, stdout, true);
+  output_field ({h, zb, hmax}, stdout, n = N, linear = true);
 }
 
 // movies every minute
 event movies (t++) {
   static FILE * fp = NULL;
   if (!fp) fp = popen ("ppm2mpeg > eta.mpg", "w");
-  scalar eta[];
-  foreach()
-    eta[] = h[] > dry ? h[] + zb[] : 0.;
-  boundary ({eta});
-  output_ppm (eta, fp, min = -2, max = 2, n = 512, linear = true);
+  scalar m[], etam[];
+  foreach() {
+    etam[] = eta[]*(h[] > dry);
+    m[] = etam[] - zb[];
+  }
+  boundary ({m, etam});
+  output_ppm (etam, fp, mask = m, min = -2, max = 2, n = 512, linear = true);
 
   static FILE * fp2 = NULL;
   if (!fp2) fp2 = popen ("ppm2mpeg > eta-zoom.mpg", "w");
-  output_ppm (eta, fp2, min = -2, max = 2, n = 512, linear = false,
+  output_ppm (etam, fp2, mask = m, min = -2, max = 2, n = 512, linear = true,
 	      box = {{89,8},{98,16}});
 
   static FILE * fp1 = NULL;
   if (!fp1) fp1 = popen ("ppm2mpeg > level.mpg", "w");
-  scalar l = eta;
+  scalar l = m;
   foreach()
     l[] = level;
   output_ppm (l, fp1, min = MINLEVEL, max = MAXLEVEL, n = 512);
@@ -167,6 +169,7 @@ event movies (t++) {
 // tide gauges
 
 Gauge gauges[] = {
+  // file   lon      lat         description
   {"coco", 96.88,  -12.13, "Cocos Islands, Australia"},
   {"colo", 79.83,    6.93, "Colombo, Sri Lanka"},
   {"hani", 73.18,    6.77, "Hanimaadhoo, Maldives"},
