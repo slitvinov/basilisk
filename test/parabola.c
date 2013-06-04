@@ -1,5 +1,5 @@
 #include "grid/cartesian1D.h"
-#include "saint-venant1.h"
+#include "saint-venant.h"
 
 void parameters()
 {

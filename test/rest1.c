@@ -1,5 +1,5 @@
 // lake at rest with emerged island
-#include "saint-venant1.h"
+#include "saint-venant.h"
 
 void parameters()
 {

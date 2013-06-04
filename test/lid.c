@@ -45,7 +45,7 @@ event logfile (i += 10; i <= 10000) {
   fprintf (stderr, "%f %.9f %g\n", t, energy(), du);
 }
 
-event outputfile (i += 100) output_matrix (u.x, N, stdout, true);
+event outputfile (i += 100) output_matrix (u.x, stdout, N, linear = true);
 
 void end()
 {

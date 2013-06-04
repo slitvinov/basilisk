@@ -70,7 +70,7 @@ void output_matrix (struct OutputMatrix p)
 
 #define NCMAP 127
 
-void colormap_jet (float cmap[NCMAP][3])
+void colormap_jet (double cmap[NCMAP][3])
 {
   for (int i = 0; i < NCMAP; i++) {
     cmap[i][0] = 
@@ -95,8 +95,8 @@ typedef struct {
   unsigned char r, g, b;
 } color;
 
-color colormap_color (float cmap[NCMAP][3], 
-			     double val, float min, float max)
+color colormap_color (double cmap[NCMAP][3], 
+		      double val, double min, double max)
 {
   color c;
   if (val == nodata) {
@@ -105,7 +105,7 @@ color colormap_color (float cmap[NCMAP][3],
   }    
   val = val <= min ? 0. : val >= max ? 0.9999 : (val - min)/(max - min);
   int i = val*(NCMAP - 1);
-  float coef = val*(NCMAP - 1) - i;
+  double coef = val*(NCMAP - 1) - i;
   assert (i < NCMAP - 1);
   unsigned char * c1 = (unsigned char *) &c;
   for (int j = 0; j < 3; j++)
@@ -142,7 +142,7 @@ void output_ppm (struct OutputPPM p)
   int ny = (p.box[1][1] - p.box[0][1])/delta;
   
   color ** ppm = matrix_new (ny, p.n, sizeof(color));
-  float cmap[NCMAP][3];
+  double cmap[NCMAP][3];
   colormap_jet (cmap);
   OMP_PARALLEL()
   OMP(omp for schedule(static))

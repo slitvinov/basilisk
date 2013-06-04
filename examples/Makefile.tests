@@ -1,5 +1,6 @@
 # DO NOT EDIT, edit 'Makefile' instead
 ALLTESTS = \
+	tides.c \
 	tsunami.c \
 
 PLOTS = \

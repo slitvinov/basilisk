@@ -4,7 +4,7 @@
 // use KDT database rather than analytical function
 #define KDT 1
 
-#include "saint-venant1.h"
+#include "saint-venant.h"
 #if KDT
 # include "terrain.h"
 #endif
@@ -43,7 +43,7 @@ void init()
     for (double y = 0.; y <= 1000.; y += 1.)
       fprintf (fp, "%g %g %g\n", x, y, zb(x,y));
   fclose (fp);
-  terrain (zb, "ponds");
+  terrain (zb, "ponds", NULL);
   foreach()
     h[] = 0.1;
 #endif
@@ -72,19 +72,19 @@ event logfile (i += 10) {
 event outputfile (t <= 1200.; t += 1200./8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field ({h, zb, u}, N, stdout, true);
+  output_field ({h, zb, u}, stdout, N, linear = true);
 
   scalar l[];
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf);
-  output_field ({h, zb, l}, N, stdout, false);
+  output_field ({h, zb, l}, stdout, N);
 
   nf++;
 }
 
 // int event (t += 100)
-//  output_matrix (h, N, stdout, true);
+//  output_matrix (h, stdout, N, true);
 
 event adapt (i++) {
   scalar w[];

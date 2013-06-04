@@ -4,7 +4,7 @@
 // [2] I.K. Nikolos, A.I. Delis, 2009, section 6.4.
 //     http://dx.doi.org/10.1016/j.cma.2009.08.006
 
-#include "saint-venant1.h"
+#include "saint-venant.h"
 
 #define MAXLEVEL 8
 #define MINLEVEL 0
@@ -110,12 +110,12 @@ event outputfile (t = {9, 12, 13, 14, 20})
 {
   static int nf = 0;
   printf ("file: conical-%d\n", nf);
-  output_field ({h,zb,hmax}, N, stdout, true);
+  output_field ({h,zb,hmax}, stdout, N, linear = true);
   printf ("file: level-%d\n", nf);
   scalar l[];
   foreach()
     l[] = level;
-  output_field ({l}, N, stdout, false);
+  output_field ({l}, stdout, N);
   nf++;
 }
 

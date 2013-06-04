@@ -1,4 +1,4 @@
-#include "saint-venant1.h"
+#include "saint-venant.h"
 
 #define LEVEL 7
 
@@ -48,13 +48,13 @@ event logfile (i++) {
 event outputfile (t <= 1.2; t += 1.2/8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field ({h}, N, stdout, true);
+  output_field ({h}, stdout, N, linear = true);
 
   scalar l[];
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
-  output_field ({l}, N, stdout, false);
+  output_field ({l}, stdout, N);
 }
 
 event adapt (i++) {

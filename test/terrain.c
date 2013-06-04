@@ -12,12 +12,12 @@ int main ()
   for (int l = 4; l <= 7; l++) {
     init_grid (1 << l);
     scalar zb[];
-    terrain (zb, "terrain");
+    terrain (zb, "terrain", NULL);
     scalar e[];
     foreach()
       e[] = zb[] - sin(3.*pi*x)*cos(2.*pi*y);
     if (l == 7)
-      output_field ({zb, e}, 128, stdout, false);
+      output_field ({zb, e}, stdout, n = 128);
     norm n = normf (e);
     stats s = statsf (_terrain[zb].n);
     fprintf (stderr, "%d %g %g %g %g %g\n", l, n.avg, n.rms, n.max, 

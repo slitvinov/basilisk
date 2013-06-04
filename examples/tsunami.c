@@ -1,4 +1,4 @@
-#include "saint-venant1.h"
+#include "saint-venant.h"
 #include "terrain.h"
 #include "okada.h"
 
@@ -23,9 +23,10 @@ void parameters()
 }
 
 // "radiation" boundary conditions on left,right,bottom
-u.x[left]   = - (sqrt (G*h[]) - sqrt(G*max(- zb[], 0.)));
-u.x[right]  = + (sqrt (G*h[]) - sqrt(G*max(- zb[], 0.)));
-u.y[bottom] = - (sqrt (G*h[]) - sqrt(G*max(- zb[], 0.)));
+// sealevel at zero
+u.x[left]   = - radiation(0);
+u.x[right]  = + radiation(0);
+u.y[bottom] = - radiation(0);
 
 // extra storage for hmax (maximum wave elevation)
 scalar hmax[];
@@ -33,7 +34,7 @@ scalar hmax[];
 void init()
 {
   // use etopo2 kdt terrain database for topography zb
-  terrain (zb, "/home/popinet/terrain/etopo2");
+  terrain (zb, "/home/popinet/terrain/etopo2", NULL);
   // ensure that water level is conserved during refinement/coarsening
   // the default is to conserve volume
   conserve_elevation();

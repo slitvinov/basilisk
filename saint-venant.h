@@ -1,155 +1,254 @@
-/* Note that this is largely obsolete: for more recent versions see
- * saint-venant1.h and conservation.h.
- *
- *  An implementation of:
- *    [1] Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
- *    Saint-Venant system. Mathematical Modelling and Numerical
- *    Analysis, 36(3), 397-425.
- * and
- *    [2] Kurganov, A., and Guergana, P. "A second-order
- *    well-balanced positivity preserving central-upwind scheme for
- *    the Saint-Venant system." Communications in Mathematical
- *    Sciences 5.1 (2007): 133-160.
- */
-
 #include "utils.h"
+#include "predictor-corrector.h"
 
-scalar hu[], w[], B[];
-scalar hu1[], w1[];
-// gradients of hu, w
-vector ghu[], gw[];
-// fluxes
-vector fhu[], fw[];
+// h: water depth
+// zb: bathymetry
+// u: flow speed
+
+// note: the order is important as zb needs to be refined before h 
+// and h before eta
+scalar zb[], h[], eta[];
+vector u[];
 
 // Default parameters
 // acceleration of gravity
 double G = 1.;
-// gradient
-double (* gradient) (double, double, double) = minmod2;
-// user-provided functions
-void parameters (void);
-void init       (void);
+// cells are "dry" when water depth is less than...
+double dry = 1e-10;
+// user-provided initial conditions
+void init (void);
 
-static void positivity()
+// fields updated by time-integration (in "predictor-corrector.h")
+scalar * evolving = {h, u};
+
+// make sure eta[] is always zb[] + h[]
+#if QUADTREE
+static void refine_eta (Point point, scalar eta)
 {
-  /* ensure positivity of reconstruction: see section 2.2 of [2] */
-  foreach() {
-    if (w[] + delta*gw.x[]/2. < (B[1,0] + B[])/2.)
-      gw.x[] = (B[1,0] + B[] - 2.*w[])/delta; // (2.15) of [2]
-    else if (w[] - delta*gw.x[]/2. < (B[-1,0] + B[])/2.)
-      gw.x[] = (2.*w[] - B[-1,0] - B[])/delta; // (2.16) of [2]
-  }
+  foreach_child()
+    eta[] = zb[] + h[];
 }
 
-/* avoid division by zero */
-static double hu_over_h (double hu, double h, double epsilon)
+static void coarsen_eta (Point point, scalar eta)
 {
-  double h4 = sq(h)*sq(h);
-  return h*hu/sqrt((h4 + max(h4, epsilon))/2.); // (2.17) of [2]
+  eta[] = zb[] + h[];
+}
+#endif
+
+void init_internal (void)
+{
+#if QUADTREE
+  eta.refine  = refine_eta;
+  eta.coarsen = coarsen_eta;
+#endif
+  init();
+  foreach()
+    eta[] = zb[] + h[];
+  boundary (all);
 }
 
-static double flux (Point point, int i, double dtmax)
+// fluxes
+vector Fh, S;
+tensor Fq;
+
+#include "riemann.h"
+
+double fluxes (scalar * evolving, double dtmax)
 {
-  delta /= 2.;
-  double hup = hu[i,0] - delta*ghu.x[i,0], hum = hu[i-1,0] + delta*ghu.x[i-1,0];
-  double wp  = w[i,0] - delta*gw.x[i,0], wm = w[i-1,0] + delta*gw.x[i-1,0];
-  double Bpm = (B[i,0] + B[i-1,0])/2.;
-  double hp = wp - Bpm, hm = wm - Bpm;
-  double epsilon = 1e-6;
-  double up = hu_over_h (hup, hp, epsilon), um = hu_over_h (hum, hm, epsilon);
-  hup = hp*up; hum = hm*um;
-  double cp = sqrt(G*hp), cm = sqrt(G*hm);
-  double ap = max(up + cp, um + cm); ap = max(ap, 0.);
-  double am = min(up - cp, um - cm); am = min(am, 0.);
-  double a = max(ap, -am);
-  if (a > 0.) {
-    fw.x[i,0] = (ap*hum - am*hup + ap*am*(wp - wm))/(ap - am); // (4.5) of [1]
-    fhu.x[i,0] = (ap*(hum*um + G*sq(hm)/2.) - am*(hup*up + G*sq(hp)/2.) + 
-		  ap*am*(hup - hum))/(ap - am);
-    double dt = CFL*delta/a;
-    return dt < dtmax ? dt : dtmax;
+  // recover scalar and vector fields from list
+  scalar h = evolving[0];
+  vector u = { evolving[1], evolving[2] };
+
+  // gradients
+  vector gh[], geta[];
+  tensor gu[];
+  for (scalar s in {gh, geta, gu})
+    s.gradient = zero; // first-order gradient reconstruction
+  gradients ({h, eta, u}, {gh, geta, gu});
+
+  // fluxes
+  Fh = new vector; S = new vector;
+  Fq = new tensor;
+  foreach_face (reduction (min:dtmax)) {
+    double hi = h[], hn = h[-1,0];
+    if (hi > dry || hn > dry) {
+      double dx = delta/2.;
+      double zi = eta[] - hi;
+      double zl = zi - dx*(geta.x[] - gh.x[]);
+      double zn = eta[-1,0] - hn;
+      double zr = zn + dx*(geta.x[-1,0] - gh.x[-1,0]);
+      double zlr = max(zl, zr);
+      
+      double hl = hi - dx*gh.x[];
+      double up = u.x[] - dx*gu.x.x[];
+      double hp = max(0., hl + zl - zlr);
+      
+      double hr = hn + dx*gh.x[-1,0];
+      double um = u.x[-1,0] + dx*gu.x.x[-1,0];
+      double hm = max(0., hr + zr - zlr);
+
+      // Riemann solver
+      double fh, fu, fv;
+      kurganov (hm, hp, um, up, delta, &fh, &fu, &dtmax);
+      fv = (fh > 0. ? u.y[-1,0] + dx*gu.y.x[-1,0] : u.y[] - dx*gu.y.x[])*fh;
+
+      // topographic source term
+#if QUADTREE
+      // this is necessary to ensure balance at fine/coarse boundaries
+      // see notes/balanced.tm
+      if (!(cell.flags & (fghost|active))) {
+	hi = coarse(h,0,0);
+	zi = coarse(zb,0,0);
+      }
+      if (!(neighbor(-1,0).flags & (fghost|active))) {
+	hn = coarse(h,-1,0);
+	zn = coarse(zb,-1,0);
+      }
+#endif
+      double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
+      double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
+
+      // fluxes
+      Fh.x[]   = fh;
+      Fq.x.x[] = fu - sl;
+      S.x[]    = fu - sr;
+      Fq.y.x[] = fv;
+    }
+    else // dry
+      Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
   }
-  fw.x[i,0] = fhu.x[i,0] = 0.;
+
+#if QUADTREE
+  // fixme: all this should be halo_restriction_flux()
+  vector * list = {Fh, S, Fq};
+  foreach_halo_fine_to_coarse()
+    foreach_dimension() {
+      if (is_leaf (neighbor(-1,0)))
+	for (vector f in list)
+	  f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+      if (is_leaf (neighbor(1,0)))
+	for (vector f in list)
+	  f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
+    }
+#endif
+
   return dtmax;
 }
 
-static void update (scalar hu2, scalar hu1, scalar w2, scalar w1, double dt)
+void update (scalar * output, scalar * input, double dt)
 {
+  // recover scalar and vector fields from lists
+  scalar hi = input[0], ho = output[0];
+  vector 
+    ui = { input[1], input[2] },
+    uo = { output[1], output[2] };
+
+  if (ho != hi)
+    trash ({ho, uo});
+  trash ({eta});
+  // new fields in ho[], uo[]
   foreach() {
-    double Bp = (B[1,0] + B[])/2., Bm = (B[-1,0] + B[])/2.;
-    double S = G*(w[] - (Bp + Bm)/2.)*(Bp - Bm); // (2.10) of [2]
-    hu1[] = hu2[] + dt*(fhu.x[] - fhu.x[1,0] - S)/delta;
+    double hold = hi[];
+    ho[] = hold + dt*(Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/delta;
+    eta[] = ho[] + zb[];
+    if (ho[] > dry)
+      foreach_dimension()
+	uo.x[] = (hold*ui.x[] + dt*(Fq.x.x[] + Fq.x.y[] - 
+				   S.x[1,0] - Fq.x.y[0,1])/delta)/ho[];
+    else
+      foreach_dimension()
+	uo.x[] = 0.;
   }
-  foreach()
-    w1[] = w2[] + dt*(fw.x[] - fw.x[1,0])/delta;
-  boundary ({w1});
-  boundary ({hu1});
+  boundary ({ho, eta, uo});
+
+  delete ((scalar *){Fh, S, Fq});
 }
 
-double dt = 0.;
-
-void run (void)
+#if QUADTREE
+static void refine_elevation (Point point, scalar h)
 {
-  parameters();
-  init_grid(N);
-
-  // limiting
-  for (scalar s in {hu, w})
-    s.gradient = gradient;
-
-  foreach() {
-    hu[] = B[] = 0.;
-    w[] = 1.;
+  // reconstruction of fine cells using elevation (rather than water depth)
+  // (default refinement conserves mass but not lake-at-rest)
+  if (h[] >= dry) {
+    // wet cell
+    double eta = zb[] + h[];   // water surface elevation  
+    struct { double x, y; } g; // gradient of eta
+    foreach_dimension()
+      g.x = gradient (zb[-1,0] + h[-1,0], eta, zb[1,0] + h[1,0])/4.;
+    // reconstruct water depth h from eta and zb
+    foreach_child()
+      h[] = max(0, eta + g.x*child.x + g.y*child.y - zb[]);
   }
+  else {
+    // dry cell
+    double v = 0., eta = 0.; // water surface elevation
+    // 3x3 neighbourhood
+    for (int i = -1; i <= 1; i++)
+      for (int j = -1; j <= 1; j++)
+	if (h[i,j] >= dry) {
+	  eta += h[i,j]*(zb[i,j] + h[i,j]);
+	  v += h[i,j];
+	}
+    if (v > 0.)
+      eta /= v; // volume-averaged eta of neighbouring wet cells
+    else
+      eta = 0.; // surrounded by dry cells => set eta to default "sealevel"
 
-  init();
-  boundary ({hu});
-  boundary ({B});
-  foreach()
-    w[] = max(w[], (B[-1,0] + 2.*B[] + B[1,0])/4.);
-  boundary ({w});
-
-  // clone temporary storage
-  _method[hu1] = _method[hu];
-  _method[w1]  = _method[w];
-
-  timer start = timer_start();
-  double t = 0.;
-  int i = 0, tnc = 0;
-  while (events (i, t)) {
-    /* 2nd-order predictor-corrector */
-
-    /* predictor */
-    gradients ({hu, w}, {ghu, gw});
-    boundary ({ghu.x, gw.x});
-
-    dt = DT;
-    foreach()
-      dt = flux (point, 0, dt);
-    foreach_boundary(right,true)
-      dt = flux (point, 1, dt);
-    dt = dtnext (t, dt);
-
-    update (hu, hu1, w, w1, dt/2.);
-    swap (scalar, hu, hu1);
-    swap (scalar, w, w1);
-
-    /* corrector */
-    gradients ({hu, w}, {ghu, gw});
-    positivity();
-    boundary ({ghu.x, gw.x});
-
-    foreach()
-      flux (point, 0, dt);
-    foreach_boundary(right,true)
-      flux (point, 1, dt);
-
-    update (hu1, hu, w1, w, dt);
-
-    foreach() tnc++;
-    i++; t = tnext;
+    // reconstruct water depth h from eta and zb
+    foreach_child()
+      h[] = max(0, eta - zb[]);
   }
-  timer_print (start, i, tnc);
+}
 
-  free_grid ();
+static void coarsen_elevation (Point point, scalar h)
+{
+  double eta = 0., v = 0.;
+  foreach_child()
+    if (h[] > dry) {
+      eta += h[]*(zb[] + h[]);
+      v += h[];
+    }
+  if (v > 0.)
+    h[] = max(0., eta/v - zb[]);
+  else // dry cell
+    h[] = 0.;
+}
+
+void conserve_elevation (void)
+{
+  h.refine  = refine_elevation;
+  h.coarsen = coarsen_elevation;
+}
+#else // Cartesian
+void conserve_elevation (void) {}
+#endif
+
+// "radiation" boundary conditions
+#define radiation(ref) (sqrt (G*h[]) - sqrt(G*max((ref) - zb[], 0.)))
+
+// tide gauges
+
+typedef struct {
+  char * name;
+  double x, y;
+  char * desc;
+  FILE * fp;
+} Gauge;
+
+void output_gauges (Gauge * gauges, scalar * list)
+{
+  for (Gauge * g = gauges; g->name; g++) {
+    if (!g->fp) {
+      g->fp = fopen (g->name, "w");
+      if (g->desc)
+	fprintf (g->fp, "%s\n", g->desc);
+    }
+    Point point = locate (g->x, g->y);
+    if (point.level >= 0 && h[] > dry) {
+      fprintf (g->fp, "%g", t);
+      for (scalar s in list)
+	fprintf (g->fp, " %g", s[]);
+    }
+    fputc ('\n', g->fp);
+  }
 }

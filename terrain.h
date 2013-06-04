@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <kdt/kdt.h>
 #ifdef _OPENMP
 # define NPROC omp_get_max_threads()
@@ -6,7 +7,7 @@
 #endif
 
 typedef struct {
-  Kdt ** kdt;
+  Kdt *** kdt;
   scalar n, dmin, dmax;
 } Terrain;
 
@@ -36,10 +37,11 @@ static void reconstruct_terrain (Point point, scalar zb)
   delta /= 2.;
   KdtRect rect = {{x - delta, x + delta},
 		  {y - delta, y + delta}};
-  kdt_query_sum (_terrain[zb].kdt[pid()],
-		 (KdtCheck) includes,
-		 (KdtCheck) intersects, &point,
-		 rect, &s);
+  for (Kdt ** kdt = _terrain[zb].kdt[pid()]; *kdt; kdt++)
+    kdt_query_sum (*kdt,
+		   (KdtCheck) includes,
+		   (KdtCheck) intersects, &point,
+		   rect, &s);
   val(_terrain[zb].n,0,0) = s.n;
   if (s.w > 0.) {
     zb[] = s.H0/s.w;
@@ -66,20 +68,31 @@ static void refine_terrain (Point point, scalar zb)
     reconstruct_terrain (point, zb);
 }
 
-void terrain (scalar zb, const char * name)
-{
+void terrain (scalar zb, ...)
+{  
   if (zb >= _nterrain) {
     _terrain = realloc (_terrain, sizeof (Terrain)*(zb + 1));
     _nterrain = zb + 1;
   }
-  _terrain[zb].kdt = malloc (NPROC*sizeof (Kdt *));
-  for (int i = 0; i < NPROC; i++) {
-    _terrain[zb].kdt[i] = kdt_new();
-    if (kdt_open (_terrain[zb].kdt[i], name)) {
-      fprintf (stderr, "terrain: could not open terrain database '%s'\n", name);
-      exit (1);
+  _terrain[zb].kdt = calloc (NPROC, sizeof (Kdt **));
+
+  int nt = 0;
+  va_list ap;
+  va_start (ap, zb);
+  char * name;
+  while ((name = va_arg (ap, char *)))
+    for (int i = 0; i < NPROC; i++) {
+      Kdt ** kdt = _terrain[zb].kdt[i];
+      _terrain[zb].kdt[i] = kdt = realloc (kdt, sizeof(Kdt *)*(nt + 2));
+      kdt[nt] = kdt_new();
+      kdt[nt + 1] = NULL;
+      if (kdt_open (kdt[nt], name)) {
+	fprintf (stderr, "terrain: could not open terrain database '%s'\n", 
+		 name);
+	exit (1);
+      }
     }
-  }
+  va_end (ap);
 
   zb.refine = refine_terrain;
   scalar n = new scalar;

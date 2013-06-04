@@ -79,7 +79,7 @@ event field (t = end) {
   fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
 
   if (N == 256)
-    output_field ({e}, N, stdout, false);
+    output_field ({e}, stdout, N);
 }
 
 int main() {

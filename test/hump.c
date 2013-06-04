@@ -1,5 +1,5 @@
 // Small amplitude solitary wave interacting with a parabolic hump
-#include "saint-venant1.h"
+#include "saint-venant.h"
 
 #define MAXLEVEL 9
 #define MINLEVEL 7
@@ -30,13 +30,13 @@ event outputfile (t = {0.6, 0.9, 1.2, 1.5, 1.8})
 {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field ({eta}, N, stdout, true);
+  output_field ({eta}, stdout, N, linear = true);
 
   scalar l[];
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
-  output_field ({l}, N, stdout, false);
+  output_field ({l}, stdout, N);
 }
 
 event logfile (i++) {
