@@ -86,9 +86,10 @@ event movies (t += 10) {
   if (!fp2) fp2 = popen ("ppm2mpeg > vort.mpg", "w");
   scalar vort = etam;
   foreach()
-    vort[] = (u.x[0,1] - u.x[0,-1] + u.y[1,0] - u.y[-1,0])/(2.*delta);
+    vort[] = (u.x[0,1] - u.x[0,-1] - u.y[1,0] + u.y[-1,0])/(2.*delta);
   boundary ({vort});
-  output_ppm (vort, fp2, mask = m, n = 512, linear = true);
+  output_ppm (vort, fp2, mask = m, // min = -1e-2, max = 1e-2, 
+	      n = 512, linear = true);
 
   static FILE * fp1 = NULL;
   if (!fp1) fp1 = popen ("ppm2mpeg > level.mpg", "w");

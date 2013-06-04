@@ -131,19 +131,25 @@ norm normf (scalar f)
 }
 
 typedef struct {
-  double min, max, sum;
+  double min, max, sum, stddev, area;
 } stats;
 
 stats statsf (scalar f)
 {
-  double min = 1e100, max = -1e100, sum = 0.;
-  foreach(reduction(+:sum) reduction(max:max) reduction(min:min)) {
-    sum += f[]*delta*delta;
+  double min = 1e100, max = -1e100, sum = 0., sum2 = 0., area = 0.;
+  foreach(reduction(+:sum) reduction(+:sum2) reduction(+:area)
+	  reduction(max:max) reduction(min:min)) {
+    double a = sq(delta);
+    sum += f[]*a;
+    sum2 += f[]*f[]*a;
+    area += a;
     if (f[] > max) max = f[];
     if (f[] < min) min = f[];
   }
   stats s;
-  s.min = min, s.max = max, s.sum = sum;
+  s.min = min, s.max = max, s.sum = sum, s.area = area;
+  sum2 -= sum*sum/area;
+  s.stddev = sum2 > 0. ? sqrt(sum2/area) : 0.;
   return s;
 }
 
