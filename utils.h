@@ -205,4 +205,19 @@ void gradients (scalar * f, vector * g)
   boundary ((scalar *) g);
 }
 
+void * matrix_new (int n, int p, size_t size)
+{
+  void ** m = malloc (n*sizeof (void *));
+  char * a = malloc (n*p*size);
+  for (int i = 0; i < n; i++)
+    m[i] = a + i*p*size;
+  return m;
+}
+
+void matrix_free (void * m)
+{
+  free (((void **) m)[0]);
+  free (m);
+}
+
 #include "output.h"

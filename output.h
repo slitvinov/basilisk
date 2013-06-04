@@ -91,20 +91,26 @@ void colormap_jet (float cmap[NCMAP][3])
   }
 }
 
-void colormap_color (float cmap[NCMAP][3], 
-		     double val, float min, float max,
-		     unsigned char c[3])
+typedef struct {
+  unsigned char r, g, b;
+} color;
+
+color colormap_color (float cmap[NCMAP][3], 
+			     double val, float min, float max)
 {
+  color c;
   if (val == nodata) {
-    c[0] = c[1] = c[2] = 0; // nodata is black
-    return;
+    c.r = c.g = c.b = 0; // nodata is black
+    return c;
   }    
   val = val <= min ? 0. : val >= max ? 0.9999 : (val - min)/(max - min);
   int i = val*(NCMAP - 1);
   float coef = val*(NCMAP - 1) - i;
   assert (i < NCMAP - 1);
+  unsigned char * c1 = (unsigned char *) &c;
   for (int j = 0; j < 3; j++)
-    c[j] = 255*(cmap[i][j]*(1. - coef) + cmap[i + 1][j]*coef);
+    c1[j] = 255*(cmap[i][j]*(1. - coef) + cmap[i + 1][j]*coef);
+  return c;
 }
 
 struct OutputPPM {
@@ -134,10 +140,13 @@ void output_ppm (struct OutputPPM p)
   double fn = p.n;
   double delta = (p.box[1][0] - p.box[0][0])/fn;
   int ny = (p.box[1][1] - p.box[0][1])/delta;
-  fprintf (p.fp, "P6\n%u %u 255\n", p.n, ny);
+  
+  color ** ppm = matrix_new (ny, p.n, sizeof(color));
   float cmap[NCMAP][3];
   colormap_jet (cmap);
-  for (int j = ny - 1; j >= 0; j--) {
+  OMP_PARALLEL()
+  OMP(omp for schedule(static))
+  for (int j = 0; j < ny; j++) {
     double yp = delta*j + p.box[0][1] + delta/2.;
     for (int i = 0; i < p.n; i++) {
       double xp = delta*i + p.box[0][0] + delta/2., v;
@@ -163,10 +172,14 @@ void output_ppm (struct OutputPPM p)
 	Point point = locate (xp, yp);
 	v = point.level >= 0 ? val(p.f,0,0) : nodata;
       }
-      unsigned char c[3];
-      colormap_color (cmap, v, p.min, p.max, c);
-      fwrite (c, sizeof(unsigned char), 3, p.fp);
+      ppm[ny - 1 - j][i] = colormap_color (cmap, v, p.min, p.max);
     }
   }
+  OMP_END_PARALLEL()
+
+  fprintf (p.fp, "P6\n%u %u 255\n", p.n, ny);
+  fwrite (((void **) ppm)[0], sizeof(color), ny*p.n, p.fp);
   fflush (p.fp);
+  
+  matrix_free (ppm);
 }
