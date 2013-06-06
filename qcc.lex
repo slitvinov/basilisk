@@ -560,9 +560,16 @@ end_foreach{ID}*{SP}*"()" {
     ECHO; insthg = 1;
     endforeachdim ();
   }
-  if (infunction && scope == functionscope && scope > 0 && !infunctiondecl) {
-    fputs ("; ", yyout); insthg = 1;
-    infunction_declarations();
+  if (infunction && scope == functionscope) {
+    if (scope > 0 && !infunctiondecl) {
+      fputs ("; ", yyout); insthg = 1;
+      infunction_declarations();
+    }
+    else if (!infunctiondecl) {
+      infunction = 0;
+      if (debug)
+	fprintf (stderr, "%s:%d: outfunction\n", fname, line);
+    }
   }
   if (inboundary) {
     ECHO;
