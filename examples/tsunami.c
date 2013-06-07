@@ -4,14 +4,16 @@
 
 #define MAXLEVEL 10
 #define MINLEVEL 5
+#define ETAE  1e-2 // error on free surface elevation (1 cm)
+#define HMAXE 5e-2 // error on maximum free surface elevation (5 cm)
 
 // metres to degrees
 double mtd = 360./40075e3;
 
 void parameters()
 {
-  // 1024^2 grid points
-  N = 1 << MAXLEVEL;
+  // 32^2 grid points to start with
+  N = 1 << MINLEVEL;
   // the domain is 54 degrees squared
   L0 = 54.;
   // centered on 94,8 longitude,latitude
@@ -31,6 +33,30 @@ u.y[bottom] = - radiation(0);
 // extra storage for hmax (maximum wave elevation)
 scalar hmax[];
 
+void fault (struct Okada p)
+{
+  scalar d[];
+  p.d = d;
+  do {
+    okada (p);
+    // d[] now contains the Okada vertical displacement
+    foreach()
+      // turn d[] into eta[] = zb[] + h[] + d[] (in wet areas only)
+      d[] = (zb[] + max (0., h[] + d[]))*(h[] > dry);
+    boundary ({d});
+    // we iterate adaptivity until everything is well resolved
+  } while (adapt_wavelet ({d, hmax}, (double[]){ETAE, HMAXE}, 
+			  MAXLEVEL, MINLEVEL).nf);
+
+  // deformation is added to h[] (water depth) only in wet areas
+  okada (p);
+  foreach()
+    if (h[] > dry) {
+      h[] = max (0., h[] + d[]);
+      eta[] = zb[] + h[];
+    }
+}
+
 void init()
 {
   // use etopo2 kdt terrain database for topography zb
@@ -38,89 +64,55 @@ void init()
   // ensure that water level is conserved during refinement/coarsening
   // the default is to conserve volume
   conserve_elevation();
-  scalar d[];
+  // initial still water surface is at z = 0 i.e. the water depth h[] is...
+  foreach()
+    h[] = max(0., - zb[]);
+  boundary ({h});
   // initial deformation
-  okada (d, 
-	 x = 94.57, y = 3.83,
+  fault (x = 94.57, y = 3.83,
 	 depth = 11.4857e3,
 	 strike = 323, dip = 12, rake = 90,
 	 length = 220e3, width = 130e3,
 	 U = 18);
-  // sealevel at z = 0 + initial deformation
-  foreach() {
-    h[] = max(0., - zb[]);
-    if (h[] > dry)
-      h[] = max (0., h[] + d[]);
-  }
 }
 
 // second fault segment is triggered at t = 272 seconds
-event fault2 (t = 272./60.)
-{
-  scalar d[];
-  okada (d,
-	 x = 93.90, y = 5.22,
+event fault2 (t = 272./60.) {
+  fault (x = 93.90, y = 5.22,
 	 depth = 11.4857e3,
 	 strike = 348, dip = 12, rake = 90,
 	 length = 150e3, width = 130e3,
 	 U = 23);
-  // deformation is added to h[] (water depth) only in wet areas
-  foreach()
-    if (h[] > dry) {
-      h[] = max (0., h[] + d[]);
-      eta[] = zb[] + h[];
-    }
 }
 
 // third fault segment is triggered at t = 588 seconds
 event fault3 (t = 588./60.)
 {
-  scalar d[];
-  okada (d,
-	 x = 93.21, y = 7.41,
+  fault (x = 93.21, y = 7.41,
 	 depth = 12.525e3,
 	 strike = 338, dip = 12, rake = 90,
 	 length = 390e3, width = 120e3,
 	 U = 12);
-  foreach()
-    if (h[] > dry) {
-      h[] = max (0., h[] + d[]);
-      eta[] = zb[] + h[];
-    }
 }
 
 // fourth fault segment is triggered at t = 913 seconds
 event fault4 (t = 913./60.)
 {
-  scalar d[];
-  okada (d,
-	 x = 92.60, y = 9.70,
+  fault (x = 92.60, y = 9.70,
 	 depth = 15.12419e3,
 	 strike = 356, dip = 12, rake = 90,
 	 length = 150e3, width = 95e3,
 	 U = 12);
-  foreach()
-    if (h[] > dry) {
-      h[] = max (0., h[] + d[]);
-      eta[] = zb[] + h[];
-    }
 }
 
 // fifth fault segment is triggered at t = 1273 seconds
 event fault5 (t = 1273./60.)
 {
-  scalar d[];
-  okada (d,
-	 x = 92.87, y = 11.70,
+  fault (x = 92.87, y = 11.70,
 	 depth = 15.12419e3,
 	 strike = 10, dip = 12, rake = 90,
 	 length = 350e3, width = 95e3,
 	 U = 12);
-  foreach()
-    if (h[] > dry) {
-      h[] = max (0., h[] + d[]);
-      eta[] = zb[] + h[];
-    }
 }
 
 // every timestep
@@ -147,7 +139,7 @@ event logfile (i++) {
 // snapshots every hour
 event snapshots (t += 60; t <= 600) {
   printf ("file: t-%g\n", t);
-  output_field ({h, zb, hmax}, stdout, n = N, linear = true);
+  output_field ({h, zb, hmax}, stdout, n = 1 << MAXLEVEL, linear = true);
 }
 
 // movies every minute
@@ -222,8 +214,8 @@ event adapt (i++) {
     eta[] = h[] > dry ? h[] + zb[] : 0;
   boundary ({eta});
 
-  // adapt on both eta and hmax with errors of 1e-2 and 5e-2 respectively
-  astats s = adapt_wavelet ({eta, hmax}, (double[]){1e-2, 5e-2}, 
+  // adapt on both eta and hmax with errors ETAE and HMAXE respectively
+  astats s = adapt_wavelet ({eta, hmax}, (double[]){ETAE, HMAXE},
 			    MAXLEVEL, MINLEVEL);
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }

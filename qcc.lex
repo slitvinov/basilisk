@@ -1029,12 +1029,26 @@ reduction{WS}*[(](min|max):{ID}+[)] {
 	     fname, line, s, s1);
 }
 
+{ID}+{WS}*[(]{WS}*{ID}+{WS}*[)] {
+  // function call without 'args' assignment
+  char * s = yytext; space (s);
+  int len = s - yytext;
+  for (int i = 0; i < nargs && !inarg; i++)
+    if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {
+      ECHO;
+      inarg = 1;
+    }
+  if (!inarg)
+    REJECT;
+  inarg = 0;
+}
+
 {ID}+{WS}*[(] {
   // function call with 'args' assignment
   char * s = yytext; space (s);
   int len = s - yytext;
   for (int i = 0; i < nargs && !inarg; i++)
-    if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {      
+    if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {
       ECHO; para++;
       inarg = para;
       fprintf (yyout, "(struct %s){", argss[i]);
