@@ -1,16 +1,37 @@
-To compile you need to setup C99FLAGS according to your compiler.
+You should only need a C99-compliant compiler.
 
-Examples:
+If you are using gcc on a UNIX-like system, this should work:
 
-gcc + bash:
+% cp config.gcc config
+% make
 
- % CC=gcc C99FLAGS="-std=c99" make
+If you are using another system/compiler, find a config file which
+looks close to yours. Try:
 
-This is a trick to turn off 'extended precision',
-see: http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html
+% ls config.*
+% cp config.[your pick] config
+% make
+
+before creating your own (also consider sharing your config file).
+
+== Getting started ==
+
+% cd examples
+% more README
 
 == Useful additional packages ==
 
 gnuplot (> 4.2)
 graphiz
 http://code.google.com/p/jrfonseca/wiki/Gprof2Dot
+ffmpeg
+
+== Running the test suite ==
+
+% cd test
+% make
+
+== Notes ==
+
+Trick to turn off 'extended precision':
+http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html
