@@ -23,9 +23,41 @@ enum {
 #define is_refined(cell) (is_active(cell) && !is_leaf(cell))
 #define is_corner(cell)  (stage == _CORNER)
 
-typedef struct _Point Quadtree;
-typedef struct _Cache Cache;
+// Caches
 
+typedef struct {
+  int i, j;
+} IndexLevel;
+
+typedef struct {
+  IndexLevel * p;
+  int n, nm;
+} CacheLevel;
+
+static void cache_level_init (CacheLevel * c)
+{
+  c->p = NULL;
+  c->n = c->nm = 0;
+}
+
+typedef struct {
+  int i, j, level;
+} Index;
+
+typedef struct {
+  Index * p;
+  int n, nm;
+} Cache;
+
+static void cache_init (Cache * c)
+{
+  c->p = NULL;
+  c->n = c->nm = 0;
+}
+
+// Quadtree
+
+typedef struct _Point Quadtree;
 struct _Point {
   int depth;        /* the maximum depth of the tree */
 
@@ -33,20 +65,23 @@ struct _Point {
   char ** m;        /* the grids at each level */
   int i, j, level;  /* the current cell index and level */
 
-  Cache * halo;     /* halo indices for each level */
-  Cache * active;   /* active cells indices for each level */
+  Cache        leaves;  /* leaf indices */
+  CacheLevel * halo;    /* halo indices for each level */
+  CacheLevel * active;  /* active cells indices for each level */
 
   bool dirty;       /* whether caches should be updated */
 };
 
-typedef struct {
-  int i, j;
-} Index;
-
-struct _Cache {
-  Index * p;
-  int n, nm;
-};
+static void cache_level_append (CacheLevel * c, Point p)
+{
+  if (c->n >= c->nm) {
+    c->nm += 100;
+    c->p = realloc (c->p, sizeof (IndexLevel)*c->nm);
+  }
+  c->p[c->n].i = p.i;
+  c->p[c->n].j = p.j;
+  c->n++;
+}
 
 static void cache_append (Cache * c, Point p)
 {
@@ -56,13 +91,8 @@ static void cache_append (Cache * c, Point p)
   }
   c->p[c->n].i = p.i;
   c->p[c->n].j = p.j;
+  c->p[c->n].level = p.level;
   c->n++;
-}
-
-static void cache_init (Cache * c)
-{
-  c->p = NULL;
-  c->n = c->nm = 0;
 }
 
 size_t _size (size_t l)
@@ -270,15 +300,13 @@ void recursive (Point point)
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
   OMP_PARALLEL()							\
   Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-  for (int _l = 0; _l <= depth(); _l++)					\
-    OMP(omp for schedule(static) clause)				\
-    for (int _k = 0; _k < point.active[_l].n; _k++) {			\
-      point.i = point.active[_l].p[_k].i;				\
-      point.j = point.active[_l].p[_k].j;				\
-      point.level = _l;							\
-      POINT_VARIABLES;							\
-      if (is_leaf (cell)) {
-@define end_foreach() } } OMP_END_PARALLEL() }
+  OMP(omp for schedule(static) clause)					\
+  for (int _k = 0; _k < point.leaves.n; _k++) {			        \
+    point.i = point.leaves.p[_k].i;					\
+    point.j = point.leaves.p[_k].j;					\
+    point.level = point.leaves.p[_k].level;				\
+    POINT_VARIABLES;
+@define end_foreach() } OMP_END_PARALLEL() }
 
 @define foreach_fine_to_coarse(clause)     {				\
   update_cache();							\
@@ -380,10 +408,10 @@ void alloc_layer (Quadtree * p)
   q->m = &(q->m[1]);
   p->m = q->m;
   q->m[q->depth] = alloc_cells (q->depth);
-  q->active = realloc (q->active, (q->depth + 1)*sizeof (Cache));
-  cache_init (&q->active[q->depth]);
-  q->halo = realloc (q->halo, (q->depth + 1)*sizeof (Cache));
-  cache_init (&q->halo[q->depth]);
+  q->active = realloc (q->active, (q->depth + 1)*sizeof (CacheLevel));
+  cache_level_init (&q->active[q->depth]);
+  q->halo = realloc (q->halo, (q->depth + 1)*sizeof (CacheLevel));
+  cache_level_init (&q->halo[q->depth]);
 }
 
 void realloc_scalar (void)
@@ -487,6 +515,7 @@ static void update_cache (void)
     return;
 
   /* empty caches */
+  q->leaves.n = 0;
   for (int l = 0; l <= depth(); l++)
     q->halo[l].n = q->active[l].n = 0;
 
@@ -494,16 +523,18 @@ static void update_cache (void)
     if (!is_active (cell)) {
       if (cell.neighbors > 0)
 	/* update halo cache (prolongation) */
-	cache_append (&q->halo[level], point);
+	cache_level_append (&q->halo[level], point);
       else
 	continue;
     }
     else {
-      if (!is_leaf (cell) && cell.neighbors > 0)
+      if (is_leaf (cell))
+	cache_append (&q->leaves, point);
+      else if (cell.neighbors > 0)
 	/* update halo cache (restriction) */
-	cache_append (&q->halo[level], point);
+	cache_level_append (&q->halo[level], point);
       /* update active cache */
-      cache_append (&q->active[level], point);
+      cache_level_append (&q->active[level], point);
     }
   }
 
@@ -574,8 +605,9 @@ void init_grid (int n)
   q->m[0] = alloc_cells (0);
   CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
   CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
-  q->active = calloc (1, sizeof (Cache));
-  q->halo = calloc (1, sizeof (Cache));
+  cache_init (&q->leaves);
+  q->active = calloc (1, sizeof (CacheLevel));
+  q->halo = calloc (1, sizeof (CacheLevel));
   q->dirty = true;
   grid = q;
   while (depth--)
@@ -587,6 +619,7 @@ void init_grid (int n)
 void free_grid (void)
 {
   Quadtree * q = grid;
+  free (q->leaves.p);
   for (int l = 0; l <= q->depth; l++) {
     free (q->m[l]);
     free (q->halo[l].p);
