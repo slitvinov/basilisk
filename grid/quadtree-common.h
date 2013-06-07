@@ -245,7 +245,8 @@ void quadtree_boundary_restriction (scalar * list)
 @define boundary_ghost(d, x) {						\
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
     int _in = -_ig[d], _jn = -_jg[d];					\
-    foreach_halo() if (is_leaf(_neighbor(_in,_jn))) {			\
+    foreach_halo() if (point.m[point.level][_index(_in,_jn)] &&		\
+		       is_leaf(_neighbor(_in,_jn))) {			\
       ig = _in; jg = _jn; VARIABLES; x; }				\
     end_foreach_halo();							\
   }

@@ -62,7 +62,7 @@ struct _Point {
   int depth;        /* the maximum depth of the tree */
 
   Quadtree * back;  /* back pointer to the "parent" quadtree */
-  char ** m;        /* the grids at each level */
+  char *** m;        /* the grids at each level */
   int i, j, level;  /* the current cell index and level */
 
   Cache        leaves;  /* leaf indices */
@@ -101,32 +101,30 @@ size_t _size (size_t l)
   return n*n;
 }
 
-@define CELL(m,level,i)  (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
+@define CELL(m,level,i)  (*((Cell *) m[level][i]))
 
 /***** Multigrid macros *****/
 @define depth()      (((Quadtree *)grid)->depth)
-@define aparent(k,l) \
-  CELL(point.m, point.level-1, ((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
-       (point.j+GHOSTS)/2+l)
-@define child(k,l)   \
-  CELL(point.m, point.level+1, (2*point.i-GHOSTS+k)*2*(_n + GHOSTS) +	\
-       (2*point.j-GHOSTS+l))
+@define _index(k,l)  ((point.i + k)*(_n + 2*GHOSTS) + point.j + l)
+@define _parentindex(k,l) (((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
+			   (point.j+GHOSTS)/2+l)
+@define _childindex(k,l) ((2*point.i-GHOSTS+k)*2*(_n + GHOSTS) + \
+			  (2*point.j-GHOSTS+l))
+@define aparent(k,l) CELL(point.m, point.level-1, _parentindex(k,l))
+@define child(k,l)   CELL(point.m, point.level+1, _childindex(k,l))
 
 /***** Quadtree macros ****/
 @define _n (1 << point.level)
-@define cell							\
-  CELL(point.m, point.level, point.i*(_n + 2*GHOSTS) + point.j)
-@define _neighbor(k,l)							\
-  CELL(point.m, point.level, (point.i + k)*(_n + 2*GHOSTS) + point.j + l)
+@define cell		CELL(point.m, point.level, _index(0,0))
+@define _neighbor(k,l)	CELL(point.m, point.level, _index(k,l))
 
 /***** Data macros *****/
 @define data(k,l)							\
-  ((double *) &point.m[point.level][((point.i + k)*(_n + 2*GHOSTS) +	\
-				     (point.j + l))*(sizeof(Cell) + datasize) \
-				    + sizeof(Cell)])
-@define field(cell) ((double *)(((char *) &cell) + sizeof(Cell)))
-@define _fine(a,k,l) field(child(k,l))[a]
-@define _coarse(a,k,l) field(aparent(k,l))[a]
+((double *) (point.m[point.level][_index(k,l)] + sizeof(Cell)))
+@define _fine(a,k,l) \
+  ((double *) (point.m[point.level+1][_childindex(k,l)] + sizeof(Cell)))[a]
+@define _coarse(a,k,l)							\
+  ((double *) (point.m[point.level-1][_parentindex(k,l)] + sizeof(Cell)))[a]
 
 @define POINT_VARIABLES						     \
   VARIABLES							     \
@@ -186,6 +184,8 @@ void recursive (Point point)
     while (_s >= 0) {							\
       int stage;							\
       _pop (point.level, point.i, point.j, stage);			\
+      if (!point.m[point.level][_index(0,0)])				\
+	continue;							\
       switch (stage) {							\
       case 0: {								\
         POINT_VARIABLES;						\
@@ -214,6 +214,8 @@ void recursive (Point point)
     while (_s >= 0) {							\
       int stage;							\
       _pop (point.level, point.i, point.j, stage);			\
+      if (!point.m[point.level][_index(0,0)])				\
+	continue;							\
       switch (stage) {							\
       case 0: {								\
         POINT_VARIABLES;						\
@@ -269,6 +271,8 @@ void recursive (Point point)
     while (_s >= 0) {							\
       int stage;							\
       _pop (point.level, point.i, point.j, stage);			\
+      if (!point.m[point.level][_index(0,0)])				\
+	continue;							\
       switch (stage) {							\
       case 0: case _CORNER: {						\
           POINT_VARIABLES;						\
@@ -376,26 +380,24 @@ void recursive (Point point)
 void quadtree_trash (scalar * list)
 {
   Quadtree * q = grid;
-  int cellsize = sizeof(Cell) + datasize;;
-  for (int l = 0; l <= q->depth; l++) {
-    char * data = q->m[l] + sizeof(Cell);
-    for (int i = 0; i < _size(l); i++, data += cellsize)
+  for (int l = 0; l <= q->depth; l++)
+    for (int i = 0; i < _size(l); i++)
       for (scalar s in list)
-	((double *)data)[s] = undefined;
-  }
+	((double *)(q->m[l][i] + sizeof(Cell)))[s] = undefined;
 }
 
-char * alloc_cells (int l)
+char ** alloc_cells (int l)
 {
   int len = _size(l), cellsize = sizeof(Cell) + datasize;
-  char * m = calloc (len, cellsize);
+  char ** m = calloc (len, sizeof (char *));
+  for (int i = 0; i < len; i++)
+    m[i] = calloc (1, cellsize);
   /* trash the data just to make sure it's either explicitly
      initialised or never touched */
-  char * data = m + sizeof(Cell);
   int nv = datasize/sizeof(double);
-  for (int i = 0; i < len; i++, data += cellsize)
+  for (int i = 0; i < len; i++)
     for (int j = 0; j < nv; j++)
-      ((double *)data)[j] = undefined;
+      ((double *)(m[i] + sizeof(Cell)))[j] = undefined;
   return m;
 }
 
@@ -404,27 +406,50 @@ void alloc_layer (Quadtree * p)
   Quadtree * q = p->back;
   q->depth++; p->depth++;
   q->m = &(q->m[-1]);
-  q->m = realloc(q->m, sizeof (char *)*(q->depth + 2)); 
+  q->m = realloc(q->m, sizeof (char **)*(q->depth + 2)); 
   q->m = &(q->m[1]);
   p->m = q->m;
-  q->m[q->depth] = alloc_cells (q->depth);
+  q->m[q->depth] = calloc (_size(q->depth), sizeof (char *));
   q->active = realloc (q->active, (q->depth + 1)*sizeof (CacheLevel));
   cache_level_init (&q->active[q->depth]);
   q->halo = realloc (q->halo, (q->depth + 1)*sizeof (CacheLevel));
   cache_level_init (&q->halo[q->depth]);
 }
 
+void alloc_children (Quadtree * p)
+{
+  p->back->dirty = true;
+  if (p->level == p->depth) alloc_layer(p);
+  char ** m = p->m[p->level+1];
+  Point point = *((Point *)p);
+  for (int k = - GHOSTS; k < 2 + GHOSTS; k++)
+    for (int l = - GHOSTS; l < 2 + GHOSTS; l++)
+      if (!m[_childindex(k,l)])
+	m[_childindex(k,l)] = calloc (1, sizeof(Cell) + datasize);
+}
+
+void free_children (Quadtree * p)
+{
+  p->back->dirty = true;
+  char ** m = p->m[p->level+1];
+  Point point = *((Point *)p);
+  for (int k = - GHOSTS; k < 2 + GHOSTS; k++)
+    for (int l = - GHOSTS; l < 2 + GHOSTS; l++)
+      if (!((Cell *) m[_childindex(k,l)])->neighbors) {
+	free (m[_childindex(k,l)]);
+	m[_childindex(k,l)] = NULL;
+      }
+}
+
 void realloc_scalar (void)
 {
   Quadtree * q = grid;
-  size_t oldatasize = sizeof(Cell) + datasize - sizeof(double);
   for (int l = 0; l <= q->depth; l++) {
     size_t len = _size(l);
-    q->m[l] = realloc (q->m[l], len*(sizeof(Cell) + datasize));
-    char * data = q->m[l] + (len - 1)*oldatasize;
-    for (int i = len - 1; i > 0; i--, data -= oldatasize)
-      memmove (data + i*sizeof(double), data, oldatasize);
-  }    
+    for (int i = 0; i < len; i++)
+      if (q->m[l][i])
+	q->m[l][i] = realloc (q->m[l][i], sizeof(Cell) + datasize);
+  }
 }
 
 Point refine_cell (Point point, scalar * list)
@@ -447,8 +472,6 @@ Point refine_cell (Point point, scalar * list)
 #endif
 
   /* refine */
-  point.back->dirty = true;
-  if (point.level == point.depth) alloc_layer(&point);
   cell.flags &= ~leaf;
   /* update neighborhood */
   for (int o = -GHOSTS; o <= GHOSTS; o++)
@@ -457,6 +480,7 @@ Point refine_cell (Point point, scalar * list)
 
   /* for each child: (note that using foreach_child() would be nicer
      but it seems to be significanly slower) */
+  alloc_children (&point);
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
       assert(!(child(k,l).flags & active));
@@ -489,7 +513,6 @@ bool coarsen_cell (Point point, scalar * list)
     s.coarsen (point, s);
 
   /* coarsen */
-  point.back->dirty = true;
   cell.flags |= leaf;
   /* update neighborhood */
   for (int o = -GHOSTS; o <= GHOSTS; o++)
@@ -505,6 +528,8 @@ bool coarsen_cell (Point point, scalar * list)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)
 	  child(k+o,l+p).neighbors--;
     }
+
+  free_children (&point);
   return true;
 }
 
@@ -621,6 +646,8 @@ void free_grid (void)
   Quadtree * q = grid;
   free (q->leaves.p);
   for (int l = 0; l <= q->depth; l++) {
+    for (int i = 0; i < _size(l); i++)
+      free (q->m[l][i]);
     free (q->m[l]);
     free (q->halo[l].p);
     free (q->active[l].p);
