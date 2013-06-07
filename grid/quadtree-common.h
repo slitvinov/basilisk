@@ -48,6 +48,94 @@
 
 // Quadtree methods
 
+typedef struct {
+  int nc, nf;
+} astats;
+
+struct Adapt {
+  scalar * slist; // list of scalars
+  double * max;   // tolerance for each scalar
+  int maxlevel;   // maximum level of refinement
+  int minlevel;   // minimum level of refinement (default 1)
+  scalar * list;  // list of fields to update (default all)
+};
+
+astats adapt_wavelet (struct Adapt p)
+{
+  if (p.list == NULL)
+    p.list = all;
+
+  restriction (p.slist);
+  boundary_restriction (p.slist);
+
+  astats st = {0, 0};
+  scalar * listc = NULL;
+  for (scalar s in p.list)
+    if (s.coarsen != refine_none)
+      listc = list_append (listc, s);
+
+  // refinement
+  foreach_leaf()
+    if (level < p.maxlevel) {
+      int i = 0, refine = false;
+      for (scalar s in p.slist) {
+	/* difference between fine value and bilinearly-interpolated
+	   coarse value */
+	double w = s[] - (9.*coarse(s,0,0) + 
+			  3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+			  coarse(s,child.x,child.y))/16.;
+	if (fabs(w) > p.max[i++]) {
+	  refine = true; // error is too large
+	  break; // no need to check other fields
+	}
+      }
+      if (refine) {
+	point = refine_cell (point, p.list);
+	st.nf++;
+      }
+    }
+
+  // coarsening
+  // the loop below is only necessary to ensure symmetry of 2:1 constraint
+  for (int l = depth() - 1; l >= max(p.minlevel, 1); l--)
+    foreach_cell() {
+      if (is_leaf (cell))
+	continue;
+      else if (level == l) {
+	int i = 0, coarsen = true;
+	/* difference between fine value and bilinearly-interpolated
+	   coarse value */
+	for (scalar s in p.slist) {
+	  double error =
+	    fabs (s[] - (9.*coarse(s,0,0) + 
+			 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+			 coarse(s,child.x,child.y))/16.);
+	  for (int k = 0; k < 2; k++)
+	    for (int l = 0; l < 2; l++) {
+	      double e = fabs(fine(s,k,l) - (9.*s[] + 
+					     3.*(s[2*k-1,0] + s[0,2*l-1]) + 
+					     s[2*k-1,2*l-1])/16.);
+	      if (e > error)
+		error = e;
+	    }
+	  if (error > p.max[i++]/1.5) {
+	    coarsen = false; // error is too large
+	    break; // no need to check other fields
+	  }
+	}
+	if (coarsen && coarsen_cell (point, listc))
+	  st.nc++;
+	continue;
+      }
+    }
+  free (listc);
+
+  if (st.nc || st.nf)
+    boundary (p.list);
+
+  return st;
+}
+
 int coarsen_function (int (* func) (Point p), scalar * list)
 {
   int nc = 0;
@@ -64,37 +152,6 @@ int coarsen_function (int (* func) (Point p), scalar * list)
   return nc;
 }
 
-int coarsen_wavelet (scalar w, double max, int minlevel, scalar * list)
-{
-  int nc = 0;
-  scalar * listc = NULL;
-  for (scalar s in list)
-    if (s.coarsen != refine_none)
-      listc = list_append (listc, s);
-  for (int l = depth() - 1; l >= 0; l--)
-    foreach_cell() {
-      if (is_leaf (cell))
-	continue;
-      else if (level == l) {
-	double error = 0.;
-	for (int k = 0; k < 2; k++)
-	  for (int l = 0; l < 2; l++) {
-	    double e = fabs(fine(w,k,l));
-	    if (e > error)
-	      error = e;
-	  }
-	// propagate the error to coarser levels
-	double wc = fabs(w[]) + error;
-	if (error < max && level >= minlevel && coarsen_cell (point, listc))
-	  nc++;
-	w[] = wc;
-	continue;
-      }
-    }
-  free (listc);
-  return nc;
-}
-
 int refine_function (int (* func) (Point p, void * data), 
 		     void * data,
 		     scalar * list)
@@ -105,40 +162,6 @@ int refine_function (int (* func) (Point p, void * data),
       point = refine_cell (point, list);
       nf++;
     }
-  return nf;
-}
-
-static void huge (Point point, scalar w)
-{
-  // prevents coarsening of newly created cells (when combined
-  // with coarsen_wavelet())
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      fine(w,k,l) = HUGE;  
-}
-
-int refine_wavelet (scalar w, double max, int maxlevel, scalar * list)
-{
-  // overload the refine method for w
-  void * f = w.refine;
-  w.refine = huge;
-  scalar * list1 = NULL;
-  for (scalar s in list)
-    if (s.refine != refine_none)
-      list1 = list_append (list1, s);
-  if (!list_lookup (list1, w))
-    // add w to the list of variables to refine
-    list1 = list_append (list1, w);
-  // refine
-  int nf = 0;
-  foreach_leaf()
-    if (level < maxlevel && w[] != HUGE && fabs(w[]) >= max) {
-      point = refine_cell (point, list1);
-      nf++;
-    }
-  free (list1);
-  // restore refine method
-  w.refine = f;
   return nf;
 }
 

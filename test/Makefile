@@ -1,11 +1,11 @@
 VALGRIND = valgrind -q --tool=memcheck
 # the default CFLAGS are set in ../config
-CFLAGS += -fpe -DTRASH=1
+CFLAGS += -g -O2 -fpe -DTRASH=1
 
 all: check slow
 
 # list only non-default (!.tst) tests
-check: halo.vtst speed.stst refine.vtst rk2.vtst \
+check: halo.vtst speed.stst rk2.vtst \
        laplacian.stst interpolate.vtst events.vtst \
        faces.vtst
 

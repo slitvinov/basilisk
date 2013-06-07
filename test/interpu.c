@@ -5,7 +5,7 @@
 #include "grid/quadtree.h"
 #include "utils.h"
 
-scalar h[], w[];
+scalar h[];
 vector u[];
 
 int main (int argc, char ** argv)
@@ -19,9 +19,8 @@ int main (int argc, char ** argv)
   boundary ({h});
   
   /* initial coarsening (see halo.c) */
-  wavelet (h, w);
   double tolerance = 1e-4;
-  coarsen_wavelet (w, tolerance, 0, NULL);
+  adapt_wavelet ({h}, &tolerance, 11, list = {h});
 
   foreach_face(x) u.x[] = exp(-(x*x + y*y)/(R0*R0));
   foreach_face(y) u.y[] = exp(-(x*x + y*y)/(R0*R0));

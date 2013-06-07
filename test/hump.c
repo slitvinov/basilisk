@@ -45,16 +45,8 @@ event logfile (i++) {
 }
 
 event adapt (i++) {
-  scalar w[];
-  wavelet (eta, w);
-
-  double cmax = 1e-4;
-  int nf = refine_wavelet (w, cmax, MAXLEVEL, all);
-  int nc = coarsen_wavelet (w, cmax/4., MINLEVEL, all);
-  if (nf || nc)
-    boundary (all);
-
-  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
+  astats s = adapt_wavelet ({eta}, (double[]){1e-4}, MAXLEVEL, MINLEVEL);
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }
 
 int main() { run(); }

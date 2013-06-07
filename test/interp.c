@@ -5,7 +5,7 @@
 #include "grid/quadtree.h"
 #include "utils.h"
 
-scalar h[], w[];
+scalar h[];
 
 int main (int argc, char ** argv)
 {
@@ -18,9 +18,8 @@ int main (int argc, char ** argv)
   boundary ({h});
   
   /* initial coarsening (see halo.c) */
-  wavelet (h, w);
   double tolerance = 1e-4;
-  coarsen_wavelet (w, tolerance, 0, NULL);
+  adapt_wavelet ({h}, &tolerance, 11);
 
   halo_restriction ({h}, NULL);
   halo_prolongation (-1, {h});

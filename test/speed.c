@@ -5,7 +5,7 @@
 #include "grid/quadtree.h"
 #include "utils.h"
 
-scalar h[], w[];
+scalar h[];
 
 int main (int argc, char ** argv)
 {
@@ -25,8 +25,7 @@ int main (int argc, char ** argv)
   int i;
   for (i = 0; i < 61; i++) {
     /* coarsening */
-    wavelet (h, w);
-    coarsen_wavelet (w, 1e-5, 0, NULL);
+    adapt_wavelet ({h}, (double []){1e-5}, 10);
     if (i == 0)
       end0 = clock();
   }

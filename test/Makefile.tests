@@ -23,7 +23,6 @@ ALLTESTS = \
 	parabola.c \
 	poisson.c \
 	ponds.c \
-	refine.c \
 	rest.c \
 	rest1.c \
 	rk2.c \
@@ -53,7 +52,6 @@ PLOTS = \
 	parabola.plot \
 	poisson.plot \
 	ponds.plot \
-	refine.plot \
 	rk2.plot \
 	rotation.plot \
 	speed.plot \
@@ -62,7 +60,6 @@ PLOTS = \
 TESTS = \
 	halo.c \
 	speed.c \
-	refine.c \
 	rk2.c \
 	laplacian.c \
 	interpolate.c \

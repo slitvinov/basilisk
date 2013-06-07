@@ -1,6 +1,8 @@
 # edit config (not this file) to tune compiler options etc..
 include config
 
+CFLAGS += -O2
+
 all: qcc qplot libkdt
 
 libkdt:
@@ -31,7 +33,7 @@ tags:
 dist:
 	darcs dist
 
-diff.tgz:
+diff:
 	tar czvf diff.tgz `darcs whatsnew -s | awk '{print $$2}'`
 
 clean:

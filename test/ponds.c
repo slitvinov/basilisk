@@ -86,17 +86,6 @@ event outputfile (t <= 1200.; t += 1200./8) {
 // int event (t += 100)
 //  output_matrix (h, stdout, N, true);
 
-event adapt (i++) {
-  scalar w[];
-  wavelet (h, w);
-
-  double cmax = 1e-2;
-  int nf = refine_wavelet (w, cmax, LEVEL, all);
-  int nc = coarsen_wavelet (w, cmax/4., 4, all);
-  if (nf || nc)
-    boundary (all);
-
-  //  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
-}
+event adapt (i++) { adapt_wavelet ({h}, (double[]){1e-2}, LEVEL, 4); }
 
 int main() { run(); }

@@ -66,8 +66,10 @@ event fault2 (t = 272./60.)
 	 U = 23);
   // deformation is added to h[] (water depth) only in wet areas
   foreach()
-    if (h[] > dry)
+    if (h[] > dry) {
       h[] = max (0., h[] + d[]);
+      eta[] = zb[] + h[];
+    }
 }
 
 // third fault segment is triggered at t = 588 seconds
@@ -81,8 +83,10 @@ event fault3 (t = 588./60.)
 	 length = 390e3, width = 120e3,
 	 U = 12);
   foreach()
-    if (h[] > dry)
+    if (h[] > dry) {
       h[] = max (0., h[] + d[]);
+      eta[] = zb[] + h[];
+    }
 }
 
 // fourth fault segment is triggered at t = 913 seconds
@@ -96,8 +100,10 @@ event fault4 (t = 913./60.)
 	 length = 150e3, width = 95e3,
 	 U = 12);
   foreach()
-    if (h[] > dry)
+    if (h[] > dry) {
       h[] = max (0., h[] + d[]);
+      eta[] = zb[] + h[];
+    }
 }
 
 // fifth fault segment is triggered at t = 1273 seconds
@@ -111,8 +117,10 @@ event fault5 (t = 1273./60.)
 	 length = 350e3, width = 95e3,
 	 U = 12);
   foreach()
-    if (h[] > dry)
+    if (h[] > dry) {
       h[] = max (0., h[] + d[]);
+      eta[] = zb[] + h[];
+    }
 }
 
 // every timestep
@@ -133,7 +141,7 @@ event logfile (i++) {
     if (h[] > dry && h[] + zb[] > hmax[])
       hmax[] = h[] + zb[];
   }
-  boundary ((scalar *){u});
+  boundary ({hmax, u});
 }
 
 // snapshots every hour
@@ -161,10 +169,19 @@ event movies (t++) {
 
   static FILE * fp1 = NULL;
   if (!fp1) fp1 = popen ("ppm2mpeg > level.mpg", "w");
-  scalar l = m;
+  scalar l = etam;
   foreach()
     l[] = level;
   output_ppm (l, fp1, min = MINLEVEL, max = MAXLEVEL, n = 512);
+
+#if _OPENMP
+  static FILE * fp3 = NULL;
+  if (!fp3) fp3 = popen ("ppm2mpeg > pid.mpg", "w");
+  foreach()
+    etam[] = pid();
+  double tmax = omp_get_max_threads() - 1;
+  output_ppm (etam, fp3, max = tmax, n = 512);
+#endif // _OPENMP
 }
 
 // tide gauges
@@ -205,16 +222,10 @@ event adapt (i++) {
     eta[] = h[] > dry ? h[] + zb[] : 0;
   boundary ({eta});
 
-  scalar w[];
-  wavelet (eta, w);
-
-  double cmax = 1e-2;
-  int nf = refine_wavelet (w, cmax, MAXLEVEL, all);
-  int nc = coarsen_wavelet (w, cmax/4., MINLEVEL, all);
-  if (nf || nc)
-    boundary (all);
-
-  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
+  // adapt on both eta and hmax with errors of 1e-2 and 5e-2 respectively
+  astats s = adapt_wavelet ({eta, hmax}, (double[]){1e-2, 5e-2}, 
+			    MAXLEVEL, MINLEVEL);
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }
 
 int main() { run(); }

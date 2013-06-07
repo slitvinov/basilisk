@@ -1,6 +1,6 @@
 VALGRIND = valgrind -q --tool=memcheck
 # the default CFLAGS are set in ../config
-CFLAGS += -fpe -fopenmp
+CFLAGS += -g -O2 -fpe -fopenmp
 
 all: check
 

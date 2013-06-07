@@ -92,9 +92,12 @@ Gauge gauges[] = {
 };
 
 event logfile (i++) {
-  // stats on water depth
   stats s = statsf (h);
-  fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
+  norm n = normf (u.x);
+  if (i == 0)
+    fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
+  fprintf (stderr, "%g %d %g %g %.8f %g %g %g %g\n", 
+	   t, i, s.min, s.max, s.sum, dt, n.rms, n.max, dt);
   assert (s.min >= 0.);
 
   // store hmax
@@ -126,16 +129,8 @@ event adapt (i++) {
     eta[] = h[] > dry ? h[] + zb[] : 0;
   boundary ({eta});
 
-  scalar w[];
-  wavelet (eta, w);
-
-  double cmax = 3e-4;
-  int nf = refine_wavelet (w, cmax, MAXLEVEL, all);
-  int nc = coarsen_wavelet (w, cmax/4., MINLEVEL, all);
-  if (nf || nc)
-    boundary (all);
-
-  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
+  astats s = adapt_wavelet ({eta}, (double[]){3e-4}, MAXLEVEL, MINLEVEL);
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }
 #endif
 

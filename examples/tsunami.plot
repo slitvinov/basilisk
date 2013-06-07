@@ -2,6 +2,11 @@
 
 set term pngcairo enhanced size 800,800 font ",11"
 
+set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1, \
+    	              0.375 0.05882 1 0.9333, 0.5 0.5647 1 0.4392, \
+		      0.625 1 0.9333 0, 0.75 1 0.4392 0, \
+		      0.875 0.9333 0 0, 1 0.498 0 0 )
+
 unset key
 set size ratio -1
 set xrange [67:105]
