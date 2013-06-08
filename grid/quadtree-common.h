@@ -48,6 +48,87 @@
 
 // Quadtree methods
 
+Point refine_cell (Point point, scalar * list)
+{
+#if TWO_ONE
+  /* refine neighborhood if required */
+  if (level > 0)
+    for (int k = 0; k != 2*child.x; k += child.x)
+      for (int l = 0; l != 2*child.y; l += child.y)
+	if (aparent(k,l).flags & leaf) {
+	  Point p = point;
+	  /* fixme: this should be made
+	     independent from the quadtree implementation */
+	  p.level = point.level - 1;
+	  p.i = (point.i + GHOSTS)/2 + k;
+	  p.j = (point.j + GHOSTS)/2 + l;
+	  p = refine_cell (p, list);
+	  assert (p.m == point.m);
+	}
+#endif
+
+  /* refine */
+  cell.flags &= ~leaf;
+  /* update neighborhood */
+  for (int o = -GHOSTS; o <= GHOSTS; o++)
+    for (int p = -GHOSTS; p <= GHOSTS; p++)
+      neighbor(o,p).neighbors--;
+
+  /* for each child: (note that using foreach_child() would be nicer
+     but it seems to be significanly slower) */
+  alloc_children (&point);
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++) {
+      assert(!(child(k,l).flags & active));
+      child(k,l).flags |= (active | leaf);
+      /* update neighborhood */
+      for (int o = -GHOSTS; o <= GHOSTS; o++)
+	for (int p = -GHOSTS; p <= GHOSTS; p++)
+	  child(k+o,l+p).neighbors++;
+    }
+
+  /* initialise scalars */
+  for (scalar s in list)
+    s.refine (point, s);
+
+  return point;
+}
+
+bool coarsen_cell (Point point, scalar * list)
+{
+#if TWO_ONE
+  /* check that neighboring cells are not too fine */
+  for (int k = -1; k < 3; k++)
+    for (int l = -1; l < 3; l++)
+      if (is_active (child(k,l)) && !is_leaf (child(k,l)))
+	return false; // cannot coarsen
+#endif
+
+  /* restriction */
+  for (scalar s in list)
+    s.coarsen (point, s);
+
+  /* coarsen */
+  cell.flags |= leaf;
+  /* update neighborhood */
+  for (int o = -GHOSTS; o <= GHOSTS; o++)
+    for (int p = -GHOSTS; p <= GHOSTS; p++)
+      neighbor(o,p).neighbors++;
+
+  /* for each child */
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++) {
+      child(k,l).flags &= ~(leaf|active);
+      /* update neighborhood */
+      for (int o = -GHOSTS; o <= GHOSTS; o++)
+	for (int p = -GHOSTS; p <= GHOSTS; p++)
+	  child(k+o,l+p).neighbors--;
+    }
+
+  free_children (&point);
+  return true;
+}
+
 typedef struct {
   int nc, nf;
 } astats;
@@ -245,8 +326,8 @@ void quadtree_boundary_restriction (scalar * list)
 @define boundary_ghost(d, x) {						\
     foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
     int _in = -_ig[d], _jn = -_jg[d];					\
-    foreach_halo() if (point.m[point.level][_index(_in,_jn)] &&		\
-		       is_leaf(_neighbor(_in,_jn))) {			\
+    foreach_halo() if (_ALLOCATED(_in,_jn) &&				\
+                       is_leaf(_neighbor(_in,_jn))) {			\
       ig = _in; jg = _jn; VARIABLES; x; }				\
     end_foreach_halo();							\
   }
