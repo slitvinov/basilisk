@@ -2,7 +2,7 @@ You should only need a C99-compliant compiler.
 
 If you are using gcc on a UNIX-like system, this should work:
 
-% cp config.gcc config
+% ln -s config.gcc config
 % make
 
 If you are using another system/compiler, find a config file which
