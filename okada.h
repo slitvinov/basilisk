@@ -111,6 +111,7 @@ struct Okada {
   double mu, lambda;
   double length, width, vU[3], U;
   double R;
+  int (* iterate) (void);
 };
 
 void okada (struct Okada p)
@@ -146,4 +147,26 @@ void okada (struct Okada p)
 			      oka);
     val(p.d,0,0) = oka[2];
   }
+}
+
+void fault (struct Okada p)
+{
+  scalar d[];
+  p.d = d;
+  do {
+    okada (p);
+    // d[] now contains the Okada vertical displacement
+    foreach()
+      // turn d[] into eta[] = zb[] + h[] + d[] (in wet areas only)
+      d[] = (zb[] + max (0., h[] + d[]))*(h[] > dry);
+    boundary ({d});
+  } while (p.iterate && p.iterate());
+
+  // deformation is added to h[] (water depth) only in wet areas
+  okada (p);
+  foreach()
+    if (h[] > dry) {
+      h[] = max (0., h[] + d[]);
+      eta[] = zb[] + h[];
+    }
 }
