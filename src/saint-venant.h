@@ -1,27 +1,45 @@
+A solver for the Saint-Venant equations
+=======================================
+
+First we need some utilities. Time integration will be done with a generic 
+predictor-corrector scheme.
+
+~~~
 #include "utils.h"
 #include "predictor-corrector.h"
+~~~
 
-// h: water depth
-// zb: bathymetry
-// u: flow speed
+The primary fields are the water depth h, the bathymetry zb and the flow 
+speed u. eta is the water level i.e. h + zb. Note that the order of the 
+declarations is important as zb needs to be refined before h and h before eta.
 
-// note: the order is important as zb needs to be refined before h 
-// and h before eta
+~~~
 scalar zb[], h[], eta[];
 vector u[];
+~~~
 
-// Default parameters
-// acceleration of gravity
+The only physical parameter is the acceleration of gravity G. Cells are 
+considered "dry" when the water depth is less than the dry parameter (this 
+should not require tweaking). The initial conditions are defined by the 
+user in init().
+
+~~~
 double G = 1.;
-// cells are "dry" when water depth is less than...
 double dry = 1e-10;
-// user-provided initial conditions
 void init (void);
+~~~
 
-// fields updated by time-integration (in "predictor-corrector.h")
+The generic time-integration scheme in predictor-corrector.h needs to know 
+which fields are updated.
+
+~~~
 scalar * evolving = {h, u};
+~~~
 
-// make sure eta[] is always zb[] + h[]
+When using an adaptive discretisation (i.e. a quadtree)., we need to make sure 
+that eta is maintained as zb + h whenever cells are refined or coarsened.
+
+~~~
 #if QUADTREE
 static void refine_eta (Point point, scalar eta)
 {
@@ -34,7 +52,12 @@ static void coarsen_eta (Point point, scalar eta)
   eta[] = zb[] + h[];
 }
 #endif
+~~~
 
+The predictor-corrector scheme will call this function before starting the 
+main time loop.
+
+~~~
 void init_internal (void)
 {
 #if QUADTREE
@@ -46,8 +69,12 @@ void init_internal (void)
     eta[] = zb[] + h[];
   boundary (all);
 }
+~~~
 
-// fluxes
+Computing fluxes
+----------------
+
+~~~
 vector Fh, S;
 tensor Fq;
 
@@ -252,3 +279,4 @@ void output_gauges (Gauge * gauges, scalar * list)
     fputc ('\n', g->fp);
   }
 }
+~~~
