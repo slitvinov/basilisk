@@ -43,10 +43,10 @@ scalar zb[], h[], eta[];
 vector u[];
 ~~~
 
-The only physical parameter is the acceleration of gravity G. Cells are 
-considered "dry" when the water depth is less than the dry parameter (this 
+The only physical parameter is the acceleration of gravity `G`. Cells are 
+considered "dry" when the water depth is less than the `dry` parameter (this 
 should not require tweaking). The initial conditions are defined by the 
-user in init().
+user in `init()`.
 
 ~~~c
 double G = 1.;
@@ -54,7 +54,9 @@ double dry = 1e-10;
 void init (void);
 ~~~
 
-## Setup
+## Time-integration
+
+### Setup
 
 First we need some utilities. Time integration will be done with a generic 
 [predictor-corrector](predictor-corrector.h) scheme.
@@ -106,11 +108,11 @@ void init_internal (void)
 }
 ~~~
 
-## Computing fluxes
+### Computing fluxes
 
 We first declare some global variables (they need to be visible both
-in fluxes() and in update()). Fh and Fq will contain the fluxes for
-$h$ and $h\mathbf{u}$ respectively and S is necessary to store the
+in `fluxes()` and in `update()`). `Fh` and `Fq` will contain the fluxes for
+$h$ and $h\mathbf{u}$ respectively and `S` is necessary to store the
 asymmetric topographic source term. Various approximate Riemann
 solvers are defined in [riemann.h]().
 
@@ -158,7 +160,7 @@ The faces which are "wet" on at least one side are traversed.
     if (hi > dry || hn > dry) {
 ~~~
 
-### Left/right state reconstruction
+#### Left/right state reconstruction
 
 The gradients computed above are used to reconstruct the left and
 right states of the primary fields $h$, $\mathbf{u}$, $z_b$. The
@@ -182,7 +184,7 @@ reconstruction of Audusse et al.
       double hm = max(0., hr + zr - zlr);
 ~~~
 
-### Riemann solver
+#### Riemann solver
 
 We can now call one of the approximate Riemann solvers to get the fluxes.
 
@@ -192,7 +194,7 @@ We can now call one of the approximate Riemann solvers to get the fluxes.
       fv = (fh > 0. ? u.y[-1,0] + dx*gu.y.x[-1,0] : u.y[] - dx*gu.y.x[])*fh;
 ~~~
 
-### Topographic source term
+#### Topographic source term
 
 In the case of adaptive refinement, care must be taken to ensure
 well-balancing at coarse/fine faces (see [notes/balanced.tm]()).
@@ -212,7 +214,7 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()).
       double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
 ~~~
 
-### Flux update
+#### Flux update
 
 ~~~c
       Fh.x[]   = fh;
@@ -225,7 +227,7 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()).
   }
 ~~~
 
-### Boundary conditions for fluxes
+#### Boundary conditions for fluxes
 
 ~~~c
 #if QUADTREE
@@ -246,7 +248,7 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()).
 }
 ~~~
 
-## Update
+### Update
 
 This is the second function used by the predictor-corrector scheme. It
 uses the input and the fluxes computed previously to compute the
@@ -352,11 +354,23 @@ void conserve_elevation (void) {}
 
 ## "Radiation" boundary conditions
 
+This can be used to implement open boundary conditions at low
+[Froude numbers](http://en.wikipedia.org/wiki/Froude_number). The idea
+is to set the velocity normal to the boundary so that the water level
+relaxes towards its desired value (`ref`).
+
 ~~~c
 #define radiation(ref) (sqrt (G*h[]) - sqrt(G*max((ref) - zb[], 0.)))
 ~~~
 
 ## Tide gauges
+
+An array of `Gauge` structures passed to `output_gauges()` will create
+a file (called `name`) for each gauge. Each time `output_gauges()` is
+called a line will be appended to the file. The line contains the time
+and the value of each scalar in `list` in the (wet) cell containing
+`(x,y)`. The `desc` field can be filled with a longer description of
+the gauge.
 
 ~~~c
 typedef struct {
