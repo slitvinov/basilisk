@@ -3,7 +3,7 @@
 include ../config
 include Makefile.tests
 
-DIR = $(notdir $(CURDIR))
+DIR = $(notdir $(CURDIR))/src
 
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(ALLTESTS))) Makefile.deps
 
@@ -62,8 +62,14 @@ clean:
 %.png: %.plot
 	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $< || rm -f $@
 
+%.pdf: %.h
+	pandoc -o $@ $<
+
+%.pdf: %.c
+	pandoc -o $@ $<
+
 Makefile.tests: Makefile
-	@-if test ! -d ../_darcs; then 					\
+	@-if test ! -d ../../_darcs; then 				\
            touch Makefile.tests; 					\
 	   echo "Makefile.tests not updated (not darcs-controlled)";  	\
 	   exit 1;							\

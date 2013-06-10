@@ -34,7 +34,13 @@ dist:
 	darcs dist
 
 diff:
-	tar czvf diff.tgz `darcs whatsnew -s | awk '{print $$2}'`
+	cd .. && tar czvf src/diff.tgz `darcs whatsnew -s | awk '{print $$2}'`
+
+%.pdf: %.h
+	pandoc -o $@ $<
+
+%.pdf: %.c
+	pandoc -o $@ $<
 
 clean:
 	rm -f *.o

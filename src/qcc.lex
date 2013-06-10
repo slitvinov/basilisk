@@ -1143,7 +1143,8 @@ int getput(void)
 void stripname (char * path);
 char * stripslash (char * path);
 int includes (int argc, char ** argv, char ** out, 
-	      char ** grid, int * default_grid);
+	      char ** grid, int * default_grid,
+	      const char * dir);
 
 int endfor (FILE * fin, FILE * fout)
 {
@@ -1181,10 +1182,10 @@ FILE * writepath (char * path, const char * mode)
   }
   return fopen (path, mode);
 }
-  
-void cleanup (int status)
+
+void cleanup (int status, const char * dir)
 {
-  if (!debug) {
+  if (!debug && dir) {
     char command[80] = "rm -r -f ";
     strcat (command, dir);
     int s = system (command); s = s;
@@ -1204,7 +1205,7 @@ FILE * dopen (const char * fname, const char * mode)
 void compdir (FILE * fin, FILE * fout, char * grid)
 {
   if (endfor (fin, fout))
-    cleanup (1);
+    cleanup (1, dir);
   fclose (fout);
 
   fout = dopen ("grid.h", "w");
@@ -1341,17 +1342,14 @@ int main (int argc, char ** argv)
   if (file) {
     char * out[100], * grid = NULL;
     int default_grid;
-    includes (argc, argv, out, &grid, &default_grid);
+    includes (argc, argv, out, &grid, &default_grid, dep ? NULL : dir);
     if (!dep) {
       char * basename = strdup (file), * ext = basename;
       while (*ext != '\0' && *ext != '.') ext++;
-      char * cpp = malloc (strlen(dir) + strlen(basename) + 
-			   strlen("-cpp") + strlen(ext) + 2);
-      strcpy (cpp, dir);
-      strcat (cpp, "/");
+      char * cpp = malloc (strlen(basename) + strlen("-cpp") + strlen(ext) + 1);
       if (*ext == '.') {
 	*ext = '\0';
-	strcat (cpp, basename);
+	strcpy (cpp, basename);
 	strcat (cpp, "-cpp");
 	*ext = '.';
 	strcat (cpp, ext);
@@ -1360,12 +1358,12 @@ int main (int argc, char ** argv)
 	strcpy (cpp, basename);
 	strcat (cpp, "-cpp");
       }
-      FILE * fin = fopen (file, "r");
+      FILE * fin = dopen (file, "r");
       if (!fin) {
 	perror (file);
-	cleanup (1);
+	cleanup (1, dir);
       }
-      FILE * fout = fopen (cpp, "w");
+      FILE * fout = dopen (cpp, "w");
       if (fpe)
 	fputs ("#include <string.h>\n"
 	       "#include <fenv.h>\n", 
@@ -1400,7 +1398,6 @@ int main (int argc, char ** argv)
       /* grid */
       if (default_grid)
 	fprintf (fout, "#include \"grid/%s.h\"\n", grid);
-      fprintf (fout, "# 1 \"%s\"\n", file);
       int c;
       while ((c = fgetc (fin)) != EOF)
 	fputc (c, fout);
@@ -1409,18 +1406,21 @@ int main (int argc, char ** argv)
       fout = dopen (file, "w");
       if (!fout) {
 	perror (file);
-	cleanup (1);
+	cleanup (1, dir);
       }
 
       char preproc[1000];
-      strcpy (preproc, command);
+      strcpy (preproc, "cd ");
+      strcat (preproc, dir);
+      strcat (preproc, " && ");
+      strcat (preproc, command);
       strcat (preproc, " -E ");
       strcat (preproc, cpp);
 
       fin = popen (preproc, "r");
       if (!fin) {
 	perror (preproc);
-	cleanup (1);
+	cleanup (1, dir);
       }
 
       compdir (fin, fout, grid);
@@ -1428,7 +1428,7 @@ int main (int argc, char ** argv)
       if (status == -1 ||
 	  (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || 
 				    WTERMSIG (status) == SIGQUIT)))
-	cleanup (1);
+	cleanup (1, dir);
 
       strcat (command, " ");
       strcat (command, dir);
@@ -1439,7 +1439,7 @@ int main (int argc, char ** argv)
   }
   else if (dep) {
     fprintf (stderr, "usage: qcc -grid=[GRID] [OPTIONS] FILE.c\n");
-    cleanup (1);
+    cleanup (1, dir);
   }
   /* compilation */
   if (!dep) {
@@ -1449,8 +1449,8 @@ int main (int argc, char ** argv)
     if (status == -1 ||
 	(WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || 
 				  WTERMSIG (status) == SIGQUIT)))
-      cleanup (1);
-    cleanup (WEXITSTATUS (status));
+      cleanup (1, dir);
+    cleanup (WEXITSTATUS (status), dir);
   }
-  cleanup (0);
+  cleanup (0, dir);
 }
