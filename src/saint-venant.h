@@ -4,44 +4,37 @@ The
 [Saint-Venant equations](http://en.wikipedia.org/wiki/Shallow_water_equations)
 can be written in integral form as the hyperbolic system of
 conservation laws
-\begin{equation}
-  \partial_t \int_{\Omega} \ensuremath{\boldsymbol{q}} d \Omega =
-  \int_{\partial \Omega} \ensuremath{\boldsymbol{f}} (
-  \ensuremath{\boldsymbol{q}}) \cdot \ensuremath{\boldsymbol{n}}d \partial
-  \Omega - \int_{\Omega} hg \ensuremath{\boldsymbol{\nabla}} z_b
-\end{equation}
+$$
+  \partial_t \int_{\Omega} \mathbf{q} d \Omega =
+  \int_{\partial \Omega} \mathbf{f} (
+  \mathbf{q}) \cdot \mathbf{n}d \partial
+  \Omega - \int_{\Omega} hg \nabla z_b
+$$
 where $\Omega$ is a given subset of space, $\partial \Omega$ its boundary and
-$\ensuremath{\boldsymbol{n}}$ the unit normal vector on this boundary. For
+$\mathbf{n}$ the unit normal vector on this boundary. For
 conservation of mass and momentum in the shallow-water context, $\Omega$ is a
-subset of bidimensional space and $\ensuremath{\boldsymbol{q}}$ and
-$\ensuremath{\boldsymbol{f}}$ are written
-\begin{equation}
-  \ensuremath{\boldsymbol{q}} = \left(\begin{array}{c}
+subset of bidimensional space and $\mathbf{q}$ and
+$\mathbf{f}$ are written
+$$
+  \mathbf{q} = \left(\begin{array}{c}
     h\\
     hu_x\\
     hu_y
-  \end{array}\right), \ensuremath{\boldsymbol{f}} (
-  \ensuremath{\boldsymbol{q}}) = \left(\begin{array}{cc}
+  \end{array}\right), 
+  \;\;\;\;\;\;
+  \mathbf{f} (\mathbf{q}) = \left(\begin{array}{cc}
     hu_x & hu_y\\
     hu_x^2 + \frac{1}{2} gh^2 & hu_xu_y\\
     hu_xu_y & hu_y^2 + \frac{1}{2} gh^2
   \end{array}\right)
-\end{equation}
-where $\boldsymbol{u}$ is the velocity vector, $h$ the water depth and
+$$
+where $\mathbf{u}$ is the velocity vector, $h$ the water depth and
 $z_b$ the height of the topography.
 
-## Setup
-
-First we need some utilities. Time integration will be done with a generic 
-[predictor-corrector](src/predictor-corrector.h) scheme.
-
-~~~c
-#include "utils.h"
-#include "predictor-corrector.h"
-~~~
+## User variables and parameters
 
 The primary fields are the water depth $h$, the bathymetry $z_b$ and
-the flow speed $\boldsymbol{u}$. $\eta$ is the water level i.e. $z_b +
+the flow speed $\mathbf{u}$. $\eta$ is the water level i.e. $z_b +
 h$. Note that the order of the declarations is important as $z_b$
 needs to be refined before $h$ and $h$ before $\eta$.
 
@@ -59,6 +52,16 @@ user in init().
 double G = 1.;
 double dry = 1e-10;
 void init (void);
+~~~
+
+## Setup
+
+First we need some utilities. Time integration will be done with a generic 
+[predictor-corrector](predictor-corrector.h) scheme.
+
+~~~c
+#include "utils.h"
+#include "predictor-corrector.h"
 ~~~
 
 The generic time-integration scheme in predictor-corrector.h needs to know 
@@ -107,9 +110,9 @@ void init_internal (void)
 
 We first declare some global variables (they need to be visible both
 in fluxes() and in update()). Fh and Fq will contain the fluxes for
-$h$ and $h{\bf u}$ respectively and S is necessary to store the
+$h$ and $h\mathbf{u}$ respectively and S is necessary to store the
 asymmetric topographic source term. Various approximate Riemann
-solvers are defined in [riemann.h](src/riemann.h).
+solvers are defined in [riemann.h]().
 
 ~~~c
 vector Fh, S;
@@ -158,7 +161,7 @@ The faces which are "wet" on at least one side are traversed.
 ### Left/right state reconstruction
 
 The gradients computed above are used to reconstruct the left and
-right states of the primary fields $h$, ${\bf u}$, $z_b$. The
+right states of the primary fields $h$, $\mathbf{u}$, $z_b$. The
 "interface" topography $z_{lr}$ is reconstructed using the hydrostatic
 reconstruction of Audusse et al.
     
@@ -192,7 +195,7 @@ We can now call one of the approximate Riemann solvers to get the fluxes.
 ### Topographic source term
 
 In the case of adaptive refinement, care must be taken to ensure
-well-balancing at coarse/fine faces (see [src/notes/balanced.tm]()).
+well-balancing at coarse/fine faces (see [notes/balanced.tm]()).
 
 ~~~c
 #if QUADTREE
@@ -353,7 +356,7 @@ void conserve_elevation (void) {}
 #define radiation(ref) (sqrt (G*h[]) - sqrt(G*max((ref) - zb[], 0.)))
 ~~~
 
-## tide gauges
+## Tide gauges
 
 ~~~c
 typedef struct {
