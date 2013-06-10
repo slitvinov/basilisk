@@ -78,11 +78,28 @@
 SP   [ \t]
 WS   [ \t\v\n\f]
 ES   (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
-CODE ^[SP]*[~]{3,}[^\n]*\n
+BEGINCODE ^[SP]*[~]{3,}c[^\n]*\n
+ENDCODE   ^[SP]*[~]{3,}[^\n]*\n
 
 %%
 
-{CODE}    incode = !incode; if (myout) fputc ('\n', myout);
+{BEGINCODE} {
+  if (incode) {
+    yylineno--;
+    return yyerror ("code blocks cannot be nested");
+  }
+  incode = 1;
+  if (myout) fputc ('\n', myout);
+}
+
+{ENDCODE} {
+  if (!incode) {
+    yylineno--;
+    return yyerror ("not in a code block");
+  }
+  incode = 0;
+  if (myout) fputc ('\n', myout);
+}
 
 ^{SP}*#{SP}*include{SP}+\".*\"*{SP}*\n {
   echo();
