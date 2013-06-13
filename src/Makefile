@@ -34,7 +34,8 @@ dist:
 	darcs dist
 
 diff:
-	cd .. && tar czvf src/diff.tgz `darcs whatsnew -s | awk '{print $$2}'`
+	cd .. && tar czvf src/diff.tgz `darcs whatsnew -s | \
+		sed 's/. .\/.*\/$$//g' | awk '{print $$2}'`
 
 %.pdf: %.h
 	pandoc -o $@ $<
