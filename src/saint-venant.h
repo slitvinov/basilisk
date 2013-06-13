@@ -1,3 +1,4 @@
+/**
 # A solver for the Saint-Venant equations
 
 The
@@ -36,47 +37,43 @@ $z_b$ the height of the topography.
 The primary fields are the water depth $h$, the bathymetry $z_b$ and
 the flow speed $\mathbf{u}$. $\eta$ is the water level i.e. $z_b +
 h$. Note that the order of the declarations is important as $z_b$
-needs to be refined before $h$ and $h$ before $\eta$.
+needs to be refined before $h$ and $h$ before $\eta$. */
 
-~~~c
 scalar zb[], h[], eta[];
 vector u[];
-~~~
 
+/**
 The only physical parameter is the acceleration of gravity `G`. Cells are 
 considered "dry" when the water depth is less than the `dry` parameter (this 
 should not require tweaking). The initial conditions are defined by the 
-user in `init()`.
+user in `init()`. */
 
-~~~c
 double G = 1.;
 double dry = 1e-10;
 void init (void);
-~~~
 
+/**
 ## Time-integration
 
 ### Setup
 
 First we need some utilities. Time integration will be done with a generic 
-[predictor-corrector](predictor-corrector.h) scheme.
+[predictor-corrector](predictor-corrector.h) scheme. */
 
-~~~c
 #include "utils.h"
 #include "predictor-corrector.h"
-~~~
 
-The generic time-integration scheme in predictor-corrector.h needs to know 
-which fields are updated.
+/** 
+The generic time-integration scheme in predictor-corrector.h needs
+to know which fields are updated. */
 
-~~~c
 scalar * evolving = {h, u};
-~~~
 
-When using an adaptive discretisation (i.e. a quadtree)., we need to make sure 
-that $\eta$ is maintained as $z_b + h$ whenever cells are refined or coarsened.
+/** 
+When using an adaptive discretisation (i.e. a quadtree)., we need
+to make sure that $\eta$ is maintained as $z_b + h$ whenever cells are
+refined or coarsened. */
 
-~~~c
 #if QUADTREE
 static void refine_eta (Point point, scalar eta)
 {
@@ -89,12 +86,11 @@ static void coarsen_eta (Point point, scalar eta)
   eta[] = zb[] + h[];
 }
 #endif
-~~~
 
+/**
 The predictor-corrector scheme will call this function before starting the 
-main time loop.
+main time loop. */
 
-~~~c
 void init_internal (void)
 {
 #if QUADTREE
@@ -106,17 +102,16 @@ void init_internal (void)
     eta[] = zb[] + h[];
   boundary (all);
 }
-~~~
 
+/**
 ### Computing fluxes
 
 We first declare some global variables (they need to be visible both
 in `fluxes()` and in `update()`). `Fh` and `Fq` will contain the fluxes for
 $h$ and $h\mathbf{u}$ respectively and `S` is necessary to store the
 asymmetric topographic source term. Various approximate Riemann
-solvers are defined in [riemann.h]().
+solvers are defined in [riemann.h](). */
 
-~~~c
 vector Fh, S;
 tensor Fq;
 
@@ -124,50 +119,45 @@ tensor Fq;
 
 double fluxes (scalar * evolving, double dtmax)
 {
-~~~
 
+/**
 We first recover the currently evolving fields (as set by the
-predictor-corrector scheme).
+predictor-corrector scheme). */
 
-~~~c
   scalar h = evolving[0];
   vector u = { evolving[1], evolving[2] };
-~~~
 
+/**
 The gradients are stored in locally-allocated fields. First-order
-reconstruction is used for the gradient fields.
+reconstruction is used for the gradient fields. */
 
-~~~c
   vector gh[], geta[];
   tensor gu[];
   for (scalar s in {gh, geta, gu})
     s.gradient = zero;
   gradients ({h, eta, u}, {gh, geta, gu});
-~~~
 
-The flux fields declared above are dynamically allocated.
+/**
+The flux fields declared above are dynamically allocated. */
 
-~~~c
   Fh = new vector; S = new vector;
   Fq = new tensor;
-~~~
 
-The faces which are "wet" on at least one side are traversed.
+/**
+The faces which are "wet" on at least one side are traversed. */
 
-~~~c  
   foreach_face (reduction (min:dtmax)) {
     double hi = h[], hn = h[-1,0];
     if (hi > dry || hn > dry) {
-~~~
 
+/**
 #### Left/right state reconstruction
 
 The gradients computed above are used to reconstruct the left and
 right states of the primary fields $h$, $\mathbf{u}$, $z_b$. The
 "interface" topography $z_{lr}$ is reconstructed using the hydrostatic
-reconstruction of Audusse et al.
+reconstruction of Audusse et al. */
     
-~~~c    
       double dx = delta/2.;
       double zi = eta[] - hi;
       double zl = zi - dx*(geta.x[] - gh.x[]);
@@ -182,24 +172,22 @@ reconstruction of Audusse et al.
       double hr = hn + dx*gh.x[-1,0];
       double um = u.x[-1,0] + dx*gu.x.x[-1,0];
       double hm = max(0., hr + zr - zlr);
-~~~
 
+/**
 #### Riemann solver
 
-We can now call one of the approximate Riemann solvers to get the fluxes.
+We can now call one of the approximate Riemann solvers to get the fluxes. */
 
-~~~c
       double fh, fu, fv;
       kurganov (hm, hp, um, up, delta, &fh, &fu, &dtmax);
       fv = (fh > 0. ? u.y[-1,0] + dx*gu.y.x[-1,0] : u.y[] - dx*gu.y.x[])*fh;
-~~~
 
+/**
 #### Topographic source term
 
 In the case of adaptive refinement, care must be taken to ensure
-well-balancing at coarse/fine faces (see [notes/balanced.tm]()).
+well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
 
-~~~c
 #if QUADTREE
       if (!(cell.flags & (fghost|active))) {
 	hi = coarse(h,0,0);
@@ -212,11 +200,10 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()).
 #endif
       double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
       double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
-~~~
 
-#### Flux update
+/**
+#### Flux update */
 
-~~~c
       Fh.x[]   = fh;
       Fq.x.x[] = fu - sl;
       S.x[]    = fu - sr;
@@ -225,11 +212,10 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()).
     else // dry
       Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
   }
-~~~
 
-#### Boundary conditions for fluxes
+/**
+#### Boundary conditions for fluxes */
 
-~~~c
 #if QUADTREE
   // fixme: all this should be halo_restriction_flux()
   vector * list = {Fh, S, Fq};
@@ -246,15 +232,14 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()).
 
   return dtmax;
 }
-~~~
 
+/**
 ### Update
 
 This is the second function used by the predictor-corrector scheme. It
 uses the input and the fluxes computed previously to compute the
-output.
+output. */
 
-~~~c
 void update (scalar * output, scalar * input, double dt)
 {
   // recover scalar and vector fields from lists
@@ -280,18 +265,16 @@ void update (scalar * output, scalar * input, double dt)
 	uo.x[] = 0.;
   }
   boundary ({ho, eta, uo});
-~~~
 
-The dynamic fields allocated in fluxes() are freed.
+/**
+The dynamic fields allocated in fluxes() are freed. */
 
-~~~c
   delete ((scalar *){Fh, S, Fq});
 }
-~~~
 
-## Conservation of water surface elevation
+/**
+## Conservation of water surface elevation */
 
-~~~c
 #if QUADTREE
 static void refine_elevation (Point point, scalar h)
 {
@@ -350,19 +333,18 @@ void conserve_elevation (void)
 #else // Cartesian
 void conserve_elevation (void) {}
 #endif
-~~~
 
+/**
 ## "Radiation" boundary conditions
 
 This can be used to implement open boundary conditions at low
 [Froude numbers](http://en.wikipedia.org/wiki/Froude_number). The idea
 is to set the velocity normal to the boundary so that the water level
-relaxes towards its desired value (`ref`).
+relaxes towards its desired value (`ref`). */
 
-~~~c
 #define radiation(ref) (sqrt (G*h[]) - sqrt(G*max((ref) - zb[], 0.)))
-~~~
 
+/**
 ## Tide gauges
 
 An array of `Gauge` structures passed to `output_gauges()` will create
@@ -370,9 +352,8 @@ a file (called `name`) for each gauge. Each time `output_gauges()` is
 called a line will be appended to the file. The line contains the time
 and the value of each scalar in `list` in the (wet) cell containing
 `(x,y)`. The `desc` field can be filled with a longer description of
-the gauge.
+the gauge. */
 
-~~~c
 typedef struct {
   char * name;
   double x, y;
@@ -397,4 +378,3 @@ void output_gauges (Gauge * gauges, scalar * list)
     fputc ('\n', g->fp);
   }
 }
-~~~
