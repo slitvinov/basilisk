@@ -26,7 +26,7 @@ typedef struct {
 /* the maximum level */
 static int quad_r;
 
-int size (int l)
+static int size (int l)
 {
   return ((1 << (2*(l + 1))) - 1)/3;
 }

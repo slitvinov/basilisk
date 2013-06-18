@@ -1290,12 +1290,14 @@ int main (int argc, char ** argv)
   strcat (command, " -I");
   strcat (command, LIBDIR);
   char * file = NULL;
-  int i, dep = 0;
+  int i, dep = 0, tags = 0;
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
       ;
     else if (!strcmp (argv[i], "-MD"))
       dep = 1;
+    else if (!strcmp (argv[i], "-tags"))
+      tags = 1;
     else if (!strcmp (argv[i], "-debug"))
       debug = 1;
     else if (!strcmp (argv[i], "-fpe"))
@@ -1311,7 +1313,7 @@ int main (int argc, char ** argv)
       }
     }
     else if (argv[i][0] != '-' && 
-	     !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
+	     (tags || !strcmp (&argv[i][strlen(argv[i]) - 2], ".c"))) {
       if (file) {
 	fprintf (stderr, "usage: qcc -grid=[GRID] [OPTIONS] FILE.c\n");
 	return 1;
@@ -1342,8 +1344,8 @@ int main (int argc, char ** argv)
   if (file) {
     char * out[100], * grid = NULL;
     int default_grid;
-    includes (argc, argv, out, &grid, &default_grid, dep ? NULL : dir);
-    if (!dep) {
+    includes (argc, argv, out, &grid, &default_grid, dep || tags ? NULL : dir);
+    if (!dep && !tags) {
       char * basename = strdup (file), * ext = basename;
       while (*ext != '\0' && *ext != '.') ext++;
       char * cpp = malloc (strlen(basename) + strlen("-cpp") + strlen(ext) + 1);
@@ -1437,12 +1439,12 @@ int main (int argc, char ** argv)
      strcat (command, command1);
     }
   }
-  else if (dep) {
+  else if (dep || tags) {
     fprintf (stderr, "usage: qcc -grid=[GRID] [OPTIONS] FILE.c\n");
     cleanup (1, dir);
   }
   /* compilation */
-  if (!dep) {
+  if (!dep && !tags) {
     if (debug)
       fprintf (stderr, "command: %s\n", command);
     status = system (command);

@@ -5,11 +5,36 @@
   #include <sys/stat.h>
   #include <sys/types.h>
 
-  static FILE * fdepend = NULL, * myout = NULL;
+  typedef struct {
+    char * id, * file;
+    int line;
+  } Tag;
+
+  Tag * tagsa = NULL;
+  int ntags = 0, target = 1, keywords_only = 0;
+
+  static void append_tag (Tag t) {
+    ntags++;
+    tagsa = realloc (tagsa, ntags*sizeof(Tag));
+    tagsa[ntags-1] = t;
+    tagsa[ntags-1].id = strdup (t.id);
+    tagsa[ntags-1].file = strdup (t.file);
+    char * page = strstr (tagsa[ntags-1].file, ".page");
+    if (page) *page = '\0';
+  }
+
+  static Tag * lookup_tag (const char * id) {
+    for (int i = 0; i < ntags; i++)
+      if (!strcmp(tagsa[i].id, id))
+	return &tagsa[i];
+    return NULL;
+  }
+
+  static FILE * fdepend = NULL, * ftags = NULL, * myout = NULL;
   static char * fname;
   
   static char * paths[100] = { LIBDIR }, grid[80] = "quadtree";
-  static int npath = 1, hasgrid = 0;
+  static int npath = 1, hasgrid = 0, debug = 0;
   static int incode;   // are we in a code block?
   static int somecode; // any code blocks in this file?
 
@@ -55,6 +80,17 @@
     return NULL;
   }
 
+#define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
+#define space(s) { while (!strchr(" \t\v\n\f", *s)) s++; }
+
+  static char * shortpath (char * path) {
+    char * file = strstr (path, LIBDIR);
+    if (file == path)
+      return file + strlen(LIBDIR) - strlen("src") - 1; // remove root
+    else
+      return path;
+  }
+
   static int yyerror(const char * s);
   static int comment(void);
   static void echo() {
@@ -75,11 +111,13 @@
   }
 %}
 
-SP   [ \t]
-WS   [ \t\v\n\f]
-ES   (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
+ID     [a-zA-Z0-9_]
+SP     [ \t]
+WS     [ \t\v\n\f]
+ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 BEGINCODE ^[SP]*[~]{3,}c[^\n]*\n
 ENDCODE   ^[SP]*[~]{3,}[^\n]*\n
+FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
 
 %%
 
@@ -103,18 +141,25 @@ ENDCODE   ^[SP]*[~]{3,}[^\n]*\n
 
 ^{SP}*#{SP}*include{SP}+\".*\"*{SP}*\n {
   echo();
-  char * s = strchr(yytext, '"');
-  s++;
-  char * e = &s[strlen(s) - 1];
-  while (*e == ' ' || *e == '\t' || *e == '"' || *e == '\n') {
-    *e = '\0'; e--;
-  }
-  char * path;
-  FILE * fp = openpath (s, "r", &path);
-  if (fp != NULL) {
-    push (path);
-    free (path);
-    fclose (fp);
+  if (!keywords_only) {
+    char * s = strchr(yytext, '"');
+    s++;
+    char * e = &s[strlen(s) - 1];
+    while (*e == ' ' || *e == '\t' || *e == '"' || *e == '\n') {
+      *e = '\0'; e--;
+    }
+    char * path;
+    FILE * fp = openpath (s, "r", &path);
+    if (fp != NULL) {
+      push (path);
+      if (ftags && target) {
+	fputs ("incl ", ftags);
+	singleslash (shortpath(path), ftags);
+	fprintf (ftags, " %s %d\n", fname, yylineno - 1);
+      }
+      free (path);
+      fclose (fp);
+    }
   }
 }
 
@@ -125,6 +170,41 @@ ENDCODE   ^[SP]*[~]{3,}[^\n]*\n
     while (strchr (s, '/')) s = strchr (s, '/') + 1;
     strcpy (grid, s);
     if ((s = strchr (grid, '.'))) *s = '\0';
+}
+
+^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{] {
+  // function declaration
+  echo();
+  if (ftags && !keywords_only) {
+    char * s = yytext; int nl = 0;
+    while (*s != '\0') if (*s++ == '\n') nl++;
+    s = yytext; space(s); nonspace(s); s[-1] = '\0';
+    char * s1 = s;
+    while (!strchr(" \t\v\n\f(", *s1)) s1++;
+    *s1++ = '\0';
+    Tag t = { s, fname, yylineno - nl};
+    append_tag (t);
+    if (debug)
+      fprintf (stderr, "%s:%d: function declaration '%s'\n", 
+	       tagsa[ntags-1].file, tagsa[ntags-1].line, tagsa[ntags-1].id);
+    if (target)
+      fprintf (ftags, "decl %s %s %d\n", 
+	       tagsa[ntags-1].id, tagsa[ntags-1].file, tagsa[ntags-1].line);
+  }
+}
+
+{ID}+ {
+  // keyword in target
+  echo();
+  if (ftags) {
+    Tag * t;
+    if (target && (t = lookup_tag(yytext))) {
+      if (debug)
+	fprintf (stderr, "%s:%d: function call '%s'\n", 
+		 fname, yylineno, yytext);
+      fprintf (ftags, "call %s %s %d\n", t->id, shortpath (t->file), t->line);
+    }
+  }
 }
 
 "/*"              { echo(); if (comment()) return 1; }
@@ -257,6 +337,7 @@ static int compdir (char * file, char ** out, int nout, const char * dir)
     if (fout)
       fclose (fout);
     out[nout++] = path;
+    target = 0;
   }
   return nout;
 }
@@ -265,7 +346,7 @@ int includes (int argc, char ** argv, char ** out,
 	      char ** grid1, int * default_grid,
 	      const char * dir)
 {
-  int depend = 0, nout = 0;
+  int depend = 0, nout = 0, tags = 0;
   char * file = NULL, * output = NULL;
   int i;
   for (i = 1; i < argc; i++) {
@@ -273,10 +354,14 @@ int includes (int argc, char ** argv, char ** out,
       strcpy (grid, &argv[i][6]);
     else if (!strcmp (argv[i], "-MD"))
       depend = 1;
+    else if (!strcmp (argv[i], "-tags"))
+      tags = 1;
+    else if (!strcmp (argv[i], "-debug"))
+      debug = 1;
     else if (!strcmp (argv[i], "-o"))
       output = argv[i + 1];
     else if (argv[i][0] != '-' && \
-	     !strcmp (&argv[i][strlen(argv[i]) - 2], ".c")) {
+	     (tags || !strcmp (&argv[i][strlen(argv[i]) - 2], ".c"))) {
       if (file) {
 	fprintf (stderr, "usage: include [OPTIONS] FILE.c\n");
 	cleanup (1, dir);
@@ -289,7 +374,7 @@ int includes (int argc, char ** argv, char ** out,
     char ndep[80], * s = &output[strlen(output)-1];
     while (*s != '.' && s != output) s--;
     if (output != file || s == output)
-      /* generate dep files with suffixes included for -o option */
+      /* generate dep/tags files with suffixes included for -o option */
       strcpy (ndep, output);
     else {
       *s = '\0';
@@ -307,7 +392,23 @@ int includes (int argc, char ** argv, char ** out,
     }
     fprintf (fdepend, "%s:\t\\\n", output);
   }
+  if (tags && file) {
+    if (!output) output = file;
+    char ndep[80];
+    // strip trailing .page
+    strcpy (ndep, output);
+    char * page = strstr (ndep, ".page");
+    if (page)
+      *page = '\0';
+    strcat (ndep, ".tags");
+    ftags = fopen (ndep, "w");
+    if (!ftags) {
+      perror (ndep);
+      cleanup (1, dir);
+    }
+  }
   if (file) {
+    target = 1;
     nout = compdir (file, out, 0, dir);
     if (!hasgrid) {
       char * path, gridpath[80] = "grid/";
@@ -319,8 +420,14 @@ int includes (int argc, char ** argv, char ** out,
 	cleanup (1, dir);
       }
       fclose (fp);
+      target = 0;
       nout = compdir (path, out, nout, dir);
       hasgrid = 0;
+    }
+    if (ftags) {
+      // reprocess the target file for keywords
+      keywords_only = target = 1;
+      compdir (file, out, nout, dir);
     }
     char * path;    
     FILE * fp = openpath ("common.h", "r", &path);
@@ -332,6 +439,8 @@ int includes (int argc, char ** argv, char ** out,
     fputc ('\n', fdepend);
     fclose (fdepend);
   }
+  if (ftags)
+    fclose (ftags);
   *grid1 = grid;
   *default_grid = !hasgrid;
   return nout;

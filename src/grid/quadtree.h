@@ -100,7 +100,7 @@ static void cache_append (Cache * c, Point p)
   c->n++;
 }
 
-size_t _size (size_t l)
+static size_t _size (size_t l)
 {
   size_t n = (1 << l) + 2*GHOSTS;
   return n*n;

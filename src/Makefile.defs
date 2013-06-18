@@ -68,6 +68,9 @@ clean:
 %.pdf: %.c
 	pandoc -o $@ $<
 
+%.tags: %.page ../qcc
+	../qcc -tags $<
+
 Makefile.tests: Makefile
 	@-if test ! -d ../../_darcs; then 				\
            touch Makefile.tests; 					\

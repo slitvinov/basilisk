@@ -14,7 +14,7 @@ struct _Point {
 };
 #define _n point.n // for output_stencil()
 
-size_t _size (size_t l)
+static size_t _size (size_t l)
 {
   size_t n = (1 << l) + 2*GHOSTS;
   return n*n;

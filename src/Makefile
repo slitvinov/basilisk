@@ -27,7 +27,7 @@ include.c: include.lex
 qcc.c: qcc.lex
 	flex -o qcc.c qcc.lex
 
-tags:
+etags:
 	etags *.h grid/*.h
 
 dist:
@@ -37,7 +37,10 @@ diff:
 	cd .. && tar czvf src/diff.tgz `darcs whatsnew -s | \
 		sed 's/. .\/.*\/$$//g' | awk '{print $$2}'`
 
-%.pdf: %.h
+%.tags: %.page qcc
+	./qcc -tags $<
+
+%.pdf: %.h.page
 	pandoc -o $@ $<
 
 %.pdf: %.c
