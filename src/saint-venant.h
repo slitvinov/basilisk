@@ -63,13 +63,13 @@ First we need some utilities. Time integration will be done with a generic
 #include "utils.h"
 #include "predictor-corrector.h"
 
-/** 
+/**
 The generic time-integration scheme in predictor-corrector.h needs
 to know which fields are updated. */
 
 scalar * evolving = {h, u};
 
-/** 
+/**
 When using an adaptive discretisation (i.e. a quadtree)., we need
 to make sure that $\eta$ is maintained as $z_b + h$ whenever cells are
 refined or coarsened. */

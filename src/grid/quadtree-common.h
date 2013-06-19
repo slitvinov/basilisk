@@ -40,6 +40,13 @@
       continue;							\
     }								\
   end_foreach_boundary_cell()
+  
+@define foreach_boundary_ghost_halo(d) {				   \
+  int _in = -_ig[d], _jn = -_jg[d];					   \
+  foreach_halo() if (_ALLOCATED(_in,_jn) && is_leaf(_neighbor(_in,_jn))) { \
+    ig = _in; jg = _jn; VARIABLES;
+@define end_foreach_boundary_ghost_halo()	\
+  } end_foreach_halo(); }
 
 @define is_face_x() !is_refined(neighbor(-1,0))
 @define is_face_y() !is_refined(neighbor(0,-1))
@@ -322,16 +329,6 @@ void quadtree_boundary_restriction (scalar * list)
 
 // Cartesian methods
 
-@undef boundary_ghost
-@define boundary_ghost(d, x) {						\
-    foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
-    int _in = -_ig[d], _jn = -_jg[d];					\
-    foreach_halo() if (_ALLOCATED(_in,_jn) &&				\
-                       is_leaf(_neighbor(_in,_jn))) {			\
-      ig = _in; jg = _jn; VARIABLES; x; }				\
-    end_foreach_halo();							\
-  }
-
 #undef boundary_flux
 #define boundary_flux halo_restriction_flux
 
@@ -393,7 +390,7 @@ Point locate (double xp, double yp)
     if (is_leaf (cell))
       return point;
   }
-  Point point = { level: -1 };
+  Point point = { .level = -1 };
   return point;
 }
 

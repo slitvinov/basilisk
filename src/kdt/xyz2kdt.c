@@ -26,8 +26,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "config.h"
-#ifdef HAVE_GETOPT_H
+#if HAVE_GETOPT_H
 #  include <getopt.h>
 #endif /* HAVE_GETOPT_H */
 
@@ -64,7 +63,7 @@ int main (int argc, char * argv[])
 
   /* parse options using getopt */
   while (c != EOF) {
-#ifdef HAVE_GETOPT_LONG
+#if HAVE_GETOPT_LONG
     static struct option long_options[] = {
       {"pagesize", required_argument, NULL, 'p'},
       {"verbose", no_argument, NULL, 'v'},

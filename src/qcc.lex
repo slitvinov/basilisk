@@ -1,6 +1,7 @@
 %option noyywrap
 %{
   #include <unistd.h>
+  #include <string.h>
   #include <ctype.h>
   #include <sys/stat.h>
   #include <sys/types.h>
@@ -214,17 +215,30 @@
       }
       fputs (" end_foreach()\n", yyout);
       if (foreach_face_xy != face_x) {
-	fputs ("boundary_ghost (top, ({", yyout);
+	fputs ("foreach_boundary_ghost (top) {\n", yyout);
 	if (foreach_face_xy == face_xy)
 	  writefile (fp, 'y', 'x', foreach_face_line, NULL);
 	else
 	  writefile (fp, 'x', 'y', foreach_face_line, NULL);
-	fputs ("}));\n", yyout);
+	fputs ("} end_foreach_boundary_ghost();\n", yyout);
+	fputs ("#ifdef foreach_boundary_ghost_halo\n"
+	       "foreach_boundary_ghost_halo (top) {\n", yyout);
+	if (foreach_face_xy == face_xy)
+	  writefile (fp, 'y', 'x', foreach_face_line, NULL);
+	else
+	  writefile (fp, 'x', 'y', foreach_face_line, NULL);
+	fputs ("} end_foreach_boundary_ghost_halo();\n"
+	       "#endif\n", yyout);
       }
       if (foreach_face_xy != face_y) {
-	fputs ("boundary_ghost (right, ({", yyout);
+	fputs ("foreach_boundary_ghost (right) {\n", yyout);
 	writefile (fp, 'x', 'y', foreach_face_line, NULL);
-	fputs ("}));\n", yyout);
+	fputs ("} end_foreach_boundary_ghost();\n", yyout);
+	fputs ("#ifdef foreach_boundary_ghost_halo\n"
+	       "foreach_boundary_ghost_halo (right) {\n", yyout);
+	writefile (fp, 'x', 'y', foreach_face_line, NULL);
+	fputs ("} end_foreach_boundary_ghost_halo();\n"
+	       "#endif\n", yyout);
       }
       fprintf (yyout, "#line %d\n", line);
       fclose (fp);
@@ -312,35 +326,57 @@
 	vtype--;
 	dot = strchr (dot+1, '.');
       }
-      char member[80];
+      char member[80] = "";
       if (scope > 0 || var->i[0] < 0) { // dynamic allocation
-	switch (vtype - listtype) {
-	case 0: sprintf (member, "%s,", s); break;
-	case 1: sprintf (member, "%s.x,%s.y,", s, s); break;
-	case 2: sprintf (member, "%s.x.x,%s.x.y,%s.y.x,%s.y.y,",
-			 s, s, s, s); break;
-	default: assert (0);
+	switch (listtype) {
+	case scalar: {
+	  switch (vtype) {
+	  case 0: sprintf (member, "%s,", s); break;
+	  case 1: sprintf (member, "%s.x,%s.y,", s, s); break;
+	  case 2: sprintf (member, "%s.x.x,%s.x.y,%s.y.x,%s.y.y,",
+			   s, s, s, s); break;
+	  default: assert (0);
+	  }
+	  break;
+	}
+	case vector: {
+	  switch (vtype) {
+	  case 1: sprintf (member, "{%s.x,%s.y},", s, s); break;
+	  case 2: sprintf (member, "{%s.x.x,%s.x.y},{%s.y.x,%s.y.y},",
+			   s, s, s, s); break;
+	  default: assert (0);
+	  }
+	  break;	  
+	}
+	case tensor: {
+	  switch (vtype) {
+	  case 2: sprintf (member, "{{%s.x.x,%s.x.y},{%s.y.x,%s.y.y}},",
+			   s, s, s, s); break;
+	  default: assert (0);
+	  }
+	  break;	  
+	}
+	default: assert(0);
 	}
       }
-      else if (listtype == scalar) { // static scalar allocation
-	switch (vtype - listtype) {
-	case 0: sprintf (member, "%d,", var->i[0]); break;
-	case 1: sprintf (member, "%d,%d,", var->i[0], var->i[1]); break;
-	case 2: sprintf (member, "%d,%d,%d,%d,",
-			 var->i[0], var->i[1], var->i[2], var->i[3]); break;
-	default: assert (0);
+      else { // static allocation
+	int n = vtype - listtype;
+	char coord[20];
+	for (int i = 0; i < (1 << n); i++) {
+	  switch (listtype) {
+	  case scalar:
+	    sprintf (coord, "%d,", var->i[i]); break;
+	  case vector:
+	    sprintf (coord, "{%d,%d},", var->i[2*i], var->i[2*i+1]); break;
+	  case tensor:
+	    sprintf (coord, "{{%d,%d},{%d,%d}},",
+		     var->i[4*i], var->i[4*i+1], var->i[4*i+2], var->i[4*i+3]);
+	    break;
+	  default: assert (0);
+	  }
+	  strcat (member, coord);
 	}
       }
-      else if (listtype == vector) { // static vector allocation
-	switch (vtype - listtype) {
-	case 0: sprintf (member, "{%d,%d},", var->i[0], var->i[1]); break;
-	case 1: sprintf (member, "{%d,%d},{%d,%d},",
-			 var->i[0], var->i[1], var->i[2], var->i[3]); break;
-	default: assert (0);
-	}
-      }
-      else
-	assert (0); // static tensor allocation not done yet
       list = realloc (list, (strlen(list) + strlen(member) + 1)*sizeof(char));
       strcat (list, member);
       s = strtok (NULL, " \t\v\n\f,)");

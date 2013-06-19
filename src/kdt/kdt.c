@@ -349,7 +349,7 @@ typedef struct {
 typedef struct {
   KdtRect bound;
   long len;
-  PADDING_32_BITS;
+  PADDING_32_BITS
   long np;
   int version;
 } Header;

@@ -31,10 +31,6 @@ void (* debug)    (Point);
   } end_foreach_boundary()
 @endif
 
-@define boundary_ghost(d, x) {						\
-    foreach_boundary_ghost (d) { x; } end_foreach_boundary_ghost();	\
-  }
-
 @define end_foreach_face()
 
 #define boundary_flux(...)

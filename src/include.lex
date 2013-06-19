@@ -327,7 +327,7 @@ static int compdir (char * file, char ** out, int nout, const char * dir)
       }
       free (out);
 
-      fputs ("# 1 \"", fout);
+      fputs ("#line 1 \"", fout);
       singleslash (path, fout);
       fputs ("\"\n", fout);
     }

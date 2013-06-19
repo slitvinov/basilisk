@@ -1,3 +1,4 @@
+# Automatically generated using 'make Makefile.tests'
 # DO NOT EDIT, edit 'Makefile' instead
 ALLTESTS = \
 	advection.c \
@@ -19,6 +20,7 @@ ALLTESTS = \
 	interpu.c \
 	laplacian.c \
 	lid.c \
+	lists.c \
 	nonlinear.c \
 	parabola.c \
 	poisson.c \

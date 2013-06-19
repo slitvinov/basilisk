@@ -103,7 +103,7 @@ void timer_print (timer t, int i, long tnc)
   }
   printf ("# " GRIDNAME 
 	  ", %d steps, %g CPU, %.4g real, %.3g points.step/s, %d var\n",
-	  i, cpu, real, tnc/real, datasize/sizeof(double));
+	  i, cpu, real, tnc/real, (int) (datasize/sizeof(double)));
 }
 
 typedef struct {

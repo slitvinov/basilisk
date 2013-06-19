@@ -144,7 +144,7 @@ struct _Event {
   int i, a;
 };
 
-double tnext = INFINITY; // time of next event
+double tnext = HUGE; // time of next event
 void init_events (void);
 
 // boundary conditions for each direction/variable
