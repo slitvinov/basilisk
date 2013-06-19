@@ -9,6 +9,8 @@ check: $(subst .c,.tst,$(filter-out $(TESTS),$(ALLTESTS))) Makefile.deps
 
 plots: $(subst .plot,.png,$(PLOTS))
 
+exe: $(subst .c,.exe,$(ALLTESTS)) $(subst .ctst,.cexe,$(SPECIAL_TESTS))
+
 clean:
 	rm -f *.*tst *.d *.*log *.*out *.png *.*exe *.prof Makefile.deps
 
