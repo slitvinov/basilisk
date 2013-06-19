@@ -33,6 +33,7 @@
   #define EVMAX 100
   int inevent, eventscope, eventpara;
   char eventarray[EVMAX], * eventfile[EVMAX], * eventid[EVMAX];
+  char * eventarray_elems[EVMAX];
   int nexpr[EVMAX], eventline[EVMAX];
 
   int foreachdim, foreachdimpara, foreachdimline;
@@ -984,13 +985,11 @@ event{WS}+{ID}+{WS}*[(] {
   if (inevent == 1) {
     eventarray[nevents] = yytext[0];
     yytext[yyleng-1] = '\0';
-    fprintf (yyout, "1); "
-	     "  *ip = i; *tp = t; "
-	     "  return ret; "
-	     "} "
-	     "static %s %s_array[] = %s,-1}; ",
-	     yytext[0] == 'i' ? "int" : "double", 
-	     eventid[nevents], strchr (yytext, '{'));
+    eventarray_elems[nevents] = strdup (strchr (yytext, '{'));
+    fputs ("1); "
+	   "  *ip = i; *tp = t; "
+	   "  return ret; "
+	   "} ", yyout);
   }
   else
     REJECT;
@@ -1265,8 +1264,9 @@ void compdir (FILE * fin, FILE * fout, char * grid)
 	       "static int %s_expr%d (int * ip, double * tp);\n",
 	       id, j);
     if (eventarray[i])
-      fprintf (fout, "static %s %s_array[];\n", 
-	       eventarray[i] == 'i' ? "int" : "double", id);
+      fprintf (fout, "static %s %s_array[] = %s,-1};\n", 
+	       eventarray[i] == 'i' ? "int" : "double", id,
+	       eventarray_elems[i]);
   }
   fputs ("Event Events[] = {\n", fout);
   for (int i = 0; i < nevents; i++) {
