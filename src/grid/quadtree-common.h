@@ -11,11 +11,12 @@
 @endif
 
 @ifndef foreach_level
-@ define foreach_level(l)						\
-  foreach_cell() {							\
-    if (!is_active (cell))						\
-      continue;								\
+@ def foreach_level(l)
+  foreach_cell() {
+    if (!is_active (cell))
+      continue;
     else if (level == l) {
+@
 @ define end_foreach_level()    continue; } } end_foreach_cell()
 @endif
 
@@ -32,20 +33,23 @@
   foreach_boundary_cell(dir,corners) if (is_leaf (cell)) {
 @define end_foreach_boundary()  continue; } end_foreach_boundary_cell()
 
-@define foreach_boundary_level(dir,l,corners)	\
-  foreach_boundary_cell(dir,corners)		\
+@def foreach_boundary_level(dir,l,corners)
+  foreach_boundary_cell(dir,corners)
     if (level == l || is_leaf(cell)) {
-@define end_foreach_boundary_level()				\
-      corners(); /* we need this otherwise we'd skip corners */	\
-      continue;							\
-    }								\
+@
+@def end_foreach_boundary_level()
+      corners(); /* we need this otherwise we'd skip corners */
+      continue;
+    }
   end_foreach_boundary_cell()
+@
   
-@define foreach_boundary_ghost_halo(d) {				   \
-  int _in = -_ig[d], _jn = -_jg[d];					   \
-  foreach_halo() if (_ALLOCATED(_in,_jn) && is_leaf(_neighbor(_in,_jn))) { \
+@def foreach_boundary_ghost_halo(d) {
+  int _in = -_ig[d], _jn = -_jg[d];
+  foreach_halo() if (_ALLOCATED(_in,_jn) && is_leaf(_neighbor(_in,_jn))) {
     ig = _in; jg = _jn; VARIABLES;
-@define end_foreach_boundary_ghost_halo()	\
+@
+@define end_foreach_boundary_ghost_halo() \
   } end_foreach_halo(); }
 
 @define is_face_x() !is_refined(neighbor(-1,0))

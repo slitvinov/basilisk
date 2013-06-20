@@ -29,58 +29,63 @@ static size_t _size (size_t l)
 
 /***** Multigrid variables and macros *****/
 @define depth()       (((Point *)grid)->depth)
-@define _fine(a,k,l)   \
-  ((double *)								\
-   &point.d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) + \
+@def _fine(a,k,l)
+  ((double *)
+   &point.d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) +
 			    (2*point.j-GHOSTS+l))*datasize])[a]
-@define _coarse(a,k,l) \
-  ((double *)								\
-   &point.d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) + \
+@
+@def _coarse(a,k,l)
+  ((double *)
+   &point.d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) +
 			    (point.j+GHOSTS)/2+l)*datasize])[a]
-@define POINT_VARIABLES						     \
-  VARIABLES							     \
-  int level = point.level; NOT_UNUSED(level);			     \
-  struct { int x, y; } child = {				     \
-    2*((point.i+GHOSTS)%2)-1, 2*((point.j+GHOSTS)%2)-1		     \
+@
+@def POINT_VARIABLES
+  VARIABLES
+  int level = point.level; NOT_UNUSED(level);
+  struct { int x, y; } child = {
+    2*((point.i+GHOSTS)%2)-1, 2*((point.j+GHOSTS)%2)-1
   }; NOT_UNUSED(child);
-
-@define foreach_level(l) 						\
-  OMP_PARALLEL()							\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  Point point = *((Point *)grid);					\
-  point.level = l; point.n = 1 << point.level;				\
-  OMP(omp for schedule(static))						\
-  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
-    point.i = _k;							\
-    for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
+@
+@def foreach_level(l)
+  OMP_PARALLEL()
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  Point point = *((Point *)grid);
+  point.level = l; point.n = 1 << point.level;
+  OMP(omp for schedule(static))
+  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {
+    point.i = _k;
+    for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {
       POINT_VARIABLES
+@
 @define end_foreach_level() }} OMP_END_PARALLEL()
 
-@define foreach(clause) 						\
-  OMP_PARALLEL()							\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  Point point = *((Point *)grid);					\
-  point.level = point.depth; point.n = 1 << point.level;		\
-  OMP(omp for schedule(static) clause)					\
-  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {			\
-    point.i = _k;							\
-    for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
+@def foreach(clause)
+  OMP_PARALLEL()
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  Point point = *((Point *)grid);
+  point.level = point.depth; point.n = 1 << point.level;
+  OMP(omp for schedule(static) clause)
+  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {
+    point.i = _k;
+    for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {
       POINT_VARIABLES
+@
 @define end_foreach() }} OMP_END_PARALLEL()
 
-@define foreach_boundary_level(d,l,corners)				\
-  OMP_PARALLEL()							\
-  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
-  Point point = *((Point *)grid);					\
-  point.level = l; point.n = 1 << point.level;				\
-  int _start = GHOSTS, _end = point.n + GHOSTS;				\
-  /* traverse corners only for top and bottom */			\
-  if (corners && d > left) { _start -= GHOSTS; _end += GHOSTS; }	\
-  OMP(omp for schedule(static))						\
-  for (int _k = _start; _k < _end; _k++) {				\
-    point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS; \
-    point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS; \
+@def foreach_boundary_level(d,l,corners)
+  OMP_PARALLEL()
+  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+  Point point = *((Point *)grid);
+  point.level = l; point.n = 1 << point.level;
+  int _start = GHOSTS, _end = point.n + GHOSTS;
+  /* traverse corners only for top and bottom */
+  if (corners && d > left) { _start -= GHOSTS; _end += GHOSTS; }
+  OMP(omp for schedule(static))
+  for (int _k = _start; _k < _end; _k++) {
+    point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
+    point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
     POINT_VARIABLES
+@
 @define end_foreach_boundary_level() } OMP_END_PARALLEL()
 
 @define foreach_boundary(d,corners) \
@@ -88,32 +93,35 @@ static size_t _size (size_t l)
 @define end_foreach_boundary() \
   end_foreach_boundary_level()
 
-@define foreach_fine_to_coarse() {					\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  Point _p = *((Point *)grid);						\
-  _p.level = _p.depth - 1; _p.n = 1 << _p.level;			\
-  for (; _p.level >= 0; _p.n /= 2, _p.level--)				\
-    OMP_PARALLEL()							\
-    Point point = _p;							\
-    OMP(omp for schedule(static))					\
-    for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {		\
-      point.i = _k;							\
-      for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {	\
+@def foreach_fine_to_coarse() {
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  Point _p = *((Point *)grid);
+  _p.level = _p.depth - 1; _p.n = 1 << _p.level;
+  for (; _p.level >= 0; _p.n /= 2, _p.level--)
+    OMP_PARALLEL()
+    Point point = _p;
+    OMP(omp for schedule(static))
+    for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {
+      point.i = _k;
+      for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {
         POINT_VARIABLES
+@
 @define end_foreach_fine_to_coarse() }} OMP_END_PARALLEL() }
 
-@define foreach_child() {				\
-  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS; \
-  point.level++;					\
-  for (int _k = 0; _k < 2; _k++)			\
-    for (int _l = 0; _l < 2; _l++) {			\
-      point.i = _i + _k; point.j = _j + _l;		\
+@def foreach_child() {
+  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
+  point.level++;
+  for (int _k = 0; _k < 2; _k++)
+    for (int _l = 0; _l < 2; _l++) {
+      point.i = _i + _k; point.j = _j + _l;
       POINT_VARIABLES;
-@define end_foreach_child()			        \
-  }							\
-  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2; \
-  point.level--;                                        \
+@
+@def end_foreach_child()
+  }
+  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2;
+  point.level--;
 }
+@
 
 void init_grid (int n)
 {

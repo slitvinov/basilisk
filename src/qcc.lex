@@ -1121,7 +1121,20 @@ reduction{WS}*[(](min|max):{ID}+[)] {
   fname = strdup (name);
 }
 
-^{WS}*@{WS}*{ID}+ {
+^{SP}*@{SP}*def{SP}+ {
+  // @def ... @
+  fputs ("#define ", yyout);
+  register int c;
+  while ((c = input()) != EOF && c != '@') {
+    if (c == '\n')
+      fputc (' ', yyout);
+    else
+      fputc (c, yyout);
+  }
+  fprintf (yyout, "\n#line %d\n", line);
+}
+
+^{SP}*@{SP}*{ID}+ {
   yytext = strchr(yytext, '@'); yytext++;
   fprintf (yyout, "#%s", yytext);
   register int oldc = 0, c;
@@ -1133,7 +1146,7 @@ reduction{WS}*[(](min|max):{ID}+[)] {
   }
 }
 
-^{WS}*@.*" Pragma(" {
+^{SP}*@.*" Pragma(" {
   yytext = strchr(yytext, '@'); yytext++;
   char * s = strstr (yytext, "Pragma("); *s++ = '\0';
   fprintf (yyout, "#%s", yytext);

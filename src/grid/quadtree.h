@@ -149,15 +149,16 @@ static size_t _size (size_t l)
      [_parentindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a]
 #endif // !DYNAMIC
 
-@define POINT_VARIABLES						     \
-  VARIABLES							     \
-  int level = point.level; NOT_UNUSED(level);			     \
-  struct { int x, y; } child = {				     \
-    2*((point.i+GHOSTS)%2)-1, 2*((point.j+GHOSTS)%2)-1		     \
-  }; NOT_UNUSED(child);						     \
-  Point parent = point;	NOT_UNUSED(parent);   			     \
-  parent.level--;						     \
+@def POINT_VARIABLES
+  VARIABLES
+  int level = point.level; NOT_UNUSED(level);
+  struct { int x, y; } child = {
+    2*((point.i+GHOSTS)%2)-1, 2*((point.j+GHOSTS)%2)-1
+  }; NOT_UNUSED(child);
+  Point parent = point;	NOT_UNUSED(parent);
+  parent.level--;
   parent.i = (point.i + GHOSTS)/2; parent.j = (point.j + GHOSTS)/2;
+@
 
 /* ===============================================================
  *                    Quadtree traversal
@@ -198,75 +199,79 @@ void recursive (Point point)
   { b = stack[_s].l; c = stack[_s].i; d = stack[_s].j;			\
     e = stack[_s].stage; _s--; }
 
-@define foreach_cell()							\
-  {									\
-    int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-    Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
-    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
-    while (_s >= 0) {							\
-      int stage;							\
-      _pop (point.level, point.i, point.j, stage);			\
-      if (!_ALLOCATED (0,0))						\
-	continue;							\
-      switch (stage) {							\
-      case 0: {								\
-        POINT_VARIABLES;						\
+@def foreach_cell()
+  {
+    int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
+    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
+    while (_s >= 0) {
+      int stage;
+      _pop (point.level, point.i, point.j, stage);
+      if (!_ALLOCATED (0,0))
+	continue;
+      switch (stage) {
+      case 0: {
+        POINT_VARIABLES;
 	/* do something */
-@define end_foreach_cell()						\
-        if (point.level < point.depth) {				\
-	  _push (point.level, point.i, point.j, 1);			\
-          _push (point.level + 1, _LEFT, _TOP, 0);			\
-        }								\
-        break;								\
-      }									\
-      case 1: _push (point.level, point.i, point.j, 2);			\
-              _push (point.level + 1, _RIGHT, _TOP,    0); break;	\
-      case 2: _push (point.level, point.i, point.j, 3);		        \
-              _push (point.level + 1, _LEFT,  _BOTTOM, 0); break;	\
-      case 3: _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;	\
-      }								        \
-    }                                                                   \
+@
+@def end_foreach_cell()
+        if (point.level < point.depth) {
+	  _push (point.level, point.i, point.j, 1);
+          _push (point.level + 1, _LEFT, _TOP, 0);
+        }
+        break;
+      }
+      case 1: _push (point.level, point.i, point.j, 2);
+              _push (point.level + 1, _RIGHT, _TOP,    0); break;
+      case 2: _push (point.level, point.i, point.j, 3);
+              _push (point.level + 1, _LEFT,  _BOTTOM, 0); break;
+      case 3: _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;
+      }
+    }
   }
+@
 
-@define foreach_cell_post(condition)					\
-  {									\
-    Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
-    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
-    while (_s >= 0) {							\
-      int stage;							\
-      _pop (point.level, point.i, point.j, stage);			\
-      if (!_ALLOCATED (0,0))						\
-	continue;							\
-      switch (stage) {							\
-      case 0: {								\
-        POINT_VARIABLES;						\
-	if (condition) {						\
-	  if (point.level == point.depth)	{			\
-	    _push (point.level, point.i, point.j, 4);			\
-	  }								\
-	  else {							\
-	    _push (point.level, point.i, point.j, 1);			\
-	    _push (point.level + 1, _LEFT, _TOP, 0);			\
-	  }								\
-	}								\
-	break;								\
-      }									\
-      case 1: _push (point.level, point.i, point.j, 2);                 \
-              _push (point.level + 1, _RIGHT, _TOP,    0); break;	\
-      case 2: _push (point.level, point.i, point.j, 3);                 \
-	      _push (point.level + 1, _LEFT,  _BOTTOM, 0); break;	\
-      case 3: _push (point.level, point.i, point.j, 4);                 \
-	      _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;	\
-      case 4: {								\
-        POINT_VARIABLES;						\
+@def foreach_cell_post(condition)
+  {
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
+    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
+    while (_s >= 0) {
+      int stage;
+      _pop (point.level, point.i, point.j, stage);
+      if (!_ALLOCATED (0,0))
+	continue;
+      switch (stage) {
+      case 0: {
+        POINT_VARIABLES;
+	if (condition) {
+	  if (point.level == point.depth)	{
+	    _push (point.level, point.i, point.j, 4);
+	  }
+	  else {
+	    _push (point.level, point.i, point.j, 1);
+	    _push (point.level + 1, _LEFT, _TOP, 0);
+	  }
+	}
+	break;
+      }
+      case 1: _push (point.level, point.i, point.j, 2);
+              _push (point.level + 1, _RIGHT, _TOP,    0); break;
+      case 2: _push (point.level, point.i, point.j, 3);
+	      _push (point.level + 1, _LEFT,  _BOTTOM, 0); break;
+      case 3: _push (point.level, point.i, point.j, 4);
+	      _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;
+      case 4: {
+        POINT_VARIABLES;
 	/* do something */
-@define end_foreach_cell_post()						\
-      }									\
-      }								        \
-    }                                                                   \
+@
+@def end_foreach_cell_post()
+      }
+      }
+    }
   }
+@
 
 #define corners()							\
       if (_corners) {							\
@@ -283,117 +288,125 @@ void recursive (Point point)
         }								\
       }
 
-@define foreach_boundary_cell(dir,corners)				\
-  { _OMPSTART /* for face reduction */					\
-    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);	\
-    Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-    int _d = dir; NOT_UNUSED(_d);					\
-    int _corners = corners;						\
-    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;	\
-    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */			\
-    while (_s >= 0) {							\
-      int stage;							\
-      _pop (point.level, point.i, point.j, stage);			\
-      if (!_ALLOCATED (0,0))						\
-	continue;							\
-      switch (stage) {							\
-      case 0: case _CORNER: {						\
-          POINT_VARIABLES;						\
+@def foreach_boundary_cell(dir,corners)
+  { _OMPSTART /* for face reduction */
+    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    int _d = dir; NOT_UNUSED(_d);
+    int _corners = corners;
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
+    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
+    while (_s >= 0) {
+      int stage;
+      _pop (point.level, point.i, point.j, stage);
+      if (!_ALLOCATED (0,0))
+	continue;
+      switch (stage) {
+      case 0: case _CORNER: {
+          POINT_VARIABLES;
   	  /* do something */
-@define end_foreach_boundary_cell()					\
-        }								\
-	if (stage == _CORNER) continue;				        \
-        /* children */							\
-        if (point.level < point.depth) {                                \
-	  _push (point.level, point.i, point.j, 1);			\
-	  int k = _d > left ? _LEFT : _RIGHT - _d;			\
-	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;			\
-	  _push (point.level + 1, k, l, 0);				\
-	} else corners();						\
-	break;								\
-      case 1: {								\
-  	  int k = _d > left ? _RIGHT : _RIGHT - _d;			\
-	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;			\
-	  _push (point.level + 1, k, l, 0);				\
-	  corners();							\
-	  break;							\
-        }								\
-      }									\
-    }  _OMPEND                                                          \
+@
+@def end_foreach_boundary_cell()
+        }
+	if (stage == _CORNER) continue;
+        /* children */
+        if (point.level < point.depth) {
+	  _push (point.level, point.i, point.j, 1);
+	  int k = _d > left ? _LEFT : _RIGHT - _d;
+	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;
+	  _push (point.level + 1, k, l, 0);
+	} else corners();
+	break;
+      case 1: {
+  	  int k = _d > left ? _RIGHT : _RIGHT - _d;
+	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;
+	  _push (point.level + 1, k, l, 0);
+	  corners();
+	  break;
+        }
+      }
+    }  _OMPEND
   }
+@
 
-@define foreach(clause)     {						\
-  update_cache();							\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  OMP_PARALLEL()							\
-  Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-  OMP(omp for schedule(static) clause)					\
-  for (int _k = 0; _k < point.leaves.n; _k++) {			        \
-    point.i = point.leaves.p[_k].i;					\
-    point.j = point.leaves.p[_k].j;					\
-    point.level = point.leaves.p[_k].level;				\
+@def foreach(clause)     {
+  update_cache();
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  OMP_PARALLEL()
+  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  OMP(omp for schedule(static) clause)
+  for (int _k = 0; _k < point.leaves.n; _k++) {
+    point.i = point.leaves.p[_k].i;
+    point.j = point.leaves.p[_k].j;
+    point.level = point.leaves.p[_k].level;
     POINT_VARIABLES;
+@
 @define end_foreach() } OMP_END_PARALLEL() }
 
-@define foreach_fine_to_coarse(clause)     {				\
-  update_cache();							\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  OMP_PARALLEL()							\
-  Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-  for (int _l = depth() - 1; _l >= 0; _l--) {				\
-    point.level = _l;							\
-    OMP(omp for schedule(static) clause)				\
-    for (int _k = 0; _k < point.active[_l].n; _k++) {			\
-      point.i = point.active[_l].p[_k].i;			        \
-      point.j = point.active[_l].p[_k].j;				\
-      POINT_VARIABLES;							\
+@def foreach_fine_to_coarse(clause)     {
+  update_cache();
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  OMP_PARALLEL()
+  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  for (int _l = depth() - 1; _l >= 0; _l--) {
+    point.level = _l;
+    OMP(omp for schedule(static) clause)
+    for (int _k = 0; _k < point.active[_l].n; _k++) {
+      point.i = point.active[_l].p[_k].i;
+      point.j = point.active[_l].p[_k].j;
+      POINT_VARIABLES;
       if (!is_leaf (cell)) {
+@
 @define end_foreach_fine_to_coarse() } } } OMP_END_PARALLEL() }
 
-@define foreach_level_or_leaf(l)     {					\
-  update_cache();							\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  OMP_PARALLEL()							\
-  Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-  for (int _l = l; _l >= 0; _l--) {					\
-    point.level = _l;							\
-    OMP(omp for schedule(static))					\
-    for (int _k = 0; _k < point.active[_l].n; _k++) {			\
-      point.i = point.active[_l].p[_k].i;				\
-      point.j = point.active[_l].p[_k].j;				\
-      POINT_VARIABLES;							\
+@def foreach_level_or_leaf(l)     {
+  update_cache();
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  OMP_PARALLEL()
+  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  for (int _l = l; _l >= 0; _l--) {
+    point.level = _l;
+    OMP(omp for schedule(static))
+    for (int _k = 0; _k < point.active[_l].n; _k++) {
+      point.i = point.active[_l].p[_k].i;
+      point.j = point.active[_l].p[_k].j;
+      POINT_VARIABLES;
       if (_l == l || is_leaf (cell)) {
+@
 @define end_foreach_level_or_leaf() } } } OMP_END_PARALLEL() }
 
-@define foreach_level(l)     {						\
-  update_cache();							\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  int _l = l;								\
-  OMP_PARALLEL()							\
-  Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-  point.level = _l;							\
-  OMP(omp for schedule(static))						\
-  for (int _k = 0; _k < point.active[_l].n; _k++) {			\
-    point.i = point.active[_l].p[_k].i;					\
-    point.j = point.active[_l].p[_k].j;					\
+@def foreach_level(l)     {
+  update_cache();
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  int _l = l;
+  OMP_PARALLEL()
+  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  point.level = _l;
+  OMP(omp for schedule(static))
+  for (int _k = 0; _k < point.active[_l].n; _k++) {
+    point.i = point.active[_l].p[_k].i;
+    point.j = point.active[_l].p[_k].j;
     POINT_VARIABLES;
+@
 @define end_foreach_level() } OMP_END_PARALLEL() }
 
 @define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
 @define end_foreach_leaf()        continue; } end_foreach_cell()
 
-@define foreach_child() {				\
-  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS; \
-  point.level++;					\
-  for (int _k = 0; _k < 2; _k++)			\
-    for (int _l = 0; _l < 2; _l++) {			\
-      point.i = _i + _k; point.j = _j + _l;		\
+@def foreach_child() {
+  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
+  point.level++;
+  for (int _k = 0; _k < 2; _k++)
+    for (int _l = 0; _l < 2; _l++) {
+      point.i = _i + _k; point.j = _j + _l;
       POINT_VARIABLES;
-@define end_foreach_child()			        \
-  }							\
-  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2; \
-  point.level--;                                        \
+@
+@def end_foreach_child()
+  }
+  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2;
+  point.level--;
 }
+@
 
 #if TRASH
 # undef trash
@@ -556,37 +569,39 @@ static void update_cache (void)
 }
 
 /* breadth-first traversal of halos from coarse to fine */
-@define foreach_halo_coarse_to_fine(depth1)    {			\
-  update_cache();							\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  int _depth = depth1 < 0 ? depth() : depth1;				\
-  OMP_PARALLEL()							\
-  Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-  for (int _l = 0; _l <= _depth; _l++)                                  \
-    OMP(omp for schedule(static))					\
-    for (int _k = 0; _k < point.halo[_l].n; _k++) {			\
-      point.i = point.halo[_l].p[_k].i;					\
-      point.j = point.halo[_l].p[_k].j;					\
-      point.level = _l;							\
-      POINT_VARIABLES;							\
+@def foreach_halo_coarse_to_fine(depth1)    {
+  update_cache();
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  int _depth = depth1 < 0 ? depth() : depth1;
+  OMP_PARALLEL()
+  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  for (int _l = 0; _l <= _depth; _l++)
+    OMP(omp for schedule(static))
+    for (int _k = 0; _k < point.halo[_l].n; _k++) {
+      point.i = point.halo[_l].p[_k].i;
+      point.j = point.halo[_l].p[_k].j;
+      point.level = _l;
+      POINT_VARIABLES;
       if (!is_active(cell)) {
+@
 @define end_foreach_halo_coarse_to_fine()	\
   } } OMP_END_PARALLEL() }
 
 /* breadth-first traversal of halos from fine to coarse */
-@define foreach_halo_fine_to_coarse()    {				\
-  update_cache();							\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  OMP_PARALLEL()							\
-  Quadtree point = *((Quadtree *)grid); point.back = grid;		\
-  for (int _l = depth() - 1; _l >= 0; _l--)				\
-    OMP(omp for schedule(static))					\
-    for (int _k = 0; _k < point.halo[_l].n; _k++) {			\
-      point.i = point.halo[_l].p[_k].i;					\
-      point.j = point.halo[_l].p[_k].j;					\
-      point.level = _l;							\
-      POINT_VARIABLES;							\
+@def foreach_halo_fine_to_coarse()    {
+  update_cache();
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  OMP_PARALLEL()
+  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  for (int _l = depth() - 1; _l >= 0; _l--)
+    OMP(omp for schedule(static))
+    for (int _k = 0; _k < point.halo[_l].n; _k++) {
+      point.i = point.halo[_l].p[_k].i;
+      point.j = point.halo[_l].p[_k].j;
+      point.level = _l;
+      POINT_VARIABLES;
       if (is_active(cell)) {
+@
 @define end_foreach_halo_fine_to_coarse()	\
   } } OMP_END_PARALLEL() }
 

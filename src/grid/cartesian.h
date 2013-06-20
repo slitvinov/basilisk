@@ -18,29 +18,31 @@ struct _Point {
 
 @define POINT_VARIABLES VARIABLES
 
-@define foreach(clause)							\
-  OMP_PARALLEL()							\
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);			\
-  Point point = *((Point *)grid);					\
-  OMP(omp for schedule(static) clause)					\
-  for (int _k = 1; _k <= point.n; _k++) {				\
-    point.i = _k;							\
-    for (point.j = 1; point.j <= point.n; point.j++) {			\
+@def foreach(clause)
+  OMP_PARALLEL()
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  Point point = *((Point *)grid);
+  OMP(omp for schedule(static) clause)
+  for (int _k = 1; _k <= point.n; _k++) {
+    point.i = _k;
+    for (point.j = 1; point.j <= point.n; point.j++) {
       POINT_VARIABLES
+@
 @define end_foreach() }} OMP_END_PARALLEL()
 
-@define foreach_boundary(d,corners)					\
-  OMP_PARALLEL()							\
-  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);		\
-  Point point = *((Point *)grid);					\
-  int _start = 1, _end = point.n;					\
-  /* traverse corners only for top and bottom */			\
-  if (corners && d > left) { _start--; _end++; }			\
-  OMP(omp for schedule(static))						\
-  for (int _k = _start; _k <= _end; _k++) {				\
-    point.i = d > left ? _k : d == right ? point.n : 1;			\
-    point.j = d < top  ? _k : d == top   ? point.n : 1;			\
+@def foreach_boundary(d,corners)
+  OMP_PARALLEL()
+  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+  Point point = *((Point *)grid);
+  int _start = 1, _end = point.n;
+  /* traverse corners only for top and bottom */
+  if (corners && d > left) { _start--; _end++; }
+  OMP(omp for schedule(static))
+  for (int _k = _start; _k <= _end; _k++) {
+    point.i = d > left ? _k : d == right ? point.n : 1;
+    point.j = d < top  ? _k : d == top   ? point.n : 1;
     POINT_VARIABLES
+@
 @define end_foreach_boundary() } OMP_END_PARALLEL()
 
 void init_grid (int n)

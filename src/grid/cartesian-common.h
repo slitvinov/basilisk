@@ -3,15 +3,16 @@
 void (* debug)    (Point);
 
 @undef VARIABLES
-@define VARIABLES							\
-  double delta = L0*DELTA; /* cell size */				\
-  /* cell/face center coordinates */					\
-  double x  = (ig/2. + I + 0.5)*delta + X0;				\
-  double y  = (jg/2. + J + 0.5)*delta + Y0;				\
-  /* we need this to avoid compiler warnings */	                        \
-  NOT_UNUSED(delta); NOT_UNUSED(x); NOT_UNUSED(y);			\
-  /* and this when catching FPEs */					\
+@def VARIABLES
+  double delta = L0*DELTA; /* cell size */
+  /* cell/face center coordinates */
+  double x  = (ig/2. + I + 0.5)*delta + X0;
+  double y  = (jg/2. + J + 0.5)*delta + Y0;
+  /* we need this to avoid compiler warnings */
+  NOT_UNUSED(delta); NOT_UNUSED(x); NOT_UNUSED(y);
+  /* and this when catching FPEs */
   _CATCH
+@
 
 #include "fpe.h"
 
@@ -21,14 +22,16 @@ void (* debug)    (Point);
 @endif
 
 @ifndef foreach_boundary_ghost
-@ define foreach_boundary_ghost(dir)					\
-  foreach_boundary(dir,false) {						\
-    point.i += ig; point.j += jg;					\
-    ig = -ig; jg = -jg;							\
+@ def foreach_boundary_ghost(dir)
+  foreach_boundary(dir,false) {
+    point.i += ig; point.j += jg;
+    ig = -ig; jg = -jg;
     POINT_VARIABLES;
-@ define end_foreach_boundary_ghost()					\
-    ig = -ig; jg = -jg;							\
+@
+@ def end_foreach_boundary_ghost()
+    ig = -ig; jg = -jg;
   } end_foreach_boundary()
+@
 @endif
 
 @define end_foreach_face()
