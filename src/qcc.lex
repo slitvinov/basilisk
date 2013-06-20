@@ -692,7 +692,14 @@ end_foreach{ID}*{SP}*"()" {
   }
   var = &var[7];
   nonspace (var);
-  if (para == 0) { /* declaration */
+  if (*var == '[') {
+    // scalar [..
+    for (; *var != '\0'; var++)
+      if (*var == '[') brack++;
+      else if (*var == ']') brack--;
+    ECHO;
+  }
+  else if (para == 0) { /* declaration */
     declaration (var);
     invardecl = scope + 1;
   }
