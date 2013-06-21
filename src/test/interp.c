@@ -1,7 +1,5 @@
 /* interpolation on halos  */
 
-#include <assert.h>
-#include <time.h>
 #include "grid/quadtree.h"
 #include "utils.h"
 

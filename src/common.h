@@ -1,17 +1,17 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <string.h>
-#include <float.h>
-#include <limits.h>
-#include <assert.h>
-#include <math.h>
+@include <stdlib.h>
+@include <stdio.h>
+@include <stddef.h>
+@include <stdbool.h>
+@include <string.h>
+@include <float.h>
+@include <limits.h>
+@include <assert.h>
+@include <math.h>
 
-#define pi 3.14159265358979
-#undef HUGE
-#define HUGE 1e30
-#define nodata DBL_MAX
+@define pi 3.14159265358979
+@undef HUGE
+@define HUGE 1e30
+@define nodata DBL_MAX
 
 @define max(a,b) ((a) > (b) ? (a) : (b))
 @define min(a,b) ((a) < (b) ? (a) : (b))

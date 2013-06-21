@@ -21,17 +21,19 @@
 @endif
 
 @ifndef foreach_level_or_leaf
-@ define foreach_level_or_leaf(l)   foreach_cell() { \
-                                      if (level == l || is_leaf(cell)) {
+@ def foreach_level_or_leaf(l)
+  foreach_cell() {
+    if (level == l || is_leaf(cell)) {
+@
 @ define end_foreach_level_or_leaf()  continue; } } end_foreach_cell()
 @endif
 
 @define foreach_halo()     foreach_halo_coarse_to_fine(-1)
 @define end_foreach_halo() end_foreach_halo_coarse_to_fine()
 
-@define foreach_boundary(dir,corners)				\
-  foreach_boundary_cell(dir,corners) if (is_leaf (cell)) {
-@define end_foreach_boundary()  continue; } end_foreach_boundary_cell()
+@def foreach_boundary(dir,corners)
+  foreach_boundary_cell(dir,corners) if (is_leaf (cell)) { @
+@def end_foreach_boundary()  continue; } end_foreach_boundary_cell() @
 
 @def foreach_boundary_level(dir,l,corners)
   foreach_boundary_cell(dir,corners)
@@ -49,8 +51,7 @@
   foreach_halo() if (_ALLOCATED(_in,_jn) && is_leaf(_neighbor(_in,_jn))) {
     ig = _in; jg = _jn; VARIABLES;
 @
-@define end_foreach_boundary_ghost_halo() \
-  } end_foreach_halo(); }
+@define end_foreach_boundary_ghost_halo() } end_foreach_halo(); }
 
 @define is_face_x() !is_refined(neighbor(-1,0))
 @define is_face_y() !is_refined(neighbor(0,-1))

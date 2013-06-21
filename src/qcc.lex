@@ -1423,8 +1423,8 @@ int main (int argc, char ** argv)
       }
       FILE * fout = dopen (cpp, "w");
       if (fpe)
-	fputs ("#include <string.h>\n"
-	       "#include <fenv.h>\n", 
+	fputs ("@include <string.h>\n"
+	       "@include <fenv.h>\n", 
 	       fout);
       if (catch)
 	fputs ("#define _CATCH last_point = point;\n", fout);
@@ -1456,9 +1456,21 @@ int main (int argc, char ** argv)
       /* grid */
       if (default_grid)
 	fprintf (fout, "#include \"grid/%s.h\"\n", grid);
-      int c;
-      while ((c = fgetc (fin)) != EOF)
-	fputc (c, fout);
+      char s[81];
+      while (fgets (s, 81, fin)) {
+	// replace '#include <' with '@include <'
+	char * s1 = s; while (strchr (" \t", *s1)) s1++;
+	if (*s1 == '#') {
+	  char *s2 = s1 + 1; while (strchr (" \t", *s2)) s2++;
+	  if (!strncmp (s2, "include", 7)) {
+	    while (!strchr (" \t", *s2)) s2++;
+	    while (strchr (" \t", *s2)) s2++;
+	    if (*s2 == '<')
+	      *s1 = '@';
+	  }
+	}
+	fputs (s, fout);
+      }
       fclose (fout);
       fclose (fin);
       fout = dopen (file, "w");

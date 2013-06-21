@@ -117,10 +117,10 @@ static size_t _size (size_t l)
 /***** Multigrid macros *****/
 @define depth()      (((Quadtree *)grid)->depth)
 @define _index(k,l)  ((point.i + k)*(_n + 2*GHOSTS) + point.j + l)
-@define _parentindex(k,l) (((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) + \
-			   (point.j+GHOSTS)/2+l)
-@define _childindex(k,l) ((2*point.i-GHOSTS+k)*2*(_n + GHOSTS) + \
-			  (2*point.j-GHOSTS+l))
+@def _parentindex(k,l) (((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) +
+			(point.j+GHOSTS)/2+l) @
+@def _childindex(k,l) ((2*point.i-GHOSTS+k)*2*(_n + GHOSTS) +
+		       (2*point.j-GHOSTS+l)) @
 @define aparent(k,l) CELL(point.m, point.level-1, _parentindex(k,l))
 @define child(k,l)   CELL(point.m, point.level+1, _childindex(k,l))
 
@@ -131,22 +131,22 @@ static size_t _size (size_t l)
 
 /***** Data macros *****/
 #if DYNAMIC
-  @define data(k,l)				                        \
-    ((double *) (point.m[point.level][_index(k,l)] + sizeof(Cell)))
-  @define _fine(a,k,l)							\
-    ((double *) (point.m[point.level+1][_childindex(k,l)] + sizeof(Cell)))[a]
-  @define _coarse(a,k,l)						\
-    ((double *) (point.m[point.level-1][_parentindex(k,l)] + sizeof(Cell)))[a]
+  @def data(k,l)
+    ((double *) (point.m[point.level][_index(k,l)] + sizeof(Cell))) @
+  @def _fine(a,k,l)
+    ((double *) (point.m[point.level+1][_childindex(k,l)] + sizeof(Cell)))[a] @
+  @def _coarse(a,k,l)
+    ((double *) (point.m[point.level-1][_parentindex(k,l)] + sizeof(Cell)))[a] @
 #else // !DYNAMIC
-  @define data(k,l)							\
-    ((double *) &point.m[point.level]					\
-     [_index(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])
-  @define _fine(a,k,l)							\
-    ((double *) &point.m[point.level+1]					\
-     [_childindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a]
-  @define _coarse(a,k,l)						\
-    ((double *) &point.m[point.level-1]					\
-     [_parentindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a]
+  @def data(k,l)
+    ((double *) &point.m[point.level]
+     [_index(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)]) @
+  @def _fine(a,k,l)
+    ((double *) &point.m[point.level+1]
+     [_childindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
+  @def _coarse(a,k,l)
+    ((double *) &point.m[point.level-1]
+     [_parentindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
 #endif // !DYNAMIC
 
 @def POINT_VARIABLES
@@ -584,8 +584,7 @@ static void update_cache (void)
       POINT_VARIABLES;
       if (!is_active(cell)) {
 @
-@define end_foreach_halo_coarse_to_fine()	\
-  } } OMP_END_PARALLEL() }
+@define end_foreach_halo_coarse_to_fine() } } OMP_END_PARALLEL() }
 
 /* breadth-first traversal of halos from fine to coarse */
 @def foreach_halo_fine_to_coarse()    {
@@ -602,8 +601,7 @@ static void update_cache (void)
       POINT_VARIABLES;
       if (is_active(cell)) {
 @
-@define end_foreach_halo_fine_to_coarse()	\
-  } } OMP_END_PARALLEL() }
+@define end_foreach_halo_fine_to_coarse() } } OMP_END_PARALLEL() }
 
 Point refine_cell (Point point, scalar * list);
 

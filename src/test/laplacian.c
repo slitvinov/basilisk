@@ -1,6 +1,3 @@
-#include <math.h>
-#include <stdio.h>
-#include <time.h>
 #include "utils.h"
 
 scalar a[], b[];

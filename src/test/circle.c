@@ -1,8 +1,5 @@
 /* This is similar to gerris/test/poisson/circle */
 
-#include <math.h>
-#include <stdlib.h>
-#include <time.h>
 #include "grid/quadtree.h"
 #include "utils.h"
 #include "mg.h"

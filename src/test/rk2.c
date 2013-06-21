@@ -1,5 +1,3 @@
-#include <math.h>
-#include <stdio.h>
 #include "grid/cartesian.h"
 #include "utils.h"
 

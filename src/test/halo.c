@@ -1,6 +1,5 @@
 /* definition of halo cells after coarsening */
 
-#include <assert.h>
 #include "grid/quadtree.h"
 #include "utils.h"
 

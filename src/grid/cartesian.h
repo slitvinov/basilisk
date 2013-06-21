@@ -1,7 +1,5 @@
 #define GRIDNAME "Cartesian"
 
-#include <stdlib.h>
-
 #define I     (point.i - 1)
 #define J     (point.j - 1)
 #define DELTA (1./point.n)
@@ -13,8 +11,8 @@ struct _Point {
 };
 #define _n point.n // for output_stencil()
 
-@define data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) + \
-					  (point.j + l))*datasize])
+@def data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) +
+				       (point.j + l))*datasize]) @
 
 @define POINT_VARIABLES VARIABLES
 

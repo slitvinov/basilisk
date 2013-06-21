@@ -1,8 +1,5 @@
 #define GRIDNAME "Multigrid"
 
-#include <stdio.h>
-#include <assert.h>
-
 #define I      (point.i - GHOSTS)
 #define J      (point.j - GHOSTS)
 #define DELTA  (1./point.n)
@@ -23,9 +20,9 @@ static size_t _size (size_t l)
 #define CELL(m,level,i)  (*((Cell *) &m[level][(i)*datasize]))
 
 /***** Cartesian macros *****/
-@define data(k,l)  \
-  ((double *)&point.d[point.level][((point.i + k)*(point.n + 2*GHOSTS) + \
-				    point.j + l)*datasize])
+@def data(k,l)
+  ((double *)&point.d[point.level][((point.i + k)*(point.n + 2*GHOSTS) +
+				    point.j + l)*datasize]) @
 
 /***** Multigrid variables and macros *****/
 @define depth()       (((Point *)grid)->depth)
@@ -88,10 +85,8 @@ static size_t _size (size_t l)
 @
 @define end_foreach_boundary_level() } OMP_END_PARALLEL()
 
-@define foreach_boundary(d,corners) \
-  foreach_boundary_level(d,point.depth,corners)
-@define end_foreach_boundary() \
-  end_foreach_boundary_level()
+@def foreach_boundary(d,corners) foreach_boundary_level(d,point.depth,corners) @
+@def end_foreach_boundary() end_foreach_boundary_level() @
 
 @def foreach_fine_to_coarse() {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);

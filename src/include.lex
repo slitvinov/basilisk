@@ -139,7 +139,14 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
   if (myout) fputc ('\n', myout);
 }
 
+^{SP}*#{SP}*include{SP}+<.*>*{SP}*\n {
+  // #include <...>
+  char * s = yytext; nonspace(s); *s = '@';
+  echo();
+}
+
 ^{SP}*#{SP}*include{SP}+\".*\"*{SP}*\n {
+  // include "..."
   echo();
   if (!keywords_only) {
     char * s = strchr(yytext, '"');
@@ -287,13 +294,25 @@ static int include (char * file, FILE * fin, FILE * fout)
   incode = somecode = 0;
   long header = fout ? ftell (fout) : 0;
   int ret = yylex();
-  if (fout && !somecode) { 
+  if (fout && !somecode) {
     // no literate code block found, assume the entire file is pure code
     fseek (fout, header, SEEK_SET);
     rewind (fin);
-    int c;
-    while ((c = fgetc (fin)) != EOF)
-      fputc (c, fout);
+    char s[81];
+    while (fgets (s, 81, fin)) {
+      // replace '#include <' with '@include <'
+      char * s1 = s; while (strchr (" \t", *s1)) s1++;
+      if (*s1 == '#') {
+	char *s2 = s1 + 1; while (strchr (" \t", *s2)) s2++;
+	if (!strncmp (s2, "include", 7)) {
+	  while (!strchr (" \t", *s2)) s2++;
+	  while (strchr (" \t", *s2)) s2++;
+	  if (*s2 == '<')
+	    *s1 = '@';
+	}
+      }
+      fputs (s, fout);
+    }
   }
   free (fname);
   return ret;
