@@ -184,3 +184,72 @@ void output_ppm (struct OutputPPM p)
   
   matrix_free (ppm);
 }
+
+struct OutputGRD {
+  scalar f;
+  FILE * fp;
+  double delta;
+  bool linear;
+  double box[2][2];
+  scalar mask;
+};
+
+void output_grd (struct OutputGRD p)
+{
+  // default values
+  if (p.box[0][0] == 0. && p.box[0][1] == 0. && 
+      p.box[1][0] == 0. && p.box[1][1] == 0.) {
+    p.box[0][0] = X0;      p.box[0][1] = Y0;
+    p.box[1][0] = X0 + L0; p.box[1][1] = Y0 + L0;
+    if (p.delta == 0) p.delta = L0/N;
+  }
+
+  double delta = p.delta;
+  int nx = (p.box[1][0] - p.box[0][0])/delta;
+  int ny = (p.box[1][1] - p.box[0][1])/delta;
+
+  // header
+  fprintf (p.fp, "ncols          %d\n", nx);
+  fprintf (p.fp, "nrows          %d\n", ny);
+  fprintf (p.fp, "xllcorner      %g\n", p.box[0][0]);
+  fprintf (p.fp, "yllcorner      %g\n", p.box[0][1]);
+  fprintf (p.fp, "cellsize       %g\n", delta);
+  fprintf (p.fp, "nodata_value   -9999\n");
+  
+  // data
+  for (int j = ny-1; j >= 0; j--) {
+    double yp = delta*j + p.box[0][1] + delta/2.;
+    for (int i = 0; i < nx; i++) {
+      double xp = delta*i + p.box[0][0] + delta/2., v;
+      if (p.mask) { // masking
+	if (p.linear) {
+	  double m = interpolate (p.mask, xp, yp);
+	  if (m < 0.)
+	    v = nodata;
+	  else
+	    v = interpolate (p.f, xp, yp);
+	}
+	else {
+	  Point point = locate (xp, yp);
+	  if (point.level < 0 || val(p.mask,0,0) < 0.)
+	    v = nodata;
+	  else
+	    v = val(p.f,0,0);
+	}
+      }
+      else if (p.linear)
+	v = interpolate (p.f, xp, yp);
+      else {
+	Point point = locate (xp, yp);
+	v = point.level >= 0 ? val(p.f,0,0) : nodata;
+      }
+      if (v == nodata)
+	fprintf (p.fp, "-9999 ");
+      else
+	fprintf (p.fp, "%f ", v);
+    }
+    fprintf (p.fp, "\n");
+  }
+
+  fflush (p.fp);
+}
