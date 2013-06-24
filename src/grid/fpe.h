@@ -16,8 +16,10 @@ static void caught_fpe (int sig)
 
 void catch_fpe (void)
 {
-  struct sigaction act = {};
+  struct sigaction act;
   act.sa_handler = caught_fpe;
+  sigemptyset (&act.sa_mask);
+  act.sa_flags = 0;
   last_point.level = -1;
   sigaction (8, &act, NULL);
 }

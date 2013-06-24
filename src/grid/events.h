@@ -116,7 +116,7 @@ void init_events (void)
 int events (int i, double t)
 {
   int inext = 0, cond = 0, cond1 = 0;
-  tnext = INFINITY;
+  tnext = HUGE;
   for (Event * ev = Events; !ev->last && !cond; ev++)
     if (COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt)
       cond = 1;
@@ -132,12 +132,12 @@ int events (int i, double t)
     if (ev->i > i)
       inext = 1;
   }
-  return (!cond || cond1) && (tnext != INFINITY || inext);
+  return (!cond || cond1) && (tnext != HUGE || inext);
 }
 
 double dtnext (double t, double dt)
 {
-  if (tnext != INFINITY) {
+  if (tnext != HUGE) {
     unsigned int n = (tnext - t)/dt;
     assert (n < INT_MAX); // check that dt is not too small
     dt = (tnext - t)/(n + 1);

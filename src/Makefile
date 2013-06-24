@@ -9,7 +9,9 @@ libkdt:
 	cd kdt && make
 
 qcc: qcc.c include.o
-	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" -DCC99="\"$(CC99)\"" \
+	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
+		-DCC99="\"$(CC99)\"" \
+		-DCPP99="\"$(CPP99)\"" \
 		qcc.c include.o -o qcc
 
 include.o: include.c
@@ -29,6 +31,9 @@ qcc.c: qcc.lex
 
 etags:
 	etags *.h grid/*.h
+
+changelog:
+	darcs changes > ChangeLog
 
 dist:
 	darcs dist

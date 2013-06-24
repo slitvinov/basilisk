@@ -1,4 +1,4 @@
-# if you don't have valgrind just set this to empty
+# if you don't have valgrind just comment this out
 VALGRIND = valgrind -q --tool=memcheck
 # the default CFLAGS are set in ../config
 CFLAGS += -g -O2 -fpe -DTRASH=1

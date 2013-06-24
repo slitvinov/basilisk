@@ -1479,13 +1479,25 @@ int main (int argc, char ** argv)
 	cleanup (1, dir);
       }
 
-      char preproc[1000];
+      char preproc[1000], * cppcommand = getenv ("CPP99");
       strcpy (preproc, "cd ");
       strcat (preproc, dir);
       strcat (preproc, " && ");
-      strcat (preproc, command);
-      strcat (preproc, " -E ");
+      if (!cppcommand && strcmp (CPP99, ""))
+	cppcommand = CPP99;
+      if (cppcommand) {
+	strcat (preproc, cppcommand);
+	strcat (preproc, " -I");
+	strcat (preproc, LIBDIR);
+	strcat (preproc, " ");
+      }
+      else {
+	strcat (preproc, command);
+	strcat (preproc, " -E ");
+      }
       strcat (preproc, cpp);
+      if (debug)
+	fprintf (stderr, "preproc: %s\n", preproc);
 
       fin = popen (preproc, "r");
       if (!fin) {
