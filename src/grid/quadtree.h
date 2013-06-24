@@ -8,7 +8,7 @@
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  char flags, neighbors; // number of neighboring leaves
+  int flags, neighbors; // number of neighboring leaves
 } Cell;
 
 enum {

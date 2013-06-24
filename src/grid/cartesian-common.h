@@ -11,7 +11,7 @@ void (* debug)    (Point);
   /* we need this to avoid compiler warnings */
   NOT_UNUSED(delta); NOT_UNUSED(x); NOT_UNUSED(y);
   /* and this when catching FPEs */
-  _CATCH
+  _CATCH;
 @
 
 #include "fpe.h"
