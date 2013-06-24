@@ -21,7 +21,7 @@ void init()
 
 event logfile (t = {0.5, 0.75, 1, 3, 50}) {
   foreach() {
-    fprintf (stderr, "%g %g %g %g\n", x, h[], u.x[], zb[]);
+    fprintf (stderr, "%g %g %.6f %g\n", x, h[], u.x[], zb[]);
     assert (h[] > 0.);
   }
   fprintf (stderr, "\n");

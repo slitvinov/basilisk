@@ -67,7 +67,7 @@ int main (int argc, char ** argv)
     maxres[i] = max;
   }
   for (int i = 0; i < NITER; i++) {
-    fprintf (stderr, "%d %g\n", i, maxres[i]);
+    fprintf (stderr, "%d %.2g\n", i, maxres[i]);
     printf ("%d %g %g\n", i, (iter[i] - start)/(double)CLOCKS_PER_SEC, 
     	    maxres[i]);
   }

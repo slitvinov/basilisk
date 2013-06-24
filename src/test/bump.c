@@ -18,7 +18,7 @@ void init()
 
 event logfile (t = 0.7) {
   foreach()
-    fprintf (stderr, "%g %g %g %g\n", x, w[], hu[], B[]);
+    fprintf (stderr, "%g %g %.6f %g\n", x, w[], hu[], B[]);
 }
 
 int main() { run(); }

@@ -35,7 +35,7 @@ void init()
 
 event logfile (t += 0.1; t <= 0.7) {
   foreach()
-    fprintf (stderr, "%g %g %g\n", x, h[], q[]);
+    fprintf (stderr, "%g %g %.6f\n", x, h[], q[]);
   fprintf (stderr, "\n");
 }
 

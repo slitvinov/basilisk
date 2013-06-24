@@ -91,7 +91,7 @@ void solve (int depth)
     maxres[i] = max;
   }
   for (int i = 0; i < NITER; i++) {
-    fprintf (stderr, "residual %d %d %g\n", depth, i, maxres[i]);
+    fprintf (stderr, "residual %d %d %.1g\n", depth, i, maxres[i]);
     printf ("speed %d %d %g %g\n", depth, i, 
 	    (iter[i] - start)/(double)CLOCKS_PER_SEC, maxres[i]);
   }
