@@ -35,7 +35,8 @@
 
 #define VERSION 20120405 /* the file format version */
 
-/* same as the system tmpfile() but uses the working directory (rather than /tmp) */
+/* same as the system tmpfile() but uses the working directory (rather
+   than /tmp) */
 FILE * kdt_tmpfile (void)
 {
   char name[] = "kdtXXXXXX";
@@ -635,6 +636,17 @@ static FILE * open_ext (const char * name, const char * ext, const char * mode)
   strcpy (&fname[len], ext);
   FILE * fp = fopen (fname, mode);
   free (fname);
+#if BUFFERED_KDT
+  if (fp && strchr (mode, 'r')) {
+    fseek (fp, 0, SEEK_END);
+    long fsize = ftell (fp);
+    fseek (fp, 0, SEEK_SET);    
+    char * buf = malloc (fsize);
+    size_t len = fread (buf, 1, fsize, fp);
+    fclose (fp);
+    fp = fmemopen (buf, len, mode);
+  }
+#endif /* BUFFERED_KDT */
   return fp;
 }
 

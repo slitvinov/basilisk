@@ -1,5 +1,6 @@
 include ../config
 
+# if you want to use a memory-buffered KDT, add -DBUFFERED_KDT=1 to CFLAGS
 CFLAGS += -O2
 
 all: xyz2kdt kdtquery
