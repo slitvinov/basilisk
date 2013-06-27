@@ -2,11 +2,22 @@
 
 You have two ways of getting the most recent source code:
 
-### using [darcs](http://darcs.net)
+### Using [darcs](http://darcs.net)
+
+This is the recommended way of installing Basilisk.
 
 This is useful if you want to modify the code (because everything is
 version-controlled) and also if you want to maintain your version
 up-to-date.
+
+On a Debian-like system (i.e. Debian, Ubuntu etc...) installing darcs
+is as easy as
+
+~~~bash
+sudo apt-get install darcs
+~~~
+
+To get the latest Basilisk source code do
 
 ~~~bash
 darcs get http://gerris.dalembert.upmc.fr/darcs/basilisk
@@ -21,9 +32,11 @@ darcs pull
 
 and recompile.
 
-### using a tarball
+### Using a tarball
 
-If you don't have darcs, you can use this instead.
+If for some reason you can't use darcs, you can use this instead. You
+will get exactly the same version as with darcs, but the code will not
+be version-controlled.
 
 ~~~bash
 wget http://gerris.dalembert.upmc.fr/darcs/basilisk/basilisk.tar.gz
@@ -44,11 +57,8 @@ ln -s config.gcc config
 make
 ~~~
 
-You should also add the two `export` commands above to your
-`$HOME/.bashrc` file.
-
 If you are using another system/compiler, find a config file which
-looks close to yours, then try...
+looks close to yours, then try
 
 ~~~bash
 cd basilisk/src
@@ -57,22 +67,33 @@ cp config.[your pick] config
 make
 ~~~
 
-...before creating your own (also consider sharing your config file).
+You can also edit this file to customise things for your system
+(please also consider sharing your new config file).
+
+To avoid having to re-type the two export commands above everytime you
+login, you should also add them to your `$HOME/.bashrc` file. You can
+either edit `$HOME/.bashrc` manually or do
+
+~~~bash
+cd basilisk/src
+echo "export BASILISK=$PWD" >> ~/.bashrc
+echo "export PATH=$PATH:$PWD" >> ~/.bashrc
+~~~
 
 ## Useful additional packages
 
 - gnuplot (> 4.2)
 - ffmpeg
 - smpeg-plaympeg
-- graphiz
+- graphviz
 - valgrind
 
 and also
 [gprof2dot](http://code.google.com/p/jrfonseca/wiki/Gprof2Dot). On a
-Debian-based system (Debian, Ubuntu etc...), you just need to do
+Debian-like system you just need to do
 
 ~~~bash
-sudo apt-get install gnuplot ffmpeg smpeg-plaympeg graphiz valgrind
+sudo apt-get install gnuplot ffmpeg smpeg-plaympeg graphviz valgrind
 ~~~
 
 
