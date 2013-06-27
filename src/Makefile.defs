@@ -1,6 +1,6 @@
 # -*-Makefile-*-
 
-include ../config
+include $(BASILISK)/config
 include Makefile.tests
 
 DIR = $(notdir $(CURDIR))
@@ -11,8 +11,10 @@ plots: $(subst .plot,.png,$(PLOTS))
 
 exe: $(subst .c,.exe,$(ALLTESTS)) $(subst .ctst,.cexe,$(SPECIAL_TESTS))
 
+tags: $(subst .page,.tags,$(ALLPAGES))
+
 clean:
-	rm -f *.*tst *.d *.*log *.*out *.png *.*exe *.prof Makefile.deps
+	rm -f *.o *.*tst *.d *.*log *.*out *.png *.*exe *.prof Makefile.deps
 
 .PRECIOUS: %.exe %.cexe %.pgexe %.prof
 
@@ -42,14 +44,14 @@ clean:
 	diff $*.log $*.ref
 	@touch $@
 
-%.exe: %.c ../qcc Makefile
-	../qcc $(CFLAGS) -o $@ $< -lm
+%.exe: %.c $(BASILISK)/qcc Makefile
+	$(BASILISK)/qcc $(CFLAGS) -o $@ $< -lm
 
-%.cexe: %.c ../qcc Makefile
-	../qcc -grid=multigrid $(CFLAGS) -o $@ $< -lm
+%.cexe: %.c $(BASILISK)/qcc Makefile
+	$(BASILISK)/qcc -grid=multigrid $(CFLAGS) -o $@ $< -lm
 
-%.pgexe: %.c ../qcc Makefile
-	../qcc $(CFLAGS) -pg -o $@ $< -lm
+%.pgexe: %.c $(BASILISK)/qcc Makefile
+	$(BASILISK)/qcc $(CFLAGS) -pg -o $@ $< -lm
 
 %.prof: %.pgexe
 	./$< 2> $*.log > $*.out
@@ -62,7 +64,8 @@ clean:
 	dot -Tpng -o $@ < $<
 
 %.png: %.plot
-	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" $< || rm -f $@
+	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" \
+		$< || rm -f $@
 
 %.pdf: %.h
 	pandoc -o $@ $<
@@ -70,20 +73,26 @@ clean:
 %.pdf: %.c
 	pandoc -o $@ $<
 
-%.tags: %.page ../qcc
-	../qcc -tags $<
+%.tags: %.page $(BASILISK)/qcc
+	$(BASILISK)/qcc -tags $<
+	expireGititCache http://localhost:5001 \
+		$(subst $(BASILISK),src,$(PWD))/$<
 
-Makefile.tests: Makefile
-	sh ../tests.sh
+Makefile.tests: Makefile $(BASILISK)/tests.sh
+	sh $(BASILISK)/tests.sh
 
-%.exe.d: %.c ../qcc
-	../qcc -MD -o $@ $<
+%.exe.d: %.c $(BASILISK)/qcc
+	$(BASILISK)/qcc -MD -o $@ $<
 
-%.cexe.d: %.c ../qcc
-	../qcc -MD -grid=multigrid -o $@ $<
+%.cexe.d: %.c $(BASILISK)/qcc
+	$(BASILISK)/qcc -MD -grid=multigrid -o $@ $<
+
+%.tags.d: %.page $(BASILISK)/qcc
+	$(BASILISK)/qcc -MD -tags $<
 
 Makefile.deps: 	$(subst .c,.exe.d,$(ALLTESTS)) \
-		$(subst .ctst,.cexe.d,$(SPECIAL_TESTS))
+		$(subst .ctst,.cexe.d,$(SPECIAL_TESTS)) \
+		$(subst .page,.tags.d,$(ALLPAGES))
 	@cat $^ > Makefile.deps
 
 include Makefile.deps

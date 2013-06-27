@@ -1,6 +1,4 @@
-# if you don't have valgrind just comment this out
-VALGRIND = valgrind -q --tool=memcheck
-# the default CFLAGS are set in ../config
+# the default CFLAGS are set in $(BASILISK)/config
 CFLAGS += -g -O2 -fpe -DTRASH=1
 
 # note that you can separate compilation and running the tests by doing
@@ -20,11 +18,11 @@ slow: nonlinear.tst advection.tst rotation.tst \
 # these tests have special depencies/compilation requirements
 poisson.tst: poisson.ctst
 laplacian.stst: laplacian.ctst
-nonlinear.exe: nonlinear.c ../qcc Makefile
-	../qcc $(CFLAGS) -o nonlinear.exe nonlinear.c -lgsl -lgslcblas -lm
-terrain.exe: terrain.c ../qcc Makefile
-	../qcc $(CFLAGS) -o terrain.exe terrain.c `pwd`/../kdt/kdt.o -lm
-ponds.exe: ponds.c ../qcc Makefile
-	../qcc $(CFLAGS) -o ponds.exe ponds.c `pwd`/../kdt/kdt.o -lm
+nonlinear.exe: nonlinear.c $(BASILISK)/qcc Makefile
+	qcc $(CFLAGS) -o nonlinear.exe nonlinear.c -lgsl -lgslcblas -lm
+terrain.exe: terrain.c $(BASILISK)/qcc Makefile
+	qcc $(CFLAGS) -o terrain.exe terrain.c $(BASILISK)/kdt/kdt.o -lm
+ponds.exe: ponds.c $(BASILISK)/qcc Makefile
+	qcc $(CFLAGS) -o ponds.exe ponds.c $(BASILISK)/kdt/kdt.o -lm
 
-include ../Makefile.defs
+include $(BASILISK)/Makefile.defs

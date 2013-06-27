@@ -1,27 +1,38 @@
-== 2004 Indian Ocean tsunami ==
+== How to run examples ==
 
-Edit tsunami.c, change "/home/popinet/terrain" if required.
+We will take the [2004 Indian ocean tsunami](tsunami.c) as an
+example. Start by following the link and read the documented source
+code. Then edit [tsunami.c]() with your favourite text editor and
+change "/home/popinet/terrain" as required.
 
 Run the simulation with:
 
-% make tsunami.tst
+~~~sh
+make tsunami.tst
+~~~
 
-The standard error is in tsunami.log i.e. do:
+The standard error is in `tsunami.log` i.e. do:
 
-% tail -f tsunami.log
+~~~sh
+tail -f tsunami.log
+~~~
 
 if you want to see what is happening.
 
 Display the results (also works while it's running) with:
 
-% plaympeg -l eta.mpg
-% plaympeg -l level.mpg
-% plaympeg -l pid.mpg
+~~~sh
+plaympeg -l eta.mpg
+plaympeg -l level.mpg
+plaympeg -l pid.mpg
+~~~
 
-(you will need ffmpeg on your system for this to work,
- use totem, vlc, another movie player etc... if you don't have plaympeg).
+(you will need ffmpeg on your system for this to work, use totem, vlc,
+another movie player etc... if you don't have plaympeg).
 
 Generate and display graphs (after completion, requires gnuplot > 4.2):
 
-% make tsunami.png
-% eog *.png
+~~~sh
+make tsunami.png
+eog *.png
+~~~

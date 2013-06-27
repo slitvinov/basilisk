@@ -393,15 +393,19 @@ int includes (int argc, char ** argv, char ** out,
     char ndep[80], * s = &output[strlen(output)-1];
     while (*s != '.' && s != output) s--;
     if (output != file || s == output)
-      /* generate dep/tags files with suffixes included for -o option */
+      /* generate dep files with suffixes included for -o option */
       strcpy (ndep, output);
     else {
       *s = '\0';
       strcpy (ndep, output);
       *s = '.';
     }
-    if (strlen(ndep) < 2 || strcmp (&ndep[strlen(ndep)-2], ".d"))
-      strcat (ndep, ".d");
+    if (strlen(ndep) < 2 || strcmp (&ndep[strlen(ndep)-2], ".d")) {
+      if (tags)
+	strcat (ndep, ".tags.d");
+      else
+	strcat (ndep, ".d");
+    }
     else
       output[strlen(ndep)-2] = '\0'; // strip trailing ".d";
     fdepend = fopen (ndep, "w");
@@ -409,9 +413,16 @@ int includes (int argc, char ** argv, char ** out,
       perror (ndep);
       cleanup (1, dir);
     }
-    fprintf (fdepend, "%s:\t\\\n", output);
+    char * page = strstr (output, ".page");
+    if (tags && page) {
+      *page = '\0';
+      fprintf (fdepend, "%s.tags:\t\\\n", output);
+      *page = '.';
+    }
+    else
+      fprintf (fdepend, "%s:\t\\\n", output);
   }
-  if (tags && file) {
+  else if (tags && file) {
     if (!output) output = file;
     char ndep[80];
     // strip trailing .page

@@ -29,7 +29,7 @@ We then define a few useful macros and constants. */
 // metres to degrees
 double mtd = 360./40075e3;
 
-/** 
+/**
 The following function will be called by the Saint-Venant solver
 to setup the initial simulation grid. When using a quadtree
 (i.e. adaptive) discretisation, we want to start with the coarsest

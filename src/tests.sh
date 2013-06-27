@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if test ! -d ../../_darcs; then
+if ! darcs show files > /dev/null 2>&1; then
     touch Makefile.tests
     echo "Makefile.tests not updated (not darcs-controlled)"
 else
@@ -8,14 +8,14 @@ else
     (
     echo "# Automatically generated using 'make Makefile.tests'"
     echo "# DO NOT EDIT, edit 'Makefile' instead"
-    echo "ALLTESTS = \\"
     DIR=`basename $PWD`
-    darcs show files | grep 'src/'$DIR'/.*\.c' | 		\
-	sed 's/.\/src\/'$DIR'\/\(.*\)/\t\1 \\/g'
+    echo "ALLTESTS = \\"
+    darcs show files | grep '/'$DIR'/[^/]*\.c$' | 		\
+	sed 's/.*\/'$DIR'\/\(.*\)/\t\1 \\/g'
     echo ""
     echo "PLOTS = \\"
-    darcs show files | grep 'src/'$DIR'/.*\.plot' | 		\
-	sed 's/.\/src\/'$DIR'\/\(.*\)/\t\1 \\/g'
+    darcs show files | grep '/'$DIR'/[^/]*\.plot$' | 		\
+	sed 's/.*\/'$DIR'\/\(.*\)/\t\1 \\/g'
     echo ""
     echo "TESTS = \\"
     sed ':x; /\\$/ { N; s/\\\n//; tx }' < Makefile | 		\
@@ -29,6 +29,10 @@ else
     echo "SPECIAL_TESTS = \\"
     grep -o '[a-zA-Z_0-9]*\.ctst' Makefile | sort | uniq |	\
 	sed 's/\(.*\)/\t\1 \\/g'
+    echo ""
+    echo "ALLPAGES = \\"
+    darcs show files | grep '/'$DIR'/[^/]*\.[ch]\.page$' |      \
+	sed 's/.*\/'$DIR'\/\(.*\)/\t\1 \\/g'
     echo ""
     ) > Makefile.tests
 fi

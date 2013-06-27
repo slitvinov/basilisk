@@ -1,13 +1,12 @@
-VALGRIND = valgrind -q --tool=memcheck
-# the default CFLAGS are set in ../config
+# the default CFLAGS are set in $(BASILISK)/config
 CFLAGS += -g -O2 -fpe -fopenmp
 
 all: check
 
-tsunami.exe: tsunami.c ../qcc Makefile
-	../qcc $(CFLAGS) tsunami.c -o tsunami.exe `pwd`/../kdt/kdt.o -lm
+tsunami.exe: tsunami.c $(BASILISK)/qcc Makefile
+	qcc $(CFLAGS) tsunami.c -o tsunami.exe $(BASILISK)/kdt/kdt.o -lm
 
-tides.exe: tides.c ../qcc Makefile
-	../qcc $(CFLAGS) tides.c -o tides.exe `pwd`/../kdt/kdt.o -lm
+tides.exe: tides.c $(BASILISK)/qcc Makefile
+	qcc $(CFLAGS) tides.c -o tides.exe $(BASILISK)/kdt/kdt.o -lm
 
-include ../Makefile.defs
+include $(BASILISK)/Makefile.defs

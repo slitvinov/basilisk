@@ -1,6 +1,3 @@
-# edit config (not this file) to tune compiler options etc..
-include config
-
 CFLAGS += -O2
 
 all: qcc qplot libkdt
@@ -29,6 +26,10 @@ include.c: include.lex
 qcc.c: qcc.lex
 	flex -o qcc.c qcc.lex
 
+alltags: tags
+	cd examples && make tags
+	cd test && make tags
+
 etags:
 	etags *.h grid/*.h
 
@@ -42,14 +43,4 @@ diff:
 	cd .. && tar czvf src/diff.tgz `darcs whatsnew -s | \
 		sed 's/. .\/.*\/$$//g' | awk '{print $$2}'`
 
-%.tags: %.page qcc
-	./qcc -tags $<
-
-%.pdf: %.h.page
-	pandoc -o $@ $<
-
-%.pdf: %.c
-	pandoc -o $@ $<
-
-clean:
-	rm -f *.o
+include $(BASILISK)/Makefile.defs
