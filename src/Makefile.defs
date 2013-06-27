@@ -92,7 +92,8 @@ Makefile.tests: Makefile $(BASILISK)/tests.sh
 
 Makefile.deps: 	$(subst .c,.exe.d,$(ALLTESTS)) \
 		$(subst .ctst,.cexe.d,$(SPECIAL_TESTS)) \
-		$(subst .page,.tags.d,$(ALLPAGES))
-	@cat $^ > Makefile.deps
+		$(subst .page,.tags.d,$(ALLPAGES)) \
+		Makefile.tests
+	@cat /dev/null $(subst Makefile.tests,,$^) > Makefile.deps
 
 include Makefile.deps
