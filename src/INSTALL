@@ -1,37 +1,98 @@
-You should only need a C99-compliant compiler.
+## Installation
+
+You have two ways of getting the most recent source code:
+
+### using [darcs](http://darcs.net)
+
+This is useful if you want to modify the code (because everything is
+version-controlled) and also if you want to maintain your version
+up-to-date.
+
+~~~bash
+darcs get http://gerris.dalembert.upmc.fr/darcs/basilisk
+~~~
+
+If later you want to update the source code, you just need to do
+
+~~~bash
+cd basilisk
+darcs pull
+~~~
+
+and recompile.
+
+### using a tarball
+
+If you don't have darcs, you can use this instead.
+
+~~~bash
+wget http://gerris.dalembert.upmc.fr/darcs/basilisk/basilisk.tar.gz
+tar xzf basilisk.tar.gz
+~~~
+
+### Compilation
+
+For compilation, the only requirement is a C99-compliant compiler.
 
 If you are using gcc on a UNIX-like system, this should work:
 
-% ln -s config.gcc config
-% make
+~~~bash
+cd basilisk/src
+export BASILISK=$PWD
+export PATH=$PATH:$PWD
+ln -s config.gcc config
+make
+~~~
+
+You should also add the two `export` commands above to your
+`$HOME/.bashrc` file.
 
 If you are using another system/compiler, find a config file which
-looks close to yours. Try:
+looks close to yours, then try...
 
-% ls config.*
-% cp config.[your pick] config
-% make
+~~~bash
+cd basilisk/src
+ls config.*
+cp config.[your pick] config
+make
+~~~
 
-before creating your own (also consider sharing your config file).
+...before creating your own (also consider sharing your config file).
 
-== Getting started ==
+## Useful additional packages
 
-% cd examples
-% more README
+- gnuplot (> 4.2)
+- ffmpeg
+- smpeg-plaympeg
+- graphiz
+- valgrind
 
-== Useful additional packages ==
+and also
+[gprof2dot](http://code.google.com/p/jrfonseca/wiki/Gprof2Dot). On a
+Debian-based system (Debian, Ubuntu etc...), you just need to do
 
-gnuplot (> 4.2)
-graphiz
-http://code.google.com/p/jrfonseca/wiki/Gprof2Dot
-ffmpeg
+~~~bash
+sudo apt-get install gnuplot ffmpeg smpeg-plaympeg graphiz valgrind
+~~~
 
-== Running the test suite ==
 
-% cd test
-% make
+## Getting started
 
-== Notes ==
+~~~bash
+cd basilisk/src/examples
+~~~
 
-Trick to turn off 'extended precision':
-http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html
+and read the [README](examples/README) file.
+
+## Running the test suite
+
+~~~bash
+cd test
+make
+~~~
+
+## Notes
+
+* [Trick to turn off 'extended
+  precision'](http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html)
+  on 32-bits Intel systems
