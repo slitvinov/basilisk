@@ -39,3 +39,5 @@ echo "updating Makefile.tests"
     showfiles '[ch]\.page'
     echo ""
 ) > Makefile.tests
+
+rm -f Makefile.deps

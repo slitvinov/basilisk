@@ -5,11 +5,12 @@ include Makefile.tests
 
 DIR = $(notdir $(CURDIR))
 
-check: $(subst .c,.tst,$(filter-out $(TESTS),$(ALLTESTS))) Makefile.deps
+check: $(subst .c,.tst,$(filter-out $(TESTS),$(filter-out $(EXCLUDE),$(ALLTESTS)))) Makefile.deps
 
 plots: $(subst .plot,.png,$(PLOTS))
 
-exe: $(subst .c,.exe,$(ALLTESTS)) $(subst .ctst,.cexe,$(SPECIAL_TESTS))
+exe: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
+     $(subst .ctst,.cexe,$(SPECIAL_TESTS))
 
 tags: $(subst .page,.tags,$(ALLPAGES))
 
@@ -90,10 +91,10 @@ Makefile.tests: Makefile $(BASILISK)/tests.sh
 %.tags.d: %.page $(BASILISK)/qcc
 	$(BASILISK)/qcc -MD -tags $<
 
-Makefile.deps: 	$(subst .c,.exe.d,$(ALLTESTS)) \
+Makefile.deps: 	$(subst .c,.exe.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(subst .ctst,.cexe.d,$(SPECIAL_TESTS)) \
-		$(subst .page,.tags.d,$(ALLPAGES)) \
-		Makefile.tests
-	@cat /dev/null $(subst Makefile.tests,,$^) > Makefile.deps
+		$(subst .page,.tags.d,$(ALLPAGES))
+	@echo "Updating Makefile.deps"
+	@cat /dev/null $^ > Makefile.deps
 
 include Makefile.deps

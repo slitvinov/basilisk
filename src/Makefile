@@ -1,5 +1,8 @@
 CFLAGS += -O2
 
+# these are not tests
+EXCLUDE = qcc.c include.c qplot.c
+
 all: qcc qplot libkdt
 
 libkdt:
