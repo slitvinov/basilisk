@@ -1,19 +1,18 @@
-== How to run examples ==
+Here is what you need to do to run the examples. We will take the [2004 Indian
+ ocean tsunami](tsunami.c) as an example. Start by following the link and read 
+the documented source code. Then edit [tsunami.c]() with your favourite text
+editor and change `/home/popinet/terrain` as required in the [initial 
+conditions](tsunami.c#initial-conditions).
 
-We will take the [2004 Indian ocean tsunami](tsunami.c) as an
-example. Start by following the link and read the documented source
-code. Then edit [tsunami.c]() with your favourite text editor and
-change "/home/popinet/terrain" as required.
+You can then run the simulation with:
 
-Run the simulation with:
-
-~~~sh
+~~~bash
 make tsunami.tst
 ~~~
 
 The standard error is in `tsunami.log` i.e. do:
 
-~~~sh
+~~~bash
 tail -f tsunami.log
 ~~~
 
@@ -21,18 +20,18 @@ if you want to see what is happening.
 
 Display the results (also works while it's running) with:
 
-~~~sh
+~~~bash
 plaympeg -l eta.mpg
 plaympeg -l level.mpg
 plaympeg -l pid.mpg
 ~~~
 
-(you will need ffmpeg on your system for this to work, use totem, vlc,
+(you will need ffmpeg on your system for this to work. Use totem, vlc,
 another movie player etc... if you don't have plaympeg).
 
 Generate and display graphs (after completion, requires gnuplot > 4.2):
 
-~~~sh
+~~~bash
 make tsunami.png
 eog *.png
 ~~~
