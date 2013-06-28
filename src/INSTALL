@@ -20,7 +20,7 @@ sudo apt-get install darcs
 To get the latest Basilisk source code do
 
 ~~~bash
-darcs get http://gerris.dalembert.upmc.fr/darcs/basilisk
+darcs get http://basilisk.fr:3306/basilisk
 ~~~
 
 If later you want to update the source code, you just need to do
@@ -39,7 +39,7 @@ will get exactly the same version as with darcs, but the code will not
 be version-controlled.
 
 ~~~bash
-wget http://gerris.dalembert.upmc.fr/darcs/basilisk/basilisk.tar.gz
+wget http://basilisk.fr:3306/basilisk/basilisk.tar.gz
 tar xzf basilisk.tar.gz
 ~~~
 
