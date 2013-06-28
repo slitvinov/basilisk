@@ -1,6 +1,6 @@
 ! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < tsunami.out
 
-set term pngcairo enhanced size 800,800 font ",11"
+set term pngcairo enhanced size 700,700 font ",11"
 
 set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1, \
     	              0.375 0.05882 1 0.9333, 0.5 0.5647 1 0.4392, \
@@ -16,8 +16,10 @@ set logscale cb
 set cbrange [0.1:10]
 splot 't-600' u 1:2:($3 > 1e-3 ? $5 : 1e1000)
 
+! mogrify -trim +repage tsunami.png
+
 reset
-set term pngcairo enhanced size 800,1024 font ",10"
+set term pngcairo enhanced size 625,800 font ",10"
 set output 'tsunami_gauges.png'
 set multiplot layout 5,1 scale 1,1.1
 set xrange [3:8]

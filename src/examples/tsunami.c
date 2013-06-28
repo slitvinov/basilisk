@@ -268,6 +268,17 @@ event snapshots (t += 60; t <= 600) {
 }
 
 /**
+After completion of the simulation, doing
+
+~~~bash
+make tsunami.png
+~~~
+
+will run gnuplot on these files (using the commands in
+[tsunami.plot]()) to produce images such as this one:
+
+![Maximum wave elevation (metres) reached over 10 hours.](tsunami.png)
+
 ### Movies
 
 This is done every minute (`t++`). The static variable `fp` is `NULL`
@@ -361,6 +372,12 @@ Gauge gauges[] = {
 event gauges1 (i++) output_gauges (gauges, {eta});
 
 /**
+As before gnuplot (via [tsunami.plot]()) processes these files to
+produce this image:
+
+![Comparison between observed and simulated timeseries (hours) of wave
+ elevations (metres) for a selection of tide gauges.](tsunami_gauges.png)
+
 ## Adaptivity
 
 We apply our `adapt()` function at every timestep. */
