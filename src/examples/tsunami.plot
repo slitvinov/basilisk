@@ -1,11 +1,19 @@
+# We first split the large standard output file into its subfiles (as
+# defined by the "file:" keyword, see tsunami.c
+
 ! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < tsunami.out
 
 set term pngcairo enhanced size 700,700 font ",8"
 
+# this sets the color palette to "jet"
 set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1, \
     	              0.375 0.05882 1 0.9333, 0.5 0.5647 1 0.4392, \
 		      0.625 1 0.9333 0, 0.75 1 0.4392 0, \
 		      0.875 0.9333 0 0, 1 0.498 0 0 )
+
+# here we plot the value of hmax ($5) but only for wet cells 
+# (i.e. h = $3 > 1e-3), dry cells take a 'no data' value i.e. 1e1000
+# We use only the last output file (i.e. 't-600' minutes = 10 hours)
 
 unset key
 set size ratio -1
@@ -16,7 +24,10 @@ set logscale cb
 set cbrange [0.1:10]
 splot 't-600' u 1:2:($3 > 1e-3 ? $5 : 1e1000)
 
+# we remove the large border left by gnuplot using ImageMagick
 ! mogrify -trim +repage tsunami.png
+
+# we now generate the tide gauge plot
 
 reset
 set term pngcairo enhanced size 625,800 font ",8"
@@ -43,4 +54,5 @@ plot 'colo' u ($1/60.):2 w l t 'modelled', \
      'colores.txt' u 1:($2/100.) w lp t 'observed'
 unset multiplot
 
+# finally we remove the subfiles of tsunami.out
 ! rm -f t-*
