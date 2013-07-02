@@ -303,6 +303,11 @@ event movies (t++) {
   output_ppm (etam, fp, mask = m, min = -2, max = 2, n = 512, linear = true);
 
 /**
+After completion this will give the following animation
+
+![[Animation](eta.mpg) of the wave elevation. Dark blue is -2 metres
+ and less. Dark red is +2 metres and more.](eta.png)
+
 We also use the `box` option to only output a subset of the domain
 (defined by the lower-left, upper-right coordinates). */
 
@@ -312,6 +317,9 @@ We also use the `box` option to only output a subset of the domain
 	      box = {{89,8},{98,16}});
 
 /**
+![[Animation](eta-zoom.mpg) of the wave elevation. Dark blue is -2 metres
+ and less. Dark red is +2 metres and more.](eta-zoom.png)
+
 And repeat the operation for the level of refinement...*/
 
   static FILE * fp1 = NULL;
@@ -322,6 +330,9 @@ And repeat the operation for the level of refinement...*/
   output_ppm (l, fp1, min = MINLEVEL, max = MAXLEVEL, n = 512);
 
 /**
+![[Animation](level.mpg) of the level of refinement. Dark blue is 5
+ and dark red is 10.](level.png)
+
 ...and for the process id for parallel runs. */
 
 #if _OPENMP
@@ -335,6 +346,8 @@ And repeat the operation for the level of refinement...*/
 }
 
 /**
+![[Animation](pid.mpg) of the OpenMP process id.](pid.png)
+
 ### Tide gauges
 
 We define a list of file names, locations and descriptions and use the
