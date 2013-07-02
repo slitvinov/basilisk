@@ -1,5 +1,16 @@
+/**
+# Lid-driven cavity at Re=1000
+
+We use the multigrid implementation (rather than the default quadtree
+implementation) and the MAC Navier--Stokes solver. */
+
 #include "grid/multigrid.h"
 #include "navier-stokes1.h"
+
+/**
+Here we define the domain geometry: a square box of size unity
+centered on (0,0). We also set the viscosity and some parameters 
+controlling the numerical scheme. */
 
 void parameters()
 { 
@@ -15,13 +26,38 @@ void parameters()
   CFL = 0.8;
 }
 
-u.x[top]    = 2. - u.x[]; // u.x[] = 1. on top boundary
-// no slip walls on all other boundaries */
+/**
+The default boundary conditions are symmetry (i.e. slip walls). We
+need no-slip on three boundaries and $u=1$ on the top
+boundary. Boundary conditions are set by defining the value of the
+'ghost cell' e.g. for the top boundary we have
+
+![](/boundary.png)
+
+with
+$$
+u_b = (u + u_g)/2
+$$
+this gives a ghost cell value for the top boundary of */
+
+u.x[top]    = 2. - u.x[];
+
+/**
+For the other no-slip boundaries this gives */
+
 u.x[bottom] = - u.x[];
 u.y[left]   = - u.y[];
 u.y[right]  = - u.y[];
 
+/**
+The default velocity is zero everywhere. We still need to define an
+init() function. */
+
 void init() {}
+
+/**
+We define an auxilliary function which computes the total kinetic
+energy. */
 
 static double energy()
 {
@@ -31,12 +67,23 @@ static double energy()
   return se*L0*L0;
 }
 
-scalar un[]; /* we need another scalar */
+/**
+We want the simulation to stop when we are close to steady state. To
+do this we store the `u.x` field of the previous timestep in an
+auxilliary variable `un`. */
+
+scalar un[];
 
 event init_un (i = 0) {
   foreach()
     un[] = u.x[];
 }
+
+/**
+Every 10 timesteps we check whether $u$ has changed by more than
+10^-4^. If it has not, the event returns 1 which stops the
+simulation. We also output the evolution of the kinetic energy on
+standard error. */
 
 event logfile (i += 10; i <= 10000) {
   double du = change (u.x, un);
@@ -45,7 +92,16 @@ event logfile (i += 10; i <= 10000) {
   fprintf (stderr, "%f %.9f %g\n", t, energy(), du);
 }
 
+/**
+Every 100 timesteps we output a binary representation of `u.x`
+bilinearly-interpolated on an N x N grid. */
+
 event outputfile (i += 100) output_matrix (u.x, stdout, N, linear = true);
+
+/**
+This function is called after completion of the simulation. We write
+in the `xprof` and `yprof` files the interpolated values of `u.x` and
+`u.y` along the two profiles. */
 
 void end()
 {
@@ -60,4 +116,19 @@ void end()
   fclose (fp);
 }
 
+/**
+And finally we call the `run()` method of the Navier--Stokes solver. */
+
 int main() { run (); }
+
+/**
+## Results
+
+After processing by gnuplot (i.e. using `make lid.png` with
+[lid.plot]()) we get
+
+![Horizontal profile of the $y$-component of the velocity on the
+ centerline of the box.](lid.png)
+
+The results can be made closer to Ghia et al. by increasing the
+resolution. */
