@@ -65,7 +65,7 @@ clean:
 	dot -Tpng -o $@ < $<
 
 %.png: %.plot
-	gnuplot -e "batch=1; set term pngcairo enhanced; set output '$@';" \
+	gnuplot -e "batch=1; set term pngcairo enhanced font \",10\"; set output '$@';" \
 		$< || rm -f $@
 
 %.pdf: %.h

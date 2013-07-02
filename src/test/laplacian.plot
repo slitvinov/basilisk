@@ -47,7 +47,7 @@ set grid xtics nomxtics ytics nomytics noztics nomztics \
  nox2tics nomx2tics noy2tics nomy2tics nocbtics nomcbtics
 set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
 set key title ""
-set key inside top right vertical Right noreverse enhanced autotitles nobox
+set key inside top left vertical Right noreverse enhanced autotitles nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
 unset label
 unset arrow
@@ -101,8 +101,6 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq  norangelimit
-set title "Relative speed of elementary operations on a regular grid" 
-set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
 set timestamp  offset character 0, 0, 0 font "" norotate
@@ -159,4 +157,9 @@ batch = 0
 plot '< paste laplacian.slog laplacian.clog' u 1:($2/$4) w lp t '5-points Laplacian', \
      '< paste laplacian.out laplacian.cout | grep sum' u 2:($3/$7) w lp t 'Sum', \
   '< paste laplacian.out laplacian.cout | grep res' u 2:($3/$7) w lp t 'Restriction'         
+
+set output 'laplacian_speed.png'
+set ylabel 'nanoseconds per grid point'
+plot 'laplacian.slog' u 1:2 w lp t 'Quadtree', \
+     'laplacian.clog' u 1:2 w lp t 'Cartesian'
 #    EOF
