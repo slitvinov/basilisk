@@ -110,6 +110,8 @@ and read the [README](examples/README) file.
 ~~~bash
 cd test
 make
+make plots
+eog *.png
 ~~~
 
 ## Notes
