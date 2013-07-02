@@ -83,6 +83,7 @@ echo "export PATH=$PATH:$PWD" >> ~/.bashrc
 ## Useful additional packages
 
 - gnuplot (> 4.2)
+- imagemagick
 - ffmpeg
 - smpeg-plaympeg
 - graphviz
@@ -93,7 +94,7 @@ and also
 Debian-like system you just need to do
 
 ~~~bash
-sudo apt-get install gnuplot ffmpeg smpeg-plaympeg graphviz valgrind
+sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind
 ~~~
 
 
