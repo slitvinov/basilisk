@@ -37,10 +37,9 @@ double timestep ()
 {
   double dtmax = DT/CFL;
   foreach(reduction(min:dtmax)) {
-    double dx = L0*delta;
     foreach_dimension()
       if (u.x[] != 0.) {
-	double dt = dx/fabs(u.x[]);
+	double dt = delta/fabs(u.x[]);
 	if (dt < dtmax) dtmax = dt;
       }
   }
@@ -79,7 +78,7 @@ void advance (double dt)
 void relax (scalar a, scalar b, int l)
 {
   foreach_level_or_leaf (l)
-    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - L0*L0*delta*delta*b[])/4.;
+    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - delta*delta*b[])/4.;
 }
 
 double residual (scalar a, scalar b, scalar res)
@@ -87,7 +86,7 @@ double residual (scalar a, scalar b, scalar res)
   double maxres = 0.;
   foreach(reduction(max:maxres)) {
     res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])
-      /(L0*L0*delta*delta);
+      /(delta*delta);
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
@@ -99,7 +98,7 @@ void projection (vector u, scalar p,
 {
   double sum = 0.;
   foreach(reduction(+:sum)) {
-    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/(L0*delta);
+    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/delta;
     sum += div[];
   }
   double maxres = residual (p, div, res);

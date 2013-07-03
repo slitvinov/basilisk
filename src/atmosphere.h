@@ -46,7 +46,7 @@ void advection_centered (scalar f, scalar u, scalar v, scalar df)
     df[] = ((f[] + f[-1,0)]*u[] - 
 	    (f[] + f[1,0)]*u[1,0] +
 	    (f[] + f[0,-1)]*v[] - 
-	    (f[] + f[0,1)]*v[0,1)]/(2.*L0*delta);
+	    (f[] + f[0,1)]*v[0,1)]/(2.*delta);
 }
 
 void advection_upwind (scalar f, scalar u, scalar v, scalar df)
@@ -55,7 +55,7 @@ void advection_upwind (scalar f, scalar u, scalar v, scalar df)
     df[] = ((u[] < 0. ? f[] : f[-1,0)]*u[] - 
 	    (u[1,0] > 0. ? f[] : f[1,0)]*u[1,0] +
 	    (v[] < 0. ? f[] : f[0,-1)]*v[] - 
-	    (v[0,1] > 0. ? f[] : f[0,1)]*v[0,1)]/(L0*delta);
+	    (v[0,1] > 0. ? f[] : f[0,1)]*v[0,1)]/delta;
 }
 
 double timestep (void)
@@ -63,18 +63,17 @@ double timestep (void)
   double dtmax = DT/CFL;
   dtmax *= dtmax;
   foreach(reduction(min:dtmax)) {
-    double dx = L0*delta;
-    dx *= dx;
+    delta *= delta;
     if (h[] > 0.) {
-      double dt = dx/(G*h[]);
+      double dt = delta/(G*h[]);
       if (dt < dtmax) dtmax = dt;
     }
     if (u[] != 0.) {
-      double dt = dx/(u[]*u[]);
+      double dt = delta/(u[]*u[]);
       if (dt < dtmax) dtmax = dt;
     }
     if (v[] != 0.) {
-      double dt = dx/(v[]*v[]);
+      double dt = delta/(v[]*v[]);
       if (dt < dtmax) dtmax = dt;
     }
   }
@@ -86,16 +85,15 @@ void momentum (scalar u, scalar v, scalar h, scalar du, scalar dv)
   foreach() {
     double g = G*(h[] + b[]) + ke[];
     double psiu = (psi[] + psi[0,1])/2.;
-    double dx = L0*delta;
     du[] = 
-      - (g - G*(h[-1,0] + b[-1,0]) - ke[-1,0])/dx
+      - (g - G*(h[-1,0] + b[-1,0]) - ke[-1,0])/delta
       + (psiu + F0)*(v[] + v[0,1] + v[-1,0] + v[-1,1])/4.
-      + NU*(u[1,0] + u[0,1] + u[-1,0] + u[0,-1] - 4.*u[])/(dx*dx);
+      + NU*(u[1,0] + u[0,1] + u[-1,0] + u[0,-1] - 4.*u[])/(delta*delta);
     double psiv = (psi[] + psi[1,0])/2.;
     dv[] = 
-      - (g - G*(h[0,-1] + b[0,-1]) - ke[0,-1])/dx
+      - (g - G*(h[0,-1] + b[0,-1]) - ke[0,-1])/delta
       - (psiv + F0)*(u[] + u[1,0] + u[0,-1] + u[1,-1])/4.
-      + NU*(v[1,0] + v[0,1] + v[-1,0] + v[0,-1] - 4.*v[])/(dx*dx);
+      + NU*(v[1,0] + v[0,1] + v[-1,0] + v[0,-1] - 4.*v[])/(delta*delta);
   }
 }
 

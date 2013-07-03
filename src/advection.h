@@ -31,10 +31,9 @@ double timestep (const vector u)
 {
   double dtmax = DT/CFL;
   foreach(reduction(min:dtmax)) {
-    double dx = L0*delta;
     foreach_dimension()
       if (u.x[] != 0.) {
-	double dt = dx/fabs(u.x[]);
+	double dt = delta/fabs(u.x[]);
 	if (dt < dtmax) dtmax = dt;
       }
   }
@@ -59,11 +58,11 @@ void run (void)
     vector flux[], g[];
     gradients ({f}, {g});
     fluxes_upwind_bcg (f, g, u, flux, dt);
-    foreach()
+    foreach(reduction(+:tnc)) {
       f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;
-    boundary ({f});
-    foreach (reduction (+:tnc))
       tnc++;
+    }
+    boundary ({f});
     i++; t = tnext;
   }
   timer_print (start, i, tnc);

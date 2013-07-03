@@ -76,7 +76,7 @@ double energy()
   double se = 0.;
   foreach(reduction(+:se))
     se += (h[]*ke[] + G*h[]*(h[]/2. + b[]))*delta*delta;
-  return se*L0*L0;
+  return se;
 }
 
 event logfile (i += 10; t <= 5.)

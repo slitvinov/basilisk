@@ -64,7 +64,7 @@ static double energy()
   double se = 0.;
   foreach(reduction(+:se))
     se += (sq(u.x[] + u.x[1,0)] + sq(u.y[] + u.y[0,1))]/8.*delta*delta;
-  return se*L0*L0;
+  return se;
 }
 
 /**
