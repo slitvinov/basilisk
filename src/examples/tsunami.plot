@@ -58,7 +58,7 @@ unset multiplot
 ! rm -f t-*
 
 # we also generate snapshots from the movies
-! ffmpeg -i eta.mpg -ss 5.00 eta.png
-! ffmpeg -i eta-zoom.mpg -ss 5.00 eta-zoom.png
-! ffmpeg -i level.mpg -ss 5.00 level.png
-! ffmpeg -i pid.mpg -ss 5.00 pid.png
+! ffmpeg -i eta.mpg -ss 5.00 -s 256x256 eta.png
+! ffmpeg -i eta-zoom.mpg -ss 5.00 -s 256x256 eta-zoom.png
+! ffmpeg -i level.mpg -ss 5.00 -s 256x256 level.png
+! ffmpeg -i pid.mpg -ss 5.00 -s 256x256 pid.png
