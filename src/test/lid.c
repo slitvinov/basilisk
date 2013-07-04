@@ -130,5 +130,5 @@ After processing by gnuplot (i.e. using `make lid.png` with
 ![Horizontal profile of the $y$-component of the velocity on the
  centerline of the box.](lid.png)
 
-The results can be made closer to Ghia et al. by increasing the
-resolution. */
+The results can be made closer to [Ghia et al, 1982](/src/references.bib#ghia82) 
+by increasing the resolution. */

@@ -30,7 +30,9 @@ $$
   \end{array}\right)
 $$
 where $\mathbf{u}$ is the velocity vector, $h$ the water depth and
-$z_b$ the height of the topography.
+$z_b$ the height of the topography. See also [Popinet, 
+2011](/src/references.bib#popinet2011) for a more detailed
+introduction.
 
 ## User variables and parameters
 
@@ -156,7 +158,7 @@ The faces which are "wet" on at least one side are traversed. */
 The gradients computed above are used to reconstruct the left and
 right states of the primary fields $h$, $\mathbf{u}$, $z_b$. The
 "interface" topography $z_{lr}$ is reconstructed using the hydrostatic
-reconstruction of Audusse et al. */
+reconstruction of [Audusse et al, 2004](/src/references.bib#audusse2004) */
     
       double dx = delta/2.;
       double zi = eta[] - hi;

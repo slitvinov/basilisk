@@ -3,9 +3,10 @@
 
 The 2004 Indian Ocean tsunami was caused by a large-scale fault
 rupture (> 1000 km) at the Indian–Australian and Eurasian–Andaman
-plate boundaries. This example uses the fault model of Grilli et
-al. [3] as initial conditions for a Saint-Venant solution of the
-subsequent tsunami.  
+plate boundaries. This example uses the fault model of [Grilli et
+al, 2007](/src/references.bib#grilli2007) as initial conditions for a 
+Saint-Venant solution of the subsequent tsunami. A similar setup is
+discussed in [Popinet, 2011](/src/references.bib#popinet2011).
 
 ## Solver setup
 
