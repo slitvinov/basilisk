@@ -1,5 +1,5 @@
 # the default CFLAGS are set in $(BASILISK)/config
-CFLAGS += -g -O2 -fpe -fopenmp
+CFLAGS += -g -O2 -fopenmp
 
 all: check
 

@@ -3,12 +3,22 @@
 showfiles()
 {
     if ! darcs show files > /dev/null 2>&1; then
-	ls *.$1 2> /dev/null | sed 's/\(.*\)/\t\1 \\/g'
+	ls *.$1 2> /dev/null | sed 's/\(.*\)/	\1 \\/g'
     else
 	DIR=`basename $PWD`
 	darcs show files | grep '/'$DIR'/[^/]*\.'$1'$' | \
-	    sed 's/.*\/'$DIR'\/\(.*\)/\t\1 \\/g'
+	    sed 's/.*\/'$DIR'\/\(.*\)/	\1 \\/g'
     fi
+}
+
+# join lines delimited by \\n characters
+singleline()
+{
+    sed -e ':a
+N
+$!ba
+s/\\\n//g
+'
 }
 
 echo "updating Makefile.tests"
@@ -18,22 +28,24 @@ echo "updating Makefile.tests"
     DIR=`basename $PWD`
     echo "ALLTESTS = \\"
     showfiles c
+    showfiles c.page | sed 's/\.c\.page/\.c/g'
     echo ""
     echo "PLOTS = \\"
     showfiles plot
     echo ""
     echo "TESTS = \\"
-    sed ':x; /\\$/ { N; s/\\\n//; tx }' < Makefile | 		\
-	grep '^check:' | grep -o '[a-zA-Z_0-9]*\..tst' | 	\
-	sed 's/\(.*\)\..tst/\t\1.c \\/g'
-    sed ':x; /\\$/ { N; s/\\\n//; tx }' < Makefile | 		\
-	grep -v '^check:' | grep -o ':.*' | 			\
-	grep -o '[a-zA-Z_0-9]*\.tst' | 				\
-	sed 's/\(.*\)\.tst/\t\1.c \\/g'
+    singleline < Makefile | 		                   \
+	grep '^check:' | tr ' ' '\n' |                     \
+	sed -n 's/[ 	]*\([a-zA-Z_0-9]*\..tst\)[ 	]*/\1/p' |  \
+	sed 's/\(.*\)\..tst/	\1.c \\/g'
+    singleline < Makefile | 		                   \
+	grep -v '^check:' | grep '^[^.]*:.*' | tr ' ' '\n' |     \
+	sed -n 's/[ 	]*\([a-zA-Z_0-9]*\.tst\)[ 	]*/\1/p' |    \
+	sed 's/\(.*\)\.tst/	\1.c \\/g'
     echo ""
     echo "SPECIAL_TESTS = \\"
-    grep -o '[a-zA-Z_0-9]*\.ctst' Makefile | sort | uniq |	\
-	sed 's/\(.*\)/\t\1 \\/g'
+    sed -n 's/.*:[ 	]*\([a-zA-Z_0-9]*\.ctst\)/\1/p' Makefile | \
+	sort | uniq | sed 's/\(.*\)/	\1 \\/g'
     echo ""
     echo "ALLPAGES = \\"
     showfiles '[ch]\.page'
