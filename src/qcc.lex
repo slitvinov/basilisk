@@ -14,7 +14,7 @@
   typedef struct { int x, y; char * name; } Vector;
   typedef struct { Vector x, y; char * name; } Tensor;
 
-  int debug = 0, fpe = 0, catch = 0;
+  int debug = 0, catch = 0;
   char dir[] = ".qccXXXXXX";
 
   int nvar = 0, nevents = 0;
@@ -1315,8 +1315,9 @@ void compdir (FILE * fin, FILE * fout, char * grid)
 	   "  for (int i = 0; i < %d; i++)\n"
 	   "    all[i] = i;\n"
 	   "  all[%d] = -1;\n", nvar + 1, nvar, nvar);
-  if (fpe)
-    fputs ("  set_fpe();\n", fout);
+#if _GNU_SOURCE
+  fputs ("  set_fpe();\n", fout);
+#endif
   if (catch)
     fputs ("  catch_fpe();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);
@@ -1356,8 +1357,6 @@ int main (int argc, char ** argv)
       tags = 1;
     else if (!strcmp (argv[i], "-debug"))
       debug = 1;
-    else if (!strcmp (argv[i], "-fpe"))
-      fpe = 1;
     else if (!strcmp (argv[i], "-catch"))
       catch = 1;
     else if (!strcmp (argv[i], "-o")) {
@@ -1422,10 +1421,11 @@ int main (int argc, char ** argv)
 	cleanup (1, dir);
       }
       FILE * fout = dopen (cpp, "w");
-      if (fpe)
-	fputs ("@include <string.h>\n"
-	       "@include <fenv.h>\n", 
-	       fout);
+#if _GNU_SOURCE
+      fputs ("@include <string.h>\n"
+	     "@include <fenv.h>\n", 
+	     fout);
+#endif
       if (catch)
 	fputs ("#define _CATCH last_point = point;\n", fout);
       else
@@ -1435,23 +1435,24 @@ int main (int argc, char ** argv)
       if (catch)
 	fputs ("void catch_fpe (void);\n", fout);
       /* undefined value */
-      if (fpe)
-	/* Initialises unused memory with "signaling NaNs".  
-	 * This is probably not very portable, tested with
-	 * gcc (Debian 4.4.5-8) 4.4.5 on Linux 2.6.32-5-amd64.
-	 * This blog was useful:
-	 *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
-	 */
-	fputs ("double undefined;\n"
-	       "static void set_fpe (void) {\n"
-	       "  long lnan = 0x7ff0000000000001;\n"
-	       "  assert (sizeof (long) == sizeof (double));\n"
-	       "  memcpy (&undefined, &lnan, sizeof (long));\n"
-	       "  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n"
-	       "}\n",
-	       fout);
-      else
-	fputs ("#define undefined DBL_MAX\n", fout);
+#if _GNU_SOURCE
+      /* Initialises unused memory with "signaling NaNs".  
+       * This is probably not very portable, tested with
+       * gcc (Debian 4.4.5-8) 4.4.5 on Linux 2.6.32-5-amd64.
+       * This blog was useful:
+       *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
+       */
+      fputs ("double undefined;\n"
+	     "static void set_fpe (void) {\n"
+	     "  long lnan = 0x7ff0000000000001;\n"
+	     "  assert (sizeof (long) == sizeof (double));\n"
+	     "  memcpy (&undefined, &lnan, sizeof (long));\n"
+	     "  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n"
+	     "}\n",
+	     fout);
+#else
+      fputs ("#define undefined DBL_MAX\n", fout);
+#endif
       fputs ("@include \"grid.h\"\n", fout);
       /* grid */
       if (default_grid)
