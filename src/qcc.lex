@@ -14,7 +14,7 @@
   typedef struct { int x, y; char * name; } Vector;
   typedef struct { Vector x, y; char * name; } Tensor;
 
-  int debug = 0, catch = 0;
+  int debug = 0, catch = 0, nolineno = 0;
   char dir[] = ".qccXXXXXX";
 
   int nvar = 0, nevents = 0;
@@ -1297,7 +1297,8 @@ void compdir (FILE * fin, FILE * fout, char * grid)
       fprintf (fout, "%s_array,\n", id);
     else
       fprintf (fout, "((void *)0),\n");
-    fprintf (fout, "    \"%s\", %d},\n", eventfile[i], eventline[i]);
+    fprintf (fout, "    \"%s\", %d},\n", eventfile[i], 
+	     nolineno ? 0 : eventline[i]);
   }
   fputs ("  { 1 }\n};\n", fout);
   /* boundaries */
@@ -1359,6 +1360,8 @@ int main (int argc, char ** argv)
       debug = 1;
     else if (!strcmp (argv[i], "-catch"))
       catch = 1;
+    else if (!strcmp (argv[i], "-nolineno"))
+      nolineno = 1;
     else if (!strcmp (argv[i], "-o")) {
       strcat (command1, " ");
       strcat (command1, argv[i++]);

@@ -1,9 +1,13 @@
 # -*-Makefile-*-
 
+GENSUM = md5sum
+CHECKSUM = md5sum -c --status
+
 include $(BASILISK)/config
 include Makefile.tests
 
 DIR = $(notdir $(CURDIR))
+QCC = $(BASILISK)/qcc
 
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(filter-out $(EXCLUDE),$(ALLTESTS)))) Makefile.deps
 
@@ -15,44 +19,54 @@ exe: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 tags: $(subst .page,.tags,$(ALLPAGES))
 
 clean:
-	rm -f *.o *.*tst *.d *.*log *.*out *.png *.*exe *.prof Makefile.deps
+	rm -f *.o *.s *.*tst *.*chk *.d *.*log *.*out \
+		*.png *.*exe *.prof Makefile.deps
 
-.PRECIOUS: %.exe %.cexe %.pgexe %.prof
+.PRECIOUS: %.exe %.cexe %.pgexe %.prof %.s
 
-%.tst: %.exe
-	@echo \[$@\]
-	@-rm -f $*.png
-	@./$< 2> $*.log > $*.out
-	diff $*.log $*.ref
-	@touch $@
+dotest = if test -f $@ && $(CHECKSUM) $@; then 	\
+	   touch $@;				\
+	   echo "make: '$@' is up to date."; 	\
+         else 					\
+	   echo \[$@\]	&&			\
+	   rm -f $*.png &&			\
+	   $(4) ./$< 2> $*.$(1) > $*.$(2) &&	\
+	   $(3)	&&				\
+	   $(GENSUM) $*.s > $@;			\
+         fi
 
-%.stst: %.exe
-	@echo \[$@\]
-	@-rm -f $*.png
-	@./$< 2> $*.slog > $*.out
-	-diff $*.slog $*.ref
-	@touch $@
+%.tst: %.exe %.s
+	@$(call dotest,log,out,diff $*.log $*.ref)
 
-%.ctst: %.cexe
-	@echo \[$@\]
-	@./$< 2> $*.clog > $*.cout
-	@touch $@
+%.stst: %.exe %.s
+	@$(call dotest,slog,out,(diff $*.slog $*.ref || true))
 
-%.vtst: %.exe
-	@echo \[$@\]
-	@-rm -f $*.png
-	@$(VALGRIND) ./$< 2> $*.log > $*.out
-	diff $*.log $*.ref
-	@touch $@
+%.ctst: %.cexe %.s
+	@$(call dotest,clog,cout,true)
 
-%.exe: %.c $(BASILISK)/qcc Makefile
-	$(BASILISK)/qcc $(CFLAGS) -o $@ $< -lm
+%.vtst: %.exe %.s
+	@$(call dotest,log,out,diff $*.log $*.ref,$(VALGRIND))
 
-%.cexe: %.c $(BASILISK)/qcc Makefile
-	$(BASILISK)/qcc -grid=multigrid $(CFLAGS) -o $@ $< -lm
+%.s: %.c $(QCC)
+	@$(QCC) -nolineno -S $<
 
-%.pgexe: %.c $(BASILISK)/qcc Makefile
-	$(BASILISK)/qcc $(CFLAGS) -pg -o $@ $< -lm
+compile = if test -f $*.$(1) && $(CHECKSUM) $*.$(1); then \
+	    touch $@;					\
+	    echo "make: '$@' is up to date."; 		\
+	  else						\
+	    echo qcc $(CFLAGS) $(2) -o $@ $< -lm;	\
+	    $(QCC) $(CFLAGS) $(2) -o $@ $< -lm &&	\
+	    $(GENSUM) $*.s > $*.$(1);			\
+	  fi
+
+%.exe: %.c %.s Makefile
+	@$(call compile,chk)
+
+%.cexe: %.c %.s Makefile
+	@$(call compile,cchk,-grid=multigrid)
+
+%.pgexe: %.c %.s Makefile
+	@$(call compile,pgchk,-pg)
 
 %.prof: %.pgexe
 	./$< 2> $*.log > $*.out
@@ -74,22 +88,26 @@ clean:
 %.pdf: %.c
 	pandoc -o $@ $<
 
-%.tags: %.page $(BASILISK)/qcc
-	$(BASILISK)/qcc -tags $<
+%.tags: %.page $(QCC)
+	$(QCC) -tags $<
 	expireGititCache http://localhost:5001 \
 		$(subst $(BASILISK),src,$(PWD))/$<
+
+whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
+	$(subst .ctst,.cexe,$(SPECIAL_TESTS))
+	nm -u $^ | sed -n 's/^[ ]*U \(.*\)/\1/p' | sort | uniq > whitelist
 
 Makefile.tests: Makefile $(BASILISK)/tests.sh
 	sh $(BASILISK)/tests.sh
 
-%.exe.d: %.c $(BASILISK)/qcc
-	$(BASILISK)/qcc -MD -o $@ $<
+%.exe.d: %.c $(QCC)
+	$(QCC) -MD -o $@ $<
 
-%.cexe.d: %.c $(BASILISK)/qcc
-	$(BASILISK)/qcc -MD -grid=multigrid -o $@ $<
+%.cexe.d: %.c $(QCC)
+	$(QCC) -MD -grid=multigrid -o $@ $<
 
-%.tags.d: %.page $(BASILISK)/qcc
-	$(BASILISK)/qcc -MD -tags $<
+%.tags.d: %.page $(QCC)
+	$(QCC) -MD -tags $<
 
 Makefile.deps: 	$(subst .c,.exe.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(subst .ctst,.cexe.d,$(SPECIAL_TESTS)) \
