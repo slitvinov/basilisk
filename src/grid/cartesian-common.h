@@ -46,15 +46,15 @@ void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
   for (int i = 0; i < len; i++) fputc ('-', fp);
   fputc ('\n', fp);
   for (int j = GHOSTS; j >= -GHOSTS; j--) {
-    if (J + j >= - GHOSTS && J + j < _n + GHOSTS) {
+    if (J + j >= - GHOSTS && J + j < NN + GHOSTS) {
       for (int i = - GHOSTS; i <= GHOSTS; i++)
-	if (I + i >= - GHOSTS && I + i < _n + GHOSTS) {
+	if (I + i >= - GHOSTS && I + i < NN + GHOSTS) {
 	  fprintf (fp, "%5.g", s[i,j]);
-	  if ((I + i < 0 || I + i >= _n) &&
-	      (J + j < 0 || J + j >= _n))
+	  if ((I + i < 0 || I + i >= NN) &&
+	      (J + j < 0 || J + j >= NN))
 	    fputs (":C ", fp);
-	  else if (I + i < 0 || I + i >= _n ||
-		   J + j < 0 || J + j >= _n)
+	  else if (I + i < 0 || I + i >= NN ||
+		   J + j < 0 || J + j >= NN)
 	    fputs (":B ", fp);
 	  else
 	    fputs ("   ", fp);

@@ -116,16 +116,16 @@ static size_t _size (size_t l)
 
 /***** Multigrid macros *****/
 @define depth()      (((Quadtree *)grid)->depth)
-@define _index(k,l)  ((point.i + k)*(_n + 2*GHOSTS) + point.j + l)
-@def _parentindex(k,l) (((point.i+GHOSTS)/2+k)*(_n/2+2*GHOSTS) +
+@define _index(k,l)  ((point.i + k)*(NN + 2*GHOSTS) + point.j + l)
+@def _parentindex(k,l) (((point.i+GHOSTS)/2+k)*(NN/2+2*GHOSTS) +
 			(point.j+GHOSTS)/2+l) @
-@def _childindex(k,l) ((2*point.i-GHOSTS+k)*2*(_n + GHOSTS) +
+@def _childindex(k,l) ((2*point.i-GHOSTS+k)*2*(NN + GHOSTS) +
 		       (2*point.j-GHOSTS+l)) @
 @define aparent(k,l) CELL(point.m, point.level-1, _parentindex(k,l))
 @define child(k,l)   CELL(point.m, point.level+1, _childindex(k,l))
 
 /***** Quadtree macros ****/
-@define _n (1 << point.level)
+@define NN (1 << point.level)
 @define cell		CELL(point.m, point.level, _index(0,0))
 @define _neighbor(k,l)	CELL(point.m, point.level, _index(k,l))
 
@@ -278,12 +278,12 @@ void recursive (Point point)
         if (_d < top) {							\
   	  if (point.j == GHOSTS)					\
 	    _push (point.level, point.i, point.j - 1, _CORNER);		\
-	  if (point.j == _n + 2*GHOSTS - 2)			        \
+	  if (point.j == NN + 2*GHOSTS - 2)			        \
 	    _push (point.level, point.i, point.j + 1, _CORNER);		\
 	} else {							\
 	  if (point.i == GHOSTS)					\
 	    _push (point.level, point.i - 1, point.j, _CORNER);		\
-	  if (point.i == _n + 2*GHOSTS - 2)			        \
+	  if (point.i == NN + 2*GHOSTS - 2)			        \
 	    _push (point.level, point.i + 1, point.j, _CORNER);		\
         }								\
       }

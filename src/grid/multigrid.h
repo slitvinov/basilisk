@@ -9,7 +9,7 @@ struct _Point {
   int level, depth;
   int i, j, n;
 };
-#define _n point.n // for output_stencil()
+#define NN point.n // for output_stencil()
 
 static size_t _size (size_t l)
 {
