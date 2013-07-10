@@ -144,5 +144,5 @@ set loadpath
 set fontpath 
 set fit noerrorvariables
 GNUTERM = "wxt"
-plot 'nonlinear.ref' u 2:3 w l, './nonlinear.log' u 2:3 w l
+plot '../nonlinear.ref' u 2:3 w l, 'log' u 2:3 w l
 #    EOF

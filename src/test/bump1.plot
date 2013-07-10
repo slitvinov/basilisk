@@ -143,5 +143,5 @@ set loadpath
 set fontpath 
 set fit noerrorvariables
 GNUTERM = "wxt"
-plot './bump1.log' w l
+plot 'log' w l
 #    EOF

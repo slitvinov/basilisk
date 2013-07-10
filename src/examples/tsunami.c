@@ -272,13 +272,13 @@ event snapshots (t += 60; t <= 600) {
 After completion of the simulation, doing
 
 ~~~bash
-make tsunami.png
+make tsunami/plot.png
 ~~~
 
 will run gnuplot on these files (using the commands in
 [tsunami.plot]()) to produce images such as this one:
 
-![Maximum wave elevation (metres) reached over 10 hours.](tsunami.png)
+![Maximum wave elevation (metres) reached over 10 hours.](tsunami/plot.png)
 
 ### Movies
 
@@ -306,8 +306,8 @@ event movies (t++) {
 /**
 After completion this will give the following animation
 
-![[Animation](eta.mpg) of the wave elevation. Dark blue is -2 metres
- and less. Dark red is +2 metres and more.](eta.png)
+![[Animation](tsunami/eta.mpg) of the wave elevation. Dark blue is -2 metres
+ and less. Dark red is +2 metres and more.](tsunami/eta.png)
 
 We also use the `box` option to only output a subset of the domain
 (defined by the lower-left, upper-right coordinates). */
@@ -318,8 +318,8 @@ We also use the `box` option to only output a subset of the domain
 	      box = {{89,8},{98,16}});
 
 /**
-![[Animation](eta-zoom.mpg) of the wave elevation. Dark blue is -2 metres
- and less. Dark red is +2 metres and more.](eta-zoom.png)
+![[Animation](tsunami/eta-zoom.mpg) of the wave elevation. Dark blue is 
+-2 metres and less. Dark red is +2 metres and more.](tsunami/eta-zoom.png)
 
 And repeat the operation for the level of refinement...*/
 
@@ -331,8 +331,8 @@ And repeat the operation for the level of refinement...*/
   output_ppm (l, fp1, min = MINLEVEL, max = MAXLEVEL, n = 512);
 
 /**
-![[Animation](level.mpg) of the level of refinement. Dark blue is 5
- and dark red is 10.](level.png)
+![[Animation](tsunami/level.mpg) of the level of refinement. Dark blue is 5
+ and dark red is 10.](tsunami/level.png)
 
 ...and for the process id for parallel runs. */
 
@@ -347,7 +347,7 @@ And repeat the operation for the level of refinement...*/
 }
 
 /**
-![[Animation](pid.mpg) of the OpenMP process id.](pid.png)
+![[Animation](tsunami/pid.mpg) of the OpenMP process id.](tsunami/pid.png)
 
 ### Tide gauges
 
@@ -390,7 +390,7 @@ As before gnuplot (via [tsunami.plot]()) processes these files to
 produce this image:
 
 ![Comparison between observed and simulated timeseries (hours) of wave
- elevations (metres) for a selection of tide gauges.](tsunami_gauges.png)
+ elevations (metres) for a selection of tide gauges.](tsunami/gauges.png)
 
 ## Adaptivity
 

@@ -143,5 +143,5 @@ set loadpath
 set fontpath 
 set fit noerrorvariables
 GNUTERM = "wxt"
-plot 'speed.out' ps 0.1
+plot 'out' ps 0.1
 #    EOF

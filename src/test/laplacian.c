@@ -83,11 +83,11 @@ the overhead is relatively larger for the simpler operations (e.g. sum
 of all elements). This graph is quite sensitive to the exact machine
 architecture (cache hierarchy etc...).
 
-![Relative speed of simple operations on a quadtree mesh](laplacian.png)
+![Relative speed of simple operations on a quadtree mesh](laplacian/plot.png)
 
 The absolute speed for the Laplacian operator on both grid
 implementations is shown below. Note that Cartesian meshes are fast!
 (i.e. hundreds of million of grid points per second).
 
 ![Absolute speed of the 5-points Laplacian on Cartesian and quadtree
- meshes](laplacian_speed.png) */
+ meshes](laplacian/speed.png) */

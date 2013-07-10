@@ -4,7 +4,8 @@ CFLAGS += -O2
 EXCLUDE = qcc.c include.c qplot.c
 
 all: qcc qplot libkdt
-	chmod +x ppm2mpeg
+	@chmod +x ppm2mpeg dotest
+	@test -f xyz2kdt || ln -s kdt/xyz2kdt
 
 libkdt:
 	cd kdt && make

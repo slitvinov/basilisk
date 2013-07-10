@@ -146,10 +146,10 @@ set fit noerrorvariables
 GNUTERM = "wxt"
 unset grid
 plot \
-     'halo.out' w l t "" lc 0, \
-     '< grep halo halo.log | awk "(\$3==5){print \$0}"' pt 7 lc 1 t 'halo 5', \
-     '< grep halo halo.log | awk "(\$3==4){print \$0}"' pt 7 lc 2 t 'halo 4', \
-     '< grep res halo.log | awk "(\$3==4){print \$0}"' pt 5 lc 3 t 'res 4', \
-     '< grep res halo.log | awk "(\$3==3){print \$0}"' pt 5 lc 4 t 'res 3', \
-     '< grep boundary halo.log' pt 3 lc 4 t 'boundary'
+     'out' w l t "" lc 0, \
+     '< grep halo log | awk "(\$3==5){print \$0}"' pt 7 lc 1 t 'halo 5', \
+     '< grep halo log | awk "(\$3==4){print \$0}"' pt 7 lc 2 t 'halo 4', \
+     '< grep res log | awk "(\$3==4){print \$0}"' pt 5 lc 3 t 'res 4', \
+     '< grep res log | awk "(\$3==3){print \$0}"' pt 5 lc 4 t 'res 3', \
+     '< grep boundary log' pt 3 lc 4 t 'boundary'
 #    EOF

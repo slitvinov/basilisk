@@ -1,6 +1,6 @@
-set term pngcairo enhanced size 800,400
+set term @PNG enhanced size 800,400
 
-! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < drybump.out
+! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
 
 unset key
 unset xtics

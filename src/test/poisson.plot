@@ -162,6 +162,6 @@ batch = 0
 GPFUN_r = "r(x,y)=sqrt(x*x+y*y)"
 R0 = 0.1
 GPFUN_e = "e(a,x,y)=a-f(r(x,y))"
-plot './poisson.out' u 2:3 w lp t 'quadtree', './poisson.cout' u 2:3 w lp t 'multigrid'
-## fit f(x) '< grep "max error" ./circle.log' u (log(2**$3)):(log($4)) via a,b
+plot 'out' u 2:3 w lp t 'quadtree', 'cout' u 2:3 w lp t 'multigrid'
+## fit f(x) '< grep "max error" log' u (log(2**$3)):(log($4)) via a,b
 #    EOF

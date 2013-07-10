@@ -38,7 +38,7 @@ void init()
     h[] = 0.1;
   }
 #else
-  FILE * fp = popen ("../kdt/xyz2kdt ponds", "w");
+  FILE * fp = popen ("xyz2kdt ponds", "w");
   for (double x = 0.; x <= 1000; x += 1.)
     for (double y = 0.; y <= 1000.; y += 1.)
       fprintf (fp, "%g %g %g\n", x, y, zb(x,y));
@@ -64,7 +64,7 @@ event logfile (i += 10) {
   norm n = normf (u.x);
   if (i == 0)
     fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
-  fprintf (stderr, "%g %d %g %g %.8f %g %g %g %g\n", 
+  fprintf (stderr, "%g %d %.4g %g %.8f %g %g %g %g\n", 
 	   t, i, s.min, s.max, s.sum, dt, n.rms, n.max, dt);
   assert (s.min > 0.);
 }

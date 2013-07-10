@@ -30,8 +30,8 @@ echo "updating Makefile.tests"
     showfiles c
     showfiles c.page | sed 's/\.c\.page/\.c/g'
     echo ""
-    echo "PLOTS = \\"
-    showfiles plot
+    echo "plots: \\"
+    showfiles plot | sed 's/\(.*\)\.plot/\1\/plot.png/g'
     echo ""
     echo "TESTS = \\"
     singleline < Makefile | 		                   \

@@ -19,18 +19,18 @@ psi(x) = a*a*B*B*exp (-tau*t)/(8.*G*G*h0)*(- s*tau*sin (2.*s*t) + \
 bed(x) = h0*(x/a)**2
 set key top center
 plot [-5000:5000] \
-      '< grep ^p parabola.out' u 2:5:($5+$3) w filledcu lc 3 t 'Numerical', \
+      '< grep ^p out' u 2:5:($5+$3) w filledcu lc 3 t 'Numerical', \
       psi(x) > bed(x) ? psi(x) : bed(x) lc 2 t 'Analytical', \
       bed(x) lw 3 lc 1 lt 1 t 'Bed profile'
 
-if (batch) set term pngcairo; set output "parabola_u0.png"; else pause -1;
+if (batch) set term @PNG; set output "u0.png"; else pause -1;
 reset
 set key top right
 set ylabel 'u0'
 set xlabel 'Time'
-plot u0(x) t 'Analytical', '< grep ^s parabola.out' u 2:3 every 2 w p t 'Numerical'
+plot u0(x) t 'Analytical', '< grep ^s out' u 2:3 every 2 w p t 'Numerical'
 
-if (batch) set term pngcairo enhanced; set output "parabola_convergence.png"; else pause -1;
+if (batch) set term @PNG enhanced; set output "convergence.png"; else pause -1;
 reset
 set xlabel 'Resolution'
 set ylabel 'Relative error norms'
@@ -40,14 +40,14 @@ set xtics 32,2,512
 set grid
 ftitle(a,b) = sprintf("order %4.2f", -b)
 f1(x)=a1+b1*x
-fit f1(x) 'parabola.log' u (log($1)):(log($2)) via a1,b1
+fit f1(x) 'log' u (log($1)):(log($2)) via a1,b1
 f2(x)=a2+b2*x
-fit f2(x) 'parabola.log' u (log($1)):(log($3)) via a2,b2
+fit f2(x) 'log' u (log($1)):(log($3)) via a2,b2
 fm(x)=am+bm*x
-fit fm(x) 'parabola.log' u (log($1)):(log($4)) via am,bm
+fit fm(x) 'log' u (log($1)):(log($4)) via am,bm
 plot exp (f1(log(x))) t ftitle(a1,b1), \
      exp (f2(log(x))) t ftitle(a2,b2), \
      exp (fm(log(x))) t ftitle(am,bm),  \
-     'parabola.log' u 1:2 t '|h|_1' ps 1.5, \
-     'parabola.log' u 1:3 t '|h|_2' ps 1.5, \
-     'parabola.log' u 1:4 t '|h|_{max}' ps 1.5 lc 0
+     'log' u 1:2 t '|h|_1' ps 1.5, \
+     'log' u 1:3 t '|h|_2' ps 1.5, \
+     'log' u 1:4 t '|h|_{max}' ps 1.5 lc 0

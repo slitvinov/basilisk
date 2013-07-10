@@ -143,5 +143,5 @@ set loadpath
 set fontpath 
 set fit noerrorvariables
 GNUTERM = "wxt"
-plot 'dry.log' u 1:($2+$4) w l, 'dry.log' u 1:4 w l
+plot 'log' u 1:($2+$4) w l, 'log' u 1:4 w l
 #    EOF

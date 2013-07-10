@@ -25,13 +25,13 @@ set cbrange [0.1:10]
 splot 't-600' u 1:2:($3 > 1e-3 ? $5 : 1e1000)
 
 # we remove the large border left by gnuplot using ImageMagick
-! mogrify -trim +repage tsunami.png
+! mogrify -trim +repage plot.png
 
 # we now generate the tide gauge plot
 
 reset
 set term pngcairo enhanced size 625,800 font ",8"
-set output 'tsunami_gauges.png'
+set output 'gauges.png'
 set multiplot layout 5,1 scale 1,1.1
 set xrange [3:8]
 set key bottom right

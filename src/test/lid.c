@@ -124,11 +124,11 @@ int main() { run (); }
 /**
 ## Results
 
-After processing by gnuplot (i.e. using `make lid.png` with
+After processing by gnuplot (i.e. using `make lid/plot.png` with
 [lid.plot]()) we get
 
 ![Horizontal profile of the $y$-component of the velocity on the
- centerline of the box.](lid.png)
+ centerline of the box.](lid/plot.png)
 
 The results can be made closer to [Ghia et al, 1982](/src/references.bib#ghia82) 
 by increasing the resolution. */

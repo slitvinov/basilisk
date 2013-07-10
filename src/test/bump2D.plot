@@ -1,6 +1,6 @@
-! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < bump2D.out
+! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
  
-set term pngcairo enhanced size 640,640
+set term @PNG enhanced size 640,640
 
 set size ratio -1
 unset key
@@ -27,7 +27,7 @@ splot 'eta-7'
 splot 'eta-8'
 unset multiplot
 
-set output 'bump2D_level.png'
+set output 'level.png'
 
 set multiplot layout 3,3 scale 1.6,1.6
 splot 'level-0'
@@ -43,7 +43,7 @@ unset multiplot
 
 exit 0
 
-set output 'bump2D_pid.png'
+set output 'pid.png'
 
 set multiplot layout 3,3 scale 1.6,1.6
 splot 'pid-0'

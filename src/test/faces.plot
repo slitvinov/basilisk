@@ -143,5 +143,5 @@ set loadpath
 set fontpath 
 set fit noerrorvariables
 GNUTERM = "wxt"
-plot './faces.out' w l, './faces.log' u 1:2
+plot 'out' w l, 'log' u 1:2
 #    EOF

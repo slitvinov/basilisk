@@ -149,5 +149,5 @@ R0 = 0.1
 GPFUN_r = "r(x,y)=sqrt(x*x+y*y)"
 GPFUN_f = "f(x)=exp(-(x*x)/(R0*R0))"
 GPFUN_e = "e(a,x,y)=a-f(r(x,y))"
-plot [0:0.7] '< awk "(\$3==10){print \$0}" interp.out' u (r($1,$2)):($6) t 'level 10', '< awk "(\$3==9){print \$0}" interp.out' u (r($1,$2)):($6) t 'level 9',      '< awk "(\$3==8){print \$0}" interp.out' u (r($1,$2)):($6) t 'level 8',      '< awk "(\$3==7){print \$0}" interp.out' u (r($1,$2)):($6) t 'level 7',      '< awk "(\$3==6){print \$0}" interp.out' u (r($1,$2)):($6) t 'level 6',      '< awk "(\$3==5){print \$0}" interp.out' u (r($1,$2)):($6) t 'level 5',      '< awk "(\$3==4){print \$0}" interp.out' u (r($1,$2)):($6) t 'level 4'
+plot [0:0.7] '< awk "(\$3==10){print \$0}" out' u (r($1,$2)):($6) t 'level 10', '< awk "(\$3==9){print \$0}" out' u (r($1,$2)):($6) t 'level 9',      '< awk "(\$3==8){print \$0}" out' u (r($1,$2)):($6) t 'level 8',      '< awk "(\$3==7){print \$0}" out' u (r($1,$2)):($6) t 'level 7',      '< awk "(\$3==6){print \$0}" out' u (r($1,$2)):($6) t 'level 6',      '< awk "(\$3==5){print \$0}" out' u (r($1,$2)):($6) t 'level 5',      '< awk "(\$3==4){print \$0}" out' u (r($1,$2)):($6) t 'level 4'
 #    EOF

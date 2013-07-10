@@ -143,5 +143,5 @@ set loadpath
 set fontpath 
 set fit noerrorvariables
 GNUTERM = "wxt"
-plot 'transcritical.log' u 1:2 w l, 'transcritical.log' u 1:4 w l
+plot 'log' u 1:2 w l, 'log' u 1:4 w l
 #    EOF

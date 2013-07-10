@@ -1,6 +1,6 @@
-! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < drybump2D.out
+! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
  
-set term pngcairo enhanced size 640,640
+set term @PNG enhanced size 640,640
 
 set size ratio -1
 set xrange [-0.5:0.5]
@@ -31,7 +31,7 @@ splot 'eta-7' u 1:2:($3 > dry ? $3 : 1e1000)
 splot 'eta-8' u 1:2:($3 > dry ? $3 : 1e1000)
 unset multiplot
 
-set output 'drybump2D_level.png'
+set output 'level.png'
 
 set multiplot layout 3,3 scale s,s
 splot 'level-0'

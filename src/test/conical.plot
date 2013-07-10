@@ -1,6 +1,6 @@
-! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < conical.out
+! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
  
-set term pngcairo enhanced size 900,1600 font ",8"
+set term @PNG enhanced size 900,1600 font ",8"
 
 unset key
 unset xtics
@@ -28,8 +28,8 @@ splot './level-3'
 unset multiplot
 
 reset
-set term pngcairo enhanced size 640,640
-set output 'conical_runup.png'
+set term @PNG enhanced size 640,640
+set output 'runup.png'
 set size ratio -1
 unset surface
 unset key
@@ -42,8 +42,8 @@ set grid
 plot [10:16][11:17]'./runup.dat' w l
 
 reset
-set term pngcairo enhanced size 600,800
-set output 'conical_gauges.png'
+set term @PNG enhanced size 600,800
+set output 'gauges.png'
 set multiplot layout 5,1 scale 1.,1.
 set xrange [3:20]
 plot 'WG3' u 1:($2-0.32) w l t 'WG3'

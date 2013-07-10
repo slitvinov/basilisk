@@ -3,10 +3,10 @@ CFLAGS += -g -O2 -fopenmp
 
 all: check
 
-tsunami.exe: tsunami.c $(BASILISK)/qcc Makefile
-	qcc $(CFLAGS) tsunami.c -o tsunami.exe $(BASILISK)/kdt/kdt.o -lm
+tsunami.tst: tsunami.s
+	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest tsunami.tst
 
-tides.exe: tides.c $(BASILISK)/qcc Makefile
-	qcc $(CFLAGS) tides.c -o tides.exe $(BASILISK)/kdt/kdt.o -lm
+tides.tst: tides.s
+	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest tides.tst
 
 include $(BASILISK)/Makefile.defs

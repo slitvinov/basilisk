@@ -1,6 +1,6 @@
-! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < ponds.out
+! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
  
-set term pngcairo enhanced size 1024,512 font ",8"
+set term @PNG enhanced size 1024,512 font ",8"
 
 unset key
 set hidden3d
@@ -26,7 +26,7 @@ splot './eta-8' u 1:2:4 every 3:3 w l, \
       './eta-8' u 1:2:($3>dry?$3+$4:1e1000):(sqrt($5**2+$6**2)) w pm3d
 unset multiplot
 
-set output 'ponds_level.png'
+set output 'level.png'
 
 dry = 0.
 set multiplot layout 2,2 scale 1,1.3
@@ -40,7 +40,7 @@ splot './level-8' u 1:2:4 every 3:3 w l, \
       './level-8' u 1:2:($3>dry?$3+$4:1e1000):5 w pm3d
 unset multiplot
 
-set output 'ponds_vectors.png'
+set output 'vectors.png'
 
 reset
 set xrange [0:1000]

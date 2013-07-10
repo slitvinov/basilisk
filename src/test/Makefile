@@ -1,9 +1,6 @@
 # the default CFLAGS are set in $(BASILISK)/config
 CFLAGS += -g -O2 -DTRASH=1
 
-# note that you can separate compilation and running the tests by doing
-# % make exe
-# % make
 all: check slow
 
 # list only non-default (!.tst) tests
@@ -17,12 +14,16 @@ slow: nonlinear.tst advection.tst rotation.tst \
 
 # these tests have special depencies/compilation requirements
 poisson.tst: poisson.ctst
+
 laplacian.stst: laplacian.ctst
-nonlinear.exe: nonlinear.c $(BASILISK)/qcc Makefile
-	qcc $(CFLAGS) -o nonlinear.exe nonlinear.c -lgsl -lgslcblas -lm
-terrain.exe: terrain.c $(BASILISK)/qcc Makefile
-	qcc $(CFLAGS) -o terrain.exe terrain.c $(BASILISK)/kdt/kdt.o -lm
-ponds.exe: ponds.c $(BASILISK)/qcc Makefile
-	qcc $(CFLAGS) -o ponds.exe ponds.c $(BASILISK)/kdt/kdt.o -lm
+
+terrain.tst: terrain.s
+	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest terrain.tst
+
+ponds.tst: ponds.s
+	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest ponds.tst
+
+nonlinear.tst: nonlinear.s
+	@LIBS="-lgsl -lgslcblas" $(BASILISK)/dotest nonlinear.tst
 
 include $(BASILISK)/Makefile.defs

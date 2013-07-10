@@ -1,72 +1,38 @@
 # -*-Makefile-*-
 
-GENSUM = md5sum
-CHECKSUM = md5sum -c --status
+PNG = png
+export GENSUM = md5sum
+export CHECKSUM = md5sum -c --status
+export CFLAGS
 
 include $(BASILISK)/config
 include Makefile.tests
 
-DIR = $(notdir $(CURDIR))
 QCC = $(BASILISK)/qcc
 
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(filter-out $(EXCLUDE),$(ALLTESTS)))) Makefile.deps
 
-plots: $(subst .plot,.png,$(PLOTS))
-
-exe: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
-     $(subst .ctst,.cexe,$(SPECIAL_TESTS))
-
 tags: $(subst .page,.tags,$(ALLPAGES))
 
 clean:
-	rm -f *.o *.s *.*tst *.*chk *.d *.*log *.*out \
-		*.png *.*exe *.prof Makefile.deps
+	rm -f *.o *.s *.*tst *.d *.prof Makefile.deps
 
-.PRECIOUS: %.exe %.cexe %.pgexe %.prof %.s
+.PRECIOUS: %.prof %.s
 
-dotest = if test -f $@ && $(CHECKSUM) $@; then 	\
-	   touch $@;				\
-	   echo "make: '$@' is up to date."; 	\
-         else 					\
-	   echo \[$@\]	&&			\
-	   rm -f $*.png &&			\
-	   $(4) ./$< 2> $*.$(1) > $*.$(2) &&	\
-	   $(3)	&&				\
-	   $(GENSUM) $*.s > $@;			\
-         fi
+%.tst: %.s
+	@$(BASILISK)/dotest $@
 
-%.tst: %.exe %.s
-	@$(call dotest,log,out,diff $*.log $*.ref)
+%.stst: %.s
+	@$(BASILISK)/dotest $@
 
-%.stst: %.exe %.s
-	@$(call dotest,slog,out,(diff $*.slog $*.ref || true))
+%.ctst: %.s
+	@CFLAGS="-grid=multigrid $(CFLAGS)" $(BASILISK)/dotest $@
 
-%.ctst: %.cexe %.s
-	@$(call dotest,clog,cout,true)
-
-%.vtst: %.exe %.s
-	@$(call dotest,log,out,diff $*.log $*.ref,$(VALGRIND))
+%.vtst: %.s
+	@$(BASILISK)/dotest $@ "$(VALGRIND)"
 
 %.s: %.c $(QCC)
 	@$(QCC) -nolineno -S $<
-
-compile = if test -f $*.$(1) && $(CHECKSUM) $*.$(1); then \
-	    touch $@;					\
-	    echo "make: '$@' is up to date."; 		\
-	  else						\
-	    echo qcc $(CFLAGS) $(2) -o $@ $< -lm;	\
-	    $(QCC) $(CFLAGS) $(2) -o $@ $< -lm &&	\
-	    $(GENSUM) $*.s > $*.$(1);			\
-	  fi
-
-%.exe: %.c %.s Makefile
-	@$(call compile,chk)
-
-%.cexe: %.c %.s Makefile
-	@$(call compile,cchk,-grid=multigrid)
-
-%.pgexe: %.c %.s Makefile
-	@$(call compile,pgchk,-pg)
 
 %.prof: %.pgexe
 	./$< 2> $*.log > $*.out
@@ -78,9 +44,8 @@ compile = if test -f $*.$(1) && $(CHECKSUM) $*.$(1); then \
 %.dot.png: %.dot
 	dot -Tpng -o $@ < $<
 
-%.png: %.plot
-	gnuplot -e "batch=1; set term pngcairo enhanced font \",10\"; set output '$@';" \
-		$< || rm -f $@
+%/plot.png: %.plot
+	cd $* && gnuplot -e "batch=1; PNG=\"$(PNG)\"; set term $(PNG) enhanced font \",10\"; set output 'plot.png'; set macros;" ../$< || rm -f plot.png
 
 %.pdf: %.h
 	pandoc -o $@ $<
@@ -93,24 +58,31 @@ compile = if test -f $*.$(1) && $(CHECKSUM) $*.$(1); then \
 	expireGititCache http://localhost:5001 \
 		$(subst $(BASILISK),src,$(PWD))/$<
 
+# lists external symbols of executables
+extern = nm -u $(1) | sed -n 's/^[ ]*U \(.*\)/\1/p' | sort | uniq
+
 whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	$(subst .ctst,.cexe,$(SPECIAL_TESTS))
-	nm -u $^ | sed -n 's/^[ ]*U \(.*\)/\1/p' | sort | uniq > whitelist
+	@echo "updating whitelist"
+	@$(call extern,$^) > whitelist
+
+# checks that an executable only links against whitelisted external symbols
+%.wexe: %.exe
+	@( $(call extern,$<) | diff $(BASILISK)/test/whitelist - | \
+		(sed -n 's/^> *\(.*\)/error: \1 not whitelisted/p') | \
+		grep 'not whitelisted' && rm -f $@ ) || cp -f $< $@
+	@test -f $@
 
 Makefile.tests: Makefile $(BASILISK)/tests.sh
 	sh $(BASILISK)/tests.sh
 
-%.exe.d: %.c $(QCC)
+%.s.d: %.c $(QCC)
 	$(QCC) -MD -o $@ $<
-
-%.cexe.d: %.c $(QCC)
-	$(QCC) -MD -grid=multigrid -o $@ $<
 
 %.tags.d: %.page $(QCC)
 	$(QCC) -MD -tags $<
 
-Makefile.deps: 	$(subst .c,.exe.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
-		$(subst .ctst,.cexe.d,$(SPECIAL_TESTS)) \
+Makefile.deps: 	$(subst .c,.s.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(subst .page,.tags.d,$(ALLPAGES))
 	@echo "Updating Makefile.deps"
 	@cat /dev/null $^ > Makefile.deps

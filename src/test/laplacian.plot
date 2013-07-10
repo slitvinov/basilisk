@@ -154,12 +154,12 @@ FIT_NDF = 2
 FIT_STDFIT = 0.0555182308282567
 FIT_WSSR = 0.00616454790859917
 batch = 0
-plot '< paste laplacian.slog laplacian.clog' u 1:($2/$4) w lp t '5-points Laplacian', \
-     '< paste laplacian.out laplacian.cout | grep sum' u 2:($3/$7) w lp t 'Sum', \
-  '< paste laplacian.out laplacian.cout | grep res' u 2:($3/$7) w lp t 'Restriction'         
+plot '< paste slog clog' u 1:($2/$4) w lp t '5-points Laplacian', \
+     '< paste out cout | grep sum' u 2:($3/$7) w lp t 'Sum', \
+  '< paste out cout | grep res' u 2:($3/$7) w lp t 'Restriction'         
 
-set output 'laplacian_speed.png'
+set output 'speed.png'
 set ylabel 'nanoseconds per grid point'
-plot 'laplacian.slog' u 1:2 w lp t 'Quadtree', \
-     'laplacian.clog' u 1:2 w lp t 'Cartesian'
+plot 'slog' u 1:2 w lp t 'Quadtree', \
+     'clog' u 1:2 w lp t 'Cartesian'
 #    EOF

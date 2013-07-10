@@ -1,6 +1,6 @@
-! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < hump.out
+! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
  
-set term pngcairo enhanced size 800,600
+set term @PNG enhanced size 800,600
 
 set size ratio -1
 unset key
@@ -26,7 +26,7 @@ splot 'eta-3'
 splot 'eta-4'
 unset multiplot
 
-set output 'hump_level.png'
+set output 'level.png'
 
 set multiplot layout 3,2 scale s,s
 splot 'level-0'
