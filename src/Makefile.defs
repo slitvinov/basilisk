@@ -32,7 +32,7 @@ clean:
 	@$(BASILISK)/dotest $@ "$(VALGRIND)"
 
 %.s: %.c $(QCC)
-	@$(QCC) -nolineno -S $<
+	@$(QCC) -nolineno -S $< || (rm -f $@ && false)
 
 %.prof: %.pgexe
 	./$< 2> $*.log > $*.out
