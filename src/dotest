@@ -51,7 +51,8 @@ remote()
     chksum=`$GENSUM $test.s | cut -d' ' -f1`
     cd $test
     mkdir $chksum
-    cp -f $test.c $test.ref $chksum
+    cp -f $test.c $chksum
+    if test -f $test.ref; then cp -f $test.ref $chksum; fi
     script > $chksum/$test.sh
 cat <<EOF >> $chksum/$test.sh
 rm -f $test.c $test.sh $test.ref
