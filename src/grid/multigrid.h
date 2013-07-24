@@ -48,8 +48,9 @@ static size_t _size (size_t l)
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point = *((Point *)grid);
   point.level = l; point.n = 1 << point.level;
+  int _k;
   OMP(omp for schedule(static))
-  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {
+  for (_k = GHOSTS; _k < point.n + GHOSTS; _k++) {
     point.i = _k;
     for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {
       POINT_VARIABLES
@@ -61,8 +62,9 @@ static size_t _size (size_t l)
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point = *((Point *)grid);
   point.level = point.depth; point.n = 1 << point.level;
+  int _k;
   OMP(omp for schedule(static) clause)
-  for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {
+  for (_k = GHOSTS; _k < point.n + GHOSTS; _k++) {
     point.i = _k;
     for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {
       POINT_VARIABLES
@@ -77,8 +79,9 @@ static size_t _size (size_t l)
   int _start = GHOSTS, _end = point.n + GHOSTS;
   /* traverse corners only for top and bottom */
   if (corners && d > left) { _start -= GHOSTS; _end += GHOSTS; }
+  int _k;
   OMP(omp for schedule(static))
-  for (int _k = _start; _k < _end; _k++) {
+  for (_k = _start; _k < _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
     POINT_VARIABLES
@@ -95,8 +98,9 @@ static size_t _size (size_t l)
   for (; _p.level >= 0; _p.n /= 2, _p.level--)
     OMP_PARALLEL()
     Point point = _p;
+    int _k;
     OMP(omp for schedule(static))
-    for (int _k = GHOSTS; _k < point.n + GHOSTS; _k++) {
+    for (_k = GHOSTS; _k < point.n + GHOSTS; _k++) {
       point.i = _k;
       for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {
         POINT_VARIABLES

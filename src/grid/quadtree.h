@@ -334,8 +334,9 @@ void recursive (Point point)
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   OMP_PARALLEL()
   Quadtree point = *((Quadtree *)grid); point.back = grid;
+  int _k;
   OMP(omp for schedule(static) clause)
-  for (int _k = 0; _k < point.leaves.n; _k++) {
+  for (_k = 0; _k < point.leaves.n; _k++) {
     point.i = point.leaves.p[_k].i;
     point.j = point.leaves.p[_k].j;
     point.level = point.leaves.p[_k].level;
@@ -346,34 +347,36 @@ void recursive (Point point)
 @def foreach_fine_to_coarse(clause)     {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  OMP_PARALLEL()
-  Quadtree point = *((Quadtree *)grid); point.back = grid;
   for (int _l = depth() - 1; _l >= 0; _l--) {
+    OMP_PARALLEL()
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
     point.level = _l;
+    int _k;
     OMP(omp for schedule(static) clause)
-    for (int _k = 0; _k < point.active[_l].n; _k++) {
+    for (_k = 0; _k < point.active[_l].n; _k++) {
       point.i = point.active[_l].p[_k].i;
       point.j = point.active[_l].p[_k].j;
       POINT_VARIABLES;
       if (!is_leaf (cell)) {
 @
-@define end_foreach_fine_to_coarse() } } } OMP_END_PARALLEL() }
+@define end_foreach_fine_to_coarse() } } OMP_END_PARALLEL() } }
 
 @def foreach_level_or_leaf(l)     {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  OMP_PARALLEL()
-  Quadtree point = *((Quadtree *)grid); point.back = grid;
   for (int _l = l; _l >= 0; _l--) {
+    OMP_PARALLEL()
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
     point.level = _l;
+    int _k;
     OMP(omp for schedule(static))
-    for (int _k = 0; _k < point.active[_l].n; _k++) {
+    for (_k = 0; _k < point.active[_l].n; _k++) {
       point.i = point.active[_l].p[_k].i;
       point.j = point.active[_l].p[_k].j;
       POINT_VARIABLES;
       if (_l == l || is_leaf (cell)) {
 @
-@define end_foreach_level_or_leaf() } } } OMP_END_PARALLEL() }
+@define end_foreach_level_or_leaf() } } OMP_END_PARALLEL() } }
 
 @def foreach_level(l)     {
   update_cache();
@@ -382,8 +385,9 @@ void recursive (Point point)
   OMP_PARALLEL()
   Quadtree point = *((Quadtree *)grid); point.back = grid;
   point.level = _l;
+  int _k;
   OMP(omp for schedule(static))
-  for (int _k = 0; _k < point.active[_l].n; _k++) {
+  for (_k = 0; _k < point.active[_l].n; _k++) {
     point.i = point.active[_l].p[_k].i;
     point.j = point.active[_l].p[_k].j;
     POINT_VARIABLES;
@@ -573,35 +577,37 @@ static void update_cache (void)
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   int _depth = depth1 < 0 ? depth() : depth1;
-  OMP_PARALLEL()
-  Quadtree point = *((Quadtree *)grid); point.back = grid;
-  for (int _l = 0; _l <= _depth; _l++)
+  for (int _l = 0; _l <= _depth; _l++) {
+    OMP_PARALLEL()
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    int _k;
     OMP(omp for schedule(static))
-    for (int _k = 0; _k < point.halo[_l].n; _k++) {
+    for (_k = 0; _k < point.halo[_l].n; _k++) {
       point.i = point.halo[_l].p[_k].i;
       point.j = point.halo[_l].p[_k].j;
       point.level = _l;
       POINT_VARIABLES;
       if (!is_active(cell)) {
 @
-@define end_foreach_halo_coarse_to_fine() } } OMP_END_PARALLEL() }
+  @define end_foreach_halo_coarse_to_fine() } } OMP_END_PARALLEL() } }
 
 /* breadth-first traversal of halos from fine to coarse */
 @def foreach_halo_fine_to_coarse()    {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  OMP_PARALLEL()
-  Quadtree point = *((Quadtree *)grid); point.back = grid;
-  for (int _l = depth() - 1; _l >= 0; _l--)
+  for (int _l = depth() - 1; _l >= 0; _l--) {
+    OMP_PARALLEL()
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    int _k;
     OMP(omp for schedule(static))
-    for (int _k = 0; _k < point.halo[_l].n; _k++) {
+    for (_k = 0; _k < point.halo[_l].n; _k++) {
       point.i = point.halo[_l].p[_k].i;
       point.j = point.halo[_l].p[_k].j;
       point.level = _l;
       POINT_VARIABLES;
       if (is_active(cell)) {
 @
-@define end_foreach_halo_fine_to_coarse() } } OMP_END_PARALLEL() }
+@define end_foreach_halo_fine_to_coarse() } } OMP_END_PARALLEL() } }
 
 Point refine_cell (Point point, scalar * list);
 
