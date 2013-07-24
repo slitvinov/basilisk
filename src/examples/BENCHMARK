@@ -1,0 +1,63 @@
+# Tsunami benchmark
+
+On fitzroy (NIWA's IBM/AIX Power6 supercomputer), follow the [installation
+instructions](/src/INSTALL), then edit `src/examples/tsunami.c` and
+replace `/home/popinet/terrain/etopo2` with
+e.g. `/hpcf/data/popinet/terrain/etopo2`, then do
+
+~~~bash
+cd src/examples
+qcc -O2 -g -pg tsunami.c -o tsunami ../kdt/kdt.o -lm
+~~~
+
+Create e.g. `tsunami.sh` as
+
+~~~bash
+#!/bin/bash
+
+#@ job_name         = basilisk
+#@ class            = General
+#@ job_type         = serial
+#@ output           = tsunami.out
+#@ error            = tsunami.log
+#@ account_no       = HAFS1301
+#@ wall_clock_limit = 45:00
+#@ environment      = COPY_ALL
+#@ queue
+
+./tsunami
+~~~
+
+then do
+
+~~~bash
+llsubmit tsunami.sh
+~~~
+
+After completion of the run do
+
+~~~bash
+tail -n1 tsunami.out
+# Quadtree, 2992 steps, 2095.75 CPU, 2260 real, 6.85e+04 points.step/s, 28 var
+~~~
+
+Note that the computational speed (in points.step/s) is computed using
+the real runtime (not the CPU time). For reference, the results on my
+system `popinet-new` (Intel(R) Core(TM)2 Quad CPU Q9400 @ 2.66GHz) are
+
+~~~bash
+tail -n1 tsunami.out
+# Quadtree, 2992 steps, 1190.36 CPU, 1216 real, 1.28e+05 points.step/s, 28 var
+~~~
+
+## Profiling graphs
+
+They can be generated using
+[gprof2dot](http://code.google.com/p/jrfonseca/wiki/Gprof2Dot)
+
+~~~bash
+gprof tsunami gmon.out | gprof2dot.py | dot -Tpng -o tsunami.dot.png
+~~~
+
+- [popinet-new](tsunami/tsunami.dot.png)
+- [fitzroy](tsunami/fitzroy.dot.png)
