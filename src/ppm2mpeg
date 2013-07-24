@@ -1,20 +1,22 @@
 #!/bin/bash
 
 if test -z "`which ffmpeg`"; then
-    echo "ppm2mpeg: error: could not find 'ffmpeg'" > /dev/stderr
-    exit 1
-fi
-
-command="ffmpeg -f image2pipe -vcodec ppm -i - -vcodec mpeg1video -b 1800K -f mpeg1video"
-while test $# -gt 0; do
-    command="$command $1"
-    shift
-done
-
-if test -d "$TMPDIR" ; then
-  log=`mktemp $TMPDIR/ppm2mpeg.XXXXXX`
+    echo "ppm2mpeg: warning: could not find 'ffmpeg'" > /dev/stderr
+    echo "ppm2mpeg: the output will just be concatenated PPM files" \
+	> /dev/stderr
+    command=cat
+    log=/dev/null
 else
-  log=`mktemp /tmp/ppm2mpeg.XXXXXX`
+    command="ffmpeg -f image2pipe -vcodec ppm -i - -vcodec mpeg1video -b 1800K -f mpeg1video"
+    while test $# -gt 0; do
+	command="$command $1"
+	shift
+    done
+    if test -d "$TMPDIR" ; then
+	log=`mktemp $TMPDIR/ppm2mpeg.XXXXXX`
+    else
+	log=`mktemp /tmp/ppm2mpeg.XXXXXX`
+    fi
 fi
 
 if $command - 2> $log; then :
