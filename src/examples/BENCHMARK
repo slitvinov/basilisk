@@ -61,3 +61,64 @@ gprof tsunami gmon.out | gprof2dot.py | dot -Tpng -o tsunami.dot.png
 
 - [popinet-new](tsunami/tsunami.dot.png)
 - [fitzroy](tsunami/fitzroy.dot.png)
+
+## Parallel run
+
+We will first turn off the generation of movies as they
+are expensive. To do this edit `tsunami.c` and add
+
+~~~c
+#if 0
+event movies (t++) {
+...
+#endif
+event do_adapt (i++) adapt();
+...
+~~~
+
+To use OpenMP on fitzroy do
+
+~~~bash
+qcc -O2 -qsmp=omp tsunami.c -o tsunami ../kdt/kdt.o -lm
+~~~
+
+and submit the job as
+
+~~~bash
+#!/bin/bash
+
+#@ job_name         = basilisk
+#@ class            = General
+#@ job_type         = parallel
+#@ node             = 1
+#@ tasks_per_node   = 4
+#@ task_affinity    = core(1)
+#@ output           = tsunami-4.out
+#@ error            = tsunami-4.log
+#@ account_no       = HAFS1301
+#@ wall_clock_limit = 30:00
+#@ environment      = COPY_ALL
+#@ queue
+
+OMP_NUM_THREADS=4 ./tsunami
+~~~
+
+The results on `fitzroy` are
+
+~~~bash
+1 core
+# Quadtree, 2718 steps, 838.585 CPU, 921.3 real, 1.52e+05 points.step/s, 28 var
+4 cores
+# Quadtree, 2718 steps, 1030.61 CPU, 642.4 real, 2.17e+05 points.step/s, 28 var
+8 cores
+# Quadtree, 2718 steps, 1224.36 CPU, 536.5 real, 2.6e+05 points.step/s, 28 var
+~~~
+
+The results on `popinet-new` are
+
+~~~bash
+1 core
+# Quadtree, 2719 steps, 643.21 CPU, 647.8 real, 2.17e+05 points.step/s, 28 var
+4 cores
+# Quadtree, 2719 steps, 1398.57 CPU, 388.8 real, 3.62e+05 points.step/s, 28 var
+~~~
