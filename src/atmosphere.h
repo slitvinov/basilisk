@@ -109,13 +109,13 @@ void ke_psi (scalar u, scalar v)
 #endif
     psi[] = (v[] - v[-1,0] + u[0,-1] - u[])/delta;
   }
-  foreach_boundary (right, true)
+  foreach_boundary (right, false)
     psi[1,0] = (v[1,0] - v[] + u[1,-1] - u[1,0])/delta;
-  foreach_boundary (left, true)
+  foreach_boundary (left, false)
     ke[-1,0] = (sq(u[-1,0] + u[]) + sq(v[-1,0] + v[-1,1]))/8.;
-  foreach_boundary (top, true)
+  foreach_boundary (top, false)
     psi[0,1] = (v[0,1] - v[-1,1] + u[] - u[0,1])/delta;
-  foreach_boundary (bottom, true)
+  foreach_boundary (bottom, false)
     ke[0,-1] = (sq(u[0,-1] + u[1,-1]) + sq(v[0,-1] + v[]))/8.;
 }
 
