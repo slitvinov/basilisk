@@ -151,22 +151,21 @@ void okada (struct Okada p)
 
 void fault (struct Okada p)
 {
-  scalar d[];
-  p.d = d;
+  scalar hold[];
+  // save the initial water depth
+  _method[hold] = _method[h]; // clone h into hold
+  foreach()
+    hold[] = h[];
+  boundary ({hold});
+
+  p.d = h;
   do {
     okada (p);
-    // d[] now contains the Okada vertical displacement
-    foreach()
-      // turn d[] into eta[] = zb[] + h[] + d[] (in wet areas only)
-      d[] = (zb[] + max (0., h[] + d[]))*(h[] > dry);
-    boundary ({d});
-  } while (p.iterate && p.iterate());
-
-  // deformation is added to h[] (water depth) only in wet areas
-  okada (p);
-  foreach()
-    if (h[] > dry) {
-      h[] = max (0., h[] + d[]);
+    // h[] now contains the Okada vertical displacement
+    foreach() {
+      // deformation is added to hold[] (water depth) only in wet areas
+      h[] = hold[] > dry ? max (0., hold[] + h[]) : hold[];
       eta[] = zb[] + h[];
     }
+  } while (p.iterate && p.iterate());
 }
