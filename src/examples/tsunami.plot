@@ -1,7 +1,7 @@
 # We first split the large standard output file into its subfiles (as
 # defined by the "file:" keyword, see tsunami.c
 
-! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < tsunami.out
+! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
 
 set term pngcairo enhanced size 700,700 font ",8"
 
@@ -37,21 +37,21 @@ set xrange [3:8]
 set key bottom right
 set title 'Hanimaadhoo, Maldives'
 plot 'hani' u ($1/60.):2 w l t 'modelled', \
-     'hanires.txt' u 1:($2/100.) w lp t 'observed'
+     '../hanires.txt' u 1:($2/100.) w lp t 'observed'
 unset key
 set title 'Male, Maldives'
 plot 'male' u ($1/60.):2 w l t 'modelled', \
-     'maleres.txt' u 1:($2/100.) w lp t 'observed'
+     '../maleres.txt' u 1:($2/100.) w lp t 'observed'
 set title 'Gan, Maldives'
 plot 'gana' u ($1/60.):2 w l t 'modelled', \
-     'ganares.txt' u 1:($2/100.) w lp t 'observed'
+     '../ganares.txt' u 1:($2/100.) w lp t 'observed'
 set title 'Diego Garcia'
 plot 'dieg' u ($1/60.):2 w l t 'modelled', \
-     'diegres.txt' u 1:($2/100.) w lp t 'observed'
+     '../diegres.txt' u 1:($2/100.) w lp t 'observed'
 set title 'Columbo, Sri Lanka'
 set xrange [2.5:8]
 plot 'colo' u ($1/60.):2 w l t 'modelled', \
-     'colores.txt' u 1:($2/100.) w lp t 'observed'
+     '../colores.txt' u 1:($2/100.) w lp t 'observed'
 unset multiplot
 
 # finally we remove the subfiles of tsunami.out
