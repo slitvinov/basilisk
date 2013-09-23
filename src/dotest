@@ -46,7 +46,7 @@ expirecache()
 }
 
 # run locally
-local()
+locally()
 {
     cd $test
     echo qcc $CFLAGS -o $test/$test $test.c $LIBS -lm;
@@ -120,7 +120,7 @@ else
 	echo $! > $test/pid
     else
 	echo \[$test.$ext\]
-	local
+	locally
     fi
 
     if test -f $test/fail; then
