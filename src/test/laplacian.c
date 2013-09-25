@@ -43,9 +43,9 @@ using a 5-points Laplacian operator. */
       foreach()
 	b[] = (a[0,1] + a[1,0] + a[0,-1] + a[-1,0] - 4.*a[]);
     end = clock();
-    fprintf (stderr, "%d %g\n", l, 
-	     1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)));
-
+    printf ("lap %d %g\n", l, 
+	    1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)));
+    
 /**
 Something simpler: the sum of `a` over the entire mesh. */
 

@@ -22,9 +22,6 @@ clean:
 %.tst: %.s
 	@$(BASILISK)/dotest $@
 
-%.stst: %.s
-	@$(BASILISK)/dotest $@
-
 %.ctst: %.s
 	@CFLAGS="-grid=multigrid $(CFLAGS)" $(BASILISK)/dotest $@
 

@@ -4,9 +4,7 @@ CFLAGS += -g -O2 -DTRASH=1
 all: check slow
 
 # list only non-default (!.tst) tests
-check: halo.vtst speed.stst rk2.vtst \
-       laplacian.stst interpolate.vtst events.vtst \
-       faces.vtst
+check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst
 
 # these tests will not be done by the default 'check' target
 slow: nonlinear.tst advection.tst rotation.tst \
@@ -15,7 +13,7 @@ slow: nonlinear.tst advection.tst rotation.tst \
 # these tests have special depencies/compilation requirements
 poisson.tst: poisson.ctst
 
-laplacian.stst: laplacian.ctst
+laplacian.tst: laplacian.ctst
 
 terrain.tst: terrain.s
 	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest terrain.tst

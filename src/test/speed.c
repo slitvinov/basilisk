@@ -30,17 +30,16 @@ int main (int argc, char ** argv)
   end = clock ();
   double cpu0 = ((double) (end0 - start))/CLOCKS_PER_SEC;
   double cpu = ((double) (end - start))/CLOCKS_PER_SEC;
-  fprintf (stderr,
-	   "---- restriction + wavelet + coarsen_wavelet "
-	   "+ flag_halo_cells ----\n");
+  printf ("---- restriction + wavelet + coarsen_wavelet "
+	  "+ flag_halo_cells ----\n");
   int leaves = 0, maxlevel = 0;
   foreach() { leaves++; if (level > maxlevel) maxlevel = level; }
-  fprintf (stderr, "after coarsening: %d leaves, maximum level %d\n", 
-	   leaves, maxlevel);
-  fprintf (stderr, "initial coarsening:  %6g CPU, %.3g points.steps/s\n",
-	   cpu0, n*n/cpu0);
-  fprintf (stderr, "%4d iterations:     %6g CPU, %.3g leaves.steps/s\n",
-	   i - 1, cpu - cpu0, leaves*(i - 1)/(cpu - cpu0));
+  printf ("after coarsening: %d leaves, maximum level %d\n", 
+	  leaves, maxlevel);
+  printf ("initial coarsening:  %6g CPU, %.3g points.steps/s\n",
+	  cpu0, n*n/cpu0);
+  printf ("%4d iterations:     %6g CPU, %.3g leaves.steps/s\n",
+	  i - 1, cpu - cpu0, leaves*(i - 1)/(cpu - cpu0));
 
   int nhalos = 0;
   foreach_halo() {
@@ -53,10 +52,10 @@ int main (int argc, char ** argv)
     halo_prolongation (-1, {h});
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
-  fprintf (stderr, "---- update_halos ----\n");
-  fprintf (stderr, "%d halo points\n", nhalos);
-  fprintf (stderr, "%4d iterations:     %6g CPU, %.3g halos.steps/s\n",
-	   i, cpu, nhalos*i/cpu);
+  printf ("---- update_halos ----\n");
+  printf ("%d halo points\n", nhalos);
+  printf ("%4d iterations:     %6g CPU, %.3g halos.steps/s\n",
+	  i, cpu, nhalos*i/cpu);
 
   start = clock ();
   for (i = 0; i < 2000; i++)
@@ -69,10 +68,10 @@ int main (int argc, char ** argv)
     foreach_boundary_level (b, depth(), true)
       nbounds++;
 
-  fprintf (stderr, "---- boundary_level ----\n");
-  fprintf (stderr, "%d boundary points\n", nbounds);
-  fprintf (stderr, "%4d iterations:     %6g CPU, %.3g boundary.steps/s\n",
-	   i, cpu, nbounds*i*10/cpu);
+  printf ("---- boundary_level ----\n");
+  printf ("%d boundary points\n", nbounds);
+  printf ("%4d iterations:     %6g CPU, %.3g boundary.steps/s\n",
+	  i, cpu, nbounds*i*10/cpu);
 
   free_grid();
 }
