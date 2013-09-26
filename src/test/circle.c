@@ -43,7 +43,7 @@ void residual (scalar a, scalar b, scalar res)
   vector g[];
   foreach_face()
     g.x[] = (a[] - a[-1,0])/delta;
-  boundary_flux ({g});
+  boundary_normal ({g});
   foreach()
     res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/delta;
 #else

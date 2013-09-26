@@ -68,11 +68,13 @@ void init()
 /* } */
 
 event velocity (i++) {
+  trash ({u});
   foreach_face(x)
     u.x[] = 1.5*sin(2.*pi*t/5.)*sin((x + 0.5)*pi)*cos((y + 0.5)*pi);
   foreach_face(y)
     u.y[] = - 1.5*sin(2.*pi*t/5.)*cos((x + 0.5)*pi)*sin((y + 0.5)*pi);
-  boundary_flux (u);
+  boundary_normal ({u});
+  boundary_tangent ({u});
 }
 
 event logfile (t = {0,5}) {

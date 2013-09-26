@@ -214,23 +214,8 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
     else // dry
       Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
   }
-
-/**
-#### Boundary conditions for fluxes */
-
-#if QUADTREE
-  // fixme: all this should be halo_restriction_flux()
-  vector * list = {Fh, S, Fq};
-  foreach_halo_fine_to_coarse()
-    foreach_dimension() {
-      if (is_leaf (neighbor(-1,0)))
-	for (vector f in list)
-	  f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
-      if (is_leaf (neighbor(1,0)))
-	for (vector f in list)
-	  f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
-    }
-#endif
+  
+  boundary_normal ({Fh, S, Fq});
 
   return dtmax;
 }

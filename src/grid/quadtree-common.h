@@ -334,8 +334,8 @@ void quadtree_boundary_restriction (scalar * list)
 
 // Cartesian methods
 
-#undef boundary_flux
-#define boundary_flux halo_restriction_flux
+#undef boundary_normal
+#define boundary_normal halo_restriction_flux
 
 void quadtree_boundary (scalar * list)
 {

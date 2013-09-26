@@ -37,6 +37,9 @@ struct _Point {
 @
 @define end_foreach_boundary() }}
 
+@define foreach_boundary_face(d)    foreach_boundary(d,true)
+@define end_foreach_boundary_face() end_foreach_boundary()
+
 @def foreach_boundary_ghost(d) { _OMPSTART /* for face reduction */
   int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point = *((Point *)grid);
@@ -85,8 +88,9 @@ void realloc_scalar (void)
 # define trash cartesian1D_trash
 #endif
 
-void cartesian1D_trash (scalar * list)
+void cartesian1D_trash (void * alist)
 {
+  scalar * list = alist;
   Point * p = grid;
   char * data = p->data;
   for (int i = 0; i < p->n + 2; i++, data += datasize) {

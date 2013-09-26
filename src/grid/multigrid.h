@@ -88,6 +88,21 @@ static size_t _size (size_t l)
 @
 @define end_foreach_boundary_level() } OMP_END_PARALLEL()
 
+@def foreach_boundary_face(d)
+  // fixme: x,y coordinates are not correct
+  OMP_PARALLEL()
+  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+  Point point = *((Point *)grid);
+  point.level = point.depth; point.n = 1 << point.level;
+  int _start = GHOSTS, _end = point.n + 2*GHOSTS, _k;
+  OMP(omp for schedule(static))
+  for (_k = _start; _k < _end; _k++) {
+    point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
+    point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
+    POINT_VARIABLES
+@
+@define end_foreach_boundary_face() } OMP_END_PARALLEL()
+
 @def foreach_boundary(d,corners) foreach_boundary_level(d,point.depth,corners) @
 @def end_foreach_boundary() end_foreach_boundary_level() @
 
@@ -121,6 +136,22 @@ static size_t _size (size_t l)
   point.level--;
 }
 @
+
+#if TRASH
+# undef trash
+# define trash multigrid_trash
+#endif
+
+void multigrid_trash (void * alist)
+{
+  scalar * list = alist;
+  Point p = *((Point *)grid);
+  p.level = p.depth - 1; p.n = 1 << p.level;
+  for (; p.level >= 0; p.n /= 2, p.level--)
+    for (int i = 0; i < (p.n + 2*GHOSTS)*(p.n + 2*GHOSTS); i++)
+      for (scalar s in list)
+	((double *)(&p.d[p.level][i*datasize]))[s] = undefined;
+}
 
 void init_grid (int n)
 {

@@ -36,7 +36,7 @@ void (* debug)    (Point);
 
 @define end_foreach_face()
 
-#define boundary_flux(...)
+#define boundary_normal(...)
 #define output_stencil(v,fp) _output_stencil(point,v,#v,fp)
 void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
 {
@@ -144,7 +144,8 @@ void delete (scalar * list)
 
 // Cartesian methods
 
-void (* boundary) (scalar *);
+void (* boundary)         (scalar *);
+void (* boundary_tangent) (vector *);
 
 void cartesian_boundary (scalar * list)
 {
@@ -152,6 +153,19 @@ void cartesian_boundary (scalar * list)
     foreach_boundary (b, true) // also traverse corners
       for (scalar s in list)
 	s[ghost] = s.boundary[b] (point, s);
+}
+
+void cartesian_boundary_tangent (vector * list)
+{
+  // fixme: hardcoded for 2D
+  for (int d = top; d <= bottom; d++)
+    foreach_boundary_face (d)
+      for (vector v in list)
+	v.x[ghost] = v.x.boundary[d] (point, v.x);
+  for (int d = right; d <= left; d++)
+    foreach_boundary_face (d)
+      for (vector v in list)
+	v.y[ghost] = v.y.boundary[d] (point, v.y);
 }
 
 static double symmetry (Point point, scalar s)
@@ -233,9 +247,10 @@ void cartesian_debug (Point point)
 
 void cartesian_methods()
 {
-  init_scalar = cartesian_init_scalar;
-  init_vector = cartesian_init_vector;
-  init_tensor = cartesian_init_tensor;
-  boundary    = cartesian_boundary;
-  debug       = cartesian_debug;
+  init_scalar      = cartesian_init_scalar;
+  init_vector      = cartesian_init_vector;
+  init_tensor      = cartesian_init_tensor;
+  boundary         = cartesian_boundary;
+  boundary_tangent = cartesian_boundary_tangent;
+  debug            = cartesian_debug;
 }

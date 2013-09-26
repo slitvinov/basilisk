@@ -45,6 +45,34 @@ struct _Point {
 @
 @define end_foreach_boundary() } OMP_END_PARALLEL()
 
+@def foreach_boundary_face(d)
+  // fixme: x,y coordinates are not correct
+  OMP_PARALLEL()
+  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+  Point point = *((Point *)grid);
+  int _start = 1, _end = point.n + 1, _k;
+  OMP(omp for schedule(static))
+  for (_k = _start; _k <= _end; _k++) {
+    point.i = d > left ? _k : d == right ? point.n : 1;
+    point.j = d < top  ? _k : d == top   ? point.n : 1;
+    POINT_VARIABLES
+@
+@define end_foreach_boundary_face() } OMP_END_PARALLEL()
+
+#if TRASH
+# undef trash
+# define trash cartesian_trash
+#endif
+
+void cartesian_trash (void * alist)
+{
+  scalar * list = alist;
+  Point * p = grid;
+  for (int i = 0; i < (p->n + 2)*(p->n + 2); i++)
+    for (scalar s in list)
+      ((double *)(&p->data[i*datasize]))[s] = undefined;
+}
+
 void init_grid (int n)
 {
   init_solver();

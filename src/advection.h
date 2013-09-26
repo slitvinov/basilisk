@@ -15,6 +15,7 @@ void fluxes_upwind_bcg (const scalar f, const vector g,
 			vector flux,
 			double dt)
 {
+  trash ({flux});
   foreach_face() {
     double un = dt*u.x[]/delta, s = sign(un);
     int i = -(s + 1.)/2.;
@@ -24,19 +25,18 @@ void fluxes_upwind_bcg (const scalar f, const vector g,
     f2 -= dt*vn*fyy/(4.*delta);
     flux.x[] = f2*u.x[];
   }
-  boundary_flux (flux);
+  boundary_normal ({flux});
 }
 
 double timestep (const vector u)
 {
   double dtmax = DT/CFL;
-  foreach(reduction(min:dtmax)) {
+  foreach(reduction(min:dtmax))
     foreach_dimension()
       if (u.x[] != 0.) {
 	double dt = delta/fabs(u.x[]);
 	if (dt < dtmax) dtmax = dt;
       }
-  }
   return dtmax*CFL;
 }
 
@@ -48,7 +48,7 @@ void run (void)
   foreach()
     f[] = u.x[] = u.y[] = 0.;
   init();
-  boundary ({f, u.x, u.y});
+  boundary ({f, u});
 
   timer start = timer_start();
   double t = 0.;

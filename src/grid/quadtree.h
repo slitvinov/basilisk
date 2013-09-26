@@ -308,7 +308,7 @@ void recursive (Point point)
 @
 @def end_foreach_boundary_cell()
         }
-	if (stage == _CORNER) continue;
+	if (is_corner (cell)) continue;
         /* children */
         if (point.level < point.depth) {
 	  _push (point.level, point.i, point.j, 1);
@@ -322,6 +322,59 @@ void recursive (Point point)
 	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;
 	  _push (point.level + 1, k, l, 0);
 	  corners();
+	  break;
+        }
+      }
+    }  _OMPEND
+  }
+@
+
+#define last()								\
+      if (is_leaf (cell)) {						\
+        if (_d < top) {							\
+	  if (point.j == NN + 2*GHOSTS - 2)			        \
+	    _push (point.level, point.i, point.j + 1, _CORNER);		\
+	} else {							\
+	  if (point.i == NN + 2*GHOSTS - 2)			        \
+	    _push (point.level, point.i + 1, point.j, _CORNER);		\
+        }								\
+      }
+
+@def foreach_boundary_face(dir)
+  // fixme: x,y coordinates are not correct
+  { _OMPSTART /* for face reduction */
+    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    int _d = dir; NOT_UNUSED(_d);
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
+    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
+    while (_s >= 0) {
+      int stage;
+      _pop (point.level, point.i, point.j, stage);
+      if (!_ALLOCATED (0,0))
+	continue;
+      switch (stage) {
+      case 0: case _CORNER: 
+	if (is_leaf (cell) || is_corner (cell)) {
+          POINT_VARIABLES;
+  	  /* do something */
+@
+@def end_foreach_boundary_face()
+        }
+	if (is_corner (cell)) continue;
+        /* children */
+        if (point.level < point.depth) {
+	  _push (point.level, point.i, point.j, 1);
+	  int k = _d > left ? _LEFT : _RIGHT - _d;
+	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;
+	  _push (point.level + 1, k, l, 0);
+	} else last();
+	break;
+      case 1: {
+  	  int k = _d > left ? _RIGHT : _RIGHT - _d;
+	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;
+	  _push (point.level + 1, k, l, 0);
+	  last();
 	  break;
         }
       }
@@ -417,8 +470,9 @@ void recursive (Point point)
 # define trash quadtree_trash
 #endif
 
-void quadtree_trash (scalar * list)
+void quadtree_trash (void * alist)
 {
+  scalar * list = alist;
   Quadtree * q = grid;
 #if DYNAMIC
   for (int l = 0; l <= q->depth; l++)
