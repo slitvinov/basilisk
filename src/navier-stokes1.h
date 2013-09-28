@@ -17,32 +17,24 @@ void parameters (void);
 void init       (void);
 void end        (void);
 
+// default is no flow through boundaries
+u.x[right]  = 0.;
+u.x[left]   = 0.;
+u.y[top]    = 0.;
+u.y[bottom] = 0.;
+
 static void boundary_u (vector u)
 {
-#if 0
-  // slip-walls by default
-  u.x[right]  = 0.;
-  // u.x[left]   = 0.;
-  u.y[top]    = 0.;
-  // u.y[bottom] = 0.;
-
-  boundary ((scalar *){u});
-  /* fixme */
-  foreach_boundary (left,true)
-    u.x[] = 0.;
-  foreach_boundary (bottom,true)
-    u.y[] = 0.;
-#else
   foreach_boundary (right,false)
-    u.x[ghost] = 0.;
+    u.x[ghost] = u.x.boundary[right] (point, u.x);
   foreach_boundary (top,false)
-    u.y[ghost] = 0.;
+    u.y[ghost] = u.y.boundary[top] (point, u.y);
   foreach_boundary (left,false)
-    u.x[] = 0.;
+    u.x[] = u.x.boundary[left] (point, u.x);
   foreach_boundary (bottom,false)
-    u.y[] = 0.;
+    u.y[] = u.y.boundary[bottom] (point, u.y);
+  boundary_normal ({u});
   boundary_tangent ({u});
-#endif
 }
 
 double timestep()
