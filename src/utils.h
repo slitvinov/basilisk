@@ -64,8 +64,8 @@ double interpolate (scalar v, double xp, double yp)
   Point point = locate (xp, yp);
   if (point.level < 0)
     return nodata;
-  x = (xp - x)/delta;
-  y = (yp - y)/delta;
+  x = (xp - x)/delta - v.d.x/2.;
+  y = (yp - y)/delta - v.d.y/2.;
   int i = sign(x), j = sign(y);
   x = fabs(x); y = fabs(y);
   /* bilinear interpolation */

@@ -124,6 +124,9 @@ void run (void)
   parameters ();
   init_grid (N);
 
+  S.x.y = S.y.x; // fixme: the tensor is symmetric
+  // staggering for u.x, u.y, S.x.y
+  u.x.d.x = u.y.d.y = S.x.y.d.x = S.x.y.d.y = -1;
   foreach()
     u.x[] = u.y[] = p[] = 0.;
   init ();

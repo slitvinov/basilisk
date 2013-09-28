@@ -163,6 +163,7 @@ typedef struct {
   void   (* refine)              (Point, scalar);
   void   (* coarsen)             (Point, scalar);
   double (* gradient)            (double, double, double);
+  struct { int x, y; } d;        // staggering
 } Methods;
 
 Methods * _method;
