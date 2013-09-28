@@ -24,7 +24,7 @@
   Tensor * tensors = NULL;
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
-    inforeach_boundary, inforeach_face;
+    inforeach_boundary, inforeach_face, inforeach_vertex;
   int invardecl, vartype;
   int inval, invalpara;
   int brack, inarray;
@@ -55,6 +55,8 @@
   int foreach_face_line;
   enum { face_x, face_y, face_xy };
   int foreach_face_xy;
+
+  int foreach_vertex_line;
 
   char ** args = NULL, ** argss = NULL;
   int nargs = 0, inarg;
@@ -244,6 +246,32 @@
       fprintf (yyout, "#line %d\n", line);
       fclose (fp);
     }
+    else if (inforeach_vertex) {
+      fclose (yyout);
+      yyout = foreachfp;
+      FILE * fp = dopen ("foreach_vertex.h", "r");
+      fputs ("foreach() { ", yyout);
+      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      fputs (" } end_foreach()\n", yyout);
+      fputs ("foreach_boundary_face_ghost (top) {\n", yyout);
+      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      fputs ("} end_foreach_boundary_face_ghost();\n"
+	     "#ifdef foreach_boundary_face_ghost_halo\n"
+	     "foreach_boundary_face_ghost_halo (top) {\n", yyout);
+      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      fputs ("} end_foreach_boundary_face_ghost_halo();\n"
+	     "#endif\n"
+	     "foreach_boundary_face_ghost (right) {\n", yyout);
+      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      fputs ("} end_foreach_boundary_face_ghost();\n"
+	     "#ifdef foreach_boundary_face_ghost_halo\n"
+	     "foreach_boundary_face_ghost_halo (right) {\n", yyout);
+      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      fputs ("} end_foreach_boundary_face_ghost_halo();\n"
+	     "#endif\n", yyout);
+      fprintf (yyout, "#line %d\n", line);
+      fclose (fp);
+    }
     if (nreduct > 0)
       fprintf (yyout,
 	       "\nend_%s();\n"
@@ -255,7 +283,7 @@
 	       foreachs, line);
     else
       fprintf (yyout, " end_%s();", foreachs);
-    inforeach = inforeach_boundary = inforeach_face = 0;
+    inforeach = inforeach_boundary = inforeach_face = inforeach_vertex = 0;
   }
 
   void endevent() {
@@ -513,6 +541,10 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 	fclose (fp);
       }
     }
+    else if (inforeach_vertex) {
+      yyout = dopen ("foreach_vertex.h", "w");
+      foreach_vertex_line = line;
+    }
     else {
       FILE * fp = dopen ("foreach.h", "r");
       int c;
@@ -577,6 +609,7 @@ foreach{ID}* {
   foreachfp = yyout;
   yyout = dopen ("foreach.h", "w");
   inforeach_boundary = (!strncmp(foreachs, "foreach_boundary", 16));
+  inforeach_vertex = (!strcmp(foreachs, "foreach_vertex"));
   inforeach_face = (!strcmp(foreachs, "foreach_face"));
   ECHO;
 }
@@ -1207,7 +1240,7 @@ int endfor (FILE * fin, FILE * fout)
   yyout = fout;
   line = 0, scope = para = 0;
   inforeach = foreachscope = foreachpara = 
-    inforeach_boundary = inforeach_face = 0;
+    inforeach_boundary = inforeach_face = inforeach_vertex = 0;
   invardecl = 0;
   inval = invalpara = 0;
   brack = inarray = 0;

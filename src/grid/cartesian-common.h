@@ -34,7 +34,21 @@ void (* debug)    (Point);
 @
 @endif
 
+@ifndef foreach_boundary_face_ghost
+@ def foreach_boundary_face_ghost(dir)
+  foreach_boundary_face(dir) {
+    point.i += ig; point.j += jg;
+    ig = -ig; jg = -jg;
+    POINT_VARIABLES;
+@
+@ def end_foreach_boundary_face_ghost()
+    ig = -ig; jg = -jg;
+  } end_foreach_boundary_face()
+@
+@endif
+
 @define end_foreach_face()
+@define end_foreach_vertex()
 
 #define boundary_normal(...)
 #define output_stencil(v,fp) _output_stencil(point,v,#v,fp)

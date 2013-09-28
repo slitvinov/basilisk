@@ -28,8 +28,8 @@ clean:
 %.vtst: %.s
 	@$(BASILISK)/dotest $@ "$(VALGRIND)"
 
-%.s: %.c $(QCC)
-	@$(QCC) -nolineno -S $< || (rm -f $@ && false)
+%.s: %.c $(QCC) Makefile
+	@$(QCC) $(CFLAGS) -nolineno -S $< || (rm -f $@ && false)
 
 %.prof: %.pgexe
 	./$< 2> $*.log > $*.out
