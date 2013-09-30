@@ -35,7 +35,7 @@ int main (int argc, char ** argv)
       else
 	continue;
     }
-  halo_prolongation_u_v (-1, u.x, u.y);
+  halo_prolongation_u_v (depth(), u.x, u.y);
 
   double max = 0., maxv = 0;
   foreach_halo() {

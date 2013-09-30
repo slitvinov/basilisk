@@ -19,7 +19,7 @@ int main (int argc, char ** argv)
   
   adapt_wavelet ({h}, (double []){1e-2}, 5);
 
-  foreach_halo_coarse_to_fine(-1)
+  foreach_halo()
     fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
   foreach_halo_fine_to_coarse()
     fprintf (stderr, "%g %g %d %d res\n", x, y, level, cell.neighbors);

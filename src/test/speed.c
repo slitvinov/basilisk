@@ -49,7 +49,7 @@ int main (int argc, char ** argv)
 
   start = clock ();
   for (i = 0; i < 10000; i++)
-    halo_prolongation (-1, {h});
+    halo_prolongation (depth(), {h});
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   printf ("---- update_halos ----\n");

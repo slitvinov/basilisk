@@ -28,7 +28,7 @@
 @ define end_foreach_level_or_leaf()  continue; } } end_foreach_cell()
 @endif
 
-@define foreach_halo()     foreach_halo_coarse_to_fine(-1)
+@define foreach_halo()     foreach_halo_coarse_to_fine(depth())
 @define end_foreach_halo() end_foreach_halo_coarse_to_fine()
 
 @def foreach_boundary(dir,corners)
@@ -371,7 +371,7 @@ void quadtree_boundary (scalar * list)
       listr = list_append (listr, s);
 
   if (listr) {
-    halo_prolongation (-1, listr);
+    halo_prolongation (depth(), listr);
     for (int b = 0; b < nboundary; b++)
       foreach_boundary_cell (b, true)
 	if (!is_active (cell)) {

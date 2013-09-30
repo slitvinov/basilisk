@@ -329,17 +329,6 @@ void recursive (Point point)
   }
 @
 
-#define last()								\
-      if (is_leaf (cell)) {						\
-        if (_d < top) {							\
-	  if (point.j == NN + 2*GHOSTS - 2)			        \
-	    _push (point.level, point.i, point.j + 1, _CORNER);		\
-	} else {							\
-	  if (point.i == NN + 2*GHOSTS - 2)			        \
-	    _push (point.level, point.i + 1, point.j, _CORNER);		\
-        }								\
-      }
-
 @def foreach_boundary_face(dir)
   // fixme: x,y coordinates are not correct
   { _OMPSTART /* for face reduction */
@@ -356,25 +345,33 @@ void recursive (Point point)
       switch (stage) {
       case 0: case _CORNER: 
 	if (is_leaf (cell) || is_corner (cell)) {
+	  if (is_leaf (cell)) {
+	    if (_d < top) {
+	      if (point.j == NN + 2*GHOSTS - 2)
+		_push (point.level, point.i, point.j + 1, _CORNER);
+	    } else {
+	      if (point.i == NN + 2*GHOSTS - 2)
+		_push (point.level, point.i + 1, point.j, _CORNER);
+	    }
+	  }
           POINT_VARIABLES;
   	  /* do something */
 @
 @def end_foreach_boundary_face()
+          continue;
         }
-	if (is_corner (cell)) continue;
         /* children */
         if (point.level < point.depth) {
 	  _push (point.level, point.i, point.j, 1);
 	  int k = _d > left ? _LEFT : _RIGHT - _d;
 	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;
 	  _push (point.level + 1, k, l, 0);
-	} else last();
+	}
 	break;
       case 1: {
   	  int k = _d > left ? _RIGHT : _RIGHT - _d;
 	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;
 	  _push (point.level + 1, k, l, 0);
-	  last();
 	  break;
         }
       }
@@ -626,12 +623,10 @@ static void update_cache (void)
   q->dirty = false;
 }
 
-/* breadth-first traversal of halos from coarse to fine */
-@def foreach_halo_coarse_to_fine(depth1)    {
+@def foreach_halo_levels(start,cond,inc) {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  int _depth = depth1 < 0 ? depth() : depth1;
-  for (int _l = 0; _l <= _depth; _l++) {
+  for (int _l = start; _l cond; _l inc) {
     OMP_PARALLEL()
     Quadtree point = *((Quadtree *)grid); point.back = grid;
     int _k;
@@ -641,27 +636,30 @@ static void update_cache (void)
       point.j = point.halo[_l].p[_k].j;
       point.level = _l;
       POINT_VARIABLES;
-      if (!is_active(cell)) {
 @
-  @define end_foreach_halo_coarse_to_fine() } } OMP_END_PARALLEL() } }
+@define end_foreach_halo_levels() } OMP_END_PARALLEL() } }
+
+/* breadth-first traversal of halos from coarse to fine */
+@def foreach_halo_coarse_to_fine(depth1) {
+  foreach_halo_levels (0, <= depth1, ++)
+    if (!is_active(cell)) {
+@
+@define end_foreach_halo_coarse_to_fine() } end_foreach_halo_levels() }
 
 /* breadth-first traversal of halos from fine to coarse */
-@def foreach_halo_fine_to_coarse()    {
-  update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  for (int _l = depth() - 1; _l >= 0; _l--) {
-    OMP_PARALLEL()
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
-    int _k;
-    OMP(omp for schedule(static))
-    for (_k = 0; _k < point.halo[_l].n; _k++) {
-      point.i = point.halo[_l].p[_k].i;
-      point.j = point.halo[_l].p[_k].j;
-      point.level = _l;
-      POINT_VARIABLES;
-      if (is_active(cell)) {
+@def foreach_halo_fine_to_coarse()
+  foreach_halo_levels (depth() - 1, >= 0, --)
+    if (is_active(cell)) {
 @
-@define end_foreach_halo_fine_to_coarse() } } OMP_END_PARALLEL() } }
+@define end_foreach_halo_fine_to_coarse() } end_foreach_halo_levels()
+
+@def foreach_halo_vertex()
+  foreach_halo_levels(0, <= depth(), ++)
+    if ((_ALLOCATED(-1,0) && is_leaf(_neighbor(-1,0))) ||
+	(_ALLOCATED(0,-1) && is_leaf(_neighbor(0,-1))) ||
+	(_ALLOCATED(-1,-1) && is_leaf(_neighbor(-1,-1)))) {
+@
+@define end_foreach_halo_vertex() } end_foreach_halo_levels()
 
 Point refine_cell (Point point, scalar * list);
 
