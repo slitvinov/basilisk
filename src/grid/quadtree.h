@@ -108,10 +108,10 @@ static size_t _size (size_t l)
 
 #if DYNAMIC
   @define CELL(m,level,i) (*((Cell *)m[level][i]))
-  @define _ALLOCATED(i,j) (point.m[point.level][_index(i,j)])
+  @define _allocated(i,j) (point.m[point.level][_index(i,j)])
 #else
   @define CELL(m,level,i) (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
-  @define _ALLOCATED(i,j) 1
+  @define _allocated(i,j) 1
 #endif
 
 /***** Multigrid macros *****/
@@ -208,7 +208,7 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
-      if (!_ALLOCATED (0,0))
+      if (!_allocated (0,0))
 	continue;
       switch (stage) {
       case 0: {
@@ -240,7 +240,7 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
-      if (!_ALLOCATED (0,0))
+      if (!_allocated (0,0))
 	continue;
       switch (stage) {
       case 0: {
@@ -299,7 +299,7 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
-      if (!_ALLOCATED (0,0))
+      if (!_allocated (0,0))
 	continue;
       switch (stage) {
       case 0: case _CORNER: {
@@ -340,17 +340,17 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
-      if (!_ALLOCATED (0,0))
+      if (!_allocated (0,0))
 	continue;
       switch (stage) {
       case 0: case _CORNER: 
 	if (is_leaf (cell) || is_corner (cell)) {
 	  if (is_leaf (cell)) {
 	    if (_d < top) {
-	      if (point.j == NN + 2*GHOSTS - 2)
+	      if (!is_leaf(_neighbor(0,1)))
 		_push (point.level, point.i, point.j + 1, _CORNER);
 	    } else {
-	      if (point.i == NN + 2*GHOSTS - 2)
+	      if (!is_leaf(_neighbor(1,0)))
 		_push (point.level, point.i + 1, point.j, _CORNER);
 	    }
 	  }
@@ -655,9 +655,9 @@ static void update_cache (void)
 
 @def foreach_halo_vertex()
   foreach_halo_levels(0, <= depth(), ++)
-    if ((_ALLOCATED(-1,0) && is_leaf(_neighbor(-1,0))) ||
-	(_ALLOCATED(0,-1) && is_leaf(_neighbor(0,-1))) ||
-	(_ALLOCATED(-1,-1) && is_leaf(_neighbor(-1,-1)))) {
+    if ((_allocated(-1,0) && is_leaf(_neighbor(-1,0))) ||
+	(_allocated(0,-1) && is_leaf(_neighbor(0,-1))) ||
+	(_allocated(-1,-1) && is_leaf(_neighbor(-1,-1)))) {
 @
 @define end_foreach_halo_vertex() } end_foreach_halo_levels()
 

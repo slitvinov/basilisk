@@ -48,7 +48,7 @@
   
 @def foreach_boundary_ghost_halo(d) {
   int _in = -_ig[d], _jn = -_jg[d];
-  foreach_halo() if (_ALLOCATED(_in,_jn) && is_leaf(_neighbor(_in,_jn))) {
+  foreach_halo() if (_allocated(_in,_jn) && is_leaf(_neighbor(_in,_jn))) {
     ig = _in; jg = _jn; VARIABLES;
 @
 @define end_foreach_boundary_ghost_halo() } end_foreach_halo(); }
@@ -272,8 +272,9 @@ void halo_restriction_flux (vector * list)
 {
   foreach_halo_fine_to_coarse()
     foreach_dimension() {
+    // if (is_leaf (neighbor(-1,0)))
       for (vector f in list)
-        f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+	f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
       if (is_leaf (neighbor(1,0)))
 	for (vector f in list)
 	  f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
@@ -295,25 +296,6 @@ void halo_prolongation (int depth, scalar * list)
 	s[] = (9.*coarse(s,0,0) + 
 	       3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
 	       coarse(s,child.x,child.y))/16.;	
-  }
-}
-
-void halo_prolongation_u_v (int depth, scalar u, scalar v)
-{
-  foreach_halo_coarse_to_fine (depth) {
-    /* linear interpolation from coarser level */
-    if (child.x < 0)
-      /* conservative interpolation */
-      u[] = coarse(u,0,0) + (coarse(u,0,1) - coarse(u,0,-1))*child.y/8.;
-    else
-      u[] = (3.*coarse(u,0,0) + coarse(u,0,child.y) + 
-	     3.*coarse(u,1,0) + coarse(u,1,child.y))/8.;
-    if (child.y < 0)
-      /* conservative interpolation */
-      v[] = coarse(v,0,0) + (coarse(v,1,0) - coarse(v,-1,0))*child.x/8.;
-    else
-      v[] = (3.*coarse(v,0,0) + coarse(v,child.x,0) + 
-	     3.*coarse(v,0,1) + coarse(v,child.x,1))/8.;
   }
 }
 
@@ -386,6 +368,26 @@ void quadtree_boundary (scalar * list)
   }
 }
 
+void quadtree_boundary_tangent (vector * list)
+{
+  cartesian_boundary_tangent (list);
+
+  foreach_halo()
+    foreach_dimension()
+      // fixme: this does not work for static quadtrees 
+      // (because allocated() is always true
+      if (allocated(-1,0) && !is_leaf(neighbor(-1,0))) {
+	if (child.x < 0) {
+	  for (vector u in list)
+	    u.x[] = (3.*coarse(u.x,0,0) + coarse(u.x,0,child.y))/4.;
+	}
+	else
+	  for (vector u in list)
+	    u.x[] = (3.*coarse(u.x,0,0) + coarse(u.x,0,child.y) +
+		     3.*coarse(u.x,1,0) + coarse(u.x,1,child.y))/8.;
+      }
+}
+
 Point locate (double xp, double yp)
 {
   foreach_cell () {
@@ -412,5 +414,6 @@ void quadtree_methods()
   multigrid_methods();
   init_scalar          = quadtree_init_scalar;
   boundary             = quadtree_boundary;
+  boundary_tangent     = quadtree_boundary_tangent;
   boundary_restriction = quadtree_boundary_restriction;
 }

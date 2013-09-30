@@ -1,10 +1,18 @@
+static int refine_func (Point point, void * data)
+{
+  return (x*x + y*y < 0.25*0.25 ||
+	  sq(x + 0.5) + sq(y - 0.5) < 0.25*0.25);
+}
+
 int main ()
 {
-  init_grid(4);
+  X0 = -0.5;
+  init_grid(8);
+  refine_function (refine_func, NULL, NULL);
   output_cells (stdout);
-  foreach_boundary_face (top)
-    fprintf (stderr, "top %g %g\n", x - delta/2., y - delta/2.);
-  foreach_boundary_face (right)
-    fprintf (stderr, "right %g %g\n", x - delta/2., y - delta/2.);
+  foreach_boundary_face (bottom)
+    fprintf (stderr, "bottom %g %g %d\n", x - delta/2., y, level);
+  foreach_boundary_face (left)
+    fprintf (stderr, "left %g %g %d\n", x, y - delta/2., level);
   free_grid();
 }

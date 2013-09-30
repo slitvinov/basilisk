@@ -44,6 +44,7 @@
 @define val(a,k,l)     data(k,l)[a]
 @define fine(a,k,l)    _fine(a,k,l)
 @define coarse(a,k,l)  _coarse(a,k,l)
+@define allocated(k,l) _allocated(k,l)
 @define neighbor(k,l)  _neighbor(k,l)
 
 // the grid

@@ -1,4 +1,4 @@
-/* interpolation on halos  */
+/* tangential interpolation on staggered vector fields  */
 
 #include "grid/quadtree.h"
 #include "utils.h"
@@ -17,38 +17,35 @@ int main (int argc, char ** argv)
   boundary ({h});
   
   /* initial coarsening (see halo.c) */
-  double tolerance = 1e-4;
+  double tolerance = 1.5e-4;
   adapt_wavelet ({h}, &tolerance, 11, list = {h});
 
+  trash ({u});
   foreach_face(x) u.x[] = exp(-(x*x + y*y)/(R0*R0));
   foreach_face(y) u.y[] = exp(-(x*x + y*y)/(R0*R0));
+  boundary_normal ({u});
+  boundary_tangent ({u});
+  //  output_cells (stdout);
 
-  /* see boundary_quadtree() */
-  halo_restriction_flux ({u});
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell (b, true) {
-      if (is_active (cell)) {
-	if (cell.neighbors > 0)
-	  for (scalar s in {u})
-	    s[ghost] = s.boundary[b] (point, s);
-      }
-      else
-	continue;
+  double max = 0;
+  foreach_face (x)
+    for (int i = -1; i <= 1; i++) {
+      double xu = x, yu = y + i*delta;
+      double e = exp(-(xu*xu+yu*yu)/(R0*R0)) - u.x[0,i];
+      if (fabs(e) > max)
+	max = fabs(e);
     }
-  halo_prolongation_u_v (depth(), u.x, u.y);
 
-  double max = 0., maxv = 0;
-  foreach_halo() {
-    double xu = x - delta/2., yu = y;
-    double xv = x, yv = y - delta/2.;
-    double e = exp(-(xu*xu+yu*yu)/(R0*R0)) - u.x[];
-    if (fabs(e) > max)
-      max = fabs(e);
-    printf ("%g %g %d %d %g %g\n", xu, yu, level, cell.neighbors, u.x[], e);
-    e = fabs (exp(-(xv*xv+yv*yv)/(R0*R0)) - u.y[]);
-    if (e > maxv)
-      maxv = e;
-  }
+  double maxv = 0;
+  foreach_face (y)
+    for (int i = -1; i <= 1; i++) {
+      double xv = x + i*delta, yv = y;
+      double e = exp(-(xv*xv+yv*yv)/(R0*R0)) - u.y[i,0];
+      if (fabs(e) > maxv)
+	maxv = fabs(e);
+      printf ("%g %g %d %d %g %g\n", 
+	      xv, yv, level, cell.neighbors, u.y[i,0], e);
+    }
 
   fprintf (stderr, "maximum error on halos: %g %g\n", max, maxv);
 
