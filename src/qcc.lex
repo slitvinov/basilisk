@@ -1489,8 +1489,8 @@ int main (int argc, char ** argv)
        */
       fputs ("double undefined;\n"
 	     "static void set_fpe (void) {\n"
-	     "  long lnan = 0x7ff0000000000001;\n"
-	     "  assert (sizeof (long) == sizeof (double));\n"
+	     "  int64_t lnan = 0x7ff0000000000001;\n"
+	     "  assert (sizeof (int64_t) == sizeof (double));\n"
 	     "  memcpy (&undefined, &lnan, sizeof (long));\n"
 	     "  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n"
 	     "}\n",

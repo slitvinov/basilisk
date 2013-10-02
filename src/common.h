@@ -10,7 +10,7 @@
 
 @define pi 3.14159265358979
 @undef HUGE
-@define HUGE 1e30
+@define HUGE ((double)1e30)
 @define nodata DBL_MAX
 
 @define max(a,b) ((a) > (b) ? (a) : (b))
