@@ -1,6 +1,5 @@
 /* speed of definition of halos */
 
-#include "grid/quadtree.h"
 #include "utils.h"
 
 scalar h[];

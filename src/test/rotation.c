@@ -26,46 +26,11 @@ void init()
 
 #define end 0.785398
 
-// event (t += 0.1; t <= end) output_matrix (f, N, stdout, true);
-
-/* event (t += 0.1; t <= 5.) { */
-/*   scalar l = new scalar; */
-/*   foreach() l[] = level; */
-/*   output_matrix (l, N, stdout, false); */
-/* } */
-
-/* event (t += 0.1; t <= 5.) { */
-/*   char s[80]; */
-/*   FILE * fp; */
-/*   scalar l = new scalar; */
-/*   foreach() l[] = level; */
-/*   sprintf (s, "level-%g", t); */
-/*   fp = fopen (s, "w"); */
-/*   output_matrix (l, N, fp, false); */
-/*   fclose (fp); */
-
-/*   sprintf (s, "f-%g", t); */
-/*   fp = fopen (s, "w"); */
-/*   output_matrix (f, N, fp, false); */
-/*   fclose (fp);   */
-
-/*   sprintf (s, "cells-%g", t); */
-/*   fp = fopen (s, "w"); */
-/*   output_cells (fp); */
-/*   fclose (fp);   */
-/* } */
-
-/* event (t += 0.1; t <= 5.) { */
-/*   wavelet (f, w); */
-/*   output_matrix (w, N, stdout, false); */
-/* } */
-
 event velocity (i++) {
   trash ({u});
   foreach_face(x) u.x[] = -8.*y;
   foreach_face(y) u.y[] =  8.*x;
-  boundary_normal ({u});
-  boundary_tangent ({u});
+  boundary_mac ({u});
 }
 
 event logfile (t = {0,end}) {

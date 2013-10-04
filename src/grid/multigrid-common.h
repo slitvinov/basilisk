@@ -102,20 +102,6 @@ void multigrid_debug (Point point)
 {
   cartesian_debug (point);
 
-  if (point.level < depth()) {
-    FILE * fp = fopen ("fine", "w");
-    double xf = x - delta/4., yf = y - delta/4.;
-    for (int k = 0; k <= 1; k++)
-      for (int l = 0; l <= 1; l++) {
-	fprintf (fp, "%g %g", xf + k*delta/2., yf + l*delta/2.);
-	for (scalar v in all)
-	  fprintf (fp, " %g", fine(v,k,l));
-	fputc ('\n', fp);
-      }
-    fclose (fp);
-    fputs (", 'fine' u 1:2:3+v w labels tc lt 2", stderr);
-  }
-
   if (point.level > 0) {
     FILE * fp = fopen ("coarse", "w");
     double xc = x - child.x*delta/2., yc = y - child.y*delta/2.;
@@ -128,6 +114,20 @@ void multigrid_debug (Point point)
       }
     fclose (fp);
     fputs (", 'coarse' u 1:2:3+v w labels tc lt 3", stderr);
+  }
+
+  if (point.level < depth()) {
+    FILE * fp = fopen ("fine", "w");
+    double xf = x - delta/4., yf = y - delta/4.;
+    for (int k = 0; k <= 1; k++)
+      for (int l = 0; l <= 1; l++) {
+	fprintf (fp, "%g %g", xf + k*delta/2., yf + l*delta/2.);
+	for (scalar v in all)
+	  fprintf (fp, " %g", fine(v,k,l));
+	fputc ('\n', fp);
+      }
+    fclose (fp);
+    fputs (", 'fine' u 1:2:3+v w labels tc lt 2", stderr);
   }
 }
 

@@ -1,7 +1,7 @@
 static int refine_func (Point point, void * data)
 {
   return (x*x + y*y < 0.25*0.25 ||
-	  sq(x + 0.5) + sq(y - 0.5) < 0.25*0.25);
+	  sq(x - 0.5) + sq(y - 0.5) < 0.25*0.25);
 }
 
 int main ()
@@ -12,7 +12,11 @@ int main ()
   output_cells (stdout);
   foreach_boundary_face (bottom)
     fprintf (stderr, "bottom %g %g %d\n", x - delta/2., y, level);
-  foreach_boundary_face (left)
-    fprintf (stderr, "left %g %g %d\n", x, y - delta/2., level);
+  foreach_boundary_face (right)
+    fprintf (stderr, "right %g %g %d\n", x, y - delta/2., level);
+  foreach_boundary_cell_post (right, !is_leaf (cell))
+    fprintf (stderr, "post %g %g %d\n", x, y, level);
+  foreach_boundary_halo (right)
+    fprintf (stderr, "halo %g %g %d\n", x, y, level);
   free_grid();
 }

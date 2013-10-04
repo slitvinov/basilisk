@@ -1,8 +1,5 @@
 /* definition of halo cells after coarsening */
 
-#include "grid/quadtree.h"
-#include "utils.h"
-
 scalar h[];
 
 int main (int argc, char ** argv)

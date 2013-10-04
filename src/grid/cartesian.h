@@ -13,6 +13,7 @@ struct _Point {
 
 @def data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) +
 				       (point.j + l))*datasize]) @
+@define _allocated(...) true
 
 @define POINT_VARIABLES VARIABLES
 

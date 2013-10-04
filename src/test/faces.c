@@ -1,5 +1,3 @@
-#include "utils.h"
-
 static int refine_func (Point point, void * data)
 {
   return x*x + y*y < 0.25*0.25;

@@ -50,7 +50,6 @@ void (* debug)    (Point);
 @define end_foreach_face()
 @define end_foreach_vertex()
 
-#define boundary_normal(...)
 #define output_stencil(v,fp) _output_stencil(point,v,#v,fp)
 void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
 {
@@ -159,6 +158,7 @@ void delete (scalar * list)
 // Cartesian methods
 
 void (* boundary)         (scalar *);
+void (* boundary_normal)  (vector *);
 void (* boundary_tangent) (vector *);
 
 void cartesian_boundary (scalar * list)
@@ -167,6 +167,11 @@ void cartesian_boundary (scalar * list)
     foreach_boundary (b, true) // also traverse corners
       for (scalar s in list)
 	s[ghost] = s.boundary[b] (point, s);
+}
+
+void cartesian_boundary_normal (vector * list)
+{
+  // nothing to do
 }
 
 void cartesian_boundary_tangent (vector * list)
@@ -246,8 +251,13 @@ void cartesian_debug (Point point)
   for (int k = -1; k <= 1; k++)
     for (int l = -1; l <= 1; l++) {
       fprintf (fp, "%g %g", x + k*delta, y + l*delta);
-      for (scalar v in all)
-	fprintf (fp, " %g", v[k,l]);
+      if (allocated (k,l)) {
+	for (scalar v in all)
+	  fprintf (fp, " %g", v[k,l]);
+      }
+      else
+	for (scalar v in all)
+	  fprintf (fp, " n/a");
       fputc ('\n', fp);
     }
   fclose (fp);
@@ -265,6 +275,25 @@ void cartesian_methods()
   init_vector      = cartesian_init_vector;
   init_tensor      = cartesian_init_tensor;
   boundary         = cartesian_boundary;
+  boundary_normal  = cartesian_boundary_normal;
   boundary_tangent = cartesian_boundary_tangent;
   debug            = cartesian_debug;
+}
+
+void boundary_mac (vector * list)
+{
+  foreach_boundary (right,false)
+    for (vector u in list)
+      u.x[ghost] = u.x.boundary[right] (point, u.x);
+  foreach_boundary (top,false)
+    for (vector u in list)
+      u.y[ghost] = u.y.boundary[top] (point, u.y);
+  foreach_boundary (left,false)
+    for (vector u in list)
+      u.x[] = u.x.boundary[left] (point, u.x);
+  foreach_boundary (bottom,false)
+    for (vector u in list)
+      u.y[] = u.y.boundary[bottom] (point, u.y);
+  boundary_normal (list);
+  boundary_tangent (list);
 }

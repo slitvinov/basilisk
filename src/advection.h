@@ -10,6 +10,12 @@ double (* gradient) (double, double, double) = NULL; // centered
 void parameters  (void);
 void init        (void);
 
+// default is no flow through boundaries
+u.x[right]  = 0.;
+u.x[left]   = 0.;
+u.y[top]    = 0.;
+u.y[bottom] = 0.;
+
 void fluxes_upwind_bcg (const scalar f, const vector g,
 			const vector u, 
 			vector flux,
@@ -44,11 +50,16 @@ void run (void)
 {
   parameters();
   init_grid (N);
+
+  u.x.d.x = u.y.d.y = -1; // staggering for u.x, u.y
   f.gradient = gradient;
+  foreach_face()
+    u.x[] = 0.;
   foreach()
-    f[] = u.x[] = u.y[] = 0.;
+    f[] = 0.;
   init();
-  boundary ({f, u});
+  boundary ({f});
+  boundary_mac ({u});
 
   timer start = timer_start();
   double t = 0.;

@@ -23,20 +23,6 @@ u.x[left]   = 0.;
 u.y[top]    = 0.;
 u.y[bottom] = 0.;
 
-static void boundary_u (vector u)
-{
-  foreach_boundary (right,false)
-    u.x[ghost] = u.x.boundary[right] (point, u.x);
-  foreach_boundary (top,false)
-    u.y[ghost] = u.y.boundary[top] (point, u.y);
-  foreach_boundary (left,false)
-    u.x[] = u.x.boundary[left] (point, u.x);
-  foreach_boundary (bottom,false)
-    u.y[] = u.y.boundary[bottom] (point, u.y);
-  boundary_normal ({u});
-  boundary_tangent ({u});
-}
-
 double timestep()
 {
   double dtmax = DT/CFL;
@@ -65,7 +51,7 @@ void advance (double dt)
 {
   foreach_face()
     u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/delta;
-  boundary_u (u);
+  boundary_mac ({u});
 }
 
 void relax (scalar a, scalar b, int l)
@@ -109,7 +95,7 @@ void projection (vector u, scalar p,
 	     NITERMAX, sum);
   foreach_face()
     u.x[] -= (p[] - p[-1,0])/delta;
-  boundary_u (u);
+  boundary_mac ({u});
 }
 
 void run (void)
@@ -125,7 +111,7 @@ void run (void)
   foreach()
     p[] = 0.;
   init();
-  boundary_u (u);
+  boundary_mac ({u});
   boundary ({p});
 
   projection (u, p, S.x.y, S.y.y, S.x.x);

@@ -1,8 +1,5 @@
 /* interpolation on halos  */
 
-#include "grid/quadtree.h"
-#include "utils.h"
-
 scalar h[];
 
 int main (int argc, char ** argv)

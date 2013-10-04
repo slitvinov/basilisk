@@ -31,6 +31,24 @@
 @define foreach_halo()     foreach_halo_coarse_to_fine(depth())
 @define end_foreach_halo() end_foreach_halo_coarse_to_fine()
 
+@def foreach_boundary_halo(dir)
+  foreach_boundary_cell (dir, false)
+    if (!is_active(cell)) {
+      if (cell.neighbors > 0) {
+	point.i += ig; point.j += jg;
+	ig = -ig; jg = -jg;
+	POINT_VARIABLES;
+@
+@def end_foreach_boundary_halo()
+        ig = -ig; jg = -jg;
+        point.i -= ig; point.j -= jg;
+      }
+      else
+	continue;
+    }
+  end_foreach_boundary_cell()
+@
+
 @def foreach_boundary(dir,corners)
   foreach_boundary_cell(dir,corners) if (is_leaf (cell)) { @
 @def end_foreach_boundary()  continue; } end_foreach_boundary_cell() @
@@ -52,6 +70,17 @@
     ig = _in; jg = _jn; VARIABLES;
 @
 @define end_foreach_boundary_ghost_halo() } end_foreach_halo(); }
+
+@def foreach_boundary_fine_to_coarse(dir)
+  foreach_boundary_cell_post (dir, !is_leaf (cell)) {
+    point.i += ig; point.j += jg;
+    ig = -ig; jg = -jg;
+    POINT_VARIABLES;
+@
+@def end_foreach_boundary_fine_to_coarse()
+    ig = -ig; jg = -jg;
+  } end_foreach_boundary_cell_post()
+@
 
 @define is_face_x() !is_refined(neighbor(-1,0))
 @define is_face_y() !is_refined(neighbor(0,-1))
@@ -316,9 +345,6 @@ void quadtree_boundary_restriction (scalar * list)
 
 // Cartesian methods
 
-#undef boundary_normal
-#define boundary_normal halo_restriction_flux
-
 void quadtree_boundary (scalar * list)
 {
   scalar * listdef = NULL, * listc = NULL;
@@ -370,12 +396,22 @@ void quadtree_boundary (scalar * list)
 
 void quadtree_boundary_tangent (vector * list)
 {
+  /* we need to define the normal ghost values on coarse (right/top) boundaries
+     (this is not done by boundary_normal()) */
+  foreach_boundary_fine_to_coarse(right)
+    for (vector u in list)
+      u.x[] = (fine(u.x,0,0) + fine(u.x,0,1))/2.;
+  foreach_boundary_fine_to_coarse(top)
+    for (vector u in list)
+      u.y[] = (fine(u.y,0,0) + fine(u.y,1,0))/2.;
+
   cartesian_boundary_tangent (list);
 
+  // interior halos
   foreach_halo()
     foreach_dimension()
       // fixme: this does not work for static quadtrees 
-      // (because allocated() is always true
+      // because allocated() is always true
       if (allocated(-1,0) && !is_leaf(neighbor(-1,0))) {
 	if (child.x < 0) {
 	  for (vector u in list)
@@ -386,6 +422,14 @@ void quadtree_boundary_tangent (vector * list)
 	    u.x[] = (3.*coarse(u.x,0,0) + coarse(u.x,0,child.y) +
 		     3.*coarse(u.x,1,0) + coarse(u.x,1,child.y))/8.;
       }
+
+  // we need to do the same for the (right/top) boundary halos
+  foreach_boundary_halo (right)
+    for (vector u in list)
+      u.x[] = (3.*coarse(u.x,0,0) + coarse(u.x,0,child.y))/4.;
+  foreach_boundary_halo (top)
+    for (vector u in list)
+      u.y[] = (3.*coarse(u.y,0,0) + coarse(u.y,child.x,0))/4.;
 }
 
 Point locate (double xp, double yp)
@@ -414,6 +458,7 @@ void quadtree_methods()
   multigrid_methods();
   init_scalar          = quadtree_init_scalar;
   boundary             = quadtree_boundary;
+  boundary_normal      = halo_restriction_flux;
   boundary_tangent     = quadtree_boundary_tangent;
   boundary_restriction = quadtree_boundary_restriction;
 }

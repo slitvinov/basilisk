@@ -111,7 +111,7 @@ static size_t _size (size_t l)
   @define _allocated(i,j) (point.m[point.level][_index(i,j)])
 #else
   @define CELL(m,level,i) (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
-  @define _allocated(i,j) 1
+  @define _allocated(i,j) true
 #endif
 
 /***** Multigrid macros *****/
@@ -246,7 +246,7 @@ void recursive (Point point)
       case 0: {
         POINT_VARIABLES;
 	if (condition) {
-	  if (point.level == point.depth)	{
+	  if (point.level == point.depth) {
 	    _push (point.level, point.i, point.j, 4);
 	  }
 	  else {
@@ -326,6 +326,52 @@ void recursive (Point point)
         }
       }
     }  _OMPEND
+  }
+@
+
+@def foreach_boundary_cell_post(dir,condition)
+  {
+    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    int _d = dir; NOT_UNUSED(_d);
+    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
+    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
+    while (_s >= 0) {
+      int stage;
+      _pop (point.level, point.i, point.j, stage);
+      if (!_allocated (0,0))
+	continue;
+      switch (stage) {
+      case 0: {
+	POINT_VARIABLES;
+	if (condition) {
+	  if (point.level == point.depth) {
+	    _push (point.level, point.i, point.j, 4);
+	  }
+	  else {
+	    _push (point.level, point.i, point.j, 1);
+	    int k = _d > left ? _LEFT : _RIGHT - _d;
+	    int l = _d < top  ? _TOP  : _TOP + 2 - _d;
+	    _push (point.level + 1, k, l, 0);
+	  }
+	}
+	break;
+      }
+      case 1: {
+	 _push (point.level, point.i, point.j, 4);
+	int k = _d > left ? _RIGHT : _RIGHT - _d;
+	int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;
+	_push (point.level + 1, k, l, 0);
+	break;
+      }
+      case 4: {
+        POINT_VARIABLES;
+	/* do something */	
+@
+@def end_foreach_boundary_cell_post()
+      }
+      }
+    }
   }
 @
 

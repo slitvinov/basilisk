@@ -1,5 +1,5 @@
-/* Note that this is largely obsolete: for more recent versions see
- * saint-venant1.h and conservation.h.
+/* Note that this is obsolete: for more recent versions see
+ * saint-venant.h and conservation.h.
  *
  *  An implementation of:
  *    [1] Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the

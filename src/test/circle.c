@@ -1,6 +1,5 @@
 /* This is similar to gerris/test/poisson/circle */
 
-#include "grid/quadtree.h"
 #include "utils.h"
 #include "mg.h"
 
@@ -21,10 +20,9 @@ void homogeneous_boundary (scalar * v, int l)
 {
   /* Homogeneous Dirichlet condition on all boundaries */
   scalar p = *v;
-  foreach_boundary_level (right, l, true)  p[ghost] = - p[];
-  foreach_boundary_level (left, l,  true)  p[ghost] = - p[];
-  foreach_boundary_level (top, l, true)    p[ghost] = - p[];
-  foreach_boundary_level (bottom, l, true) p[ghost] = - p[];
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_level (b, l, true)
+      p[ghost] = - p[];
   /* we don't need to restrict because the solution is already defined
      on coarse levels */
   halo_prolongation (l, {p});
