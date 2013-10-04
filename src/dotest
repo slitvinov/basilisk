@@ -14,9 +14,13 @@ script()
 {
     cat <<EOF
 #!/bin/sh
-rm -f warn pass fail log out
-\$BASILISK/qcc $CFLAGS -o $test $test.c $LIBS -lm > warn 2>&1 || mv -f warn fail
-rm -f $test.c
+rm -f warn pass fail $log $out
+src=$test.c
+if test -f $test.s; then
+  src=$test.s
+fi
+\$BASILISK/qcc $CFLAGS \$src -o $test $LIBS -lm >> warn 2>&1 || mv -f warn fail
+rm -f \$src
 if test -f fail; then
     cat fail
     exit 1
@@ -49,14 +53,14 @@ expirecache()
 locally()
 {
     cd $test
-    echo qcc $CFLAGS -o $test/$test $test.c $LIBS -lm;
+    echo qcc $CFLAGS -o $test/$test $test.s $LIBS -lm;
     script | sh
     expirecache
     cd ..
 }
 
 # compile/run on a remote "sandbox"
-remote()
+remotely()
 {
     set -e
     rhost=$1
@@ -106,7 +110,7 @@ if test -f $test.$ext && $CHECKSUM $test.$ext; then
 else
     rm -f $test.$ext $test/pass $test/fail $test/plot.png
     expirecache
-    mkdir -p $test && cp -f $test.c $test
+    mkdir -p $test
     if test -f $test.ref; then cp -f $test.ref $test; fi
     if test -d $BASILISK_WIKI/static -a \
 	-f $test.c.page -a \
@@ -114,17 +118,23 @@ else
 	ln -s $PWD/$test $BASILISK_WIKI/static/$dir/$test
     fi
 
+    case "$CFLAGS" in
+	*-grid=multigrid*) sext=cs;;
+	*) sext=s;;
+    esac
+
     if test -n "$SANDBOX"; then
 	echo \[$test.$ext on $SANDBOX\]
-        ( remote $SANDBOX ) &
+	cp -f $test.c $test
+        ( remotely $SANDBOX ) &
 	echo $! > $test/pid
     else
-	echo \[$test.$ext\]
+	cp -f $test.$sext $test/$test.s
 	locally
     fi
 
     if test -f $test/fail; then
 	exit 1
     fi
-    $GENSUM $test.s > $test.$ext;
+    $GENSUM $test.$sext > $test.$ext;
 fi

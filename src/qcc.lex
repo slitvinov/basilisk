@@ -1562,13 +1562,15 @@ int main (int argc, char ** argv)
       strcat (command, dir);
       strcat (command, "/");
       strcat (command, file); 
-     strcat (command, command1);
+      strcat (command, command1);
     }
   }
   else if (dep || tags) {
     fprintf (stderr, "usage: qcc -grid=[GRID] [OPTIONS] FILE.c\n");
     cleanup (1, dir);
   }
+  else
+    strcat (command, command1);
   /* compilation */
   if (!dep && !tags) {
     if (debug)
