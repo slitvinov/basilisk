@@ -139,22 +139,24 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
   if (myout) fputc ('\n', myout);
 }
 
-^{SP}*#{SP}*include{SP}+<.*>*{SP}*\n {
+
+^{SP}*#{SP}*include{SP}+<.*>{SP}*\n {
   // #include <...>
   char * s = yytext; nonspace(s); *s = '@';
   echo();
 }
 
-^{SP}*#{SP}*include{SP}+\".*\"*{SP}*\n {
+^{SP}*#{SP}*include{SP}+\"[^\"]*\"[^\n]*\n {
   // include "..."
   echo();
   if (!keywords_only) {
     char * s = strchr(yytext, '"');
     s++;
     char * e = &s[strlen(s) - 1];
-    while (*e == ' ' || *e == '\t' || *e == '"' || *e == '\n') {
+    while (*e != '"') {
       *e = '\0'; e--;
     }
+    *e = '\0';
     char * path;
     FILE * fp = openpath (s, "r", &path);
     if (fp != NULL) {

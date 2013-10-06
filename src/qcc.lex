@@ -1387,8 +1387,6 @@ int main (int argc, char ** argv)
     strcpy (command, CC99);
   else
     strcpy (command, cc);
-  strcat (command, " -I");
-  strcat (command, LIBDIR);
   char * file = NULL;
   int i, dep = 0, tags = 0;
   for (i = 1; i < argc; i++) {
@@ -1533,12 +1531,14 @@ int main (int argc, char ** argv)
 	cppcommand = CPP99;
       if (cppcommand) {
 	strcat (preproc, cppcommand);
-	strcat (preproc, " -I");
+	strcat (preproc, " -I. -I");
 	strcat (preproc, LIBDIR);
 	strcat (preproc, " ");
       }
       else {
 	strcat (preproc, command);
+	strcat (preproc, " -I. -I");
+	strcat (preproc, LIBDIR);
 	strcat (preproc, " -E ");
       }
       strcat (preproc, cpp);
@@ -1558,6 +1558,8 @@ int main (int argc, char ** argv)
 				    WTERMSIG (status) == SIGQUIT)))
 	cleanup (1, dir);
 
+      strcat (command, " -I");
+      strcat (command, LIBDIR);
       strcat (command, " ");
       strcat (command, dir);
       strcat (command, "/");
