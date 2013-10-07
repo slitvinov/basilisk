@@ -47,6 +47,8 @@
 @define allocated(k,l) _allocated(k,l)
 @define neighbor(k,l)  _neighbor(k,l)
 
+@define symmetric
+
 // the grid
 void * grid = NULL;
 // coordinates of the lower-left corner of the box

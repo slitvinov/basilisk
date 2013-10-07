@@ -1,7 +1,7 @@
 /* This is similar to gerris/test/poisson/circle */
 
 #include "utils.h"
-#include "mg.h"
+#include "poisson.h"
 
 scalar a[], b[], res[], dp[];
 
@@ -15,42 +15,6 @@ a[right]  = 2.*solution(x, y) - a[];
 a[left]   = 2.*solution(x, y) - a[];
 a[top]    = 2.*solution(x, y) - a[];
 a[bottom] = 2.*solution(x, y) - a[];
-
-void homogeneous_boundary (scalar * v, int l)
-{
-  /* Homogeneous Dirichlet condition on all boundaries */
-  scalar p = *v;
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_level (b, l, true)
-      p[ghost] = - p[];
-  /* we don't need to restrict because the solution is already defined
-     on coarse levels */
-  halo_prolongation (l, {p});
-}
-
-void relax (scalar a, scalar b, int l)
-{
-  foreach_level_or_leaf (l)
-    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - delta*delta*b[])/4.;
-}
-
-void residual (scalar a, scalar b, scalar res)
-{
-#if 1
-  /* conservative coarse/fine discretisation (2nd order) */
-  vector g[];
-  foreach_face()
-    g.x[] = (a[] - a[-1,0])/delta;
-  boundary_normal ({g});
-  foreach()
-    res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/delta;
-#else
-  /* "naive" discretisation (1st order) */
-  foreach()
-    res[] = b[] + 
-    (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(delta*delta);
-#endif
-}
 
 int refine_circle (Point point, void * data)
 {

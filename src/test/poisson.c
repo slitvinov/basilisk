@@ -1,5 +1,5 @@
 #include "utils.h"
-#include "mg.h"
+#include "poisson.h"
 
 scalar a[], b[], res[], dp[];
 
@@ -14,28 +14,6 @@ a[left]   = 2.*solution(x, y) - a[];
 a[top]    = 2.*solution(x, y) - a[];
 a[bottom] = 2.*solution(x, y) - a[];
 
-void homogeneous_boundary (scalar * v, int l)
-{
-  /* Homogeneous Dirichlet condition on all boundaries */
-  scalar p = *v;
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_level (b, l, true)
-      p[ghost] = - p[];
-}
-
-void relax (scalar a, scalar b, int l)
-{
-  foreach_level_or_leaf (l)
-    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - delta*delta*b[])/4.;
-}
-
-void residual (scalar a, scalar b, scalar res)
-{
-  foreach()
-    res[] = b[] + 
-    (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(delta*delta);
-}
-
 int main (int argc, char ** argv)
 {
   X0 = Y0 = -0.5;
@@ -48,7 +26,7 @@ int main (int argc, char ** argv)
   }
   boundary ({a});
 
-  #define NITER 15
+  #define NITER 13
   clock_t start = clock(), iter[NITER];
   double maxres[NITER];
   residual (a, b, res);

@@ -1,4 +1,6 @@
 #include "utils.h"
+#include "bcg.h"
+#include "timestep.h"
 
 scalar f[]; // tracer
 vector u[]; // velocity
@@ -15,36 +17,6 @@ u.x[right]  = 0.;
 u.x[left]   = 0.;
 u.y[top]    = 0.;
 u.y[bottom] = 0.;
-
-void fluxes_upwind_bcg (const scalar f, const vector g,
-			const vector u, 
-			vector flux,
-			double dt)
-{
-  trash ({flux});
-  foreach_face() {
-    double un = dt*u.x[]/delta, s = sign(un);
-    int i = -(s + 1.)/2.;
-    double f2 = f[i,0] + s*min(1., 1. - s*un)*g.x[i,0]*delta/2.;
-    double vn = u.y[i,0] + u.y[i,1];
-    double fyy = vn < 0. ? f[i,1] - f[i,0] : f[i,0] - f[i,-1];
-    f2 -= dt*vn*fyy/(4.*delta);
-    flux.x[] = f2*u.x[];
-  }
-  boundary_normal ({flux});
-}
-
-double timestep (const vector u)
-{
-  double dtmax = DT/CFL;
-  foreach(reduction(min:dtmax))
-    foreach_dimension()
-      if (u.x[] != 0.) {
-	double dt = delta/fabs(u.x[]);
-	if (dt < dtmax) dtmax = dt;
-      }
-  return dtmax*CFL;
-}
 
 void run (void)
 {
@@ -66,9 +38,8 @@ void run (void)
   int i = 0, tnc = 0;
   while (events (i, t)) {
     double dt = dtnext (t, timestep (u));
-    vector flux[], g[];
-    gradients ({f}, {g});
-    fluxes_upwind_bcg (f, g, u, flux, dt);
+    vector flux[];
+    fluxes_upwind_bcg (f, u, flux, dt);
     foreach(reduction(+:tnc)) {
       f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;
       tnc++;

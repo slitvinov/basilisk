@@ -130,6 +130,21 @@ tensor new_tensor (const char * name)
   return t;
 }
 
+tensor new_symmetric_tensor (const char * name)
+{
+  char cname[strlen(name) + 5];
+  tensor t;
+  sprintf (cname, "%s.x.x", name);
+  t.x.x = new_scalar(cname);
+  sprintf (cname, "%s.x.y", name);
+  t.x.y = new_scalar(cname);
+  sprintf (cname, "%s.y.y", name);
+  t.y.y = new_scalar(cname);
+  t.y.x = t.x.y;
+  init_tensor (t, name);
+  return t;
+}
+
 scalar * clone (scalar * l)
 {
   scalar * list = NULL;

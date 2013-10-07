@@ -1,21 +1,19 @@
 #include "utils.h"
-#include "mg.h"
+#include "timestep.h"
+#include "poisson.h"
 
 scalar p[];
 vector u[];
-tensor S[];
 
 // Default parameters
 // Viscosity
 double NU = 0.;
-// Maximum number of multigrid iterations
-int NITERMAX = 100;
-// Tolerance on maximum divergence
-double TOLERANCE = 1e-3;
 // user-provided functions
 void parameters (void);
 void init       (void);
 void end        (void);
+// timestep
+double dt = 0;
 
 // default is no flow through boundaries
 u.x[right]  = 0.;
@@ -23,19 +21,13 @@ u.x[left]   = 0.;
 u.y[top]    = 0.;
 u.y[bottom] = 0.;
 
-double timestep()
+void advance (double dt)
 {
-  double dtmax = DT/CFL;
-  foreach_face (reduction(min:dtmax))
-    if (u.x[] != 0.) {
-      double dt = delta/fabs(u.x[]);
-      if (dt < dtmax) dtmax = dt;
-    }
-  return dtmax*CFL;
-}
+  // stresses
+  symmetric tensor S[];
+  // staggering for S.x.y
+  S.x.y.d.x = S.x.y.d.y = -1;
 
-void stresses()
-{
   trash ({S});
   foreach()
     foreach_dimension()
@@ -45,35 +37,16 @@ void stresses()
       - (u.x[] + u.x[0,-1])*(u.y[] + u.y[-1,0])/4. +
       NU*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/delta;
   boundary ({S.x.x, S.y.y});
-}
 
-void advance (double dt)
-{
+  // update
   foreach_face()
     u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/delta;
   boundary_mac ({u});
 }
 
-void relax (scalar a, scalar b, int l)
+void projection (vector u, scalar p)
 {
-  foreach_level_or_leaf (l)
-    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - delta*delta*b[])/4.;
-}
-
-double residual (scalar a, scalar b, scalar res)
-{
-  double maxres = 0.;
-  foreach (reduction(max:maxres)) {
-    res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(delta*delta);
-    if (fabs (res[]) > maxres)
-      maxres = fabs (res[]);
-  }
-  return maxres;
-}
-
-void projection (vector u, scalar p, 
-		 scalar div, scalar res, scalar dp)
-{
+  scalar div[], res[], dp[];
   double sum = 0.;
   foreach (reduction(+:sum)) {
     div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/delta;
@@ -85,6 +58,8 @@ void projection (vector u, scalar p,
     mg_cycle (p, res, dp,
 	      relax, boundary_level,
 	      4, 0);
+    // fixme: use a generic Poisson solver instead
+    // need to find a solution for homogeneous BCs
     boundary_level ({p}, depth());
     maxres = residual (p, div, res);
   }
@@ -103,9 +78,8 @@ void run (void)
   parameters();
   init_grid (N);
 
-  S.x.y = S.y.x; // fixme: the tensor is symmetric
-  // staggering for u.x, u.y, S.x.y
-  u.x.d.x = u.y.d.y = S.x.y.d.x = S.x.y.d.y = -1;
+  // staggering for u.x, u.y
+  u.x.d.x = u.y.d.y = -1;
   foreach_face()
     u.x[] = 0.;
   foreach()
@@ -114,16 +88,15 @@ void run (void)
   boundary_mac ({u});
   boundary ({p});
 
-  projection (u, p, S.x.y, S.y.y, S.x.x);
+  projection (u, p);
 
   timer start = timer_start();
   double t = 0;
   int i = 0;
   while (events (i, t)) {
-    double dt = dtnext (t, timestep());
-    stresses();
+    double dt = dtnext (t, timestep (u));
     advance (dt);
-    projection (u, p, S.x.y, S.y.y, S.x.x);
+    projection (u, p);
     i++; t = tnext;
   }
   end();

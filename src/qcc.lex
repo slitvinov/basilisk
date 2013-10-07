@@ -25,7 +25,7 @@
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
     inforeach_boundary, inforeach_face, inforeach_vertex;
-  int invardecl, vartype;
+  int invardecl, vartype, varsymmetric;
   int inval, invalpara;
   int brack, inarray;
   int inreturn;
@@ -63,7 +63,7 @@
 
   typedef struct { 
     char * v; 
-    int type, args, scope, automatic; 
+    int type, args, scope, automatic, symmetric; 
     int i[4];
   } var_t;
   var_t _varstack[100]; int varstack = -1;
@@ -76,7 +76,7 @@
       while ((q = strchr (q, '['))) {
 	*q++ = '\0'; na++;
       }
-      _varstack[++varstack] = (var_t) { f, type, na, scope, 0, {-1} };
+      _varstack[++varstack] = (var_t) { f, type, na, scope, 0, 0, {-1} };
     }
   }
 
@@ -434,7 +434,8 @@
 
   void new_field (var_t * var) {
     if (scope > 0)
-      fprintf (yyout, "= new_%s(\"%s\")",
+      fprintf (yyout, "= new_%s%s(\"%s\")",
+	       var->symmetric ? "symmetric_" : "",
 	       var->type == scalar ? "scalar" : 
 	       var->type == vector ? "vector" : 
 	       var->type == tensor ? "tensor" :
@@ -480,6 +481,7 @@
       varpush (var, vartype, scope);
       var_t * v = varlookup (var, strlen(var));
       v->automatic = 1;
+      v->symmetric = varsymmetric;
       fputs (yytext, yyout);
       new_field (v);
     }
@@ -691,10 +693,14 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
-{ID}+{WS}*[=]{WS}*new{WS}+(scalar|vector|tensor) |
-[=]{WS}*new{WS}+(scalar|vector|tensor) {
+{ID}+{WS}*[=]{WS}*new{WS}+(symmetric){0,1}*{WS}*(scalar|vector|tensor) |
+[=]{WS}*new{WS}+(symmetric){0,1}{WS}*(scalar|vector|tensor) {
   char * type = strchr (yytext, '=');
-  type = strstr (type, "new"); space(type); nonspace(type); 
+  type = strstr (type, "new"); space(type); nonspace(type);
+  char * symmetric = strstr (type, "symmetric");
+  if (symmetric) {
+    space(type); nonspace(type);
+  }
   int newvartype = (!strcmp (type, "scalar") ? scalar :
 		    !strcmp (type, "vector") ? vector :
 		    !strcmp (type, "tensor") ? tensor :
@@ -717,12 +723,16 @@ end_foreach{ID}*{SP}*"()" {
       return yyerror ("type mismatch in new");
     fprintf (yyout, "%s ", yytext);
   }
+  var->symmetric = (symmetric != NULL);
   new_field (var);
   if (debug)
-    fprintf (stderr, "%s:%d: new %s: %s\n", fname, line, type, var->v);
+    fprintf (stderr, "%s:%d: new %s%s: %s\n", 
+	     fname, line, var->symmetric ? "symmetric " : "", type, var->v);
 }
 
+symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
 (scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ {
+  varsymmetric = (strstr(yytext, "symmetric") != NULL);
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
   if (!var) {
