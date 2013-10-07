@@ -82,7 +82,7 @@ typedef struct {
 mgstats poisson (scalar a, scalar b)
 {
   scalar res[], da[];
-  mgstats s;
+  mgstats s = {0, 0., 0.};
   foreach (reduction(+:sum))
     s.sum += b[];
   s.maxres = residual (a, b, res);
