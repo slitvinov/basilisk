@@ -108,7 +108,7 @@ if test -f $test.$ext && $CHECKSUM $test.$ext; then
     touch $test.$ext
     echo "make: '$test' is up to date."
 else
-    rm -f $test.$ext $test/pass $test/fail $test/plot.png
+    rm -f $test.$ext $test/pass $test/fail $test/warn $test/plot.png
     expirecache
     mkdir -p $test
     if test -f $test.ref; then cp -f $test.ref $test; fi
