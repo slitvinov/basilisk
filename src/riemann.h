@@ -9,7 +9,7 @@
 #define SQRT3 1.73205080756888
 #define epsilon 1e-30
 
-void kinetic (double hm, double hp, double um, double up, double delta,
+void kinetic (double hm, double hp, double um, double up, double Delta,
 	      double * fh, double * fq, double * dtmax)
 {
   double ci = sqrt(G*hm/2.);
@@ -19,7 +19,7 @@ void kinetic (double hm, double hp, double um, double up, double delta,
   *fh = cig*3.*(Mp*Mp - Mm*Mm);
   *fq = cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
   if (Mp > 0.) {
-    double dt = CFL*delta/Mp;
+    double dt = CFL*Delta/Mp;
     if (dt < *dtmax)
       *dtmax = dt;
   }
@@ -31,13 +31,13 @@ void kinetic (double hm, double hp, double um, double up, double delta,
   *fh += cig*3.*(Mp*Mp - Mm*Mm);
   *fq += cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
   if (Mm < - epsilon) {
-    double dt = CFL*delta/-Mm;
+    double dt = CFL*Delta/-Mm;
     if (dt < *dtmax)
       *dtmax = dt;
   }
 }
 
-void kurganov (double hm, double hp, double um, double up, double delta,
+void kurganov (double hm, double hp, double um, double up, double Delta,
 	       double * fh, double * fq, double * dtmax)
 {
   double cp = sqrt(G*hp), cm = sqrt(G*hm);
@@ -49,7 +49,7 @@ void kurganov (double hm, double hp, double um, double up, double delta,
     *fh = (ap*qm - am*qp + ap*am*(hp - hm))/(ap - am); // (4.5) of [1]
     *fq = (ap*(qm*um + G*sq(hm)/2.) - am*(qp*up + G*sq(hp)/2.) + 
 	    ap*am*(qp - qm))/(ap - am);
-    double dt = CFL*delta/a;
+    double dt = CFL*Delta/a;
     if (dt < *dtmax)
       *dtmax = dt;
   }
@@ -57,7 +57,7 @@ void kurganov (double hm, double hp, double um, double up, double delta,
     *fh = *fq = 0.;
 }
 
-void hllc (double hm, double hp, double um, double up, double delta,
+void hllc (double hm, double hp, double um, double up, double Delta,
 	   double * fh, double * fq, double * dtmax)
 {
   double cm = sqrt (G*hm), cp = sqrt (G*hp);
@@ -85,7 +85,7 @@ void hllc (double hm, double hp, double um, double up, double delta,
 
   double a = max(fabs(SL), fabs(SR));
   if (a > epsilon) {
-    double dt = CFL*delta/a;
+    double dt = CFL*Delta/a;
     if (dt < *dtmax)
       *dtmax = dt;
   }

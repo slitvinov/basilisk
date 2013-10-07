@@ -8,11 +8,11 @@ void output_vtk (scalar * list, int n, FILE * fp, bool linear)
   fprintf (fp, "POINTS %d double\n", n*n);
 
   double fn = n;
-  double delta = L0/fn;
+  double Delta = L0/fn;
   for (int i = 0; i < n; i++) {
-    double x = delta*i + X0 + delta/2.;
+    double x = Delta*i + X0 + Delta/2.;
     for (int j = 0; j < n; j++) {
-      double y = delta*j + Y0 + delta/2.;
+      double y = Delta*j + Y0 + Delta/2.;
       fprintf (fp, "%g %g 0\n", x, y);
     }
   }
@@ -21,11 +21,11 @@ void output_vtk (scalar * list, int n, FILE * fp, bool linear)
     fprintf (fp, "SCALARS scalar%d double\n", s);
     fputs ("LOOKUP_TABLE default\n", fp);
     double fn = n;
-    double delta = L0/fn;
+    double Delta = L0/fn;
     for (int i = 0; i < n; i++) {
-      double x = delta*i + X0 + delta/2.;
+      double x = Delta*i + X0 + Delta/2.;
       for (int j = 0; j < n; j++) {
-	double y = delta*j + Y0 + delta/2., v;
+	double y = Delta*j + Y0 + Delta/2., v;
 	if (linear)
 	  v = interpolate (s, x, y);
 	else {

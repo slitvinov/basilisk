@@ -28,11 +28,11 @@ int main (int argc, char ** argv)
     //    FILE * fp = fopen("error","w");
     double emax = 0.;
     int ni = 4*n + 7;
-    double delta = 1./ni;
+    double Delta = 1./ni;
     for (int i = 0; i <= ni; i++) {
-      double x = delta*i - 0.5;
+      double x = Delta*i - 0.5;
       for (int j = 0; j <= ni; j++) {
-	double y = delta*j - 0.5;
+	double y = Delta*j - 0.5;
 	double e = fabs (cos(2.*pi*x)*cos(2.*pi*y) - interpolate (v, x, y));
 	//	fprintf (fp, "%g %g %g\n", x, y, e);
 	if (e > emax) emax = e;

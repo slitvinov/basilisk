@@ -17,26 +17,26 @@ int _nterrain = 0;
 static int includes (KdtRect rect, Point * p)
 {
   Point point = *p;
-  delta /= 2.;
-  return (rect[0].l >= x - delta && rect[0].h <= x + delta &&
-	  rect[1].l >= y - delta && rect[1].h <= y + delta);
+  Delta /= 2.;
+  return (rect[0].l >= x - Delta && rect[0].h <= x + Delta &&
+	  rect[1].l >= y - Delta && rect[1].h <= y + Delta);
 }
 
 static int intersects (KdtRect rect, Point * p)
 {
   Point point = *p;
-  delta /= 2.;
-  return (rect[0].l <= x + delta && rect[0].h >= x - delta &&
-	  rect[1].l <= y + delta && rect[1].h >= y - delta);
+  Delta /= 2.;
+  return (rect[0].l <= x + Delta && rect[0].h >= x - Delta &&
+	  rect[1].l <= y + Delta && rect[1].h >= y - Delta);
 }
 
 static void reconstruct_terrain (Point point, scalar zb)
 {
   KdtSum s;
   kdt_sum_init (&s);
-  delta /= 2.;
-  KdtRect rect = {{x - delta, x + delta},
-		  {y - delta, y + delta}};
+  Delta /= 2.;
+  KdtRect rect = {{x - Delta, x + Delta},
+		  {y - Delta, y + Delta}};
   for (Kdt ** kdt = _terrain[zb].kdt[pid()]; *kdt; kdt++)
     kdt_query_sum (*kdt,
 		   (KdtCheck) includes,

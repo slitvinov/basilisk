@@ -31,16 +31,16 @@ void advance (double dt)
   trash ({S});
   foreach()
     foreach_dimension()
-      S.x.x[] = - sq(u.x[] + u.x[1,0])/4. + 2.*NU*(u.x[1,0] - u.x[])/delta;
+      S.x.x[] = - sq(u.x[] + u.x[1,0])/4. + 2.*NU*(u.x[1,0] - u.x[])/Delta;
   foreach_vertex()
     S.x.y[] = 
       - (u.x[] + u.x[0,-1])*(u.y[] + u.y[-1,0])/4. +
-      NU*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/delta;
+      NU*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/Delta;
   boundary ({S.x.x, S.y.y});
 
   // update
   foreach_face()
-    u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/delta;
+    u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/Delta;
   boundary_mac ({u});
 }
 
@@ -49,7 +49,7 @@ void projection (vector u, scalar p)
   scalar div[], res[], dp[];
   double sum = 0.;
   foreach (reduction(+:sum)) {
-    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/delta;
+    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
     sum += div[];
   }
   double maxres = residual (p, div, res);
@@ -69,7 +69,7 @@ void projection (vector u, scalar p)
 	     "  sum: %g\n", 
 	     NITERMAX, sum);
   foreach_face()
-    u.x[] -= (p[] - p[-1,0])/delta;
+    u.x[] -= (p[] - p[-1,0])/Delta;
   boundary_mac ({u});
 }
 

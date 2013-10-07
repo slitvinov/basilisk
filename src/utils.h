@@ -61,8 +61,8 @@ double interpolate (scalar v, double xp, double yp)
   Point point = locate (xp, yp);
   if (point.level < 0)
     return nodata;
-  x = (xp - x)/delta - v.d.x/2.;
-  y = (yp - y)/delta - v.d.y/2.;
+  x = (xp - x)/Delta - v.d.x/2.;
+  y = (yp - y)/Delta - v.d.y/2.;
   int i = sign(x), j = sign(y);
   x = fabs(x); y = fabs(y);
   /* bilinear interpolation */
@@ -114,7 +114,7 @@ norm normf (scalar f)
 	  reduction(+:rms) reduction(+:area)) {
     double v = fabs(f[]);
     if (v > max) max = v;
-    double a = sq(delta);
+    double a = sq(Delta);
     avg  += a*v;
     rms  += a*v*v;
     area += a;
@@ -136,7 +136,7 @@ stats statsf (scalar f)
   double min = 1e100, max = -1e100, sum = 0., sum2 = 0., area = 0.;
   foreach(reduction(+:sum) reduction(+:sum2) reduction(+:area)
 	  reduction(max:max) reduction(min:min)) {
-    double a = sq(delta);
+    double a = sq(Delta);
     sum += f[]*a;
     sum2 += f[]*f[]*a;
     area += a;
@@ -200,10 +200,10 @@ void gradients (scalar * f, vector * g)
     for (s,v in f,g)
       if (s.gradient)
 	foreach_dimension()
-	  v.x[] = s.gradient (s[-1,0], s[], s[1,0])/delta;
+	  v.x[] = s.gradient (s[-1,0], s[], s[1,0])/Delta;
       else // centered
 	foreach_dimension()
-	  v.x[] = (s[1,0] - s[-1,0])/(2.*delta);
+	  v.x[] = (s[1,0] - s[-1,0])/(2.*Delta);
   }
   boundary ((scalar *) g);
 }

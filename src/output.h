@@ -12,11 +12,11 @@ void output_field (struct OutputField p)
   for (scalar s in p.list)
     fprintf (p.fp, " %d:%d", i++, s);
   fputc('\n', p.fp);
-  double delta = L0/p.n;
+  double Delta = L0/p.n;
   for (int i = 0; i < p.n; i++) {
-    double xp = delta*i + X0 + delta/2.;
+    double xp = Delta*i + X0 + Delta/2.;
     for (int j = 0; j < p.n; j++) {
-      double yp = delta*j + Y0 + delta/2.;
+      double yp = Delta*j + Y0 + Delta/2.;
       fprintf (p.fp, "%g %g", xp, yp);
       if (p.linear) {
 	for (scalar s in p.list)
@@ -44,17 +44,17 @@ struct OutputMatrix {
 void output_matrix (struct OutputMatrix p)
 {
   float fn = p.n;
-  float delta = L0/fn;
+  float Delta = L0/fn;
   fwrite (&fn, sizeof(float), 1, p.fp);
   for (int j = 0; j < p.n; j++) {
-    float yp = delta*j + X0 + delta/2.;
+    float yp = Delta*j + X0 + Delta/2.;
     fwrite (&yp, sizeof(float), 1, p.fp);
   }
   for (int i = 0; i < p.n; i++) {
-    float xp = delta*i + X0 + delta/2.;
+    float xp = Delta*i + X0 + Delta/2.;
     fwrite (&xp, sizeof(float), 1, p.fp);
     for (int j = 0; j < p.n; j++) {
-      float yp = delta*j + Y0 + delta/2., v;
+      float yp = Delta*j + Y0 + Delta/2., v;
       if (p.linear)
 	v = interpolate (p.f, xp, yp);
       else {
@@ -139,8 +139,8 @@ void output_ppm (struct OutputPPM p)
   }
 
   double fn = p.n;
-  double delta = (p.box[1][0] - p.box[0][0])/fn;
-  int ny = (p.box[1][1] - p.box[0][1])/delta;
+  double Delta = (p.box[1][0] - p.box[0][0])/fn;
+  int ny = (p.box[1][1] - p.box[0][1])/Delta;
   
   color ** ppm = matrix_new (ny, p.n, sizeof(color));
   double cmap[NCMAP][3];
@@ -148,9 +148,9 @@ void output_ppm (struct OutputPPM p)
   OMP_PARALLEL()
   OMP(omp for schedule(static))
   for (int j = 0; j < ny; j++) {
-    double yp = delta*j + p.box[0][1] + delta/2.;
+    double yp = Delta*j + p.box[0][1] + Delta/2.;
     for (int i = 0; i < p.n; i++) {
-      double xp = delta*i + p.box[0][0] + delta/2., v;
+      double xp = Delta*i + p.box[0][0] + Delta/2., v;
       if (p.mask) { // masking
 	if (p.linear) {
 	  double m = interpolate (p.mask, xp, yp);
@@ -188,7 +188,7 @@ void output_ppm (struct OutputPPM p)
 struct OutputGRD {
   scalar f;
   FILE * fp;
-  double delta;
+  double Delta;
   bool linear;
   double box[2][2];
   scalar mask;
@@ -201,26 +201,26 @@ void output_grd (struct OutputGRD p)
       p.box[1][0] == 0. && p.box[1][1] == 0.) {
     p.box[0][0] = X0;      p.box[0][1] = Y0;
     p.box[1][0] = X0 + L0; p.box[1][1] = Y0 + L0;
-    if (p.delta == 0) p.delta = L0/N;
+    if (p.Delta == 0) p.Delta = L0/N;
   }
 
-  double delta = p.delta;
-  int nx = (p.box[1][0] - p.box[0][0])/delta;
-  int ny = (p.box[1][1] - p.box[0][1])/delta;
+  double Delta = p.Delta;
+  int nx = (p.box[1][0] - p.box[0][0])/Delta;
+  int ny = (p.box[1][1] - p.box[0][1])/Delta;
 
   // header
   fprintf (p.fp, "ncols          %d\n", nx);
   fprintf (p.fp, "nrows          %d\n", ny);
   fprintf (p.fp, "xllcorner      %g\n", p.box[0][0]);
   fprintf (p.fp, "yllcorner      %g\n", p.box[0][1]);
-  fprintf (p.fp, "cellsize       %g\n", delta);
+  fprintf (p.fp, "cellsize       %g\n", Delta);
   fprintf (p.fp, "nodata_value   -9999\n");
   
   // data
   for (int j = ny-1; j >= 0; j--) {
-    double yp = delta*j + p.box[0][1] + delta/2.;
+    double yp = Delta*j + p.box[0][1] + Delta/2.;
     for (int i = 0; i < nx; i++) {
-      double xp = delta*i + p.box[0][0] + delta/2., v;
+      double xp = Delta*i + p.box[0][0] + Delta/2., v;
       if (p.mask) { // masking
 	if (p.linear) {
 	  double m = interpolate (p.mask, xp, yp);

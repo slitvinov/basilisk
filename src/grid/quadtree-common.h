@@ -435,8 +435,8 @@ void quadtree_boundary_tangent (vector * list)
 Point locate (double xp, double yp)
 {
   foreach_cell () {
-    delta /= 2.;
-    if (xp < x - delta || xp > x + delta || yp < y - delta || yp > y + delta)
+    Delta /= 2.;
+    if (xp < x - Delta || xp > x + Delta || yp < y - Delta || yp > y + Delta)
       continue;
     if (is_leaf (cell))
       return point;

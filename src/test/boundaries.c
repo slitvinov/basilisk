@@ -11,9 +11,9 @@ int main ()
   refine_function (refine_func, NULL, NULL);
   output_cells (stdout);
   foreach_boundary_face (bottom)
-    fprintf (stderr, "bottom %g %g %d\n", x - delta/2., y, level);
+    fprintf (stderr, "bottom %g %g %d\n", x - Delta/2., y, level);
   foreach_boundary_face (right)
-    fprintf (stderr, "right %g %g %d\n", x, y - delta/2., level);
+    fprintf (stderr, "right %g %g %d\n", x, y - Delta/2., level);
   foreach_boundary_cell_post (right, !is_leaf (cell))
     fprintf (stderr, "post %g %g %d\n", x, y, level);
   foreach_boundary_halo (right)

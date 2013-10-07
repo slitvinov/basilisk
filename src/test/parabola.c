@@ -67,8 +67,8 @@ event umean (t += 50; t <= 6000) {
   if (N == 128) {
     double sq = 0., sh = 0.;
     foreach() {
-      sq += delta*h[]*u.x[];
-      sh += delta*h[];
+      sq += Delta*h[]*u.x[];
+      sh += Delta*h[];
     }
     printf ("s %g %g %f\n", t, sq/sh, sh);
   }

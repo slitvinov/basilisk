@@ -104,10 +104,10 @@ void multigrid_debug (Point point)
 
   if (point.level > 0) {
     FILE * fp = fopen ("coarse", "w");
-    double xc = x - child.x*delta/2., yc = y - child.y*delta/2.;
+    double xc = x - child.x*Delta/2., yc = y - child.y*Delta/2.;
     for (int k = 0; k <= 1; k++)
       for (int l = 0; l <= 1; l++) {
-	fprintf (fp, "%g %g", xc + k*child.x*delta*2., yc + l*child.y*delta*2.);
+	fprintf (fp, "%g %g", xc + k*child.x*Delta*2., yc + l*child.y*Delta*2.);
 	for (scalar v in all)
 	  fprintf (fp, " %g", coarse(v,k*child.x,l*child.y));
 	fputc ('\n', fp);
@@ -118,10 +118,10 @@ void multigrid_debug (Point point)
 
   if (point.level < depth()) {
     FILE * fp = fopen ("fine", "w");
-    double xf = x - delta/4., yf = y - delta/4.;
+    double xf = x - Delta/4., yf = y - Delta/4.;
     for (int k = 0; k <= 1; k++)
       for (int l = 0; l <= 1; l++) {
-	fprintf (fp, "%g %g", xf + k*delta/2., yf + l*delta/2.);
+	fprintf (fp, "%g %g", xf + k*Delta/2., yf + l*Delta/2.);
 	for (scalar v in all)
 	  fprintf (fp, " %g", fine(v,k,l));
 	fputc ('\n', fp);

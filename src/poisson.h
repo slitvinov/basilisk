@@ -49,7 +49,7 @@ static void homogeneous_boundary (scalar * v, int l)
 static void relax (scalar a, scalar b, int l)
 {
   foreach_level_or_leaf (l)
-    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - delta*delta*b[])/4.;
+    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - sq(Delta)*b[])/4.;
 }
 
 static double residual (scalar a, scalar b, scalar res)
@@ -59,14 +59,14 @@ static double residual (scalar a, scalar b, scalar res)
   /* conservative coarse/fine discretisation (2nd order) */
   vector g[];
   foreach_face()
-    g.x[] = (a[] - a[-1,0])/delta;
+    g.x[] = (a[] - a[-1,0])/Delta;
   boundary_normal ({g});
   foreach (reduction(max:maxres)) {
-    res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/delta;
+    res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta;
 #else
   /* "naive" discretisation (only 1st order on quadtrees) */
   foreach (reduction(max:maxres)) {
-    res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/(delta*delta);
+    res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/sq(Delta);
 #endif
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);

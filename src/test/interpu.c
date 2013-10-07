@@ -28,7 +28,7 @@ int main (int argc, char ** argv)
   double max = 0;
   foreach_face (x)
     for (int i = -1; i <= 1; i++) {
-      double xu = x, yu = y + i*delta;
+      double xu = x, yu = y + i*Delta;
       double e = exp(-(xu*xu+yu*yu)/(R0*R0)) - u.x[0,i];
       if (fabs(e) > max)
 	max = fabs(e);
@@ -37,7 +37,7 @@ int main (int argc, char ** argv)
   double maxv = 0;
   foreach_face (y)
     for (int i = -1; i <= 1; i++) {
-      double xv = x + i*delta, yv = y;
+      double xv = x + i*Delta, yv = y;
       double e = exp(-(xv*xv+yv*yv)/(R0*R0)) - u.y[i,0];
       if (fabs(e) > maxv)
 	maxv = fabs(e);

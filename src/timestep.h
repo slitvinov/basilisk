@@ -4,7 +4,7 @@ double timestep (const vector u)
   foreach(reduction(min:dtmax))
     foreach_dimension()
       if (u.x[] != 0.) {
-	double dt = delta/fabs(u.x[]);
+	double dt = Delta/fabs(u.x[]);
 	if (dt < dtmax) dtmax = dt;
       }
   return dtmax*CFL;

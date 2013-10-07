@@ -46,7 +46,7 @@ void advection_centered (scalar f, scalar u, scalar v, scalar df)
     df[] = ((f[] + f[-1,0)]*u[] - 
 	    (f[] + f[1,0)]*u[1,0] +
 	    (f[] + f[0,-1)]*v[] - 
-	    (f[] + f[0,1)]*v[0,1)]/(2.*delta);
+	    (f[] + f[0,1)]*v[0,1)]/(2.*Delta);
 }
 
 void advection_upwind (scalar f, scalar u, scalar v, scalar df)
@@ -55,7 +55,7 @@ void advection_upwind (scalar f, scalar u, scalar v, scalar df)
     df[] = ((u[] < 0. ? f[] : f[-1,0)]*u[] - 
 	    (u[1,0] > 0. ? f[] : f[1,0)]*u[1,0] +
 	    (v[] < 0. ? f[] : f[0,-1)]*v[] - 
-	    (v[0,1] > 0. ? f[] : f[0,1)]*v[0,1)]/delta;
+	    (v[0,1] > 0. ? f[] : f[0,1)]*v[0,1)]/Delta;
 }
 
 double timestep (void)
@@ -63,17 +63,17 @@ double timestep (void)
   double dtmax = DT/CFL;
   dtmax *= dtmax;
   foreach(reduction(min:dtmax)) {
-    delta *= delta;
+    Delta *= Delta;
     if (h[] > 0.) {
-      double dt = delta/(G*h[]);
+      double dt = Delta/(G*h[]);
       if (dt < dtmax) dtmax = dt;
     }
     if (u[] != 0.) {
-      double dt = delta/(u[]*u[]);
+      double dt = Delta/(u[]*u[]);
       if (dt < dtmax) dtmax = dt;
     }
     if (v[] != 0.) {
-      double dt = delta/(v[]*v[]);
+      double dt = Delta/(v[]*v[]);
       if (dt < dtmax) dtmax = dt;
     }
   }
@@ -86,14 +86,14 @@ void momentum (scalar u, scalar v, scalar h, scalar du, scalar dv)
     double g = G*(h[] + b[]) + ke[];
     double psiu = (psi[] + psi[0,1])/2.;
     du[] = 
-      - (g - G*(h[-1,0] + b[-1,0]) - ke[-1,0])/delta
+      - (g - G*(h[-1,0] + b[-1,0]) - ke[-1,0])/Delta
       + (psiu + F0)*(v[] + v[0,1] + v[-1,0] + v[-1,1])/4.
-      + NU*(u[1,0] + u[0,1] + u[-1,0] + u[0,-1] - 4.*u[])/(delta*delta);
+      + NU*(u[1,0] + u[0,1] + u[-1,0] + u[0,-1] - 4.*u[])/sq(Delta);
     double psiv = (psi[] + psi[1,0])/2.;
     dv[] = 
-      - (g - G*(h[0,-1] + b[0,-1]) - ke[0,-1])/delta
+      - (g - G*(h[0,-1] + b[0,-1]) - ke[0,-1])/Delta
       - (psiv + F0)*(u[] + u[1,0] + u[0,-1] + u[1,-1])/4.
-      + NU*(v[1,0] + v[0,1] + v[-1,0] + v[0,-1] - 4.*v[])/(delta*delta);
+      + NU*(v[1,0] + v[0,1] + v[-1,0] + v[0,-1] - 4.*v[])/sq(Delta);
   }
 }
 
@@ -107,14 +107,14 @@ void ke_psi (scalar u, scalar v)
     double vc = v[]*v[] + v[0,1]*v[0,1];
     ke[] = (uc + vc)/4.;
 #endif
-    psi[] = (v[] - v[-1,0] + u[0,-1] - u[])/delta;
+    psi[] = (v[] - v[-1,0] + u[0,-1] - u[])/Delta;
   }
   foreach_boundary (right, false)
-    psi[1,0] = (v[1,0] - v[] + u[1,-1] - u[1,0])/delta;
+    psi[1,0] = (v[1,0] - v[] + u[1,-1] - u[1,0])/Delta;
   foreach_boundary (left, false)
     ke[-1,0] = (sq(u[-1,0] + u[]) + sq(v[-1,0] + v[-1,1]))/8.;
   foreach_boundary (top, false)
-    psi[0,1] = (v[0,1] - v[-1,1] + u[] - u[0,1])/delta;
+    psi[0,1] = (v[0,1] - v[-1,1] + u[] - u[0,1])/Delta;
   foreach_boundary (bottom, false)
     ke[0,-1] = (sq(u[0,-1] + u[1,-1]) + sq(v[0,-1] + v[]))/8.;
 }

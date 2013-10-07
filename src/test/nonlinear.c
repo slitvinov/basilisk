@@ -75,7 +75,7 @@ double energy()
 {
   double se = 0.;
   foreach(reduction(+:se))
-    se += (h[]*ke[] + G*h[]*(h[]/2. + b[]))*delta*delta;
+    se += (h[]*ke[] + G*h[]*(h[]/2. + b[]))*sq(Delta);
   return se;
 }
 

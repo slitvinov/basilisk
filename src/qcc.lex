@@ -253,10 +253,10 @@
       fclose (yyout);
       yyout = foreachfp;
       FILE * fp = dopen ("foreach_vertex.h", "r");
-      fputs ("foreach() { x -= delta/2.; y -= delta/2.; ", yyout);
+      fputs ("foreach() { x -= Delta/2.; y -= Delta/2.; ", yyout);
       writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
       fputs (" } end_foreach()\n", yyout);
-      fputs ("foreach_boundary_face_ghost (top) { x -= delta/2.;\n", yyout);
+      fputs ("foreach_boundary_face_ghost (top) { x -= Delta/2.;\n", yyout);
       writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
       fputs ("} end_foreach_boundary_face_ghost();\n"
 	     "#ifdef foreach_boundary_face_ghost_halo\n"
@@ -264,7 +264,7 @@
       writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
       fputs ("} end_foreach_boundary_face_ghost_halo();\n"
 	     "#endif\n"
-	     "foreach_boundary_face_ghost (right) { y -= delta/2.;\n", yyout);
+	     "foreach_boundary_face_ghost (right) { y -= Delta/2.;\n", yyout);
       writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
       fputs ("} end_foreach_boundary_face_ghost();\n"
 	     "#ifdef foreach_boundary_face_ghost_halo\n"
@@ -273,7 +273,7 @@
       fputs ("} end_foreach_boundary_face_ghost_halo();\n"
 	     "#endif\n", yyout);
       fputs ("#ifdef foreach_halo_vertex\n"
-	     "foreach_halo_vertex () { x -= delta/2.; y -= delta/2.;\n",
+	     "foreach_halo_vertex () { x -= Delta/2.; y -= Delta/2.;\n",
 	     yyout);
       writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
       fputs ("} end_foreach_halo_vertex();\n"

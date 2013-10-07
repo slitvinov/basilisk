@@ -160,7 +160,7 @@ right states of the primary fields $h$, $\mathbf{u}$, $z_b$. The
 "interface" topography $z_{lr}$ is reconstructed using the hydrostatic
 reconstruction of [Audusse et al, 2004](/src/references.bib#audusse2004) */
     
-      double dx = delta/2.;
+      double dx = Delta/2.;
       double zi = eta[] - hi;
       double zl = zi - dx*(geta.x[] - gh.x[]);
       double zn = eta[-1,0] - hn;
@@ -181,7 +181,7 @@ reconstruction of [Audusse et al, 2004](/src/references.bib#audusse2004) */
 We can now call one of the approximate Riemann solvers to get the fluxes. */
 
       double fh, fu, fv;
-      kurganov (hm, hp, um, up, delta, &fh, &fu, &dtmax);
+      kurganov (hm, hp, um, up, Delta, &fh, &fu, &dtmax);
       fv = (fh > 0. ? u.y[-1,0] + dx*gu.y.x[-1,0] : u.y[] - dx*gu.y.x[])*fh;
 
 /**
@@ -241,12 +241,12 @@ void update (scalar * output, scalar * input, double dt)
   // new fields in ho[], uo[]
   foreach() {
     double hold = hi[];
-    ho[] = hold + dt*(Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/delta;
+    ho[] = hold + dt*(Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/Delta;
     eta[] = ho[] + zb[];
     if (ho[] > dry)
       foreach_dimension()
 	uo.x[] = (hold*ui.x[] + dt*(Fq.x.x[] + Fq.x.y[] - 
-				   S.x[1,0] - Fq.x.y[0,1])/delta)/ho[];
+				   S.x[1,0] - Fq.x.y[0,1])/Delta)/ho[];
     else
       foreach_dimension()
 	uo.x[] = 0.;

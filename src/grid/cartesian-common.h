@@ -4,12 +4,12 @@ void (* debug)    (Point);
 
 @undef VARIABLES
 @def VARIABLES
-  double delta = L0*DELTA; /* cell size */
+  double Delta = L0*DELTA; /* cell size */
   /* cell/face center coordinates */
-  double x  = (ig/2. + I + 0.5)*delta + X0;
-  double y  = (jg/2. + J + 0.5)*delta + Y0;
+  double x  = (ig/2. + I + 0.5)*Delta + X0;
+  double y  = (jg/2. + J + 0.5)*Delta + Y0;
   /* we need this to avoid compiler warnings */
-  NOT_UNUSED(delta); NOT_UNUSED(x); NOT_UNUSED(y);
+  NOT_UNUSED(Delta); NOT_UNUSED(x); NOT_UNUSED(y);
   /* and this when catching FPEs */
   _CATCH;
 @
@@ -245,13 +245,13 @@ tensor cartesian_init_tensor (tensor t, const char * name)
 void output_cells (FILE * fp)
 {
   foreach() {
-    delta /= 2.;
+    Delta /= 2.;
     fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
-	     x - delta, y - delta,
-	     x - delta, y + delta,
-	     x + delta, y + delta,
-	     x + delta, y - delta,
-	     x - delta, y - delta);
+	     x - Delta, y - Delta,
+	     x - Delta, y + Delta,
+	     x + Delta, y + Delta,
+	     x + Delta, y - Delta,
+	     x - Delta, y - Delta);
   }
   fflush (fp);
 }
@@ -265,7 +265,7 @@ void cartesian_debug (Point point)
   fp = fopen ("stencil", "w");
   for (int k = -1; k <= 1; k++)
     for (int l = -1; l <= 1; l++) {
-      fprintf (fp, "%g %g", x + k*delta, y + l*delta);
+      fprintf (fp, "%g %g", x + k*Delta, y + l*Delta);
       if (allocated (k,l)) {
 	for (scalar v in all)
 	  fprintf (fp, " %g", v[k,l]);

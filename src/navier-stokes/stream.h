@@ -55,16 +55,16 @@ void run (void)
     mgpsi = poisson (psi, omega);
     // velocity from streamfunction
     foreach_face(x)
-      u.x[] = (psi[0,-1] + psi[-1,-1] - psi[0,1] - psi[-1,1])/(4.*delta);
+      u.x[] = (psi[0,-1] + psi[-1,-1] - psi[0,1] - psi[-1,1])/(4.*Delta);
     foreach_face(y)
-      u.y[] = (psi[1,0] + psi[1,-1] - psi[-1,0] - psi[-1,-1])/(4.*delta);
+      u.y[] = (psi[1,0] + psi[1,-1] - psi[-1,0] - psi[-1,-1])/(4.*Delta);
     boundary_mac ({u});
     // advection of vorticity
     dt = dtnext (t, timestep (u));
     vector flux[];
     fluxes_upwind_bcg (omega, u, flux, dt);
     foreach(reduction(+:tnc)) {
-      omega[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;
+      omega[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta;
       tnc++;
     }
     boundary ({omega});

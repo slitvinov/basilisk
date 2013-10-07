@@ -41,7 +41,7 @@ void run (void)
     vector flux[];
     fluxes_upwind_bcg (f, u, flux, dt);
     foreach(reduction(+:tnc)) {
-      f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/delta;
+      f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta;
       tnc++;
     }
     boundary ({f});

@@ -41,7 +41,7 @@ using a 5-points Laplacian operator. */
     start = clock();
     while (i--)
       foreach()
-	b[] = (a[0,1] + a[1,0] + a[0,-1] + a[-1,0] - 4.*a[]);
+	b[] = (a[0,1] + a[1,0] + a[0,-1] + a[-1,0] - 4.*a[])/sq(Delta);
     end = clock();
     printf ("lap %d %g\n", l, 
 	    1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)));

@@ -21,7 +21,7 @@ void init_internal (void)
  *    Analysis, 36(3), 397-425.
  */ 
 static double riemann (const double * right, const double * left,
-		       double delta, double * f, int len, 
+		       double Delta, double * f, int len, 
 		       double dtmax)
 {
   double fm[len], fp[len], em[2], ep[2];
@@ -33,7 +33,7 @@ static double riemann (const double * right, const double * left,
   if (a > 0.) {
     for (int i = 0; i < len; i++)
       f[i] = (ap*fm[i] - am*fp[i] + ap*am*(left[i] - right[i]))/(ap - am);
-    double dt = CFL*delta/a;
+    double dt = CFL*Delta/a;
     if (dt < dtmax)
       dtmax = dt;
   }
@@ -70,7 +70,7 @@ double fluxes (scalar * conserved, double dtmax)
 
   // compute fluxes
   foreach_face() {
-    double dx = delta/2.;
+    double dx = Delta/2.;
     int i = 0;
     scalar s;
     vector g;
@@ -79,7 +79,7 @@ double fluxes (scalar * conserved, double dtmax)
       r[i++] = s[-1,0] + dx*g.x[-1,0];
     }
     // Riemann solver
-    dtmax = riemann (r, l, delta, f, len, dtmax);
+    dtmax = riemann (r, l, Delta, f, len, dtmax);
     // update fluxes
     i = 0;
     for (vector f1 in lflux)
@@ -101,7 +101,7 @@ void update (scalar * output, scalar * input, double dt)
     scalar o, i;
     vector f;
     for (o,i,f in output,input,lflux)
-      o[] = i[] + dt*(f.x[] - f.x[1,0])/delta;
+      o[] = i[] + dt*(f.x[] - f.x[1,0])/Delta;
   }
   boundary (output);
   delete ((scalar *)lflux);
