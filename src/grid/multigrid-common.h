@@ -5,6 +5,21 @@
 @ define end_foreach_level_or_leaf end_foreach_level
 @endif
 
+@ifndef foreach_boundary_fine_to_coarse
+@ def foreach_boundary_fine_to_coarse(dir) {
+  for (int _l = depth() - 1; _l >= 0; _l--)
+    foreach_boundary_level (dir,_l,false) {
+      point.i += ig; point.j += jg;
+      ig = -ig; jg = -jg;
+      POINT_VARIABLES;
+@
+@ def end_foreach_boundary_fine_to_coarse()
+      ig = -ig; jg = -jg;
+    } end_foreach_boundary_level() 
+  }
+@
+@endif
+
 // Multigrid methods
 
 void (* boundary_level)       (scalar *, int);
@@ -20,6 +35,21 @@ void restriction (scalar * list)
   foreach_fine_to_coarse()
     for (scalar s in list)
       s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+}
+
+void restriction_staggered (vector * list)
+{
+  foreach_fine_to_coarse()
+    for (vector v in list)
+      foreach_dimension()
+	v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+  boundary_normal (list);
+  foreach_boundary_fine_to_coarse(right)
+    for (vector v in list)
+      v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+  foreach_boundary_fine_to_coarse(top)
+    for (vector v in list)
+      v.y[] = (fine(v.y,0,0) + fine(v.y,1,0))/2.;
 }
 
 void wavelet (scalar s, scalar w)

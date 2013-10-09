@@ -1,4 +1,4 @@
-/* Multigrid Poisson solver */
+/* Multigrid Poisson solvers */
 
 static void boundary_homogeneous (scalar a, scalar da, int l)
 {
@@ -45,6 +45,34 @@ int NITERMAX = 100;
 // Tolerance on residual
 double TOLERANCE = 1e-3;
 
+typedef struct {
+  int i;
+  double maxres, sum;
+} mgstats;
+
+mgstats mg_solve (scalar a, scalar b, 
+		  double (* residual) (scalar, scalar, scalar),
+		  void (* relax) (scalar da, scalar res, int depth))
+{
+  scalar res[], da[];
+  mgstats s = {0, 0., 0.};
+  foreach (reduction(+:sum))
+    s.sum += b[];
+  s.maxres = residual (a, b, res);
+  for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.maxres > TOLERANCE); s.i++) {
+    mg_cycle (a, res, da, relax, 4, 0);
+    s.maxres = residual (a, b, res);
+  }
+  if (s.i == NITERMAX)
+    fprintf (stderr, 
+	     "WARNING: convergence not reached after %d iterations\n"
+	     "  sum: %g\n", 
+	     NITERMAX, s.sum);
+  return s;
+}
+
+// Poisson equation with constant coefficients
+
 static void relax (scalar a, scalar b, int l)
 {
   foreach_level_or_leaf (l)
@@ -73,26 +101,54 @@ static double residual (scalar a, scalar b, scalar res)
   return maxres;
 }
 
-typedef struct {
-  int i;
-  double maxres, sum;
-} mgstats;
-
 mgstats poisson (scalar a, scalar b)
 {
-  scalar res[], da[];
-  mgstats s = {0, 0., 0.};
-  foreach (reduction(+:sum))
-    s.sum += b[];
-  s.maxres = residual (a, b, res);
-  for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.maxres > TOLERANCE); s.i++) {
-    mg_cycle (a, res, da, relax, 4, 0);
-    s.maxres = residual (a, b, res);
+  return mg_solve (a, b, residual, relax);
+}
+
+// Poisson equation with variable coefficients
+
+vector alpha;
+
+static void relax_variable (scalar a, scalar b, int l)
+{
+  foreach_level_or_leaf (l)
+    a[] = (alpha.x[1,0]*a[1,0] + alpha.x[]*a[-1,0] + 
+	   alpha.y[0,1]*a[0,1] + alpha.y[]*a[0,-1] 
+	   - sq(Delta)*b[])
+    /(alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[]);
+}
+
+static double residual_variable (scalar a, scalar b, scalar res)
+{
+  double maxres = 0.;
+#if QUADTREE
+  /* conservative coarse/fine discretisation (2nd order) */
+  vector g[];
+  foreach_face()
+    g.x[] = (a[] - a[-1,0])/Delta;
+  boundary_normal ({g});
+  foreach (reduction(max:maxres)) {
+    res[] = b[] + (alpha.x[]*g.x[] - alpha.x[1,0]*g.x[1,0] + 
+		   alpha.y[]*g.y[] - alpha.y[0,1]*g.y[0,1])/Delta;
+#else
+  /* "naive" discretisation (only 1st order on quadtrees) */
+  foreach (reduction(max:maxres)) {
+    res[] = b[] + 
+      ((alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[])*a[]
+       - alpha.x[1,0]*a[1,0] - alpha.x[]*a[-1,0] 
+       - alpha.y[0,1]*a[0,1] - alpha.y[]*a[0,-1])
+      /sq(Delta);
+#endif
+    if (fabs (res[]) > maxres)
+      maxres = fabs (res[]);
   }
-  if (s.i == NITERMAX)
-    fprintf (stderr, 
-	     "WARNING: convergence not reached after %d iterations\n"
-	     "  sum: %g\n", 
-	     NITERMAX, s.sum);
-  return s;
+  return maxres;
+}
+
+mgstats poisson_variable (scalar a, scalar b, vector c)
+{
+  alpha = c;
+  restriction_staggered ({alpha});
+  return mg_solve (a, b, residual_variable, relax_variable);
 }
