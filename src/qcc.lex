@@ -46,7 +46,8 @@
   int nreduct;
 
   int inboundary;
-  char * boundaryfunc, boundaryvar[80];
+  char boundaryfunc[80], boundaryvar[80], boundarydir[80];
+  FILE * boundaryfp = NULL;
   int nboundary = 0;
 
   int infunction, infunctiondecl, functionscope, functionpara;
@@ -492,6 +493,39 @@
     if (debug)
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
   }
+
+  static void homogeneize (FILE * in, FILE * fp)
+  {
+    /* replace neumann/dirichlet(...) with neumann/dirichlet(0) */
+    char * cond[2] = {"dirichlet", "neumann"};
+    char str[1024];
+    while (fgets (str, 1024, in)) {
+      char * s = str;
+      while (*s != '\0') {
+	int i;
+	for (i = 0; i < 2; i++)
+	  if (!strncmp (s, cond[i], strlen (cond[i]))) {
+	    fputs (cond[i], fp);
+	    s += strlen (cond[i]);
+	    while (strchr (" \t\v\n\f", *s))
+	      s++;
+	    if (*s == '(') {
+	      fputs ("_homogeneous", fp);
+	      fputc (*s++, fp);
+	      s++;
+	      int para = 0;
+	      while ((para > 0 || *s != ')') && *s != '\0') {
+		if (*s == '(') para++;
+		if (*s == ')') para--;
+		s++;
+	      }
+	    }
+	    break;
+	  }
+	fputc (*s++, fp);
+      }
+    }
+  }
   
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
 #define space(s) { while (!strchr(" \t\v\n\f", *s)) s++; }
@@ -654,15 +688,37 @@ end_foreach{ID}*{SP}*"()" {
   }
   if (inboundary) {
     ECHO;
+    fclose (yyout);
+    yyout = boundaryfp;
+    FILE * fp = dopen ("inboundary.h", "r");
+    int c;
+    while ((c = fgetc (fp)) != EOF)
+      fputc (c, yyout);
+    fputs (" } ", yyout);
+    fprintf (yyout, 
+	     "double _%s%s_homogeneous (Point point, scalar _s) {"
+	     " int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
+	     " POINT_VARIABLES; "
+	     " return ", 
+	     boundaryfunc, boundarydir);
+    rewind (fp);
+    homogeneize (fp, yyout);
+    fclose (fp);
     fputs (" } ", yyout);
     if (scope == 0)
       /* file scope */
-      fprintf (yyout, "static void _boundary%d (void) { %s } ",
-	       nboundary++, boundaryfunc);
-    else
-      /* function scope */
-      fputs (boundaryfunc, yyout);
-    free (boundaryfunc);
+      fprintf (yyout, 
+	       "static void _boundary%d (void) { ",
+	       nboundary++);
+    /* function/file scope */
+    fprintf (yyout,
+	     "_method[%s].boundary[%s] = _%s%s;"
+	     "_method[%s].boundary_homogeneous[%s] = _%s%s_homogeneous;",
+	     boundaryvar, boundarydir, boundaryfunc, boundarydir,
+	     boundaryvar, boundarydir, boundaryfunc, boundarydir);
+    if (scope == 0)
+      /* file scope */
+      fputs (" } ", yyout);
     inboundary = inforeach_boundary = inforeach = 0;
   }
   else if (inforeach && scope == foreachscope && para == foreachpara) {
@@ -863,33 +919,28 @@ val{WS}*[(]    {
     while (!strchr(" \t\v\n\f[", *s)) s++;
     *s++ = '\0';
     nonspace (s);
-    char * b = s;
+    strcpy (boundarydir, s);
+    s = boundarydir;
     while (!strchr(" \t\v\n\f]", *s)) s++;
     *s++ = '\0';
-    char * func = malloc (strlen (yytext) + 1);
-    strcpy (func, yytext);
-    char * s1 = func;
+    strcpy (boundaryfunc, yytext);
+    char * s1 = boundaryfunc;
     while (*s1 != '\0') {
       if (*s1 == '.')
 	*s1 = '_';
       s1++;
     }
-    boundaryfunc = malloc (strlen ("_method[].boundary[] = _;") + 
-			   2*strlen (b) + 
-			   strlen(yytext) + 
-			   strlen (func) + 1);
-    sprintf (boundaryfunc, "_method[%s].boundary[%s] = _%s%s;", 
-	     yytext, b, func, b);
     fprintf (yyout, 
 	     "double _%s%s (Point point, scalar _s) {"
 	     " int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
 	     " POINT_VARIABLES; "
 	     " return ", 
-	     func, b);
-    free (func);
+	     boundaryfunc, boundarydir);
     inboundary = inforeach_boundary = 1;
     strcpy (boundaryvar, yytext);
     inforeach = 2;
+    boundaryfp = yyout;
+    yyout = dopen ("inboundary.h", "w");
   }
   else
     REJECT;
@@ -1209,7 +1260,7 @@ reduction{WS}*[(](min|max):{ID}+[)] {
       oldc = c;    /* eat up text of preproc */
     if (c == EOF || oldc != '\\')
       break;
-  }  
+  }
 }
   
 "/*"                                    { ECHO; if (comment()) return 1; }

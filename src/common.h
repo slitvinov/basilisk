@@ -157,15 +157,21 @@ enum { right, left, top, bottom, nboundary };
 int _ig[nboundary] = {1,-1,0,0}, 
     _jg[nboundary] = {0,0,1,-1};
 
+@define dirichlet(x)            (2.*(x) - val(_s,0,0))
+@define dirichlet_homogeneous() (- val(_s,0,0))
+@define neumann(x)              (Delta*(x) + val(_s,0,0))
+@define neumann_homogeneous()   (val(_s,0,0))
+
 typedef struct _Point Point;
 
 // methods for each scalar
 
 typedef struct {
-  double (* boundary[nboundary]) (Point, scalar);
-  void   (* refine)              (Point, scalar);
-  void   (* coarsen)             (Point, scalar);
-  double (* gradient)            (double, double, double);
+  double (* boundary[nboundary])             (Point, scalar);
+  double (* boundary_homogeneous[nboundary]) (Point, scalar);
+  void   (* refine)                          (Point, scalar);
+  void   (* coarsen)                         (Point, scalar);
+  double (* gradient)                        (double, double, double);
   struct { int x, y; } d;        // staggering
 } Methods;
 

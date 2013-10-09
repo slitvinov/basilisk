@@ -1,50 +1,49 @@
 /* Multigrid Poisson solver */
 
-void mg_cycle (scalar a, scalar res, scalar dp,
-	       void (* relax)    (scalar dp, scalar res, int depth),
-	       void (* boundary) (scalar * dp, int depth),
+static void boundary_homogeneous (scalar a, scalar da, int l)
+{
+  /* Apply homogeneous boundary conditions of a to da on all boundaries */
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_level (b, l, true)
+      da[ghost] = a.boundary_homogeneous[b] (point, da);
+#if QUADTREE
+  /* we don't need to restrict because the solution is already defined
+     on coarse levels */
+  halo_prolongation (l, {da});
+#endif
+}
+
+void mg_cycle (scalar a, scalar res, scalar da,
+	       void (* relax) (scalar da, scalar res, int depth),
 	       int nrelax, int minlevel)
 {
   restriction ({res});
   for (int l = minlevel; l <= depth(); l++) {
     if (l == minlevel) {
       foreach_level_or_leaf (l)
-	dp[] = 0.;
+	da[] = 0.;
     }
     else 
       /* bilinear interpolation from coarser level */
       foreach_level_or_leaf (l)
-	dp[] = (9.*coarse(dp,0,0) + 
-		3.*(coarse(dp,child.x,0) + coarse(dp,0,child.y)) + 
-		coarse(dp,child.x,child.y))/16.;
-    boundary ({dp}, l);
+	da[] = (9.*coarse(da,0,0) + 
+		3.*(coarse(da,child.x,0) + coarse(da,0,child.y)) + 
+		coarse(da,child.x,child.y))/16.;
+    boundary_homogeneous (a, da, l);
     for (int i = 0; i < nrelax; i++) {
-      relax (dp, res, l);
-      boundary ({dp}, l);
+      relax (da, res, l);
+      boundary_homogeneous (a, da, l);
     }
   }
   foreach()
-    a[] += dp[];
+    a[] += da[];
+  boundary ({a});
 }
 
 // Maximum number of multigrid iterations
 int NITERMAX = 100;
 // Tolerance on residual
 double TOLERANCE = 1e-3;
-
-static void homogeneous_boundary (scalar * v, int l)
-{
-  /* Homogeneous Dirichlet condition on all boundaries */
-  scalar p = *v;
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_level (b, l, true)
-      p[ghost] = - p[];
-#if QUADTREE
-  /* we don't need to restrict because the solution is already defined
-     on coarse levels */
-  halo_prolongation (l, {p});
-#endif
-}
 
 static void relax (scalar a, scalar b, int l)
 {
@@ -87,10 +86,7 @@ mgstats poisson (scalar a, scalar b)
     s.sum += b[];
   s.maxres = residual (a, b, res);
   for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.maxres > TOLERANCE); s.i++) {
-    mg_cycle (a, res, da,
-	      relax, homogeneous_boundary,
-	      4, 0);
-    boundary ({a});
+    mg_cycle (a, res, da, relax, 4, 0);
     s.maxres = residual (a, b, res);
   }
   if (s.i == NITERMAX)

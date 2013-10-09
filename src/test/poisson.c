@@ -9,10 +9,10 @@ double solution (double x, double y)
 }
 
 /* Dirichlet condition on all boundaries */
-a[right]  = 2.*solution(x, y) - a[];
-a[left]   = 2.*solution(x, y) - a[];
-a[top]    = 2.*solution(x, y) - a[];
-a[bottom] = 2.*solution(x, y) - a[];
+a[right]  = dirichlet (solution(x, y));
+a[left]   = dirichlet (solution(x, y));
+a[top]    = dirichlet (solution(x, y));
+a[bottom] = dirichlet (solution(x, y));
 
 int main (int argc, char ** argv)
 {
@@ -31,10 +31,7 @@ int main (int argc, char ** argv)
   double maxres[NITER];
   residual (a, b, res);
   for (int i = 0; i < NITER; i++) {
-    mg_cycle (a, res, dp,
-	      relax, homogeneous_boundary,
-	      nrelax, 0);
-    boundary ({a});
+    mg_cycle (a, res, dp, relax, nrelax, 0);
     residual (a, b, res);
     double max = 0.;
     foreach()

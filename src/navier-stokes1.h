@@ -14,6 +14,7 @@ void init       (void);
 void end        (void);
 // timestep
 double dt = 0;
+mgstats mgp;  // statistics of the Poisson solver
 
 // default is no flow through boundaries
 u.x[right]  = 0.;
@@ -46,28 +47,10 @@ void advance (double dt)
 
 void projection (vector u, scalar p)
 {
-  scalar div[], res[], dp[];
-  double sum = 0.;
-  foreach (reduction(+:sum)) {
+  scalar div[];
+  foreach()
     div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
-    sum += div[];
-  }
-  double maxres = residual (p, div, res);
-  int i;
-  for (i = 0; i < NITERMAX && (i < 1 || maxres > TOLERANCE); i++) {
-    mg_cycle (p, res, dp,
-	      relax, boundary_level,
-	      4, 0);
-    // fixme: use a generic Poisson solver instead
-    // need to find a solution for homogeneous BCs
-    boundary_level ({p}, depth());
-    maxres = residual (p, div, res);
-  }
-  if (i == NITERMAX)
-    fprintf (stderr, 
-	     "WARNING: convergence not reached after %d iterations\n"
-	     "  sum: %g\n", 
-	     NITERMAX, sum);
+  mgp = poisson (p, div);
   foreach_face()
     u.x[] -= (p[] - p[-1,0])/Delta;
   boundary_mac ({u});
