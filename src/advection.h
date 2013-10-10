@@ -18,6 +18,9 @@ u.x[left]   = 0.;
 u.y[top]    = 0.;
 u.y[bottom] = 0.;
 
+// timestep
+double dt = 0.;
+
 void run (void)
 {
   parameters();
@@ -37,7 +40,7 @@ void run (void)
   double t = 0.;
   int i = 0, tnc = 0;
   while (events (i, t)) {
-    double dt = dtnext (t, timestep (u));
+    dt = dtnext (t, timestep (u));
     vector flux[];
     fluxes_upwind_bcg (f, u, flux, dt);
     foreach(reduction(+:tnc)) {

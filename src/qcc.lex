@@ -33,6 +33,7 @@
   #define EVMAX 100
   int inevent, eventscope, eventpara;
   char eventarray[EVMAX], * eventfile[EVMAX], * eventid[EVMAX];
+  int eventlast[EVMAX];
   char * eventarray_elems[EVMAX];
   int nexpr[EVMAX], eventline[EVMAX];
 
@@ -1078,7 +1079,7 @@ event{WS}+{ID}+{WS}*[(] {
 	   "  int i = *ip; double t = *tp;"
 	   "  int ret = (", id, inevent++);
   eventscope = scope; eventpara = ++para;
-  eventarray[nevents] = 0;
+  eventarray[nevents] = eventlast[nevents] = 0;
   eventfile[nevents] = strdup (fname);
   eventid[nevents] = strdup (id);
   eventline[nevents] = line;
@@ -1096,6 +1097,13 @@ event{WS}+{ID}+{WS}*[(] {
   }
   else
     REJECT;
+}
+
+,{WS}*last {
+  if (inevent == 1)
+    eventlast[nevents] = 1;
+  else
+    ECHO;
 }
 
 foreach_dimension{WS}*[(]{WS}*[)] {
@@ -1385,24 +1393,26 @@ void compdir (FILE * fin, FILE * fout, char * grid)
 	       eventarray_elems[i]);
   }
   fputs ("Event Events[] = {\n", fout);
-  for (int i = 0; i < nevents; i++) {
-    char * id = eventid[i];
-    fprintf (fout, "  { 0, %d, %s, {", nexpr[i], id);
-    int j;
-    for (j = 0; j < nexpr[i] - 1; j++)
-      fprintf (fout, "%s_expr%d, ", id, j);
-    fprintf (fout, "%s_expr%d}, ", id, j);
-    if (eventarray[i] == 'i')
-      fprintf (fout, "%s_array, ", id);
-    else
-      fprintf (fout, "((void *)0), ");
-    if (eventarray[i] == 't')
-      fprintf (fout, "%s_array,\n", id);
-    else
-      fprintf (fout, "((void *)0),\n");
-    fprintf (fout, "    \"%s\", %d},\n", eventfile[i], 
-	     nolineno ? 0 : eventline[i]);
-  }
+  for (int last = 0; last <= 1; last++)
+    for (int i = 0; i < nevents; i++) 
+      if (eventlast[i] == last) {
+	char * id = eventid[i];
+	fprintf (fout, "  { 0, %d, %s, {", nexpr[i], id);
+	int j;
+	for (j = 0; j < nexpr[i] - 1; j++)
+	  fprintf (fout, "%s_expr%d, ", id, j);
+	fprintf (fout, "%s_expr%d}, ", id, j);
+	if (eventarray[i] == 'i')
+	  fprintf (fout, "%s_array, ", id);
+	else
+	  fprintf (fout, "((void *)0), ");
+	if (eventarray[i] == 't')
+	  fprintf (fout, "%s_array,\n", id);
+	else
+	  fprintf (fout, "((void *)0),\n");
+	fprintf (fout, "    \"%s\", %d},\n", eventfile[i], 
+		 nolineno ? 0 : eventline[i]);
+      }
   fputs ("  { 1 }\n};\n", fout);
   /* boundaries */
   for (int i = 0; i < nboundary; i++)
