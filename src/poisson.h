@@ -56,7 +56,7 @@ mgstats mg_solve (scalar a, scalar b,
 {
   scalar res[], da[];
   mgstats s = {0, 0., 0.};
-  foreach (reduction(+:sum))
+  foreach () // fixme: need reduction(+:s.sum)
     s.sum += b[];
   s.maxres = residual (a, b, res);
   for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.maxres > TOLERANCE); s.i++) {

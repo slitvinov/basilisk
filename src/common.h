@@ -17,6 +17,8 @@
 @define min(a,b) ((a) < (b) ? (a) : (b))
 @define sq(x) ((x)*(x))
 @define sign(x) ((x) > 0 ? 1 : -1)
+@define noise() (1. - 2.*rand()/(double)RAND_MAX)
+@define clamp(x,a,b) ((x) < (a) ? (a) : (x) > (b) ? (b) : (x))
 @define swap(type,a,b) { type tmp = a; a = b; b = tmp; }
 
 @define GHOSTS  1 // number of ghost layers
