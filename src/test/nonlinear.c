@@ -47,14 +47,14 @@ double h0 (double r) {
 
 scalar h1[];
 
-void init()
+event init (i = 0)
 {
   foreach()
     h1[] = h[] = (H0 + h0(sqrt (x*x + y*y)));
   foreach_face(x)
-    u[] = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
+    u.x[] = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
   foreach_face(y)
-    v[] =   vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
+    u.y[] =   vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
 }
 
 /* ------------------ Output helper functions --------------- */

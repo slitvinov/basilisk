@@ -1,8 +1,8 @@
 #include "utils.h"
 
-scalar u[], v[], h[], b[];
+vector u[], un[];
+scalar h[], hn[], b[];
 scalar ke[], psi[];
-scalar un[], vn[], hn[];
 
 // Default parameters
 // Coriolis parameter
@@ -13,51 +13,50 @@ double G = 1.;
 double NU = 0.;
 // user-provided functions
 void parameters (void);
-void init       (void);
 
-void boundary_uv (scalar u, scalar v)
+void boundary_uv (vector u)
 {
   /* slip walls (symmetry) by default */
   foreach_boundary (right, true)
-    u[ghost] = 0.;
+    u.x[ghost] = 0.;
   foreach_boundary (right, true)
-    v[ghost] = v[];
+    u.y[ghost] = u.y[];
   foreach_boundary (left, true) {
-    u[ghost] = - u[1,0];
-    u[] = 0.;
+    u.x[ghost] = - u.x[1,0];
+    u.x[] = 0.;
   }
   foreach_boundary (left, true)
-    v[ghost] = v[];
+    u.y[ghost] = u.y[];
   foreach_boundary (top, true)
-    u[ghost] = u[];
+    u.x[ghost] = u.x[];
   foreach_boundary (top, true)
-    v[ghost] = 0.;
+    u.y[ghost] = 0.;
   foreach_boundary (bottom, true)
-    u[ghost] = u[];
+    u.x[ghost] = u.x[];
   foreach_boundary (bottom, true) {
-    v[ghost] = - v[0,1];
-    v[] = 0.;
+    u.y[ghost] = - u.y[0,1];
+    u.y[] = 0.;
   }
 }
 
-void advection_centered (scalar f, scalar u, scalar v, scalar df)
+void advection_centered (scalar f, vector u, scalar df)
 {
   foreach()
-    df[] = ((f[] + f[-1,0)]*u[] - 
-	    (f[] + f[1,0)]*u[1,0] +
-	    (f[] + f[0,-1)]*v[] - 
-	    (f[] + f[0,1)]*v[0,1)]/(2.*Delta);
+    df[] = ((f[] + f[-1,0])*u.x[] - 
+	    (f[] + f[1,0])*u.x[1,0] +
+	    (f[] + f[0,-1])*u.y[] - 
+	    (f[] + f[0,1])*u.y[0,1])/(2.*Delta);
 }
 
-void advection_upwind (scalar f, scalar u, scalar v, scalar df)
+void advection_upwind (scalar f, vector u, scalar df)
 {
   foreach()
-    df[] = ((u[] < 0. ? f[] : f[-1,0)]*u[] - 
-	    (u[1,0] > 0. ? f[] : f[1,0)]*u[1,0] +
-	    (v[] < 0. ? f[] : f[0,-1)]*v[] - 
-	    (v[0,1] > 0. ? f[] : f[0,1)]*v[0,1)]/Delta;
+    df[] = ((u.x[] < 0. ? f[] : f[-1,0])*u.x[] - 
+	    (u.x[1,0] > 0. ? f[] : f[1,0])*u.x[1,0] +
+	    (u.y[] < 0. ? f[] : f[0,-1])*u.y[] - 
+	    (u.y[0,1] > 0. ? f[] : f[0,1])*u.y[0,1])/Delta;
 }
-
+    
 double timestep (void)
 {
   double dtmax = DT/CFL;
@@ -68,86 +67,92 @@ double timestep (void)
       double dt = Delta/(G*h[]);
       if (dt < dtmax) dtmax = dt;
     }
-    if (u[] != 0.) {
-      double dt = Delta/(u[]*u[]);
-      if (dt < dtmax) dtmax = dt;
-    }
-    if (v[] != 0.) {
-      double dt = Delta/(v[]*v[]);
-      if (dt < dtmax) dtmax = dt;
-    }
+    foreach_dimension()
+      if (u.x[] != 0.) {
+	double dt = Delta/sq(u.x[]);
+	if (dt < dtmax) dtmax = dt;
+      }
   }
   return sqrt (dtmax)*CFL;
 }
 
-void momentum (scalar u, scalar v, scalar h, scalar du, scalar dv)
+void momentum (vector u, scalar h, vector du)
 {
+  struct { double x, y; } f = {1.,-1.};
   foreach() {
     double g = G*(h[] + b[]) + ke[];
-    double psiu = (psi[] + psi[0,1])/2.;
-    du[] = 
-      - (g - G*(h[-1,0] + b[-1,0]) - ke[-1,0])/Delta
-      + (psiu + F0)*(v[] + v[0,1] + v[-1,0] + v[-1,1])/4.
-      + NU*(u[1,0] + u[0,1] + u[-1,0] + u[0,-1] - 4.*u[])/sq(Delta);
-    double psiv = (psi[] + psi[1,0])/2.;
-    dv[] = 
-      - (g - G*(h[0,-1] + b[0,-1]) - ke[0,-1])/Delta
-      - (psiv + F0)*(u[] + u[1,0] + u[0,-1] + u[1,-1])/4.
-      + NU*(v[1,0] + v[0,1] + v[-1,0] + v[0,-1] - 4.*v[])/sq(Delta);
+    foreach_dimension() {
+      double psiu = (psi[] + psi[0,1])/2.;
+      du.x[] = 
+	- (g - G*(h[-1,0] + b[-1,0]) - ke[-1,0])/Delta
+	+ f.x*(psiu + F0)*(u.y[] + u.y[0,1] + u.y[-1,0] + u.y[-1,1])/4.
+	+ NU*(u.x[1,0] + u.x[0,1] + u.x[-1,0] + u.x[0,-1] - 4.*u.x[])/sq(Delta);
+    }
   }
 }
 
-void ke_psi (scalar u, scalar v)
+void ke_psi (vector u)
 {
   foreach() {
 #if 1
-    ke[] = (sq(u[] + u[1,0]) + sq(v[] + v[0,1]))/8.;
+    ke[] = (sq(u.x[] + u.x[1,0]) + sq(u.y[] + u.y[0,1]))/8.;
 #else
-    double uc = u[]*u[] + u[1,0]*u[1,0];
-    double vc = v[]*v[] + v[0,1]*v[0,1];
+    double uc = u.x[]*u.x[] + u.x[1,0]*u.x[1,0];
+    double vc = u.y[]*u.y[] + u.y[0,1]*u.y[0,1];
     ke[] = (uc + vc)/4.;
 #endif
-    psi[] = (v[] - v[-1,0] + u[0,-1] - u[])/Delta;
+    psi[] = (u.y[] - u.y[-1,0] + u.x[0,-1] - u.x[])/Delta;
   }
   foreach_boundary (right, false)
-    psi[1,0] = (v[1,0] - v[] + u[1,-1] - u[1,0])/Delta;
+    psi[1,0] = (u.y[1,0] - u.y[] + u.x[1,-1] - u.x[1,0])/Delta;
   foreach_boundary (left, false)
-    ke[-1,0] = (sq(u[-1,0] + u[]) + sq(v[-1,0] + v[-1,1]))/8.;
+    ke[-1,0] = (sq(u.x[-1,0] + u.x[]) + sq(u.y[-1,0] + u.y[-1,1]))/8.;
   foreach_boundary (top, false)
-    psi[0,1] = (v[0,1] - v[-1,1] + u[] - u[0,1])/Delta;
+    psi[0,1] = (u.y[0,1] - u.y[-1,1] + u.x[] - u.x[0,1])/Delta;
   foreach_boundary (bottom, false)
-    ke[0,-1] = (sq(u[0,-1] + u[1,-1]) + sq(v[0,-1] + v[]))/8.;
+    ke[0,-1] = (sq(u.x[0,-1] + u.x[1,-1]) + sq(u.y[0,-1] + u.y[]))/8.;
 }
 
 void advance (double t, scalar * f, scalar * df)
 {
-  scalar u = f[0], v = f[1], h = f[2];
-  scalar du = df[0], dv = df[1], dh = df[2];
+  vector u = {f[0], f[1]}, du = {df[0], df[1]};
+  scalar h = f[2], dh = df[2];
 
-  advection_centered (h, u, v, dh);
-  momentum (u, v, h, du, dv);
+  advection_centered (h, u, dh);
+  momentum (u, h, du);
 }
 
 void update (double t, scalar * f)
 {
-  scalar u = f[0], v = f[1], h = f[2];
+  vector u = {f[0], f[1]};
+  scalar h = f[2];
   boundary ({h});
-  boundary_uv (u, v);
-  ke_psi (u, v);
+  boundary_uv (u);
+  ke_psi (u);
+}
+
+event defaults (i = 0)
+{
+  foreach() {
+    b[] = u.x[] = u.y[] = 0.;
+    h[] = 1.;
+  }
+  boundary ({b,h});
+  boundary_uv (u);
+  ke_psi (u);
+}
+
+event init (i = 0)
+{
+  boundary ({b,h});
+  boundary_uv (u);
+  ke_psi (u);
 }
 
 void run (void)
 {
   parameters ();
   init_grid (N);
-  foreach() {
-    b[] = u[] = v[] = 0.;
-    h[] = 1.;
-  }
-  init ();
-  boundary ({b,h});
-  boundary_uv (u, v);
-  ke_psi (u, v);
 
   timer start = timer_start();
   double t = 0;
@@ -155,16 +160,16 @@ void run (void)
   while (events (i, t)) {
     double dt = dtnext (t, timestep ());
 #if 1
-    advection_centered (h, u, v, hn);
-    foreach() { h[] += hn[]*dt; }
+    advection_centered (h, u, hn);
+    foreach()
+      h[] += hn[]*dt;
     boundary ({h});
-    momentum (u, v, h, un, vn);
-    foreach() {
-      u[] += un[]*dt;
-      v[] += vn[]*dt;
-    }
-    boundary_uv (u, v);
-    ke_psi (u, v);
+    momentum (u, h, un);
+    foreach()
+      foreach_dimension()
+        u.x[] += un.x[]*dt;
+    boundary_uv (u);
+    ke_psi (u);
 #else /* unstable! */
     scalar f[3] = { u, v, h };
     scalar df[2][3] = {{ un,  vn,  hn },
