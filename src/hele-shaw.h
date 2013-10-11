@@ -6,7 +6,7 @@
 scalar p[], divu[];
 vector kmu[];
 
-mgstats mgp;              // statistics of the Poisson solver
+mgstats mgp; // statistics of the Poisson solver
 
 event defaults (i = 0)
 {

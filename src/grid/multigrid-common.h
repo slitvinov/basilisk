@@ -39,11 +39,11 @@ void restriction (scalar * list)
 
 void restriction_staggered (vector * list)
 {
+  boundary_normal (list);
   foreach_fine_to_coarse()
     for (vector v in list)
       foreach_dimension()
 	v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-  boundary_normal (list);
   foreach_boundary_fine_to_coarse(right)
     for (vector v in list)
       v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
