@@ -8,18 +8,14 @@ void parameters()
 {
   X0 = Y0 = -0.5;
   N = 1 << MAXLEVEL;
-  CFL = 0.8; // fixme: default
 }
 
-void init()
+event init (i = 0)
 {
   double dd = 0.1;
-  foreach() {
+  foreach()
     omega[] = (exp(-(sq(x - dd) + sq(y))/(dd/10.)) +
 	       exp(-(sq(x + dd) + sq(y))/(dd/10.)));
-    psi[] = 0.; // fixme: default
-  }
-  boundary ({psi}); // fixme: default
 }
 
 event logfile (t = {0,30}) {

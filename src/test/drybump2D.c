@@ -25,7 +25,7 @@ void refine_zb (Point point, scalar zb)
     zb[] = terrain (x, y);
 }
 
-void init()
+event init (i = 0)
 {
   zb.refine = refine_zb; // updates terrain
   foreach() {

@@ -12,7 +12,7 @@ int refine (Point point, void * data)
   return x < -0.1 && y < -0.1;
 }
 
-void init()
+event init (i = 0)
 {
   refine_function (refine, NULL, all);
 

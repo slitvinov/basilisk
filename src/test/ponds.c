@@ -29,7 +29,7 @@ void refine_zb (Point point, scalar zb)
 }
 #endif
 
-void init()
+event init (i = 0)
 {
 #if !KDT
   zb.refine = refine_zb; // updates terrain

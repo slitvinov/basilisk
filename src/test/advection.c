@@ -13,12 +13,10 @@ void parameters()
 
 #define bump(x,y) (exp(-100.*(sq(x + 0.2) + sq(y + .236338))))
 
-void init()
+event init (i = 0)
 {
   foreach()
     f[] = bump(x,y);
-  foreach_face() // this is necessary to initialise refined cells
-    u.x[] = 0.;
 }
 
 event velocity (i++) {

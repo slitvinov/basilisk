@@ -27,7 +27,7 @@ void flux (const double * s, double * f, double e[2])
   e[1] = u + c; // max
 }
 
-void init()
+event init (i = 0)
 {
   foreach()
     h[] = 0.1 + exp(-200*x*x);

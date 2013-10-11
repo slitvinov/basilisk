@@ -18,7 +18,7 @@ double bump (double x, double y)
   return (1. + cos(20.*x)*cos(20.*y))*exp(-coeff*r2)/2.;
 }
 
-void init()
+event init (i = 0)
 {
   foreach()
     f[] = bump(x,y);

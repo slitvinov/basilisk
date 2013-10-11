@@ -47,12 +47,10 @@ vector u[];
 /**
 The only physical parameter is the acceleration of gravity `G`. Cells are 
 considered "dry" when the water depth is less than the `dry` parameter (this 
-should not require tweaking). The initial conditions are defined by the 
-user in `init()`. */
+should not require tweaking). */
 
 double G = 1.;
 double dry = 1e-10;
-void init (void);
 
 /**
 ## Time-integration
@@ -90,16 +88,23 @@ static void coarsen_eta (Point point, scalar eta)
 #endif
 
 /**
-The predictor-corrector scheme will call this function before starting the 
-main time loop. */
+We use the main time loop (in the predictor-corrector scheme) to setup
+the initial defaults. */
 
-void init_internal (void)
+event defaults (i = 0)
 {
 #if QUADTREE
   eta.refine  = refine_eta;
   eta.coarsen = coarsen_eta;
 #endif
-  init();
+}
+
+/**
+The event below will happen after all the other initial events to take
+into account user-defined field initialisations. */
+
+event init (i = 0)
+{
   foreach()
     eta[] = zb[] + h[];
   boundary (all);

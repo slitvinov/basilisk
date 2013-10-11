@@ -9,7 +9,7 @@ void parameters()
   N = 1 << LEVEL;
 }
 
-void init()
+event init (i = 0)
 {
   foreach() {
     h[] = exp(-200.*(x*x));

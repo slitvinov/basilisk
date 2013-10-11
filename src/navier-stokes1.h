@@ -10,7 +10,6 @@ vector u[];
 double NU = 0.;
 // user-provided functions
 void parameters (void);
-void init       (void);
 void end        (void);
 // timestep
 double dt = 0;
@@ -56,22 +55,29 @@ void projection (vector u, scalar p)
   boundary_mac ({u});
 }
 
-void run (void)
+event defaults (i = 0)
 {
-  parameters();
-  init_grid (N);
-
   // staggering for u.x, u.y
   u.x.d.x = u.y.d.y = -1;
   foreach_face()
     u.x[] = 0.;
+  boundary_mac ({u});
   foreach()
     p[] = 0.;
-  init();
+  boundary ({p});
+}
+
+event init (i = 0)
+{
   boundary_mac ({u});
   boundary ({p});
-
   projection (u, p);
+}
+
+void run (void)
+{
+  parameters();
+  init_grid (N);
 
   timer start = timer_start();
   double t = 0;

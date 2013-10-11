@@ -149,7 +149,7 @@ elevation rather than volume when adapting the mesh. This is important
 for tsunamis since most of the domain will be close to "lake-at-rest"
 balance. */
 
-void init()
+event init (i = 0)
 {
   terrain (zb, "/home/popinet/terrain/etopo2", NULL);
   conserve_elevation();

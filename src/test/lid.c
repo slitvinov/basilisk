@@ -50,12 +50,6 @@ u.y[left]   = - u.y[];
 u.y[right]  = - u.y[];
 
 /**
-The default velocity is zero everywhere. We still need to define an
-init() function. */
-
-void init() {}
-
-/**
 We define an auxilliary function which computes the total kinetic
 energy. */
 
@@ -130,5 +124,5 @@ After processing by gnuplot (i.e. using `make lid/plot.png` with
 ![Horizontal profile of the $y$-component of the velocity on the
  centerline of the box.](lid/plot.png)
 
-The results can be made closer to [Ghia et al, 1982](/src/references.bib#ghia82) 
-by increasing the resolution. */
+The results can be made closer to [Ghia et al,
+1982](/src/references.bib#ghia82) by increasing the resolution. */

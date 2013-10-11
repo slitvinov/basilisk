@@ -6,12 +6,18 @@
 scalar p[], divu[];
 vector kmu[];
 
-void coefficients (void); // user-provided
 mgstats mgp;              // statistics of the Poisson solver
+
+event defaults (i = 0)
+{
+  gradient = minmod2;
+  foreach()
+    p[] = divu[] = 0.;
+  boundary ({p});
+}
 
 event pressure (i++, last)
 {
-  coefficients();
   // pressure field
   mgp = poisson_variable (p, divu, kmu);
   // velocity from pressure gradient

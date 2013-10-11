@@ -17,7 +17,7 @@ u.x[right]  = u.x[];
 u.y[top]    = u.y[];
 u.y[bottom] = u.y[];
 
-void init()
+event init (i = 0)
 {
   foreach() {
     x += 0.5;

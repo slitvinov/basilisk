@@ -11,7 +11,7 @@ h[right]   = 0.;
 eta[right] = zb[];
 u.x[right] = u.x[];
 
-void init()
+event init (i = 0)
 {
   foreach() {
     zb[] = 0.25*(cos(pi*x/0.1) + 1.)*(fabs(x) < 0.1);

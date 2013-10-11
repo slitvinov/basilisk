@@ -23,7 +23,7 @@ double Psi (double x, double t)
     exp (-tau*t/2.)/G*(Bf*s*cos (s*t) + tau*Bf/2.*sin (s*t))*x;
 }
 
-void init()
+event init (i = 0)
 {
   foreach() {
     zb[] = h0*(x/a)*(x/a);

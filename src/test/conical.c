@@ -65,7 +65,7 @@ void refine_zb (Point point, scalar zb)
 // storage for maximum wave height
 scalar hmax[];
 
-void init()
+event init (i = 0)
 {
 #if QUADTREE
   zb.refine = refine_zb; // updates terrain

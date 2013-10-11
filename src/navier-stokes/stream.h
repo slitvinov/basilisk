@@ -13,6 +13,14 @@ psi[left]   = dirichlet(0);
 psi[top]    = dirichlet(0);
 psi[bottom] = dirichlet(0);
 
+event defaults (i = 0)
+{
+  CFL = 0.8; // otherwise it is 0.5 in advection.h
+  foreach()
+    psi[] = 0.;
+  boundary ({psi});
+}
+
 event streamfunction (i++, last)
 {
   // streamfunction from omega

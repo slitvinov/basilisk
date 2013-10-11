@@ -6,12 +6,9 @@
 #define evolving conserved
 // fluxes/eigenvalues for each conserved quantity
 void flux (const double *, double *, double *);
-// user-provided initial conditions
-void init (void);
 
-void init_internal (void)
+event init (i = 0)
 {
-  init();
   boundary (all);
 }
 

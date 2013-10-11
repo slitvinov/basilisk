@@ -33,9 +33,9 @@
   #define EVMAX 100
   int inevent, eventscope, eventpara;
   char eventarray[EVMAX], * eventfile[EVMAX], * eventid[EVMAX];
-  int eventlast[EVMAX];
   char * eventarray_elems[EVMAX];
-  int nexpr[EVMAX], eventline[EVMAX];
+  int nexpr[EVMAX], eventline[EVMAX], eventparent[EVMAX], eventchild[EVMAX];
+  int eventlast[EVMAX];
 
   int foreachdim, foreachdimpara, foreachdimline;
   FILE * foreachdimfp;
@@ -1071,15 +1071,37 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
 
 event{WS}+{ID}+{WS}*[(] {
   /* event (... */
-  char * id = yytext;
+  char ids[80], * id = ids;
+  strncpy (id, yytext, 80);
   space (id); nonspace (id);
   char * s = id; while (!strchr(" \t\v\n\f(", *s)) s++; *s = '\0';
+  eventparent[nevents] = eventchild[nevents] = -1;
+  eventlast[nevents] = 0;
+  // check whether an event with the same name already exists
+  // if it does, append a number (up to 9)
+  char i = '0', found = 1;
+  int len = strlen(id), lastfound = -1;
+  id[len+1] = '\0';
+  while (i <= '9' && found) {
+    found = 0;
+    for (int j = 0; j < nevents && !found; j++)
+      if (!strcmp (id, eventid[j])) {
+	lastfound = j;
+	found = 1;
+      }
+    if (found)
+      id[len] = i++;
+  }
+  if (lastfound >= 0) {
+    eventparent[lastfound] = nevents;
+    eventchild[nevents] = lastfound;
+  }
   fprintf (yyout, 
 	   "static int %s_expr%d (int * ip, double * tp) {"
 	   "  int i = *ip; double t = *tp;"
 	   "  int ret = (", id, inevent++);
   eventscope = scope; eventpara = ++para;
-  eventarray[nevents] = eventlast[nevents] = 0;
+  eventarray[nevents] = 0;
   eventfile[nevents] = strdup (fname);
   eventid[nevents] = strdup (id);
   eventline[nevents] = line;
@@ -1368,6 +1390,26 @@ FILE * dopen (const char * fname, const char * mode)
   return fout;
 }
 
+void write_event (int i, FILE * fout)
+{
+  char * id = eventid[i];
+  fprintf (fout, "  { 0, %d, %s, {", nexpr[i], id);
+  int j;
+  for (j = 0; j < nexpr[i] - 1; j++)
+    fprintf (fout, "%s_expr%d, ", id, j);
+  fprintf (fout, "%s_expr%d}, ", id, j);
+  if (eventarray[i] == 'i')
+    fprintf (fout, "%s_array, ", id);
+  else
+    fprintf (fout, "((void *)0), ");
+  if (eventarray[i] == 't')
+    fprintf (fout, "%s_array,\n", id);
+  else
+    fprintf (fout, "((void *)0),\n");
+  fprintf (fout, "    \"%s\", %d},\n", eventfile[i], 
+	   nolineno ? 0 : eventline[i]);
+}
+
 void compdir (FILE * fin, FILE * fout, char * grid)
 {
   if (endfor (fin, fout))
@@ -1394,24 +1436,12 @@ void compdir (FILE * fin, FILE * fout, char * grid)
   }
   fputs ("Event Events[] = {\n", fout);
   for (int last = 0; last <= 1; last++)
-    for (int i = 0; i < nevents; i++) 
-      if (eventlast[i] == last) {
-	char * id = eventid[i];
-	fprintf (fout, "  { 0, %d, %s, {", nexpr[i], id);
-	int j;
-	for (j = 0; j < nexpr[i] - 1; j++)
-	  fprintf (fout, "%s_expr%d, ", id, j);
-	fprintf (fout, "%s_expr%d}, ", id, j);
-	if (eventarray[i] == 'i')
-	  fprintf (fout, "%s_array, ", id);
-	else
-	  fprintf (fout, "((void *)0), ");
-	if (eventarray[i] == 't')
-	  fprintf (fout, "%s_array,\n", id);
-	else
-	  fprintf (fout, "((void *)0),\n");
-	fprintf (fout, "    \"%s\", %d},\n", eventfile[i], 
-		 nolineno ? 0 : eventline[i]);
+    for (int i = 0; i < nevents; i++)
+      if (eventparent[i] < 0 && eventlast[i] == last) {
+	write_event (i, fout);
+	int j = i;
+	while ((j = eventchild[j]) >= 0)
+	  write_event (j, fout);
       }
   fputs ("  { 1 }\n};\n", fout);
   /* boundaries */

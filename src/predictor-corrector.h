@@ -3,8 +3,6 @@
 // Required from solver
 // fields updated by time-integration
 extern scalar * evolving;
-// initial conditions
-void init_internal (void);
 // how to compute fluxes
 double fluxes (scalar * evolving, double dtmax);
 // how to update evolving fields
@@ -17,12 +15,8 @@ void      parameters (void);
 
 double t = 0., dt = 0.;
 
-void run()
+event defaults (i = 0)
 {
-  t = 0.;
-  parameters();
-  init_grid(N);
-
   // limiting
   for (scalar s in all)
     s.gradient = gradient;
@@ -32,9 +26,13 @@ void run()
     for (scalar s in all)
       s[] = 0.;
   boundary (all);
+}
 
-  // initial conditions
-  init_internal();
+void run()
+{
+  t = 0.;
+  parameters();
+  init_grid(N);
 
   // main loop
   timer start = timer_start();

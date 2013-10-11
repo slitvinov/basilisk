@@ -5,25 +5,21 @@ double mu1 = 2.5, mu2 = 1e-3, k = 0.1;
 
 p[left]  = dirichlet(1e-3);
 p[right] = dirichlet(0);
-f[left] = 1.;
+f[left]  = 1.;
 
 void parameters()
 {
   L0 = 7.5e-2;
   N = 256;
   TOLERANCE = 1e-6;
-  gradient = minmod2; // fixme: default
 }
 
 void init() {
-  foreach() {
+  foreach()
     f[] = (x < 1e-3)*(1. + 0.001*(1. + noise()));
-    p[] = divu[] = 0.; // fixme: default
-  }
-  boundary ({p}); // fixme: default
 }
 
-void coefficients()
+event coefficients (i++)
 {
   foreach_face() {
     double ff = (f[] + f[-1,0])/2.;
@@ -34,7 +30,7 @@ void coefficients()
 event logfile (i++)
 {
   double flux = 0.;
-  foreach_boundary (left,false)
+  foreach_boundary (left, false)
     flux += u.x[]*Delta;
   fprintf (stderr, "%d %g %d %g\n", i, t, mgp.i, flux);
 }
