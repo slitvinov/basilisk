@@ -37,16 +37,13 @@ event logfile (i++)
 
 event movies (t += 0.2)
 {
-  static FILE * fp1 = NULL;
-  if (!fp1) fp1 = popen ("ppm2mpeg > f.mpg", "w");
+  static FILE * fp1 = popen ("ppm2mpeg > f.mpg", "w");
   output_ppm (f, fp1, min = 0, max = 1, n = N);
 
-  static FILE * fp2 = NULL;
-  if (!fp2) fp2 = popen ("ppm2mpeg > u.mpg", "w");
+  static FILE * fp2 = popen ("ppm2mpeg > u.mpg", "w");
   output_ppm (u.x, fp2, n = N);
 
-  static FILE * fp3 = NULL;
-  if (!fp3) fp3 = popen ("ppm2mpeg > v.mpg", "w");
+  static FILE * fp3 = popen ("ppm2mpeg > v.mpg", "w");
   output_ppm (u.y, fp3, n = N);
 }
 

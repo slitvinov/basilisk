@@ -72,8 +72,7 @@ event snapshots (t += 60; t <= 6000) {
 
 // movies every 10 minutes
 event movies (t += 10) {
-  static FILE * fp = NULL;
-  if (!fp) fp = popen ("ppm2mpeg > eta.mpg", "w");
+  static FILE * fp = popen ("ppm2mpeg > eta.mpg", "w");
   scalar m[], etam[];
   foreach() {
     etam[] = eta[]*(h[] > dry);
@@ -82,8 +81,7 @@ event movies (t += 10) {
   boundary ({m, etam});
   output_ppm (etam, fp, mask = m, min = -1, max = 1, n = 512, linear = true);
 
-  static FILE * fp2 = NULL;
-  if (!fp2) fp2 = popen ("ppm2mpeg > vort.mpg", "w");
+  static FILE * fp2 = popen ("ppm2mpeg > vort.mpg", "w");
   scalar vort = etam;
   foreach()
     vort[] = (u.x[0,1] - u.x[0,-1] - u.y[1,0] + u.y[-1,0])/(2.*delta);
@@ -91,8 +89,7 @@ event movies (t += 10) {
   output_ppm (vort, fp2, mask = m, // min = -1e-2, max = 1e-2, 
 	      n = 512, linear = true);
 
-  static FILE * fp1 = NULL;
-  if (!fp1) fp1 = popen ("ppm2mpeg > level.mpg", "w");
+  static FILE * fp1 = popen ("ppm2mpeg > level.mpg", "w");
   scalar l = etam;
   foreach()
     l[] = level;

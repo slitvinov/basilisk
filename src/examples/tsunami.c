@@ -293,8 +293,7 @@ topography. Any part of the image for which `m[]` is negative
 (i.e. for which `etam[] < zb[]`) will be masked out. */
 
 event movies (t++) {
-  static FILE * fp = NULL;
-  if (!fp) fp = popen ("ppm2mpeg > eta.mpg", "w");
+  static FILE * fp = popen ("ppm2mpeg > eta.mpg", "w");
   scalar m[], etam[];
   foreach() {
     etam[] = eta[]*(h[] > dry);
@@ -312,8 +311,7 @@ After completion this will give the following animation
 We also use the `box` option to only output a subset of the domain
 (defined by the lower-left, upper-right coordinates). */
 
-  static FILE * fp2 = NULL;
-  if (!fp2) fp2 = popen ("ppm2mpeg > eta-zoom.mpg", "w");
+  static FILE * fp2 = popen ("ppm2mpeg > eta-zoom.mpg", "w");
   output_ppm (etam, fp2, mask = m, min = -2, max = 2, n = 512, linear = true,
 	      box = {{89,8},{98,16}});
 
@@ -323,8 +321,7 @@ We also use the `box` option to only output a subset of the domain
 
 And repeat the operation for the level of refinement...*/
 
-  static FILE * fp1 = NULL;
-  if (!fp1) fp1 = popen ("ppm2mpeg > level.mpg", "w");
+  static FILE * fp1 = popen ("ppm2mpeg > level.mpg", "w");
   scalar l = etam;
   foreach()
     l[] = level;
@@ -337,8 +334,7 @@ And repeat the operation for the level of refinement...*/
 ...and for the process id for parallel runs. */
 
 #if _OPENMP
-  static FILE * fp3 = NULL;
-  if (!fp3) fp3 = popen ("ppm2mpeg > pid.mpg", "w");
+  static FILE * fp3 = popen ("ppm2mpeg > pid.mpg", "w");
   foreach()
     etam[] = pid();
   double tmax = omp_get_max_threads() - 1;

@@ -1292,6 +1292,19 @@ reduction{WS}*[(](min|max):{ID}+[)] {
       break;
   }
 }
+
+static{WS}+FILE{WS}*[*]{WS}*{ID}+{WS}*= {
+  // static FILE * fp = ...
+  ECHO;
+  char * s = yytext;
+  while (*s != '*') s++;
+  s++;
+  nonspace (s);
+  char * id = s;
+  space (s);
+  *s = '\0';
+  fprintf (yyout, "NULL; if (!%s) %s = ", id, id);
+}
   
 "/*"                                    { ECHO; if (comment()) return 1; }
 "//".*                                  { ECHO; /* consume //-comment */ }
