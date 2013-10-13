@@ -126,11 +126,10 @@ static double residual_variable (scalar a, scalar b, scalar res)
   /* conservative coarse/fine discretisation (2nd order) */
   vector g[];
   foreach_face()
-    g.x[] = (a[] - a[-1,0])/Delta;
+    g.x[] = alpha.x[]*(a[] - a[-1,0])/Delta;
   boundary_normal ({g});
   foreach (reduction(max:maxres)) {
-    res[] = b[] + (alpha.x[]*g.x[] - alpha.x[1,0]*g.x[1,0] + 
-		   alpha.y[]*g.y[] - alpha.y[0,1]*g.y[0,1])/Delta;
+    res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta;
 #else
   /* "naive" discretisation (only 1st order on quadtrees) */
   foreach (reduction(max:maxres)) {
