@@ -63,7 +63,7 @@ event coefficients (i++)
 {
   foreach_face() {
     double ff = (f[] + f[-1,0])/2.;
-    kmu.x[] = - k/(mu1 + clamp(ff,0,1)*(mu2 - mu1));
+    beta.x[] = - k/(mu1 + clamp(ff,0,1)*(mu2 - mu1));
   }
 }
 
