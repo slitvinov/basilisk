@@ -32,6 +32,7 @@ qcc.c: qcc.lex
 	flex -o qcc.c qcc.lex
 
 alltags: tags
+	cd navier-stokes && make tags
 	cd examples && make tags
 	cd test && make tags
 
