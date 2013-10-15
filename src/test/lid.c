@@ -5,7 +5,7 @@ We use the multigrid implementation (rather than the default quadtree
 implementation) and the MAC Navier--Stokes solver. */
 
 #include "grid/multigrid.h"
-#include "navier-stokes1.h"
+#include "navier-stokes/mac.h"
 
 /**
 Here we define the domain geometry: a square box of size unity
