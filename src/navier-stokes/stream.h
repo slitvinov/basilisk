@@ -30,7 +30,7 @@ is a [Poisson equation](/src/poisson.h). */
 
 /**
 The field advected by the [advection solver](/src/advection.h) is
-called `f`. We define $\omega$ as an alias for `f` for clarity. We
+called `f`. We define $\omega$ as an alias of `f` for clarity. We
 allocate the streamfunction field $\psi$ and a structure to store the
 statistics on the convergence of the Poisson solver. */
 
@@ -75,14 +75,16 @@ event streamfunction (i++, last)
 /**
 Using the new streamfunction, we can then update the components of the
 velocity field. Since they are staggered relative to the
-streamfunction, we need to average the horizontal and vertical
-gradients, which gives the discrete expressions below. */
+streamfunction, we need to average the gradients, which gives the
+discrete expression below (for the horizontal velocity component). The
+expression for the vertical velocity component is obtained by
+automatic permutation of the indices but requires a change of sign:
+this is done through the pseudo-vector `f`. */
 
   trash ({u});
-  foreach_face(x)
-    u.x[] = (psi[0,-1] + psi[-1,-1] - psi[0,1] - psi[-1,1])/(4.*Delta);
-  foreach_face(y)
-    u.y[] = (psi[1,0] + psi[1,-1] - psi[-1,0] - psi[-1,-1])/(4.*Delta);
+  struct { double x, y; } f = {1.,-1.};
+  foreach_face()
+    u.x[] = f.x*(psi[0,-1] + psi[-1,-1] - psi[0,1] - psi[-1,1])/(4.*Delta);
   boundary_normal ({u});
   boundary_tangent ({u});
 }
