@@ -15,26 +15,21 @@ check: $(subst .c,.tst,$(filter-out $(TESTS),$(filter-out $(EXCLUDE),$(ALLTESTS)
 tags: $(subst .page,.tags,$(ALLPAGES))
 
 clean:
-	rm -f *.o *.s *.cs *.*tst *.d *.prof Makefile.deps
+	rm -f *.o *.s *.*tst *.d *.prof Makefile.deps
 
-.PRECIOUS: %.prof %.s %.cs
+.PRECIOUS: %.prof %.s
 
 %.tst: %.s
 	@$(BASILISK)/dotest $@
 
-%.ctst: %.cs
-	@CFLAGS="$(CFLAGS) -grid=multigrid" $(BASILISK)/dotest $@
+%.ctst: %.s
+	@CFLAGS="-grid=multigrid $(CFLAGS)" $(BASILISK)/dotest $@
 
 %.vtst: %.s
 	@$(BASILISK)/dotest $@ "$(VALGRIND)"
 
 %.s: %.c $(QCC) Makefile
-	@echo qcc $(CFLAGS) -nolineno -S $<
-	@$(QCC) $(CFLAGS) -nolineno -S $< || (rm -f $@ && false)
-
-%.cs: %.c $(QCC) Makefile
-	@echo qcc $(CFLAGS) -nolineno -S -grid=multigrid $<
-	@$(QCC) $(CFLAGS) -nolineno -S -grid=multigrid $< -o $@ || (rm -f $@ && false)
+	@$(QCC) $(subst -g ,,$(CFLAGS)) -nolineno -S $< || (rm -f $@ && false)
 
 %.prof: %.c
 	$(QCC) $(subst -DTRASH=1,,$(CFLAGS)) -g -pg $< -o $*/$* -lm
@@ -82,14 +77,10 @@ Makefile.tests: Makefile $(BASILISK)/tests.sh
 %.s.d: %.c $(QCC)
 	$(QCC) -MD -o $@ $<
 
-%.cs.d: %.c $(QCC)
-	$(QCC) -grid=multigrid -MD -o $@ $<
-
 %.tags.d: %.page $(QCC)
 	$(QCC) -MD -tags $<
 
 Makefile.deps: 	$(subst .c,.s.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
-		$(subst .ctst,.cs.d,$(SPECIAL_TESTS)) \
 		$(subst .page,.tags.d,$(ALLPAGES))
 	@echo "Updating Makefile.deps"
 	@cat /dev/null $^ > Makefile.deps

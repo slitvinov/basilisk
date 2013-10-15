@@ -15,18 +15,15 @@ script()
     cat <<EOF
 #!/bin/sh
 rm -f warn pass fail $log $out
-src=$test.c
-if test -f $test.s; then
-  src=$test.s
-fi
-\$BASILISK/qcc $CFLAGS \$src -o $test $LIBS -lm >> warn 2>&1 || mv -f warn fail
-rm -f \$src
+\$BASILISK/qcc $CFLAGS -o $test $test.c $LIBS -lm > warn 2>&1 || mv -f warn fail
+rm -f $test.c
 if test -f fail; then
     cat fail
     exit 1
 fi
 cat warn
 test -s warn || rm -f warn
+echo \[$test.$ext\]
 if $valgrind ./$test 2> $log > $out; then
     if test -f $test.ref; then
         echo diff $log $test.ref > fail
@@ -53,7 +50,7 @@ expirecache()
 locally()
 {
     cd $test
-    echo qcc $CFLAGS -o $test/$test $test.s $LIBS -lm;
+    echo qcc $CFLAGS -o $test/$test $test.c $LIBS -lm;
     script | sh
     expirecache
     cd ..
@@ -110,7 +107,7 @@ if test -f $test.$ext && $CHECKSUM $test.$ext; then
 else
     rm -f $test.$ext $test/pass $test/fail $test/warn $test/plot.png
     expirecache
-    mkdir -p $test
+    mkdir -p $test && cp -f $test.c $test
     if test -f $test.ref; then cp -f $test.ref $test; fi
     if test -d $BASILISK_WIKI/static -a \
 	-f $test.c.page -a \
@@ -118,23 +115,16 @@ else
 	ln -s $PWD/$test $BASILISK_WIKI/static/$dir/$test
     fi
 
-    case "$CFLAGS" in
-	*-grid=multigrid*) sext=cs;;
-	*) sext=s;;
-    esac
-
     if test -n "$SANDBOX"; then
 	echo \[$test.$ext on $SANDBOX\]
-	cp -f $test.c $test
         ( remotely $SANDBOX ) &
 	echo $! > $test/pid
     else
-	cp -f $test.$sext $test/$test.s
 	locally
     fi
 
     if test -f $test/fail; then
 	exit 1
     fi
-    $GENSUM $test.$sext > $test.$ext;
+    $GENSUM $test.s > $test.$ext;
 fi
