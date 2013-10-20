@@ -59,7 +59,7 @@ $\beta$. */
 
 event pressure (i++, last)
 {
-  mgp = poisson_variable (p, zeta, beta);
+  mgp = poisson (p, zeta, beta);
 
 /**
 We then update the velocity field by computing the staggered pressure

@@ -216,16 +216,18 @@ static double residual (scalar a, scalar b, scalar res)
 }
 
 /**
-Once these two functions are defined, writing the final function is trivial. */
-
-mgstats poisson (scalar a, scalar b)
-{
-  return mg_solve (a, b, residual, relax);
-}
-
-/**
 ## Poisson equation with variable coefficients
-*/
+
+The case of the Poisson equation with variable coefficients
+$$
+\nabla\cdot(\alpha\nabla a) = b
+$$
+is only slightly more complex. 
+
+We define $\alpha$ as vector field because we need values at the
+staggered locations corresponding to the face gradients of field
+$a$. Using these values the relaxation and residual operators are
+derived similarly to the case of constant coefficients. */
 
 vector alpha;
 
@@ -264,9 +266,28 @@ static double residual_variable (scalar a, scalar b, scalar res)
   return maxres;
 }
 
-mgstats poisson_variable (scalar a, scalar b, vector c)
+/**
+## User interface
+
+Finally we provide a generic user interface for the case of constant
+or variable coefficients,
+$$
+\nabla\cdot (c\nabla a) = b
+$$
+where the $c$ argument is optional and defaults to unity. */
+
+struct Poisson {
+  scalar a, b;
+  vector c;
+};
+
+mgstats poisson (struct Poisson p)
 {
-  alpha = c;
-  restriction_staggered ({alpha});
-  return mg_solve (a, b, residual_variable, relax_variable);
+  if (p.c.x) {
+    alpha = p.c;
+    restriction_staggered ({alpha});
+    return mg_solve (p.a, p.b, residual_variable, relax_variable);
+  }
+  else
+    return mg_solve (p.a, p.b, residual, relax);
 }
