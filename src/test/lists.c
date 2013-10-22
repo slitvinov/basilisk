@@ -20,4 +20,8 @@ int main()
   vector * list1 = {d,e};
   for (vector v in list1)
     fprintf (stderr, "%d %d\n", v.x, v.y);
+
+  tensor * list2 = {e};
+  for (tensor t in list2)
+    fprintf (stderr, "%d %d %d %d\n", t.x.x, t.x.y, t.y.x, t.y.y);    
 }

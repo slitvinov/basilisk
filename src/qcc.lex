@@ -964,10 +964,10 @@ Point{WS}+point[^{ID}] {
   ECHO;
 }
 
-for{WS}*[(]{WS}*(scalar|vector){WS}+{ID}+{WS}+in{WS}+ {
+for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}+{WS}+in{WS}+ {
   /* for (scalar .. in .. */
   char * s = strchr (&yytext[3], 'r'); s++;
-  int vartype = s[-2] == 'o' ? vector : scalar;
+  int vartype = s[-3] == 's' ? tensor : s[-3] == 't' ? vector : scalar;
   nonspace (s);
   char * id = s;
   while (!strchr (" \t\v\n\f", *s)) s++;
@@ -999,10 +999,13 @@ for{WS}*[(]{WS}*(scalar|vector){WS}+{ID}+{WS}+in{WS}+ {
   if (debug)
     fprintf (stderr, "%s:%d: %s\n", fname, line, list);
   fprintf (yyout,
-	   "for (%s %s = *%s, *_i%d = %s; %s%s >= 0; %s = *++_i%d%s",
-	   vartype == scalar ? "scalar" : "vector", id,
+	   "for (%s %s = *%s, *_i%d = %s; *((scalar *)&%s) >= 0; %s = *++_i%d%s",
+	   vartype == scalar ? "scalar" : 
+	   vartype == vector ? "vector" : 
+                               "tensor", 
+	   id,
 	   list, i, list, 
-	   id, vartype == scalar ? "" : ".x", 
+	   id, 
 	   id, i, last);
   free (list);
   i++;
@@ -1027,27 +1030,28 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
   if (nlist != nid)
     return yyerror ("lists must be the same size");
   static int index = 0;
-  char * sc = NULL, * vc = NULL;
+  char * sc = NULL, * vc = NULL, * tc = NULL;
   for (int i = 0; i < nid; i++) {
     var_t * var = varlookup (id[i], strlen(id[i]));
     if (!var) {
-      fprintf (stderr, "%s:%d: error: '%s' is not a scalar or vector\n", 
+      fprintf (stderr, 
+	       "%s:%d: error: '%s' is not a scalar, vector or tensor\n", 
 	       fname, line, id[i]);
       return 1;
     }
     fprintf (yyout, "%s * _i%d = %s; ", 
-	     var->type == vector ? "vector" : "scalar",
+	     var->type == vector ? "vector" : 
+	     var->type == scalar ? "scalar" :
+	                           "tensor",
 	     index + i, list[i]);
     if (!sc && var->type == scalar) sc = id[i];
     if (!vc && var->type == vector) vc = id[i];
+    if (!tc && var->type == tensor) tc = id[i];
   }
-  fprintf (yyout, "for (%s = *%s", id[0], list[0]);
+  fprintf (yyout, "if (%s) for (%s = *%s", list[0], id[0], list[0]);
   for (int i = 1; i < nid; i++)
     fprintf (yyout, ", %s = *%s", id[i], list[i]);
-  if (sc)
-    fprintf (yyout, "; %s >= 0; ", sc);
-  else
-    fprintf (yyout, "; %s.x >= 0; ", vc);
+  fprintf (yyout, "; *((scalar *)&%s) >= 0; ", id[0]);
   fprintf (yyout, "%s = *++_i%d", id[0], index);
   for (int i = 1; i < nid; i++)
     fprintf (yyout, ", %s = *++_i%d", id[i], index + i);

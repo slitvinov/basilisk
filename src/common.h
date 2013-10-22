@@ -72,23 +72,6 @@ typedef struct {
 
 // lists
 
-int vectors_len (vector * list)
-{
-  if (!list) return 0;
-  int nv = 0;
-  for (vector v in list) nv++;
-  return nv;
-}
-
-vector * vectors_append (vector * list, vector v)
-{
-  int len = vectors_len (list);
-  list = realloc (list, sizeof (vector)*(len + 2));
-  list[len] = v;
-  list[len + 1] = (vector){-1,-1};
-  return list;
-}
-
 int list_len (scalar * list)
 {
   if (!list) return 0;
@@ -121,6 +104,83 @@ scalar * list_copy (scalar * l)
   if (l != NULL)
     for (scalar s in l)
       list = list_append (list, s);
+  return list;
+}
+
+scalar * list_concat (scalar * l1, scalar * l2)
+{
+  scalar * l3 = list_copy (l1);
+  for (scalar s in l2)
+    l3 = list_append (l3, s);
+  return l3;
+}
+
+int vectors_len (vector * list)
+{
+  if (!list) return 0;
+  int nv = 0;
+  for (vector v in list) nv++;
+  return nv;
+}
+
+vector * vectors_append (vector * list, vector v)
+{
+  int len = vectors_len (list);
+  list = realloc (list, sizeof (vector)*(len + 2));
+  list[len] = v;
+  list[len + 1] = (vector){-1,-1};
+  return list;
+}
+
+vector * vectors_copy (vector * l)
+{
+  vector * list = NULL;
+  if (l != NULL)
+    for (vector v in l)
+      list = vectors_append (list, v);
+  return list;
+}
+
+vector * vectors_from_scalars (scalar * s)
+{
+  vector * list = NULL;
+  while (*s >= 0) {
+    vector v;
+    v.x = *s++;
+    assert (*s >= 0);
+    v.y = *s++;
+    list = vectors_append (list, v);
+  }
+  return list;
+}
+
+int tensors_len (tensor * list)
+{
+  if (!list) return 0;
+  int nt = 0;
+  for (tensor t in list) nt++;
+  return nt;
+}
+
+tensor * tensors_append (tensor * list, tensor t)
+{
+  int len = tensors_len (list);
+  list = realloc (list, sizeof (tensor)*(len + 2));
+  list[len] = t;
+  list[len + 1] = (tensor){{-1,-1},{-1,-1}};
+  return list;
+}
+
+tensor * tensors_from_vectors (vector * v)
+{
+  tensor * list = NULL;
+  while (v->x >= 0) {
+    tensor t;
+    t.x = *v++;
+    assert (v->x >= 0);
+    t.y = *v++;
+    list = tensors_append (list, t);
+  }
   return list;
 }
 
