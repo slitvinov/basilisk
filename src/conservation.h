@@ -1,34 +1,79 @@
-// generic solver for systems of conservation laws
-#include "utils.h"
+/**
+# A generic solver for systems of conservation laws
 
-// user-provided parameters and functions:
-// list of conserved scalar quantities
+Using the ideas of [Kurganov and Tadmor,
+2000](references.bib#kurganov2000) it is possible to write a generic
+solver for systems of conservation laws of the form
+$$
+\partial_t\left(\begin{array}{c}
+    s_i\\
+    \mathbf{v}_j\\
+ \end{array}\right) + \nabla\cdot\left(\begin{array}{c}
+    \mathbf{F}_i\\
+    \mathbf{T}_j\\
+ \end{array}\right) = 0
+$$
+where $s_i$ is a list of scalar fields, $\mathbf{v}_j$ a list of
+vector fields and $\mathbf{F}_i$, $\mathbf{T}_j$ are the corresponding
+vector (resp. tensor) fluxes. 
+
+Note that the [Saint-Venant solver](saint-venant.h) is a particular
+case of this generic algorithm.
+
+The user must provide the lists of conserved scalar and vector fields
+*/
+
 extern scalar * scalars;
-// list of conserved vector quantities
 extern vector * vectors;
-// fluxes/eigenvalues for each conserved quantity
+
+/**
+as well as a function which, given the state of each quantity,
+returns the fluxes and the minimum/maximum eigenvalues
+(i.e. `eigenvalue[0]`/`eigenvalue[1]`) of the corresponding Riemann
+problem. */
+
 void flux (const double * state, double * flux, double * eigenvalue);
 
-// the list of evolving fields required by predictor-corrector.h
+/**
+## Time-integration
+
+### Setup
+
+First we need some utilities. Time integration will be done with a generic 
+[predictor-corrector](predictor-corrector.h) scheme. */
+
+#include "utils.h"
+#include "predictor-corrector.h"
+
+/**
+The generic time-integration scheme in `predictor-corrector.h` needs
+to know which fields are updated i.e. all the scalars + the components
+of all the vector fields. */
+
 scalar * evolving;
 
 event defaults (i = 0)
 {
-  // the evolving scalar fields are the conserved scalars + the
-  // components of the conserved vectors
   evolving = list_concat (scalars, (scalar *) vectors);
 }
+
+/**
+We force boundary conditions on all fields after initialisation.
+*/
 
 event init (i = 0)
 {
   boundary (all);
 }
 
-/* generic central-upwind scheme: see e.g. section 3.1 in
- *    [1] Kurganov, A., & Levy, D. (2002). Central-upwind schemes for the
- *    Saint-Venant system. Mathematical Modelling and Numerical
- *    Analysis, 36(3), 397-425.
- */ 
+/**
+### Computing fluxes
+
+The core of the central-upwind scheme (see e.g. section 3.1 of
+[Kurganov & Levy, 2002](references.bib#kurganov2002)) is the
+approximate solution of the Riemann problem given by the left and
+right states to get the fluxes `f`. */
+
 static double riemann (const double * right, const double * left,
 		       double Delta, double * f, int len, 
 		       double dtmax)
@@ -52,23 +97,33 @@ static double riemann (const double * right, const double * left,
   return dtmax;
 }
 
-// fluxes
+/**
+We use a global variable to pass the list of fluxes between the
+`fluxes()` function and the `update()` function of the generic
+predictor-corrector scheme. */
+
 vector * lflux = NULL;
 
 double fluxes (scalar * conserved, double dtmax)
 {
-  // allocate space for slopes
+
+/**
+The gradients of each quantity are stored in a list of dynamically-allocated
+fields. First-order reconstruction is used for the gradient fields. */
+
   vector * slopes = NULL;
   for (scalar s in conserved) {
     vector slope = new vector;
     foreach_dimension()
-      slope.x.gradient = zero; // first-order interpolation only
+      slope.x.gradient = zero;
     slopes = vectors_append (slopes, slope);
   }
-  // compute slopes
   gradients (conserved, slopes);
 
-  // allocate space for fluxes
+/**
+The flux fields are dynamically allocated and the left and right
+states of each conserved quantity are locally-allocated. */
+
   int len = list_len (conserved);
   double r[len], l[len]; // right/left Riemann states
   double f[len];         // fluxes for each conserved quantity
@@ -77,24 +132,44 @@ double fluxes (scalar * conserved, double dtmax)
     lflux = vectors_append (lflux, f1);
   }
 
-  // recover scalars/vectors and the corresponding vector/tensor slopes/fluxes
+/**
+The predictor-corrector scheme treats all fields as scalars (stored in
+the `conserved` list). We need to recover vector and tensor quantities
+from these lists. To do so, knowing the number of scalar fields, we
+split the scalar list into a list of scalars and a list of vectors. */
+
   int scalars_len = list_len (scalars);
 
   scalar * scalars = list_copy (conserved);
   if (scalars) scalars[scalars_len] = -1;
   vector * vectors = vectors_from_scalars (&conserved[scalars_len]);
 
+/**
+We then do the same for the gradients i.e. split the list of vectors
+into a list of vectors and a list of tensors. */
+
   vector * scalar_slopes = vectors_copy (slopes);
   if (scalar_slopes) scalar_slopes[scalars_len] = (vector){-1,-1};
   tensor * vector_slopes = tensors_from_vectors (&slopes[scalars_len]);
+
+/**
+And again for the fluxes. */
 
   vector * scalar_fluxes = vectors_copy (lflux);
   if (scalar_fluxes) scalar_fluxes[scalars_len] = (vector){-1,-1};
   tensor * vector_fluxes = tensors_from_vectors (&lflux[scalars_len]);
 
-  // compute fluxes
+/**
+We are ready to compute the fluxes through each face of the domain. */
+
   foreach_face (reduction (min:dtmax)) {
-    // left/right states
+
+/**
+#### Left/right state reconstruction 
+
+We use the central values of each scalar/vector quantity and the
+pre-computed gradients to compute the left and right states. */
+
     double dx = Delta/2.;
     int i = 0;
     scalar s;
@@ -111,9 +186,14 @@ double fluxes (scalar * conserved, double dtmax)
       l[i] = v.y[] - dx*t.y.x[];
       r[i++] = v.y[-1,0] + dx*t.y.x[-1,0];
     }
-    // Riemann solver
+
+/**
+#### Riemann problem
+
+We then call the generic Riemann solver and store the resulting fluxes
+in the pre-allocated fields. */
+
     dtmax = riemann (r, l, Delta, f, len, dtmax);
-    // update fluxes
     i = 0;
     for (vector fs in scalar_fluxes)
       fs.x[] = f[i++];
@@ -123,7 +203,12 @@ double fluxes (scalar * conserved, double dtmax)
     }
   }
 
-  // free space for slopes and lists
+/**
+#### Cleanup
+
+We finally deallocate the memory used to store lists and gradient
+fields, and apply boundary conditions on fluxes. */
+
   free (scalars);
   free (vectors);
   free (scalar_slopes);
@@ -138,6 +223,13 @@ double fluxes (scalar * conserved, double dtmax)
   return dtmax;
 }
 
+/**
+### Update
+
+This is the second function used by the predictor-corrector scheme. It
+uses the input and the fluxes computed previously to compute the
+output. */
+
 void update (scalar * output, scalar * input, double dt)
 {
   if (output != input)
@@ -149,8 +241,11 @@ void update (scalar * output, scalar * input, double dt)
       o[] = i[] + dt*(f.x[] - f.x[1,0] + f.y[] - f.y[0,1])/Delta;
   }
   boundary (output);
+
+/**
+Finally the flux fields are deallocated and the list is freed. */
+
   delete ((scalar *)lflux);
+  free (lflux);
   lflux = NULL;
 }
-
-#include "predictor-corrector.h"
