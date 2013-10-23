@@ -1,6 +1,6 @@
 ! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
  
-set term @PNG enhanced size 640,640
+set term @PNG enhanced size 400,400
 
 set size ratio -1
 unset key
@@ -15,7 +15,7 @@ set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1, \
 		      0.625 1 0.9333 0, 0.75 1 0.4392 0, \
 		      0.875 0.9333 0 0, 1 0.498 0 0 )
 
-set multiplot layout 3,3 scale 1.6,1.6
+set multiplot layout 3,3 scale 1.75,1.75
 splot 'eta-0'
 splot 'eta-1'
 splot 'eta-2'
@@ -29,7 +29,7 @@ unset multiplot
 
 set output 'level.png'
 
-set multiplot layout 3,3 scale 1.6,1.6
+set multiplot layout 3,3 scale 1.75,1.75
 splot 'level-0'
 splot 'level-1'
 splot 'level-2'
@@ -45,7 +45,7 @@ exit 0
 
 set output 'pid.png'
 
-set multiplot layout 3,3 scale 1.6,1.6
+set multiplot layout 3,3 scale 1.75,1.75
 splot 'pid-0'
 splot 'pid-1'
 splot 'pid-2'
