@@ -4,6 +4,9 @@
 
 double mu1 = 2.5, mu2 = 1e-3, k = 0.1;
 
+scalar f[];
+scalar * tracers = {f};
+
 p[left]  = dirichlet(1e-3);
 p[right] = dirichlet(0);
 f[left]  = 1.;

@@ -37,7 +37,6 @@ event init (i = 0)
 {
   boundary_mac ({u});
   boundary ({p});
-  projection (0, 0);
 }
 
 event advance (i++)
@@ -68,9 +67,15 @@ event projection (i++)
   boundary_mac ({u});
   foreach()
     div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
-  mgp = poisson (p, div);
-  foreach_face()
-    u.x[] -= (p[] - p[-1,0])/Delta;
+  mgp = poisson (p, div, alpha);
+  if (alpha.x) {
+    foreach_face()
+      u.x[] -= alpha.x[]*(p[] - p[-1,0])/Delta;
+  }
+  else {
+    foreach_face()
+      u.x[] -= (p[] - p[-1,0])/Delta;
+  }
   boundary_mac ({u});
 
   dt = dtnext (t, timestep (u));
