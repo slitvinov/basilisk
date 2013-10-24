@@ -1,6 +1,6 @@
-void fluxes_upwind_bcg (const scalar f, const vector u, 
-			vector flux,
-			double dt)
+void tracer_fluxes (const scalar f, const vector u, 
+		    vector flux,
+		    double dt)
 {
   vector g[];
   gradients ({f}, {g});
@@ -17,3 +17,5 @@ void fluxes_upwind_bcg (const scalar f, const vector u,
   }
   boundary_normal ({flux});
 }
+
+#include "tracer.h"

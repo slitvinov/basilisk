@@ -1,6 +1,9 @@
 #include "grid/cartesian.h"
 #include "advection.h"
 
+scalar f[];
+scalar * tracers = {f};
+
 void parameters()
 {
   // coordinates of lower-left corner

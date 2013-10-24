@@ -1454,11 +1454,14 @@ void compdir (FILE * fin, FILE * fout, char * grid)
   fputs ("Event Events[] = {\n", fout);
   for (int last = 0; last <= 1; last++)
     for (int i = 0; i < nevents; i++)
-      if (eventparent[i] < 0 && eventlast[i] == last) {
-	write_event (i, fout);
+      if (eventchild[i] < 0 && eventlast[i] == last) {
 	int j = i;
-	while ((j = eventchild[j]) >= 0)
+	while (eventparent[j] >= 0)
+	  j = eventparent[j];
+	do {
 	  write_event (j, fout);
+	  j = eventchild[j];
+	} while (j >= 0);
       }
   fputs ("  { 1 }\n};\n", fout);
   /* boundaries */

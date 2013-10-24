@@ -29,14 +29,14 @@ is a [Poisson equation](/src/poisson.h). */
 #include "poisson.h"
 
 /**
-The field advected by the [advection solver](/src/advection.h) is
-called `f`. We define $\omega$ as an alias of `f` for clarity. We
-allocate the streamfunction field $\psi$ and a structure to store the
-statistics on the convergence of the Poisson solver. */
+We allocate the vorticity field $\omega$, the streamfunction field
+$\psi$ and a structure to store the statistics on the convergence of
+the Poisson solver. The fields advected by the [advection
+solver](/src/advection.h) are listed in `tracers`. */
 
-#define omega f
-scalar psi[];
+scalar omega[], psi[];
 mgstats mgpsi;
+scalar * tracers = {omega};
 
 /**
 Here we set the default boundary conditions for the

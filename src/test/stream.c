@@ -1,5 +1,3 @@
-// fixme: utils.h should be in stream.h
-// #include "utils.h"
 #include "navier-stokes/stream.h"
 
 #define MAXLEVEL 8

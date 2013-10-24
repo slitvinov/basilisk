@@ -1,12 +1,10 @@
 #include "utils.h"
-#include "bcg.h"
 #include "timestep.h"
+#include "bcg.h"
 
-scalar f[]; // tracer
 vector u[]; // velocity
 
 // Default parameters
-// gradient
 double (* gradient) (double, double, double) = NULL; // centered
 void parameters  (void); // user-provided
 
@@ -22,10 +20,12 @@ double dt = 0.;
 event defaults (i = 0)
 {
   u.x.d.x = u.y.d.y = -1; // staggering for u.x, u.y
-  f.gradient = gradient;
+  for (scalar f in tracers)
+    f.gradient = gradient;
   foreach()
-    f[] = 0.;
-  boundary ({f});
+    for (scalar f in tracers)
+      f[] = 0.;
+  boundary (tracers);
   foreach_face()
     u.x[] = 0.;
   boundary_mac ({u});
@@ -41,13 +41,8 @@ void run (void)
   int i = 0, tnc = 0;
   while (events (i, t)) {
     dt = dtnext (t, timestep (u));
-    vector flux[];
-    fluxes_upwind_bcg (f, u, flux, dt);
-    foreach(reduction(+:tnc)) {
-      f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta;
+    foreach(reduction(+:tnc))
       tnc++;
-    }
-    boundary ({f});
     i++; t = tnext;
   }
   timer_print (start, i, tnc);

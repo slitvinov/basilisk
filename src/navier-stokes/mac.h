@@ -21,7 +21,26 @@ u.x[left]   = 0.;
 u.y[top]    = 0.;
 u.y[bottom] = 0.;
 
-void advance (double dt)
+event defaults (i = 0)
+{
+  // staggering for u.x, u.y
+  u.x.d.x = u.y.d.y = -1;
+  foreach_face()
+    u.x[] = 0.;
+  boundary_mac ({u});
+  foreach()
+    p[] = 0.;
+  boundary ({p});
+}
+
+event init (i = 0)
+{
+  boundary_mac ({u});
+  boundary ({p});
+  projection (0, 0);
+}
+
+event advance (i++)
 {
   // stresses
   symmetric tensor S[];
@@ -41,37 +60,20 @@ void advance (double dt)
   // update
   foreach_face()
     u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/Delta;
-  boundary_mac ({u});
 }
 
-void projection (vector u, scalar p)
+event projection (i++)
 {
   scalar div[];
+  boundary_mac ({u});
   foreach()
     div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
   mgp = poisson (p, div);
   foreach_face()
     u.x[] -= (p[] - p[-1,0])/Delta;
   boundary_mac ({u});
-}
 
-event defaults (i = 0)
-{
-  // staggering for u.x, u.y
-  u.x.d.x = u.y.d.y = -1;
-  foreach_face()
-    u.x[] = 0.;
-  boundary_mac ({u});
-  foreach()
-    p[] = 0.;
-  boundary ({p});
-}
-
-event init (i = 0)
-{
-  boundary_mac ({u});
-  boundary ({p});
-  projection (u, p);
+  dt = dtnext (t, timestep (u));
 }
 
 void run (void)
@@ -83,9 +85,6 @@ void run (void)
   double t = 0;
   int i = 0;
   while (events (i, t)) {
-    double dt = dtnext (t, timestep (u));
-    advance (dt);
-    projection (u, p);
     i++; t = tnext;
   }
   end();
