@@ -205,6 +205,7 @@ struct _Event {
   double * arrayt;
   char * file;
   int line;
+  char * name;
   double t;
   int i, a;
 };

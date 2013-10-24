@@ -1423,8 +1423,8 @@ void write_event (int i, FILE * fout)
     fprintf (fout, "%s_array,\n", id);
   else
     fprintf (fout, "((void *)0),\n");
-  fprintf (fout, "    \"%s\", %d},\n", eventfile[i], 
-	   nolineno ? 0 : eventline[i]);
+  fprintf (fout, "    \"%s\", %d, \"%s\"},\n", eventfile[i], 
+	   nolineno ? 0 : eventline[i], id);
 }
 
 void compdir (FILE * fin, FILE * fout, char * grid)

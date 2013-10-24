@@ -22,6 +22,9 @@ static int event_do (Event * ev, int i, double t)
   if ((i > ev->i && t > ev->t) || !event_cond (ev, i, t))
     return event_finished (ev);
   if (i == ev->i || fabs (t - ev->t) <= 1e-9) {
+#if DEBUG_EVENTS
+    fprintf (stderr, "  %s()\t%s:%d\n", ev->name, ev->file, ev->line);
+#endif
     if ((* ev->action) (i, t)) {
       event_finished (ev);
       return event_stop;
@@ -115,6 +118,9 @@ void init_events (void)
 
 int events (int i, double t)
 {
+#if DEBUG_EVENTS
+  fprintf (stderr, "events (i = %d, t = %g)\n", i, t);
+#endif
   int inext = 0, cond = 0, cond1 = 0;
   tnext = HUGE;
   for (Event * ev = Events; !ev->last && !cond; ev++)
