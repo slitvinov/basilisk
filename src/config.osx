@@ -1,0 +1,13 @@
+# -*-Makefile-*-
+
+# how to launch the C99 compiler
+CC99 = gcc -std=c99 -D_XOPEN_SOURCE=700 -DHAVE_GETOPT_H=1
+
+# other useful (non-standard) flags
+CFLAGS += -Wall
+
+# if you have valgrind, otherwise comment this out
+# VALGRIND = valgrind -q --tool=memcheck
+
+# if gnuplot supports pngcairo, otherwise comment this out
+# PNG = pngcairo
