@@ -1586,7 +1586,8 @@ int main (int argc, char ** argv)
       }
       FILE * fout = dopen (cpp, "w");
 #if _GNU_SOURCE
-      fputs ("@include <string.h>\n"
+      fputs ("@include <stdint.h>\n"
+	     "@include <string.h>\n"
 	     "@include <fenv.h>\n", 
 	     fout);
 #endif
@@ -1610,7 +1611,7 @@ int main (int argc, char ** argv)
 	     "static void set_fpe (void) {\n"
 	     "  int64_t lnan = 0x7ff0000000000001;\n"
 	     "  assert (sizeof (int64_t) == sizeof (double));\n"
-	     "  memcpy (&undefined, &lnan, sizeof (long));\n"
+	     "  memcpy (&undefined, &lnan, sizeof (double));\n"
 	     "  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n"
 	     "}\n",
 	     fout);
