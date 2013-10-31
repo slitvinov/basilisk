@@ -8,6 +8,8 @@ staggered vector u[];
 // Default parameters
 // Viscosity
 double NU = 0.;
+// specific volume (default is unity)
+staggered vector alpha;
 // user-provided functions
 void parameters (void);
 void end        (void);

@@ -42,15 +42,16 @@ void solve (int depth)
   foreach_face()
     c.x[] = x + y + 2.;
   restriction ((scalar *){c});
-  alpha = c;
+
+  struct Poisson p = { a, b, c, 0. };
 
   #define NITER 13
   clock_t start = clock(), iter[NITER];
   double maxres[NITER];
-  residual_variable (a, b, res);
+  residual (a, b, res, &p);
   for (int i = 0; i < NITER; i++) {
-    mg_cycle (a, res, dp, relax_variable, nrelax, 0);
-    residual_variable (a, b, res);
+    mg_cycle (a, res, dp, relax, &p, nrelax, 0);
+    residual (a, b, res, &p);
     double max = 0.;
     foreach()
       if (fabs(res[]) > max)

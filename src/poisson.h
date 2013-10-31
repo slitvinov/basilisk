@@ -1,26 +1,26 @@
 /**
-# Multigrid Poisson solvers
+# Multigrid Poisson--Helmholtz solvers
 
-We want to solve Poisson equations of the general form
+We want to solve Poisson--Helmholtz equations of the general form
 $$
-\nabla\cdot (c\nabla a) = b
+L(a) = \nabla\cdot (\alpha\nabla a) + \lambda a = b
 $$
 This can be done efficiently using a multigrid solver. 
 
-An important aspect of Poisson equations is that they are linear. This
-property can be used to build better estimates of a solution by
-successive *corrections* to an initial guess. If we define an
-approximate solution $\tilde{a}$ as
+An important aspect of Poisson--Helmholtz equations is that the
+operator $L()$ is linear. This property can be used to build better
+estimates of a solution by successive *corrections* to an initial
+guess. If we define an approximate solution $\tilde{a}$ as
 $$
 \tilde{a} + da = a
 $$
 where $a$ is the exact (unknown) solution, using the linearity of the
-Laplacian we find that $da$ verifies
+operator we find that $da$ verifies
 $$
-\nabla\cdot(c\nabla da) = b - \nabla\cdot(c\nabla\tilde{a})
+L(da) = b - L(\tilde{a})
 $$
 where the right-hand-side is often called the *residual* of the
-approximate solution $\tilde{a}$. 
+approximate solution $\tilde{a}$.
 
 ## Homogeneous boundary conditions
 
@@ -60,7 +60,8 @@ function `relax`, we will provide an improved guess at the end of the
 cycle. */
 
 void mg_cycle (scalar a, scalar res, scalar da,
-	       void (* relax) (scalar da, scalar res, int depth),
+	       void (* relax) (scalar da, scalar res, int depth, void * data),
+	       void * data,
 	       int nrelax, int minlevel)
 {
 
@@ -97,7 +98,7 @@ iterations of the relaxation function to refine the initial guess. */
 
     boundary_homogeneous (a, da, l);
     for (int i = 0; i < nrelax; i++) {
-      relax (da, res, l);
+      relax (da, res, l, data);
       boundary_homogeneous (a, da, l);
     }
   }
@@ -134,11 +135,16 @@ typedef struct {
 
 /**
 The user needs to provide a function which computes the residual field
-(and returns its maximum) as well as the relaxation function. */
+(and returns its maximum) as well as the relaxation function. The
+user-defined pointer `data` can be used to pass arguments to these
+functions. */
 
-mgstats mg_solve (scalar a, scalar b, 
-		  double (* residual) (scalar a, scalar b, scalar res),
-		  void (* relax) (scalar da, scalar res, int depth))
+mgstats mg_solve (scalar a, scalar b,
+		  double (* residual) (scalar a, scalar b, scalar res, 
+				       void * data),
+		  void (* relax) (scalar da, scalar res, int depth, 
+				  void * data),
+		  void * data)
 {
   scalar res[], da[];
   mgstats s = {0, 0., 0.};
@@ -148,7 +154,7 @@ mgstats mg_solve (scalar a, scalar b,
 /**
 Here we compute the initial residual field and its maximum. */
 
-  s.maxres = residual (a, b, res);
+  s.maxres = residual (a, b, res, data);
 
 /**
 We then iterates until convergence or until `NITERMAX` is reached. Note
@@ -156,8 +162,8 @@ also that we force the solver to apply at least one cycle, even if the
 initial residual is lower than `TOLERANCE`. */
 
   for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.maxres > TOLERANCE); s.i++) {
-    mg_cycle (a, res, da, relax, 4, 0);
-    s.maxres = residual (a, b, res);
+    mg_cycle (a, res, da, relax, data, 4, 0);
+    s.maxres = residual (a, b, res, data);
   }
 
 /**
@@ -172,122 +178,125 @@ If we have reached the maximum number of iterations, we warn the user. */
 }
 
 /**
-## Poisson equation with constant coefficients
+## Application to the Poisson--Helmholtz equation
 
-We now apply the generic multigrid solver to the simplest case
+We now apply the generic multigrid solver to the Poisson--Helmholtz equation
 $$
-\nabla^2 a = b
+\nabla\cdot (\alpha\nabla a) + \lambda a = b
 $$
-Using a standard 5-points discrete Laplacian operator, we easily get the
-corresponding relaxation function. */
+We first setup the data structure required to pass the extra
+parameters $\alpha$ and $\lambda$. We define $\alpha$ as a staggered
+vector field because we need values at the staggered locations
+corresponding to the face gradients of field $a$. */
 
-static void relax (scalar a, scalar b, int l)
+struct Poisson {
+  scalar a, b;
+  staggered vector alpha;
+  double lambda;
+};
+
+/**
+We can now write the relaxation function. We first recover the extra
+parameters from the data pointer. */
+
+static void relax (scalar a, scalar b, int l, void * data)
 {
-  foreach_level_or_leaf (l)
-    a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - sq(Delta)*b[])/4.;
+  struct Poisson * p = data;
+  staggered vector alpha = p->alpha;
+  double lambda = p->lambda;
+
+/**
+If $\alpha$ is not defined, we assume it takes its default value of
+one and, using a 5-points Laplacian operator, we get the relaxation
+function. */
+
+  if (!alpha.x) {
+    foreach_level_or_leaf (l)
+      a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - sq(Delta)*b[])
+      /(4. - lambda*sq(Delta));
+  }
+
+/**
+Otherwise we use the staggered values of $\alpha$ to weight the
+gradients. */
+
+  else {
+    foreach_level_or_leaf (l)
+      a[] = (alpha.x[1,0]*a[1,0] + alpha.x[]*a[-1,0] + 
+	     alpha.y[0,1]*a[0,1] + alpha.y[]*a[0,-1] 
+	     - sq(Delta)*b[])
+      /(alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[] - lambda*sq(Delta));
+  }
 }
 
 /**
-The equivalent residual function is also trivial to obtain in the case
-of a Cartesian grid, however the case of the quadtree mesh requires
-more careful consideration...
- */
+The equivalent residual function is obtained in a similar way in the
+case of a Cartesian grid, however the case of the quadtree mesh
+requires more careful consideration... */
 
-static double residual (scalar a, scalar b, scalar res)
+static double residual (scalar a, scalar b, scalar res, void * data)
 {
-  double maxres = 0.;
+  struct Poisson * p = data;
+  staggered vector alpha = p->alpha;
+  double lambda = p->lambda, maxres = 0.;
 #if QUADTREE
   /* conservative coarse/fine discretisation (2nd order) */
   vector g[];
-  foreach_face()
-    g.x[] = (a[] - a[-1,0])/Delta;
+  if (!alpha.x) {
+    foreach_face()
+      g.x[] = (a[] - a[-1,0])/Delta;
+  }
+  else {
+    foreach_face()
+      g.x[] = alpha.x[]*(a[] - a[-1,0])/Delta;
+  }
   boundary_normal ({g});
   foreach (reduction(max:maxres)) {
-    res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta;
-#else
-  /* "naive" discretisation (only 1st order on quadtrees) */
-  foreach (reduction(max:maxres)) {
-    res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/sq(Delta);
-#endif
+    res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta
+      - lambda*a[];
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
-  return maxres;
-}
-
-/**
-## Poisson equation with variable coefficients
-
-The case of the Poisson equation with variable coefficients
-$$
-\nabla\cdot(\alpha\nabla a) = b
-$$
-is only slightly more complex. 
-
-We define $\alpha$ as vector field because we need values at the
-staggered locations corresponding to the face gradients of field
-$a$. Using these values the relaxation and residual operators are
-derived similarly to the case of constant coefficients. */
-
-staggered vector alpha;
-
-static void relax_variable (scalar a, scalar b, int l)
-{
-  foreach_level_or_leaf (l)
-    a[] = (alpha.x[1,0]*a[1,0] + alpha.x[]*a[-1,0] + 
-	   alpha.y[0,1]*a[0,1] + alpha.y[]*a[0,-1] 
-	   - sq(Delta)*b[])
-    /(alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[]);
-}
-
-static double residual_variable (scalar a, scalar b, scalar res)
-{
-  double maxres = 0.;
-#if QUADTREE
-  /* conservative coarse/fine discretisation (2nd order) */
-  vector g[];
-  foreach_face()
-    g.x[] = alpha.x[]*(a[] - a[-1,0])/Delta;
-  boundary_normal ({g});
-  foreach (reduction(max:maxres)) {
-    res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta;
 #else
   /* "naive" discretisation (only 1st order on quadtrees) */
-  foreach (reduction(max:maxres)) {
-    res[] = b[] + 
-      ((alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[])*a[]
-       - alpha.x[1,0]*a[1,0] - alpha.x[]*a[-1,0] 
-       - alpha.y[0,1]*a[0,1] - alpha.y[]*a[0,-1])
-      /sq(Delta);
-#endif
-    if (fabs (res[]) > maxres)
-      maxres = fabs (res[]);
+  if (!alpha.x) {
+    foreach (reduction(max:maxres)) {
+      res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/sq(Delta)
+	- lambda*a[];
+      if (fabs (res[]) > maxres)
+	maxres = fabs (res[]);
+    }
   }
+  else {
+    foreach (reduction(max:maxres)) {
+      res[] = b[] + 
+	((alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[])*a[]
+	 - alpha.x[1,0]*a[1,0] - alpha.x[]*a[-1,0] 
+	 - alpha.y[0,1]*a[0,1] - alpha.y[]*a[0,-1])/sq(Delta)
+	- lambda*a[];
+      if (fabs (res[]) > maxres)
+	maxres = fabs (res[]);
+    }
+  }
+#endif
   return maxres;
 }
 
 /**
 ## User interface
 
-Finally we provide a generic user interface for the case of constant
-or variable coefficients,
+Finally we provide a generic user interface for a Poisson--Helmholtz
+equation of the form
 $$
-\nabla\cdot (c\nabla a) = b
+\nabla\cdot (\alpha\nabla a) + \lambda a = b
 $$
-where the $c$ argument is optional and defaults to unity. */
-
-struct Poisson {
-  scalar a, b;
-  staggered vector c;
-};
+where the $\alpha$ and $\lambda$ arguments are optional and default
+to unity and zero respectively. */
 
 mgstats poisson (struct Poisson p)
 {
-  if (p.c.x) {
-    alpha = p.c;
+  vector alpha = p.alpha;
+  if (alpha.x)
     restriction ((scalar *){alpha});
-    return mg_solve (p.a, p.b, residual_variable, relax_variable);
-  }
-  else
-    return mg_solve (p.a, p.b, residual, relax);
+  return mg_solve (p.a, p.b, residual, relax, &p);
 }

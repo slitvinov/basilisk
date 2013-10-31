@@ -38,10 +38,11 @@ void solve (int depth)
   #define NITER 15
   clock_t start = clock(), iter[NITER];
   double maxres[NITER];
-  residual (a, b, res);
+  struct Poisson p = { a, b, {0,0}, 0.};
+  residual (a, b, res, &p);
   for (int i = 0; i < NITER; i++) {
-    mg_cycle (a, res, dp, relax, nrelax, 0);
-    residual (a, b, res);
+    mg_cycle (a, res, dp, relax, &p, nrelax, 0);
+    residual (a, b, res, &p);
     double max = 0.;
     foreach()
       if (fabs(res[]) > max)
