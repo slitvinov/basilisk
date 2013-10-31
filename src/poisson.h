@@ -77,10 +77,9 @@ We then proceed from the coarsest grid (`minlevel`) down to the finest grid. */
 
 /**
 On the coarsest grid, we take zero as initial guess. */
-    if (l == minlevel) {
+    if (l == minlevel)
       foreach_level_or_leaf (l)
 	da[] = 0.;
-    }
 
 /**
 On all other grids, we take as initial guess the approximate solution
@@ -210,23 +209,21 @@ If $\alpha$ is not defined, we assume it takes its default value of
 one and, using a 5-points Laplacian operator, we get the relaxation
 function. */
 
-  if (!alpha.x) {
+  if (!alpha.x)
     foreach_level_or_leaf (l)
       a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - sq(Delta)*b[])
       /(4. - lambda*sq(Delta));
-  }
 
 /**
 Otherwise we use the staggered values of $\alpha$ to weight the
 gradients. */
 
-  else {
+  else
     foreach_level_or_leaf (l)
       a[] = (alpha.x[1,0]*a[1,0] + alpha.x[]*a[-1,0] + 
 	     alpha.y[0,1]*a[0,1] + alpha.y[]*a[0,-1] 
 	     - sq(Delta)*b[])
       /(alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[] - lambda*sq(Delta));
-  }
 }
 
 /**
@@ -242,14 +239,12 @@ static double residual (scalar a, scalar b, scalar res, void * data)
 #if QUADTREE
   /* conservative coarse/fine discretisation (2nd order) */
   vector g[];
-  if (!alpha.x) {
+  if (!alpha.x)
     foreach_face()
       g.x[] = (a[] - a[-1,0])/Delta;
-  }
-  else {
+  else
     foreach_face()
       g.x[] = alpha.x[]*(a[] - a[-1,0])/Delta;
-  }
   boundary_normal ({g});
   foreach (reduction(max:maxres)) {
     res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta
@@ -259,15 +254,14 @@ static double residual (scalar a, scalar b, scalar res, void * data)
   }
 #else
   /* "naive" discretisation (only 1st order on quadtrees) */
-  if (!alpha.x) {
+  if (!alpha.x)
     foreach (reduction(max:maxres)) {
       res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/sq(Delta)
 	- lambda*a[];
       if (fabs (res[]) > maxres)
 	maxres = fabs (res[]);
     }
-  }
-  else {
+  else
     foreach (reduction(max:maxres)) {
       res[] = b[] + 
 	((alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[])*a[]
@@ -277,7 +271,6 @@ static double residual (scalar a, scalar b, scalar res, void * data)
       if (fabs (res[]) > maxres)
 	maxres = fabs (res[]);
     }
-  }
 #endif
   return maxres;
 }

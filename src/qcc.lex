@@ -294,6 +294,7 @@
 	       foreachs, line);
     else
       fprintf (yyout, " end_%s();", foreachs);
+    fputs (" }", yyout);
     inforeach = inforeach_boundary = inforeach_face = inforeach_vertex = 0;
   }
 
@@ -683,6 +684,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 }
 
 foreach{ID}* {
+  fputs (" { ", yyout);
   strcpy (foreachs, yytext);
   inforeach = 1; foreachscope = scope; foreachpara = para;
   nreduct = 0;

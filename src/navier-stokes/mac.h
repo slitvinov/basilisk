@@ -66,14 +66,12 @@ event projection (i++)
   foreach()
     div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
   mgp = poisson (p, div, alpha);
-  if (alpha.x) {
+  if (alpha.x)
     foreach_face()
       u.x[] -= alpha.x[]*(p[] - p[-1,0])/Delta;
-  }
-  else {
+  else
     foreach_face()
       u.x[] -= (p[] - p[-1,0])/Delta;
-  }
   boundary ((scalar *){u});
 
   dt = dtnext (t, timestep (u));
