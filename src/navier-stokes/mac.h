@@ -3,7 +3,7 @@
 #include "poisson.h"
 
 scalar p[];
-vector u[];
+staggered vector u[];
 
 // Default parameters
 // Viscosity
@@ -23,20 +23,16 @@ u.y[bottom] = 0.;
 
 event defaults (i = 0)
 {
-  // staggering for u.x, u.y
-  u.x.d.x = u.y.d.y = -1;
   foreach_face()
     u.x[] = 0.;
-  boundary_mac ({u});
   foreach()
     p[] = 0.;
-  boundary ({p});
+  boundary ({p,u});
 }
 
 event init (i = 0)
 {
-  boundary_mac ({u});
-  boundary ({p});
+  boundary ({p,u});
 }
 
 event advance (i++)
@@ -64,7 +60,7 @@ event advance (i++)
 event projection (i++)
 {
   scalar div[];
-  boundary_mac ({u});
+  boundary ((scalar *){u});
   foreach()
     div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
   mgp = poisson (p, div, alpha);
@@ -76,7 +72,7 @@ event projection (i++)
     foreach_face()
       u.x[] -= (p[] - p[-1,0])/Delta;
   }
-  boundary_mac ({u});
+  boundary ((scalar *){u});
 
   dt = dtnext (t, timestep (u));
 }

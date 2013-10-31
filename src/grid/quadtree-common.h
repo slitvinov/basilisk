@@ -345,7 +345,7 @@ void quadtree_boundary_restriction (scalar * list)
 
 // Cartesian methods
 
-void quadtree_boundary (scalar * list)
+void quadtree_boundary_centered (scalar * list)
 {
   scalar * listdef = NULL, * listc = NULL;
   for (scalar s in list)
@@ -453,12 +453,40 @@ scalar quadtree_init_scalar (scalar s, const char * name)
   return s;
 }
 
+static void refine_staggered (Point point, scalar s)
+{
+  vector v = s.v;
+  foreach_dimension() {
+    if (is_leaf(neighbor(-1,0)) || is_ghost(neighbor(-1,0))) {
+      double g = (v.x[0,+1] - v.x[0,-1])/8.;
+      fine(v.x,0,0) = v.x[] - g;
+      fine(v.x,0,1) = v.x[] + g;
+    }
+    if (is_leaf(neighbor(+1,0)) || is_ghost(neighbor(+1,0))) {
+      double g = (v.x[1,+1] - v.x[1,-1])/8.;
+      fine(v.x,2,0) = v.x[1,0] - g;
+      fine(v.x,2,1) = v.x[1,0] + g;
+    }
+    fine(v.x,1,0) = (fine(v.x,0,0) + fine(v.x,2,0))/2.;
+    fine(v.x,1,1) = (fine(v.x,0,1) + fine(v.x,2,1))/2.;
+  }
+}
+
+vector quadtree_init_staggered_vector (vector v, const char * name)
+{
+  v = multigrid_init_staggered_vector (v, name);
+  v.x.refine  = refine_staggered;
+  v.y.refine  = refine_v;
+  return v;
+}
+
 void quadtree_methods()
 {
   multigrid_methods();
-  init_scalar          = quadtree_init_scalar;
-  boundary             = quadtree_boundary;
-  boundary_normal      = halo_restriction_flux;
-  boundary_tangent     = quadtree_boundary_tangent;
-  boundary_restriction = quadtree_boundary_restriction;
+  init_scalar           = quadtree_init_scalar;
+  boundary_centered     = quadtree_boundary_centered;
+  boundary_normal       = halo_restriction_flux;
+  boundary_tangent      = quadtree_boundary_tangent;
+  boundary_restriction  = quadtree_boundary_restriction;
+  init_staggered_vector = quadtree_init_staggered_vector;
 }

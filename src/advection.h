@@ -19,12 +19,12 @@ Bell-Collela-Glaz flux computation is defined in [bcg.h](). */
 #include "bcg.h"
 
 /**
-We allocate the velocity field and declare a few user-defined
-parameters. The `gradient` function is used to set the type of
-slope-limiting required. The default is to not use any limiting
-(i.e. a purely centered slope estimation). */
+We allocate the (staggered) velocity field and declare a few
+user-defined parameters. The `gradient` function is used to set the
+type of slope-limiting required. The default is to not use any
+limiting (i.e. a purely centered slope estimation). */
 
-vector u[]; // velocity
+staggered vector u[]; // velocity
 
 // Default parameters
 double (* gradient) (double, double, double) = NULL; // centered
@@ -53,7 +53,6 @@ fields. */
 
 event defaults (i = 0)
 {
-  u.x.d.x = u.y.d.y = -1; // staggering for u.x, u.y
   for (scalar f in tracers)
     f.gradient = gradient;
   foreach()
@@ -62,7 +61,7 @@ event defaults (i = 0)
   boundary (tracers);
   foreach_face()
     u.x[] = 0.;
-  boundary_mac ({u});
+  boundary ((scalar *){u});
 }
 
 /**

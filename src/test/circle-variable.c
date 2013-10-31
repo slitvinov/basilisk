@@ -4,7 +4,7 @@
 #include "poisson.h"
 
 scalar a[], b[], res[], dp[];
-vector c[];
+staggered vector c[];
 
 double solution (double x, double y)
 {
@@ -41,7 +41,7 @@ void solve (int depth)
   trash ({c});
   foreach_face()
     c.x[] = x + y + 2.;
-  restriction_staggered ({c});
+  restriction ((scalar *){c});
   alpha = c;
 
   #define NITER 13

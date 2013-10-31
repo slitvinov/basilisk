@@ -32,24 +32,33 @@ void coarsen_average (Point point, scalar s)
 
 void restriction (scalar * list)
 {
-  foreach_fine_to_coarse()
-    for (scalar s in list)
+  scalar * listc = NULL;
+  vector * lists = NULL;
+  for (scalar s in list) {
+    if (s.staggered)
+      lists = vectors_append (lists, s.v);
+    else
+      listc = list_append (listc, s);
+  }
+  if (lists)
+    boundary_normal (lists);
+  foreach_fine_to_coarse() {
+    for (scalar s in listc)
       s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
-}
-
-void restriction_staggered (vector * list)
-{
-  boundary_normal (list);
-  foreach_fine_to_coarse()
-    for (vector v in list)
+    for (vector v in lists)
       foreach_dimension()
 	v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-  foreach_boundary_fine_to_coarse(right)
-    for (vector v in list)
-      v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-  foreach_boundary_fine_to_coarse(top)
-    for (vector v in list)
-      v.y[] = (fine(v.y,0,0) + fine(v.y,1,0))/2.;
+  }
+  free (listc);
+  if (lists) {
+    foreach_boundary_fine_to_coarse(right)
+      for (vector v in lists)
+	v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+    foreach_boundary_fine_to_coarse(top)
+      for (vector v in lists)
+	v.y[] = (fine(v.y,0,0) + fine(v.y,1,0))/2.;
+    free (lists);
+  }
 }
 
 void wavelet (scalar s, scalar w)
@@ -108,8 +117,23 @@ void refine_reset (Point point, scalar v)
       fine(v,k,l) = 0.;
 }
 
-void refine_none (Point point, scalar v)
+void refine_none (Point point, scalar v) {}
+
+void coarsen_staggered (Point point, scalar s)
 {
+  vector v = s.v;
+  foreach_dimension()
+    v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+}
+
+static void refine_v (Point point, scalar v) {}
+
+vector multigrid_init_staggered_vector (vector v, const char * name)
+{
+  v = cartesian_init_staggered_vector (v, name);
+  v.x.coarsen = coarsen_staggered;
+  v.y.coarsen = refine_v;
+  return v;
 }
 
 void multigrid_boundary_level (scalar * list, int l)
@@ -167,4 +191,5 @@ void multigrid_methods()
   debug = multigrid_debug;
   boundary_level = multigrid_boundary_level;
   boundary_restriction = multigrid_boundary_restriction;
+  init_staggered_vector = multigrid_init_staggered_vector;
 }

@@ -229,7 +229,7 @@ staggered locations corresponding to the face gradients of field
 $a$. Using these values the relaxation and residual operators are
 derived similarly to the case of constant coefficients. */
 
-vector alpha;
+staggered vector alpha;
 
 static void relax_variable (scalar a, scalar b, int l)
 {
@@ -285,7 +285,7 @@ mgstats poisson (struct Poisson p)
 {
   if (p.c.x) {
     alpha = p.c;
-    restriction_staggered ({alpha});
+    restriction ((scalar *){alpha});
     return mg_solve (p.a, p.b, residual_variable, relax_variable);
   }
   else

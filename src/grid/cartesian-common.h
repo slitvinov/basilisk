@@ -172,11 +172,49 @@ void delete (scalar * list)
 
 // Cartesian methods
 
-void (* boundary)         (scalar *);
-void (* boundary_normal)  (vector *);
-void (* boundary_tangent) (vector *);
+void (* boundary_centered) (scalar *);
+void (* boundary_normal)   (vector *);
+void (* boundary_tangent)  (vector *);
 
-void cartesian_boundary (scalar * list)
+void boundary_staggered (vector * list)
+{
+  foreach_boundary (right,false)
+    for (vector u in list)
+      u.x[ghost] = u.x.boundary[right] (point, u.x);
+  foreach_boundary (top,false)
+    for (vector u in list)
+      u.y[ghost] = u.y.boundary[top] (point, u.y);
+  foreach_boundary (left,false)
+    for (vector u in list)
+      u.x[] = u.x.boundary[left] (point, u.x);
+  foreach_boundary (bottom,false)
+    for (vector u in list)
+      u.y[] = u.y.boundary[bottom] (point, u.y);
+  boundary_normal (list);
+  boundary_tangent (list);
+}
+
+void boundary (scalar * list)
+{
+  scalar * listc = NULL;
+  vector * lists = NULL;
+  for (scalar s in list) {
+    if (s.staggered)
+      lists = vectors_append (lists, s.v);
+    else
+      listc = list_append (listc, s);
+  }
+  if (listc) {
+    boundary_centered (listc);
+    free (listc);
+  }
+  if (lists) {
+    boundary_staggered (lists);
+    free (lists);
+  }
+}
+
+void cartesian_boundary_centered (scalar * list)
 {
   for (int b = 0; b < nboundary; b++)
     foreach_boundary (b, true) // also traverse corners
@@ -217,6 +255,8 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
+  foreach_dimension()
+    s.v.x = -1;
   return s;
 }
 
@@ -230,6 +270,17 @@ vector cartesian_init_vector (vector v, const char * name)
     v.y.boundary[top] = v.y.boundary[bottom] = 
     v.y.boundary_homogeneous[top] = v.y.boundary_homogeneous[bottom] = 
     antisymmetry;
+  foreach_dimension()
+    v.x.v = v;
+  return v;
+}
+
+vector cartesian_init_staggered_vector (vector v, const char * name)
+{
+  v = cartesian_init_vector (v, name);
+  v.x.d.x = v.y.d.y = -1;
+  foreach_dimension()
+    v.x.staggered = true;
   return v;
 }
 
@@ -293,29 +344,12 @@ void cartesian_debug (Point point)
 
 void cartesian_methods()
 {
-  init_scalar      = cartesian_init_scalar;
-  init_vector      = cartesian_init_vector;
-  init_tensor      = cartesian_init_tensor;
-  boundary         = cartesian_boundary;
-  boundary_normal  = cartesian_boundary_normal;
-  boundary_tangent = cartesian_boundary_tangent;
-  debug            = cartesian_debug;
-}
-
-void boundary_mac (vector * list)
-{
-  foreach_boundary (right,false)
-    for (vector u in list)
-      u.x[ghost] = u.x.boundary[right] (point, u.x);
-  foreach_boundary (top,false)
-    for (vector u in list)
-      u.y[ghost] = u.y.boundary[top] (point, u.y);
-  foreach_boundary (left,false)
-    for (vector u in list)
-      u.x[] = u.x.boundary[left] (point, u.x);
-  foreach_boundary (bottom,false)
-    for (vector u in list)
-      u.y[] = u.y.boundary[bottom] (point, u.y);
-  boundary_normal (list);
-  boundary_tangent (list);
+  init_scalar       = cartesian_init_scalar;
+  init_vector       = cartesian_init_vector;
+  init_tensor       = cartesian_init_tensor;
+  boundary_centered = cartesian_boundary_centered;
+  boundary_normal   = cartesian_boundary_normal;
+  boundary_tangent  = cartesian_boundary_tangent;
+  debug             = cartesian_debug;
+  init_staggered_vector = cartesian_init_staggered_vector;
 }

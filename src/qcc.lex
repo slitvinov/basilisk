@@ -11,7 +11,7 @@
   enum { scalar, vector, tensor };
 
   typedef struct { int i; char * name; } Scalar;
-  typedef struct { int x, y; char * name; } Vector;
+  typedef struct { int x, y, staggered; char * name; } Vector;
   typedef struct { Vector x, y; char * name; } Tensor;
 
   int debug = 0, catch = 0, nolineno = 0;
@@ -25,7 +25,7 @@
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
     inforeach_boundary, inforeach_face, inforeach_vertex;
-  int invardecl, vartype, varsymmetric;
+  int invardecl, vartype, varsymmetric, varstaggered;
   int inval, invalpara;
   int brack, inarray;
   int inreturn;
@@ -49,7 +49,7 @@
   int inboundary;
   char boundaryfunc[80], boundaryvar[80], boundarydir[80];
   FILE * boundaryfp = NULL;
-  int nboundary = 0;
+  int boundarycomponent, nboundary = 0;
 
   int infunction, infunctiondecl, functionscope, functionpara;
   FILE * dopen (const char * fname, const char * mode);
@@ -65,7 +65,7 @@
 
   typedef struct { 
     char * v; 
-    int type, args, scope, automatic, symmetric; 
+    int type, args, scope, automatic, symmetric, staggered;
     int i[4];
   } var_t;
   var_t _varstack[100]; int varstack = -1;
@@ -78,7 +78,7 @@
       while ((q = strchr (q, '['))) {
 	*q++ = '\0'; na++;
       }
-      _varstack[++varstack] = (var_t) { f, type, na, scope, 0, 0, {-1} };
+      _varstack[++varstack] = (var_t) { f, type, na, scope, 0, 0, 0, {-1} };
     }
   }
 
@@ -320,6 +320,36 @@
     return s;
   }
 
+  void boundary_staggering (const char * dir, int component, FILE * fp) {
+    if (!strcmp (dir, "left")) {
+      if (component == 'y')
+	fputs (" int ig = -1, jg = -1;", fp);
+      else
+	fputs (" int ig = -1, jg = 0;", fp);
+    }
+    else if (!strcmp (dir, "right")) {
+      if (component == 'y')
+	fputs (" int ig = 1, jg = -1;", fp);
+      else
+	fputs (" int ig = 1, jg = 0;", fp);
+    }
+    else if (!strcmp (dir, "top")) {
+      if (component == 'x')
+	fputs (" int ig = -1, jg = 1;", fp);
+      else
+	fputs (" int ig = 0, jg = 1;", fp);
+    }
+    else if (!strcmp (dir, "bottom")) {
+      if (component == 'x')
+	fputs (" int ig = -1, jg = -1;", fp);
+      else
+	fputs (" int ig = 0, jg = -1;", fp);      
+    }
+    else
+      assert (0);
+    fputs (" NOT_UNUSED(ig); NOT_UNUSED (jg);", fp);
+  }
+
   char * makelist (const char * input, int type) {
     char * text = malloc (strlen(input) - 1);
     strncpy (text, &input[1], strlen (input) - 1);
@@ -437,7 +467,9 @@
   void new_field (var_t * var) {
     if (scope > 0)
       fprintf (yyout, "= new_%s%s(\"%s\")",
-	       var->symmetric ? "symmetric_" : "",
+	       var->symmetric ? "symmetric_" : 
+	       var->staggered ? "staggered_" : 
+	       "",
 	       var->type == scalar ? "scalar" : 
 	       var->type == vector ? "vector" : 
 	       var->type == tensor ? "tensor" :
@@ -459,6 +491,7 @@
       vectors = realloc (vectors, sizeof (Vector)*nvectors);
       vectors[nvectors-1] = (Vector){nvar,nvar+1};
       vectors[nvectors-1].name = strdup (var->v);
+      vectors[nvectors-1].staggered = var->staggered;
       nvar += 2;
     }
     else if (var->type == tensor) {
@@ -484,6 +517,7 @@
       var_t * v = varlookup (var, strlen(var));
       v->automatic = 1;
       v->symmetric = varsymmetric;
+      v->staggered = varstaggered;
       fputs (yytext, yyout);
       new_field (v);
     }
@@ -697,11 +731,10 @@ end_foreach{ID}*{SP}*"()" {
       fputc (c, yyout);
     fputs (" } ", yyout);
     fprintf (yyout, 
-	     "double _%s%s_homogeneous (Point point, scalar _s) {"
-	     " int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
-	     " POINT_VARIABLES; "
-	     " return ", 
+	     "double _%s%s_homogeneous (Point point, scalar _s) {",
 	     boundaryfunc, boundarydir);
+    boundary_staggering (boundarydir, boundarycomponent, yyout);
+    fputs (" POINT_VARIABLES; return ", yyout);
     rewind (fp);
     homogeneize (fp, yyout);
     fclose (fp);
@@ -750,12 +783,16 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = 0;
 }
 
-{ID}+{WS}*[=]{WS}*new{WS}+(symmetric){0,1}*{WS}*(scalar|vector|tensor) |
-[=]{WS}*new{WS}+(symmetric){0,1}{WS}*(scalar|vector|tensor) {
+{ID}+{WS}*[=]{WS}*new{WS}+(symmetric|staggered){0,1}*{WS}*(scalar|vector|tensor) |
+[=]{WS}*new{WS}+(symmetric|staggered){0,1}{WS}*(scalar|vector|tensor) {
   char * type = strchr (yytext, '=');
   type = strstr (type, "new"); space(type); nonspace(type);
   char * symmetric = strstr (type, "symmetric");
   if (symmetric) {
+    space(type); nonspace(type);
+  }
+  char * staggered = strstr (type, "staggered");
+  if (staggered) {
     space(type); nonspace(type);
   }
   int newvartype = (!strcmp (type, "scalar") ? scalar :
@@ -781,15 +818,22 @@ end_foreach{ID}*{SP}*"()" {
     fprintf (yyout, "%s ", yytext);
   }
   var->symmetric = (symmetric != NULL);
+  var->staggered = (staggered != NULL);
   new_field (var);
   if (debug)
     fprintf (stderr, "%s:%d: new %s%s: %s\n", 
-	     fname, line, var->symmetric ? "symmetric " : "", type, var->v);
+	     fname, line, 
+	     var->symmetric ? "symmetric " : 
+	     var->staggered ? "staggered " :
+	     "", 
+	     type, var->v);
 }
 
 symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
+staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
 (scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ {
   varsymmetric = (strstr(yytext, "symmetric") != NULL);
+  varstaggered = (strstr(yytext, "staggered") != NULL);
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
   if (!var) {
@@ -800,6 +844,7 @@ symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
       vartype = tensor;
     }
   }
+  yytext = var;
   var = &var[7];
   nonspace (var);
   if (*var == '[') {
@@ -915,7 +960,8 @@ val{WS}*[(]    {
   /* v[top] = */
   char * s = yytext;
   while (!strchr(" \t\v\n\f[.", *s)) s++;
-  if (varlookup (yytext, s - yytext)) {
+  var_t * var;
+  if ((var = varlookup (yytext, s - yytext))) {
     s = yytext;
     while (!strchr(" \t\v\n\f[", *s)) s++;
     *s++ = '\0';
@@ -926,17 +972,22 @@ val{WS}*[(]    {
     *s++ = '\0';
     strcpy (boundaryfunc, yytext);
     char * s1 = boundaryfunc;
+    boundarycomponent = 0;
     while (*s1 != '\0') {
-      if (*s1 == '.')
-	*s1 = '_';
-      s1++;
+      if (*s1 == '.') {
+	*s1++ = '_';
+	boundarycomponent = *s1;
+      }
+      else
+	s1++;
     }
+    if (!var->staggered)
+      boundarycomponent = 0.;
     fprintf (yyout, 
-	     "double _%s%s (Point point, scalar _s) {"
-	     " int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
-	     " POINT_VARIABLES; "
-	     " return ", 
+	     "double _%s%s (Point point, scalar _s) {",
 	     boundaryfunc, boundarydir);
+    boundary_staggering (boundarydir, boundarycomponent, yyout);
+    fputs (" POINT_VARIABLES; return ", yyout);
     inboundary = inforeach_boundary = 1;
     strcpy (boundaryvar, yytext);
     inforeach = 2;
@@ -1489,7 +1540,8 @@ void compdir (FILE * fin, FILE * fout, char * grid)
     fprintf (fout, "  init_scalar (%d, \"%s\");\n", 
 	     scalars[i].i, scalars[i].name);
   for (int i = 0; i < nvectors; i++)
-    fprintf (fout, "  init_vector ((vector){%d,%d}, \"%s\");\n", 
+    fprintf (fout, "  init_%svector ((vector){%d,%d}, \"%s\");\n",
+	     vectors[i].staggered ? "staggered_" : "",
 	     vectors[i].x, vectors[i].y, vectors[i].name);
   for (int i = 0; i < ntensors; i++)
     fprintf (fout, "  init_tensor ((tensor){{%d,%d},{%d,%d}}, \"%s\");\n", 

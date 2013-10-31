@@ -49,8 +49,6 @@
 @define allocated(k,l) _allocated(k,l)
 @define neighbor(k,l)  _neighbor(k,l)
 
-@define symmetric
-
 // the grid
 void * grid = NULL;
 // coordinates of the lower-left corner of the box
@@ -82,6 +80,9 @@ int list_len (scalar * list)
 
 scalar * list_append (scalar * list, scalar s)
 {
+  for (scalar t in list)
+    if (t == s)
+      return list;
   int len = list_len (list);
   list = realloc (list, sizeof (scalar)*(len + 2));
   list[len] = s;
@@ -125,6 +126,9 @@ int vectors_len (vector * list)
 
 vector * vectors_append (vector * list, vector v)
 {
+  for (vector w in list)
+    if (w.x == v.x && w.y == v.y)
+      return list;
   int len = vectors_len (list);
   list = realloc (list, sizeof (vector)*(len + 2));
   list[len] = v;
@@ -188,9 +192,10 @@ scalar * all = NULL; // all the fields
 
 // basic methods
 
-scalar (* init_scalar) (scalar, const char *);
-vector (* init_vector) (vector, const char *);
-tensor (* init_tensor) (tensor, const char *);
+scalar (* init_scalar)           (scalar, const char *);
+vector (* init_vector)           (vector, const char *);
+tensor (* init_tensor)           (tensor, const char *);
+vector (* init_staggered_vector) (vector, const char *);
 
 // events 
 
@@ -236,6 +241,8 @@ typedef struct {
   void   (* coarsen)                         (Point, scalar);
   double (* gradient)                        (double, double, double);
   struct { int x, y; } d;        // staggering
+  vector v;
+  bool   staggered;
 } Methods;
 
 Methods * _method;

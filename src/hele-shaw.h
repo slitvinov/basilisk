@@ -35,7 +35,7 @@ stored in a vector field. We also allocate space to store the
 statistics of the Poisson solver. */
 
 scalar p[], zeta[];
-vector beta[];
+staggered vector beta[];
 mgstats mgp;
 
 /**

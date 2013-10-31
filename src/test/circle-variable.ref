@@ -9,9 +9,9 @@ residual 7 7 4e-05
 residual 7 8 6e-06
 residual 7 9 6e-07
 residual 7 10 8e-08
-residual 7 11 9e-09
+residual 7 11 1e-08
 residual 7 12 2e-09
-max error 7 0.0167163
+max error 7 0.0152109
 residual 8 0 2e+03
 residual 8 1 1e+02
 residual 8 2 1e+01
@@ -25,7 +25,7 @@ residual 8 9 2e-06
 residual 8 10 2e-07
 residual 8 11 3e-08
 residual 8 12 4e-09
-max error 8 0.00476452
+max error 8 0.00446873
 residual 9 0 9e+03
 residual 9 1 6e+02
 residual 9 2 4e+01
@@ -39,7 +39,7 @@ residual 9 9 9e-06
 residual 9 10 1e-06
 residual 9 11 2e-07
 residual 9 12 3e-08
-max error 9 0.00123791
+max error 9 0.00118007
 residual 10 0 4e+04
 residual 10 1 3e+03
 residual 10 2 2e+02
@@ -53,4 +53,4 @@ residual 10 9 3e-05
 residual 10 10 4e-06
 residual 10 11 6e-07
 residual 10 12 8e-08
-max error 10 0.000305378
+max error 10 0.000294254
