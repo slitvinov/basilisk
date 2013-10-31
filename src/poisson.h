@@ -278,7 +278,7 @@ where the $c$ argument is optional and defaults to unity. */
 
 struct Poisson {
   scalar a, b;
-  vector c;
+  staggered vector c;
 };
 
 mgstats poisson (struct Poisson p)

@@ -509,7 +509,7 @@
       assert (0);
   }
 
-  void declaration (char * var) {
+  void declaration (char * var, char * text) {
     if (!strcmp (&var[strlen(var)-2], "[]")) {
       // automatic
       var[strlen(var)-2] = '\0';
@@ -518,12 +518,12 @@
       v->automatic = 1;
       v->symmetric = varsymmetric;
       v->staggered = varstaggered;
-      fputs (yytext, yyout);
+      fputs (text, yyout);
       new_field (v);
     }
     else {
       varpush (var, vartype, scope);
-      fputs (yytext, yyout);
+      fputs (text, yyout);
     }
     if (debug)
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
@@ -844,7 +844,7 @@ staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
       vartype = tensor;
     }
   }
-  yytext = var;
+  char * text = var;
   var = &var[7];
   nonspace (var);
   if (*var == '[') {
@@ -852,28 +852,28 @@ staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
     for (; *var != '\0'; var++)
       if (*var == '[') brack++;
       else if (*var == ']') brack--;
-    ECHO;
+    fputs (text, yyout);
   }
   else if (para == 0) { /* declaration */
-    declaration (var);
+    declaration (var, text);
     invardecl = scope + 1;
   }
   else if (para == 1) { /* function prototype (no nested functions) */
-    ECHO;
+    fputs (text, yyout);
     if (debug)
       fprintf (stderr, "%s:%d: proto: %s\n", fname, line, var);
     varpush (var, vartype, scope + 1);
     invardecl = 0;
   }
   else
-    ECHO;
+    fputs (text, yyout);
 }
 
 ,{WS}*[a-zA-Z0-9_\[\]]+ {
   if (invardecl == scope + 1) {
     char * var = &yytext[1];
     nonspace (var);
-    declaration (var);
+    declaration (var, yytext);
   }
   else
     REJECT;

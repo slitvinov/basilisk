@@ -7,8 +7,9 @@ scalar field `f`, a staggered vector field `u` and a timestep `dt`, it
 fills the staggered vector field `flux` with the components of the
 advection fluxes of `f`. */
 
-void tracer_fluxes (const scalar f, const vector u, 
-		    vector flux,
+void tracer_fluxes (const scalar f, 
+		    const staggered vector u,
+		    staggered vector flux,
 		    double dt)
 {
 

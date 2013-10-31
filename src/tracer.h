@@ -13,7 +13,7 @@ staggered vector field `u` and the timestep `dt` are defined by a
 solver. */
 
 extern scalar * tracers;
-extern vector u;
+extern staggered vector u;
 extern double dt;
 
 /**
