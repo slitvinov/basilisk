@@ -117,6 +117,13 @@ vector new_vector (const char * name)
   return v;
 }
 
+vector new_staggered_vector (const char * name)
+{
+  vector v = new_vector (name);
+  init_staggered_vector (v, name);
+  return v;
+}
+
 tensor new_tensor (const char * name)
 {
   char cname[strlen(name) + 3];
