@@ -29,25 +29,16 @@ void parameters()
 /**
 The default boundary conditions are symmetry (i.e. slip walls). We
 need no-slip on three boundaries and $u=1$ on the top
-boundary. Boundary conditions are set by defining the value of the
-'ghost cell' e.g. for the top boundary we have
+boundary i.e. */
 
-![](/boundary.png)
-
-with
-$$
-u_b = (u + u_g)/2
-$$
-this gives a ghost cell value for the top boundary of */
-
-u.x[top]    = 2. - u.x[];
+u.x[top]    = dirichlet(1);
 
 /**
 For the other no-slip boundaries this gives */
 
-u.x[bottom] = - u.x[];
-u.y[left]   = - u.y[];
-u.y[right]  = - u.y[];
+u.x[bottom] = dirichlet(0);
+u.y[left]   = dirichlet(0);
+u.y[right]  = dirichlet(0);
 
 /**
 We define an auxilliary function which computes the total kinetic
@@ -57,7 +48,7 @@ static double energy()
 {
   double se = 0.;
   foreach(reduction(+:se))
-    se += (sq(u.x[] + u.x[1,0)] + sq(u.y[] + u.y[0,1))]/8.*sq(Delta);
+    se += (sq(u.x[] + u.x[1,0]) + sq(u.y[] + u.y[0,1]))/8.*sq(Delta);
   return se;
 }
 
