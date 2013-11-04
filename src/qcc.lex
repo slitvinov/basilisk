@@ -652,7 +652,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   else if (inarg == para + 1) {
     fputs ("})", yyout);
     inarg = 0;
-   }
+  }
   else
     ECHO;
 }
@@ -1277,7 +1277,8 @@ reduction{WS}*[(](min|max):{ID}+[)] {
 
 {ID}+{WS}*[(] {
   // function call with 'args' assignment
-  char * s = yytext; space (s);
+  char * s = yytext;
+  while (!strchr(" \t\v\n\f(", *s)) s++;
   int len = s - yytext;
   for (int i = 0; i < nargs && !inarg; i++)
     if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {
