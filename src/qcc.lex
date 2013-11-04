@@ -984,7 +984,7 @@ val{WS}*[(]    {
 	s1++;
     }
     if (!var->staggered)
-      boundarycomponent = 0.;
+      boundarycomponent = 0;
     fprintf (yyout, 
 	     "double _boundary%d (Point point, scalar _s) {",
 	     nboundary);
@@ -998,6 +998,18 @@ val{WS}*[(]    {
   }
   else
     REJECT;
+}
+
+dirichlet{WS}*[(] {
+  para++;
+  if (inboundary &&
+      ((boundarycomponent == 'x' && (!strcmp(boundarydir, "left") ||
+				     !strcmp(boundarydir, "right"))) ||
+       (boundarycomponent == 'y' && (!strcmp(boundarydir, "top") ||
+				     !strcmp(boundarydir, "bottom")))))
+    fputs (&yytext[9], yyout);
+  else
+    ECHO;
 }
 
 ghost {
