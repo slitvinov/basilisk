@@ -47,7 +47,7 @@
   int nreduct;
 
   int inboundary;
-  char boundaryfunc[80], boundaryvar[80], boundarydir[80];
+  char boundaryvar[80], boundarydir[80];
   FILE * boundaryfp = NULL;
   int boundarycomponent, nboundary = 0;
 
@@ -733,8 +733,8 @@ end_foreach{ID}*{SP}*"()" {
       fputc (c, yyout);
     fputs (" } ", yyout);
     fprintf (yyout, 
-	     "double _%s%s_homogeneous (Point point, scalar _s) {",
-	     boundaryfunc, boundarydir);
+	     "double _boundary%d_homogeneous (Point point, scalar _s) {",
+	     nboundary);
     boundary_staggering (boundarydir, boundarycomponent, yyout);
     fputs (" POINT_VARIABLES; return ", yyout);
     rewind (fp);
@@ -744,17 +744,18 @@ end_foreach{ID}*{SP}*"()" {
     if (scope == 0)
       /* file scope */
       fprintf (yyout, 
-	       "static void _boundary%d (void) { ",
-	       nboundary++);
+	       "static void _set_boundary%d (void) { ",
+	       nboundary);
     /* function/file scope */
     fprintf (yyout,
-	     "_method[%s].boundary[%s] = _%s%s;"
-	     "_method[%s].boundary_homogeneous[%s] = _%s%s_homogeneous;",
-	     boundaryvar, boundarydir, boundaryfunc, boundarydir,
-	     boundaryvar, boundarydir, boundaryfunc, boundarydir);
+	     "_method[%s].boundary[%s] = _boundary%d; "
+	     "_method[%s].boundary_homogeneous[%s] = _boundary%d_homogeneous;",
+	     boundaryvar, boundarydir, nboundary,
+	     boundaryvar, boundarydir, nboundary);
     if (scope == 0)
       /* file scope */
       fputs (" } ", yyout);
+    nboundary++;
     inboundary = inforeach_boundary = inforeach = 0;
   }
   else if (inforeach && scope == foreachscope && para == foreachpara) {
@@ -972,12 +973,11 @@ val{WS}*[(]    {
     s = boundarydir;
     while (!strchr(" \t\v\n\f]", *s)) s++;
     *s++ = '\0';
-    strcpy (boundaryfunc, yytext);
-    char * s1 = boundaryfunc;
+    char * s1 = yytext;
     boundarycomponent = 0;
     while (*s1 != '\0') {
       if (*s1 == '.') {
-	*s1++ = '_';
+	s1++;
 	boundarycomponent = *s1;
       }
       else
@@ -986,8 +986,8 @@ val{WS}*[(]    {
     if (!var->staggered)
       boundarycomponent = 0.;
     fprintf (yyout, 
-	     "double _%s%s (Point point, scalar _s) {",
-	     boundaryfunc, boundarydir);
+	     "double _boundary%d (Point point, scalar _s) {",
+	     nboundary);
     boundary_staggering (boundarydir, boundarycomponent, yyout);
     fputs (" POINT_VARIABLES; return ", yyout);
     inboundary = inforeach_boundary = 1;
@@ -1520,7 +1520,7 @@ void compdir (FILE * fin, FILE * fout, char * grid)
   fputs ("  { 1 }\n};\n", fout);
   /* boundaries */
   for (int i = 0; i < nboundary; i++)
-    fprintf (fout, "static void _boundary%d (void);\n", i);
+    fprintf (fout, "static void _set_boundary%d (void);\n", i);
   /* methods */
   fprintf (fout, "void %s_methods(void);\n", grid);
   fputs ("static void init_solver (void) {\n", fout);
@@ -1551,7 +1551,7 @@ void compdir (FILE * fin, FILE * fout, char * grid)
 	     tensors[i].x.x, tensors[i].x.y,
 	     tensors[i].y.x, tensors[i].y.y, tensors[i].name);
   for (int i = 0; i < nboundary; i++)
-    fprintf (fout, "  _boundary%d();\n", i);
+    fprintf (fout, "  _set_boundary%d();\n", i);
   fputs ("  init_events();\n}\n", fout);
   fclose (fout);
 }
