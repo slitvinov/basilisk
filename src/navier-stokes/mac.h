@@ -12,7 +12,6 @@ double NU = 0.;
 staggered vector alpha;
 // user-provided functions
 void parameters (void);
-void end        (void);
 // timestep
 double dt = 0;
 mgstats mgp;  // statistics of the Poisson solver
@@ -88,7 +87,6 @@ void run (void)
   while (events (i, t)) {
     i++; t = tnext;
   }
-  end();
   timer_print (start, i, -1);
 
   free_grid();

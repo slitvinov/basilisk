@@ -11,6 +11,8 @@ event event4 (i++) fprintf (stderr, "i++: %d\n", i);
 
 event event5 (t += 1; t <= 20) fprintf (stderr, "t++: %g\n", t);
 
+event event6 (t = end) fprintf (stderr, "end: %g\n", t);
+
 int main (int argc, char * argv[])
 {
   init_events();

@@ -1197,6 +1197,13 @@ event{WS}+{ID}+{WS}*[(] {
     ECHO;
 }
 
+end {
+  if (inevent == 1)
+    fputs ("1234567890", yyout);
+  else
+    ECHO;
+}
+
 foreach_dimension{WS}*[(]{WS}*[)] {
   foreachdimline = line;
   foreachdim = scope; foreachdimpara = para;

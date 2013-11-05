@@ -84,11 +84,11 @@ bilinearly-interpolated on an N x N grid. */
 event outputfile (i += 100) output_matrix (u.x, stdout, N, linear = true);
 
 /**
-This function is called after completion of the simulation. We write
+This event will happen after completion of the simulation. We write
 in the `xprof` and `yprof` files the interpolated values of `u.x` and
 `u.y` along the two profiles. */
 
-void end()
+event profiles (t = end)
 {
   FILE * fp = fopen("xprof", "w");
   for (double y = -0.5; y <= 0.5; y += 0.01)

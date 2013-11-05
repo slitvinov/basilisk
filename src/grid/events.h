@@ -1,6 +1,7 @@
 #define INIT ev->expr[0]
 #define COND ev->expr[1]
 #define INC  ev->expr[2]
+#define END_EVENT 1234567890
 
 static int event_cond (Event * ev, int i, double t)
 {
@@ -104,8 +105,13 @@ void init_events (void)
 	ev->nexpr = 0;
       }
       ev->i = ev->t = -1;
-      if (INIT)
+      if (INIT) {
 	(* INIT) (&ev->i, &ev->t);
+	if (ev->i == END_EVENT || ev->t == END_EVENT) {
+	  ev->i = END_EVENT;
+	  INIT = NULL;
+	}
+      }
       else if (INC) {
 	(* INC) (&ev->i, &ev->t);
 	if (ev->i != -1)
@@ -114,6 +120,13 @@ void init_events (void)
 	  ev->t = 0;
       }
   }
+}
+
+static void end_event_do (int i, double t)
+{
+  for (Event * ev = Events; !ev->last; ev++)
+    if (ev->i == END_EVENT)
+      ev->action (i, t);
 }
 
 int events (int i, double t)
@@ -128,8 +141,10 @@ int events (int i, double t)
       cond = 1;
   for (Event * ev = Events; !ev->last; ev++) {
     int status = event_do (ev, i, t);
-    if (status == event_stop)
+    if (status == event_stop) {
+      end_event_do (i, t);
       return 0;
+    }
     if (status == event_alive &&
 	(COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt))
       cond1 = 1;
@@ -138,7 +153,10 @@ int events (int i, double t)
     if (ev->i > i)
       inext = 1;
   }
-  return (!cond || cond1) && (tnext != HUGE || inext);
+  if ((!cond || cond1) && (tnext != HUGE || inext))
+    return 1;
+  end_event_do (i, t);
+  return 0;
 }
 
 double dtnext (double t, double dt)
