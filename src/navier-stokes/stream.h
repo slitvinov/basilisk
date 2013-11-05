@@ -68,7 +68,7 @@ have been processed (the '`last`' keyword), we update the streamfunction
 field $\psi$ by solving a Poisson equation with the updated vorticity
 field $\omega$ (which has just been advected/diffused). */
 
-event streamfunction (i++, last)
+event velocity (i++)
 {
   mgpsi = poisson (psi, omega);
 

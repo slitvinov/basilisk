@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "run.h"
 #include "timestep.h"
 #include "poisson.h"
 
@@ -10,11 +10,8 @@ staggered vector u[];
 double NU = 0.;
 // specific volume (default is unity)
 staggered vector alpha;
-// user-provided functions
-void parameters (void);
-// timestep
-double dt = 0;
-mgstats mgp;  // statistics of the Poisson solver
+// statistics of the Poisson solver
+mgstats mgp;
 
 // default is no flow through boundaries
 u.x[right]  = 0.;
@@ -73,21 +70,5 @@ event projection (i++)
       u.x[] -= (p[] - p[-1,0])/Delta;
   boundary ((scalar *){u});
 
-  dt = dtnext (t, timestep (u));
-}
-
-void run (void)
-{
-  parameters();
-  init_grid (N);
-
-  timer start = timer_start();
-  double t = 0;
-  int i = 0;
-  while (events (i, t)) {
-    i++; t = tnext;
-  }
-  timer_print (start, i, -1);
-
-  free_grid();
+  dt = timestep (u);
 }

@@ -108,7 +108,7 @@ void init_events (void)
       if (INIT) {
 	(* INIT) (&ev->i, &ev->t);
 	if (ev->i == END_EVENT || ev->t == END_EVENT) {
-	  ev->i = END_EVENT;
+	  ev->i = END_EVENT; ev->t = -1;
 	  INIT = NULL;
 	}
       }
