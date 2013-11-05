@@ -11,7 +11,7 @@ static double solution (double x, double y)
   double R0 = 0.1;
   return exp(-(x*x+y*y)/sq(R0));
 #else
-  return x + y;
+  return x - y;
 #endif
 }
 
@@ -85,9 +85,20 @@ int main (int argc, char ** argv)
   if (error())
     return 1;
 
+  scalar div[];
+  foreach()
+    div[] = u.x[] - u.x[1,0] + u.y[] - u.y[0,1];
+  stats sdiv = statsf(div);
+  fprintf (stderr, "div before: %g\n", sdiv.max);
+
   tolerance = 1e-5;
-  s = adapt_wavelet ({h}, &tolerance, 10);
+  s = adapt_wavelet ({h}, &tolerance, 10, list = {h,u});
   fprintf (stderr, "refined: %d coarsened: %d\n", s.nf, s.nc);
+
+  foreach()
+    div[] = u.x[] - u.x[1,0] + u.y[] - u.y[0,1];
+  sdiv = statsf(div);
+  fprintf (stderr, "div after: %g\n", sdiv.max);
 
 #if DEBUG
   fp = fopen ("cells1", "w");

@@ -1,6 +1,8 @@
 refined: 0 coarsened: 311100
 maximum error: 0 0
 eu: avg: 0 stddev: 0 max: 0
+div before: 0
 refined: 28820 coarsened: 0
+div after: 0
 maximum error: 0 0
 eu: avg: 0 stddev: 0 max: 0

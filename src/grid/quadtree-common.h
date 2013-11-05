@@ -470,6 +470,22 @@ static void refine_staggered (Point point, scalar s)
     fine(v.x,1,0) = (fine(v.x,0,0) + fine(v.x,2,0))/2.;
     fine(v.x,1,1) = (fine(v.x,0,1) + fine(v.x,2,1))/2.;
   }
+
+  // local projection, see section 3.3 of Popinet, JCP, 2009
+  double d[4], p[4];
+  d[0] = fine(v.x,1,1) - fine(v.x,0,1) + fine(v.y,0,2) - fine(v.y,0,1);
+  d[1] = fine(v.x,2,1) - fine(v.x,1,1) + fine(v.y,1,2) - fine(v.y,1,1);
+  d[2] = fine(v.x,1,0) - fine(v.x,0,0) + fine(v.y,0,1) - fine(v.y,0,0);
+  d[3] = fine(v.x,2,0) - fine(v.x,1,0) + fine(v.y,1,1) - fine(v.y,1,0);
+  assert (d[0] + d[1] + d[2] + d[3] < 1e-3);
+  p[0] = 0.;
+  p[1] = (3.*d[1] + d[2])/4. + d[3]/2.;
+  p[2] = (d[1] + 3.*d[2])/4. + d[3]/2.;
+  p[3] = (d[1] + d[2])/2. + d[3];
+  fine(v.x,1,1) += p[1] - p[0];
+  fine(v.x,1,0) += p[3] - p[2];
+  fine(v.y,0,1) += p[0] - p[2];
+  fine(v.y,1,1) += p[1] - p[3];
 }
 
 vector quadtree_init_staggered_vector (vector v, const char * name)
