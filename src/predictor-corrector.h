@@ -1,5 +1,7 @@
 // Generic predictor/corrector time-integration
 
+#include "utils.h"
+
 // Required from solver
 // fields updated by time-integration
 extern scalar * evolving;

@@ -39,10 +39,9 @@ void flux (const double * state, double * flux, double * eigenvalue);
 
 ### Setup
 
-First we need some utilities. Time integration will be done with a generic 
+Time integration will be done with a generic
 [predictor-corrector](predictor-corrector.h) scheme. */
 
-#include "utils.h"
 #include "predictor-corrector.h"
 
 /**

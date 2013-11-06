@@ -40,10 +40,9 @@ u.y[top]    = 0.;
 u.y[bottom] = 0.;
 
 /**
-Here we set the default staggering for velocity and the gradient
-functions for each tracer (as defined in the user-provided `tracers`
-list). We also set default values (zero) for the tracer and velocity
-fields. */
+Here we set the gradient functions for each tracer (as defined in the
+user-provided `tracers` list). We also set default values (zero) for
+the tracer and velocity fields. */
 
 event defaults (i = 0)
 {
