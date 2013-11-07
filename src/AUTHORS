@@ -6,5 +6,5 @@ Original authors
 Contributors
 ------------
 
-* Jose-Maria Fullana: Conway's game of life
+* Jose-Maria Fullana: [Conway's game of life](examples/life.c)
 * Emily Lane: GRD export
