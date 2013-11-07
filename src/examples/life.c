@@ -47,11 +47,10 @@ event life (i++)
 /**
 We count the number of live neighbors in a 3x3 neighbourhood. */
 
-    int neighbors = 0;
+    int neighbors = - a[];
     for (int i = -1; i <= 1; i++)
       for  (int j = -1; j <= 1; j++)
 	neighbors += a[i,j];
-    neighbors -= a[];
 
 /**
 If a cell is alive and surrounded by 2 or 3 neighbors it carries on
