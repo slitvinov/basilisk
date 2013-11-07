@@ -110,7 +110,7 @@ gnuplot> plot 'cells' w l lc 0, 'stencil' u 1:2:3+v w labels tc lt 1, \
 
 With some zooming and panning, you should get this picture
 
-![Example of stencil/field causing an exception](catch.png)
+![Example of stencil/field causing an exception](figures/catch.png)
 
 The red numbers represent the stencil the code was working on when the
 exception occured. It is centered on the top-left corner of the

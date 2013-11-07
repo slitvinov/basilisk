@@ -96,7 +96,9 @@ event advance (i++)
 We allocate a local symmetric tensor field. To be able to compute the
 divergence of the tensor at the staggered locations, we need to
 compute the diagonal components at the center of cells and the
-off-diagonal component at the vertices. */
+off-diagonal component at the vertices. 
+
+![Staggering of $\mathbf{u}$ and $\mathbf{S}$](/src/figures/Sxx.png) */
 
   symmetric tensor S[];
   S.x.y.d.x = S.x.y.d.y = -1; // staggering
