@@ -1,8 +1,18 @@
+/**
+# Generic time loop
+
+The `run()` function below implements a generic time loop which
+executes events until termination. */
+
 #include "utils.h"
 
-// Default parameters
-void parameters  (void); // user-provided
-// time and timestep
+/**
+The `parameters()` function is called before grid initialisation. It
+is usually provided by the user. 
+
+The time `t` and timestep `dt` can be accessed as global variables. */
+
+void parameters  (void);
 double t = 0., dt = 0.;
 
 void run (void)
@@ -14,11 +24,26 @@ void run (void)
   timer start = timer_start();
   int i = 0; long tnc = 0;
   while (events (i, t)) {
+
+/**
+Here we adjust the timestep (which can be set by one of the events
+using e.g. a stability criterion), so that it is compatible with the
+times of upcoming events. */
+
     dt = dtnext (t, dt);
+
+/**
+We store the total number of cells advanced in time for computing
+speed statistics. */
+
     foreach(reduction(+:tnc))
       tnc++;
     i++; t = tnext;
   }
+
+/**
+Time/speed statistics are written out on standard output. */
+
   timer_print (start, i, tnc);
 
   free_grid();
