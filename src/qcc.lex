@@ -1595,6 +1595,8 @@ int main (int argc, char ** argv)
       debug = 1;
     else if (!strcmp (argv[i], "-catch"))
       catch = 1;
+    else if (catch && !strncmp (argv[i], "-O", 2))
+      ;
     else if (!strcmp (argv[i], "-nolineno"))
       nolineno = 1;
     else if (!strcmp (argv[i], "-o")) {
