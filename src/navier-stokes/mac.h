@@ -21,7 +21,7 @@ need to solve a Poisson problem. */
 /**
 The Markers-And-Cells (MAC) formulation was first described in the
 pioneering paper of [Harlow and Welch,
-1964](/src/references.bib#harlow1964). It relies on a *staggered*
+1965](/src/references.bib#harlow1965). It relies on a *staggered*
 discretisation of the velocity components `u.x` and `u.y`, relative to
 the (centered) pressure `p`. This guarantees the consistency of the
 discrete gradient, divergence and Laplacian operators and leads to a
