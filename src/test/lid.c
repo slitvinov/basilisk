@@ -19,7 +19,7 @@ void parameters()
   // number of grid points
   N = 64;
   // viscosity
-  NU = 1e-3;
+  mu = 1e-3;
   // maximum timestep
   DT = 1e-1;
   // CFL number
