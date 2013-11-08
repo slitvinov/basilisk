@@ -13,9 +13,6 @@ dir=`echo $PWD | sed "s:$BASILISK_WIKI/::"`
 script()
 {
     cat <<EOF
-#!/bin/sh
-rm -f warn pass fail $log $out
-\$BASILISK/qcc $CFLAGS -o $test $test.c $LIBS -lm > warn 2>&1 || mv -f warn fail
 rm -f $test.c
 if test -f fail; then
     cat fail
@@ -50,7 +47,12 @@ expirecache()
 locally()
 {
     cd $test
+    rm -f warn pass fail $log $out
+    cd ..
     echo qcc $CFLAGS -o $test/$test $test.c $LIBS -lm;
+    qcc $CFLAGS -o $test/$test $test.c $LIBS -lm > $test/warn 2>&1 \
+	|| mv -f $test/warn $test/fail
+    cd $test
     script | sh
     expirecache
     cd ..
@@ -66,7 +68,12 @@ remotely()
     mkdir $chksum
     cp -f $test.c $chksum
     if test -f $test.ref; then cp -f $test.ref $chksum; fi
-    script > $chksum/$test.sh
+    (cat <<EOF
+#!/bin/sh
+rm -f warn pass fail $log $out
+\$BASILISK/qcc $CFLAGS -o $test $test.c $LIBS -lm > warn 2>&1 || mv -f warn fail
+EOF
+    script) > $chksum/$test.sh
 cat <<EOF >> $chksum/$test.sh
 rm -f $test.c $test.sh $test.ref
 tar czf \$HOME/$chksum.tgz *

@@ -169,6 +169,11 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
       free (path);
       fclose (fp);
     }
+    else {
+      fprintf (stderr, "%s:%d: error: %s: No such file or directory\n", 
+	       fname, yylineno - 1, s);
+      return 1;
+    }
   }
 }
 
