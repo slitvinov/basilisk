@@ -109,7 +109,6 @@ void init_events (void)
 	(* INIT) (&ev->i, &ev->t);
 	if (ev->i == END_EVENT || ev->t == END_EVENT) {
 	  ev->i = END_EVENT; ev->t = -1;
-	  INIT = NULL;
 	}
       }
       else if (INC) {
@@ -137,7 +136,8 @@ int events (int i, double t)
   int inext = 0, cond = 0, cond1 = 0;
   tnext = HUGE;
   for (Event * ev = Events; !ev->last && !cond; ev++)
-    if (COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt)
+    if (ev->i != END_EVENT && 
+	(COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt))
       cond = 1;
   for (Event * ev = Events; !ev->last; ev++) {
     int status = event_do (ev, i, t);
@@ -145,7 +145,7 @@ int events (int i, double t)
       end_event_do (i, t);
       return 0;
     }
-    if (status == event_alive &&
+    if (status == event_alive && ev->i != END_EVENT &&
 	(COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt))
       cond1 = 1;
     if (ev->t > t && ev->t < tnext)
