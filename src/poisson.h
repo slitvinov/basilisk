@@ -146,8 +146,10 @@ mgstats mg_solve (scalar a, scalar b,
 {
   scalar res[], da[];
   mgstats s = {0, 0., 0.};
-  foreach () // fixme: need reduction(+:s.sum)
-    s.sum += b[];
+  double sum = 0.;
+  foreach (reduction(+:sum))
+    sum += b[];
+  s.sum = sum;
 
 /**
 Here we compute the initial residual field and its maximum. */
