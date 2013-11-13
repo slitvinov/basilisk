@@ -269,8 +269,9 @@ mgstats poisson (struct Poisson p)
 {
 
 /**
-If `alpha` or `lambda` are not set, we replace then with constant
-unity vector (resp. zero scalar) fields. */
+If $\alpha$ or $\lambda$ are not set, we replace them with constant
+unity vector (resp. zero scalar) fields. Note that the user is free to
+provide $\alpha$ and $\beta$ as constant fields. */
 
   if (p.alpha.x) {
     staggered vector alpha = p.alpha;

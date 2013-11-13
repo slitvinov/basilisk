@@ -17,14 +17,10 @@
   int debug = 0, catch = 0, nolineno = 0;
   char dir[] = ".qccXXXXXX";
 
-  int nvar = 0, nevents = 0;
-  int nscalars = 0, nvectors = 0, ntensors = 0;
-  Scalar * scalars = NULL;
-  Vector * vectors = NULL;
-  Tensor * tensors = NULL;
+  int nvar = 0, nconst = 0, nevents = 0;
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
-    inforeach_boundary, inforeach_face, inforeach_vertex, nconst = 0;
+    inforeach_boundary, inforeach_face, inforeach_vertex, nmaybeconst = 0;
   int invardecl, vartype, varsymmetric, varstaggered, varmaybeconst;
   char * varconst;
   int inval, invalpara;
@@ -318,21 +314,21 @@
   void endforeach () {
     fclose (yyout);
     yyout = foreachfp;
-    if (nconst) {
+    if (nmaybeconst) {
       // combinations for each constant field
-      int n = 1 << nconst, bits;
+      int n = 1 << nmaybeconst, bits;
       for (bits = 0; bits < n; bits++) {
 	fputs ("\nif (", yyout);
-	for (int i = 0; i < nconst; i++) {
+	for (int i = 0; i < nmaybeconst; i++) {
 	  fprintf (yyout, "%sis_constant(%s%s)",
 		   (bits & (1 << i)) ? "" : "!",
 		   foreachconst[i]->v,
 		   foreachconst[i]->type == vector ? ".x" : "");
-	  if (i < nconst - 1)
+	  if (i < nmaybeconst - 1)
 	    fputs (" && ", yyout);
 	}
 	fputs (") {\n", yyout);
-	for (int i = 0; i < nconst; i++)
+	for (int i = 0; i < nmaybeconst; i++)
 	  if (foreachconst[i]->type == scalar) {
 	    if (bits & (1 << i))
 	      fprintf (yyout,
@@ -554,6 +550,7 @@
 
   void new_field (var_t * var) {
     if (scope > 0) {
+      // automatic variables
       fprintf (yyout, "= new_%s%s%s(\"%s\"",
 	       var->constant ? "const_" : "",
 	       var->symmetric ? "symmetric_" : 
@@ -573,38 +570,41 @@
       else
 	fputc (')', yyout);
     }
-    else if (var->type == scalar) {
-      fprintf (yyout, "= %d", nvar);
-      var->i[0] = nvar;
-      nscalars++;
-      scalars = realloc (scalars, sizeof (Scalar)*nscalars);
-      scalars[nscalars-1].i = nvar++;
-      scalars[nscalars-1].name = strdup (var->v);
+    else {
+      // global constants
+      if (var->constant) {
+	if (var->type == scalar) {
+	  fprintf (yyout, "= _NVARMAX + %d", nconst);
+	  var->i[0] = nconst++;
+	}
+	else if (var->type == vector) {
+	  fprintf (yyout, "= {_NVARMAX + %d,_NVARMAX + %d}", 
+		   nconst, nconst + 1);
+	  for (int i = 0; i < 2; i++)
+	    var->i[i] = nconst++;
+	}
+	else
+	  assert (0);
+      }
+      // global variables
+      else if (var->type == scalar) {
+	fprintf (yyout, "= %d", nvar);
+	var->i[0] = nvar++;
+      }
+      else if (var->type == vector) {
+	fprintf (yyout, "= {%d,%d}", nvar, nvar + 1);    
+	for (int i = 0; i < 2; i++)
+	  var->i[i] = nvar++;
+      }
+      else if (var->type == tensor) {
+	fprintf (yyout, "= {{%d,%d},{%d,%d}}",
+		 nvar, nvar + 1, nvar + 2, nvar + 3);
+	for (int i = 0; i < 4; i++)
+	  var->i[i] = nvar++;
+      }
+      else
+	assert (0);
     }
-    else if (var->type == vector) {
-      fprintf (yyout, "= {%d,%d}", nvar, nvar + 1);    
-      for (int i = 0; i < 2; i++)
-	var->i[i] = nvar + i;
-      nvectors++;
-      vectors = realloc (vectors, sizeof (Vector)*nvectors);
-      vectors[nvectors-1] = (Vector){nvar,nvar+1};
-      vectors[nvectors-1].name = strdup (var->v);
-      vectors[nvectors-1].staggered = var->staggered;
-      nvar += 2;
-    }
-    else if (var->type == tensor) {
-      fprintf (yyout, "= {{%d,%d},{%d,%d}}",
-	       nvar, nvar + 1, nvar + 2, nvar + 3);
-      for (int i = 0; i < 4; i++)
-	var->i[i] = nvar + i;
-      ntensors++;
-      tensors = realloc (tensors, sizeof (Tensor)*ntensors);
-      tensors[ntensors-1] = (Tensor){{nvar,nvar+1},{nvar+2, nvar+3}};
-      tensors[ntensors-1].name = strdup (var->v);
-      nvar += 4;
-    }
-    else
-      assert (0);
   }
 
   void declaration (char * var, char * text) {
@@ -777,7 +777,7 @@ foreach{ID}* {
   inforeach = 1; foreachscope = scope; foreachpara = para;
   free (foreachconst); 
   foreachconst = NULL;
-  nconst = 0;
+  nmaybeconst = 0;
   nreduct = 0;
   foreachfp = yyout;
   yyout = dopen ("foreach.h", "w");
@@ -968,7 +968,7 @@ staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
     fputs (text, yyout);
 }
 
-const{WS}+(scalar|vector|tensor){WS}+[a-zA-Z0-9_]+\[{WS}*\]{WS}*=[^;]+ {
+const{WS}+(symmetric{WS}+|staggered{WS}+|{WS}*)(scalar|vector|tensor){WS}+[a-zA-Z0-9_]+\[{WS}*\]{WS}*=[^;]+ {
   // const scalar a[] = 1.;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
@@ -1032,15 +1032,16 @@ val{WS}*[(]    {
       while (!strchr(" \t\v\n\f[", *s)) s++;
       *s = '\0';
       if (var->constant)
-	fprintf (yyout, "(_constant[%s-_NVARMAX])", yytext);
+	fprintf (yyout, "((const double) _constant[%s-_NVARMAX])", yytext);
       else {
 	if (var->maybeconst) {
 	  int found = 0;
-	  for (int i = 0; i < nconst && !found; i++)
+	  for (int i = 0; i < nmaybeconst && !found; i++)
 	    found = !strcmp (foreachconst[i]->v, var->v);
 	  if (!found) {
-	    foreachconst = realloc (foreachconst, ++nconst*sizeof (var_t *));
-	    foreachconst[nconst - 1] = var;
+	    foreachconst = realloc (foreachconst, 
+				    ++nmaybeconst*sizeof (var_t *));
+	    foreachconst[nmaybeconst - 1] = var;
 	    if (debug)
 	      fprintf (stderr, "%s:%d: '%s' may be const\n", 
 		       fname, line, var->v);
@@ -1706,8 +1707,7 @@ void compdir (FILE * fin, FILE * fout, char * grid)
   for (int i = 0; i < nboundary; i++)
     fprintf (fout, "static void _set_boundary%d (void);\n", i);
   /* methods */
-  fprintf (fout, "void %s_methods(void);\n", grid);
-  fputs ("static void init_solver (void) {\n", fout);
+  fputs ("void init_solver (void) {\n", fout);
   /* scalar methods */
   fputs ("  _method = calloc (datasize/sizeof(double), sizeof (Methods));\n", 
 	 fout);
@@ -1723,17 +1723,38 @@ void compdir (FILE * fin, FILE * fout, char * grid)
   if (catch)
     fputs ("  catch_fpe();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);
-  for (int i = 0; i < nscalars; i++)
-    fprintf (fout, "  init_scalar (%d, \"%s\");\n", 
-	     scalars[i].i, scalars[i].name);
-  for (int i = 0; i < nvectors; i++)
-    fprintf (fout, "  init_%svector ((vector){%d,%d}, \"%s\");\n",
-	     vectors[i].staggered ? "staggered_" : "",
-	     vectors[i].x, vectors[i].y, vectors[i].name);
-  for (int i = 0; i < ntensors; i++)
-    fprintf (fout, "  init_tensor ((tensor){{%d,%d},{%d,%d}}, \"%s\");\n", 
-	     tensors[i].x.x, tensors[i].x.y,
-	     tensors[i].y.x, tensors[i].y.y, tensors[i].name);
+  for (int i = varstack; i >= 0; i--) {
+    var_t var = _varstack[i];
+    if (var.i[0] >= 0) {
+      if (var.constant) {
+	// global constants
+	if (var.type == scalar)
+	  fprintf (fout, 
+		   "  init_const_scalar (_NVARMAX+%d, \"%s\", %s);\n",
+		   var.i[0], var.v, var.constant);
+	else if (var.type == vector)
+	  fprintf (fout, 
+		   "  init_const_vector ((vector){_NVARMAX+%d,_NVARMAX+%d},"
+		   " \"%s\", (double [])%s);\n",
+		   var.i[0], var.i[1], var.v, var.constant);
+	else
+	  assert (0);
+      }
+      // global variables
+      else if (var.type == scalar)
+	fprintf (fout, "  init_scalar (%d, \"%s\");\n",
+		 var.i[0], var.v);
+      else if (var.type == vector)
+	fprintf (fout, "  init_%svector ((vector){%d,%d}, \"%s\");\n",
+		 var.staggered ? "staggered_" : "",
+		 var.i[0], var.i[1], var.v);
+      else if (var.type == tensor)
+	fprintf (fout, "  init_tensor ((tensor){{%d,%d},{%d,%d}}, \"%s\");\n", 
+		 var.i[0], var.i[1], var.i[2], var.i[3], var.v);
+      else
+	assert (0);
+    }
+  }
   for (int i = 0; i < nboundary; i++)
     fprintf (fout, "  _set_boundary%d();\n", i);
   fputs ("  init_events();\n}\n", fout);
@@ -1859,7 +1880,6 @@ int main (int argc, char ** argv)
 #else
       fputs ("#define undefined DBL_MAX\n", fout);
 #endif
-      fputs ("@include \"grid.h\"\n", fout);
       /* grid */
       if (default_grid)
 	fprintf (fout, "#include \"grid/%s.h\"\n", grid);
@@ -1878,6 +1898,7 @@ int main (int argc, char ** argv)
 	}
 	fputs (s, fout);
       }
+      fputs ("@include \"grid.h\"\n", fout);
       fclose (fout);
       fclose (fin);
       fout = dopen (file, "w");

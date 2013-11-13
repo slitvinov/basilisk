@@ -158,19 +158,34 @@ tensor new_symmetric_tensor (const char * name)
   return t;
 }
 
+static int nconst = 0;
+
+void init_const_scalar (scalar s, const char * name, double val)
+{
+  if (s - _NVARMAX >= nconst) {
+    nconst = s - _NVARMAX + 1;
+    _constant = realloc (_constant, nconst*sizeof (double));
+  }
+  _constant[nconst - 1] = val;
+}
+
 scalar new_const_scalar (const char * name, double val)
 {
-  static int nconst = 0;
-  _constant = realloc (_constant, ++nconst*sizeof (double));
-  _constant[nconst - 1] = val;
-  return _NVARMAX + nconst - 1;
+  scalar s = nconst + _NVARMAX;
+  init_const_scalar (s, name, val);
+  return s;
+}
+
+void init_const_vector (vector v, const char * name, double * val)
+{
+  init_const_scalar (v.x, name, val[0]);
+  init_const_scalar (v.y, name, val[1]);
 }
 
 vector new_const_vector (const char * name, double * val)
 {
-  vector v;
-  v.x = new_const_scalar (name, val[0]);
-  v.y = new_const_scalar (name, val[1]);
+  vector v = {nconst + _NVARMAX, nconst + 1 + _NVARMAX};
+  init_const_vector (v, name, val);
   return v;
 }
 

@@ -249,6 +249,9 @@ typedef struct {
 
 Methods * _method;
 double  * _constant = NULL;
+extern int datasize;
+
+void init_solver (void);
 
 void free_solver()
 {

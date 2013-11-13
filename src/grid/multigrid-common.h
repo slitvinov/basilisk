@@ -34,21 +34,23 @@ void restriction (scalar * list)
 {
   scalar * listc = NULL;
   vector * lists = NULL;
-  for (scalar s in list) {
-    if (s.staggered)
-      lists = vectors_append (lists, s.v);
-    else
-      listc = list_append (listc, s);
-  }
+  for (scalar s in list) 
+    if (!is_constant(s)) {
+      if (s.staggered)
+	lists = vectors_append (lists, s.v);
+      else
+	listc = list_append (listc, s);
+    }
   if (lists)
     boundary_normal (lists);
-  foreach_fine_to_coarse() {
-    for (scalar s in listc)
-      s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
-    for (vector v in lists)
-      foreach_dimension()
-	v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-  }
+  if (lists || listc)
+    foreach_fine_to_coarse() {
+      for (scalar s in listc)
+	s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+      for (vector v in lists)
+	foreach_dimension()
+	  v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+    }
   free (listc);
   if (lists) {
     foreach_boundary_fine_to_coarse(right)

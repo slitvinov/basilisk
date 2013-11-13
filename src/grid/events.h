@@ -56,6 +56,8 @@ static void event_error (Event * ev, const char * s)
   exit (1);
 }
 
+extern Event Events[];
+
 void init_events (void)
 {
   for (Event * ev = Events; !ev->last; ev++) 
