@@ -360,7 +360,7 @@
 			 "#define val_%s_%c(a,i,j) val(a,i,j)\n",
 			 foreachconst[i]->v, c, foreachconst[i]->v, c);
 	  }
-	fprintf (yyout, "#line %d\n", foreach_line + 1);
+	fprintf (yyout, "#line %d\n", foreach_line);
 	foreachbody();
 	fputs (" }", yyout);
       }
@@ -707,7 +707,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
       fprintf (yyout, "\n#line %d\n", line);
     }
     yyout = dopen ("foreach_body.h", "w");
-    foreach_line = line;
+    foreach_line = line + 1;
     if (inforeach_face) {
       foreach_face_xy = face_xy;
       if (nreduct == 0) { // foreach_face (x)
