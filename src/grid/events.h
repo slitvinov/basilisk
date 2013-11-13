@@ -166,9 +166,13 @@ double dtnext (double t, double dt)
   if (tnext != HUGE) {
     unsigned int n = (tnext - t)/dt;
     assert (n < INT_MAX); // check that dt is not too small
-    dt = (tnext - t)/(n + 1);
-    if (n > 0)
+    if (n == 0)
+      dt = tnext - t;
+    else {
+      double dt1 = (tnext - t)/n;
+      dt = dt1 <= dt ? dt1 : (tnext - t)/(n + 1);
       tnext = t + dt;
+    }
   }
   else
     tnext = t + dt;
