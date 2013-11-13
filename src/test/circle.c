@@ -38,7 +38,10 @@ void solve (int depth)
   #define NITER 15
   clock_t start = clock(), iter[NITER];
   double maxres[NITER];
-  struct Poisson p = { a, b, {0,0}, 0.};
+  const vector alpha[] = {1.,1.};
+  const scalar lambda[] = 0.;
+  struct Poisson p;
+  p.a = a; p.b = b; p.alpha = alpha; p.lambda = lambda;
   residual (a, b, res, &p);
   for (int i = 0; i < NITER; i++) {
     mg_cycle (a, res, dp, relax, &p, nrelax, 0);

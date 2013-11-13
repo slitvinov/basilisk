@@ -12,6 +12,8 @@
 @undef HUGE
 @define HUGE ((double)1e30)
 @define nodata DBL_MAX
+@define _NVARMAX 65536
+@define is_constant(v) ((v) >= _NVARMAX)
 
 @define max(a,b) ((a) > (b) ? (a) : (b))
 @define min(a,b) ((a) < (b) ? (a) : (b))
@@ -246,6 +248,7 @@ typedef struct {
 } Methods;
 
 Methods * _method;
+double  * _constant = NULL;
 
 void free_solver()
 {

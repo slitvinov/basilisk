@@ -24,8 +24,9 @@
   Tensor * tensors = NULL;
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
-    inforeach_boundary, inforeach_face, inforeach_vertex;
-  int invardecl, vartype, varsymmetric, varstaggered;
+    inforeach_boundary, inforeach_face, inforeach_vertex, nconst = 0;
+  int invardecl, vartype, varsymmetric, varstaggered, varmaybeconst;
+  char * varconst;
   int inval, invalpara;
   int brack, inarray;
   int inreturn;
@@ -52,24 +53,23 @@
   int boundarycomponent, nboundary = 0;
 
   int infunction, infunctiondecl, functionscope, functionpara;
+  char * return_type = NULL;
   FILE * dopen (const char * fname, const char * mode);
 
-  int foreach_face_line;
+  int foreach_line;
   enum { face_x, face_y, face_xy };
   int foreach_face_xy;
-
-  int foreach_vertex_line;
 
   char ** args = NULL, ** argss = NULL;
   int nargs = 0, inarg;
 
   typedef struct { 
-    char * v; 
-    int type, args, scope, automatic, symmetric, staggered;
+    char * v, * constant;
+    int type, args, scope, automatic, symmetric, staggered, maybeconst;
     int i[4];
   } var_t;
   var_t _varstack[100]; int varstack = -1;
-  void varpush (const char * s, int type, int scope) {
+  void varpush (const char * s, int type, int scope, int maybeconst) {
     if (s[0] != '\0') {
       char * f = malloc (strlen (s) + 1);
       strcpy (f, s);
@@ -78,17 +78,19 @@
       while ((q = strchr (q, '['))) {
 	*q++ = '\0'; na++;
       }
-      _varstack[++varstack] = (var_t) { f, type, na, scope, 0, 0, 0, {-1} };
+      _varstack[++varstack] = (var_t) { f, NULL, type, na, scope, 
+					0, 0, 0, maybeconst, {-1} };
     }
   }
+  var_t ** foreachconst = NULL;
 
   char * makelist (const char * input, int type);
 
-  void delete_automatic (int scope) {
+  char * automatic_list (int scope) {
     char * list = NULL;
     for (int i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
       var_t var = _varstack[i];
-      if (var.automatic) {
+      if (var.automatic && !var.constant) {
 	if (list == NULL) {
 	  list = malloc (strlen (var.v) + 3);
 	  strcpy (list, "{");
@@ -100,6 +102,11 @@
 	strcat (list, var.v);
       }
     }
+    return list;
+  }
+
+  void delete_automatic (int scope) {
+    char * list = automatic_list (scope);
     if (list) {
       strcat (list, "}");
       char * slist = makelist (list, scalar);
@@ -113,8 +120,10 @@
 
   void varpop () {
     delete_automatic (scope);
-    while (varstack >= 0 && _varstack[varstack].scope > scope)
-      free (_varstack[varstack--].v);
+    while (varstack >= 0 && _varstack[varstack].scope > scope) {
+      free (_varstack[varstack].v);
+      free (_varstack[varstack--].constant);
+    }
   }
 
   var_t * vartop() {
@@ -171,7 +180,7 @@
 	s[i++] = c; s[i] = '\0';
       }
       else {
-	if (s[0] == '.' && !identifier(s[2])) {
+	if ((s[0] == '.' || s[0] == '_') && !identifier(s[2])) {
 	  if      (s[1] == 'x') s[1] = x;
 	  else if (s[1] == 'y') s[1] = y;
 	}
@@ -198,53 +207,52 @@
     fprintf (yyout, "\n#line %d\n", line);
   }
 
-  void endforeach () {
+  void foreachbody() {
     if (inforeach_face) {
-      fclose (yyout);
-      yyout = foreachfp;
+      // foreach_face()
       fputs ("foreach()", yyout);
-      FILE * fp = dopen ("foreach_face.h", "r");
+      FILE * fp = dopen ("foreach_body.h", "r");
       if (foreach_face_xy == face_xy) {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
-	writefile (fp, 'y', 'x', foreach_face_line, "is_face_x()");
+	writefile (fp, 'y', 'x', foreach_line, "is_face_x()");
 	fputs (" } { int ig = -1; VARIABLES; ", yyout);
-	writefile (fp, 'x', 'y', foreach_face_line, "is_face_x()");
+	writefile (fp, 'x', 'y', foreach_line, "is_face_x()");
 	fputs (" } ", yyout);
       }
       else if (foreach_face_xy == face_x) {
 	fputs (" { int ig = -1; VARIABLES; ", yyout);
-	writefile (fp, 'x', 'y', foreach_face_line, "is_face_x()");
+	writefile (fp, 'x', 'y', foreach_line, "is_face_x()");
 	fputs (" } ", yyout);
       }
       else {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
-	writefile (fp, 'x', 'y', foreach_face_line, "is_face_y()");
+	writefile (fp, 'x', 'y', foreach_line, "is_face_y()");
 	fputs (" } ", yyout);
       }
       fputs (" end_foreach()\n", yyout);
       if (foreach_face_xy != face_x) {
 	fputs ("foreach_boundary_ghost (top) {\n", yyout);
 	if (foreach_face_xy == face_xy)
-	  writefile (fp, 'y', 'x', foreach_face_line, NULL);
+	  writefile (fp, 'y', 'x', foreach_line, NULL);
 	else
-	  writefile (fp, 'x', 'y', foreach_face_line, NULL);
+	  writefile (fp, 'x', 'y', foreach_line, NULL);
 	fputs ("} end_foreach_boundary_ghost();\n", yyout);
 	fputs ("#ifdef foreach_boundary_ghost_halo\n"
 	       "foreach_boundary_ghost_halo (top) {\n", yyout);
 	if (foreach_face_xy == face_xy)
-	  writefile (fp, 'y', 'x', foreach_face_line, NULL);
+	  writefile (fp, 'y', 'x', foreach_line, NULL);
 	else
-	  writefile (fp, 'x', 'y', foreach_face_line, NULL);
+	  writefile (fp, 'x', 'y', foreach_line, NULL);
 	fputs ("} end_foreach_boundary_ghost_halo();\n"
 	       "#endif\n", yyout);
       }
       if (foreach_face_xy != face_y) {
 	fputs ("foreach_boundary_ghost (right) {\n", yyout);
-	writefile (fp, 'x', 'y', foreach_face_line, NULL);
+	writefile (fp, 'x', 'y', foreach_line, NULL);
 	fputs ("} end_foreach_boundary_ghost();\n", yyout);
 	fputs ("#ifdef foreach_boundary_ghost_halo\n"
 	       "foreach_boundary_ghost_halo (right) {\n", yyout);
-	writefile (fp, 'x', 'y', foreach_face_line, NULL);
+	writefile (fp, 'x', 'y', foreach_line, NULL);
 	fputs ("} end_foreach_boundary_ghost_halo();\n"
 	       "#endif\n", yyout);
       }
@@ -252,48 +260,127 @@
       fclose (fp);
     }
     else if (inforeach_vertex) {
-      fclose (yyout);
-      yyout = foreachfp;
-      FILE * fp = dopen ("foreach_vertex.h", "r");
+      // foreach_vertex()
+      FILE * fp = dopen ("foreach_body.h", "r");
       fputs ("foreach() { x -= Delta/2.; y -= Delta/2.; ", yyout);
-      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      writefile (fp, 'x', 'y', foreach_line, NULL);
       fputs (" } end_foreach()\n", yyout);
       fputs ("foreach_boundary_face_ghost (top) { x -= Delta/2.;\n", yyout);
-      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      writefile (fp, 'x', 'y', foreach_line, NULL);
       fputs ("} end_foreach_boundary_face_ghost();\n"
 	     "#ifdef foreach_boundary_face_ghost_halo\n"
 	     "foreach_boundary_face_ghost_halo (top) {\n", yyout);
-      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      writefile (fp, 'x', 'y', foreach_line, NULL);
       fputs ("} end_foreach_boundary_face_ghost_halo();\n"
 	     "#endif\n"
 	     "foreach_boundary_face_ghost (right) { y -= Delta/2.;\n", yyout);
-      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      writefile (fp, 'x', 'y', foreach_line, NULL);
       fputs ("} end_foreach_boundary_face_ghost();\n"
 	     "#ifdef foreach_boundary_face_ghost_halo\n"
 	     "foreach_boundary_face_ghost_halo (right) {\n", yyout);
-      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      writefile (fp, 'x', 'y', foreach_line, NULL);
       fputs ("} end_foreach_boundary_face_ghost_halo();\n"
 	     "#endif\n", yyout);
       fputs ("#ifdef foreach_halo_vertex\n"
 	     "foreach_halo_vertex () { x -= Delta/2.; y -= Delta/2.;\n",
 	     yyout);
-      writefile (fp, 'x', 'y', foreach_vertex_line, NULL);
+      writefile (fp, 'x', 'y', foreach_line, NULL);
       fputs ("} end_foreach_halo_vertex();\n"
 	     "#endif\n", yyout);
       fprintf (yyout, "#line %d\n", line);
       fclose (fp);
     }
+    else {
+      // foreach()
+      FILE * fp = dopen ("foreach.h", "r");
+      int c;
+      while ((c = fgetc (fp)) != EOF)
+	fputc (c, yyout);
+      fclose (fp);
+      fp = dopen ("foreach_body.h", "r");
+      while ((c = fgetc (fp)) != EOF)
+	fputc (c, yyout);
+      fclose (fp);
+    }
+    fprintf (yyout, " end_%s();", foreachs);
+  }
+
+  char * macro_from_var (const char * name) {
+    char * macro = strdup (name), * s = macro;
+    while (*s != '\0') {
+      if (*s == '.')
+	*s = '_';
+      s++;
+    }
+    return macro;
+  }
+
+  void endforeach () {
+    fclose (yyout);
+    yyout = foreachfp;
+    if (nconst) {
+      // combinations for each constant field
+      int n = 1 << nconst, bits;
+      for (bits = 0; bits < n; bits++) {
+	fputs ("\nif (", yyout);
+	for (int i = 0; i < nconst; i++) {
+	  fprintf (yyout, "%sis_constant(%s%s)",
+		   (bits & (1 << i)) ? "" : "!",
+		   foreachconst[i]->v,
+		   foreachconst[i]->type == vector ? ".x" : "");
+	  if (i < nconst - 1)
+	    fputs (" && ", yyout);
+	}
+	fputs (") {\n", yyout);
+	for (int i = 0; i < nconst; i++)
+	  if (foreachconst[i]->type == scalar) {
+	    if (bits & (1 << i))
+	      fprintf (yyout,
+		       "double _const_%s = _constant[%s-_NVARMAX];\n"
+		       "#undef val_%s\n"
+		       "#define val_%s(a,i,j) _const_%s\n",
+		       foreachconst[i]->v, foreachconst[i]->v, 
+		       foreachconst[i]->v, foreachconst[i]->v, 
+		       foreachconst[i]->v);
+	    else
+	      fprintf (yyout, 
+		       "#undef val_%s\n"
+		       "#define val_%s(a,i,j) val(a,i,j)\n",
+		       foreachconst[i]->v, foreachconst[i]->v);
+	  }
+	  else if (foreachconst[i]->type == vector) {
+	    for (int c = 'x'; c <= 'y'; c++)
+	      if (bits & (1 << i))
+		fprintf (yyout,
+			 "double _const_%s_%c = _constant[%s.%c-_NVARMAX];\n"
+			 "#undef val_%s_%c\n"
+			 "#define val_%s_%c(a,i,j) _const_%s_%c\n",
+			 foreachconst[i]->v, c, foreachconst[i]->v, c,
+			 foreachconst[i]->v, c, foreachconst[i]->v, c,
+			 foreachconst[i]->v, c);
+	      else
+		fprintf (yyout, 
+			 "#undef val_%s_%c\n"
+			 "#define val_%s_%c(a,i,j) val(a,i,j)\n",
+			 foreachconst[i]->v, c, foreachconst[i]->v, c);
+	  }
+	fprintf (yyout, "#line %d\n", foreach_line + 1);
+	foreachbody();
+	fputs (" }", yyout);
+      }
+    }
+    else
+      // no constant field
+      foreachbody();
     if (nreduct > 0)
       fprintf (yyout,
-	       "\nend_%s();\n"
+	       "\n"
 	       "#undef _OMPSTART\n"
 	       "#undef _OMPEND\n"
 	       "#define _OMPSTART\n"
 	       "#define _OMPEND\n"
 	       "#line %d\n",
-	       foreachs, line);
-    else
-      fprintf (yyout, " end_%s();", foreachs);
+	       line + 1);
     fputs (" }", yyout);
     inforeach = inforeach_boundary = inforeach_face = inforeach_vertex = 0;
   }
@@ -466,8 +553,9 @@
   }
 
   void new_field (var_t * var) {
-    if (scope > 0)
-      fprintf (yyout, "= new_%s%s(\"%s\")",
+    if (scope > 0) {
+      fprintf (yyout, "= new_%s%s%s(\"%s\"",
+	       var->constant ? "const_" : "",
 	       var->symmetric ? "symmetric_" : 
 	       var->staggered ? "staggered_" : 
 	       "",
@@ -476,6 +564,15 @@
 	       var->type == tensor ? "tensor" :
 	       "internal_error",
 	       var->v);
+      if (var->constant) {
+	if (var->type == scalar)
+	  fprintf (yyout, ", %s)", var->constant);
+	else
+	  fprintf (yyout, ", (double [])%s)", var->constant);
+      }
+      else
+	fputc (')', yyout);
+    }
     else if (var->type == scalar) {
       fprintf (yyout, "= %d", nvar);
       var->i[0] = nvar;
@@ -514,16 +611,18 @@
     if (!strcmp (&var[strlen(var)-2], "[]")) {
       // automatic
       var[strlen(var)-2] = '\0';
-      varpush (var, vartype, scope);
+      varpush (var, vartype, scope, 0);
       var_t * v = varlookup (var, strlen(var));
       v->automatic = 1;
       v->symmetric = varsymmetric;
       v->staggered = varstaggered;
+      if (varconst)
+	v->constant = strdup (varconst);
       fputs (text, yyout);
       new_field (v);
     }
     else {
-      varpush (var, vartype, scope);
+      varpush (var, vartype, scope, varmaybeconst);
       fputs (text, yyout);
     }
     if (debug)
@@ -607,9 +706,9 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 		 reductvar[i], reductvar[i], reductvar[i]);
       fprintf (yyout, "\n#line %d\n", line);
     }
+    yyout = dopen ("foreach_body.h", "w");
+    foreach_line = line;
     if (inforeach_face) {
-      yyout = dopen ("foreach_face.h", "w");
-      foreach_face_line = line;
       foreach_face_xy = face_xy;
       if (nreduct == 0) { // foreach_face (x)
 	FILE * fp = dopen ("foreach.h", "r");
@@ -621,17 +720,6 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 	    foreach_face_xy = face_y;
 	fclose (fp);
       }
-    }
-    else if (inforeach_vertex) {
-      yyout = dopen ("foreach_vertex.h", "w");
-      foreach_vertex_line = line;
-    }
-    else {
-      FILE * fp = dopen ("foreach.h", "r");
-      int c;
-      while ((c = fgetc (fp)) != EOF)
-	fputc (c, yyout);
-      fclose (fp);
     }
     inforeach = 2;
   }
@@ -687,6 +775,9 @@ foreach{ID}* {
   fputs (" { ", yyout);
   strcpy (foreachs, yytext);
   inforeach = 1; foreachscope = scope; foreachpara = para;
+  free (foreachconst); 
+  foreachconst = NULL;
+  nconst = 0;
   nreduct = 0;
   foreachfp = yyout;
   yyout = dopen ("foreach.h", "w");
@@ -778,12 +869,14 @@ end_foreach{ID}*{SP}*"()" {
     endevent ();
   }
   else if (inreturn) {
-    fputs ("; }", yyout);
+    fputs ("; ", yyout);
+    delete_automatic (0);
+    fputs (" return _ret; }", yyout);
     inreturn = 0;
   }
   else if (!insthg)
     ECHO;
-  invardecl = 0;
+  invardecl = varmaybeconst = 0;
 }
 
 {ID}+{WS}*[=]{WS}*new{WS}+(symmetric|staggered){0,1}*{WS}*(scalar|vector|tensor) |
@@ -832,11 +925,14 @@ end_foreach{ID}*{SP}*"()" {
 	     type, var->v);
 }
 
+maybe{WS}+const{WS}+    varmaybeconst = 1;
+
 symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
 staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
 (scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ {
   varsymmetric = (strstr(yytext, "symmetric") != NULL);
   varstaggered = (strstr(yytext, "staggered") != NULL);
+  varconst = NULL;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
   if (!var) {
@@ -865,11 +961,35 @@ staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
     fputs (text, yyout);
     if (debug)
       fprintf (stderr, "%s:%d: proto: %s\n", fname, line, var);
-    varpush (var, vartype, scope + 1);
-    invardecl = 0;
+    varpush (var, vartype, scope + 1, varmaybeconst);
+    invardecl = varmaybeconst = 0;
   }
   else
     fputs (text, yyout);
+}
+
+const{WS}+(scalar|vector|tensor){WS}+[a-zA-Z0-9_]+\[{WS}*\]{WS}*=[^;]+ {
+  // const scalar a[] = 1.;
+  char * var = strstr(yytext,"scalar");
+  vartype = scalar;
+  if (!var) {
+    var = strstr(yytext,"vector");
+    vartype = vector;
+    if (!var) {
+      var = strstr(yytext,"tensor");
+      vartype = tensor;
+    }
+  }
+  char * text = var;
+  var = &var[7];
+  nonspace (var);
+  char * cst = strchr (var, ']'); *++cst = '\0';
+  cst = strchr (cst + 1, '=') + 1;
+  if (para != 0)
+    return yyerror ("constant fields can only appear in declarations");
+  varconst = cst;
+  varsymmetric = varstaggered = 0;
+  declaration (var, text);
 }
 
 ,{WS}*[a-zA-Z0-9_\[\]]+ {
@@ -883,13 +1003,17 @@ staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
 }
 
 return{WS} {
-  // returning from a function: delete automatic fields before returning
-  // note that this assumes that the function scope is always 1 
-  // (i.e. no nested functions allowed).
-  inreturn = 1;
-  fputs ("{ ", yyout);
-  delete_automatic (0);
-  ECHO;
+  char * list = automatic_list (0);
+  if (list) {
+    // returning from a function: delete automatic fields before returning
+    // note that this assumes that the function scope is always 1 
+    // (i.e. no nested functions allowed).
+    free (list);
+    inreturn = 1;
+    fprintf (yyout, "{ %s _ret = ", return_type);
+  }
+  else
+    ECHO;
 }
 
 val{WS}*[(]    {
@@ -907,50 +1031,71 @@ val{WS}*[(]    {
       s = yytext;
       while (!strchr(" \t\v\n\f[", *s)) s++;
       *s = '\0';
-      if (yytext[yyleng-1] == ']')
-	/* v[] */
-	fprintf (yyout, "val(%s,0,0)", boundaryrep(yytext));
+      if (var->constant)
+	fprintf (yyout, "(_constant[%s-_NVARMAX])", yytext);
       else {
-	fprintf (yyout, "val(%s", boundaryrep(yytext));
-	if (var->args > 0) {
-	  /* v[...][... */
-	  fputc ('[', yyout);
-	  fputc (yytext[yyleng-1], yyout);
-	  inarray = brack++;
-	  int j = var->args;
-	  while (j) {
-	    int c = getput();
-	    if (c == EOF)
-	      return yyerror ("unexpected EOF");
-	    if (c == '[') brack++;
-	    if (c == ']') {
-	      brack--;
-	      if (brack == inarray)
-		j--;
+	if (var->maybeconst) {
+	  int found = 0;
+	  for (int i = 0; i < nconst && !found; i++)
+	    found = !strcmp (foreachconst[i]->v, var->v);
+	  if (!found) {
+	    foreachconst = realloc (foreachconst, ++nconst*sizeof (var_t *));
+	    foreachconst[nconst - 1] = var;
+	    if (debug)
+	      fprintf (stderr, "%s:%d: '%s' may be const\n", 
+		       fname, line, var->v);
+	  }
+	  char * macro = macro_from_var (yytext);
+	  fprintf (yyout, "val_%s(%s", macro, yytext);
+	  free (macro);
+	}
+	else
+	  fprintf (yyout, "val(%s", boundaryrep(yytext));
+	if (yytext[yyleng-1] == ']')
+	  /* v[] */
+	  fputs (",0,0)", yyout);
+	else {
+	  if (var->args > 0) {
+	    /* v[...][... */
+	    fputc ('[', yyout);
+	    fputc (yytext[yyleng-1], yyout);
+	    inarray = brack++;
+	    int j = var->args;
+	    while (j) {
+	      int c = getput();
+	      if (c == EOF)
+		return yyerror ("unexpected EOF");
+	      if (c == '[') brack++;
+	      if (c == ']') {
+		brack--;
+		if (brack == inarray)
+		  j--;
+	      }
+	    }
+	    int c = input();
+	    if (c != '[') {
+	      fprintf (stderr, "%s:%d: error: expecting '[' not '", 
+		       fname, line);
+	      fputc (c, stderr);
+	      fputs ("'\n", stderr);
+	      return 1;
+	    }
+	    fputc (',', yyout);
+	    c = input();
+	    if (c == ']')
+	      /* v[...][] */
+	      fputs ("0,0)", yyout);
+	    else {
+	      fputc (c, yyout);
+	      inarray = ++brack;
 	    }
 	  }
-	  int c = input();
-	  if (c != '[') {
-	    fprintf (stderr, "%s:%d: error: expecting '[' not '", fname, line);
-	    fputc (c, stderr);
-	    fputs ("'\n", stderr);
-	    return 1;
-	  }
-	  fputc (',', yyout);
-	  c = input();
-	  if (c == ']')
-	    /* v[...][] */
-	    fputs ("0,0)", yyout);
 	  else {
-	    fputc (c, yyout);
+	    /* v[...] */
+	    fputc (',', yyout);
+	    unput (yytext[yyleng-1]);
 	    inarray = ++brack;
 	  }
-	}
-	else {
-	  /* v[...] */
-	  fputc (',', yyout);
-	  unput (yytext[yyleng-1]);
-	  inarray = ++brack;
 	}
       }
     }
@@ -1074,7 +1219,7 @@ for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}+{WS}+in{WS}+ {
 	   id, i, last);
   free (list);
   i++;
-  varpush (id, vartype, scope);
+  varpush (id, vartype, scope, 0);
 }
 
 for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
@@ -1204,6 +1349,24 @@ end {
     ECHO;
 }
 
+{ID}+{WS}+{ID}+{WS}*\( {
+  if (scope == 0 && para == 0) {
+    // function prototype
+    para++;
+    ECHO;
+    char * s1 = yytext; space (s1); *s1++ = '\0';
+    nonspace (s1);
+    char * s2 = s1; while (!strchr (" \t\v\n\f(", *s2)) s2++; *s2 = '\0';
+    free (return_type);
+    return_type = strdup (yytext);
+    if (debug)
+      fprintf (stderr, "%s:%d: function '%s' returns '%s'\n", 
+	       fname, line, s1, yytext);
+  }
+  else
+    REJECT;
+}
+
 foreach_dimension{WS}*[(]{WS}*[)] {
   foreachdimline = line;
   foreachdim = scope; foreachdimpara = para;
@@ -1267,7 +1430,9 @@ reduction{WS}*[(](min|max):{ID}+[)] {
   // function declaration with struct argument
   ECHO;
   char * s = yytext;
-  space (s); nonspace (s);
+  space (s); *s++ = '\0'; nonspace (s);
+  free (return_type);
+  return_type = strdup (yytext);
   args = realloc (args, sizeof (char *)*++nargs);
   argss = realloc (argss, sizeof (char *)*nargs);
   char * s1 = s; while (!strchr(" \t\v\n\f(", *s1)) s1++;
@@ -1276,8 +1441,8 @@ reduction{WS}*[(](min|max):{ID}+[)] {
   args[nargs-1] = strdup (s);
   argss[nargs-1] = strdup (s1);
   if (debug)
-    fprintf (stderr, "%s:%d: function '%s' with struct '%s'\n", 
-	     fname, line, s, s1);
+    fprintf (stderr, "%s:%d: function '%s' with struct '%s' returns '%s'\n", 
+	     fname, line, s, s1, return_type);
 }
 
 {ID}+{WS}*[(]{WS}*{ID}+{WS}*[)] {

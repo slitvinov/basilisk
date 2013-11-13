@@ -118,8 +118,7 @@ cycle to refine an initial guess until a specified tolerance is
 reached. 
 
 The maximum number of iterations is controlled by `NITERMAX` and the
-tolerance by `TOLERANCE` with the default values below.
-*/
+tolerance by `TOLERANCE` with the default values below. */
 
 int NITERMAX = 100;
 double TOLERANCE = 1e-3;
@@ -191,39 +190,30 @@ corresponding to the face gradients of field $a$. */
 struct Poisson {
   scalar a, b;
   staggered vector alpha;
-  double lambda;
+  scalar lambda;
 };
 
 /**
 We can now write the relaxation function. We first recover the extra
-parameters from the data pointer. */
+parameters from the data pointer. `alpha` and `lambda` are declared as
+`maybe const` so that the function also works when `alpha` and
+`lambda` are constant vector (resp. scalar) fields. */
 
 static void relax (scalar a, scalar b, int l, void * data)
 {
   struct Poisson * p = data;
-  staggered vector alpha = p->alpha;
-  double lambda = p->lambda;
+  maybe const staggered vector alpha = p->alpha;
+  maybe const scalar lambda = p->lambda;
 
 /**
-If $\alpha$ is not defined, we assume it takes its default value of
-one and, using a 5-points Laplacian operator, we get the relaxation
-function. */
+We use the staggered values of $\alpha$ to weight the gradients of the
+5-points Laplacian operator. We get the relaxation function. */
 
-  if (!alpha.x)
-    foreach_level_or_leaf (l)
-      a[] = (a[1,0] + a[-1,0] + a[0,1] + a[0,-1] - sq(Delta)*b[])
-      /(4. - lambda*sq(Delta));
-
-/**
-Otherwise we use the staggered values of $\alpha$ to weight the
-gradients. */
-
-  else
-    foreach_level_or_leaf (l)
-      a[] = (alpha.x[1,0]*a[1,0] + alpha.x[]*a[-1,0] + 
-	     alpha.y[0,1]*a[0,1] + alpha.y[]*a[0,-1] 
-	     - sq(Delta)*b[])
-      /(alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[] - lambda*sq(Delta));
+  foreach_level_or_leaf (l)
+    a[] = (alpha.x[1,0]*a[1,0] + alpha.x[]*a[-1,0] + 
+	   alpha.y[0,1]*a[0,1] + alpha.y[]*a[0,-1] 
+	   - sq(Delta)*b[])
+    /(alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[] - lambda[]*sq(Delta));
 }
 
 /**
@@ -234,43 +224,32 @@ requires more careful consideration... */
 static double residual (scalar a, scalar b, scalar res, void * data)
 {
   struct Poisson * p = data;
-  staggered vector alpha = p->alpha;
-  double lambda = p->lambda, maxres = 0.;
+  maybe const staggered vector alpha = p->alpha;
+  maybe const scalar lambda = p->lambda;
+  double maxres = 0.;
 #if QUADTREE
   /* conservative coarse/fine discretisation (2nd order) */
   vector g[];
-  if (!alpha.x)
-    foreach_face()
-      g.x[] = (a[] - a[-1,0])/Delta;
-  else
-    foreach_face()
-      g.x[] = alpha.x[]*(a[] - a[-1,0])/Delta;
+  foreach_face()
+    g.x[] = alpha.x[]*(a[] - a[-1,0])/Delta;
   boundary_normal ({g});
   foreach (reduction(max:maxres)) {
     res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta
-      - lambda*a[];
+      - lambda[]*a[];
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
 #else
   /* "naive" discretisation (only 1st order on quadtrees) */
-  if (!alpha.x)
-    foreach (reduction(max:maxres)) {
-      res[] = b[] + (4.*a[] - a[1,0] - a[-1,0] - a[0,1] - a[0,-1])/sq(Delta)
-	- lambda*a[];
-      if (fabs (res[]) > maxres)
-	maxres = fabs (res[]);
-    }
-  else
-    foreach (reduction(max:maxres)) {
-      res[] = b[] + 
-	((alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[])*a[]
-	 - alpha.x[1,0]*a[1,0] - alpha.x[]*a[-1,0] 
-	 - alpha.y[0,1]*a[0,1] - alpha.y[]*a[0,-1])/sq(Delta)
-	- lambda*a[];
-      if (fabs (res[]) > maxres)
-	maxres = fabs (res[]);
-    }
+  foreach (reduction(max:maxres)) {
+    res[] = b[] + 
+      ((alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[])*a[]
+       - alpha.x[1,0]*a[1,0] - alpha.x[]*a[-1,0] 
+       - alpha.y[0,1]*a[0,1] - alpha.y[]*a[0,-1])/sq(Delta)
+      - lambda[]*a[];
+    if (fabs (res[]) > maxres)
+      maxres = fabs (res[]);
+  }
 #endif
   return maxres;
 }
@@ -282,14 +261,31 @@ Finally we provide a generic user interface for a Poisson--Helmholtz
 equation of the form
 $$
 \nabla\cdot (\alpha\nabla a) + \lambda a = b
-$$
-where the $\alpha$ and $\lambda$ arguments are optional and default
-to unity and zero respectively. */
+$$ */
 
 mgstats poisson (struct Poisson p)
 {
-  vector alpha = p.alpha;
-  if (alpha.x)
+
+/**
+If `alpha` or `lambda` are not set, we replace then with constant
+unity vector (resp. zero scalar) fields. */
+
+  if (p.alpha.x) {
+    staggered vector alpha = p.alpha;
     restriction ((scalar *){alpha});
+  }
+  else {
+    const vector alpha[] = {1.,1.};
+    p.alpha = alpha;
+  }
+  if (p.lambda) {
+    scalar lambda = p.lambda;
+    restriction ({lambda});
+  }
+  else {
+    const scalar lambda[] = 0.;
+    p.lambda = lambda;
+  }
+
   return mg_solve (p.a, p.b, residual, relax, &p);
 }

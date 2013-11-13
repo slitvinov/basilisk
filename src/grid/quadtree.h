@@ -376,7 +376,6 @@ void recursive (Point point)
 @
 
 @def foreach_boundary_face(dir)
-  // fixme: x,y coordinates are not correct
   { _OMPSTART /* for face reduction */
     int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
     Quadtree point = *((Quadtree *)grid); point.back = grid;

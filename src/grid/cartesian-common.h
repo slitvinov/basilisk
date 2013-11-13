@@ -92,6 +92,7 @@ scalar new_scalar (const char * name)
     }
   
   // need to allocate a new slot
+  assert (nvar < _NVARMAX);
   datasize += sizeof(double); nvar++;
   _method = realloc (_method, nvar*sizeof (Methods));
   _method[nvar - 1] = (Methods){{NULL, NULL, NULL}};
@@ -104,22 +105,27 @@ scalar new_scalar (const char * name)
   return nvar - 1;
 }
 
-vector new_vector (const char * name)
+static vector alloc_vector (const char * name)
 {
+  vector v;
   char cname[strlen(name) + 3];
   sprintf (cname, "%s.x", name);
-  scalar vx = new_scalar (cname);
+  v.x = new_scalar (cname);
   sprintf (cname, "%s.y", name);
-  scalar vy = new_scalar (cname);
-  vector v;
-  v.x = vx; v.y = vy;
+  v.y = new_scalar (cname);
+  return v;
+}
+
+vector new_vector (const char * name)
+{
+  vector v = alloc_vector (name);
   init_vector (v, name);
   return v;
 }
 
 vector new_staggered_vector (const char * name)
 {
-  vector v = new_vector (name);
+  vector v = alloc_vector (name);
   init_staggered_vector (v, name);
   return v;
 }
@@ -150,6 +156,22 @@ tensor new_symmetric_tensor (const char * name)
   t.y.x = t.x.y;
   init_tensor (t, name);
   return t;
+}
+
+scalar new_const_scalar (const char * name, double val)
+{
+  static int nconst = 0;
+  _constant = realloc (_constant, ++nconst*sizeof (double));
+  _constant[nconst - 1] = val;
+  return _NVARMAX + nconst - 1;
+}
+
+vector new_const_vector (const char * name, double * val)
+{
+  vector v;
+  v.x = new_const_scalar (name, val[0]);
+  v.y = new_const_scalar (name, val[1]);
+  return v;
 }
 
 scalar * clone (scalar * l)
@@ -262,8 +284,11 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
-  foreach_dimension()
-    s.v.x = -1;
+  foreach_dimension() {
+    s.v.x = -1; // not a vector component
+    s.d.x = 0;  // not staggered
+  }
+  s.staggered = false;
   return s;
 }
 

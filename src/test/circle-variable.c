@@ -43,7 +43,9 @@ void solve (int depth)
     c.x[] = x + y + 2.;
   restriction ((scalar *){c});
 
-  struct Poisson p = { a, b, c, 0. };
+  const scalar lambda[] = 0.;
+  struct Poisson p;
+  p.a = a; p.b = b; p.alpha = c; p.lambda = lambda;
 
   #define NITER 13
   clock_t start = clock(), iter[NITER];
