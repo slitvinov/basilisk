@@ -925,7 +925,7 @@ end_foreach{ID}*{SP}*"()" {
 	     type, var->v);
 }
 
-maybe{WS}+const{WS}+    varmaybeconst = 1;
+\({WS}*const{WS}*\)    varmaybeconst = 1;
 
 symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
 staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |

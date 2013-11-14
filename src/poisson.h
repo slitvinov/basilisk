@@ -187,25 +187,27 @@ $$
 We first setup the data structure required to pass the extra
 parameters $\alpha$ and $\lambda$. We define $\alpha$ as a staggered
 vector field because we need values at the staggered locations
-corresponding to the face gradients of field $a$. */
+corresponding to the face gradients of field $a$. 
+
+`alpha` and `lambda` are declared as `(const)` to indicate that the
+function works also when `alpha` and `lambda` are constant vector
+(resp. scalar) fields. */
 
 struct Poisson {
   scalar a, b;
-  staggered vector alpha;
-  scalar lambda;
+  (const) staggered vector alpha;
+  (const) scalar lambda;
 };
 
 /**
 We can now write the relaxation function. We first recover the extra
-parameters from the data pointer. `alpha` and `lambda` are declared as
-`maybe const` so that the function also works when `alpha` and
-`lambda` are constant vector (resp. scalar) fields. */
+parameters from the data pointer. */
 
 static void relax (scalar a, scalar b, int l, void * data)
 {
   struct Poisson * p = data;
-  maybe const staggered vector alpha = p->alpha;
-  maybe const scalar lambda = p->lambda;
+  (const) staggered vector alpha = p->alpha;
+  (const) scalar lambda = p->lambda;
 
 /**
 We use the staggered values of $\alpha$ to weight the gradients of the
@@ -226,8 +228,8 @@ requires more careful consideration... */
 static double residual (scalar a, scalar b, scalar res, void * data)
 {
   struct Poisson * p = data;
-  maybe const staggered vector alpha = p->alpha;
-  maybe const scalar lambda = p->lambda;
+  (const) staggered vector alpha = p->alpha;
+  (const) scalar lambda = p->lambda;
   double maxres = 0.;
 #if QUADTREE
   /* conservative coarse/fine discretisation (2nd order) */
