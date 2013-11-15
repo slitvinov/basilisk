@@ -175,8 +175,9 @@ event vof_advection (i = 1; i++)
     trash ({cc});
     foreach()
       cc[] = (c[] > 0.5); // eq. 19 from Weymouth & Yue
-    // fixme: alternate directions
-    sweep_x (c, cc);
-    sweep_y (c, cc);
+    // alternate directions
+    void (* sweep[2]) (scalar, scalar) = {sweep_x, sweep_y};
+    for (int d = 0; d < 2; d++)
+      sweep[(i + d) % 2] (c, cc);
   }
 }
