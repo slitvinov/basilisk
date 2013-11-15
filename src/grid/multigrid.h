@@ -23,16 +23,16 @@ static size_t _size (size_t l)
 @def data(k,l)
   ((double *)&point.d[point.level][((point.i + k)*(point.n + 2*GHOSTS) +
 				    point.j + l)*datasize]) @
-@define _allocated(...) true
+@define allocated(...) true
 
 /***** Multigrid variables and macros *****/
 @define depth()       (((Point *)grid)->depth)
-@def _fine(a,k,l)
+@def fine(a,k,l)
   ((double *)
    &point.d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) +
 			    (2*point.j-GHOSTS+l))*datasize])[a]
 @
-@def _coarse(a,k,l)
+@def coarse(a,k,l)
   ((double *)
    &point.d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) +
 			    (point.j+GHOSTS)/2+l)*datasize])[a]

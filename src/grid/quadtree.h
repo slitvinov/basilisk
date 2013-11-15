@@ -108,10 +108,10 @@ static size_t _size (size_t l)
 
 #if DYNAMIC
   @define CELL(m,level,i) (*((Cell *)m[level][i]))
-  @define _allocated(i,j) (point.m[point.level][_index(i,j)])
+  @define allocated(i,j) (point.m[point.level][_index(i,j)])
 #else
   @define CELL(m,level,i) (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
-  @define _allocated(i,j) true
+  @define allocated(i,j) true
 #endif
 
 /***** Multigrid macros *****/
@@ -127,24 +127,24 @@ static size_t _size (size_t l)
 /***** Quadtree macros ****/
 @define NN (1 << point.level)
 @define cell		CELL(point.m, point.level, _index(0,0))
-@define _neighbor(k,l)	CELL(point.m, point.level, _index(k,l))
+@define neighbor(k,l)	CELL(point.m, point.level, _index(k,l))
 
 /***** Data macros *****/
 #if DYNAMIC
   @def data(k,l)
     ((double *) (point.m[point.level][_index(k,l)] + sizeof(Cell))) @
-  @def _fine(a,k,l)
+  @def fine(a,k,l)
     ((double *) (point.m[point.level+1][_childindex(k,l)] + sizeof(Cell)))[a] @
-  @def _coarse(a,k,l)
+  @def coarse(a,k,l)
     ((double *) (point.m[point.level-1][_parentindex(k,l)] + sizeof(Cell)))[a] @
 #else // !DYNAMIC
   @def data(k,l)
     ((double *) &point.m[point.level]
      [_index(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)]) @
-  @def _fine(a,k,l)
+  @def fine(a,k,l)
     ((double *) &point.m[point.level+1]
      [_childindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
-  @def _coarse(a,k,l)
+  @def coarse(a,k,l)
     ((double *) &point.m[point.level-1]
      [_parentindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
 #endif // !DYNAMIC
@@ -208,7 +208,7 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
-      if (!_allocated (0,0))
+      if (!allocated (0,0))
 	continue;
       switch (stage) {
       case 0: {
@@ -240,7 +240,7 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
-      if (!_allocated (0,0))
+      if (!allocated (0,0))
 	continue;
       switch (stage) {
       case 0: {
@@ -299,7 +299,7 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
-      if (!_allocated (0,0))
+      if (!allocated (0,0))
 	continue;
       switch (stage) {
       case 0: case _CORNER: {
@@ -339,7 +339,7 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
-      if (!_allocated (0,0))
+      if (!allocated (0,0))
 	continue;
       switch (stage) {
       case 0: {
@@ -385,17 +385,17 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
-      if (!_allocated (0,0))
+      if (!allocated (0,0))
 	continue;
       switch (stage) {
       case 0: case _CORNER: 
 	if (is_leaf (cell) || is_corner (cell)) {
 	  if (is_leaf (cell)) {
 	    if (_d < top) {
-	      if (!is_leaf(_neighbor(0,1)))
+	      if (!is_leaf(neighbor(0,1)))
 		_push (point.level, point.i, point.j + 1, _CORNER);
 	    } else {
-	      if (!is_leaf(_neighbor(1,0)))
+	      if (!is_leaf(neighbor(1,0)))
 		_push (point.level, point.i + 1, point.j, _CORNER);
 	    }
 	  }
@@ -700,9 +700,9 @@ static void update_cache (void)
 
 @def foreach_halo_vertex()
   foreach_halo_levels(0, <= depth(), ++)
-    if ((_allocated(-1,0) && is_leaf(_neighbor(-1,0))) ||
-	(_allocated(0,-1) && is_leaf(_neighbor(0,-1))) ||
-	(_allocated(-1,-1) && is_leaf(_neighbor(-1,-1)))) {
+    if ((allocated(-1,0) && is_leaf(neighbor(-1,0))) ||
+	(allocated(0,-1) && is_leaf(neighbor(0,-1))) ||
+	(allocated(-1,-1) && is_leaf(neighbor(-1,-1)))) {
 @
 @define end_foreach_halo_vertex() } end_foreach_halo_levels()
 

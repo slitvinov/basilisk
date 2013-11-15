@@ -1,7 +1,7 @@
 CFLAGS += -O2
 
 # these are not tests
-EXCLUDE = qcc.c include.c qplot.c
+EXCLUDE = qcc.c include.c rotate.c qplot.c
 
 all: qcc qplot libkdt
 	@chmod +x ppm2mpeg dotest
@@ -10,11 +10,20 @@ all: qcc qplot libkdt
 libkdt:
 	cd kdt && make
 
-qcc: qcc.c include.o
+qcc: qcc.c include.o rotate.o
 	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
 		-DCC99="\"$(CC99)\"" \
 		-DCPP99="\"$(CPP99)\"" \
-		qcc.c include.o -o qcc
+		qcc.c include.o rotate.o -o qcc
+
+rotate.c: rotate.lex
+	flex -P rot -o rotate.c rotate.lex
+
+rotate: rotate.c
+	$(CC99) $(CFLAGS) -DTEST rotate.c -o rotate
+
+rotate.o: rotate.c
+	$(CC99) $(CFLAGS) -c rotate.c
 
 include.o: include.c
 	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" -c include.c

@@ -66,7 +66,7 @@
   
 @def foreach_boundary_ghost_halo(d) {
   int _in = -_ig[d], _jn = -_jg[d];
-  foreach_halo() if (_allocated(_in,_jn) && is_leaf(_neighbor(_in,_jn))) {
+  foreach_halo() if (allocated(_in,_jn) && is_leaf(neighbor(_in,_jn))) {
     ig = _in; jg = _jn; VARIABLES;
 @
 @define end_foreach_boundary_ghost_halo() } end_foreach_halo(); }

@@ -52,6 +52,8 @@
   char * return_type = NULL;
   FILE * dopen (const char * fname, const char * mode);
 
+  int infunctionproto;
+
   int foreach_line;
   enum { face_x, face_y, face_xy };
   int foreach_face_xy;
@@ -141,66 +143,30 @@
     return NULL;
   }
 
+  int rotate (FILE * fin, FILE * fout, int n);
+
   void writefile (FILE * fp, char x, char y, int line1,
 		  const char * condition) {
-    fputs ("\n"
-	   "#undef val\n"
-	   "#undef fine\n"
-	   "#undef coarse\n"
-	   "#undef allocated\n"
-	   "#undef neighbor\n",
-	   yyout);
-    if (x == 'x')
-      fputs ("#define val(a,k,l) data(k,l)[a]\n"
-	     "#define fine(a,k,l) _fine(a,k,l)\n"
-	     "#define coarse(a,k,l) _coarse(a,k,l)\n"
-	     "#define allocated(k,l) _allocated(k,l)\n"
-	     "#define neighbor(k,l) _neighbor(k,l)\n",
-	     yyout);
-    else
-      fputs ("#define val(a,k,l) data(l,k)[a]\n"
-	     "#define fine(a,k,l) _fine(a,l,k)\n"
-	     "#define coarse(a,k,l) _coarse(a,l,k)\n"
-	     "#define allocated(k,l) _allocated(l,k)\n"
-	     "#define neighbor(k,l) _neighbor(l,k)\n",
-	     yyout);
     if (condition)
-      fprintf (yyout, "if (%s) {\n", condition);
-    fprintf (yyout, "#line %d\n", line1);
-
-    rewind (fp);
-    char s[] = "123";
-    int c, i = 0;
-    while ((c = fgetc(fp)) != EOF) {
-      if (i < 3) {
-	s[i++] = c; s[i] = '\0';
-      }
-      else {
-	if ((s[0] == '.' || s[0] == '_') && !identifier(s[2])) {
-	  if      (s[1] == 'x') s[1] = x;
-	  else if (s[1] == 'y') s[1] = y;
-	}
-	fputc (s[0], yyout);
-	s[0] = s[1]; s[1] = s[2]; s[2] = c;
-      }
-    }
-    if (i > 0)
-      fputs (s, yyout);
+      fprintf (yyout, " if (%s) {", condition);
+    fprintf (yyout, "\n#line %d\n", line1);
+    rotate (fp, yyout, x == 'y');
     if (condition)
       fputs (" } ", yyout);
   }
 
   void endforeachdim () {
-    foreachdim = 0;
     fclose (yyout);
     yyout = foreachdimfp;
-    fputc ('{', yyout);
+    if (foreachdim > 1)
+      fputc ('{', yyout);
     FILE * fp = dopen ("dimension.h", "r");
     writefile (fp, 'y', 'x', foreachdimline, NULL);
     writefile (fp, 'x', 'y', foreachdimline, NULL);
     fclose (fp);
-    fputc ('}', yyout);
-    fprintf (yyout, "\n#line %d\n", line);
+    if (foreachdim > 1)
+      fputc ('}', yyout);
+    foreachdim = 0;
   }
 
   void foreachbody() {
@@ -210,7 +176,7 @@
       FILE * fp = dopen ("foreach_body.h", "r");
       if (foreach_face_xy == face_xy) {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
-	writefile (fp, 'y', 'x', foreach_line, "is_face_x()");
+	writefile (fp, 'y', 'x', foreach_line, "is_face_y()");
 	fputs (" } { int ig = -1; VARIABLES; ", yyout);
 	writefile (fp, 'x', 'y', foreach_line, "is_face_x()");
 	fputs (" } ", yyout);
@@ -332,7 +298,7 @@
 	  if (foreachconst[i]->type == scalar) {
 	    if (bits & (1 << i))
 	      fprintf (yyout,
-		       "double _const_%s = _constant[%s-_NVARMAX];\n"
+		       "const double _const_%s = _constant[%s-_NVARMAX];\n"
 		       "#undef val_%s\n"
 		       "#define val_%s(a,i,j) _const_%s\n",
 		       foreachconst[i]->v, foreachconst[i]->v, 
@@ -348,7 +314,7 @@
 	    for (int c = 'x'; c <= 'y'; c++)
 	      if (bits & (1 << i))
 		fprintf (yyout,
-			 "double _const_%s_%c = _constant[%s.%c-_NVARMAX];\n"
+			 "const double _const_%s_%c = _constant[%s.%c-_NVARMAX];\n"
 			 "#undef val_%s_%c\n"
 			 "#define val_%s_%c(a,i,j) _const_%s_%c\n",
 			 foreachconst[i]->v, c, foreachconst[i]->v, c,
@@ -745,7 +711,8 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 }
 
 "{" {
-  ECHO;
+  if (foreachdim != 1 || scope != 0 || infunctionproto)
+    ECHO;
   if (infunction && functionpara == 1 && scope == functionscope)
     infunction_declarations();
   scope++;
@@ -756,9 +723,13 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   if (scope < 0)
     return yyerror ("mismatched '}'");
   varpop();
-  ECHO;
-  if (foreachdim && scope == foreachdim)
+  if (foreachdim && scope == foreachdim - 1) {
+    if (scope != 0 || infunctionproto)
+      ECHO;
     endforeachdim ();
+  }
+  else
+    ECHO;
   if (infunction && scope <= functionscope) {
     infunction = 0;
     if (debug)
@@ -768,6 +739,8 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     endforeach ();
   else if (inevent && scope == eventscope)
     endevent ();
+  if (scope == 0)
+    infunctionproto = 0;
 }
 
 foreach{ID}* {
@@ -799,7 +772,9 @@ end_foreach{ID}*{SP}*"()" {
 
 ;  {
   int insthg = 0;
-  if (foreachdim && scope == foreachdim && para == foreachdimpara) {
+  if (scope == 0)
+    infunctionproto = 0;
+  if (foreachdim && scope == foreachdim - 1 && para == foreachdimpara) {
     ECHO; insthg = 1;
     endforeachdim ();
   }
@@ -1360,6 +1335,7 @@ end {
     char * s2 = s1; while (!strchr (" \t\v\n\f(", *s2)) s2++; *s2 = '\0';
     free (return_type);
     return_type = strdup (yytext);
+    infunctionproto = 1;
     if (debug)
       fprintf (stderr, "%s:%d: function '%s' returns '%s'\n", 
 	       fname, line, s1, yytext);
@@ -1369,8 +1345,7 @@ end {
 }
 
 foreach_dimension{WS}*[(]{WS}*[)] {
-  foreachdimline = line;
-  foreachdim = scope; foreachdimpara = para;
+  foreachdim = scope + 1; foreachdimpara = para;
   foreachdimfp = yyout;
   yyout = dopen ("dimension.h", "w");
   foreachdimline = line + 1;
@@ -1605,6 +1580,7 @@ int endfor (FILE * fin, FILE * fout)
   foreachdim = 0;
   inboundary = 0;
   infunction = 0;
+  infunctionproto = 0;
   inarg = 0;
   int ret = yylex();
   if (!ret) {
