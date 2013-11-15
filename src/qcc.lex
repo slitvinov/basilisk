@@ -704,10 +704,9 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 	fprintf (yyout, "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
 		 reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
 		 reductvar[i], reductvar[i], reductvar[i]);
-      fprintf (yyout, "\n#line %d\n", line);
+      fprintf (yyout, "\n#line %d\n", foreach_line);
     }
     yyout = dopen ("foreach_body.h", "w");
-    foreach_line = line + 1;
     if (inforeach_face) {
       foreach_face_xy = face_xy;
       if (nreduct == 0) { // foreach_face (x)
@@ -779,6 +778,7 @@ foreach{ID}* {
   foreachconst = NULL;
   nmaybeconst = 0;
   nreduct = 0;
+  foreach_line = line + 1;
   foreachfp = yyout;
   yyout = dopen ("foreach.h", "w");
   inforeach_boundary = (!strncmp(foreachs, "foreach_boundary", 16));
@@ -1373,6 +1373,7 @@ foreach_dimension{WS}*[(]{WS}*[)] {
   foreachdim = scope; foreachdimpara = para;
   foreachdimfp = yyout;
   yyout = dopen ("dimension.h", "w");
+  foreachdimline = line + 1;
 }
 
 reduction{WS}*[(](min|max):{ID}+[)] {
