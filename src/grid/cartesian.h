@@ -87,6 +87,7 @@ void init_grid (int n)
   for (int i = 0; i < len/sizeof(double); i++)
     v[i] = undefined;
   grid = p;
+  trash (all);
 }
 
 void realloc_scalar (void)

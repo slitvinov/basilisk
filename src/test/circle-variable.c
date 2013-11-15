@@ -38,7 +38,6 @@ void solve (int depth)
   }
   boundary ({a});
 
-  trash ({c});
   foreach_face()
     c.x[] = x + y + 2.;
   restriction ((scalar *){c});

@@ -68,7 +68,6 @@ int main (int argc, char ** argv)
     h[] = exp(-(x*x + y*y)/sq(R0));
   boundary ({h});
 
-  trash ({u});
   foreach_face()
     u.x[] = solution(x,y);
   boundary ((scalar *){u});

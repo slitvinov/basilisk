@@ -179,6 +179,7 @@ void init_grid (int n)
       v[i] = undefined;
   }
   grid = m;
+  trash (all);
 }
 
 void realloc_scalar (void)

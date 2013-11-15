@@ -18,7 +18,6 @@ int main (int argc, char ** argv)
   double tolerance = 1.5e-4;
   adapt_wavelet ({h}, &tolerance, 11, list = {h});
 
-  trash ({u});
   foreach_face(x) u.x[] = exp(-(x*x + y*y)/(R0*R0));
   foreach_face(y) u.y[] = exp(-(x*x + y*y)/(R0*R0));
   boundary_normal ({u});

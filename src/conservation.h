@@ -231,8 +231,6 @@ output. */
 
 void update (scalar * output, scalar * input, double dt)
 {
-  if (output != input)
-    trash (output);
   foreach() {
     scalar o, i;
     vector f;

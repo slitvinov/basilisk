@@ -745,6 +745,7 @@ void init_grid (int n)
     foreach_leaf()
       point = refine_cell (point, NULL);
   update_cache();
+  trash (all);
 }
 
 void free_grid (void)

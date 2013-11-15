@@ -108,7 +108,7 @@ void terrain (scalar zb, ...)
   dmax.coarsen = refine_none;
   _terrain[zb].dmax = dmax;
 
-  trash ({zb, n, dmin, dmax});
+  trash ({zb});
   for (int l = 0; l <= depth(); l++) {
     foreach_level (l)
       reconstruct_terrain (point, zb);

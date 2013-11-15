@@ -194,7 +194,6 @@ double zero (double s0, double s1, double s2)
 void gradients (scalar * f, vector * g)
 {
   assert (list_len(f) == vectors_len(g));
-  trash (g);
   foreach() {
     scalar s; vector v;
     for (s,v in f,g)

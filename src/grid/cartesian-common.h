@@ -88,6 +88,7 @@ scalar new_scalar (const char * name)
     if (!list_lookup (all, i)) { // found a previously freed slot
       all = list_append (all, i);
       init_scalar (i, name);
+      trash (((scalar []){i, -1}));
       return i;
     }
   

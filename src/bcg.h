@@ -23,7 +23,6 @@ vector field. */
 /**
 For each face, the flux is composed of two parts... */
 
-  trash ({flux});
   foreach_face() {
 
 /**

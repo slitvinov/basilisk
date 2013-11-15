@@ -31,7 +31,6 @@ int main (int argc, char ** argv)
   }
   boundary ({a});
 
-  trash ({c});
   foreach_face()
     c.x[] = x + y + 2.;
   restriction ((scalar *){c});

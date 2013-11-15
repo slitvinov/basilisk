@@ -239,9 +239,6 @@ void update (scalar * output, scalar * input, double dt)
     ui = { input[1], input[2] },
     uo = { output[1], output[2] };
 
-  if (ho != hi)
-    trash ({ho, uo});
-  trash ({eta});
   // new fields in ho[], uo[]
   foreach() {
     double hold = hi[];

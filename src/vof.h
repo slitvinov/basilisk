@@ -85,7 +85,6 @@ static double rectangle_fraction (double c,
 
 void reconstruction (const scalar c, vector n, scalar alpha)
 {
-  trash ({n, alpha});
   foreach()
     if (c[] > 0. && c[] < 1.) {
       // Youngs normal
@@ -151,7 +150,6 @@ static void sweep_x (scalar c, scalar cc)
   scalar alpha[], flux[];
   
   reconstruction (c, n, alpha);
-  trash ({flux});
   foreach_face(x) {
     double un = u.x[]*dt/Delta, s = sign(un);
     int i = -(s + 1.)/2.;
@@ -172,7 +170,6 @@ event vof_advection (i = 1; i++)
 {
   for (scalar c in interfaces) {
     scalar cc[];
-    trash ({cc});
     foreach()
       cc[] = (c[] > 0.5); // eq. 19 from Weymouth & Yue
     // alternate directions
