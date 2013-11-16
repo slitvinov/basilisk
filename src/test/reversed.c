@@ -14,12 +14,14 @@ void parameters() {
   DT = .1;
 }
 
-#define circle(x,y) ((sq(x + 0.2) + sq(y + .236338)) < sq(0.2))
+#define circle(x,y) (sq(0.2) - (sq(x + 0.2) + sq(y + .236338)))
 
 event init (i = 0) {
-  foreach()
-    f[] = circle(x,y);
-  boundary ({f});
+  scalar phi[];
+  foreach_vertex()
+    phi[] = circle(x,y);
+  staggered vector s[];
+  fractions (phi, f, s);
 }
 
 event velocity (i++) {
@@ -37,9 +39,13 @@ event logfile (t = {0,5}) {
 }
 
 event field (t = 5) {
-  scalar e[];
+  scalar phi[], e[];
+  foreach_vertex()
+    phi[] = circle(x,y);
+  staggered vector s[];
+  fractions (phi, e, s);
   foreach()
-    e[] = f[] - circle(x,y);
+    e[] -= f[];
   norm n = normf (e);
   fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
 }
