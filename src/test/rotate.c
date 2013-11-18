@@ -40,7 +40,7 @@ event logfile (t = {0,end}) {
 
 #if 0
 event interface (t += end/10.) {
-  if (N == 256)
+  if (N == 128)
     output_facets (c, stdout);
 }
 #endif
@@ -56,12 +56,12 @@ event field (t = end) {
   norm n = normf (e);
   fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
 #if 1
-  if (N == 256)
+  if (N == 128)
     output_field ({e}, stdout, N, linear = false);
 #endif
 }
 
 int main() {
-  for (N = 64; N <= 256; N *= 2)
+  for (N = 32; N <= 128; N *= 2)
     run ();
 }

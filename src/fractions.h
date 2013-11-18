@@ -1,4 +1,5 @@
 #include "geometry.h"
+#include "myc2d.h"
 
 void fractions (const scalar phi, scalar c, staggered vector s)
 {
@@ -61,23 +62,32 @@ void output_fractions (const scalar c, const staggered vector s, FILE * fp)
   fflush (fp);
 }
 
+coord youngs_normal (Point point, scalar c)
+{
+  coord n;
+  double nn = 0.;
+  foreach_dimension() {
+    n.x = (c[-1,1] + 2.*c[-1,0] + c[-1,-1] -
+	   c[+1,1] - 2.*c[+1,0] - c[+1,-1]);
+    nn += fabs(n.x);
+  }
+  // normalize
+  if (nn > 0.)
+    foreach_dimension()
+      n.x /= nn;
+  else // this is a small fragment
+    n.x = 1.;
+  return n;
+}
+
 void reconstruction (const scalar c, vector n, scalar alpha)
 {
   foreach()
     if (c[] > 0. && c[] < 1.) {
-      // Youngs normal
-      double nn = 0.;
-      foreach_dimension() {
-	n.x[] = (c[-1,1] + 2.*c[-1,0] + c[-1,-1] -
-		 c[+1,1] - 2.*c[+1,0] - c[+1,-1]);
-	nn += fabs(n.x[]);
-      }
-      // normalize
-      if (nn > 0.)
-	foreach_dimension()
-	  n.x[] /= nn;
-      else // this is a small fragment
-	n.x[] = 1.;
+      coord m = mycs (point, c); // mixed Youngs/centered normal
+      // coord m = youngs_normal (point, c);
+      foreach_dimension()
+	n.x[] = m.x;
       // intercept
       alpha[] = line_alpha (c[], n.x[], n.y[]);
     }

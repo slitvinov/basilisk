@@ -9,8 +9,8 @@ fit f2(x) 'log' u (log($1)):(log($2)) via a2,b2
 set xlabel 'Maximum resolution'
 set ylabel 'Maximum error'
 set logscale
-set xrange [32:512]
-set xtics 32,2,512
+set xrange [16:256]
+set xtics 16,2,256
 set grid ytics
 plot 'log' u 1:4 t 'max', 'log' u 1:2 t 'norm1', \
      exp(f(log(x))) t ftitle(a,b), exp(f2(log(x))) t ftitle(a2,b2)
