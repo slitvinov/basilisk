@@ -634,8 +634,8 @@
 #define YY_INPUT(buf,result,max_size)			      \
   {							      \
     int c = fgetc(yyin);				      \
+    if (c == '\n') { line++; }				      \
     result = (c == EOF) ? YY_NULL : (buf[0] = c, 1);	      \
-    if (c == '\n') line++;				      \
   }
 
   int yyerror(const char * s);
@@ -751,7 +751,7 @@ foreach{ID}* {
   foreachconst = NULL;
   nmaybeconst = 0;
   nreduct = 0;
-  foreach_line = line + 1;
+  foreach_line = line;
   foreachfp = yyout;
   yyout = dopen ("foreach.h", "w");
   inforeach_boundary = (!strncmp(foreachs, "foreach_boundary", 16));
@@ -1348,7 +1348,7 @@ foreach_dimension{WS}*[(]{WS}*[)] {
   foreachdim = scope + 1; foreachdimpara = para;
   foreachdimfp = yyout;
   yyout = dopen ("dimension.h", "w");
-  foreachdimline = line + 1;
+  foreachdimline = line;
 }
 
 reduction{WS}*[(](min|max):{ID}+[)] {
@@ -1461,7 +1461,7 @@ reduction{WS}*[(](min|max):{ID}+[)] {
     REJECT;
 }
 
-"# "[0-9]+" "({SP}?\"([^\"\\\n]|{ES})*\")+ {
+#{SP}+[0-9]+{SP}+\"[^\"]+\" {
   // line numbers
   ECHO;
   char * ln = yytext;
@@ -1570,7 +1570,7 @@ int endfor (FILE * fin, FILE * fout)
 {
   yyin = fin;
   yyout = fout;
-  line = 0, scope = para = 0;
+  line = 1, scope = para = 0;
   inforeach = foreachscope = foreachpara = 
     inforeach_boundary = inforeach_face = inforeach_vertex = 0;
   invardecl = 0;

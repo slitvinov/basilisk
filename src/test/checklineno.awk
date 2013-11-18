@@ -7,8 +7,8 @@ function show()
 	close(fname);
 	gsub ("^[ \t]*", "", var);
 	gsub ("[ \t]*$", "", var);
-	if (!index(fname, "/grid/") &&
-	    !index($0,var)) {
+#	if (!index(fname, "/grid/") && !index($0,var)) {
+	if (!index($0,var)) {
 	    print fname, line;
 	    print $0;
 	    print var
@@ -18,7 +18,7 @@ function show()
 }
 
 {
-    if (match($0,"^# [0-9]+ \"/home/.*[.][ch]\"")) {
+    if (match($0,"^# [0-9]+ \".*[.][ch]\".*")) {
 	line = $2;
 	fname = $3;
 	gsub("\"", "", fname);
