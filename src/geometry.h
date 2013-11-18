@@ -1,6 +1,3 @@
-/* fixme: use unit cells centered on the origin for symmetry of
- mx + my = alpha */
-
 double line_alpha (double c, double nx, double ny)
 {
   double alpha, n1, n2;
@@ -22,14 +19,14 @@ double line_alpha (double c, double nx, double ny)
   if (ny < 0.)
     alpha += ny;
 
-  return alpha;
+  return alpha - (nx + ny)/2.;
 }
 
 double line_area (double nx, double ny, double alpha)
 {
   double alpha1, a, v, area;
 
-  alpha1 = alpha;
+  alpha1 = alpha + (nx + ny)/2.;
   if (nx < 0.) {
     alpha1 -= nx;
     nx = - nx;
@@ -77,7 +74,7 @@ double rectangle_fraction (double c,
 {
   coord n = {nx, ny}, r[2] = {{x1,y1},{x2,y2}};
   foreach_dimension() {
-    alpha -= n.x*r[0].x;
+    alpha -= n.x*(r[1].x + r[0].x)/2.;
     n.x *= r[1].x - r[0].x;
   }
   return line_area (n.x, n.y, alpha);
@@ -88,13 +85,13 @@ int facets (double c, coord n, double alpha,
 {
   int i = 0;
   if (c > 0. && c < 1.) {
-    for (int s = 0; s <= 1; s++)
+    for (double s = -0.5; s <= 0.5; s += 1.)
       foreach_dimension()
 	if (fabs (n.y) > 1e-4) {
 	  double a = (alpha - s*n.x)/n.y;
-	  if (a >= 0. && a <= 1.) {
-	    p[i].x   = s - 0.5;
-	    p[i++].y = a - 0.5;
+	  if (a >= -0.5 && a <= 0.5) {
+	    p[i].x   = s;
+	    p[i++].y = a;
 	  }
 	}
     assert (i <= 2);

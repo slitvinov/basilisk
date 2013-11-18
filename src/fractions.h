@@ -22,13 +22,14 @@ void fractions (const scalar phi, scalar c, staggered vector s)
     if (nn == 0.) // full or empty cell
       c[] = s.x[];
     else { // interfacial cell
-      n.x /= nn; n.y /= nn;
+      foreach_dimension()
+	n.x /= nn;
       double alpha = undefined;
       for (int i = 0; i <= 1; i++)
 	foreach_dimension()
 	  if (s.x[i,0] > 0. && s.x[i,0] < 1.) {
-	    double a = phi[i,0] > 0. ? s.x[i,0] : 1. - s.x[i,0];
-	    alpha = n.x*i + n.y*a;
+	    double a = sign(phi[i,0])*(s.x[i,0] - 0.5);
+	    alpha = n.x*(i - 0.5) + n.y*a;
 	  }
       c[] = line_area (n.x, n.y, alpha);
     }
@@ -47,7 +48,8 @@ void output_fractions (const scalar c, const staggered vector s, FILE * fp)
       nn += fabs(n.x);
     }
     if (nn > 0.) { // interfacial cell
-      n.x /= nn; n.y /= nn;
+      foreach_dimension()
+	n.x /= nn;
       double alpha = line_alpha (c[], n.x, n.y);
       coord p[2];
       if (facets (c[], n, alpha, p) == 2)

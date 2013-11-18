@@ -51,11 +51,11 @@ event field (t = 5) {
 }
 
 event shape (t += 0.5) {
-  if (N == 256)
+  if (N == 128)
     output_facets (f, stdout);
 }
 
 int main() {
-  for (N = 64; N <= 256; N *= 2)
+  for (N = 32; N <= 128; N *= 2)
     run();
 }
