@@ -101,8 +101,6 @@ off-diagonal component at the vertices.
 ![Staggering of $\mathbf{u}$ and $\mathbf{S}$](/src/figures/Sxx.png) */
 
   symmetric tensor S[];
-  S.x.y.d.x = S.x.y.d.y = -1; // staggering
-  trash ({S});
 
 /**
 We average the velocity components at the center to compute the
