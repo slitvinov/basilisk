@@ -7,6 +7,8 @@ struct OutputField {
 
 void output_field (struct OutputField p)
 {
+  if (!p.list) p.list = all;
+  if (!p.fp) p.fp = stdout;
   fprintf (p.fp, "# 1:x 2:y");
   int i = 3;
   for (scalar s in p.list)
@@ -126,6 +128,7 @@ struct OutputPPM {
 void output_ppm (struct OutputPPM p)
 {
   // default values
+  if (!p.fp) p.fp = stdout;
   if (p.n == 0) p.n = N;
   if (p.min == 0 && p.max == 0) {
     stats s = statsf (p.f);
@@ -197,6 +200,7 @@ struct OutputGRD {
 void output_grd (struct OutputGRD p)
 {
   // default values
+  if (!p.fp) p.fp = stdout;
   if (p.box[0][0] == 0. && p.box[0][1] == 0. && 
       p.box[1][0] == 0. && p.box[1][1] == 0.) {
     p.box[0][0] = X0;      p.box[0][1] = Y0;
