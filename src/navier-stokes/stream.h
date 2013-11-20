@@ -82,9 +82,9 @@ automatic permutation of the indices but requires a change of sign:
 this is done through the pseudo-vector `f`. */
 
   trash ({u});
-  struct { double x, y; } f = {1.,-1.};
+  struct { double x, y; } f = {-1.,1.};
   foreach_face()
-    u.x[] = f.x*(psi[0,-1] + psi[-1,-1] - psi[0,1] - psi[-1,1])/(4.*Delta);
+    u.x[] = f.x*(psi[0,1] + psi[-1,1] - psi[0,-1] - psi[-1,-1])/(4.*Delta);
   boundary_normal ({u});
   boundary_tangent ({u});
 }

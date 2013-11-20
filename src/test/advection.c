@@ -23,11 +23,13 @@ event init (i = 0)
 }
 
 event velocity (i++) {
+  scalar psi[];
+  foreach_vertex()
+    psi[] = - 1.5*sin(2.*pi*t/5.)*sin((x + 0.5)*pi)*sin((y + 0.5)*pi)/pi;
   trash ({u});
-  foreach_face(x)
-    u.x[] = 1.5*sin(2.*pi*t/5.)*sin((x + 0.5)*pi)*cos((y + 0.5)*pi);
-  foreach_face(y)
-    u.y[] = - 1.5*sin(2.*pi*t/5.)*cos((x + 0.5)*pi)*sin((y + 0.5)*pi);
+  struct { double x, y; } f = {-1.,1.};
+  foreach_face()
+    u.x[] = f.x*(psi[0,1] - psi[])/Delta;
   boundary ((scalar *){u});
 }
 
