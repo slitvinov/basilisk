@@ -37,6 +37,8 @@
   int foreachdim, foreachdimpara, foreachdimline;
   FILE * foreachdimfp;
 
+  int foreach_child, foreach_child_scope, foreach_child_para;
+
   #define REDUCTMAX 10
   char foreachs[80], * fname;
   FILE * foreachfp;
@@ -730,6 +732,10 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   }
   else
     ECHO;
+  if (foreach_child && foreach_child_scope == scope) {
+    fputs (" end_foreach_child(); }", yyout);
+    foreach_child = 0;
+  }
   if (infunction && scope <= functionscope) {
     infunction = 0;
     if (debug)
@@ -741,6 +747,12 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     endevent ();
   if (scope == 0)
     infunctionproto = 0;
+}
+
+foreach_child {
+  fputs (" { ", yyout);
+  ECHO;
+  foreach_child = 1; foreach_child_scope = scope; foreach_child_para = para;
 }
 
 foreach{ID}* {
@@ -777,6 +789,10 @@ end_foreach{ID}*{SP}*"()" {
   if (foreachdim && scope == foreachdim - 1 && para == foreachdimpara) {
     ECHO; insthg = 1;
     endforeachdim ();
+  }
+  if (foreach_child && scope == foreach_child_scope && para == foreach_child_para) {
+    ECHO; insthg = 1;
+    fputs (" end_foreach_child(); }", yyout); foreach_child = 0;
   }
   if (infunction && scope == functionscope) {
     if (scope > 0 && !infunctiondecl) {
@@ -1578,6 +1594,7 @@ int endfor (FILE * fin, FILE * fout)
   brack = inarray = 0;
   inevent = inreturn = 0;
   foreachdim = 0;
+  foreach_child = 0;
   inboundary = 0;
   infunction = 0;
   infunctionproto = 0;

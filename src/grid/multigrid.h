@@ -43,6 +43,9 @@ static size_t _size (size_t l)
   struct { int x, y; } child = {
     2*((point.i+GHOSTS)%2)-1, 2*((point.j+GHOSTS)%2)-1
   }; NOT_UNUSED(child);
+  Point parent = point;	NOT_UNUSED(parent);
+  parent.level--;
+  parent.i = (point.i + GHOSTS)/2; parent.j = (point.j + GHOSTS)/2;
 @
 @def foreach_level(l)
   OMP_PARALLEL()
@@ -126,6 +129,7 @@ static size_t _size (size_t l)
 @def foreach_child() {
   int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
   point.level++;
+  point.n *= 2;
   for (int _k = 0; _k < 2; _k++)
     for (int _l = 0; _l < 2; _l++) {
       point.i = _i + _k; point.j = _j + _l;
@@ -135,6 +139,7 @@ static size_t _size (size_t l)
   }
   point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2;
   point.level--;
+  point.n /= 2;
 }
 @
 
