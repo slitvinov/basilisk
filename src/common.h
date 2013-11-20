@@ -238,6 +238,7 @@ typedef struct {
   void   (* refine)                          (Point, scalar);
   void   (* coarsen)                         (Point, scalar);
   double (* gradient)                        (double, double, double);
+  double (* prolongation)                    (Point, scalar);
   struct { int x, y; } d;        // staggering
   vector v;
   bool   staggered;

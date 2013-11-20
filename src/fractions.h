@@ -1,6 +1,47 @@
 #include "geometry.h"
 #include "myc2d.h"
 
+#if QUADTREE
+static double injection (Point point, scalar s)
+{
+  return coarse(s,0,0);
+}
+
+static double fraction_prolongation (Point point, scalar c)
+{
+  double cc = coarse(c,0,0);
+  if (cc <= 0. || cc >= 1.)
+    return cc;
+  coord n = mycs (parent, c);
+  double alpha = line_alpha (cc, n.x, n.y);
+  return rectangle_fraction (cc, child.x*n.x, child.y*n.y, alpha, 
+			     0., 0., 0.5, 0.5);
+}
+
+static void fraction_refine (Point point, scalar c)
+{
+  double cc = c[];
+  if (cc <= 0. || cc >= 1.)
+    for (int k = 0; k < 2; k++)
+      for (int l = 0; l < 2; l++)
+	fine(c,k,l) = cc;
+  else {
+    coord n = mycs (point, c);
+    double alpha = line_alpha (cc, n.x, n.y);
+    for (int k = 0; k < 2; k++)
+      for (int l = 0; l < 2; l++)
+	fine(c,k,l) = rectangle_fraction (cc, (2*k - 1)*n.x, (2*l - 1)*n.y, alpha,
+					  0., 0., 0.5, 0.5);
+  }
+}
+
+static double alpha_prolongation (Point point, scalar alpha)
+{
+  vector n = alpha.v;
+  return 2.*coarse(alpha,0,0) - (child.x*n.x[] + child.y*n.y[])/2.;
+}
+#endif // QUADTREE
+
 void fractions (const scalar phi, scalar c, staggered vector s)
 {
   foreach_face() {
@@ -35,31 +76,11 @@ void fractions (const scalar phi, scalar c, staggered vector s)
       c[] = line_area (n.x, n.y, alpha);
     }
   }
+#if QUADTREE
+  c.prolongation = fraction_prolongation;
+  c.refine = fraction_refine;
+#endif
   boundary ({c});
-}
-
-void output_fractions (const scalar c, const staggered vector s, FILE * fp)
-{
-  foreach() {
-    // compute normal from fractions
-    coord n;
-    double nn = 0.;
-    foreach_dimension() {
-      n.x = s.x[] - s.x[1,0];
-      nn += fabs(n.x);
-    }
-    if (nn > 0.) { // interfacial cell
-      foreach_dimension()
-	n.x /= nn;
-      double alpha = line_alpha (c[], n.x, n.y);
-      coord p[2];
-      if (facets (c[], n, alpha, p) == 2)
-	fprintf (fp, "%g %g\n%g %g\n\n", 
-		 x + p[0].x*Delta, y + p[0].y*Delta, 
-		 x + p[1].x*Delta, y + p[1].y*Delta);
-    }
-  }
-  fflush (fp);
 }
 
 coord youngs_normal (Point point, scalar c)
@@ -82,16 +103,50 @@ coord youngs_normal (Point point, scalar c)
 
 void reconstruction (const scalar c, vector n, scalar alpha)
 {
-  foreach()
-    if (c[] > 0. && c[] < 1.) {
+  foreach() {
+    if (c[] <= 0. || c[] >= 1.)
+      // this is just so that alpha_prolongation() does not blow up
+      alpha[] = n.x[] = n.y[] = 0.;
+    else {
       coord m = mycs (point, c); // mixed Youngs/centered normal
       // coord m = youngs_normal (point, c);
       foreach_dimension()
 	n.x[] = m.x;
       // intercept
-      alpha[] = line_alpha (c[], n.x[], n.y[]);
+      alpha[] = line_alpha (c[], m.x, m.y);
     }
+  }
+#if QUADTREE
+  n.x.coarsen = n.y.coarsen = alpha.coarsen = coarsen_none;
+  n.x.prolongation = n.y.prolongation = injection;
+  alpha.v = n;
+  alpha.prolongation = alpha_prolongation;
+#endif
   boundary ({n, alpha});
+}
+
+void output_fractions (const scalar c, const staggered vector s, FILE * fp)
+{
+  foreach() {
+    // compute normal from fractions
+    coord n;
+    double nn = 0.;
+    foreach_dimension() {
+      n.x = s.x[] - s.x[1,0];
+      nn += fabs(n.x);
+    }
+    if (nn > 0.) { // interfacial cell
+      foreach_dimension()
+	n.x /= nn;
+      double alpha = line_alpha (c[], n.x, n.y);
+      coord segment[2];
+      if (facets (c[], n, alpha, segment) == 2)
+	fprintf (fp, "%g %g\n%g %g\n\n", 
+		 x + segment[0].x*Delta, y + segment[0].y*Delta, 
+		 x + segment[1].x*Delta, y + segment[1].y*Delta);
+    }
+  }
+  fflush (fp);
 }
 
 void output_facets (scalar c, FILE * fp)
@@ -99,13 +154,13 @@ void output_facets (scalar c, FILE * fp)
   scalar alpha[];
   vector n[];
   reconstruction (c, n, alpha);
-  coord p[2];
+  coord segment[2];
   foreach() {
     coord m = {n.x[],n.y[]};
-    if (facets (c[], m, alpha[], p) == 2)
+    if (facets (c[], m, alpha[], segment) == 2)
       fprintf (fp, "%g %g\n%g %g\n\n", 
-	       x + p[0].x*Delta, y + p[0].y*Delta, 
-	       x + p[1].x*Delta, y + p[1].y*Delta);
+	       x + segment[0].x*Delta, y + segment[0].y*Delta, 
+	       x + segment[1].x*Delta, y + segment[1].y*Delta);
   }
   fflush (fp);
 }

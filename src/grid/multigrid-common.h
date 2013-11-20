@@ -1,3 +1,5 @@
+#define MULTIGRID 1
+
 #include "cartesian-common.h"
 
 @ifndef foreach_level_or_leaf
@@ -68,30 +70,31 @@ void wavelet (scalar s, scalar w)
   restriction ({s});
   boundary_restriction ({s});
   foreach_fine_to_coarse() {
-    /* difference between fine value and bilinearly-interpolated
-       coarse value */
-    fine(w,0,0) = fine(s,0,0) - 
-      (9.*s[] + 3.*(s[-1,0] + s[0,-1]) + s[-1,-1])/16.;
-    fine(w,0,1) = fine(s,0,1) - 
-      (9.*s[] + 3.*(s[-1,0] + s[0,+1]) + s[-1,+1])/16.;
-    fine(w,1,0) = fine(s,1,0) - 
-      (9.*s[] + 3.*(s[+1,0] + s[0,-1]) + s[+1,-1])/16.;
-    fine(w,1,1) = fine(s,1,1) - 
-      (9.*s[] + 3.*(s[+1,0] + s[0,+1]) + s[+1,+1])/16.;
+    if (s.prolongation)
+      /* difference between fine value and its prolongation */
+      foreach_child()
+	w[] = s[] - s.prolongation (point, s);
+    else
+      /* difference between fine value and bilinearly-interpolated
+	 coarse value */
+      foreach_child()
+	w[] = s[] - (9.*coarse(s,0,0) + 
+		     3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+		     coarse(s,child.x,child.y))/16.;
   }
   /* root cell */
   foreach_level(0) w[] = 0.;
 }
 
-void refine_bilinear (Point point, scalar v)
+void refine_bilinear (Point point, scalar s)
 {
   /* for each child */
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++)
       /* bilinear interpolation from coarser level */
-      fine(v,k,l) = (9.*v[] + 
-		     3.*(v[2*k-1,0] + v[0,2*l-1]) + 
-		     v[2*k-1,2*l-1])/16.;
+      fine(s,k,l) = (9.*s[] + 
+		     3.*(s[2*k-1,0] + s[0,2*l-1]) + 
+		     s[2*k-1,2*l-1])/16.;
 }
 
 void refine_linear (Point point, scalar s)
@@ -119,7 +122,8 @@ void refine_reset (Point point, scalar v)
       fine(v,k,l) = 0.;
 }
 
-void refine_none (Point point, scalar v) {}
+void refine_none  (Point point, scalar v) {}
+void coarsen_none (Point point, scalar v) {}
 
 void coarsen_staggered (Point point, scalar s)
 {
@@ -128,13 +132,11 @@ void coarsen_staggered (Point point, scalar s)
     v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
 }
 
-static void refine_v (Point point, scalar v) {}
-
 vector multigrid_init_staggered_vector (vector v, const char * name)
 {
   v = cartesian_init_staggered_vector (v, name);
   v.x.coarsen = coarsen_staggered;
-  v.y.coarsen = refine_v;
+  v.y.coarsen = coarsen_none;
   return v;
 }
 

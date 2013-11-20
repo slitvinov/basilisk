@@ -201,11 +201,14 @@ astats adapt_wavelet (struct Adapt p)
     if (level < p.maxlevel) {
       int i = 0, refine = false;
       for (scalar s in p.slist) {
-	/* difference between fine value and bilinearly-interpolated
-	   coarse value */
-	double w = s[] - (9.*coarse(s,0,0) + 
-			  3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
-			  coarse(s,child.x,child.y))/16.;
+	double w = s.prolongation ?
+	  /* difference between fine value and its prolongation */
+	  s[] - s.prolongation (point, s) :
+	  /* difference between fine value and bilinearly-interpolated
+	     coarse value */
+	  s[] - (9.*coarse(s,0,0) + 
+		 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+		 coarse(s,child.x,child.y))/16.;
 	if (fabs(w) > p.max[i++]) {
 	  refine = true; // error is too large
 	  break; // no need to check other fields
@@ -225,21 +228,32 @@ astats adapt_wavelet (struct Adapt p)
 	continue;
       else if (level == l) {
 	int i = 0, coarsen = true;
-	/* difference between fine value and bilinearly-interpolated
-	   coarse value */
 	for (scalar s in p.slist) {
-	  double error =
-	    fabs (s[] - (9.*coarse(s,0,0) + 
-			 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
-			 coarse(s,child.x,child.y))/16.);
-	  for (int k = 0; k < 2; k++)
-	    for (int l = 0; l < 2; l++) {
-	      double e = fabs(fine(s,k,l) - (9.*s[] + 
-					     3.*(s[2*k-1,0] + s[0,2*l-1]) + 
-					     s[2*k-1,2*l-1])/16.);
+	  double error;
+	  if (s.prolongation) {
+	    /* difference between fine value and its prolongation */
+	    error = fabs (s[] - s.prolongation (point, s));
+	    foreach_child() {
+	      double e = fabs(s[] - s.prolongation (point, s));
 	      if (e > error)
 		error = e;
 	    }
+	  }
+	  else {
+	    /* difference between fine value and bilinearly-interpolated
+	       coarse value */
+	    error = fabs (s[] - (9.*coarse(s,0,0) + 
+				 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+				 coarse(s,child.x,child.y))/16.);
+	    for (int k = 0; k < 2; k++)
+	      for (int l = 0; l < 2; l++) {
+		double e = fabs(fine(s,k,l) - (9.*s[] + 
+					       3.*(s[2*k-1,0] + s[0,2*l-1]) + 
+					       s[2*k-1,2*l-1])/16.);
+		if (e > error)
+		  error = e;
+	      }
+	  }
 	  if (error > p.max[i++]/1.5) {
 	    coarsen = false; // error is too large
 	    break; // no need to check other fields
@@ -274,7 +288,7 @@ int coarsen_function (int (* func) (Point p), scalar * list)
   return nc;
 }
 
-int refine_function (int (* func) (Point p, void * data), 
+int refine_function (int (* func) (Point point, void * data), 
 		     void * data,
 		     scalar * list)
 {
@@ -320,8 +334,10 @@ void halo_prolongation (int depth, scalar * list)
 	foreach_dimension()
 	  s[] += s.gradient (coarse(s,-1,0), sc, coarse(s,1,0))*child.x/4.;
       }
+      else if (s.prolongation) // variable-specific prolongation (e.g. VOF)
+	s[] = s.prolongation (point, s);
       else
-	/* bilinear interpolation from coarser level */
+	/* default is bilinear interpolation from coarser level */
 	s[] = (9.*coarse(s,0,0) + 
 	       3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
 	       coarse(s,child.x,child.y))/16.;	
@@ -492,7 +508,7 @@ vector quadtree_init_staggered_vector (vector v, const char * name)
 {
   v = multigrid_init_staggered_vector (v, name);
   v.x.refine  = refine_staggered;
-  v.y.refine  = refine_v;
+  v.y.refine  = coarsen_none;
   return v;
 }
 

@@ -4,6 +4,17 @@ extern scalar * interfaces;
 extern staggered vector u;
 extern double dt;
 
+event defaults (i = 0)
+{
+  CFL = 0.5;
+#if QUADTREE
+  for (scalar c in interfaces) {
+    c.prolongation = fraction_prolongation;
+    c.refine = fraction_refine;
+  }
+#endif
+}
+
 foreach_dimension()
 static void sweep_x (scalar c, scalar cc)
 {
@@ -15,12 +26,20 @@ static void sweep_x (scalar c, scalar cc)
     double un = u.x[]*dt/Delta, s = sign(un);
     int i = -(s + 1.)/2.;
     double cf = (c[i,0] <= 0. || c[i,0] >= 1.) ? c[i,0] :
-      rectangle_fraction (c[i,0],
-			  - s*n.x[i,0], n.y[i,0], alpha[i,0],
+      rectangle_fraction (c[i,0], - s*n.x[i,0], n.y[i,0], alpha[i,0],
 			  -0.5, -0.5, s*un - 0.5, 0.5);
     flux[] = u.x[]*cf;
   }
-  //    boundary_normal ({flux});
+
+#if QUADTREE
+  // like boundary_normal() but for a single dimension
+  foreach_halo_fine_to_coarse() {
+    flux[] = (fine(flux,0,0) + fine(flux,0,1))/2.;
+    if (is_leaf (neighbor(1,0)))
+      flux[1,0] = (fine(flux,2,0) + fine(flux,2,1))/2.;
+  }
+#endif
+
   foreach()
     c[] += dt*(flux[] - flux[1,0] + cc[]*(u.x[1,0] - u.x[]))/Delta;
   boundary ({c});
