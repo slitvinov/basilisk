@@ -105,6 +105,7 @@ Point refine_cell (Point point, scalar * list)
 	  p.j = (point.j + GHOSTS)/2 + l;
 	  p = refine_cell (p, list);
 	  assert (p.m == point.m);
+	  aparent(k,l).flags |= refined;
 	}
 #endif
 
@@ -197,28 +198,36 @@ astats adapt_wavelet (struct Adapt p)
       listc = list_append (listc, s);
 
   // refinement
-  foreach_leaf()
-    if (level < p.maxlevel) {
-      int i = 0, refine = false;
-      for (scalar s in p.slist) {
-	double w = s.prolongation ?
-	  /* difference between fine value and its prolongation */
-	  s[] - s.prolongation (point, s) :
-	  /* difference between fine value and bilinearly-interpolated
-	     coarse value */
-	  s[] - (9.*coarse(s,0,0) + 
-		 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
-		 coarse(s,child.x,child.y))/16.;
-	if (fabs(w) > p.max[i++]) {
-	  refine = true; // error is too large
-	  break; // no need to check other fields
+  foreach_cell() {
+    if (is_leaf (cell)) {
+      if (level < p.maxlevel) {
+	int i = 0, refine = false;
+	for (scalar s in p.slist) {
+	  double w = s.prolongation ?
+	    /* difference between fine value and its prolongation */
+	    s[] - s.prolongation (point, s) :
+	    /* difference between fine value and bilinearly-interpolated
+	       coarse value */
+	    s[] - (9.*coarse(s,0,0) + 
+		   3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+		   coarse(s,child.x,child.y))/16.;
+	  if (fabs(w) > p.max[i++]) {
+	    refine = true; // error is too large
+	    break; // no need to check other fields
+	  }
+	}
+	if (refine) {
+	  point = refine_cell (point, p.list);
+	  st.nf++;
 	}
       }
-      if (refine) {
-	point = refine_cell (point, p.list);
-	st.nf++;
-      }
+      continue;
     }
+    // !is_leaf (cell)
+    else if (cell.flags & refined)
+      // cell has already been refined, skip its children
+      continue;
+  }
 
   // coarsening
   // the loop below is only necessary to ensure symmetry of 2:1 constraint
@@ -227,6 +236,11 @@ astats adapt_wavelet (struct Adapt p)
       if (is_leaf (cell))
 	continue;
       else if (level == l) {
+	if (cell.flags & refined) {
+	  // cell was refined previously, unset the flag and skip its children
+	  cell.flags &= ~refined;
+	  continue;
+	}
 	int i = 0, coarsen = true;
 	for (scalar s in p.slist) {
 	  double error;

@@ -12,9 +12,10 @@ typedef struct {
 } Cell;
 
 enum {
-  active = 1 << 0,
-  leaf   = 1 << 1,
-  fghost = 1 << 2
+  active  = 1 << 0,
+  leaf    = 1 << 1,
+  fghost  = 1 << 2,
+  refined = 1 << 3
 };
 
 #define _CORNER 4
