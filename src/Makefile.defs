@@ -20,13 +20,13 @@ clean:
 .PRECIOUS: %.prof %.s
 
 %.tst: %.s
-	@$(BASILISK)/dotest $@
+	@$(BASILISK)/runtest $@
 
 %.ctst: %.s
-	@CFLAGS="-grid=multigrid $(CFLAGS)" $(BASILISK)/dotest $@
+	@CFLAGS="-grid=multigrid $(CFLAGS)" $(BASILISK)/runtest $@
 
 %.vtst: %.s
-	@$(BASILISK)/dotest $@ "$(VALGRIND)"
+	@$(BASILISK)/runtest $@ "$(VALGRIND)"
 
 %.s: %.c $(QCC) Makefile
 	@$(QCC) $(subst -g ,,$(CFLAGS)) -nolineno -S $< || (rm -f $@ && false)
