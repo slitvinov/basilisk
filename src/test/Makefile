@@ -11,17 +11,22 @@ slow: nonlinear.tst advection.tst rotation.tst \
 	bump2D.tst hump.tst drybump2D.tst ponds.tst conical.tst
 
 # these tests have special depencies/compilation requirements
-poisson.tst: poisson.ctst
 
 laplacian.tst: laplacian.ctst
 
-terrain.tst: terrain.s
-	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest terrain.tst
+nonlinear.tst: nonlinear.s
+	@LIBS="-lgsl -lgslcblas" $(BASILISK)/dotest nonlinear.tst
 
 ponds.tst: ponds.s
 	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest ponds.tst
 
-nonlinear.tst: nonlinear.s
-	@LIBS="-lgsl -lgslcblas" $(BASILISK)/dotest nonlinear.tst
+poisson.tst: poisson.ctst
+
+reversed.tst: reversed.ctst
+
+rotate.tst: rotate.ctst
+
+terrain.tst: terrain.s
+	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest terrain.tst
 
 include $(BASILISK)/Makefile.defs
