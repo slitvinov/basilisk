@@ -1023,71 +1023,69 @@ val{WS}*[(]    {
       while (!strchr(" \t\v\n\f[", *s)) s++;
       *s = '\0';
       if (var->constant)
-	fprintf (yyout, "((const double) _constant[%s-_NVARMAX])", yytext);
-      else {
-	if (var->maybeconst) {
-	  int found = 0;
-	  for (int i = 0; i < nmaybeconst && !found; i++)
-	    found = !strcmp (foreachconst[i]->v, var->v);
-	  if (!found) {
-	    foreachconst = realloc (foreachconst, 
-				    ++nmaybeconst*sizeof (var_t *));
-	    foreachconst[nmaybeconst - 1] = var;
-	    if (debug)
-	      fprintf (stderr, "%s:%d: '%s' may be const\n", 
-		       fname, line, var->v);
-	  }
-	  char * macro = macro_from_var (yytext);
-	  fprintf (yyout, "val_%s(%s", macro, yytext);
-	  free (macro);
+	fprintf (yyout, "_val_constant(%s", boundaryrep(yytext));
+      else if (var->maybeconst) {
+	int found = 0;
+	for (int i = 0; i < nmaybeconst && !found; i++)
+	  found = !strcmp (foreachconst[i]->v, var->v);
+	if (!found) {
+	  foreachconst = realloc (foreachconst, 
+				  ++nmaybeconst*sizeof (var_t *));
+	  foreachconst[nmaybeconst - 1] = var;
+	  if (debug)
+	    fprintf (stderr, "%s:%d: '%s' may be const\n", 
+		     fname, line, var->v);
 	}
-	else
-	  fprintf (yyout, "val(%s", boundaryrep(yytext));
-	if (yytext[yyleng-1] == ']')
-	  /* v[] */
-	  fputs (",0,0)", yyout);
-	else {
-	  if (var->args > 0) {
-	    /* v[...][... */
-	    fputc ('[', yyout);
-	    fputc (yytext[yyleng-1], yyout);
-	    inarray = brack++;
-	    int j = var->args;
-	    while (j) {
-	      int c = getput();
-	      if (c == EOF)
-		return yyerror ("unexpected EOF");
-	      if (c == '[') brack++;
-	      if (c == ']') {
-		brack--;
-		if (brack == inarray)
-		  j--;
-	      }
-	    }
-	    int c = input();
-	    if (c != '[') {
-	      fprintf (stderr, "%s:%d: error: expecting '[' not '", 
-		       fname, line);
-	      fputc (c, stderr);
-	      fputs ("'\n", stderr);
-	      return 1;
-	    }
-	    fputc (',', yyout);
-	    c = input();
-	    if (c == ']')
-	      /* v[...][] */
-	      fputs ("0,0)", yyout);
-	    else {
-	      fputc (c, yyout);
-	      inarray = ++brack;
+	char * macro = macro_from_var (yytext);
+	fprintf (yyout, "val_%s(%s", macro, yytext);
+	free (macro);
+      }
+      else
+	fprintf (yyout, "val(%s", boundaryrep(yytext));
+      if (yytext[yyleng-1] == ']')
+	/* v[] */
+	fputs (",0,0)", yyout);
+      else {
+	if (var->args > 0) {
+	  /* v[...][... */
+	  fputc ('[', yyout);
+	  fputc (yytext[yyleng-1], yyout);
+	  inarray = brack++;
+	  int j = var->args;
+	  while (j) {
+	    int c = getput();
+	    if (c == EOF)
+	      return yyerror ("unexpected EOF");
+	    if (c == '[') brack++;
+	    if (c == ']') {
+	      brack--;
+	      if (brack == inarray)
+		j--;
 	    }
 	  }
+	  int c = input();
+	  if (c != '[') {
+	    fprintf (stderr, "%s:%d: error: expecting '[' not '", 
+		     fname, line);
+	    fputc (c, stderr);
+	    fputs ("'\n", stderr);
+	    return 1;
+	  }
+	  fputc (',', yyout);
+	  c = input();
+	  if (c == ']')
+	    /* v[...][] */
+	    fputs ("0,0)", yyout);
 	  else {
-	    /* v[...] */
-	    fputc (',', yyout);
-	    unput (yytext[yyleng-1]);
+	    fputc (c, yyout);
 	    inarray = ++brack;
 	  }
+	}
+	else {
+	  /* v[...] */
+	  fputc (',', yyout);
+	  unput (yytext[yyleng-1]);
+	  inarray = ++brack;
 	}
       }
     }

@@ -2,6 +2,8 @@
 
 void (* debug)    (Point);
 
+@define _val_constant(a,k,l) ((const double) _constant[a -_NVARMAX])
+
 @undef VARIABLES
 @def VARIABLES
   double Delta = L0*DELTA; /* cell size */
