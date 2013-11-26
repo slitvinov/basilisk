@@ -15,10 +15,10 @@ slow: nonlinear.tst advection.tst rotation.tst \
 laplacian.tst: laplacian.ctst
 
 nonlinear.tst: nonlinear.s
-	@LIBS="-lgsl -lgslcblas" $(BASILISK)/dotest nonlinear.tst
+	@LIBS="-lgsl -lgslcblas" $(BASILISK)/runtest nonlinear.tst
 
 ponds.tst: ponds.s
-	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest ponds.tst
+	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/runtest ponds.tst
 
 poisson.tst: poisson.ctst
 
@@ -27,6 +27,6 @@ reversed.tst: reversed.ctst
 rotate.tst: rotate.ctst
 
 terrain.tst: terrain.s
-	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/dotest terrain.tst
+	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/runtest terrain.tst
 
 include $(BASILISK)/Makefile.defs

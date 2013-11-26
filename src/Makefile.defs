@@ -53,8 +53,7 @@ clean:
 
 %.tags: %.page $(QCC)
 	$(QCC) -tags $<
-	expireGititCache http://localhost:5001 \
-		$(subst $(BASILISK),src,$(PWD))/$<
+	rm -f $(subst src,cache/src,$(PWD))/$<
 
 # lists external symbols of executables
 extern = nm -u $(1) | sed -n 's/^[ ]*U \(.*\)/\1/p' | sort | uniq

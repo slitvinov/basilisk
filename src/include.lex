@@ -5,13 +5,15 @@
   #include <sys/stat.h>
   #include <sys/types.h>
 
+  enum { FUNCTION, TYPEDEF };
+
   typedef struct {
     char * id, * file;
-    int line;
+    int line, type;
   } Tag;
 
   Tag * tagsa = NULL;
-  int ntags = 0, target = 1, keywords_only = 0;
+  int ntags = 0, target = 1, keywords_only = 0, scope = 0, intypedef = 0;
 
   static void append_tag (Tag t) {
     ntags++;
@@ -19,6 +21,7 @@
     tagsa[ntags-1] = t;
     tagsa[ntags-1].id = strdup (t.id);
     tagsa[ntags-1].file = strdup (t.file);
+    tagsa[ntags-1].type = t.type;
     char * page = strstr (tagsa[ntags-1].file, ".page");
     if (page) *page = '\0';
   }
@@ -91,6 +94,29 @@
       return path;
   }
 
+  static void check_tag (char * text) {
+    if (ftags && keywords_only) {
+      Tag * t;
+      if (target && (t = lookup_tag(text)))
+	switch (t->type) {
+	case FUNCTION:
+	  if (debug)
+	    fprintf (stderr, "%s:%d: function call '%s'\n", 
+		     fname, yylineno, text);
+	  fprintf (ftags, "call %s %s %d\n", 
+		   t->id, shortpath (t->file), t->line);
+	  break;
+	case TYPEDEF:
+	  if (debug)
+	    fprintf (stderr, "%s:%d: typedef reference '%s'\n", 
+		     fname, yylineno, text);
+	  fprintf (ftags, "call %s %s %d\n", 
+		   t->id, shortpath (t->file), t->line);
+	  break;
+	}
+    }
+  }
+
   static int yyerror(const char * s);
   static int comment(void);
   static void echo() {
@@ -107,6 +133,17 @@
 	  s++;
 	}
       }
+    }
+  }
+
+  static void echo_c (int c) {
+    if (myout) {
+      if (incode) {
+	fputc (c, myout);
+	somecode = 1;
+      }
+      else if (c == '\n') // only keep newlines
+	fputc ('\n', myout);
     }
   }
 %}
@@ -139,6 +176,15 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
   if (myout) fputc ('\n', myout);
 }
 
+"{" {
+  scope++;
+}
+
+"}" {
+  scope--;
+  if (scope < 0)
+    return yyerror ("mismatched '}'");
+}
 
 ^{SP}*#{SP}*include{SP}+<.*>{SP}*\n {
   // #include <...>
@@ -186,39 +232,81 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
     if ((s = strchr (grid, '.'))) *s = '\0';
 }
 
-^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{] {
-  // function declaration
+^{ID}+{SP}+{ID}+{SP}*\( {
+  // function definition
   echo();
-  if (ftags && !keywords_only) {
+  if (ftags) {
     char * s = yytext; int nl = 0;
     while (*s != '\0') if (*s++ == '\n') nl++;
-    s = yytext; space(s); nonspace(s); s[-1] = '\0';
-    char * s1 = s;
-    while (!strchr(" \t\v\n\f(", *s1)) s1++;
-    *s1++ = '\0';
-    Tag t = { s, fname, yylineno - nl};
+    s = yytext; space(s); *s++ = '\0';
+    check_tag (yytext);
+    if (!keywords_only) {
+      nonspace(s); s[-1] = '\0';
+      char * s1 = s;
+      while (!strchr(" \t\v\n\f(", *s1)) s1++;
+      *s1++ = '\0';
+      Tag t = { s, fname, yylineno - nl, FUNCTION};
+      int p = 0, para = 1, c;
+      while (para > p && (c = input()) != EOF) {
+	echo_c (c);
+	if (c == '(') para++;
+	else if (c == ')') para--;
+      }
+      if (c == ')') {
+	while ((c = input()) != EOF) {
+	  echo_c (c);
+	  if (c == '{' || c == ';')
+	    break;
+	  if (!strchr(" \t\v\n\f", c))
+	    break;
+	}
+	if (c == '{') {
+	  scope++;
+	  append_tag (t);
+	  if (debug)
+	    fprintf (stderr, "%s:%d: function declaration '%s'\n", 
+		     tagsa[ntags-1].file, tagsa[ntags-1].line, 
+		     tagsa[ntags-1].id);
+	  if (target)
+	    fprintf (ftags, "decl %s %s %d\n", 
+		     tagsa[ntags-1].id, tagsa[ntags-1].file, 
+		     tagsa[ntags-1].line);  
+	}
+      }
+    }
+  }
+}
+
+typedef{WS}+ {
+  echo();
+  if (ftags && !keywords_only)
+    intypedef = scope + 1;
+}
+
+{ID}+{WS}*; {
+  if (intypedef && scope == intypedef - 1) {
+    echo();
+    char * s = yytext; space(s); *s-- = '\0';
+    if (*s == ';')
+      *s = '\0';
+    Tag t = { yytext, fname, yylineno, TYPEDEF};
     append_tag (t);
     if (debug)
-      fprintf (stderr, "%s:%d: function declaration '%s'\n", 
+      fprintf (stderr, "%s:%d: typedef '%s'\n", 
 	       tagsa[ntags-1].file, tagsa[ntags-1].line, tagsa[ntags-1].id);
     if (target)
       fprintf (ftags, "decl %s %s %d\n", 
 	       tagsa[ntags-1].id, tagsa[ntags-1].file, tagsa[ntags-1].line);
+    intypedef = 0;
   }
+  else
+    REJECT;  
 }
 
 {ID}+ {
   // keyword in target
   echo();
-  if (ftags) {
-    Tag * t;
-    if (target && (t = lookup_tag(yytext))) {
-      if (debug)
-	fprintf (stderr, "%s:%d: function call '%s'\n", 
-		 fname, yylineno, yytext);
-      fprintf (ftags, "call %s %s %d\n", t->id, shortpath (t->file), t->line);
-    }
-  }
+  check_tag (yytext);
 }
 
 "/*"              { echo(); if (comment()) return 1; }
@@ -299,6 +387,7 @@ static int include (char * file, FILE * fin, FILE * fout)
   myout = fout;
   yylineno = 1;
   incode = somecode = 0;
+  scope = intypedef = 0;
   long header = fout ? ftell (fout) : 0;
   int ret = yylex();
   if (fout && !somecode) {
