@@ -1,3 +1,29 @@
+/**
+# Basic geometric functions
+
+These basic geometric functions are mostly related to Volume-Of-Fluid
+computations.
+
+We consider a square cell of size unity centered on the origin, cut by
+a straight line.
+
+![Cell and interface](/src/figures/square.png)
+
+The line can be described by the equation
+$$
+n_xx+n_yy=\alpha
+$$
+where $\mathbf{n}$ is a vector normal to the interface and $\alpha$ is
+the intercept. We note $c$ the volume of the part of the square cell
+which lies "inside" the interface, where "inside" is defined by
+convention as the opposite direction to the normal vector $\mathbf{n}$
+(i.e. the normal vector is pointing "outside").
+
+With these definitions, the interface is uniquely defined by providing
+$\mathbf{n}$ and either $\alpha$ or $c$ i.e. there is a unique
+function which computes $\alpha$ given $c$ and $\mathbf{n}$. We call
+this function `line_alpha()` and define it as: */
+
 double line_alpha (double c, double nx, double ny)
 {
   double alpha, n1, n2;
@@ -21,6 +47,11 @@ double line_alpha (double c, double nx, double ny)
 
   return alpha - (nx + ny)/2.;
 }
+
+/**
+Conversely there is a unique function computing $c$ as a function of
+$\mathbf{n}$ and $\alpha$. We call this function `line_area()` and
+define it as: */
 
 double line_area (double nx, double ny, double alpha)
 {
@@ -63,12 +94,24 @@ double line_area (double nx, double ny, double alpha)
   return clamp (area, 0., 1.);
 }
 
+/**
+VOF algorithms require the computation of volume fractions on
+(rectangular) parts of the initial square cell.
+
+We first define a new type used to store the coordinates of the
+vertices of the rectangle. */
+
 typedef struct {
   double x, y;
 } coord;
 
-double rectangle_fraction (double c,
-			   double nx, double ny, double alpha,
+/**
+We then define a function which takes an interface definition
+($\mathbf{n}$, $\alpha$), the coordinates of the lower-left `(x1,y1)`
+and upper-right `(x2,y2)` corners of a rectangle and returns the
+fraction of this rectangle which lies inside the interface. */
+
+double rectangle_fraction (double nx, double ny, double alpha,
 			   double x1, double y1,
 			   double x2, double y2)
 {
@@ -79,6 +122,17 @@ double rectangle_fraction (double c,
   }
   return line_area (n.x, n.y, alpha);
 }
+
+/**
+From the interface definition, it is also possible to compute the
+coordinates of the segment representing the interface in the unit
+cell.
+
+The function below returns the 0,1 or 2 coordinates (stored in the `p`
+array provided by the user) of the corresponding interface
+segments. The case where only 1 coordinate is returned corresponds to
+the degenerate case where the interface intersects the cell exactly on
+a vertex. */
 
 int facets (double c, coord n, double alpha,
 	    coord p[2])

@@ -26,7 +26,7 @@ static void sweep_x (scalar c, scalar cc)
     double un = u.x[]*dt/Delta, s = sign(un);
     int i = -(s + 1.)/2.;
     double cf = (c[i,0] <= 0. || c[i,0] >= 1.) ? c[i,0] :
-      rectangle_fraction (c[i,0], - s*n.x[i,0], n.y[i,0], alpha[i,0],
+      rectangle_fraction (- s*n.x[i,0], n.y[i,0], alpha[i,0],
 			  -0.5, -0.5, s*un - 0.5, 0.5);
     flux[] = u.x[]*cf;
   }

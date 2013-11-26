@@ -14,7 +14,7 @@ static double fraction_prolongation (Point point, scalar c)
     return cc;
   coord n = mycs (parent, c);
   double alpha = line_alpha (cc, n.x, n.y);
-  return rectangle_fraction (cc, child.x*n.x, child.y*n.y, alpha, 
+  return rectangle_fraction (child.x*n.x, child.y*n.y, alpha, 
 			     0., 0., 0.5, 0.5);
 }
 
@@ -30,7 +30,7 @@ static void fraction_refine (Point point, scalar c)
     double alpha = line_alpha (cc, n.x, n.y);
     for (int k = 0; k < 2; k++)
       for (int l = 0; l < 2; l++)
-	fine(c,k,l) = rectangle_fraction (cc, (2*k - 1)*n.x, (2*l - 1)*n.y, alpha,
+	fine(c,k,l) = rectangle_fraction ((2*k - 1)*n.x, (2*l - 1)*n.y, alpha,
 					  0., 0., 0.5, 0.5);
   }
 }
