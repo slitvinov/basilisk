@@ -44,14 +44,6 @@ staggered vector alpha;
 mgstats mgp;
 
 /**
-The default boundary conditions are slip walls. */
-
-u.x[right]  = 0.;
-u.x[left]   = 0.;
-u.y[top]    = 0.;
-u.y[bottom] = 0.;
-
-/**
 The default velocity and pressure are zero. */
 
 event defaults (i = 0)

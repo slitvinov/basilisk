@@ -3,7 +3,7 @@
 /*-----------------------------------------------------*
  *MYC - Mixed Youngs and Central Scheme (2D)           *
  *-----------------------------------------------------*/
-static coord mycs (Point point, scalar c)
+coord mycs (Point point, scalar c)
 {
   int ix;
   double c_t,c_b,c_r,c_l;

@@ -23,13 +23,13 @@ event logfile (t = {0,30}) {
 
 event output (t += 5) {
   static int nf = 0;
-  printf ("file: psi-%d\n", nf);
-  output_field ({psi, omega}, stdout, N, linear = true);
+  printf ("file: omega-%d\n", nf);
+  output_field ({omega}, linear = true);
   scalar l[];
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf);
-  output_field ({l}, stdout, N);
+  output_field ({l});
   nf++;
 }
 

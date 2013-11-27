@@ -49,7 +49,17 @@ variable-resolution boundaries (on adaptive meshes). */
 }
 
 /**
-The function above is then used to do the time-integration itself,
-using the generic tracer advection event. */
+The function below uses the `tracer_fluxes` function to integrate the
+advection equation, using an explicit scheme with timestep `dt`, for
+each tracer in the list. */
 
-#include "tracer.h"
+void advection (scalar * tracers, staggered vector u, double dt)
+{
+  for (scalar f in tracers) {
+    vector flux[];
+    tracer_fluxes (f, u, flux, dt);
+    foreach()
+      f[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta;
+    boundary ({f});
+  }
+}

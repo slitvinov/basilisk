@@ -36,10 +36,12 @@ Note that the `r` and $\beta$ fields will be modified by the solver.
 The function returns the statistics of the Poisson solver. */
 
 struct Diffusion {
+  // mandatory
   scalar f, r;
   double dt;
-  staggered vector D;
-  scalar beta;
+  // optional
+  staggered vector D; // default 1
+  scalar beta;        // default 0
 };
 
 mgstats diffusion (struct Diffusion p)

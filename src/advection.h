@@ -12,32 +12,22 @@ such as the 2nd-order, unsplit, upwind scheme of [Bell-Collela-Glaz,
 
 The main time loop is defined in [run.h](). A stable timestep needs to
 respect the [CFL
-condition](http://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition). The
-Bell-Collela-Glaz flux computation is defined in [bcg.h](). */
+condition](http://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition). The tracer advection event is defined in [tracer.h]() */
 
 #include "run.h"
 #include "timestep.h"
-#include "bcg.h"
+#include "tracer.h"
 
 /**
-We allocate the (staggered) velocity field. The `gradient` function is
-used to set the type of slope-limiting required. The default is to not
-use any limiting (i.e. a purely centered slope estimation). */
+We allocate the (staggered) velocity field. For compatibility with the
+other solvers, we allocate it as `uf` and define an alias. The
+`gradient` function is used to set the type of slope-limiting
+required. The default is to not use any limiting (i.e. a purely
+centered slope estimation). */
 
-staggered vector u[]; // velocity
-
-// Default parameters
-double (* gradient) (double, double, double) = NULL; // centered
-
-/**
-The default boundary conditions are symmetry on all boundaries
-i.e. the (staggered) normal components of velocity are zero on all
-boundaries. */
-
-u.x[right]  = 0.;
-u.x[left]   = 0.;
-u.y[top]    = 0.;
-u.y[bottom] = 0.;
+staggered vector uf[];
+#define u uf
+double (* gradient) (double, double, double) = NULL;
 
 /**
 Here we set the gradient functions for each tracer (as defined in the
@@ -61,7 +51,7 @@ event defaults (i = 0)
 The timestep is set using the velocity field and the CFL
 criterion. This is done after all other events (the `last`
 keyword). The integration itself is performed in the events of
-[tracer.h]() (included from [bcg.h]()). */
+[tracer.h](). */
 
 event velocity (i++, last) {
   dt = timestep (u);

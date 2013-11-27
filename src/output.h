@@ -8,6 +8,7 @@ struct OutputField {
 void output_field (struct OutputField p)
 {
   if (!p.list) p.list = all;
+  if (p.n == 0) p.n = N;
   if (!p.fp) p.fp = stdout;
   fprintf (p.fp, "# 1:x 2:y");
   int i = 3;

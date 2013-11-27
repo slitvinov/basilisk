@@ -12,7 +12,7 @@ is usually provided by the user.
 
 The time `t` and timestep `dt` can be accessed as global variables. */
 
-void parameters  (void);
+void parameters (void);
 double t = 0., dt = 0.;
 
 void run (void)

@@ -297,6 +297,11 @@ static double antisymmetry (Point point, scalar s)
   return -s[];
 }
 
+static double noflux (Point point, scalar s)
+{
+  return 0.;
+}
+
 scalar cartesian_init_scalar (scalar s, const char * name)
 {
   /* set default boundary conditions (symmetry) */
@@ -312,25 +317,25 @@ scalar cartesian_init_scalar (scalar s, const char * name)
 
 vector cartesian_init_vector (vector v, const char * name)
 {
-  foreach_dimension()
+  foreach_dimension() {
     init_scalar (v.x, name);
-  /* set default boundary conditions (symmetry) */
-  v.x.boundary[right] = v.x.boundary[left] = 
-    v.x.boundary_homogeneous[right] = v.x.boundary_homogeneous[left] = 
-    v.y.boundary[top] = v.y.boundary[bottom] = 
-    v.y.boundary_homogeneous[top] = v.y.boundary_homogeneous[bottom] = 
-    antisymmetry;
-  foreach_dimension()
+    /* set default boundary conditions (symmetry) */
+    v.x.boundary[right] = v.x.boundary[left] = 
+      v.x.boundary_homogeneous[right] = v.x.boundary_homogeneous[left] = 
+      antisymmetry;
     v.x.v = v;
+  }
   return v;
 }
 
 vector cartesian_init_staggered_vector (vector v, const char * name)
 {
   v = cartesian_init_vector (v, name);
-  v.x.d.x = v.y.d.y = -1;
-  foreach_dimension()
+  foreach_dimension() {
+    v.x.boundary[right] = v.x.boundary[left] = noflux;  
+    v.x.d.x = -1;
     v.x.staggered = true;
+  }
   return v;
 }
 

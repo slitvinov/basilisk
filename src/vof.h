@@ -1,7 +1,7 @@
 #include "fractions.h"
 
 extern scalar * interfaces;
-extern staggered vector u;
+extern staggered vector uf;
 extern double dt;
 
 event defaults (i = 0)
@@ -23,12 +23,12 @@ static void sweep_x (scalar c, scalar cc)
   
   reconstruction (c, n, alpha);
   foreach_face(x) {
-    double un = u.x[]*dt/Delta, s = sign(un);
+    double un = uf.x[]*dt/Delta, s = sign(un);
     int i = -(s + 1.)/2.;
     double cf = (c[i,0] <= 0. || c[i,0] >= 1.) ? c[i,0] :
       rectangle_fraction (- s*n.x[i,0], n.y[i,0], alpha[i,0],
 			  -0.5, -0.5, s*un - 0.5, 0.5);
-    flux[] = u.x[]*cf;
+    flux[] = uf.x[]*cf;
   }
 
 #if QUADTREE
@@ -41,11 +41,11 @@ static void sweep_x (scalar c, scalar cc)
 #endif
 
   foreach()
-    c[] += dt*(flux[] - flux[1,0] + cc[]*(u.x[1,0] - u.x[]))/Delta;
+    c[] += dt*(flux[] - flux[1,0] + cc[]*(uf.x[1,0] - uf.x[]))/Delta;
   boundary ({c});
 }
 
-event vof_advection (i = 1; i++)
+event vof (i = 1; i++)
 {
   for (scalar c in interfaces) {
     scalar cc[];
