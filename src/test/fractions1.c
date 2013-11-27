@@ -1,5 +1,13 @@
-// similar to fractions.tst but with refinement
+/**
+# Computation of volume fractions on a variable-resolution grid
+
+This test case is similar to [fractions.c]() but with a refined band
+in the middle. */
+
 #include "fractions.h"
+
+/**
+The refinement band is defined by this function. */
 
 static int band (Point point, void * data)
 {
@@ -13,17 +21,28 @@ int main()
 
   refine_function (band, NULL, all);
 
+/**
+We use a circle of radius 0.3 and initialise the fractions. */
+
   scalar c[], phi[];
   staggered vector s[];
   foreach_vertex()
     phi[] = sq(0.3) - sq(x) - sq(y);
   fractions (phi, c, s);
 
-  output_fractions (c, s, stdout);
+/**
+Output the reconstruced facets and cells. */
+
+  output_facets (c, stdout, s);
   output_facets (c, stderr);
   FILE * fp = fopen ("cells", "w");
   output_cells (fp);
   fclose (fp);
+
+/**
+Finally, we reconstruct the interface and display the reconstructed
+facets only in the "halo cells". This is a check of the consistency of
+the boundary conditions applied to $\mathbf{n}$ and $\alpha$. */
 
   vector n[];
   scalar alpha[];
@@ -39,3 +58,9 @@ int main()
 
   free_grid ();
 }
+
+/**
+This gives this figure where "exact" uses `c` and `s`, "VOF" uses
+only `c` and "halo" is the halo cell reconstuction.
+
+![Exact and VOF-reconstucted interface](fractions1/plot.png) */

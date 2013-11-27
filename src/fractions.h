@@ -339,61 +339,59 @@ on quadtree grids). */
 }
 
 /**
-## Interface outputs 
+## Interface output
 
-This first function takes a volume (resp. face) fraction field `c`
-(resp. `s`) and "draws" the corresponding interfaces facets in file
-`fp`. The segment endpoints are defined by pairs of coordinates. Each
-pair of endpoints is separated from the next pair by a newline, so
-that the resulting file is directly visualisable with gnuplot.
+This function "draws" interface facets in a file. The segment
+endpoints are defined by pairs of coordinates. Each pair of endpoints
+is separated from the next pair by a newline, so that the resulting
+file is directly visualisable with gnuplot.
 
-Note that this function will produce a continuous interface representation 
-in most cases. */
+The input parameters are a volume fraction field `c`, an optional file
+pointer `fp` (which defaults to stdout) and an optional staggered
+vector field `s` containing the surface fractions.
 
-void output_fractions (const scalar c, const staggered vector s, FILE * fp)
+If `s` is specified, the surface fractions are used to compute the
+interface normals which leads to a continuous interface representation
+in most cases. Otherwise the interface normals are approximated from
+the volume fraction field, which results in a piecewise continuous
+(i.e. geometric VOF) interface representation. */
+
+struct OutputFacets {
+  scalar c;
+  FILE * fp;          // optional: default is stdout
+  staggered vector s; // optional: default is none
+};
+
+void output_facets (struct OutputFacets p)
 {
-  foreach() {
-    // compute normal from fractions
-    coord n;
-    double nn = 0.;
-    foreach_dimension() {
-      n.x = s.x[] - s.x[1,0];
-      nn += fabs(n.x);
-    }
-    if (nn > 0.) { // interfacial cell
-      foreach_dimension()
-	n.x /= nn;
+  scalar c = p.c;
+  staggered vector s = p.s;
+  if (!p.fp) p.fp = stdout;
+
+  foreach()
+    if (c[] > 0. && c[] < 1.) {
+      coord n;
+      if (!s.x)
+	// compute normal from volume fraction
+	n = mycs (point, c);
+      else {
+	// compute normal from face fractions
+	double nn = 0.;
+	foreach_dimension() {
+	  n.x = s.x[] - s.x[1,0];
+	  nn += fabs(n.x);
+	}
+	assert (nn > 0.);
+	foreach_dimension()
+	  n.x /= nn;
+      }
       double alpha = line_alpha (c[], n.x, n.y);
       coord segment[2];
       if (facets (c[], n, alpha, segment) == 2)
-	fprintf (fp, "%g %g\n%g %g\n\n", 
+	fprintf (p.fp, "%g %g\n%g %g\n\n", 
 		 x + segment[0].x*Delta, y + segment[0].y*Delta, 
 		 x + segment[1].x*Delta, y + segment[1].y*Delta);
     }
-  }
-  fflush (fp);
-}
 
-/**
-This second function only takes a volume fraction field and uses
-interface reconstruction to derive the full geometry necessary to draw
-the facets.
-
-In most cases it will only produce a piecewise continuous (i.e. VOF)
-interface representation. */
-
-void output_facets (scalar c, FILE * fp)
-{
-  scalar alpha[];
-  vector n[];
-  reconstruction (c, n, alpha);
-  coord segment[2];
-  foreach() {
-    coord m = {n.x[],n.y[]};
-    if (facets (c[], m, alpha[], segment) == 2)
-      fprintf (fp, "%g %g\n%g %g\n\n", 
-	       x + segment[0].x*Delta, y + segment[0].y*Delta, 
-	       x + segment[1].x*Delta, y + segment[1].y*Delta);
-  }
-  fflush (fp);
+  fflush (p.fp);
 }
