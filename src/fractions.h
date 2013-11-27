@@ -31,7 +31,7 @@ static double injection (Point point, scalar s)
 Once we have the normal in the fine cell, we can compute the volume
 fraction. */
 
-static double fraction_prolongation (Point point, scalar c)
+double fraction_prolongation (Point point, scalar c)
 {
 
 /**
@@ -63,7 +63,7 @@ the children of the coarse cell. Unfortunately, we cannot just use
 several applications of the prolongation function above, because of
 performance. */
 
-static void fraction_refine (Point point, scalar c)
+void fraction_refine (Point point, scalar c)
 {
   double cc = c[];
   if (cc <= 0. || cc >= 1.)
@@ -136,7 +136,7 @@ vertices to orient the interface properly. */
       if (Phi[] < 0.)
 	s.x[] = 1. - s.x[];
     }
-    
+
 /**
 If the values of $\Phi$ on the vertices of the face have the same sign
 (or are zero), then the face is either entirely outside or entirely
