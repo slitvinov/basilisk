@@ -122,7 +122,7 @@ intervals (but only on the finest grid considered). */
 
 event shape (t += T/4.) {
   if (N == 128)
-    output_facets (f, stdout);
+    output_facets (f);
 }
 
 #if 0
