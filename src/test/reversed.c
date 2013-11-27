@@ -2,7 +2,7 @@
 # Time-reversed VOF advection in a vortex
 
 This classical test advects and stretches an initially circular
-interface in a non-divergent vortical flows. The flow reverts in time
+interface in a non-divergent vortical flow. The flow reverts in time
 and the interface should come back to its original position. The
 difference between the initial and final shapes is a measure of the
 errors accumulated during advection.
@@ -15,7 +15,7 @@ scheme. */
 
 /**
 The volume fraction is stored in scalar field `f` which is listed as
-an `interface` for the VOF solver. We do not advect any tracer with
+an *interface* for the VOF solver. We do not advect any tracer with
 the default (diffusive) advection scheme of the advection solver. */
 
 scalar f[];
@@ -101,7 +101,7 @@ event logfile (t = {0,T}) {
 /**
 To compute the error, we reinitialise field `e` at the end of the
 simulation with the initial shape and compute the difference with the
-final shape. We outputs the norms as functions of the maximum
+final shape. We output the norms as functions of the maximum
 resolution `N`. */
 
 event field (t = T) {
