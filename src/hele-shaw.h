@@ -28,14 +28,14 @@ solver. */
 
 /**
 We allocate the pressure $p$ and divergence field $\zeta$. The
-$\beta$ coefficients need to be defined at staggered locations to
-match the locations of the staggered pressure gradients (and the
-staggered velocity components). These two sets of coefficients are
+$\beta$ coefficients need to be defined at face locations to
+match the locations of the face pressure gradients (and the
+face velocity components). These two sets of coefficients are
 stored in a vector field. We also allocate space to store the
 statistics of the Poisson solver. */
 
 scalar p[], zeta[];
-staggered vector beta[];
+face vector beta[];
 mgstats mgp;
 
 /**
@@ -62,7 +62,7 @@ event pressure (i++, last)
   mgp = poisson (p, zeta, beta);
 
 /**
-We then update the velocity field by computing the staggered pressure
+We then update the velocity field by computing the face pressure
 gradients. */
 
   trash ({u});

@@ -3,13 +3,13 @@
 
 The function below implements the 2nd-order, unsplit, upwind scheme of
 [Bell-Collela-Glaz, 1989](references.bib#bell89). Given a centered
-scalar field `f`, a staggered vector field `u` and a timestep `dt`, it
-fills the staggered vector field `flux` with the components of the
+scalar field `f`, a face vector field `u` and a timestep `dt`, it
+fills the face vector field `flux` with the components of the
 advection fluxes of `f`. */
 
 void tracer_fluxes (const scalar f, 
-		    const staggered vector u,
-		    staggered vector flux,
+		    const face vector u,
+		    face vector flux,
 		    double dt)
 {
 
@@ -53,7 +53,7 @@ The function below uses the `tracer_fluxes` function to integrate the
 advection equation, using an explicit scheme with timestep `dt`, for
 each tracer in the list. */
 
-void advection (scalar * tracers, staggered vector u, double dt)
+void advection (scalar * tracers, face vector u, double dt)
 {
   for (scalar f in tracers) {
     vector flux[];

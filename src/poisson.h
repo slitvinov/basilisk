@@ -185,8 +185,8 @@ $$
 \nabla\cdot (\alpha\nabla a) + \lambda a = b
 $$
 We first setup the data structure required to pass the extra
-parameters $\alpha$ and $\lambda$. We define $\alpha$ as a staggered
-vector field because we need values at the staggered locations
+parameters $\alpha$ and $\lambda$. We define $\alpha$ as a face
+vector field because we need values at the face locations
 corresponding to the face gradients of field $a$. 
 
 `alpha` and `lambda` are declared as `(const)` to indicate that the
@@ -195,7 +195,7 @@ function works also when `alpha` and `lambda` are constant vector
 
 struct Poisson {
   scalar a, b;
-  (const) staggered vector alpha;
+  (const) face vector alpha;
   (const) scalar lambda;
 };
 
@@ -206,11 +206,11 @@ parameters from the data pointer. */
 static void relax (scalar a, scalar b, int l, void * data)
 {
   struct Poisson * p = data;
-  (const) staggered vector alpha = p->alpha;
+  (const) face vector alpha = p->alpha;
   (const) scalar lambda = p->lambda;
 
 /**
-We use the staggered values of $\alpha$ to weight the gradients of the
+We use the face values of $\alpha$ to weight the gradients of the
 5-points Laplacian operator. We get the relaxation function. */
 
   foreach_level_or_leaf (l)
@@ -228,7 +228,7 @@ requires more careful consideration... */
 static double residual (scalar a, scalar b, scalar res, void * data)
 {
   struct Poisson * p = data;
-  (const) staggered vector alpha = p->alpha;
+  (const) face vector alpha = p->alpha;
   (const) scalar lambda = p->lambda;
   double maxres = 0.;
 #if QUADTREE
@@ -276,7 +276,7 @@ unity vector (resp. zero scalar) fields. Note that the user is free to
 provide $\alpha$ and $\beta$ as constant fields. */
 
   if (p.alpha.x) {
-    staggered vector alpha = p.alpha;
+    face vector alpha = p.alpha;
     restriction ((scalar *){alpha});
   }
   else {

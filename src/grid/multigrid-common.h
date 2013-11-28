@@ -38,7 +38,7 @@ void restriction (scalar * list)
   vector * lists = NULL;
   for (scalar s in list) 
     if (!is_constant(s)) {
-      if (s.staggered)
+      if (s.face)
 	lists = vectors_append (lists, s.v);
       else
 	listc = list_append (listc, s);
@@ -125,17 +125,17 @@ void refine_reset (Point point, scalar v)
 void refine_none  (Point point, scalar v) {}
 void coarsen_none (Point point, scalar v) {}
 
-void coarsen_staggered (Point point, scalar s)
+void coarsen_face (Point point, scalar s)
 {
   vector v = s.v;
   foreach_dimension()
     v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
 }
 
-vector multigrid_init_staggered_vector (vector v, const char * name)
+vector multigrid_init_face_vector (vector v, const char * name)
 {
-  v = cartesian_init_staggered_vector (v, name);
-  v.x.coarsen = coarsen_staggered;
+  v = cartesian_init_face_vector (v, name);
+  v.x.coarsen = coarsen_face;
   v.y.coarsen = coarsen_none;
   return v;
 }
@@ -195,5 +195,5 @@ void multigrid_methods()
   debug = multigrid_debug;
   boundary_level = multigrid_boundary_level;
   boundary_restriction = multigrid_boundary_restriction;
-  init_staggered_vector = multigrid_init_staggered_vector;
+  init_face_vector = multigrid_init_face_vector;
 }

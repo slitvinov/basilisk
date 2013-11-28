@@ -105,7 +105,7 @@ And use the diffusion solver to advance the system from $t$ to $t+dt$. */
     r[] = k*kb*C1[];
     beta[] = - k*sq(C1[]);
   }
-  const staggered vector c[] = {D, D};
+  const face vector c[] = {D, D};
   mgd2 = diffusion (C2, r, dt, c, beta);
 }
 

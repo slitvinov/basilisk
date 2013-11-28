@@ -21,26 +21,26 @@ need to solve a Poisson problem. */
 /**
 The Markers-And-Cells (MAC) formulation was first described in the
 pioneering paper of [Harlow and Welch,
-1965](/src/references.bib#harlow1965). It relies on a *staggered*
+1965](/src/references.bib#harlow1965). It relies on a *face*
 discretisation of the velocity components `u.x` and `u.y`, relative to
 the (centered) pressure `p`. This guarantees the consistency of the
 discrete gradient, divergence and Laplacian operators and leads to a
 stable (mode-free) integration. */
 
 scalar p[];
-staggered vector u[];
+face vector u[];
 
 /**
 The parameters are the viscosity coefficient $\mu$ and the specific
-volume $\alpha = 1/\rho$ (with default unity). $\alpha$ is a staggered
-vector because we will need its values at the staggered locations of
+volume $\alpha = 1/\rho$ (with default unity). $\alpha$ is a face
+vector because we will need its values at the face locations of
 the velocity components. 
 
 The statistics for the (multigrid) solution of the Poisson problem are
 stored in `mgp`. */
 
 double mu = 0.;
-staggered vector alpha;
+face vector alpha;
 mgstats mgp;
 
 /**
@@ -86,7 +86,7 @@ event advance (i++)
 
 /**
 We allocate a local symmetric tensor field. To be able to compute the
-divergence of the tensor at the staggered locations, we need to
+divergence of the tensor at the face locations, we need to
 compute the diagonal components at the center of cells and the
 off-diagonal component at the vertices. 
 

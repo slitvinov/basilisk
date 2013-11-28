@@ -1,4 +1,4 @@
-/* tangential interpolation on staggered vector fields  */
+/* tangential interpolation on face vector fields  */
 
 scalar h[];
 vector u[];

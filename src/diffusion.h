@@ -27,7 +27,7 @@ multigrid solver. */
 /**
 The parameters of the `diffusion()` function are a scalar field `f`,
 scalar fields `r` and $\beta$ defining the reactive term, the timestep
-`dt` and a staggered vector field containing the diffusion coefficient
+`dt` and a face vector field containing the diffusion coefficient
 `D`. If `D` is omitted it is set to one. If $\beta$ is omitted it is
 set to zero. Both `D` and $\beta$ may be constant fields.
 
@@ -40,7 +40,7 @@ struct Diffusion {
   scalar f, r;
   double dt;
   // optional
-  staggered vector D; // default 1
+  face vector D; // default 1
   scalar beta;        // default 0
 };
 

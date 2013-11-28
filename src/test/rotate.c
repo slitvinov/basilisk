@@ -19,7 +19,7 @@ event init (i = 0)
   scalar phi[];
   foreach_vertex()
     phi[] = circle(x,y);
-  staggered vector s[];
+  face vector s[];
   fractions (phi, c, s);
 }
 
@@ -55,7 +55,7 @@ event field (t = end) {
   scalar e[], phi[];
   foreach_vertex()
     phi[] = circle(x,y);
-  staggered vector s[];
+  face vector s[];
   fractions (phi, e, s);
   foreach()
     e[] -= c[];

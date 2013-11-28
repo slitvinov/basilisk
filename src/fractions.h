@@ -111,7 +111,7 @@ interface.
 
 ![Volume and surface fractions](/src/figures/fractions.png) */
 
-void fractions (const scalar Phi, scalar c, staggered vector s)
+void fractions (const scalar Phi, scalar c, face vector s)
 {
 
 /**
@@ -347,7 +347,7 @@ is separated from the next pair by a newline, so that the resulting
 file is directly visualisable with gnuplot.
 
 The input parameters are a volume fraction field `c`, an optional file
-pointer `fp` (which defaults to stdout) and an optional staggered
+pointer `fp` (which defaults to stdout) and an optional face
 vector field `s` containing the surface fractions.
 
 If `s` is specified, the surface fractions are used to compute the
@@ -358,14 +358,14 @@ the volume fraction field, which results in a piecewise continuous
 
 struct OutputFacets {
   scalar c;
-  FILE * fp;          // optional: default is stdout
-  staggered vector s; // optional: default is none
+  FILE * fp;     // optional: default is stdout
+  face vector s; // optional: default is none
 };
 
 void output_facets (struct OutputFacets p)
 {
   scalar c = p.c;
-  staggered vector s = p.s;
+  face vector s = p.s;
   if (!p.fp) p.fp = stdout;
 
   foreach()

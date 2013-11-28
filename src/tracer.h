@@ -9,11 +9,11 @@ where $\mathbf{u_f}$ is the velocity field and $f_i$ are a list of
 passive tracers.
 
 The `tracers` list is defined elsewhere (typically by the user), the
-staggered vector field `uf` and the timestep `dt` are defined by a
+face vector field `uf` and the timestep `dt` are defined by a
 solver. */
 
 extern scalar * tracers;
-extern staggered vector uf;
+extern face vector uf;
 extern double dt;
 
 /**

@@ -126,10 +126,10 @@ vector new_vector (const char * name)
   return v;
 }
 
-vector new_staggered_vector (const char * name)
+vector new_face_vector (const char * name)
 {
   vector v = alloc_vector (name);
-  init_staggered_vector (v, name);
+  init_face_vector (v, name);
   return v;
 }
 
@@ -223,7 +223,7 @@ void (* boundary_centered) (scalar *);
 void (* boundary_normal)   (vector *);
 void (* boundary_tangent)  (vector *);
 
-void boundary_staggered (vector * list)
+void boundary_face (vector * list)
 {
   foreach_dimension() {
     foreach_boundary (right,false)
@@ -242,7 +242,7 @@ void boundary (scalar * list)
   scalar * listc = NULL;
   vector * lists = NULL;
   for (scalar s in list) {
-    if (s.staggered)
+    if (s.face)
       lists = vectors_append (lists, s.v);
     else
       listc = list_append (listc, s);
@@ -252,7 +252,7 @@ void boundary (scalar * list)
     free (listc);
   }
   if (lists) {
-    boundary_staggered (lists);
+    boundary_face (lists);
     free (lists);
   }
 }
@@ -302,9 +302,9 @@ scalar cartesian_init_scalar (scalar s, const char * name)
     s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
   foreach_dimension() {
     s.v.x = -1; // not a vector component
-    s.d.x = 0;  // not staggered
+    s.d.x = 0;  // not face
   }
-  s.staggered = false;
+  s.face = false;
   return s;
 }
 
@@ -321,13 +321,13 @@ vector cartesian_init_vector (vector v, const char * name)
   return v;
 }
 
-vector cartesian_init_staggered_vector (vector v, const char * name)
+vector cartesian_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_vector (v, name);
   foreach_dimension() {
     v.x.boundary[right] = v.x.boundary[left] = noflux;  
     v.x.d.x = -1;
-    v.x.staggered = true;
+    v.x.face = true;
   }
   return v;
 }
@@ -399,5 +399,5 @@ void cartesian_methods()
   boundary_normal   = cartesian_boundary_normal;
   boundary_tangent  = cartesian_boundary_tangent;
   debug             = cartesian_debug;
-  init_staggered_vector = cartesian_init_staggered_vector;
+  init_face_vector  = cartesian_init_face_vector;
 }

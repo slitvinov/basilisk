@@ -483,7 +483,7 @@ scalar quadtree_init_scalar (scalar s, const char * name)
   return s;
 }
 
-static void refine_staggered (Point point, scalar s)
+static void refine_face (Point point, scalar s)
 {
   vector v = s.v;
   foreach_dimension() {
@@ -518,10 +518,10 @@ static void refine_staggered (Point point, scalar s)
   fine(v.y,1,1) += p[1] - p[3];
 }
 
-vector quadtree_init_staggered_vector (vector v, const char * name)
+vector quadtree_init_face_vector (vector v, const char * name)
 {
-  v = multigrid_init_staggered_vector (v, name);
-  v.x.refine  = refine_staggered;
+  v = multigrid_init_face_vector (v, name);
+  v.x.refine  = refine_face;
   v.y.refine  = coarsen_none;
   return v;
 }
@@ -534,5 +534,5 @@ void quadtree_methods()
   boundary_normal       = halo_restriction_flux;
   boundary_tangent      = quadtree_boundary_tangent;
   boundary_restriction  = quadtree_boundary_restriction;
-  init_staggered_vector = quadtree_init_staggered_vector;
+  init_face_vector = quadtree_init_face_vector;
 }

@@ -1,9 +1,9 @@
-/* tangential interpolation on staggered vector fields  */
+/* tangential interpolation on face vector fields  */
 
 #include "utils.h"
 
 scalar h[];
-staggered vector u[];
+face vector u[];
 
 static double solution (double x, double y)
 {

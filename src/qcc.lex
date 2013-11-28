@@ -11,7 +11,7 @@
   enum { scalar, vector, tensor };
 
   typedef struct { int i; char * name; } Scalar;
-  typedef struct { int x, y, staggered; char * name; } Vector;
+  typedef struct { int x, y, face; char * name; } Vector;
   typedef struct { Vector x, y; char * name; } Tensor;
 
   int debug = 0, catch = 0, nolineno = 0;
@@ -21,7 +21,7 @@
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
     inforeach_boundary, inforeach_face, inforeach_vertex, nmaybeconst = 0;
-  int invardecl, vartype, varsymmetric, varstaggered, varmaybeconst;
+  int invardecl, vartype, varsymmetric, varface, varmaybeconst;
   char * varconst;
   int inval, invalpara;
   int brack, inarray;
@@ -66,7 +66,7 @@
 
   typedef struct { 
     char * v, * constant;
-    int type, args, scope, automatic, symmetric, staggered, maybeconst;
+    int type, args, scope, automatic, symmetric, face, maybeconst;
     int i[4];
   } var_t;
   var_t _varstack[100]; int varstack = -1;
@@ -523,7 +523,7 @@
       fprintf (yyout, "= new_%s%s%s(\"%s\"",
 	       var->constant ? "const_" : "",
 	       var->symmetric ? "symmetric_" : 
-	       var->staggered ? "staggered_" : 
+	       var->face ? "face_" : 
 	       "",
 	       var->type == scalar ? "scalar" : 
 	       var->type == vector ? "vector" : 
@@ -584,7 +584,7 @@
       var_t * v = varlookup (var, strlen(var));
       v->automatic = 1;
       v->symmetric = varsymmetric;
-      v->staggered = varstaggered;
+      v->face = varface;
       if (varconst)
 	v->constant = strdup (varconst);
       fputs (text, yyout);
@@ -876,16 +876,16 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = varmaybeconst = 0;
 }
 
-{ID}+{WS}*[=]{WS}*new{WS}+(symmetric|staggered){0,1}*{WS}*(scalar|vector|tensor) |
-[=]{WS}*new{WS}+(symmetric|staggered){0,1}{WS}*(scalar|vector|tensor) {
+{ID}+{WS}*[=]{WS}*new{WS}+(symmetric|face){0,1}*{WS}*(scalar|vector|tensor) |
+[=]{WS}*new{WS}+(symmetric|face){0,1}{WS}*(scalar|vector|tensor) {
   char * type = strchr (yytext, '=');
   type = strstr (type, "new"); space(type); nonspace(type);
   char * symmetric = strstr (type, "symmetric");
   if (symmetric) {
     space(type); nonspace(type);
   }
-  char * staggered = strstr (type, "staggered");
-  if (staggered) {
+  char * face = strstr (type, "face");
+  if (face) {
     space(type); nonspace(type);
   }
   int newvartype = (!strcmp (type, "scalar") ? scalar :
@@ -911,13 +911,13 @@ end_foreach{ID}*{SP}*"()" {
     fprintf (yyout, "%s ", yytext);
   }
   var->symmetric = (symmetric != NULL);
-  var->staggered = (staggered != NULL);
+  var->face = (face != NULL);
   new_field (var);
   if (debug)
     fprintf (stderr, "%s:%d: new %s%s: %s\n", 
 	     fname, line, 
 	     var->symmetric ? "symmetric " : 
-	     var->staggered ? "staggered " :
+	     var->face ? "face " :
 	     "", 
 	     type, var->v);
 }
@@ -925,10 +925,10 @@ end_foreach{ID}*{SP}*"()" {
 \({WS}*const{WS}*\)    varmaybeconst = 1;
 
 symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
-staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
+face{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
 (scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ {
   varsymmetric = (strstr(yytext, "symmetric") != NULL);
-  varstaggered = (strstr(yytext, "staggered") != NULL);
+  varface = (strstr(yytext, "face") != NULL);
   varconst = NULL;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
@@ -965,7 +965,7 @@ staggered{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
     fputs (text, yyout);
 }
 
-const{WS}+(symmetric{WS}+|staggered{WS}+|{WS}*)(scalar|vector|tensor){WS}+[a-zA-Z0-9_]+\[{WS}*\]{WS}*=[^;]+ {
+const{WS}+(symmetric{WS}+|face{WS}+|{WS}*)(scalar|vector|tensor){WS}+[a-zA-Z0-9_]+\[{WS}*\]{WS}*=[^;]+ {
   // const scalar a[] = 1.;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
@@ -985,7 +985,7 @@ const{WS}+(symmetric{WS}+|staggered{WS}+|{WS}*)(scalar|vector|tensor){WS}+[a-zA-
   if (para != 0)
     return yyerror ("constant fields can only appear in declarations");
   varconst = cst;
-  varsymmetric = varstaggered = 0;
+  varsymmetric = varface = 0;
   declaration (var, text);
 }
 
@@ -1124,7 +1124,7 @@ val{WS}*[(]    {
       else
 	s1++;
     }
-    if (!var->staggered)
+    if (!var->face)
       boundarycomponent = 0;
     boundaryfp = yyout;
 
@@ -1761,7 +1761,7 @@ void compdir (FILE * fin, FILE * fout, char * grid)
 		 var.i[0], var.v);
       else if (var.type == vector)
 	fprintf (fout, "  init_%svector ((vector){%d,%d}, \"%s\");\n",
-		 var.staggered ? "staggered_" : "",
+		 var.face ? "face_" : "",
 		 var.i[0], var.i[1], var.v);
       else if (var.type == tensor)
 	fprintf (fout, "  init_tensor ((tensor){{%d,%d},{%d,%d}}, \"%s\");\n", 

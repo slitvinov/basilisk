@@ -22,7 +22,7 @@ need to solve a Poisson problem. */
 /**
 The Markers-And-Cells (MAC) formulation was first described in the
 pioneering paper of [Harlow and Welch,
-1965](/src/references.bib#harlow1965). It relies on a *staggered*
+1965](/src/references.bib#harlow1965). It relies on a *face*
 discretisation of the velocity components `u.x` and `u.y`, relative to
 the (centered) pressure `p`. This guarantees the consistency of the
 discrete gradient, divergence and Laplacian operators and leads to a
@@ -30,20 +30,20 @@ stable (mode-free) integration. */
 
 scalar p[], pf[];
 vector u[];
-staggered vector uf[];
+face vector uf[];
 
 /**
 The parameters are the viscosity coefficient $\mu$ and the specific
-volume $\alpha = 1/\rho$ (with default unity). $\alpha$ is a staggered
-vector because we will need its values at the staggered locations of
+volume $\alpha = 1/\rho$ (with default unity). $\alpha$ is a face
+vector because we will need its values at the face locations of
 the velocity components. 
 
 The statistics for the (multigrid) solution of the Poisson problem are
 stored in `mgp`. */
 
 double mu = 0.;
-const staggered vector alpha[] = {1,1};
-//staggered vector alpha;
+const face vector alpha[] = {1,1};
+//face vector alpha;
 mgstats mgp, mgpf;
 
 /**
@@ -115,7 +115,7 @@ void prediction()
 }
 
 // fixme: share with MAC solver
-mgstats projection (staggered vector u, scalar p)
+mgstats projection (face vector u, scalar p)
 {
   scalar div[];
   foreach()
@@ -134,7 +134,7 @@ event advance (i++)
   mgpf = projection (uf, pf);
 
   if (mu > 0. && dt > 0.) {
-    const staggered vector nu[] = {mu,mu};
+    const face vector nu[] = {mu,mu};
     scalar r[];
     foreach_dimension() {
       vector flux[];

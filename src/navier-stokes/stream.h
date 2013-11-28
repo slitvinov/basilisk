@@ -74,7 +74,7 @@ event velocity (i++)
 
 /**
 Using the new streamfunction, we can then update the components of the
-velocity field. Since they are staggered relative to the
+velocity field. Since they are face relative to the
 streamfunction, we need to average the gradients, which gives the
 discrete expression below (for the horizontal velocity component). The
 expression for the vertical velocity component is obtained by

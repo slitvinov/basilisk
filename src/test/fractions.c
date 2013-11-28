@@ -25,7 +25,7 @@ We then use this function to compute the corresponding volume and
 surface fractions. */
 
   scalar c[];
-  staggered vector s[];
+  face vector s[];
   fractions (phi, c, s);
 
 /**

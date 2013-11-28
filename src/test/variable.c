@@ -4,7 +4,7 @@
 #include "poisson.h"
 
 scalar a[], b[], res[], dp[];
-staggered vector c[];
+face vector c[];
 
 double solution (double x, double y)
 {

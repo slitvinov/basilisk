@@ -18,11 +18,11 @@ We will need basic functions for volume fraction computations. */
 The list of volume fraction fields `interfaces`, will be provided by
 the user.
 
-The staggered velocity field `uf` will be defined by a solver as well
+The face velocity field `uf` will be defined by a solver as well
 as the timestep. */
 
 extern scalar * interfaces;
-extern staggered vector uf;
+extern face vector uf;
 extern double dt;
 
 /**

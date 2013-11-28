@@ -19,13 +19,13 @@ condition](http://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_
 #include "tracer.h"
 
 /**
-We allocate the (staggered) velocity field. For compatibility with the
+We allocate the (face) velocity field. For compatibility with the
 other solvers, we allocate it as `uf` and define an alias. The
 `gradient` function is used to set the type of slope-limiting
 required. The default is to not use any limiting (i.e. a purely
 centered slope estimation). */
 
-staggered vector uf[];
+face vector uf[];
 #define u uf
 double (* gradient) (double, double, double) = NULL;
 
