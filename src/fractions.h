@@ -105,14 +105,27 @@ function $\Phi$ sampled on the *vertices* of the grid.
 By convention the "inside" of the interface corresponds to $\Phi > 0$.
 
 The function takes the vertex scalar field $\Phi$ as input and fills
-`c` with the volume fraction and `s` with the surface fractions
-i.e. the fractions of the faces of the cell which are inside the
-interface. 
+`c` with the volume fraction and, optionally if it is given, `s`
+with the surface fractions i.e. the fractions of the faces of the cell
+which are inside the interface.
 
 ![Volume and surface fractions](/src/figures/fractions.png) */
 
-void fractions (const scalar Phi, scalar c, face vector s)
+struct Fractions {
+  scalar Phi, c; // compulsory
+  face vector s; // optional
+};
+
+void fractions (struct Fractions p)
 {
+  scalar Phi = p.Phi, c = p.c;
+  face vector s = p.s;
+
+/**
+If `s` is not given, we allocate a local face vector field. */
+
+  if (!p.s.x)
+    s = new face vector;
 
 /**
 ### Surface fraction computation
@@ -160,7 +173,6 @@ quadtree meshes). */
   foreach() {
 
 /**
-
 We first compute the normal to the interface. This can be done easily
 using the surface fractions. The idea is to compute the circulation of
 the normal along the boundary $\partial\Omega$ of the fraction of the
@@ -244,9 +256,12 @@ we defined above. */
 #endif
 
 /**
-Finally we apply the boundary conditions. */
+Finally we apply the boundary conditions and deallocate the local
+frace fraction field if necessary. */
 
   boundary ({c});
+  if (!p.s.x)
+    delete ((scalar *){s});
 }
 
 /**

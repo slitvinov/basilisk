@@ -49,8 +49,7 @@ event init (i = 0) {
   scalar phi[];
   foreach_vertex()
     phi[] = circle(x,y);
-  face vector s[];
-  fractions (phi, f, s);
+  fractions (phi, f);
 }
 
 event velocity (i++) {
@@ -108,8 +107,7 @@ event field (t = T) {
   scalar phi[], e[];
   foreach_vertex()
     phi[] = circle(x,y);
-  face vector s[];
-  fractions (phi, e, s);
+  fractions (phi, e);
   foreach()
     e[] -= f[];
   norm n = normf (e);

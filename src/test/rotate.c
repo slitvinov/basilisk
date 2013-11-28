@@ -19,8 +19,7 @@ event init (i = 0)
   scalar phi[];
   foreach_vertex()
     phi[] = circle(x,y);
-  face vector s[];
-  fractions (phi, c, s);
+  fractions (phi, c);
 }
 
 #define end 0.785398
@@ -55,8 +54,7 @@ event field (t = end) {
   scalar e[], phi[];
   foreach_vertex()
     phi[] = circle(x,y);
-  face vector s[];
-  fractions (phi, e, s);
+  fractions (phi, e);
   foreach()
     e[] -= c[];
   norm n = normf (e);
