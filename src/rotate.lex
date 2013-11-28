@@ -87,14 +87,19 @@ val_{ID}*{WS}*\( |
   }
   else
     ECHO;
-  if (i == dimension - 1 + start)
+  int ghost = 0;
+  for (int j = start; j <= i && !ghost; j++)
+    if (strlen(index[j]) == 2 && 
+	strchr ("ijk", index[j][0]) && index[j][1] == 'g')
+      ghost = 1;
+  if (!ghost && i == dimension - 1 + start)
     for (int j = 0; j < dimension; j++) {
       int k = (j + n) % dimension;
       rotate_string (index[k + start]);
       fputc (j < dimension - 1 ? ',' : ')', yyout);
     }
   else
-    //  more than dimension indices: do not rotate
+    //  more than dimension indices or ghost indices: do not rotate
     for (int j = start; j <= i; j++) {
       fputs (index[j], yyout);
       fputc (j < i ? ',' : ')', yyout);

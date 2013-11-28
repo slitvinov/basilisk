@@ -225,18 +225,14 @@ void (* boundary_tangent)  (vector *);
 
 void boundary_staggered (vector * list)
 {
-  foreach_boundary (right,false)
-    for (vector u in list)
-      u.x[ghost] = u.x.boundary[right] (point, u.x);
-  foreach_boundary (top,false)
-    for (vector u in list)
-      u.y[ghost] = u.y.boundary[top] (point, u.y);
-  foreach_boundary (left,false)
-    for (vector u in list)
-      u.x[] = u.x.boundary[left] (point, u.x);
-  foreach_boundary (bottom,false)
-    for (vector u in list)
-      u.y[] = u.y.boundary[bottom] (point, u.y);
+  foreach_dimension() {
+    foreach_boundary (right,false)
+      for (vector u in list)
+	u.x[ghost] = u.x.boundary[right] (point, u.x);
+    foreach_boundary (left,false)
+      for (vector u in list)
+	u.x[] = u.x.boundary[left] (point, u.x);
+  }
   boundary_normal (list);
   boundary_tangent (list);
 }
@@ -276,15 +272,12 @@ void cartesian_boundary_normal (vector * list)
 
 void cartesian_boundary_tangent (vector * list)
 {
-  // fixme: hardcoded for 2D
-  for (int d = top; d <= bottom; d++)
-    foreach_boundary_face (d)
-      for (vector v in list)
-	v.x[ghost] = v.x.boundary[d] (point, v.x);
-  for (int d = right; d <= left; d++)
-    foreach_boundary_face (d)
-      for (vector v in list)
-	v.y[ghost] = v.y.boundary[d] (point, v.y);
+  foreach_dimension() {
+    for (int d = top; d <= bottom; d++)
+      foreach_boundary_face (d)
+	for (vector v in list)
+	  v.x[ghost] = v.x.boundary[d] (point, v.x);
+  }
 }
 
 static double symmetry (Point point, scalar s)
