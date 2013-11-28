@@ -47,8 +47,9 @@
 
   int inboundary;
   char boundaryvar[80], boundarydir[80];
-  FILE * boundaryfp = NULL;
-  int boundarycomponent, nboundary = 0;
+  FILE * boundaryfp = NULL, * boundaryheader = NULL;
+  int boundarycomponent, nboundary = 0, nsetboundary = 0;
+  int boundaryindex[80];
 
   int infunction, infunctiondecl, functionscope, functionpara;
   char * return_type = NULL;
@@ -162,7 +163,7 @@
     yyout = foreachdimfp;
     if (foreachdim > 1)
       fputc ('{', yyout);
-    FILE * fp = dopen ("dimension.h", "r");
+    FILE * fp = dopen ("_dimension.h", "r");
     writefile (fp, 'y', 'x', foreachdimline, NULL);
     writefile (fp, 'x', 'y', foreachdimline, NULL);
     fclose (fp);
@@ -175,7 +176,7 @@
     if (inforeach_face) {
       // foreach_face()
       fputs ("foreach()", yyout);
-      FILE * fp = dopen ("foreach_body.h", "r");
+      FILE * fp = dopen ("_foreach_body.h", "r");
       if (foreach_face_xy == face_xy) {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
 	writefile (fp, 'y', 'x', foreach_line, "is_face_y()");
@@ -225,7 +226,7 @@
     }
     else if (inforeach_vertex) {
       // foreach_vertex()
-      FILE * fp = dopen ("foreach_body.h", "r");
+      FILE * fp = dopen ("_foreach_body.h", "r");
       fputs ("foreach() { x -= Delta/2.; y -= Delta/2.; ", yyout);
       writefile (fp, 'x', 'y', foreach_line, NULL);
       fputs (" } end_foreach()\n", yyout);
@@ -256,12 +257,12 @@
     }
     else {
       // foreach()
-      FILE * fp = dopen ("foreach.h", "r");
+      FILE * fp = dopen ("_foreach.h", "r");
       int c;
       while ((c = fgetc (fp)) != EOF)
 	fputc (c, yyout);
       fclose (fp);
-      fp = dopen ("foreach_body.h", "r");
+      fp = dopen ("_foreach_body.h", "r");
       while ((c = fgetc (fp)) != EOF)
 	fputc (c, yyout);
       fclose (fp);
@@ -674,11 +675,11 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 		 reductvar[i], reductvar[i], reductvar[i]);
       fprintf (yyout, "\n#line %d\n", foreach_line);
     }
-    yyout = dopen ("foreach_body.h", "w");
+    yyout = dopen ("_foreach_body.h", "w");
     if (inforeach_face) {
       foreach_face_xy = face_xy;
       if (nreduct == 0) { // foreach_face (x)
-	FILE * fp = dopen ("foreach.h", "r");
+	FILE * fp = dopen ("_foreach.h", "r");
 	int c;
 	while ((c = fgetc (fp)) != EOF)
 	  if (c == 'x')
@@ -765,7 +766,7 @@ foreach{ID}* {
   nreduct = 0;
   foreach_line = line;
   foreachfp = yyout;
-  yyout = dopen ("foreach.h", "w");
+  yyout = dopen ("_foreach.h", "w");
   inforeach_boundary = (!strncmp(foreachs, "foreach_boundary", 16));
   inforeach_vertex = (!strcmp(foreachs, "foreach_vertex"));
   inforeach_face = (!strcmp(foreachs, "foreach_face"));
@@ -808,26 +809,31 @@ end_foreach{ID}*{SP}*"()" {
   if (inboundary) {
     ECHO;
     fclose (yyout);
-    yyout = boundaryfp;
-    FILE * fp = dopen ("inboundary.h", "r");
+
+    yyout = boundaryheader;
+    FILE * fp = dopen ("_inboundary.h", "r");
     int c;
     while ((c = fgetc (fp)) != EOF)
       fputc (c, yyout);
     fputs (" } ", yyout);
     fprintf (yyout, 
-	     "double _boundary%d_homogeneous (Point point, scalar _s) {",
+	     "static double _boundary%d_homogeneous (Point point, scalar _s) {",
 	     nboundary);
     boundary_staggering (boundarydir, boundarycomponent, yyout);
     fputs (" POINT_VARIABLES; return ", yyout);
     rewind (fp);
     homogeneize (fp, yyout);
     fclose (fp);
-    fputs (" } ", yyout);
-    if (scope == 0)
+    fputs (" }\n", yyout);
+
+    yyout = boundaryfp;
+    if (scope == 0) {
       /* file scope */
       fprintf (yyout, 
 	       "static void _set_boundary%d (void) { ",
 	       nboundary);
+      boundaryindex[nsetboundary++] = nboundary;
+    }
     /* function/file scope */
     fprintf (yyout,
 	     "_method[%s].boundary[%s] = _boundary%d; "
@@ -1120,16 +1126,20 @@ val{WS}*[(]    {
     }
     if (!var->staggered)
       boundarycomponent = 0;
-    fprintf (yyout, 
-	     "double _boundary%d (Point point, scalar _s) {",
-	     nboundary);
+    boundaryfp = yyout;
+
+    yyout = boundaryheader;
+    fprintf (yyout,
+	     "#line %d \"%s\"\n"
+	     "static double _boundary%d (Point point, scalar _s) {",
+	     line, fname, nboundary);
     boundary_staggering (boundarydir, boundarycomponent, yyout);
     fputs (" POINT_VARIABLES; return ", yyout);
     inboundary = inforeach_boundary = 1;
     strcpy (boundaryvar, yytext);
     inforeach = 2;
-    boundaryfp = yyout;
-    yyout = dopen ("inboundary.h", "w");
+
+    yyout = dopen ("_inboundary.h", "w");
   }
   else
     REJECT;
@@ -1361,7 +1371,7 @@ end {
 foreach_dimension{WS}*[(]{WS}*[)] {
   foreachdim = scope + 1; foreachdimpara = para;
   foreachdimfp = yyout;
-  yyout = dopen ("dimension.h", "w");
+  yyout = dopen ("_dimension.h", "w");
   foreachdimline = line;
 }
 
@@ -1595,10 +1605,11 @@ int endfor (FILE * fin, FILE * fout)
   inevent = inreturn = 0;
   foreachdim = 0;
   foreach_child = 0;
-  inboundary = 0;
+  inboundary = nboundary = nsetboundary = 0;
   infunction = 0;
   infunctionproto = 0;
   inarg = 0;
+  boundaryheader = dopen ("_boundary.h", "w");
   int ret = yylex();
   if (!ret) {
     if (scope > 0)
@@ -1606,6 +1617,7 @@ int endfor (FILE * fin, FILE * fout)
     else if (para > 0)
       ret = yyerror ("mismatched '('");
   }
+  fclose (boundaryheader);
   return ret;
 }
 
@@ -1666,7 +1678,15 @@ void compdir (FILE * fin, FILE * fout, char * grid)
     cleanup (1, dir);
   fclose (fout);
 
-  fout = dopen ("grid.h", "w");
+  fout = dopen ("_boundarydecl.h", "w");
+  for (int i = 0; i < nboundary; i++)
+    fprintf (fout, 
+       "static double _boundary%d (Point point, scalar _s);\n"
+       "static double _boundary%d_homogeneous (Point point, scalar _s);\n", 
+	     i, i);
+  fclose (fout);
+
+  fout = dopen ("_grid.h", "w");
   /* new variables */
   fprintf (fout,
 	   "int datasize = %d*sizeof (double);\n",
@@ -1698,8 +1718,9 @@ void compdir (FILE * fin, FILE * fout, char * grid)
       }
   fputs ("  { 1 }\n};\n", fout);
   /* boundaries */
-  for (int i = 0; i < nboundary; i++)
-    fprintf (fout, "static void _set_boundary%d (void);\n", i);
+  for (int i = 0; i < nsetboundary; i++)
+    fprintf (fout, "static void _set_boundary%d (void);\n", 
+	     boundaryindex[i]);
   /* methods */
   fputs ("void init_solver (void) {\n", fout);
   /* scalar methods */
@@ -1749,8 +1770,8 @@ void compdir (FILE * fin, FILE * fout, char * grid)
 	assert (0);
     }
   }
-  for (int i = 0; i < nboundary; i++)
-    fprintf (fout, "  _set_boundary%d();\n", i);
+  for (int i = 0; i < nsetboundary; i++)
+    fprintf (fout, "  _set_boundary%d();\n", boundaryindex[i]);
   fputs ("  init_events();\n}\n", fout);
   fclose (fout);
 }
@@ -1877,6 +1898,8 @@ int main (int argc, char ** argv)
       /* grid */
       if (default_grid)
 	fprintf (fout, "#include \"grid/%s.h\"\n", grid);
+      /* declaration of boundary condition fonctions */
+      fputs ("@include \"_boundarydecl.h\"\n", fout);
       char s[81];
       while (fgets (s, 81, fin)) {
 	// replace '#include <' with '@include <'
@@ -1892,7 +1915,8 @@ int main (int argc, char ** argv)
 	}
 	fputs (s, fout);
       }
-      fputs ("@include \"grid.h\"\n", fout);
+      fputs ("@include \"_boundary.h\"\n"
+	     "@include \"_grid.h\"\n", fout);
       fclose (fout);
       fclose (fin);
       fout = dopen (file, "w");

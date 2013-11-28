@@ -9,17 +9,15 @@ void parameters()
   N = 1 << MAXLEVEL;
 }
 
-// fixme: it would be nice if psi was a local variable
-// i.e. boundary conditions need to be local too
-scalar psi[];
-psi[left]   = dirichlet(0);
-psi[right]  = dirichlet(0);
-psi[top]    = dirichlet(0);
-psi[bottom] = dirichlet(0);
-
-event init (i = 0)
+event init (t = 0)
 {
-  scalar omega[];
+  scalar psi[], omega[];
+
+  psi[left]   = dirichlet(0);
+  psi[right]  = dirichlet(0);
+  psi[top]    = dirichlet(0);
+  psi[bottom] = dirichlet(0);
+
   double dd = 0.1;
   foreach() {
     omega[] = (exp(-(sq(x - dd) + sq(y))/(dd/10.)) +
@@ -48,7 +46,6 @@ event logfile (t = {0,30}) {
   fprintf (stderr, "%g %d %g %g %d\n", t, i, dt, s.sum, mgp.i);
 }
 
-#if 1
 event movie (t += 0.2; t <= 30) {
   static FILE * fp = popen ("ppm2mpeg > vort.mpg", "w");
   scalar omega[];
@@ -60,7 +57,6 @@ event movie (t += 0.2; t <= 30) {
     omega[] = level;
   output_ppm (omega, fp1);
 }
-#endif
 
 event output (t += 5) {
   static int nf = 0;
