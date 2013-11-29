@@ -140,6 +140,9 @@
   void varpop () {
     delete_automatic (scope);
     while (varstack >= 0 && _varstack[varstack].scope > scope) {
+      if (debug)
+	fprintf (stderr, "%s:%d: '%s' out of scope\n", fname, line, 
+		 _varstack[varstack].v);
       free (_varstack[varstack].v);
       free (_varstack[varstack].conditional);
       free (_varstack[varstack--].constant);
@@ -805,7 +808,7 @@ end_foreach{ID}*{SP}*"()" {
   }
 }
 
-;  {
+; {
   int insthg = 0;
   if (scope == 0)
     infunctionproto = 0;
@@ -895,6 +898,7 @@ end_foreach{ID}*{SP}*"()" {
   }
   else if (!insthg)
     ECHO;
+  varpop();
   invardecl = varmaybeconst = 0;
 }
 
@@ -1272,7 +1276,7 @@ for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}+{WS}+in{WS}+ {
 	   id, i, last);
   free (list);
   i++;
-  varpush (id, vartype, scope, 0);
+  varpush (id, vartype, scope + 1, 0);
 }
 
 for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {

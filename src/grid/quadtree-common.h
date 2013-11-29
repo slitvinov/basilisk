@@ -340,8 +340,8 @@ void halo_restriction_flux (vector * list)
 
 void halo_prolongation (int depth, scalar * list)
 {
-  foreach_halo_coarse_to_fine (depth) {
-    for (scalar s in list)
+  foreach_halo_coarse_to_fine (depth)
+    for (scalar s in list) {
       if (s.gradient) { // linear interpolation (e.g. with limiting)
 	double sc = coarse(s,0,0);
 	s[] = sc;
@@ -355,7 +355,7 @@ void halo_prolongation (int depth, scalar * list)
 	s[] = (9.*coarse(s,0,0) + 
 	       3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
 	       coarse(s,child.x,child.y))/16.;	
-  }
+    }
 }
 
 // Multigrid methods
@@ -378,11 +378,12 @@ void quadtree_boundary_restriction (scalar * list)
 void quadtree_boundary_centered (scalar * list)
 {
   scalar * listdef = NULL, * listc = NULL;
-  for (scalar s in list)
+  for (scalar s in list) {
     if (s.coarsen == coarsen_average)
       listdef = list_append (listdef, s);
     else if (s.coarsen != refine_none)
       listc = list_append (listc, s);
+  }
 
   if (listdef || listc) {
     halo_restriction (listdef, listc);
