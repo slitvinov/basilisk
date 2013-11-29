@@ -2,10 +2,15 @@
 # Lid-driven cavity at Re=1000
 
 We use the multigrid implementation (rather than the default quadtree
-implementation) and the MAC Navier--Stokes solver. */
+implementation) and either the MAC or the centered Navier--Stokes
+solver. */
 
 #include "grid/multigrid.h"
-#include "navier-stokes/mac.h"
+#if MAC
+#  include "navier-stokes/mac.h"
+#else
+#  include "navier-stokes/centered.h"
+#endif
 
 /**
 Here we define the domain geometry: a square box of size unity
@@ -21,7 +26,7 @@ void parameters()
   // viscosity
   mu = 1e-3;
   // maximum timestep
-  DT = 1e-1;
+  DT = 0.1;
   // CFL number
   CFL = 0.8;
 }
@@ -42,13 +47,18 @@ u.y[right]  = dirichlet(0);
 
 /**
 We define an auxilliary function which computes the total kinetic
-energy. */
+energy. The function works both for face and centered
+discretisations of the velocity. */
 
 static double energy()
 {
   double se = 0.;
-  foreach(reduction(+:se))
-    se += (sq(u.x[] + u.x[1,0]) + sq(u.y[] + u.y[0,1]))/8.*sq(Delta);
+  if (u.x.face)
+    foreach(reduction(+:se))
+      se += (sq(u.x[] + u.x[1,0]) + sq(u.y[] + u.y[0,1]))/8.*sq(Delta);
+  else // centered
+    foreach(reduction(+:se))
+      se += (sq(u.x[]) + sq(u.y[]))/2.*sq(Delta);
   return se;
 }
 

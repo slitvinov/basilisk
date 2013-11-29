@@ -14,6 +14,14 @@ slow: nonlinear.tst advection.tst rotation.tst \
 
 laplacian.tst: laplacian.ctst
 
+lidmac.c: lid.c
+	ln -s lid.c lidmac.c
+
+lidmac.tst: lidmac.s
+	@CFLAGS="$(CFLAGS) -DMAC=1" $(BASILISK)/runtest lidmac.tst
+
+lid.tst: lidmac.tst
+
 nonlinear.tst: nonlinear.s
 	@LIBS="-lgsl -lgslcblas" $(BASILISK)/runtest nonlinear.tst
 

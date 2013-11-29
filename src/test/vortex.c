@@ -74,8 +74,7 @@ event output (t += 5) {
 
 #if QUADTREE
 event adapt (i++) {
-  adapt_wavelet ((scalar *){u}, (double[]){1e-4,1e-4},
-		 MAXLEVEL, list = {p,pf,u,uf});
+  adapt_wavelet ((scalar *){u}, (double[]){1e-4,1e-4}, MAXLEVEL);
 }
 #endif
 
