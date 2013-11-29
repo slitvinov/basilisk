@@ -100,13 +100,13 @@ And use the diffusion solver to advance the system from $t$ to $t+dt$. */
     r[] = k*ka;
     beta[] = k*(C1[]*C2[] - kb - 1.);
   }
-  mgd1 = diffusion (C1, r, dt, beta = beta);
+  mgd1 = diffusion (C1, dt, r = r, beta = beta);
   foreach() {
     r[] = k*kb*C1[];
     beta[] = - k*sq(C1[]);
   }
   const face vector c[] = {D, D};
-  mgd2 = diffusion (C2, r, dt, c, beta);
+  mgd2 = diffusion (C2, dt, c, r, beta);
 }
 
 /**

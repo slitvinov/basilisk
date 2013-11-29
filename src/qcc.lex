@@ -68,9 +68,11 @@
     char * v, * constant;
     int type, args, scope, automatic, symmetric, face, maybeconst;
     int i[4];
+    char * conditional;
   } var_t;
   var_t _varstack[100]; int varstack = -1;
-  void varpush (const char * s, int type, int scope, int maybeconst) {
+  var_t * varpush (const char * s, int type, int scope, int maybeconst) {
+    var_t * v = NULL;
     if (s[0] != '\0') {
       char * f = malloc (strlen (s) + 1);
       strcpy (f, s);
@@ -81,7 +83,9 @@
       }
       _varstack[++varstack] = (var_t) { f, NULL, type, na, scope, 
 					0, 0, 0, maybeconst, {-1} };
+      v = &(_varstack[varstack]);
     }
+    return v;
   }
   var_t ** foreachconst = NULL;
 
@@ -91,7 +95,7 @@
     char * list = NULL;
     for (int i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
       var_t var = _varstack[i];
-      if (var.automatic && !var.constant) {
+      if (var.automatic && !var.constant && !var.conditional) {
 	if (list == NULL) {
 	  list = malloc (strlen (var.v) + 3);
 	  strcpy (list, "{");
@@ -117,12 +121,27 @@
       free (slist);
       free (list);
     }
+    for (int i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
+      var_t var = _varstack[i];
+      if (var.automatic && var.conditional) {
+	if (debug)
+	  fprintf (stderr, "%s:%d: deleting conditional %s\n", 
+		   fname, line, var.v);
+	char list[80];
+	sprintf (list, "{%s}", var.v);
+	char * slist = makelist (list, scalar);
+	fprintf (yyout, " { if (!%s) delete (%s); } ", 
+		 var.conditional, slist);
+	free (slist);
+      }
+    }
   }
 
   void varpop () {
     delete_automatic (scope);
     while (varstack >= 0 && _varstack[varstack].scope > scope) {
       free (_varstack[varstack].v);
+      free (_varstack[varstack].conditional);
       free (_varstack[varstack--].constant);
     }
   }
@@ -520,7 +539,7 @@
   void new_field (var_t * var) {
     if (scope > 0) {
       // automatic variables
-      fprintf (yyout, "= new_%s%s%s(\"%s\"",
+      fprintf (yyout, " new_%s%s%s(\"%s\"",
 	       var->constant ? "const_" : "",
 	       var->symmetric ? "symmetric_" : 
 	       var->face ? "face_" : 
@@ -543,11 +562,11 @@
       // global constants
       if (var->constant) {
 	if (var->type == scalar) {
-	  fprintf (yyout, "= _NVARMAX + %d", nconst);
+	  fprintf (yyout, " _NVARMAX + %d", nconst);
 	  var->i[0] = nconst++;
 	}
 	else if (var->type == vector) {
-	  fprintf (yyout, "= {_NVARMAX + %d,_NVARMAX + %d}", 
+	  fprintf (yyout, " {_NVARMAX + %d,_NVARMAX + %d}", 
 		   nconst, nconst + 1);
 	  for (int i = 0; i < 2; i++)
 	    var->i[i] = nconst++;
@@ -557,16 +576,16 @@
       }
       // global variables
       else if (var->type == scalar) {
-	fprintf (yyout, "= %d", nvar);
+	fprintf (yyout, " %d", nvar);
 	var->i[0] = nvar++;
       }
       else if (var->type == vector) {
-	fprintf (yyout, "= {%d,%d}", nvar, nvar + 1);    
+	fprintf (yyout, " {%d,%d}", nvar, nvar + 1);    
 	for (int i = 0; i < 2; i++)
 	  var->i[i] = nvar++;
       }
       else if (var->type == tensor) {
-	fprintf (yyout, "= {{%d,%d},{%d,%d}}",
+	fprintf (yyout, " {{%d,%d},{%d,%d}}",
 		 nvar, nvar + 1, nvar + 2, nvar + 3);
 	for (int i = 0; i < 4; i++)
 	  var->i[i] = nvar++;
@@ -577,21 +596,24 @@
   }
 
   void declaration (char * var, char * text) {
+    var_t * v;
     if (!strcmp (&var[strlen(var)-2], "[]")) {
       // automatic
       var[strlen(var)-2] = '\0';
-      varpush (var, vartype, scope, 0);
-      var_t * v = varlookup (var, strlen(var));
+      v = varpush (var, vartype, scope, 0);
       v->automatic = 1;
       v->symmetric = varsymmetric;
-      v->face = varface;
+      v->face = varface;    
       if (varconst)
 	v->constant = strdup (varconst);
       fputs (text, yyout);
+      fputc ('=', yyout);
       new_field (v);
     }
     else {
-      varpush (var, vartype, scope, varmaybeconst);
+      v = varpush (var, vartype, scope, varmaybeconst);
+      v->symmetric = varsymmetric;
+      v->face = varface;    
       fputs (text, yyout);
     }
     if (debug)
@@ -912,6 +934,7 @@ end_foreach{ID}*{SP}*"()" {
   }
   var->symmetric = (symmetric != NULL);
   var->face = (face != NULL);
+  fputc ('=', yyout);
   new_field (var);
   if (debug)
     fprintf (stderr, "%s:%d: new %s%s: %s\n", 
@@ -920,6 +943,36 @@ end_foreach{ID}*{SP}*"()" {
 	     var->face ? "face " :
 	     "", 
 	     type, var->v);
+}
+
+{ID}+{WS}*[=]{WS}*automatic{WS}*[(][^)]*[)] |
+[=]{WS}*automatic{WS}*[(][^)]*[)] {
+  var_t * var;
+  if (yytext[0] == '=') {
+    var = vartop();
+    assert (var && var->scope == scope);
+  }
+  else {
+    char * s = yytext; space (s); *s++ = '\0';
+    var = varlookup (yytext, strlen(yytext));
+    if (!var) {
+      fprintf (stderr, "%s:%d: '%s' undeclared", fname, line, yytext);
+      return 1;
+    }
+    fprintf (yyout, "%s ", yytext);
+    yytext = s;
+  }
+  var->automatic = 1;
+  char * arg = strchr (yytext, '(');
+  if (arg[1] == ')')
+    fputc ('=', yyout);
+  else {
+    var->conditional = malloc (strlen(arg) + 5);
+    sprintf (var->conditional, "%s%s", arg, 
+	     var->type == vector ? ".x" : var->type == tensor ? ".x.x" : "");
+    fprintf (yyout, "= %s ? %s :", var->conditional, arg);
+  }
+  new_field (var);
 }
 
 \({WS}*const{WS}*\)    varmaybeconst = 1;

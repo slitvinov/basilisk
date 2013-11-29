@@ -149,7 +149,7 @@ event advance (i++)
 	/(2.*sq(Delta))
 #endif
 	- alpha.x[]*(p[1,0] - p[-1,0])/(2.*Delta*dt);
-      diffusion (u.x, r, dt, nu);
+      diffusion (u.x, dt, nu, r);
       foreach()
      	u.x[] += alpha.x[]*(p[1,0] - p[-1,0])/(2.*Delta);
     }

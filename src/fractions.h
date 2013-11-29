@@ -119,13 +119,7 @@ struct Fractions {
 void fractions (struct Fractions p)
 {
   scalar Phi = p.Phi, c = p.c;
-  face vector s = p.s;
-
-/**
-If `s` is not given, we allocate a local face vector field. */
-
-  if (!p.s.x)
-    s = new face vector;
+  face vector s = automatic (p.s);
 
 /**
 ### Surface fraction computation
@@ -260,8 +254,6 @@ Finally we apply the boundary conditions and deallocate the local
 frace fraction field if necessary. */
 
   boundary ({c});
-  if (!p.s.x)
-    delete ((scalar *){s});
 }
 
 /**

@@ -37,11 +37,11 @@ The function returns the statistics of the Poisson solver. */
 
 struct Diffusion {
   // mandatory
-  scalar f, r;
+  scalar f;
   double dt;
   // optional
-  face vector D; // default 1
-  scalar beta;        // default 0
+  face vector D;  // default 1
+  scalar r, beta; // default 0
 };
 
 mgstats diffusion (struct Diffusion p)
@@ -51,14 +51,18 @@ mgstats diffusion (struct Diffusion p)
 We define $f$ and $r$ for convenience. The integration time $dt$ is
 passed as $- 1/dt$ to fit the parameters of the Poisson--Helmholtz solver. */
 
-  scalar f = p.f, r = p.r;
+  scalar f = p.f, r = automatic (p.r);
   double idt = - 1./p.dt;
 
 /**
 We use `r` to store the r.h.s. of the Poisson--Helmholtz solver. */
 
-  foreach()
-    r[] = idt*f[] - r[];
+  if (p.r)
+    foreach()
+      r[] = idt*f[] - r[];
+  else // r was not passed by the user
+    foreach()
+      r[] = idt*f[];
 
 /**
 If $\beta$ is not provided, the diagonal term $\lambda$ is a constant,
@@ -69,7 +73,7 @@ otherwise we use $\beta$ to store it. */
     scalar beta = p.beta;
     foreach()
       beta[] += idt;
-    lambda = p.beta;
+    lambda = beta;
   }
 
 /**
