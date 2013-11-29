@@ -30,11 +30,14 @@ boundary conditions applied to $\tilde{a}$. The function below applies
 the homogeneous boundary conditions of `a` to `da` for level `l` of
 the multigrid hierarchy. */
 
-static void boundary_homogeneous (scalar a, scalar da, int l)
+static void boundary_homogeneous (scalar * a, scalar * da, int l)
 {
   for (int b = 0; b < nboundary; b++)
-    foreach_boundary_level (b, l, true)
-      da[ghost] = a.boundary_homogeneous[b] (point, da);
+    foreach_boundary_level (b, l, true) {
+      scalar s, ds;
+      for (s, ds in a, da)
+	ds[ghost] = s.boundary_homogeneous[b] (point, ds);
+    }
 
 /**
 On quadtree meshes, we also need to make sure that stencils are
@@ -47,7 +50,7 @@ necessary, which leaves only the prolongation operation for level
 `l`. */
 
 #if QUADTREE
-  halo_prolongation (l, {da});
+  halo_prolongation (l, da);
 #endif
 }
 
@@ -59,8 +62,9 @@ Here we implement the multigrid cycle proper. Given an initial guess
 function `relax`, we will provide an improved guess at the end of the
 cycle. */
 
-void mg_cycle (scalar a, scalar res, scalar da,
-	       void (* relax) (scalar da, scalar res, int depth, void * data),
+void mg_cycle (scalar * a, scalar * res, scalar * da,
+	       void (* relax) (scalar * da, scalar * res, 
+			       int depth, void * data),
 	       void * data,
 	       int nrelax, int minlevel)
 {
@@ -68,7 +72,7 @@ void mg_cycle (scalar a, scalar res, scalar da,
 /**
 We first define the residual on all levels. */
 
-  restriction ({res});
+  restriction (res);
 
 /**
 We then proceed from the coarsest grid (`minlevel`) down to the finest grid. */
@@ -79,7 +83,8 @@ We then proceed from the coarsest grid (`minlevel`) down to the finest grid. */
 On the coarsest grid, we take zero as initial guess. */
     if (l == minlevel)
       foreach_level_or_leaf (l)
-	da[] = 0.;
+	for (scalar s in da)
+	  s[] = 0.;
 
 /**
 On all other grids, we take as initial guess the approximate solution
@@ -87,9 +92,10 @@ on the coarser grid bilinearly interpolated onto the current grid. */
 
     else
       foreach_level_or_leaf (l)
-	da[] = (9.*coarse(da,0,0) + 
-		3.*(coarse(da,child.x,0) + coarse(da,0,child.y)) + 
-		coarse(da,child.x,child.y))/16.;
+	for (scalar s in da)
+	  s[] = (9.*coarse(s,0,0) + 
+		 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+		 coarse(s,child.x,child.y))/16.;
 
 /**
 We then apply homogeneous boundary conditions and do several
@@ -105,9 +111,12 @@ iterations of the relaxation function to refine the initial guess. */
 /**
 And finally we apply the resulting correction to `a`. */
 
-  foreach()
-    a[] += da[];
-  boundary ({a});
+  foreach() {
+    scalar s, ds;
+    for (s, ds in a, da)
+      s[] += ds[];
+  }
+  boundary (a);
 }
 
 /**
@@ -137,24 +146,39 @@ The user needs to provide a function which computes the residual field
 user-defined pointer `data` can be used to pass arguments to these
 functions. */
 
-mgstats mg_solve (scalar a, scalar b,
-		  double (* residual) (scalar a, scalar b, scalar res, 
+mgstats mg_solve (scalar * a, scalar * b,
+		  double (* residual) (scalar * a, scalar * b, scalar ** res,
 				       void * data),
-		  void (* relax) (scalar da, scalar res, int depth, 
+		  void (* relax) (scalar * da, scalar * res, int depth, 
 				  void * data),
 		  void * data)
 {
-  scalar res[], da[];
+
+/**
+The list of residual fields will be allocated by the residual()
+function. We allocate a new correction field for each of the scalars
+in `a`. */
+
+  scalar * res = NULL, * da = NULL;
+  for (scalar s in a) {
+    scalar ds = new scalar;
+    da = list_append (da, ds);
+  }
+
+/**
+We initialise the structure storing convergence statistics. */
+
   mgstats s = {0, 0., 0.};
   double sum = 0.;
   foreach (reduction(+:sum))
-    sum += b[];
+    for (scalar s in b)
+      sum += s[];
   s.sum = sum;
 
 /**
 Here we compute the initial residual field and its maximum. */
 
-  s.maxres = residual (a, b, res, data);
+  s.maxres = residual (a, b, &res, data);
 
 /**
 We then iterates until convergence or until `NITERMAX` is reached. Note
@@ -163,7 +187,7 @@ initial residual is lower than `TOLERANCE`. */
 
   for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.maxres > TOLERANCE); s.i++) {
     mg_cycle (a, res, da, relax, data, 4, 0);
-    s.maxres = residual (a, b, res, data);
+    s.maxres = residual (a, b, &res, data);
   }
 
 /**
@@ -174,6 +198,13 @@ If we have reached the maximum number of iterations, we warn the user. */
 	     "WARNING: convergence not reached after %d iterations\n"
 	     "  sum: %g\n", 
 	     NITERMAX, s.sum);
+
+/**
+We deallocate the residual and correction fields and free the lists. */
+
+  delete (res); free (res);
+  delete (da);  free (da);
+  
   return s;
 }
 
@@ -203,8 +234,9 @@ struct Poisson {
 We can now write the relaxation function. We first recover the extra
 parameters from the data pointer. */
 
-static void relax (scalar a, scalar b, int l, void * data)
+static void relax (scalar * al, scalar * bl, int l, void * data)
 {
+  scalar a = al[0], b = bl[0];
   struct Poisson * p = data;
   (const) face vector alpha = p->alpha;
   (const) scalar lambda = p->lambda;
@@ -225,8 +257,22 @@ The equivalent residual function is obtained in a similar way in the
 case of a Cartesian grid, however the case of the quadtree mesh
 requires more careful consideration... */
 
-static double residual (scalar a, scalar b, scalar res, void * data)
+static double residual (scalar * al, scalar * bl, scalar ** resl, void * data)
 {
+  scalar a = al[0], b = bl[0];
+
+/**
+If the residual field is not already allocated we allocate it as well
+as the associated list. */
+
+  scalar res;
+  if (*resl)
+    res = (*resl)[0];
+  else {
+    res = new scalar;
+    *resl = list_append (NULL, res);
+  }
+
   struct Poisson * p = data;
   (const) face vector alpha = p->alpha;
   (const) scalar lambda = p->lambda;
@@ -291,6 +337,7 @@ provide $\alpha$ and $\beta$ as constant fields. */
     const scalar lambda[] = 0.;
     p.lambda = lambda;
   }
-
-  return mg_solve (p.a, p.b, residual, relax, &p);
+  
+  scalar a = p.a, b = p.b;
+  return mg_solve ({a}, {b}, residual, relax, &p);
 }
