@@ -523,7 +523,7 @@
 	}
       }
       list = realloc (list, (strlen(list) + strlen(member) + 1)*sizeof(char));
-      strcat (list, member);
+      list = strcat (list, member);
       s = strtok (NULL, " \t\v\n\f,)");
     }
     free (text);

@@ -17,7 +17,7 @@ need to solve a Poisson problem. */
 #include "run.h"
 #include "timestep.h"
 #include "bcg.h"
-#include "diffusion.h"
+#include "viscosity.h"
 
 /**
 The Markers-And-Cells (MAC) formulation was first described in the
@@ -42,9 +42,8 @@ The statistics for the (multigrid) solution of the Poisson problem are
 stored in `mgp`. */
 
 double mu = 0.;
-const face vector alpha[] = {1,1};
-//face vector alpha;
-mgstats mgp, mgpf;
+face vector alpha;
+mgstats mgp, mgpf, mgu;
 
 /**
 The default velocity and pressure are zero. */
@@ -115,7 +114,7 @@ void prediction()
 }
 
 // fixme: share with MAC solver
-mgstats projection (face vector u, scalar p)
+mgstats project (face vector u, scalar p)
 {
   scalar div[];
   foreach()
@@ -131,49 +130,54 @@ mgstats projection (face vector u, scalar p)
 event advance (i++)
 {
   prediction();
-  mgpf = projection (uf, pf);
+  mgpf = project (uf, pf);
 
   if (mu > 0. && dt > 0.) {
-    const face vector nu[] = {mu,mu};
-    scalar r[];
+    vector r[];
     foreach_dimension() {
       vector flux[];
       tracer_fluxes (u.x, uf, flux, dt);
       foreach()
-	r[] = (flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta +
-#if 1
+	r.x[] = (flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta +
 	(uf.x[1,0]*alpha.x[1,0]*(p[1,0] - p[]) +
 	 uf.y[0,1]*alpha.y[0,1]*(p[1,0] - p[-1,0] + p[1,1] - p[-1,1])/2. -
 	 uf.x[]*alpha.x[]*(p[] - p[-1,0]) -
 	 uf.y[]*alpha.y[]*(p[1,0] - p[-1,0] + p[1,-1] - p[-1,-1])/2. )
 	/(2.*sq(Delta))
-#endif
-	- alpha.x[]*(p[1,0] - p[-1,0])/(2.*Delta*dt);
-      diffusion (u.x, dt, nu, r);
-      foreach()
-     	u.x[] += alpha.x[]*(p[1,0] - p[-1,0])/(2.*Delta);
+	- (alpha.x[]*(p[] - p[-1,0]) + 
+	   alpha.x[1,0]*(p[1,0] - p[]))/(2.*Delta*dt);
     }
+    scalar alphac[];
+    foreach()
+      alphac[] = (alpha.x[] + alpha.x[1,0] + alpha.y[] + alpha.y[0,1])/4.;
+    const face vector muf[] = {mu,mu};
+    mgu = viscosity (u, dt, muf, r, alphac);
+    foreach()
+      foreach_dimension()
+        u.x[] += (alpha.x[]*(p[] - p[-1,0]) +
+		  alpha.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
     boundary ((scalar *){u});
   }
   else
     advection ((scalar *){u}, uf, dt);
 }
 
-event project (i++)
+event projection (i++)
 {
   trash ({uf});
   foreach_face()
     uf.x[] = (u.x[] + u.x[-1,0])/2.;
   boundary_normal ({uf});
-  mgp = projection (uf, p);
+  mgp = project (uf, p);
   foreach()
     foreach_dimension()
-      u.x[] -= alpha.x[]*(p[1,0] - p[-1,0])/(2.*Delta); // fixme: alpha!
+      u.x[] -= (alpha.x[]*(p[] - p[-1,0]) +
+		alpha.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
   boundary ((scalar *){u});
 
 /**
 Finally we obtain the timestep for the next iteration by applying the
-CFL condition to the new velocity field. */
+CFL condition to the new (face) velocity field. */
 
-  dt = timestep (u);
+  dt = timestep (uf);
 }
