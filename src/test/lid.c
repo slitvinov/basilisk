@@ -24,7 +24,12 @@ void parameters()
   // number of grid points
   N = 64;
   // viscosity
+#if MAC
   mu = 1e-3;
+#else
+  const face vector muc[] = {1e-3,1e-3};
+  mu = muc;
+#endif
   // maximum timestep
   DT = 0.1;
   // CFL number

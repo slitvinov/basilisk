@@ -55,7 +55,7 @@ event movie (t += 0.2; t <= 30) {
   static FILE * fp1 = popen ("ppm2mpeg > level.mpg", "w");
   foreach()
     omega[] = level;
-  output_ppm (omega, fp1);
+  output_ppm (omega, fp1, spread = 2);
 }
 
 event output (t += 5) {

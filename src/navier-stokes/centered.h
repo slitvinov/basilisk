@@ -28,8 +28,9 @@ the (centered) pressure `p`. This guarantees the consistency of the
 discrete gradient, divergence and Laplacian operators and leads to a
 stable (mode-free) integration. */
 
-scalar p[], pf[];
+scalar p[];
 vector u[];
+scalar pf[];
 face vector uf[];
 
 /**
@@ -41,8 +42,8 @@ the velocity components.
 The statistics for the (multigrid) solution of the Poisson problem are
 stored in `mgp`. */
 
-double mu = 0.;
-face vector alpha;
+face vector alpha; // default unity
+face vector mu;    // default zero
 mgstats mgp, mgpf, mgu;
 
 /**
@@ -52,6 +53,9 @@ The default velocity and pressure are zero. */
 
 event defaults (i = 0)
 {
+  const face vector unity[] = {1,1};
+  alpha = unity;
+
   CFL = 0.8;
   foreach() {
     foreach_dimension()
@@ -100,7 +104,7 @@ void prediction()
       foreach_dimension()
 	g.x[] = (u.x[1,0] - u.x[-1,0])/(2.*Delta);
   }
-  boundary ({gx,gy});
+  boundary ((scalar *){g});
 
   trash ({uf});
   foreach_face() {
@@ -114,7 +118,7 @@ void prediction()
 }
 
 // fixme: share with MAC solver
-mgstats project (face vector u, scalar p)
+mgstats project (face vector u, scalar p, (const) face vector alpha)
 {
   scalar div[];
   foreach()
@@ -127,39 +131,46 @@ mgstats project (face vector u, scalar p)
   return mgp;
 }
 
+event stability (i++) {}
+
 event advance (i++)
 {
   prediction();
-  mgpf = project (uf, pf);
+  mgpf = project (uf, pf, alpha);
 
-  if (mu > 0. && dt > 0.) {
-    vector r[];
-    foreach_dimension() {
-      vector flux[];
-      tracer_fluxes (u.x, uf, flux, dt);
-      foreach()
-	r.x[] = (flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta +
-	(uf.x[1,0]*alpha.x[1,0]*(p[1,0] - p[]) +
-	 uf.y[0,1]*alpha.y[0,1]*(p[1,0] - p[-1,0] + p[1,1] - p[-1,1])/2. -
-	 uf.x[]*alpha.x[]*(p[] - p[-1,0]) -
-	 uf.y[]*alpha.y[]*(p[1,0] - p[-1,0] + p[1,-1] - p[-1,-1])/2. )
-	/(2.*sq(Delta))
-	- (alpha.x[]*(p[] - p[-1,0]) + 
-	   alpha.x[1,0]*(p[1,0] - p[]))/(2.*Delta*dt);
-    }
-    scalar alphac[];
+  (const) face vector alphaf = alpha;
+  foreach_dimension() {
+    vector flux[];
+    tracer_fluxes (u.x, uf, flux, dt);
     foreach()
-      alphac[] = (alpha.x[] + alpha.x[1,0] + alpha.y[] + alpha.y[0,1])/4.;
-    const face vector muf[] = {mu,mu};
-    mgu = viscosity (u, dt, muf, r, alphac);
+      u.x[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta +
+      dt*(uf.x[1,0]*alphaf.x[1,0]*(p[1,0] - p[]) +
+	  uf.y[0,1]*alphaf.y[0,1]*(p[1,0] - p[-1,0] + p[1,1] - p[-1,1])/2. -
+	  uf.x[]*alphaf.x[]*(p[] - p[-1,0]) -
+	  uf.y[]*alphaf.y[]*(p[1,0] - p[-1,0] + p[1,-1] - p[-1,-1])/2.)
+      /(2.*sq(Delta));
+  }
+
+  if (mu.x && dt > 0.) {
+    scalar alphac[];
+    foreach() {
+      alphac[] = 0.;
+      foreach_dimension() {
+        u.x[] -= (alphaf.x[]*(p[] - p[-1,0]) +
+		  alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
+	alphac[] += alphaf.x[] + alphaf.x[1,0];
+      }
+      alphac[] *= dt/4;
+    }
+    boundary ((scalar *){u});
+    mgu = viscosity (u, mu, alphac);
     foreach()
       foreach_dimension()
-        u.x[] += (alpha.x[]*(p[] - p[-1,0]) +
-		  alpha.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
-    boundary ((scalar *){u});
+        u.x[] += (alphaf.x[]*(p[] - p[-1,0]) +
+		  alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
   }
-  else
-    advection ((scalar *){u}, uf, dt);
+  
+  boundary ((scalar *){u});
 }
 
 event projection (i++)
@@ -168,11 +179,13 @@ event projection (i++)
   foreach_face()
     uf.x[] = (u.x[] + u.x[-1,0])/2.;
   boundary_normal ({uf});
-  mgp = project (uf, p);
+  mgp = project (uf, p, alpha);
+
+  (const) face vector alphaf = alpha;
   foreach()
     foreach_dimension()
-      u.x[] -= (alpha.x[]*(p[] - p[-1,0]) +
-		alpha.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
+      u.x[] -= (alphaf.x[]*(p[] - p[-1,0]) +
+		alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
   boundary ((scalar *){u});
 
 /**

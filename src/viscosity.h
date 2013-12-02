@@ -1,13 +1,9 @@
 #include "poisson.h"
 
 struct Viscosity {
-  // mandatory
   vector u;
-  double dt;
   face vector mu;
-  vector r;
-  // optional
-  scalar alpha; // default 1
+  scalar alpha;
 };
 
 static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
@@ -49,55 +45,49 @@ static double residual_viscosity (scalar * a, scalar * b, scalar ** presl,
   double maxres = 0.;
 #if QUADTREE
   /* conservative coarse/fine discretisation (2nd order) */
-  for (a,b,res in al,bl,resl) {
-    vector g[];
+  foreach_dimension() {
+    face vector g[];
+    scalar a = u.x;
     foreach_face()
       g.x[] = mu.x[]*(a[] - a[-1,0])/Delta;
     boundary_normal ({g});
     foreach (reduction(max:maxres)) {
-      res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta
-	- alpha[]*a[];
-      if (fabs (res[]) > maxres)
-	maxres = fabs (res[]);
+      res.x[] = r.x[] - u.x[] + alpha[]/Delta*
+        (g.x[1,0] - g.x[] + g.y[0,1] - g.y[] +
+	 ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
+	  (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/(2.*Delta));
+      if (fabs (res.x[]) > maxres)
+	maxres = fabs (res.x[]);
     }
   }
 #else
   /* "naive" discretisation (only 1st order on quadtrees) */
   foreach (reduction(max:maxres)) {
     Delta *= Delta;
-    foreach_dimension()
+    foreach_dimension() {
       res.x[] = r.x[] - u.x[] +
         alpha[]*(mu.x[1,0]*u.x[1,0] + mu.x[]*u.x[-1,0] +
 		 mu.y[0,1]*u.x[0,1] + mu.y[]*u.x[0,-1] -
 		 (mu.x[1,0] + mu.x[] + mu.y[0,1] + mu.y[])*u.x[] +
 		 ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
 		  (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/2.)/Delta;
-    if (fabs (res.x[]) > maxres)
-      maxres = fabs (res.x[]);
+      if (fabs (res.x[]) > maxres)
+	maxres = fabs (res.x[]);
+    }
   }
 #endif
   return maxres;
 }
 
-mgstats viscosity (struct Viscosity p)
+mgstats viscosity (vector u, face vector mu, scalar alpha)
 {
-  vector u = p.u, r = p.r;
-
+  vector r[];
   foreach()
     foreach_dimension()
-      r.x[] = u.x[] + dt*r.x[];
-
-  if (p.alpha) {
-    scalar alpha = p.alpha;
-    foreach()
-      alpha[] *= dt;
-    restriction ({alpha});
-  }
-  else {
-    const scalar alpha[] = dt;
-    p.alpha = alpha;
-  }
-
+      r.x[] = u.x[];
+  restriction ({alpha});
+  struct Viscosity p;
+  p.mu = mu; p.alpha = alpha;
   return mg_solve ((scalar *){u}, (scalar *){r},
 		   residual_viscosity, relax_viscosity, &p);
 }

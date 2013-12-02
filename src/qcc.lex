@@ -1022,7 +1022,15 @@ face{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
     fputs (text, yyout);
 }
 
-const{WS}+(symmetric{WS}+|face{WS}+|{WS}*)(scalar|vector|tensor){WS}+[a-zA-Z0-9_]+\[{WS}*\]{WS}*=[^;]+ {
+const{WS}+(symmetric{WS}+|face{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+{WS}*=[^;]+ {
+  ECHO;
+  char * s = strchr (yytext, '='); s--;
+  while (strchr (" \t\v\n\f", *s)) s--; s++; *s = '\0';
+  fprintf (stderr, "%s:%d: warning: did you mean '%s[]'?\n", 
+	   fname, line, yytext);
+}
+
+const{WS}+(symmetric{WS}+|face{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+\[{WS}*\]{WS}*=[^;]+ {
   // const scalar a[] = 1.;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;

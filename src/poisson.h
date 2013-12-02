@@ -279,7 +279,7 @@ as the associated list. */
   double maxres = 0.;
 #if QUADTREE
   /* conservative coarse/fine discretisation (2nd order) */
-  vector g[];
+  face vector g[];
   foreach_face()
     g.x[] = alpha.x[]*(a[] - a[-1,0])/Delta;
   boundary_normal ({g});
