@@ -235,10 +235,10 @@ typedef struct _Point Point;
 typedef struct {
   double (* boundary[nboundary])             (Point, scalar);
   double (* boundary_homogeneous[nboundary]) (Point, scalar);
+  double (* prolongation)                    (Point, scalar);
   void   (* refine)                          (Point, scalar);
   void   (* coarsen)                         (Point, scalar);
   double (* gradient)                        (double, double, double);
-  double (* prolongation)                    (Point, scalar);
   struct { int x, y; } d;        // staggering
   vector v;
   bool   face;
