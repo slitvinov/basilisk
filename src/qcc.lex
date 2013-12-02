@@ -14,7 +14,7 @@
   typedef struct { int x, y, face; char * name; } Vector;
   typedef struct { Vector x, y; char * name; } Tensor;
 
-  int debug = 0, catch = 0, nolineno = 0;
+  int debug = 0, catch = 0, nolineno = 0, events = 0;
   char dir[] = ".qccXXXXXX";
 
   int nvar = 0, nconst = 0, nevents = 0;
@@ -1851,6 +1851,8 @@ int main (int argc, char ** argv)
       tags = 1;
     else if (!strcmp (argv[i], "-debug"))
       debug = 1;
+    else if (!strcmp (argv[i], "-events"))
+      events = 1;
     else if (!strcmp (argv[i], "-catch"))
       catch = 1;
     else if (catch && !strncmp (argv[i], "-O", 2))
@@ -2000,6 +2002,8 @@ int main (int argc, char ** argv)
 	strcat (preproc, LIBDIR);
 	strcat (preproc, " -E ");
       }
+      if (events)
+	strcat (preproc, " -DDEBUG_EVENTS=1 ");
       strcat (preproc, cpp);
       if (debug)
 	fprintf (stderr, "preproc: %s\n", preproc);
