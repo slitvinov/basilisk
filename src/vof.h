@@ -26,20 +26,26 @@ extern face vector uf;
 extern double dt;
 
 /**
-The scheme is stable for a CFL smaller than 0.5.
-
 On quadtrees, we need to setup the appropriate prolongation and
 refinement functions for the volume fraction fields. */
 
 event defaults (i = 0)
 {
-  CFL = 0.5;
 #if QUADTREE
   for (scalar c in interfaces) {
     c.prolongation = fraction_prolongation;
     c.refine = fraction_refine;
   }
 #endif
+}
+
+/**
+We need to make sure that the CFL is smaller than 0.5 to ensure
+stability of the VOF scheme. */
+
+event stability (i = 0) {
+  if (CFL > 0.5)
+    CFL = 0.5;
 }
 
 /**
@@ -59,6 +65,7 @@ static void sweep_x (scalar c, scalar cc)
 {
   vector n[];
   scalar alpha[], flux[];
+  double cfl = 0.;
 
 /**
 We first reconstruct the interface normal $\mathbf{n}$ and the
@@ -75,6 +82,11 @@ corresponding *upwind* cell (either 0 or -1). */
 
     double un = uf.x[]*dt/Delta, s = sign(un);
     int i = -(s + 1.)/2.;
+
+/**
+We also check that we are not violating the CFL condition. */
+
+    if (un*s > cfl) cfl = un*s;
 
 /**
 If we assume that `un` is negative i.e. `s` is -1 and `i` is 0, the
@@ -111,6 +123,14 @@ do it for a single dimension (x). */
       flux[1,0] = (fine(flux,2,0) + fine(flux,2,1))/2.;
   }
 #endif
+
+/**
+We warn the user if the CFL condition has been violated. */
+
+  if (cfl > 0.5)
+    fprintf (stderr, 
+	     "WARNING: CFL must be <= 0.5 for VOF (cfl = %g, CFL = %g)\n", 
+	     cfl, CFL);
 
 /**
 Once we have computed the fluxes on all faces, we can update the
