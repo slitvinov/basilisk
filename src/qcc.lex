@@ -162,9 +162,13 @@
   var_t * varlookup (char * s, int len) {
     for (int i = varstack; i >= 0; i--)
       if (strlen(_varstack[i].v) == len && 
-	  !strncmp(s, _varstack[i].v, len) &&
-	  (s[len-1] != '.' || _varstack[i].type == vector))
+	  !strncmp(s, _varstack[i].v, len)) {
+	if (_varstack[i].type < 0) // not a field
+	  return NULL;
+	if (s[len-1] == '.' && _varstack[i].type != vector)
+	  return NULL;
 	return &_varstack[i];
+      }
     return NULL;
   }
 
@@ -1503,12 +1507,15 @@ reduction{WS}*[(](min|max):{ID}+[)] {
   argss = realloc (argss, sizeof (char *)*nargs);
   char * s1 = s; while (!strchr(" \t\v\n\f(", *s1)) s1++;
   *s1++ = '\0'; s1 = strstr (s1, "struct"); space (s1); nonspace (s1);
-  char * s2 = s1; space (s2); *s2 = '\0';
+  char * s2 = s1; space (s2); *s2++ = '\0';
+  char * s3 = s2; space (s3); if (*s3 == '\0') s3[-1] = '\0';
   args[nargs-1] = strdup (s);
   argss[nargs-1] = strdup (s1);
+  varpush (s2, -1, scope + 1, 0);
   if (debug)
-    fprintf (stderr, "%s:%d: function '%s' with struct '%s' returns '%s'\n", 
-	     fname, line, s, s1, return_type);
+    fprintf (stderr, 
+	     "%s:%d: function '%s' with struct '%s' '%s' returns '%s'\n", 
+	     fname, line, s, s1, s2, return_type);
 }
 
 {ID}+{WS}*[(]{WS}*{ID}+{WS}*[)] {
