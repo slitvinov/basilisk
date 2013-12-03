@@ -29,11 +29,12 @@ void input_pgm (struct InputPGM p)
     fprintf (stderr, "input_pgm: could not read magic number\n");
     exit (1);
   }
-  if (strcmp (line, "P5\n")) {
+  if (strcmp (line, "P2\n") && strcmp (line, "P5\n")) {
     fprintf (stderr, "input_pgm: magic number '%s' does not match PGM\n", 
 	     line);
     exit (1);
   }
+  int binary = !strcmp (line, "P5\n");
   if (!fgets (line, 81, p.fp)) {
     fprintf (stderr, "input_pgm: could not read width and height\n");
     exit (1);
@@ -55,7 +56,14 @@ void input_pgm (struct InputPGM p)
   }
   if (maxval < 256) {
     unsigned char * a = malloc (width*height);
-    size_t n = fread (a, 1, width*height, p.fp);
+    size_t n = 0;
+    if (binary)
+      n = fread (a, 1, width*height, p.fp);
+    else {
+      int v;
+      while (n < width*height && fscanf (p.fp, "%d ", &v) == 1)
+	a[n++] = v;
+    }
     if (n != width*height) {
       fprintf (stderr, "input_pgm: read only %ld values\n", n);
       exit (1);
@@ -70,8 +78,15 @@ void input_pgm (struct InputPGM p)
     free (a);
   }
   else {
-    unsigned short * a = malloc (width*height);
-    size_t n = fread (a, 2, width*height, p.fp);
+    unsigned short * a = malloc (2*width*height);
+    size_t n = 0;
+    if (binary)
+      n = fread (a, 2, width*height, p.fp);
+    else {
+      int v;
+      while (n < width*height && fscanf (p.fp, "%d ", &v) == 1)
+	a[n++] = v;
+    }
     if (n != width*height) {
       fprintf (stderr, "input_pgm: read only %ld values\n", n);
       exit (1);
