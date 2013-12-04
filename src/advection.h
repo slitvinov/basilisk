@@ -12,11 +12,10 @@ such as the 2nd-order, unsplit, upwind scheme of [Bell-Collela-Glaz,
 
 The main time loop is defined in [run.h](). A stable timestep needs to
 respect the [CFL
-condition](http://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition). The tracer advection event is defined in [tracer.h]() */
+condition](http://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition). */
 
 #include "run.h"
 #include "timestep.h"
-#include "tracer.h"
 
 /**
 We allocate the (face) velocity field. For compatibility with the
@@ -34,8 +33,9 @@ Here we set the gradient functions for each tracer (as defined in the
 user-provided `tracers` list). We also set default values (zero) for
 the tracer and velocity fields. */
 
-event defaults (i = 0)
-{
+extern scalar * tracers;
+
+event defaults (i = 0) {
   for (scalar f in tracers)
     f.gradient = gradient;
   foreach()
@@ -48,11 +48,20 @@ event defaults (i = 0)
 }
 
 /**
+We apply boundary conditions after user initialisation. */
+
+event init (i = 0) {
+  boundary ((scalar *){u});
+  boundary (tracers);
+}
+
+/**
 The timestep is set using the velocity field and the CFL
-criterion. This is done after all other events (the `last`
-keyword). The integration itself is performed in the events of
+criterion. The integration itself is performed in the events of
 [tracer.h](). */
 
-event velocity (i++, last) {
-  dt = timestep (u);
+event velocity (i++,last) {
+  dt = dtnext (t, timestep (u));
 }
+
+#include "tracer.h"

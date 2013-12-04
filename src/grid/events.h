@@ -24,7 +24,7 @@ static int event_do (Event * ev, int i, double t)
     return event_finished (ev);
   if (i == ev->i || fabs (t - ev->t) <= 1e-9) {
 #if DEBUG_EVENTS
-    fprintf (stderr, "  %s()\t%s:%d\n", ev->name, ev->file, ev->line);
+    fprintf (stderr, "  %-20s %s:%d\n", ev->name, ev->file, ev->line);
 #endif
     if ((* ev->action) (i, t)) {
       event_finished (ev);
@@ -170,7 +170,10 @@ double dtnext (double t, double dt)
       dt = tnext - t;
     else {
       double dt1 = (tnext - t)/n;
-      dt = dt1 <= dt ? dt1 : (tnext - t)/(n + 1);
+      if (dt1 > dt + 1e-9)
+	dt = (tnext - t)/(n + 1);
+      else if (dt1 < dt)
+	dt = dt1;
       tnext = t + dt;
     }
   }

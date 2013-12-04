@@ -26,13 +26,6 @@ void run (void)
   while (events (i, t)) {
 
 /**
-Here we adjust the timestep (which can be set by one of the events
-using e.g. a stability criterion), so that it is compatible with the
-times of upcoming events. */
-
-    dt = dtnext (t, dt);
-
-/**
 We store the total number of cells advanced in time for computing
 speed statistics. */
 

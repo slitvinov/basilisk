@@ -79,9 +79,16 @@ $$
 - u_x^2 + 2\mu\partial_xu_x & - u_xu_y + \mu(\partial_yu_x + \partial_xu_y)\\
 \ldots & - u_y^2 + 2\mu\partial_yu_y
 \end{array}\right)
-$$ */
+$$ 
 
-event advance (i++)
+The timestep for this iteration is controlled by the CFL condition
+(and the timing of upcoming events). */
+
+event stability (i++,last) {
+  dt = dtnext (t, timestep (u));
+}
+
+event advance (i++,last)
 {
 
 /**
@@ -142,7 +149,7 @@ $$
 \nabla\cdot(\alpha\nabla p) = \nabla\cdot\mathbf{u}_*
 $$ */
 
-event projection (i++)
+event projection (i++,last)
 {
   
 /**
@@ -170,10 +177,4 @@ $\alpha$ is not defined we set it to one. */
     foreach_face()
       u.x[] -= (p[] - p[-1,0])/Delta;
   boundary ((scalar *){u});
-
-/**
-Finally we obtain the timestep for the next iteration by applying the
-CFL condition to the new velocity field. */
-
-  dt = timestep (u);
 }

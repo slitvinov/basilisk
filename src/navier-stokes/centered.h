@@ -66,11 +66,15 @@ event defaults (i = 0)
 }
 
 /**
-We apply boundary conditions again after user initialisation. */
+We initialise the face velocity field and apply boundary conditions
+after user initialisation. */
 
 event init (i = 0)
 {
-  boundary ({p,u});
+  trash ({uf});
+  foreach_face()
+    uf.x[] = (u.x[] + u.x[-1,0])/2.;
+  boundary ({p,u,uf});
 }
 
 /**
@@ -131,9 +135,15 @@ mgstats project (face vector u, scalar p, (const) face vector alpha)
   return mgp;
 }
 
-event stability (i++) {}
+/**
+The timestep for this iteration is controlled by the CFL condition
+(and the timing of upcoming events). */
 
-event advance (i++)
+event stability (i++,last) {
+  dt = dtnext (t, timestep (uf));
+}
+
+event advance (i++,last)
 {
   prediction();
   mgpf = project (uf, pf, alpha);
@@ -173,7 +183,7 @@ event advance (i++)
   boundary ((scalar *){u});
 }
 
-event projection (i++)
+event projection (i++,last)
 {
   trash ({uf});
   foreach_face()
@@ -187,10 +197,4 @@ event projection (i++)
       u.x[] -= (alphaf.x[]*(p[] - p[-1,0]) +
 		alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
   boundary ((scalar *){u});
-
-/**
-Finally we obtain the timestep for the next iteration by applying the
-CFL condition to the new (face) velocity field. */
-
-  dt = timestep (uf);
 }

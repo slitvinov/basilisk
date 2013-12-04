@@ -85,7 +85,7 @@ mgstats viscosity (vector u, face vector mu, scalar alpha)
   foreach()
     foreach_dimension()
       r.x[] = u.x[];
-  restriction ({alpha});
+  restriction ({mu,alpha});
   struct Viscosity p;
   p.mu = mu; p.alpha = alpha;
   return mg_solve ((scalar *){u}, (scalar *){r},

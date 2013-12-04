@@ -52,8 +52,7 @@ void parameters()
 {
   N = 128;
   L0 = 64;
-  dt = 1.;
-  TOLERANCE = dt*1e-4;
+  TOLERANCE = 1e-4;
 
 /**
 The marginal stability is obtained for `kb = kbcrit`. Here $\mu$ is
@@ -76,37 +75,6 @@ event init (i = 0)
     C2[] = kb/ka + 0.01*noise();
   }
   boundary ({C1, C2});
-}
-
-/**
-## Time integration */
-
-event integration (i++)
-{
-
-/**
-We can rewrite the evolution equations as
-$$
-\partial_t C_1 = \nabla^2 C_1 + k k_a + k (C_1 C_2 - k_b - 1) C_1
-$$
-$$
-\partial_t C_2 = D \nabla^2 C_2  + k k_b C_1 - k C_1^2 C_2
-$$
-And use the diffusion solver to advance the system from $t$ to $t+dt$. */
-
-  scalar r[], beta[];
-  
-  foreach() {
-    r[] = k*ka;
-    beta[] = k*(C1[]*C2[] - kb - 1.);
-  }
-  mgd1 = diffusion (C1, dt, r = r, beta = beta);
-  foreach() {
-    r[] = k*kb*C1[];
-    beta[] = - k*sq(C1[]);
-  }
-  const face vector c[] = {D, D};
-  mgd2 = diffusion (C2, dt, c, r, beta);
 }
 
 /**
@@ -139,6 +107,44 @@ standard C *pipes*. */
   FILE * fp = popen (command, "w");
   output_ppm (C1, fp, 200, linear = true, spread = 2);
   pclose (fp);
+}
+
+/**
+## Time integration */
+
+event integration (i++)
+{
+
+/**
+We first set the timestep according to the timing of upcoming
+events. We choose a maximum timestep of 1 which ensures the stability
+of the reactive terms for this example. */
+
+  dt = dtnext (t, 1.);
+
+/**
+We can rewrite the evolution equations as
+$$
+\partial_t C_1 = \nabla^2 C_1 + k k_a + k (C_1 C_2 - k_b - 1) C_1
+$$
+$$
+\partial_t C_2 = D \nabla^2 C_2  + k k_b C_1 - k C_1^2 C_2
+$$
+And use the diffusion solver to advance the system from $t$ to $t+dt$. */
+
+  scalar r[], beta[];
+  
+  foreach() {
+    r[] = k*ka;
+    beta[] = k*(C1[]*C2[] - kb - 1.);
+  }
+  mgd1 = diffusion (C1, dt, r = r, beta = beta);
+  foreach() {
+    r[] = k*kb*C1[];
+    beta[] = - k*sq(C1[]);
+  }
+  const face vector c[] = {D, D};
+  mgd2 = diffusion (C2, dt, c, r, beta);
 }
 
 /**

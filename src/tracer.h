@@ -21,7 +21,6 @@ The integration is performed using the Bell-Collela-Glaz scheme. */
 
 #include "bcg.h"
 
-event tracer_advection (i = 1; i++)
-{
+event tracer_advection (i++,last) {
   advection (tracers, uf, dt);
 }

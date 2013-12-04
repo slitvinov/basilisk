@@ -38,41 +38,6 @@ event init (i = 0)
 }
 
 /**
-## Game of life algorithm */
-
-event life (i++)
-{
-  foreach() {
-
-/**
-We count the number of live neighbors in a 3x3 neighbourhood. */
-
-    int neighbors = - a[];
-    for (int i = -1; i <= 1; i++)
-      for  (int j = -1; j <= 1; j++)
-	neighbors += a[i,j];
-
-/**
-If a cell is alive and surrounded by 2 or 3 neighbors it carries on
-living, otherwise it dies. If a cell is dead and surrounded by exactly
-3 neighbors it becomes alive. */
-
-    b[] = a[] ? (neighbors == 2 || neighbors == 3) : (neighbors == 3);
-
-/**
-The age of live cells is incremented. */
-
-    age[] = b[]*(age[] + 1);
-  }
-  boundary({b});
-
-/**
-Here we swap the old state (`a`) with the new state (`b`). */
-
-  swap (scalar, a, b);
-}
-
-/**
 ## Animation
 
 We generate images of the age field every 5 timesteps for the first
@@ -118,6 +83,41 @@ time-consuming operation!)... */
 
 	  "gifsicle --colors 256 --optimize --delay 1"
 	  " --loopcount=0 age-*.gif > age.gif && rm -f age-*.gif");
+}
+
+/**
+## Game of life algorithm */
+
+event life (i++)
+{
+  foreach() {
+
+/**
+We count the number of live neighbors in a 3x3 neighbourhood. */
+
+    int neighbors = - a[];
+    for (int i = -1; i <= 1; i++)
+      for  (int j = -1; j <= 1; j++)
+	neighbors += a[i,j];
+
+/**
+If a cell is alive and surrounded by 2 or 3 neighbors it carries on
+living, otherwise it dies. If a cell is dead and surrounded by exactly
+3 neighbors it becomes alive. */
+
+    b[] = a[] ? (neighbors == 2 || neighbors == 3) : (neighbors == 3);
+
+/**
+The age of live cells is incremented. */
+
+    age[] = b[]*(age[] + 1);
+  }
+  boundary({b});
+
+/**
+Here we swap the old state (`a`) with the new state (`b`). */
+
+  swap (scalar, a, b);
 }
 
 /**

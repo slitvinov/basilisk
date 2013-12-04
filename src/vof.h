@@ -153,7 +153,7 @@ a centered volume fraction field `cc` which will be defined below. */
 
 The multi-dimensional advection is performed by the event below. */
 
-event vof (i = 1; i++)
+event vof (i++,last)
 {
   for (scalar c in interfaces) {
 
