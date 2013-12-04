@@ -8,7 +8,7 @@
   #include <sys/wait.h>
   #include <assert.h>
 
-  enum { scalar, vector, tensor };
+  enum { scalar, vector, tensor, struct_type = -1 };
 
   typedef struct { int i; char * name; } Scalar;
   typedef struct { int x, y, face; char * name; } Vector;
@@ -170,6 +170,18 @@
 	return &_varstack[i];
       }
     return NULL;
+  }
+
+  int get_vartype (char * s) {
+    int len = strlen (s);
+    for (int i = varstack; i >= 0; i--)
+      if (strlen(_varstack[i].v) == len && 
+	  !strncmp(s, _varstack[i].v, len)) {
+	if (s[len-1] == '.' && _varstack[i].type != vector)
+	  return -100;
+	return _varstack[i].type;
+      }
+    return -100;
   }
 
   int rotate (FILE * fin, FILE * fout, int n);
@@ -1511,7 +1523,7 @@ reduction{WS}*[(](min|max):{ID}+[)] {
   char * s3 = s2; space (s3); if (*s3 == '\0') s3[-1] = '\0';
   args[nargs-1] = strdup (s);
   argss[nargs-1] = strdup (s1);
-  varpush (s2, -1, scope + 1, 0);
+  varpush (s2, struct_type, scope + 1, 0);
   if (debug)
     fprintf (stderr, 
 	     "%s:%d: function '%s' with struct '%s' '%s' returns '%s'\n", 
@@ -1524,8 +1536,15 @@ reduction{WS}*[(](min|max):{ID}+[)] {
   int len = s - yytext;
   for (int i = 0; i < nargs && !inarg; i++) {
     if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {
-      char * s = strchr (yytext, '(');
-      fprintf (yyout, "%s ((struct %s){%s})", args[i], argss[i], s);
+      char * s = strchr (yytext, '('); s++; nonspace (s);
+      char * s1 = s; space (s1); *s1 = '\0';
+      s1 = strchr (s, ')'); if (s1) *s1 = '\0';
+      if (debug)
+	fprintf (stderr, "%s:%d: single argument '%s'\n", fname, line, s);
+      if (get_vartype (s) == struct_type)
+	fprintf (yyout, "%s (%s)", args[i], s);
+      else
+	fprintf (yyout, "%s ((struct %s){%s})", args[i], argss[i], s);
       inarg = 1;
     }
   }
