@@ -137,7 +137,8 @@ Information about the convergence of the solver is returned in a structure. */
 
 typedef struct {
   int i;              // number of iterations
-  double maxres, sum; // maximum residual, sum of r.h.s.
+  double resb, resa;  // maximum residual before and after the iterations
+  double sum;         // sum of r.h.s.
 } mgstats;
 
 /**
@@ -178,16 +179,16 @@ We initialise the structure storing convergence statistics. */
 /**
 Here we compute the initial residual field and its maximum. */
 
-  s.maxres = residual (a, b, &res, data);
+  s.resb = s.resa = residual (a, b, &res, data);
 
 /**
 We then iterates until convergence or until `NITERMAX` is reached. Note
 also that we force the solver to apply at least one cycle, even if the
 initial residual is lower than `TOLERANCE`. */
 
-  for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.maxres > TOLERANCE); s.i++) {
+  for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.resa > TOLERANCE); s.i++) {
     mg_cycle (a, res, da, relax, data, 4, 0);
-    s.maxres = residual (a, b, &res, data);
+    s.resa = residual (a, b, &res, data);
   }
 
 /**
