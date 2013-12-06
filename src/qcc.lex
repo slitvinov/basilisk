@@ -352,15 +352,19 @@
 		       foreachconst[i]->v, foreachconst[i]->v);
 	  }
 	  else if (foreachconst[i]->type == vector) {
+	    if (bits & (1 << i))
+	      fprintf (yyout, "const struct { double x, y; } _const_%s = "
+		       "{_constant[%s.x -_NVARMAX],"
+		       " _constant[%s.y -_NVARMAX]};\n",
+		       foreachconst[i]->v, foreachconst[i]->v, 
+		       foreachconst[i]->v);
 	    for (int c = 'x'; c <= 'y'; c++)
 	      if (bits & (1 << i))
 		fprintf (yyout,
-			 "const double _const_%s_%c = _constant[%s.%c-_NVARMAX];\n"
 			 "#undef val_%s_%c\n"
-			 "#define val_%s_%c(a,i,j) _const_%s_%c\n",
-			 foreachconst[i]->v, c, foreachconst[i]->v, c,
-			 foreachconst[i]->v, c, foreachconst[i]->v, c,
-			 foreachconst[i]->v, c);
+			 "#define val_%s_%c(a,i,j) _const_%s.%c\n",
+			 foreachconst[i]->v, c,
+			 foreachconst[i]->v, c, foreachconst[i]->v, c);
 	      else
 		fprintf (yyout, 
 			 "#undef val_%s_%c\n"
