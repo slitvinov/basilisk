@@ -740,7 +740,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 	       "  return ret; "
 	       "} ");
     fprintf (yyout, 
-	     "static int %s (int i, double t) { ",
+	     "static int %s (const int i, const double t) { ",
 	     eventid[nevents]);
     assert (nevents < EVMAX);
     nexpr[nevents] = inevent;
@@ -1785,7 +1785,7 @@ void compdir (FILE * fin, FILE * fout, char * grid)
   /* events */
   for (int i = 0; i < nevents; i++) {
     char * id = eventid[i];
-    fprintf (fout, "static int %s (int i, double t);\n", id);
+    fprintf (fout, "static int %s (const int i, const double t);\n", id);
     for (int j = 0; j < nexpr[i]; j++)
       fprintf (fout,
 	       "static int %s_expr%d (int * ip, double * tp);\n",

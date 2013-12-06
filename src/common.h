@@ -202,7 +202,7 @@ typedef int (* Expr) (int *, double *);
 
 struct _Event {
   int last, nexpr;
-  int (* action) (int, double);
+  int (* action) (const int, const double);
   Expr expr[3];
   int * arrayi;
   double * arrayt;
