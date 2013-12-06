@@ -152,7 +152,7 @@ void multigrid_trash (void * alist)
 {
   scalar * list = alist;
   Point p = *((Point *)grid);
-  p.level = p.depth - 1; p.n = 1 << p.level;
+  p.level = p.depth; p.n = 1 << p.level;
   for (; p.level >= 0; p.n /= 2, p.level--)
     for (int i = 0; i < (p.n + 2*GHOSTS)*(p.n + 2*GHOSTS); i++)
       for (scalar s in list)
