@@ -239,7 +239,8 @@ typedef struct {
   void   (* refine)                          (Point, scalar);
   void   (* coarsen)                         (Point, scalar);
   double (* gradient)                        (double, double, double);
-  struct { int x, y; } d;        // staggering
+  char * name;
+  struct { int x, y; } d; // staggering
   vector v;
   bool   face;
 } Methods;
@@ -256,3 +257,5 @@ void free_solver()
   free (all); all = NULL;
   grid = NULL;
 }
+
+void delete (scalar * list);

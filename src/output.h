@@ -13,7 +13,7 @@ void output_field (struct OutputField p)
   fprintf (p.fp, "# 1:x 2:y");
   int i = 3;
   for (scalar s in p.list)
-    fprintf (p.fp, " %d:%d", i++, s);
+    fprintf (p.fp, " %d:%s", i++, s.name);
   fputc('\n', p.fp);
   double Delta = L0/p.n;
   for (int i = 0; i < p.n; i++) {

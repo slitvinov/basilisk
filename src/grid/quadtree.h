@@ -751,6 +751,7 @@ void init_grid (int n)
 
 void free_grid (void)
 {
+  delete (all);
   Quadtree * q = grid;
   free (q->leaves.p);
   for (int l = 0; l <= q->depth; l++) {

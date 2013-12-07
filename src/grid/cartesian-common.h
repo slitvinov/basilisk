@@ -198,6 +198,7 @@ scalar * clone (scalar * l)
   for (scalar s in l) {
     scalar c = new scalar;
     _method[c] = _method[s];
+    c.name = NULL;
     list = list_append (list, c);
   }
   return list;
@@ -209,6 +210,7 @@ void delete (scalar * list)
     return;
   trash (list);
   for (scalar f in list) {
+    free (f.name); f.name = NULL;
     scalar * s = all;
     for (; *s >= 0 && *s != f; s++);
     if (*s == f)
@@ -303,6 +305,7 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   s.prolongation = NULL; 
   s.refine = s.coarsen = NULL;
   s.gradient = NULL;
+  s.name = strdup (name);
   foreach_dimension() {
     s.d.x = 0;  // not face
     s.v.x = -1; // not a vector component

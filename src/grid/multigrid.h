@@ -202,6 +202,7 @@ void realloc_scalar (void)
 
 void free_grid (void)
 {
+  delete (all);
   Point * m = grid;
   for (int l = 0; l <= m->depth; l++)
     free (m->d[l]);
