@@ -151,30 +151,6 @@ $$ */
 
 event projection (i++,last)
 {
-  
-/**
-We allocate a local scalar field and compute the divergence of
-$\mathbf{u}_*$. */
-
-  scalar div[];
   boundary ((scalar *){u});
-  foreach()
-    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
-
-/**
-We solve the Poisson problem. */
-
-  mgp = poisson (p, div, alpha);
-
-/**
-And compute $\mathbf{u}_{n+1}$ using $\mathbf{u}_*$ and $p$. If
-$\alpha$ is not defined we set it to one. */
-
-  if (alpha.x)
-    foreach_face()
-      u.x[] -= alpha.x[]*(p[] - p[-1,0])/Delta;
-  else
-    foreach_face()
-      u.x[] -= (p[] - p[-1,0])/Delta;
-  boundary ((scalar *){u});
+  mgp = project (u, p, alpha);
 }

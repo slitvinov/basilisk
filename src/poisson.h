@@ -342,3 +342,51 @@ provide $\alpha$ and $\beta$ as constant fields. */
   scalar a = p.a, b = p.b;
   return mg_solve ({a}, {b}, residual, relax, &p);
 }
+
+/**
+## Projection of a velocity field
+
+The function below "projects" the velocity field *u* onto the space of
+divergence-free velocity fields i.e.
+$$
+\mathbf{u}^{n+1} \leftarrow \mathbf{u} - \alpha\nabla p
+$$
+so that
+$$
+\nabla\cdot\mathbf{u}^{n+1} = 0
+$$
+This gives the Poisson equation for the pressure
+$$
+\nabla\cdot(\alpha\nabla p) = \nabla\cdot\mathbf{u}_*
+$$ */
+
+mgstats project (face vector u, scalar p, (const) face vector alpha)
+{
+
+/**
+We allocate a local scalar field and compute the divergence of
+$\mathbf{u}_*$. */
+
+  scalar div[];
+  foreach()
+    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
+
+/**
+We solve the Poisson problem. */
+
+  mgstats mgp = poisson (p, div, alpha);
+
+/**
+And compute $\mathbf{u}_{n+1}$ using $\mathbf{u}_*$ and $p$. If
+$\alpha$ is not defined we set it to one. */
+
+  if (alpha.x)
+    foreach_face()
+      u.x[] -= alpha.x[]*(p[] - p[-1,0])/Delta;
+   else
+    foreach_face()
+      u.x[] -= (p[] - p[-1,0])/Delta;
+  boundary_normal ({u});
+  boundary_tangent ({u});
+  return mgp;
+}

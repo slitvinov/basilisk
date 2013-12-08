@@ -257,7 +257,8 @@ astats adapt_wavelet (struct Adapt p)
 	    /* difference between fine value and bilinearly-interpolated
 	       coarse value */
 	    error = fabs (s[] - (9.*coarse(s,0,0) + 
-				 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+				 3.*(coarse(s,child.x,0) + 
+				     coarse(s,0,child.y)) + 
 				 coarse(s,child.x,child.y))/16.);
 	    for (int k = 0; k < 2; k++)
 	      for (int l = 0; l < 2; l++) {
@@ -327,15 +328,23 @@ void halo_restriction (scalar * def, scalar * list)
 
 void halo_restriction_flux (vector * list)
 {
-  foreach_halo_fine_to_coarse()
-    foreach_dimension() {
-    // if (is_leaf (neighbor(-1,0)))
-      for (vector f in list)
-	f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
-      if (is_leaf (neighbor(1,0)))
-	for (vector f in list)
-	  f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
-    }
+  vector * listv = NULL;
+  for (vector v in list)
+    if (!is_constant(v.x))
+      listv = vectors_append (listv, v);
+
+  if (listv)
+    foreach_halo_fine_to_coarse()
+      foreach_dimension() {
+        // if (is_leaf (neighbor(-1,0)))
+        for (vector f in listv)
+	  f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+	if (is_leaf (neighbor(1,0)))
+	  for (vector f in listv)
+	    f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
+      }
+
+  free (listv);
 }
 
 void halo_prolongation (int depth, scalar * list)

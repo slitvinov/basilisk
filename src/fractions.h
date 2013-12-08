@@ -376,7 +376,7 @@ void output_facets (struct OutputFacets p)
   if (!p.fp) p.fp = stdout;
 
   foreach()
-    if (c[] > 0. && c[] < 1.) {
+    if (c[] > 1e-6 && c[] < 1. - 1e-6) {
       coord n;
       if (!s.x)
 	// compute normal from volume fraction

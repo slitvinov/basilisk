@@ -3,7 +3,8 @@
 struct Viscosity {
   vector u;
   face vector mu;
-  scalar alpha;
+  double dt;
+  scalar alpha; // optional
 };
 
 static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
@@ -79,15 +80,28 @@ static double residual_viscosity (scalar * a, scalar * b, scalar ** presl,
   return maxres;
 }
 
-mgstats viscosity (vector u, face vector mu, scalar alpha)
+mgstats viscosity (struct Viscosity p)
 {
+  vector u = p.u;
+  face vector mu = p.mu;
   vector r[];
-  foreach()
-    foreach_dimension()
-      r.x[] = u.x[];
-  restriction ({mu,alpha});
-  struct Viscosity p;
-  p.mu = mu; p.alpha = alpha;
+  if (p.alpha) {
+    scalar alpha = p.alpha;
+    foreach() {
+      alpha[] *= p.dt;
+      foreach_dimension()
+	r.x[] = u.x[];
+    }
+    restriction ({mu,alpha});
+  }
+  else {
+    const scalar dt[] = p.dt;
+    p.alpha = dt;
+    foreach()
+      foreach_dimension()
+	r.x[] = u.x[];
+    restriction ((scalar *){mu});
+  }
   return mg_solve ((scalar *){u}, (scalar *){r},
 		   residual_viscosity, relax_viscosity, &p);
 }

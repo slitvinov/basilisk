@@ -42,18 +42,18 @@ the velocity components.
 The statistics for the (multigrid) solution of the Poisson problem are
 stored in `mgp`. */
 
-face vector alpha; // default unity
-face vector mu;    // default zero
+face vector alpha;  // default unity
+scalar      alphac; // default unity
+face vector mu, a;  // default zero
 mgstats mgp, mgpf, mgu;
+bool stokes = false;
 
 /**
 The default velocity and pressure are zero. */
 
-// fixme: (normal) BCs for uf needs to be consistent with (normal) BCs for u
-
 event defaults (i = 0)
 {
-  const face vector unity[] = {1,1};
+  const face vector unity[] = {1.,1.};
   alpha = unity;
 
   CFL = 0.8;
@@ -71,10 +71,12 @@ after user initialisation. */
 
 event init (i = 0)
 {
+  boundary ({p,u});
   trash ({uf});
   foreach_face()
     uf.x[] = (u.x[] + u.x[-1,0])/2.;
-  boundary ({p,u,uf});
+  boundary_normal ({uf});
+  boundary_tangent ({uf});
 }
 
 /**
@@ -111,28 +113,17 @@ void prediction()
   boundary ((scalar *){g});
 
   trash ({uf});
+  const face vector zero[] = {0.,0.};
+  (const) face vector af = a.x ? a : zero;
   foreach_face() {
     double un = dt*(u.x[] + u.x[-1,0])/(2.*Delta), s = sign(un);
     int i = -(s + 1.)/2.;
-    uf.x[] = u.x[i,0] + s*min(1., 1. - s*un)*g.x[i,0]*Delta/2.;
+    uf.x[] = u.x[i,0] + af.x[i,0]*dt/2. +
+      s*min(1., 1. - s*un)*g.x[i,0]*Delta/2.;
     double fyy = u.y[i,0] < 0. ? u.x[i,1] - u.x[i,0] : u.x[i,0] - u.x[i,-1];
     uf.x[] -= dt*u.y[i,0]*fyy/(2.*Delta);
   }
   boundary ((scalar *){uf});
-}
-
-// fixme: share with MAC solver
-mgstats project (face vector u, scalar p, (const) face vector alpha)
-{
-  scalar div[];
-  foreach()
-    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
-  mgstats mgp = poisson (p, div, alpha);
-  foreach_face()
-    u.x[] -= alpha.x[]*(p[] - p[-1,0])/Delta;
-  boundary_normal ({u});
-  boundary_tangent ({u});
-  return mgp;
 }
 
 /**
@@ -143,58 +134,88 @@ event stability (i++,last) {
   dt = dtnext (t, timestep (uf));
 }
 
-event advance (i++,last)
+/**
+If we are using VOF or diffuse tracers, we need to advance them (to
+time $t+\Delta t/2$) here. */
+
+event vof (i++,last);
+event tracer_advection (i++,last);
+event density (i++,last);
+
+event advection_term (i++,last)
 {
-  prediction();
-  mgpf = project (uf, pf, alpha);
+  if (!stokes) {
+    prediction();
+    mgpf = project (uf, pf, alpha);
 
-  (const) face vector alphaf = alpha;
-  foreach_dimension() {
-    vector flux[];
-    tracer_fluxes (u.x, uf, flux, dt);
-    foreach()
-      u.x[] += dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta +
-      dt*(uf.x[1,0]*alphaf.x[1,0]*(p[1,0] - p[]) +
-	  uf.y[0,1]*alphaf.y[0,1]*(p[1,0] - p[-1,0] + p[1,1] - p[-1,1])/2. -
-	  uf.x[]*alphaf.x[]*(p[] - p[-1,0]) -
-	  uf.y[]*alphaf.y[]*(p[1,0] - p[-1,0] + p[1,-1] - p[-1,-1])/2.)
-      /(2.*sq(Delta));
-  }
-
-  if (mu.x && dt > 0.) {
-    scalar alphac[];
-    foreach() {
-      alphac[] = 0.;
-      foreach_dimension() {
-        u.x[] -= (alphaf.x[]*(p[] - p[-1,0]) +
-		  alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
-	alphac[] += alphaf.x[] + alphaf.x[1,0];
-      }
-      alphac[] *= dt/4;
+    (const) face vector alphaf = alpha;
+    (const) face vector af = a;
+    foreach_dimension() {
+      scalar dp[];
+      foreach()
+	dp[] = (af.x[] + af.x[1,0])/2. 
+	- (alphaf.x[]*(p[] - p[-1,0]) +
+	   alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta*dt);
+      boundary ({dp});
+      advection ({u.x}, uf, dt, dp);
     }
-    boundary ((scalar *){u});
-    mgu = viscosity (u, mu, alphac);
+  }
+}
+
+event viscous_term (i++,last)
+{
+  if (mu.x)
+    mgu = viscosity (u, mu, dt, alphac);
+
+  trash ({uf});
+  foreach_face()
+    uf.x[] = (u.x[] + u.x[-1,0])/2.;
+}
+
+event acceleration (i++,last)
+{ 
+  if (a.x) {
+    (const) face vector af = a;
+    boundary_normal ({af});
+    foreach_face()
+      uf.x[] += dt*af.x[];
     foreach()
       foreach_dimension()
-        u.x[] += (alphaf.x[]*(p[] - p[-1,0]) +
-		  alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
+        u.x[] += dt*(af.x[] + af.x[1,0])/2.;
+    foreach_dimension() {
+      foreach_boundary (right,false) {
+	double ub = (u.x[] + u.x.boundary[right] (point, u.x))/2.;
+	u.x[] -= (uf.x[ghost] - ub)/2.;
+	uf.x[ghost] = ub;
+      }
+      foreach_boundary (left,false) {
+	double ub = (u.x[] + u.x.boundary[left] (point, u.x))/2.;
+	u.x[] -= (uf.x[] - ub)/2.;
+	uf.x[] = ub;
+      }
+    }
   }
-  
-  boundary ((scalar *){u});
+  boundary_normal ({uf}); 
 }
 
 event projection (i++,last)
 {
-  trash ({uf});
-  foreach_face()
-    uf.x[] = (u.x[] + u.x[-1,0])/2.;
-  boundary_normal ({uf});
   mgp = project (uf, p, alpha);
 
   (const) face vector alphaf = alpha;
+#if QUADTREE
+  face vector g[];
+  foreach_face()
+    g.x[] = alphaf.x[]*(p[] - p[-1,0])/Delta;
+  boundary_normal ({g});
+  foreach()
+    foreach_dimension()
+      u.x[] -= (g.x[] + g.x[1,0])/2.;
+#else
   foreach()
     foreach_dimension()
       u.x[] -= (alphaf.x[]*(p[] - p[-1,0]) +
 		alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
+#endif
   boundary ((scalar *){u});
 }
