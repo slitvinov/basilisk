@@ -80,14 +80,14 @@ event init_un (i = 0) {
 }
 
 /**
-Every 10 timesteps we check whether $u$ has changed by more than
-10^-4^. If it has not, the event returns 1 which stops the
+Every 0.1 time units we check whether $u$ has changed by more than
+10^-5^. If it has not, the event returns 1 which stops the
 simulation. We also output the evolution of the kinetic energy on
 standard error. */
 
-event logfile (i += 10; i <= 10000) {
+event logfile (t += 0.1; i <= 10000) {
   double du = change (u.x, un);
-  if (i > 0 && du < 1e-4)
+  if (i > 0 && du < 1e-5)
     return 1; /* stop */
   fprintf (stderr, "%f %.9f %g\n", t, energy(), du);
 }
