@@ -42,8 +42,8 @@ the velocity components.
 The statistics for the (multigrid) solution of the Poisson problem are
 stored in `mgp`. */
 
-face vector alpha;  // default unity
-scalar      alphac; // default unity
+face vector alpha;  // default dt
+scalar      alphac; // default dt
 face vector mu, a;  // default zero
 mgstats mgp, mgpf, mgu;
 bool stokes = false;
@@ -162,10 +162,38 @@ event advection_term (i++,last)
   }
 }
 
+static void correction (double dt, face vector a)
+{
+  double s = sign(dt);
+  const face vector zero[] = {0.,0.};
+  (const) face vector af = a.x ? a : zero;
+  (const) face vector alphaf = alpha;
+#if QUADTREE
+  face vector g[];
+  foreach_face()
+    g.x[] = dt*af.x[] - s*alphaf.x[]*(p[] - p[-1,0])/Delta;
+  boundary_normal ({g});
+  foreach()
+    foreach_dimension()
+      u.x[] += (g.x[] + g.x[1,0])/2.;
+#else
+  foreach()
+    foreach_dimension()
+      u.x[] += dt*(af.x[] + af.x[1,0])/2. -
+        s*(alphaf.x[]*(p[] - p[-1,0]) +
+	   alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
+#endif
+  boundary ((scalar *){u});  
+}
+
 event viscous_term (i++,last)
 {
-  if (mu.x)
-    mgu = viscosity (u, mu, dt, alphac);
+  if (mu.x) {
+    const scalar dtc[] = dt;
+    correction (dt, a);
+    mgu = viscosity (u, mu, alphac ? alphac : dtc);
+    correction (-dt, a);
+  }
 
   trash ({uf});
   foreach_face()
@@ -201,21 +229,5 @@ event acceleration (i++,last)
 event projection (i++,last)
 {
   mgp = project (uf, p, alpha);
-
-  (const) face vector alphaf = alpha;
-#if QUADTREE
-  face vector g[];
-  foreach_face()
-    g.x[] = alphaf.x[]*(p[] - p[-1,0])/Delta;
-  boundary_normal ({g});
-  foreach()
-    foreach_dimension()
-      u.x[] -= (g.x[] + g.x[1,0])/2.;
-#else
-  foreach()
-    foreach_dimension()
-      u.x[] -= (alphaf.x[]*(p[] - p[-1,0]) +
-		alphaf.x[1,0]*(p[1,0] - p[]))/(2.*Delta);
-#endif
-  boundary ((scalar *){u});
+  correction (1., (vector){0,0});
 }

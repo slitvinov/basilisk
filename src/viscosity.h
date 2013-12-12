@@ -3,8 +3,7 @@
 struct Viscosity {
   vector u;
   face vector mu;
-  double dt;
-  scalar alpha; // optional
+  scalar alpha;
 };
 
 static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
@@ -14,16 +13,27 @@ static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
   (const) scalar alpha = p->alpha;
   vector u = {a[0], a[1]}, r = {b[0], b[1]};
 
-  foreach_level_or_leaf (l) {
-    Delta *= Delta;
+  foreach_level_or_leaf (l)
     foreach_dimension()
       u.x[] = (alpha[]*(mu.x[1,0]*u.x[1,0] + mu.x[]*u.x[-1,0] +
-			mu.y[0,1]*u.x[0,1] + mu.y[]*u.x[0,-1] +
-			((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
-			 (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/2.) +
-	       r.x[]*Delta)/
-      (Delta + alpha[]*(mu.x[1,0] + mu.x[] + mu.y[0,1] + mu.y[]));      
-  }
+			mu.y[0,1]*u.x[0,1] + mu.y[]*u.x[0,-1]
+#if IMPLICIT
+			+ ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
+			   (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/2.
+#endif
+			) + r.x[]*sq(Delta))/
+    (sq(Delta) + alpha[]*(mu.x[1,0] + mu.x[] + mu.y[0,1] + mu.y[]));
+
+#if TRASH
+  vector u1[];
+  foreach_level_or_leaf (l)
+    foreach_dimension()
+      u1.x[] = u.x[];
+  trash ({u});
+  foreach_level_or_leaf (l)
+    foreach_dimension()
+      u.x[] = u1.x[];
+#endif
 }
 
 static double residual_viscosity (scalar * a, scalar * b, scalar ** presl, 
@@ -54,28 +64,32 @@ static double residual_viscosity (scalar * a, scalar * b, scalar ** presl,
     boundary_normal ({g});
     foreach (reduction(max:maxres)) {
       res.x[] = r.x[] - u.x[] + alpha[]/Delta*
-        (g.x[1,0] - g.x[] + g.y[0,1] - g.y[] +
-	 ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
-	  (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/(2.*Delta));
+        (g.x[1,0] - g.x[] + g.y[0,1] - g.y[]
+#if IMPLICIT
+	 + ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
+	    (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/(2.*Delta)
+#endif
+	 );
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
     }
   }
 #else
   /* "naive" discretisation (only 1st order on quadtrees) */
-  foreach (reduction(max:maxres)) {
-    Delta *= Delta;
+  foreach (reduction(max:maxres))
     foreach_dimension() {
       res.x[] = r.x[] - u.x[] +
         alpha[]*(mu.x[1,0]*u.x[1,0] + mu.x[]*u.x[-1,0] +
 		 mu.y[0,1]*u.x[0,1] + mu.y[]*u.x[0,-1] -
-		 (mu.x[1,0] + mu.x[] + mu.y[0,1] + mu.y[])*u.x[] +
-		 ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
-		  (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/2.)/Delta;
+		 (mu.x[1,0] + mu.x[] + mu.y[0,1] + mu.y[])*u.x[]
+#if IMPLICIT
+		 + ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
+		    (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/2.
+#endif
+		 )/sq(Delta);
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
     }
-  }
 #endif
   return maxres;
 }
@@ -83,16 +97,17 @@ static double residual_viscosity (scalar * a, scalar * b, scalar ** presl,
 mgstats viscosity (struct Viscosity p)
 {
   vector u = p.u;
-  face vector mu = p.mu;
+  (const) face vector mu = p.mu;
+  (const) scalar alpha = p.alpha;
   vector r[];
-  if (p.alpha) {
-    scalar alpha = p.alpha;
-    foreach() {
-      alpha[] *= p.dt;
-      foreach_dimension()
-	r.x[] = u.x[];
-    }
-    restriction ({mu,alpha});
+  foreach() {
+    foreach_dimension()
+      r.x[] = u.x[]
+#if !IMPLICIT
+      + alpha[]*((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
+		 (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/(2.*sq(Delta))
+#endif
+      ;
   }
   else {
     const scalar dt[] = p.dt;

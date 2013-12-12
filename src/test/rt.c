@@ -34,10 +34,10 @@ event density (i++) {
   trash ({alpha});
   foreach_face() {
     double fm = (f[] + f[-1,0])/2.;
-    alpha.x[] = 1./rho(fm);
+    alpha.x[] = dt/rho(fm);
   }
   foreach()
-    alphac[] = 1./rho(f[]);
+    alphac[] = dt/rho(f[]);
   boundary_normal ({alpha});
 }
 

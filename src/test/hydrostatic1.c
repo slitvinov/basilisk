@@ -30,7 +30,7 @@ event check (i = 1) {
   output_cells (stdout);
 #if 1
   foreach()
-    fprintf (stderr, "%g %g %g %.6f %.6f\n", x, y, p[], u.x[], u.y[]);
+    fprintf (stderr, "%g %g %g %.6f %.6f\n", x, y, p[]/dt, u.x[], u.y[]);
 #else
   foreach_face(y)
     fprintf (stderr, "%g %g %g\n", x, y, uf.y[]);
