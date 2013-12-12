@@ -316,14 +316,16 @@ int refine_function (int (* func) (Point point, void * data),
   return nf;
 }
 
-void halo_restriction (scalar * def, scalar * list)
+void halo_restriction (int l, scalar * def, scalar * list)
 {
-  foreach_halo_fine_to_coarse () {
-    for (scalar s in def)
-      s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
-    for (scalar s in list)
-      s.coarsen (point, s);
-  }
+  if (l < 0) l = depth();
+  foreach_halo_levels (l - 1, >= 0, --)
+    if (is_active(cell)) {
+      for (scalar s in def)
+	s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+      for (scalar s in list)
+	s.coarsen (point, s);
+    }
 }
 
 void halo_restriction_flux (vector * list)
@@ -395,7 +397,7 @@ void quadtree_boundary_centered (scalar * list)
   }
 
   if (listdef || listc) {
-    halo_restriction (listdef, listc);
+    halo_restriction (-1, listdef, listc);
     for (int b = 0; b < nboundary; b++)
       foreach_boundary_cell (b, true) {
 	if (is_active (cell)) {

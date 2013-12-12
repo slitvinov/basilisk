@@ -32,12 +32,7 @@ the multigrid hierarchy. */
 
 static void boundary_homogeneous (scalar * a, scalar * da, int l)
 {
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_level (b, l, true) {
-      scalar s, ds;
-      for (s, ds in a, da)
-	ds[ghost] = s.boundary_homogeneous[b] (point, ds);
-    }
+#if QUADTREE
 
 /**
 On quadtree meshes, we also need to make sure that stencils are
@@ -49,8 +44,27 @@ already known on coarse grids so that the restriction operation is not
 necessary, which leaves only the prolongation operation for level
 `l`. */
 
-#if QUADTREE
+  halo_restriction (l, da, NULL);
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell (b, true)
+      if (level <= l || is_leaf(cell)) {
+	scalar s, ds;
+	for (s, ds in a, da)
+	  ds[ghost] = s.boundary_homogeneous[b] (point, ds);
+	corners();
+	if (level == l || is_leaf(cell))
+	  continue;
+      }
   halo_prolongation (l, da);
+
+#else
+
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_level (b, l, true) {
+      scalar s, ds;
+      for (s, ds in a, da)
+	ds[ghost] = s.boundary_homogeneous[b] (point, ds);
+    }
 #endif
 }
 
@@ -91,7 +105,7 @@ On all other grids, we take as initial guess the approximate solution
 on the coarser grid bilinearly interpolated onto the current grid. */
 
     else
-      foreach_level_or_leaf (l)
+      foreach_level (l)
 	for (scalar s in da)
 	  s[] = (9.*coarse(s,0,0) + 
 		 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 

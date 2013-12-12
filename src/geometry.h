@@ -141,14 +141,13 @@ int facets (double c, coord n, double alpha,
   if (c > 0. && c < 1.) {
     for (double s = -0.5; s <= 0.5; s += 1.)
       foreach_dimension()
-	if (fabs (n.y) > 1e-4) {
+	if (fabs (n.y) > 1e-4 && i < 2) {
 	  double a = (alpha - s*n.x)/n.y;
 	  if (a >= -0.5 && a <= 0.5) {
 	    p[i].x   = s;
 	    p[i++].y = a;
 	  }
 	}
-    assert (i <= 2);
   }
   return i;
 }

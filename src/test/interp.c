@@ -16,7 +16,7 @@ int main (int argc, char ** argv)
   double tolerance = 1e-4;
   adapt_wavelet ({h}, &tolerance, 11);
 
-  halo_restriction ({h}, NULL);
+  halo_restriction (-1, {h}, NULL);
   halo_prolongation (-1, {h});
 
   double max = 0.;

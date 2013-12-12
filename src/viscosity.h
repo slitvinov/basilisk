@@ -109,14 +109,7 @@ mgstats viscosity (struct Viscosity p)
 #endif
       ;
   }
-  else {
-    const scalar dt[] = p.dt;
-    p.alpha = dt;
-    foreach()
-      foreach_dimension()
-	r.x[] = u.x[];
-    restriction ((scalar *){mu});
-  }
+  restriction ({mu,alpha});
   return mg_solve ((scalar *){u}, (scalar *){r},
 		   residual_viscosity, relax_viscosity, &p);
 }
