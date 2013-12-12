@@ -14,6 +14,7 @@ void parameters() {
   const face vector muc[] = {0.00313,0.00313};
   mu = muc;
   DT = 5e-3;
+  TOLERANCE = 1e-4;
 }
 
 event init (t = 0) {
@@ -62,7 +63,7 @@ event interface (t = 0.7) {
 
 #if QUADTREE
 event adapt (i++) {
-  adapt_wavelet ({f}, (double[]){5e-3}, LEVEL, list = {p,u,pf,uf,f});
+  adapt_wavelet ({f}, (double[]){5e-3}, LEVEL, list = {p,u,pf,uf,g,f});
 }
 #endif
 
