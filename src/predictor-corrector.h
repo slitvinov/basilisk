@@ -5,10 +5,8 @@
 // Required from solver
 // fields updated by time-integration
 extern scalar * evolving;
-// how to compute fluxes
-double fluxes (scalar * evolving, double dtmax);
-// how to update evolving fields
-void   update (scalar * output, scalar * input, double dt);
+// how to compute updates
+double update (scalar * evolving, scalar * updates, double dtmax);
 
 // User-provided parameters/functions
 // gradient
@@ -16,6 +14,20 @@ double (* gradient)  (double, double, double) = minmod2;
 void      parameters (void);
 
 double t = 0., dt = 0.;
+
+static void advance_generic (scalar * output, scalar * input, scalar * updates,
+			     double dt)
+{
+  foreach() {
+    scalar o, i, u;
+    for (o,i,u in output,input,updates)
+      o[] = i[] + dt*u[];
+  }
+  boundary (output);
+}
+
+void (* advance) (scalar * output, scalar * input, scalar * updates,
+		  double dt) = advance_generic;
 
 event defaults (i = 0)
 {
@@ -40,21 +52,19 @@ void run()
   timer start = timer_start();
   int i = 0; long tnc = 0;
   while (events (i, t)) {
-    dt = dtnext (t, fluxes (evolving, DT));
+    // list of updates
+    scalar * updates = clone (evolving);
+    dt = dtnext (t, update (evolving, updates, DT));
     if (gradient != zero) {
       /* 2nd-order time-integration */
-      // temporary storage
-      scalar * temporary = clone (evolving);
       /* predictor */
-      update (temporary, evolving, dt/2.);
+      advance (updates, evolving, updates, dt/2.);
       /* corrector */
-      fluxes (temporary, dt);
-      // free temporary storage
-      delete (temporary);
-      free (temporary);
+      update (updates, updates, dt);
     }
-    update (evolving, evolving, dt);
-
+    advance (evolving, evolving, updates, dt);
+    delete (updates);
+    free (updates);
     foreach (reduction(+:tnc)) 
       tnc++;
     i++; t = tnext;

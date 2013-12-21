@@ -69,6 +69,37 @@ to know which fields are updated. */
 scalar * evolving = {h, u};
 
 /**
+We need to overload the default *advance* function of the
+predictor-corrector scheme, because the evolving variables ($h$ and
+$\mathbf{u}$) are not the conserved variables $h$ and
+$h\mathbf{u}$. */
+
+static void advance_saint_venant (scalar * output, scalar * input, 
+				  scalar * updates, double dt)
+{
+  // recover scalar and vector fields from lists
+  scalar hi = input[0], ho = output[0], dh = updates[0];
+  vector
+    ui = { input[1], input[2] },
+    uo = { output[1], output[2] },
+    dhu = { updates[1], updates[2] };
+
+  // new fields in ho[], uo[]
+  foreach() {
+    double hold = hi[];
+    ho[] = hold + dt*dh[];
+    eta[] = ho[] + zb[];
+    if (ho[] > dry)
+      foreach_dimension()
+	uo.x[] = (hold*ui.x[] + dt*dhu.x[])/ho[];
+    else
+      foreach_dimension()
+	uo.x[] = 0.;
+  }
+  boundary ({ho, eta, uo});
+}
+
+/**
 When using an adaptive discretisation (i.e. a quadtree)., we need
 to make sure that $\eta$ is maintained as $z_b + h$ whenever cells are
 refined or coarsened. */
@@ -92,6 +123,12 @@ the initial defaults. */
 
 event defaults (i = 0)
 {
+
+/**
+We overload the default 'advance' function of the predictor-corrector
+scheme and setup the refinement and coarsening methods on quadtrees. */
+
+  advance = advance_saint_venant;  
 #if QUADTREE
   eta.refine  = refine_eta;
   eta.coarsen = coarsen_eta;
@@ -112,18 +149,11 @@ event init (i = 0)
 /**
 ### Computing fluxes
 
-We first declare some global variables (they need to be visible both
-in `fluxes()` and in `update()`). `Fh` and `Fq` will contain the fluxes for
-$h$ and $h\mathbf{u}$ respectively and `S` is necessary to store the
-asymmetric topographic source term. Various approximate Riemann
-solvers are defined in [riemann.h](). */
-
-vector Fh, S;
-tensor Fq;
+Various approximate Riemann solvers are defined in [riemann.h](). */
 
 #include "riemann.h"
 
-double fluxes (scalar * evolving, double dtmax)
+double update (scalar * evolving, scalar * updates, double dtmax)
 {
 
 /**
@@ -144,10 +174,12 @@ reconstruction is used for the gradient fields. */
   gradients ({h, eta, u}, {gh, geta, gu});
 
 /**
-The flux fields declared above are dynamically allocated. */
+`Fh` and `Fq` will contain the fluxes for $h$ and $h\mathbf{u}$
+respectively and `S` is necessary to store the asymmetric topographic
+source term. */
 
-  Fh = new vector; S = new vector;
-  Fq = new tensor;
+  vector Fh[], S[];
+  tensor Fq[];
 
 /**
 The faces which are "wet" on at least one side are traversed. */
@@ -221,43 +253,22 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
   
   boundary_normal ({Fh, S, Fq});
 
-  return dtmax;
-}
-
 /**
-### Update
+#### Updates for evolving quantities
 
-This is the second function used by the predictor-corrector scheme. It
-uses the input and the fluxes computed previously to compute the
-output. */
+We store the divergence of the fluxes in the update fields. Note that
+these are updates for $h$ and $h\mathbf{u}$ (not $\mathbf{u}$). */
 
-void update (scalar * output, scalar * input, double dt)
-{
-  // recover scalar and vector fields from lists
-  scalar hi = input[0], ho = output[0];
-  vector 
-    ui = { input[1], input[2] },
-    uo = { output[1], output[2] };
-
-  // new fields in ho[], uo[]
+  scalar dh = updates[0];
+  vector dhu = { updates[1], updates[2] };
+  
   foreach() {
-    double hold = hi[];
-    ho[] = hold + dt*(Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/Delta;
-    eta[] = ho[] + zb[];
-    if (ho[] > dry)
-      foreach_dimension()
-	uo.x[] = (hold*ui.x[] + dt*(Fq.x.x[] + Fq.x.y[] - 
-				   S.x[1,0] - Fq.x.y[0,1])/Delta)/ho[];
-    else
-      foreach_dimension()
-	uo.x[] = 0.;
+    dh[] = (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/Delta;
+    foreach_dimension()
+      dhu.x[] = (Fq.x.x[] + Fq.x.y[] - S.x[1,0] - Fq.x.y[0,1])/Delta;
   }
-  boundary ({ho, eta, uo});
 
-/**
-The dynamic fields allocated in fluxes() are freed. */
-
-  delete ((scalar *){Fh, S, Fq});
+  return dtmax;
 }
 
 /**

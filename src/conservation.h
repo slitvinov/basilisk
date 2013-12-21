@@ -96,15 +96,14 @@ static double riemann (const double * right, const double * left,
   return dtmax;
 }
 
-/**
-We use a global variable to pass the list of fluxes between the
-`fluxes()` function and the `update()` function of the generic
-predictor-corrector scheme. */
-
-vector * lflux = NULL;
-
-double fluxes (scalar * conserved, double dtmax)
+double update (scalar * conserved, scalar * updates, double dtmax)
 {
+
+/**
+We declare an empty list of fluxes which will be filled with fluxes
+for each scalar and vector quantity. */
+
+  vector * lflux = NULL;
 
 /**
 The gradients of each quantity are stored in a list of dynamically-allocated
@@ -202,11 +201,25 @@ in the pre-allocated fields. */
     }
   }
 
+  boundary_normal (lflux);
+
+/**
+#### Update
+
+The update for each scalar quantity is the divergence of the fluxes. */
+
+  foreach() {
+    scalar u;
+    vector f;
+    for (u,f in updates,lflux)
+      u[] = (f.x[] - f.x[1,0] + f.y[] - f.y[0,1])/Delta;
+  }
+
 /**
 #### Cleanup
 
 We finally deallocate the memory used to store lists and gradient
-fields, and apply boundary conditions on fluxes. */
+fields. */
 
   free (scalars);
   free (vectors);
@@ -216,33 +229,8 @@ fields, and apply boundary conditions on fluxes. */
   free (vector_fluxes);
   delete ((scalar *) slopes);
   free (slopes);
-
-  boundary_normal (lflux);
+  delete ((scalar *) lflux);
+  free (lflux);
 
   return dtmax;
-}
-
-/**
-### Update
-
-This is the second function used by the predictor-corrector scheme. It
-uses the input and the fluxes computed previously to compute the
-output. */
-
-void update (scalar * output, scalar * input, double dt)
-{
-  foreach() {
-    scalar o, i;
-    vector f;
-    for (o,i,f in output,input,lflux)
-      o[] = i[] + dt*(f.x[] - f.x[1,0] + f.y[] - f.y[0,1])/Delta;
-  }
-  boundary (output);
-
-/**
-Finally the flux fields are deallocated and the list is freed. */
-
-  delete ((scalar *)lflux);
-  free (lflux);
-  lflux = NULL;
 }
