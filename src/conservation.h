@@ -35,6 +35,19 @@ problem. */
 void flux (const double * state, double * flux, double * eigenvalue);
 
 /**
+Optional source terms can be added by overloading the *sources* function
+pointer. */
+
+static void no_sources (scalar * current, scalar * updates)
+{
+  foreach()
+    for (scalar s in updates)
+      s[] = 0.;
+}
+
+void (* sources) (scalar * current, scalar * updates) = no_sources;
+
+/**
 ## Time-integration
 
 ### Setup
@@ -208,11 +221,12 @@ in the pre-allocated fields. */
 
 The update for each scalar quantity is the divergence of the fluxes. */
 
+  sources (conserved, updates);
   foreach() {
-    scalar u;
+    scalar ds;
     vector f;
-    for (u,f in updates,lflux)
-      u[] = (f.x[] - f.x[1,0] + f.y[] - f.y[0,1])/Delta;
+    for (ds,f in updates,lflux)
+      ds[] += (f.x[] - f.x[1,0] + f.y[] - f.y[0,1])/Delta;
   }
 
 /**
