@@ -67,7 +67,7 @@ static void momentum_source (scalar * current, scalar * updates)
 We recover the current fields and their variations from the lists... */
 
   scalar a = current[0], q = current[1], da = updates[0], dq = updates[1];
-  
+
 /**
 We initialise the source terms for each conserved variable. Note that
 *a* and *da*, *q* and *dq* may be the same fields, so that care needs
@@ -89,7 +89,7 @@ event defaults (i = 0)
 /**
 ## Boundary conditions
 
-We impose a sinusoidal flux Q(t) at the left of the domain. */
+We impose a sinusoidal flux $Q(t)$ at the left of the domain. */
 
 q[left] = dirichlet(Amp*sin(2.*pi*omega*t));
 
@@ -98,7 +98,7 @@ q[left] = dirichlet(Amp*sin(2.*pi*omega*t));
 
 For small amplitudes $Amp = 0.01$ at the input boundary condition the
 system has analytical solutions for $e1 < e2$, in this case the spatial
-envelope of the flux rate behaves like $Q=Amp e^{-e2/2*x}$ [Wang at
+envelope of the flux rate behaves like $Q=Amp\times e^{-e2/2x}$ [Wang at
 al., 2013]. */
 
 void parameters() {
@@ -112,7 +112,7 @@ void parameters() {
 /**
 ## Initial conditions 
 
-The initial conditions are $A=1 and $Q=0$. */
+The initial conditions are $A=1$ and $Q=0$. */
 
 event init (i = 0) {
   foreach()
