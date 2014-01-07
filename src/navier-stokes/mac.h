@@ -5,7 +5,7 @@ We wish to approximate numerically the incompressible Navier--Stokes
 equations
 $$
 \partial_t\mathbf{u}+\nabla\cdot(\mathbf{u}\otimes\mathbf{u}) = 
-\frac{1}{\rho}\left(-\nabla p + \nabla\cdot(\mu\nabla\mathbf{u})\right)
+-\nabla p + \nabla\cdot(\nu\nabla\mathbf{u})
 $$
 $$
 \nabla\cdot\mathbf{u} = 0
@@ -31,16 +31,12 @@ scalar p[];
 face vector u[];
 
 /**
-The parameters are the viscosity coefficient $\mu$ and the specific
-volume $\alpha = 1/\rho$ (with default unity). $\alpha$ is a face
-vector because we will need its values at the face locations of
-the velocity components. 
+The only parameter is the viscosity coefficient $\nu$.
 
 The statistics for the (multigrid) solution of the Poisson problem are
 stored in `mgp`. */
 
-double mu = 0.;
-face vector alpha;
+double nu = 0.;
 mgstats mgp;
 
 /**
@@ -74,10 +70,10 @@ $$
 $$
 with $\mathbf{S}$ the symmetric tensor
 $$
-\mathbf{S} = - \mathbf{u}\otimes\mathbf{u} + \mu\nabla\mathbf{u} =
+\mathbf{S} = - \mathbf{u}\otimes\mathbf{u} + \nu\nabla\mathbf{u} =
 \left(\begin{array}{cc}
-- u_x^2 + 2\mu\partial_xu_x & - u_xu_y + \mu(\partial_yu_x + \partial_xu_y)\\
-\ldots & - u_y^2 + 2\mu\partial_yu_y
+- u_x^2 + 2\nu\partial_xu_x & - u_xu_y + \nu(\partial_yu_x + \partial_xu_y)\\
+\ldots & - u_y^2 + 2\nu\partial_yu_y
 \end{array}\right)
 $$ 
 
@@ -107,7 +103,7 @@ diagonal components. */
 
   foreach()
     foreach_dimension()
-      S.x.x[] = - sq(u.x[] + u.x[1,0])/4. + 2.*mu*(u.x[1,0] - u.x[])/Delta;
+      S.x.x[] = - sq(u.x[] + u.x[1,0])/4. + 2.*nu*(u.x[1,0] - u.x[])/Delta;
 
 /**
 We average horizontally and vertically to compute the off-diagonal
@@ -116,7 +112,7 @@ component at the vertices. */
   foreach_vertex()
     S.x.y[] = 
       - (u.x[] + u.x[0,-1])*(u.y[] + u.y[-1,0])/4. +
-      mu*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/Delta;
+      nu*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/Delta;
 
 /**
 We only need to apply boundary conditions to the diagonal components. */
@@ -138,7 +134,7 @@ $$ */
 
 In a second step we compute
 $$
-\mathbf{u}_{n+1} = \mathbf{u}_* - \alpha\nabla p
+\mathbf{u}_{n+1} = \mathbf{u}_* - \Delta t\nabla p
 $$
 with the condition
 $$
@@ -146,11 +142,12 @@ $$
 $$
 This gives the Poisson equation for the pressure
 $$
-\nabla\cdot(\alpha\nabla p) = \nabla\cdot\mathbf{u}_*
+\nabla\cdot(\nabla p) = \frac{\nabla\cdot\mathbf{u}_*}{\Delta t}
 $$ */
 
 event projection (i++,last)
 {
   boundary ((scalar *){u});
-  mgp = project (u, p, alpha);
+  const face vector unity[] = {1.,1.};
+  mgp = project (u, p, unity, dt);
 }

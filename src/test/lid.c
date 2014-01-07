@@ -25,7 +25,7 @@ void parameters()
   N = 64;
   // viscosity
 #if MAC
-  mu = 1e-3;
+  nu = 1e-3;
 #else
   const face vector muc[] = {1e-3,1e-3};
   mu = muc;
