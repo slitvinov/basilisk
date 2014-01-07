@@ -36,15 +36,15 @@ static void boundary_homogeneous (scalar * a, scalar * da, int l)
 
 /**
 On quadtree meshes, we also need to make sure that stencils are
-consistent. In the general case, this involves first restricting the
-field values from the fine mesh to the coarse mesh and then
-prolongating the field on 'halo' cells using the coarse grid
-stencils. In the case of the multigrid cycle below, the solution is
-already known on coarse grids so that the restriction operation is not
-necessary, which leaves only the prolongation operation for level
-`l`. */
+consistent. We first restrict the solution from level *l* up to
+coarser levels. */
 
   halo_restriction (l, da, NULL);
+
+/**
+We then apply boundary conditions on all levels coarser than *l*
+and/or on leaf cells. */
+
   for (int b = 0; b < nboundary; b++)
     foreach_boundary_cell (b, true)
       if (level <= l || is_leaf(cell)) {
@@ -55,6 +55,10 @@ necessary, which leaves only the prolongation operation for level
 	if (level == l || is_leaf(cell))
 	  continue;
       }
+
+/**
+Finally we prolongate the solution down to level *l*. */
+
   halo_prolongation (l, da);
 
 #else
@@ -235,14 +239,16 @@ parameters $\alpha$ and $\lambda$. We define $\alpha$ as a face
 vector field because we need values at the face locations
 corresponding to the face gradients of field $a$. 
 
-`alpha` and `lambda` are declared as `(const)` to indicate that the
-function works also when `alpha` and `lambda` are constant vector
-(resp. scalar) fields. */
+*alpha* and *lambda* are declared as *(const)* to indicate that the
+function works also when *alpha* and *lambda* are constant vector
+(resp. scalar) fields. If *tolerance* is set, it supersedes the
+default *TOLERANCE* of the multigrid solver. */
 
 struct Poisson {
   scalar a, b;
   (const) face vector alpha;
   (const) scalar lambda;
+  double tolerance;
 };
 
 /**
@@ -352,9 +358,25 @@ provide $\alpha$ and $\beta$ as constant fields. */
     const scalar lambda[] = 0.;
     p.lambda = lambda;
   }
-  
+
+/**
+If *tolerance* is set it supersedes the default of the multigrid
+solver. */
+
+  double defaultol = TOLERANCE;
+  if (p.tolerance)
+    TOLERANCE = p.tolerance;
+
   scalar a = p.a, b = p.b;
-  return mg_solve ({a}, {b}, residual, relax, &p);
+  mgstats s = mg_solve ({a}, {b}, residual, relax, &p);
+
+/**
+We restore the default. */
+
+  if (p.tolerance)
+    TOLERANCE = defaultol;
+
+  return s;
 }
 
 /**
@@ -363,7 +385,7 @@ provide $\alpha$ and $\beta$ as constant fields. */
 The function below "projects" the velocity field *u* onto the space of
 divergence-free velocity fields i.e.
 $$
-\mathbf{u}^{n+1} \leftarrow \mathbf{u} - \alpha\nabla p
+\mathbf{u}^{n+1} \leftarrow \mathbf{u} - \Delta t\alpha\nabla p
 $$
 so that
 $$
@@ -371,10 +393,10 @@ $$
 $$
 This gives the Poisson equation for the pressure
 $$
-\nabla\cdot(\alpha\nabla p) = \nabla\cdot\mathbf{u}_*
+\nabla\cdot(\alpha\nabla p) = \frac{\nabla\cdot\mathbf{u}_*}{\Delta t}
 $$ */
 
-mgstats project (face vector u, scalar p, (const) face vector alpha)
+mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
 {
 
 /**
@@ -383,12 +405,12 @@ $\mathbf{u}_*$. */
 
   scalar div[];
   foreach()
-    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/Delta;
+    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/(dt*Delta);
 
 /**
 We solve the Poisson problem. */
 
-  mgstats mgp = poisson (p, div, alpha);
+  mgstats mgp = poisson (p, div, alpha, tolerance = TOLERANCE/dt);
 
 /**
 And compute $\mathbf{u}_{n+1}$ using $\mathbf{u}_*$ and $p$. If
@@ -396,11 +418,12 @@ $\alpha$ is not defined we set it to one. */
 
   if (alpha.x)
     foreach_face()
-      u.x[] -= alpha.x[]*(p[] - p[-1,0])/Delta;
-   else
+      u.x[] -= dt*alpha.x[]*(p[] - p[-1,0])/Delta;
+  else
     foreach_face()
-      u.x[] -= (p[] - p[-1,0])/Delta;
+      u.x[] -= dt*(p[] - p[-1,0])/Delta;
   boundary_normal ({u});
   boundary_tangent ({u});
+
   return mgp;
 }
