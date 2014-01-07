@@ -1,18 +1,25 @@
 /**
 # Incompressible Navier--Stokes solver (centered formulation)
 
-We wish to approximate numerically the incompressible Navier--Stokes
-equations
+We wish to approximate numerically the incompressible,
+variable-density Navier--Stokes equations
 $$
 \partial_t\mathbf{u}+\nabla\cdot(\mathbf{u}\otimes\mathbf{u}) = 
-\frac{1}{\rho}\left(-\nabla p + \nabla\cdot(\mu\nabla\mathbf{u})\right)
+\frac{1}{\rho}\left[-\nabla p + \nabla\cdot(\mu\nabla\mathbf{u})\right] + 
+\mathbf{a}
 $$
 $$
 \nabla\cdot\mathbf{u} = 0
 $$
 
-We will use the generic time loop, a CFL-limited timestep and we will
-need to solve a Poisson problem. */
+The scheme implemented here is close to that used in Gerris ([Popinet,
+2003](/src/references.bib#popinet2003), [Popinet,
+2009](/src/references.bib#popinet2009), [Lagrée et al,
+2012](/src/references.bib#lagree2011)).
+
+We will use the generic time loop, a CFL-limited timestep, the
+Bell-Collela-Glaz advection scheme and the implicit viscosity
+solver. */
 
 #include "run.h"
 #include "timestep.h"
@@ -20,44 +27,57 @@ need to solve a Poisson problem. */
 #include "viscosity.h"
 
 /**
-The Markers-And-Cells (MAC) formulation was first described in the
-pioneering paper of [Harlow and Welch,
-1965](/src/references.bib#harlow1965). It relies on a *face*
-discretisation of the velocity components `u.x` and `u.y`, relative to
-the (centered) pressure `p`. This guarantees the consistency of the
-discrete gradient, divergence and Laplacian operators and leads to a
-stable (mode-free) integration. */
+The primary variables are the centered pressure field $p$ and the
+centered velocity field $\mathbf{u}$. The centered vector field
+$\mathbf{g}$ will contain pressure gradients and acceleration terms.
+
+We will also need an auxilliary face velocity field $\mathbf{u}_f$ and
+the associated centered pressure field $p_f$. */
 
 scalar p[];
-vector u[];
+vector u[], g[];
 scalar pf[];
 face vector uf[];
-vector g[];
 
 /**
-The parameters are the viscosity coefficient $\mu$ and the specific
-volume $\alpha = 1/\rho$ (with default unity). $\alpha$ is a face
-vector because we will need its values at the face locations of
-the velocity components. 
+In the case of variable density, the user will need to define both the
+face and centered specific volume fields ($\alpha$ and $\alpha_c$
+respectively) i.e. $1/\rho$. If not specified by the user, these
+fields are set to one i.e. the density is unity.
 
-The statistics for the (multigrid) solution of the Poisson problem are
-stored in `mgp`. */
+Viscosity is set by defining the face dynamic viscosity $\mu$; default
+is zero.
 
-face vector alpha;  // default dt
-scalar      alphac; // default dt
+The face field $\mathbf{a}$ defines the acceleration term; default is
+zero.
+
+The statistics for the (multigrid) solution of the pressure Poisson
+problems and implicit viscosity are stored in *mgp*, *mgpf*, *mgu*
+respectively. 
+
+If *stokes* is set to *true*, the velocity advection term
+$\nabla\cdot(\mathbf{u}\otimes\mathbf{u})$ is omitted. This is a
+reference to [Stokes flows](http://en.wikipedia.org/wiki/Stokes_flow)
+for which inertia is negligible compared to viscosity. */
+
+face vector alpha;  // default one
+scalar      alphac; // default one
 face vector mu, a;  // default zero
 mgstats mgp, mgpf, mgu;
 bool stokes = false;
 
 /**
-The default velocity and pressure are zero. */
+## Initial conditions
+
+The default acceleration is zero. The default density is unity.  The
+default velocity and pressure are zero. */
 
 event defaults (i = 0)
 {
-  const face vector unity[] = {1.,1.};
-  alpha = unity;
   const face vector zero[] = {0.,0.};
   a = zero;
+  const face vector unity[] = {1.,1.};
+  alpha = unity;
   
   CFL = 0.8;
   foreach() {
@@ -85,20 +105,37 @@ event init (i = 0)
 /**
 ## Time integration
 
-### Advection--Diffusion 
+The timestep for this iteration is controlled by the CFL condition,
+applied to the face centered velocity field $\mathbf{u}_f$; and the
+timing of upcoming events. */
 
-In a first step, we compute $\mathbf{u}_*$
-$$
-\frac{\mathbf{u}_* - \mathbf{u}_n}{dt} = \nabla\cdot\mathbf{S}
-$$
-with $\mathbf{S}$ the symmetric tensor
-$$
-\mathbf{S} = - \mathbf{u}\otimes\mathbf{u} + \mu\nabla\mathbf{u} =
-\left(\begin{array}{cc}
-- u_x^2 + 2\mu\partial_xu_x & - u_xu_y + \mu(\partial_yu_x + \partial_xu_y)\\
-\ldots & - u_y^2 + 2\mu\partial_yu_y
-\end{array}\right)
-$$ */
+event stability (i++,last) {
+  dt = dtnext (t, timestep (uf));
+}
+
+/**
+If we are using VOF or diffuse tracers, we need to advance them (to
+time $t+\Delta t/2$) here. Note that this assumes that tracer fields
+are defined at time $t-\Delta t/2$ i.e. are lagging the
+velocity/pressure fields by half a timestep. */
+
+event vof (i++,last);
+event tracer_advection (i++,last);
+
+/**
+The density field (at time $t+\Delta t/2$) can be defined by
+overloading this event. */
+
+event density (i++,last);
+
+/**
+### Predicted face velocity field
+
+For second-order in time integration of the velocity advection term
+$\nabla\cdot(\mathbf{u}\otimes\mathbf{u})$, we need to define the face
+velocity field $\mathbf{u}_f$ at time $t+\Delta t/2$. We use a version
+of the Bell-Collela-Glaz advection scheme and the pressure gradient
+and acceleration terms at time $t$ (stored in vector $\mathbf{g}$). */
 
 void prediction()
 {
@@ -130,30 +167,28 @@ void prediction()
 }
 
 /**
-The timestep for this iteration is controlled by the CFL condition
-(and the timing of upcoming events). */
+### Advection term
 
-event stability (i++,last) {
-  dt = dtnext (t, timestep (uf));
-}
-
-/**
-If we are using VOF or diffuse tracers, we need to advance them (to
-time $t+\Delta t/2$) here. */
-
-event vof (i++,last);
-event tracer_advection (i++,last);
-event density (i++,last);
+We predict the face velocity field $\mathbf{u}_f$ at time $t+\Delta
+t/2$ then project it to make it divergence-free. We can then use it to
+compute the velocity advection term, using the standard
+Bell-Collela-Glaz advection scheme for each component of the velocity
+field. */
 
 event advection_term (i++,last)
 {
   if (!stokes) {
     prediction();
-    mgpf = project (uf, pf, alpha);
-    foreach_dimension()
-      advection ({u.x}, uf, dt, g.x); // fixme: list for {g.x}
+    mgpf = project (uf, pf, alpha, dt);
+    advection ((scalar *){u}, uf, dt, (scalar *){g});
   }
 }
+
+/**
+### Viscous term
+
+We first define a function which adds the pressure gradient and
+acceleration terms. */
 
 static void correction (double dt)
 {
@@ -163,70 +198,136 @@ static void correction (double dt)
   boundary ((scalar *){u});  
 }
 
+/**
+The viscous term is computed implicitly. We first add the pressure
+gradient and acceleration terms, as computed at time $t$, then call
+the implicit viscosity solver. We then remove the acceleration and
+pressure gradient terms as they will replaced by their values at time
+$t+\Delta t$. */
+
 event viscous_term (i++,last)
 {
   if (mu.x) {
-    const scalar dtc[] = dt;
+    const scalar unity[] = 1.;
     correction (dt);
-    mgu = viscosity (u, mu, alphac ? alphac : dtc);
+    mgu = viscosity (u, mu, alphac ? alphac : unity, dt);
     correction (-dt);
   }
+
+/**
+The (provisionary) face velocity field at time $t+\Delta t$ is
+obtained by simple interpolation. */
 
   trash ({uf});
   foreach_face()
     uf.x[] = (u.x[] + u.x[-1,0])/2.;
 }
 
+/**
+### Acceleration term
+
+The acceleration term $\mathbf{a}$ needs careful treatment as many
+equilibrium solutions depend on exact balance between the acceleration
+term and the pressure gradient: for example Laplace's balance for
+surface tension or hydrostatic pressure in the presence of gravity.
+
+To ensure a consistent discretisation, the acceleration term is
+defined on faces as are pressure gradients and the centered combined
+acceleration and pressure gradient term $\mathbf{g}$ is obtained by
+averaging. */
+
 event acceleration (i++,last)
-{ 
+{
+
+/**
+We first reset the centered acceleration/pressure gradient field. */
+
+  trash ({g});
+  foreach()
+    foreach_dimension()
+      g.x[] = 0.;
+
+/**
+We then add the acceleration term to the face velocity field. */
+
   if (a.x) {
     (const) face vector af = a;
     boundary_normal ({af});
     foreach_face()
       uf.x[] += dt*af.x[];
-    //    foreach_dimension() {
+
+/**
+We then apply the boundary conditions to the provisionary face
+velocity field.
+
+When Dirichlet conditions are applied to the normal velocity, the
+Neumann condition applied on the pressure field is not necessarily
+consistent with the cancellation of the acceleration term. While this
+is not an issue for the face velocity field (whose value is specified
+on the boundary), this is a problem for the centered velocity field:
+as the pressure gradient applied to the centered velocity field is the
+average of the face pressure gradients, the normal component of the
+centered velocity field close to a boundary will only see half the
+pressure gradient required to balance the acceleration term. To
+compensate for this, we substract from the centered acceleration term
+$\mathbf{g}$ half the acceleration term, but only in the case where
+Dirichlet conditions are applied to the normal component. */
+
+    foreach_dimension() {
       foreach_boundary (right,false) {
-	u.x[] += dt*(af.x[] + af.x[1,0])/2.;
+	double ac = dt*(af.x[] + af.x[1,0])/2.;
+	u.x[] += ac;
 	double ub = (u.x[] + u.x.boundary[right] (point, u.x))/2.;
-	u.x[] -= dt*(af.x[] + af.x[1,0])/2. + (uf.x[ghost] - ub)/2.;
+	u.x[] -= ac;
+	g.x[] -= (uf.x[ghost] - ub)/(2.*dt);
 	uf.x[ghost] = ub;
       }
       foreach_boundary (left,false) {
-	u.x[] += dt*(af.x[] + af.x[1,0])/2.;
+	double ac = dt*(af.x[] + af.x[1,0])/2.;
+	u.x[] += ac;
 	double ub = (u.x[] + u.x.boundary[left] (point, u.x))/2.;
-	u.x[] -= dt*(af.x[] + af.x[1,0])/2. + (uf.x[] - ub)/2.;
+	u.x[] -= ac;
+	g.x[] -= (uf.x[] - ub)/(2.*dt);
 	uf.x[] = ub;
       }
-      foreach_boundary (top,false) {
-	u.y[] += dt*(af.y[] + af.y[0,1])/2.;
-	double ub = (u.y[] + u.y.boundary[top] (point, u.y))/2.;
-	u.y[] -= dt*(af.y[] + af.y[0,1])/2. + (uf.y[ghost] - ub)/2.;
-	uf.y[ghost] = ub;
-      }
-      foreach_boundary (bottom,false) {
-	u.y[] += dt*(af.y[] + af.y[0,1])/2.;
-	double ub = (u.y[] + u.y.boundary[bottom] (point, u.y))/2.;
-	u.y[] -= dt*(af.y[] + af.y[0,1])/2. + (uf.y[] - ub)/2.;
-	uf.y[] = ub;
-      }
-      //    }
+    }
   }
   boundary_normal ({uf}); 
 }
 
+/**
+## Approximate projection
+
+To get the pressure field at time $t + \Delta t$ we project the face
+velocity field (which will also be used for tracer advection at the
+next timestep). */
+
 event projection (i++,last)
 {
-  mgp = project (uf, p, alpha);
+  mgp = project (uf, p, alpha, dt);
+
+/**
+We then compute a face field $\mathbf{g}_f$ combining both
+acceleration and pressure gradient. */
+
   (const) face vector af = a, alphaf = alpha;
   face vector gf[];
   foreach_face()
-    gf.x[] = af.x[] - alphaf.x[]*(p[] - p[-1,0])/(dt*Delta);
+    gf.x[] = af.x[] - alphaf.x[]*(p[] - p[-1,0])/Delta;
   boundary_normal ({gf});
-  trash ({g});
+
+/**
+We average these face values to obtain the centered, combined
+acceleration and pressure gradient field. */
+
   foreach()
     foreach_dimension()
-      g.x[] = (gf.x[] + gf.x[1,0])/2.;
+      g.x[] += (gf.x[] + gf.x[1,0])/2.;
   boundary ((scalar *){g});
+
+/**
+And finally add this term to the centered velocity field. */
+
   // check BCs for g when it is refined
   correction (dt);
 }

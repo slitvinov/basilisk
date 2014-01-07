@@ -32,14 +32,14 @@ event init (t = 0) {
 #define rho(f) ((f)*1.225 + (1. - (f))*0.1694)
 
 event density (i++) {
-  trash ({alpha});
+  trash ({alpha,alphac});
   foreach_face() {
     double fm = (f[] + f[-1,0])/2.;
-    alpha.x[] = dt/rho(fm);
+    alpha.x[] = 1./rho(fm);
   }
-  foreach()
-    alphac[] = dt/rho(f[]);
   boundary_normal ({alpha});
+  foreach()
+    alphac[] = 1./rho(f[]);
 }
 
 event logfile (i++) {
