@@ -120,6 +120,7 @@ struct OutputPPM {
   scalar f;
   FILE * fp;
   int n;
+  char * file;
   double min, max, spread;
   bool linear;
   double box[2][2];
@@ -129,7 +130,6 @@ struct OutputPPM {
 void output_ppm (struct OutputPPM p)
 {
   // default values
-  if (!p.fp) p.fp = stdout;
   if (p.n == 0) p.n = N;
   if (p.min == 0 && p.max == 0) {
     stats s = statsf (p.f);
@@ -182,9 +182,23 @@ void output_ppm (struct OutputPPM p)
   }
   OMP_END_PARALLEL()
 
+  if (!p.fp) p.fp = stdout;
+  if (p.n == 0) p.n = N;
+  if (p.file) {
+    char * command = malloc (strlen ("convert ppm:- ") + strlen (p.file) + 1);
+    strcpy (command, "convert ppm:- ");
+    strcat (command, p.file);
+    p.fp = popen (command, "w");
+    free (command);
+  }
+
   fprintf (p.fp, "P6\n%u %u 255\n", p.n, ny);
   fwrite (((void **) ppm)[0], sizeof(color), ny*p.n, p.fp);
-  fflush (p.fp);
+
+  if (p.file)
+    pclose (p.fp);
+  else
+    fflush (p.fp);
   
   matrix_free (ppm);
 }
