@@ -11,7 +11,7 @@ void tracer_fluxes (const scalar f,
 		    const face vector u,
 		    face vector flux,
 		    double dt,
-		    scalar src)
+		    (const) scalar src)
 {
 
 /**
@@ -20,13 +20,6 @@ vector field. */
 
   vector g[];
   gradients ({f}, {g});
-
-/**
-If the source term field *src* is defined we use it, otherwise we set
-it to zero. */
-
-  const scalar zero[] = 0.;
-  (const) scalar a = src ? src : zero;
 
 /**
 For each face, the flux is composed of two parts... */
@@ -38,7 +31,7 @@ A normal component... */
 
     double un = dt*u.x[]/Delta, s = sign(un);
     int i = -(s + 1.)/2.;
-    double f2 = f[i,0] + a[i,0]*dt/2. +
+    double f2 = f[i,0] + src[i,0]*dt/2. +
       s*min(1., 1. - s*un)*g.x[i,0]*Delta/2.;
 
 /**
@@ -66,16 +59,31 @@ struct Advection {
   scalar * tracers;
   face vector u;
   double dt;
-  scalar src; // optional
+  scalar * src; // optional
 };
 
 void advection (struct Advection p)
 {
-  for (scalar f in p.tracers) {
+
+/**
+If *src* is not provided we set all the source terms to zero. */
+  
+  scalar * lsrc = p.src;
+  if (!lsrc) {
+    const scalar zero[] = 0.;
+    for (scalar s in p.tracers)
+      lsrc = list_append (lsrc, zero);
+  }
+
+  scalar f, src;
+  for (f,src in p.tracers,lsrc) {
     vector flux[];
-    tracer_fluxes (f, p.u, flux, p.dt, p.src);
+    tracer_fluxes (f, p.u, flux, p.dt, src);
     foreach()
       f[] += p.dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta;
     boundary ({f});
   }
+
+  if (!p.src)
+    free (lsrc);
 }
