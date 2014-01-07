@@ -80,7 +80,7 @@ void terrain (scalar zb, ...)
   va_list ap;
   va_start (ap, zb);
   char * name;
-  while ((name = va_arg (ap, char *)))
+  while ((name = va_arg (ap, char *))) {
     for (int i = 0; i < NPROC; i++) {
       Kdt ** kdt = _terrain[zb].kdt[i];
       _terrain[zb].kdt[i] = kdt = realloc (kdt, sizeof(Kdt *)*(nt + 2));
@@ -92,6 +92,8 @@ void terrain (scalar zb, ...)
 	exit (1);
       }
     }
+    nt++;
+  }
   va_end (ap);
 
   zb.refine = refine_terrain;
