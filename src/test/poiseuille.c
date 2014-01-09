@@ -11,14 +11,15 @@ u.x[top] = dirichlet(0);
 u.x[bottom] = dirichlet(0);
 
 u.x[left] = neumann(0);
-p[left] = dirichlet(0);
+p[left] = dirichlet(y + 0.5);
 u.x[right] = neumann(0);
-p[right] = dirichlet(0);
+p[right] = dirichlet( y + 0.5);
 
 scalar un[];
 
 event init (t = 0) {
-  const face vector g[] = {1.,0.};
+  // we also check for hydrostatic balance
+  const face vector g[] = {1.,1.};
   a = g;
   const face vector muc[] = {1.,1.};
   mu = muc;
