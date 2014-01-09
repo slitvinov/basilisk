@@ -31,7 +31,7 @@ event init (t = 0) {
 
 #define rho(f) ((f)*1.225 + (1. - (f))*0.1694)
 
-event density (i++) {
+event properties (i++) {
   trash ({alpha,alphac});
   foreach_face() {
     double fm = (f[] + f[-1,0])/2.;

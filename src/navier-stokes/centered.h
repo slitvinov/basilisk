@@ -123,10 +123,11 @@ event vof (i++,last);
 event tracer_advection (i++,last);
 
 /**
-The density field (at time $t+\Delta t/2$) can be defined by
-overloading this event. */
+The fluid properties such as specific volume (fields $\alpha$ and
+$\alpha_c$) or dynamic viscosity (face field $\mu_f$) -- at time
+$t+\Delta t/2$ -- can be defined by overloading this event. */
 
-event density (i++,last);
+event properties (i++,last);
 
 /**
 ### Predicted face velocity field
