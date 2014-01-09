@@ -643,7 +643,7 @@
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
   }
 
-  static void homogeneize (FILE * in, FILE * fp)
+  static int homogeneize (FILE * in, FILE * fp)
   {
     /* replace neumann/dirichlet(...) with neumann/dirichlet(0) */
     char * cond[2] = {"dirichlet", "neumann"};
@@ -659,21 +659,23 @@
 	    while (strchr (" \t\v\n\f", *s))
 	      s++;
 	    if (*s == '(') {
-	      fputs ("_homogeneous", fp);
-	      fputc (*s++, fp);
+	      fputs ("_homogeneous()", fp);
 	      s++;
-	      int para = 0;
-	      while ((para > 0 || *s != ')') && *s != '\0') {
+	      int para = 1;
+	      while (para > 0 && *s != '\0') {
 		if (*s == '(') para++;
 		if (*s == ')') para--;
 		s++;
 	      }
+	      if (para > 0)
+		return 1;
 	    }
 	    break;
 	  }
 	fputc (*s++, fp);
       }
     }
+    return 0;
   }
   
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
@@ -867,7 +869,8 @@ end_foreach{ID}*{SP}*"()" {
     boundary_staggering (boundarydir, boundarycomponent, yyout);
     fputs (" POINT_VARIABLES; return ", yyout);
     rewind (fp);
-    homogeneize (fp, yyout);
+    if (homogeneize (fp, yyout))
+      return yyerror ("expecting ')'");
     fclose (fp);
     fputs (" }\n", yyout);
 
