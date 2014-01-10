@@ -22,13 +22,21 @@ s/\\\n//g
 }
 
 echo "updating Makefile.tests"
+# create symbolic links between pages and sources if necessary
+for f in `showfiles '[ch]\.page'` \\; do
+    if test "$f" != "\\"; then
+	short=`echo $f | sed 's/\.\([ch]\)\.page/\.\1/'`
+	if test ! -f $short; then
+	    ln -s $f $short
+	fi
+    fi
+done
 (
     echo "# Automatically generated using 'make Makefile.tests'"
     echo "# DO NOT EDIT, edit 'Makefile' instead"
     DIR=`basename $PWD`
     echo "ALLTESTS = \\"
     showfiles c
-    showfiles c.page | sed 's/\.c\.page/\.c/g'
     echo ""
     echo "plots: \\"
     showfiles plot | sed 's/\(.*\)\.plot/\1\/plot.png/g'
