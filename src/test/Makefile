@@ -1,5 +1,5 @@
 # the default CFLAGS are set in $(BASILISK)/config
-CFLAGS += -g -O2 -DTRASH=1
+CFLAGS += -g -O2
 
 all: check slow
 
