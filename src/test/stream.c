@@ -75,9 +75,9 @@ int main() { run(); }
 
 After running and processing by gnuplot (using [stream.plot]()) we get:
 
-![Evolution of the vorticity field with time.](vortex/plot.png)
+![Evolution of the vorticity field with time.](stream/plot.png)
 
-![Evolution of level of refinement with time.](vortex/level.png)
+![Evolution of level of refinement with time.](stream/level.png)
 
 ## See also
 
