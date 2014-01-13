@@ -14,6 +14,8 @@ check: $(subst .c,.tst,$(filter-out $(TESTS),$(filter-out $(EXCLUDE),$(ALLTESTS)
 
 tags: $(subst .page,.tags,$(ALLPAGES))
 
+itags: $(subst .h.page,.h.itags,$(ALLPAGES))
+
 clean:
 	rm -f *.o *.s *.*tst *.d *.prof Makefile.deps
 
@@ -54,6 +56,10 @@ clean:
 %.tags: %.page $(QCC)
 	$(QCC) -tags $<
 	rm -f $(subst src,cache/src,$(PWD))/$<
+
+%.itags: %.tags $(subst .page,.tags,$(ALLPAGES)) $(BASILISK)/includedin.sh
+	sh $(BASILISK)/includedin.sh $(subst .tags,,$<) > $@
+	rm -f $(subst src,cache/src,$(PWD))/$(subst .tags,.page,$<)
 
 # lists external symbols of executables
 extern = nm -u $(1) | sed -n 's/^[ ]*U \(.*\)/\1/p' | sort | uniq

@@ -40,10 +40,15 @@ include.c: include.lex
 qcc.c: qcc.lex
 	flex -o qcc.c qcc.lex
 
-alltags: tags
+alltags:
 	cd navier-stokes && make tags
 	cd examples && make tags
 	cd test && make tags
+	make tags
+	cd navier-stokes && make itags
+	cd examples && make itags
+	cd test && make itags
+	make itags
 
 etags:
 	etags *.h grid/*.h
