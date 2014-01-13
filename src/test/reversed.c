@@ -123,6 +123,21 @@ event shape (t += T/4.) {
     output_facets (f);
 }
 
+/**
+If we are using adaptivity, we also output the levels of refinement at
+maximum stretching. */
+
+#if QUADTREE
+event levels (t = T/2) {
+  if (N == 128) {
+    scalar l[];
+    foreach()
+      l[] = level;
+    output_ppm (l, file = "levels.png", n = 400, min = 0, max = 7);
+  }
+}
+#endif
+
 #if 0
 event movie (i += 10)
 {
@@ -151,7 +166,7 @@ We use gnuplot (see [reversed.plot]()) to compute the convergence rate
 of the error norms with and without adaptation. The convergence rates
 are comparable.
 
-![Convergence rates for constant- and adaptive grids](reversed/plot.png)
+![Convergence rates for constant- and adaptive grids.](reversed/plot.png)
 
 The shapes of the interface at $t=0$, $t=T/4$, $t=T/2$, $t=3T/4$ and
 $t=T$ are displayed below for both sets of simulations (constant and
@@ -161,4 +176,6 @@ measure the error). Note that the errors for $t=3T/4$ seem to be much
 larger than those for $t=T$.
 
 ![Shapes of the interface for $t=0$, $t=T/4$, $t=T/2$, $t=3T/4$ and
-$t=T$ for two sets of simulations](reversed/interface.png) */
+$t=T$ for two sets of simulations.](reversed/interface.png) 
+
+![Refinement levels for $t=T/2$ and $N=128$.](reversed/levels.png) */
