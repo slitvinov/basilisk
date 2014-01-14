@@ -4,7 +4,7 @@
 In two dimensions the incompressible, constant-density Navier--Stokes
 equations can be written
 $$
-\partial_t\omega + \mathbf{u}\cdot\nabla\omega + \nu\nabla^2\omega = 0
+\partial_t\omega + \mathbf{u}\cdot\nabla\omega = \nu\nabla^2\omega
 $$
 $$
 \nabla^2\psi = \omega
