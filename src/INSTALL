@@ -45,7 +45,7 @@ tar xzf basilisk.tar.gz
 
 ### Compilation
 
-For compilation, the only requirement is a C99-compliant compiler.
+For compilation, the only requirement is a C99-compliant compiler and the `make` utility (a version of `make` compatible with GNU make is recommended but not essential).
 
 If you are using gcc on a UNIX-like system, this should work:
 
