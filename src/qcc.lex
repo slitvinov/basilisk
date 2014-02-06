@@ -1969,7 +1969,9 @@ int main (int argc, char ** argv)
 	     fout);
 #endif
       if (catch)
-	fputs ("#define _CATCH last_point = point;\n", fout);
+	fputs ("#define TRASH 1\n"
+	       "#define _CATCH last_point = point;\n", 
+	       fout);
       else
 	fputs ("#define _CATCH\n", fout);
       fputs ("#include \"common.h\"\n", fout);
