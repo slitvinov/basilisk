@@ -168,12 +168,10 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
 }
 
 {ENDCODE} {
-  if (!incode) {
-    yylineno--;
-    return yyerror ("not in a code block");
+  if (incode) {
+    incode = 0;
+    if (myout) fputc ('\n', myout);
   }
-  incode = 0;
-  if (myout) fputc ('\n', myout);
 }
 
 "{" {
