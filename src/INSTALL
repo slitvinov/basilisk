@@ -14,7 +14,7 @@ On a Debian-like system (i.e. Debian, Ubuntu etc...) installing darcs
 is as easy as
 
 ~~~bash
-sudo apt-get install darcs flex
+sudo apt-get install darcs flex make
 ~~~
 
 To get the latest Basilisk source code do
@@ -97,26 +97,6 @@ Debian-like system you just need to do
 sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind
 ~~~
 
-
 ## Getting started
 
-~~~bash
-cd basilisk/src/examples
-~~~
-
-and read the [README](examples/README) file.
-
-## Running the test suite
-
-~~~bash
-cd test
-make
-make plots
-eog *.png
-~~~
-
-## Notes
-
-* [Trick to turn off 'extended
-  precision'](http://www.network-theory.co.uk/docs/gccintro/gccintro_70.html)
-  on 32-bits Intel systems
+The best place to start is the [tutorial](/Tutorial).
