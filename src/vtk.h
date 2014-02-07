@@ -18,7 +18,7 @@ void output_vtk (scalar * list, int n, FILE * fp, bool linear)
   }
   fprintf (fp, "POINT_DATA %d\n", n*n);
   for (scalar s in list) {
-    fprintf (fp, "SCALARS scalar%d double\n", s);
+    fprintf (fp, "SCALARS %s double\n", s.name);
     fputs ("LOOKUP_TABLE default\n", fp);
     double fn = n;
     double Delta = L0/fn;
