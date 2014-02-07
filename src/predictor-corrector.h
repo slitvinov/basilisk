@@ -45,7 +45,6 @@ event defaults (i = 0)
 void run()
 {
   t = 0.;
-  parameters();
   init_grid(N);
 
   // main loop
