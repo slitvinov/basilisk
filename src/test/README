@@ -1,3 +1,11 @@
+# Test cases
+
+The following test cases are run automatically whenever the code
+changes.
+
+Note that only the documented test cases appear in the list below
+(follow the [All tests](/src/test) link for a complete list).
+
 ## [Systems of conservation laws](/src/conservation.h)
 
 * [Bouncing Saint-Venant bump](bump2D1.c)
@@ -20,3 +28,108 @@
 * [Speed of elementary operations on different grids](laplacian.c)
 
 ## [All tests](/src/test)
+
+# Running and creating test cases (and examples)
+
+First make sure to read the [section on
+Makefiles](/Tutorial#using-makefiles) in the [tutorial](/Tutorial).
+
+To run a particular test case yourself, you can then just do
+
+~~~bash
+cd src/test
+make bump2D1.tst
+~~~
+
+which should give something like
+
+    ...
+    qcc -g -O2 -Wall -o bump2D1/bump2D1 bump2D1.c -lm
+    [bump2D1.tst]
+
+This indicates that the test compiled and ran successfully. 
+
+## Error checking
+
+If the test fails, you will get something like
+
+    ...
+    > 2.5 434 0.0678117 0.164104 0.11299303
+    > # refined 80 cells, coarsened 108 cells
+    make: *** [bump2D1.tst] Error 1
+
+The last line indicates that make failed. The lines before this are
+the output of
+
+~~~bash
+diff bump2D1/log bump2D1.ref
+~~~
+
+That is, to check whether the test case succeeded or not, the default
+Makefile of Basilisk just compares (using
+[*diff*](http://man7.org/linux/man-pages/man1/diff.1.html)) the *log*
+file created by the program to the matching reference log file (with
+the *.ref* extension).
+
+To create your own test case (let's call it *mytest*), you only need
+to create the source code (i.e. *mytest.c*), run it to create the
+*mytest/log* file, check that you are happy with the results and copy
+*mytest/log* into *mytest.ref*.
+
+## Graphics
+
+Most tests (but not all) also produce some kind of graph summarising
+the results (which allows for example to understand more easily
+how/why a particular test failed). Some tests produce these graphs
+directly when they run, but most rely on *gnuplot* to generate the
+graphs in a post-processing step.
+
+This step is not automatically executed when doing *make
+test.tst*. This allows for example to run the test suite on *bare
+bones* systems which do not have gnuplot installed. To run this step,
+one needs to do
+
+~~~bash
+make bump2D1/plot.png
+~~~
+
+which should give something like
+
+    cd bump2D1 && gnuplot -e "batch=1; PNG=\"pngcairo\" ... ../bump2D1.plot ...
+
+Note that, while *plot.png* is the default name for the generated
+graph, the gnuplot script can also generate other graphs. Doing
+
+~~~bash
+ls bump2D1/*.png
+~~~
+
+(or *`eog bump2D1/*.png`*) reveal them all.
+
+Note that if you try to generate plots for a test case which does not
+have a corresponding *.plot* gnuplot script, you will get something
+like
+
+~~~bash
+make events/plot.png
+make: *** No rule to make target `events/plot.png'.  Stop.
+~~~
+
+## Running the entire test suite
+
+Use something like
+
+~~~bash
+cd src/test/
+make -k -j8
+~~~
+
+where *-k* tells *make* not to stop at the first error and *-j8* uses
+parallel processing (assuming you have at least 8 cores on your
+system).
+
+If you want to generate all the graphs at once, do
+
+~~~bash
+make plots
+~~~
