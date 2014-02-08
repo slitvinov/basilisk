@@ -6,10 +6,14 @@ scalar c[];
 scalar * interfaces = {c}, * tracers = NULL;
 int MAXLEVEL;
 
-void parameters()
+int main()
 {
   // coordinates of lower-left corner
   X0 = Y0 = -0.5;
+  for (MAXLEVEL = 5; MAXLEVEL <= 7; MAXLEVEL++) {
+    N = 1 << MAXLEVEL;
+    run ();
+  }
 }
 
 #define circle(x,y) (sq(0.1) - (sq(x-0.25) + sq(y)))
@@ -61,11 +65,4 @@ event field (t = end) {
   fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
   if (N == 64)
     output_field ({e}, stdout, N, linear = false);
-}
-
-int main() {
-  for (MAXLEVEL = 5; MAXLEVEL <= 7; MAXLEVEL++) {
-    N = 1 << MAXLEVEL;
-    run ();
-  }
 }

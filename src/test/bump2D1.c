@@ -63,10 +63,11 @@ etc... as when using the standard Saint-Venant solver (see
 
 #define LEVEL 7
 
-void parameters()
+int main()
 {
   X0 = Y0 = -0.5;
   N = 1 << LEVEL;
+  run();
 }
 
 event init (i = 0)
@@ -110,8 +111,6 @@ event adapt (i++) {
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }
 #endif
-
-int main() { run(); }
 
 /**
 ## Results

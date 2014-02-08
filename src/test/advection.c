@@ -4,7 +4,7 @@
 scalar f[];
 scalar * tracers = {f};
 
-void parameters()
+int main()
 {
   // coordinates of lower-left corner
   X0 = Y0 = -0.5;
@@ -12,6 +12,8 @@ void parameters()
   DT = .1;
   // CFL number
   CFL = 0.8;
+  for (N = 64; N <= 256; N *= 2)
+    run();
 }
 
 #define bump(x,y) (exp(-100.*(sq(x + 0.2) + sq(y + .236338))))
@@ -47,9 +49,4 @@ event field (t = 5) {
   
   if (N == 256)
     output_field ({e}, stdout, N);
-}
-
-int main() {
-  for (N = 64; N <= 256; N *= 2)
-    run();
 }

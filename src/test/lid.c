@@ -17,7 +17,7 @@ Here we define the domain geometry: a square box of size unity
 centered on (0,0). We also set the viscosity and some parameters 
 controlling the numerical scheme. */
 
-void parameters()
+int main()
 { 
   // coordinates of lower-left corner
   X0 = Y0 = -0.5;
@@ -34,6 +34,11 @@ void parameters()
   DT = 0.1;
   // CFL number
   CFL = 0.8;
+
+/**
+We then call the `run()` method of the Navier--Stokes solver. */
+
+  run();
 }
 
 /**
@@ -115,11 +120,6 @@ event profiles (t = end)
     fprintf (fp, "%g %g\n", x, interpolate (u.y, x, 0));
   fclose (fp);
 }
-
-/**
-And finally we call the `run()` method of the Navier--Stokes solver. */
-
-int main() { run (); }
 
 /**
 ## Results

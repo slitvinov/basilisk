@@ -11,11 +11,12 @@
 
 #define LEVEL 7
 
-void parameters()
+int main()
 {
   N = 1 << LEVEL;
   G = 9.81;
   L0 = 1000.;
+  run();
 }
 
 #define zb(x,y) ((cos(pi*x/L0)*cos(pi*y/L0) + \
@@ -87,5 +88,3 @@ event outputfile (t <= 1200.; t += 1200./8) {
 //  output_matrix (h, stdout, N, true);
 
 event adapt (i++) { adapt_wavelet ({h}, (double[]){1e-2}, LEVEL, 4); }
-
-int main() { run(); }

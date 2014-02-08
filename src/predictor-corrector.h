@@ -8,10 +8,9 @@ extern scalar * evolving;
 // how to compute updates
 double update (scalar * evolving, scalar * updates, double dtmax);
 
-// User-provided parameters/functions
+// User-provided functions
 // gradient
 double (* gradient)  (double, double, double) = minmod2;
-void      parameters (void);
 
 double t = 0., dt = 0.;
 

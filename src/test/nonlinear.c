@@ -2,7 +2,7 @@
 #include "grid/cartesian.h"
 #include "atmosphere.h"
 
-void parameters() {
+int main() {
   // coordinates of lower-left corner
   X0 = Y0 = -0.5;
   // number of grid points
@@ -19,6 +19,7 @@ void parameters() {
   // CFL number
   //  CFL = 0.5;
   CFL = 0.25;
+  run();
 }
 
 /* ---------------- Initial conditions ------------------- */
@@ -81,5 +82,3 @@ double energy()
 
 event logfile (i += 10; t <= 5.)
   fprintf (stderr, "t: %g %g %g\n", t, error(), energy());
-
-int main() { run(); }

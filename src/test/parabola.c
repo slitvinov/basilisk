@@ -1,17 +1,26 @@
 #include "grid/cartesian1D.h"
 #include "saint-venant.h"
 
-void parameters()
-{
-  X0 = -5000.;
-  L0 = 10000.;
-  G = 9.81;
-}
+double e1 = 0., e2 = 0., emax = 0.;
+int ne = 0;
 
 double a = 3000.;
 double h0 = 10.;
 double tau = 1e-3;
 double Bf = 5.;
+
+int main()
+{
+  X0 = -5000.;
+  L0 = 10000.;
+  G = 9.81;
+  for (N = 32; N <= 512; N *= 2) {
+    e1 = e2 = emax = 0.;
+    ne = 0;
+    run();
+    fprintf (stderr, "%d %g %g %g\n", N, e1/ne/h0, sqrt(e2/ne)/h0, emax/h0);
+  }
+}
 
 double Psi (double x, double t)
 {
@@ -39,9 +48,6 @@ event friction (i++) {
 }
 
 scalar e[];
-
-double e1 = 0., e2 = 0., emax = 0.;
-int ne = 0;
 
 event error (i++) {
   foreach()
@@ -71,14 +77,5 @@ event umean (t += 50; t <= 6000) {
       sh += Delta*h[];
     }
     printf ("s %g %g %f\n", t, sq/sh, sh);
-  }
-}
-
-int main() {
-  for (N = 32; N <= 512; N *= 2) {
-    e1 = e2 = emax = 0.;
-    ne = 0;
-    run();
-    fprintf (stderr, "%d %g %g %g\n", N, e1/ne/h0, sqrt(e2/ne)/h0, emax/h0);
   }
 }

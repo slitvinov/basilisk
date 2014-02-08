@@ -27,7 +27,6 @@ double G = 1.;
 // gradient
 double (* gradient) (double, double, double) = minmod2;
 // user-provided functions
-void parameters (void);
 void init       (void);
 
 static void positivity()
@@ -90,7 +89,6 @@ double dt = 0.;
 
 void run (void)
 {
-  parameters();
   init_grid(N);
 
   // limiting

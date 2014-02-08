@@ -1,10 +1,12 @@
 #include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
 
-void parameters() {
+int main() {
   Y0 = -0.5;
   stokes = true;
   TOLERANCE = 1e-5;
+  for (N = 8; N <= 64; N *= 2)
+    run(); 
 }
 
 u.x[top] = dirichlet(0);
@@ -42,9 +44,4 @@ event profile (t = end) {
     e[] = u.x[] - 0.5*(0.25 - y*y);
   norm n = normf (e);
   fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
-}
-
-int main() {
-  for (N = 8; N <= 64; N *= 2)
-    run(); 
 }

@@ -17,10 +17,15 @@ The lower-left corner is at (-0.5,-0.5) (the default box size is one)
 i.e. the domain spans (-0.5,-0.5) (0.5,0.5) and is discretised using
 $256^2$ cells. */
 
-void parameters()
+int main()
 {
   X0 = Y0 = -0.5;
   N = 256;
+
+/**
+The generic `run()` function implements the main time loop. */
+
+  run();
 }
 
 /**
@@ -119,11 +124,6 @@ Here we swap the old state (`a`) with the new state (`b`). */
 
   swap (scalar, a, b);
 }
-
-/**
-The generic `run()` function implements the main time loop. */
-
-int main() { run(); }
 
 /**
 ![Evolution of the age of cells](life/age.gif) */

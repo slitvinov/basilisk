@@ -3,10 +3,11 @@
 
 #define LEVEL 10
 
-void parameters()
+int main()
 {
   X0 = -0.5;
   N = 1 << LEVEL;
+  run();
 }
 
 event init (i = 0)
@@ -31,5 +32,3 @@ event outputfile (t <= 0.6; t += 0.6/8) {
   foreach()
     printf ("%g %g %g %g\n", x, h[], zb[], u.x[]);
 }
-
-int main() { run(); }

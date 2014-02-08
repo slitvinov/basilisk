@@ -1,10 +1,11 @@
 #include "grid/cartesian1D.h"
 #include "saint-venant2.h"
 
-void parameters()
+int main()
 {
   X0 = Y0 = -0.5;
   N = 100;
+  run();
 }
 
 void init()
@@ -20,5 +21,3 @@ event logfile (t = 1.8) {
   foreach()
     fprintf (stderr, "%g %g %g %g\n", x, w[], hu[], B[]);
 }
-
-int main() { run(); }

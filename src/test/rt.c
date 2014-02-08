@@ -6,7 +6,7 @@
 scalar f[];
 scalar * interfaces = {f};
 
-void parameters() {
+int main() {
   L0 = 4;
   X0 = Y0 = -2;
   N = 1 << LEVEL;
@@ -15,6 +15,7 @@ void parameters() {
   mu = muc;
   DT = 5e-3;
   TOLERANCE = 1e-4;
+  run();
 }
 
 event init (t = 0) {
@@ -66,5 +67,3 @@ event adapt (i++) {
   adapt_wavelet ({f}, (double[]){5e-3}, LEVEL, list = {p,u,pf,uf,g,f});
 }
 #endif
-
-int main() { run (); }

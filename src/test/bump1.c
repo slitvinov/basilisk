@@ -20,11 +20,12 @@ void flux (const double * s, double * f, double e[2])
   e[1] = u + c; // max
 }
 
-void parameters()
+int main()
 {
   theta = 1.;
   X0 = Y0 = -0.5;
   N = 500;
+  run();
 }
 
 event init (i = 0)
@@ -38,5 +39,3 @@ event logfile (t += 0.1; t <= 0.7) {
     fprintf (stderr, "%g %g %.6f\n", x, h[], q.x[]);
   fprintf (stderr, "\n");
 }
-
-int main() { run(); }

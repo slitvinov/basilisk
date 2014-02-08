@@ -14,10 +14,11 @@ dimension. */
 
 #define MAXLEVEL 8
 
-void parameters()
+int main()
 {
   X0 = Y0 = -0.5;
   N = 1 << MAXLEVEL;
+  run();
 }
 
 /**
@@ -141,8 +142,6 @@ event adapt (i++) {
   adapt_wavelet ((scalar *){u}, (double[]){1e-4,1e-4}, MAXLEVEL);
 }
 #endif
-
-int main() { run(); }
 
 /**
 ## Results

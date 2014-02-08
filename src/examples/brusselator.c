@@ -42,34 +42,44 @@ double dt;
 mgstats mgd1, mgd2;
 
 /**
-## Initial conditions
+## Parameters
 
 We change the size of the domain `L0` and choose a timestep (which
 ensures the stability of the reactive terms). We also set the
 tolerance on the implicit diffusion solver. */
 
-void parameters()
+int main()
 {
   N = 128;
   L0 = 64;
   TOLERANCE = 1e-4;
 
 /**
-The marginal stability is obtained for `kb = kbcrit`. Here $\mu$ is
-the control parameter.  For $\mu > 0$ the system is supercritical
-(Hopf bifurcation). */
+Here $\mu$ is the control parameter.  For $\mu > 0$ the system is
+supercritical (Hopf bifurcation). We test several values of $\mu$. */
+
+  mu = 0.04; run();
+  mu = 0.1;  run();
+  mu = 0.98; run();
+}
+
+/**
+## Initial conditions */
+
+event init (i = 0)
+{
+
+/**
+The marginal stability is obtained for `kb = kbcrit`. */
 
   double nu = sqrt(1./D);
   double kbcrit = sq(1. + ka*nu);
   kb = kbcrit*(1. + mu);
-}
 
 /**
 The (unstable) stationary solution is $C_1 = ka$ and $C_2 = kb/ka$. It
 is perturbed by a random noise in [-0.01:0.01]. */
 
-event init (i = 0)
-{
   foreach() {
     C1[] = ka ; 
     C2[] = kb/ka + 0.01*noise();
@@ -142,16 +152,7 @@ And use the diffusion solver to advance the system from $t$ to $t+dt$. */
 /**
 ## Results
 
-We test several values of $\mu$. */
-
-int main() {
-  mu = 0.04; run();
-  mu = 0.1;  run();
-  mu = 0.98; run();
-}
-
-/**
-Which give the following stable [Turing
+We get the following stable [Turing
 patterns](http://en.wikipedia.org/wiki/The_Chemical_Basis_of_Morphogenesis).
 
 --------------------------------- ---------------------------------------------------- ---------------------------------

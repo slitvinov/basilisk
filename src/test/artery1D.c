@@ -101,12 +101,13 @@ system has analytical solutions for $e1 < e2$, in this case the spatial
 envelope of the flux rate behaves like $Q=Amp\times e^{-e2/2x}$ [Wang at
 al., 2013]. */
 
-void parameters() {
+int main() {
   N = 400;
   e1 = 0.5 ;
   e2 = 0.1 ;
   omega = 1.;
   Amp = 0.01 ;
+  run();
 }
 
 /**
@@ -130,8 +131,6 @@ event printdata (t += 0.1; t <= 1.) {
     fprintf (stderr, "%g %g\n", x, q[]);
   fprintf (stderr, "\n\n");
 }
-
-int main() { run(); }
 
 /**
 We get the following comparison between the numerical solution and the

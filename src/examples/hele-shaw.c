@@ -11,11 +11,12 @@ p[left]  = dirichlet(1e-3);
 p[right] = dirichlet(0);
 f[left]  = 1.;
 
-void parameters()
+int main()
 {
   L0 = 7.5e-2;
   N = 1 << MAXLEVEL;
   TOLERANCE = 1e-3;
+  run();
 }
 
 event init (i = 0) {
@@ -70,4 +71,3 @@ event coefficients (i++)
   }
 }
 
-int main() { run(); }

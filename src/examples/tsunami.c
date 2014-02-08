@@ -31,13 +31,11 @@ We then define a few useful macros and constants. */
 double mtd = 360./40075e3;
 
 /**
-The following function will be called by the Saint-Venant solver
-to setup the initial simulation grid. When using a quadtree
-(i.e. adaptive) discretisation, we want to start with the coarsest
-grid, otherwise we directly refine to the maximum level. Note that `1
-<< n` is C for $2^n$. */
+When using a quadtree (i.e. adaptive) discretisation, we want to start
+with the coarsest grid, otherwise we directly refine to the maximum
+level. Note that *1 << n* is C for $2^n$. */
 
-void parameters()
+int main()
 {
 #if QUADTREE
   // 32^2 grid points to start with
@@ -52,8 +50,8 @@ Here we setup the domain geometry. For the moment Basilisk only
 supports square domains. For this example we have to use degrees as
 horizontal units because that is what the topographic database uses
 (eventually coordinate mappings will give more flexibility). We set
-the size of the box `L0` and the coordinates of the lower-left corner
-`(X0,Y0)`. */
+the size of the box *L0* and the coordinates of the lower-left corner
+*(X0,Y0)*. */
 
   // the domain is 54 degrees squared
   L0 = 54.;
@@ -62,7 +60,7 @@ the size of the box `L0` and the coordinates of the lower-left corner
   Y0 = 8. - L0/2.;
 
 /**
-`G` is the acceleration of gravity required by the Saint-Venant
+*G* is the acceleration of gravity required by the Saint-Venant
 solver. This is the only dimensional parameter. We rescale it so that
 time is in minutes, horizontal distances in degrees and vertical
 distances in metres. This is a trick to circumvent the current lack of
@@ -70,6 +68,12 @@ coordinate mapping. */
 
   // acceleration of gravity in degrees^2/min^2/m
   G = 9.81*sq(mtd)*sq(60.);
+
+/**
+We then call the *run()* method of the Saint-Venant solver to
+perform the integration. */
+
+  run();
 }
 
 /**
@@ -95,18 +99,18 @@ u.y[bottom] = - radiation(0);
 ## Adaptation
 
 Here we define an auxilliary function which we will use several times
-in what follows. Again we have two `#if...#else` branches selecting
+in what follows. Again we have two *#if...#else* branches selecting
 whether the simulation is being run on an (adaptive) quadtree or a
 (static) Cartesian grid.
 
 We want to adapt according to two criteria: an estimate of the error
 on the free surface position -- to track the wave in time -- and an
-estimate of the error on the maximum wave height `hmax` -- to make
+estimate of the error on the maximum wave height *hmax* -- to make
 sure that the final maximum wave height field is properly resolved.
 
 We first define a temporary field (in the
 [automatic variable](http://en.wikipedia.org/wiki/Automatic_variable)
-`η`) which we set to $h+z_b$ but only for "wet" cells. If we used
+*η*) which we set to $h+z_b$ but only for "wet" cells. If we used
 $h+z_b$ everywhere (i.e. the default $\eta$ provided by the
 Saint-Venant solver) we would also refine the dry topography, which is
 not useful. */
@@ -119,10 +123,10 @@ int adapt() {
   boundary ({eta});
 
 /**
-We can now use wavelet adaptation on the list of scalars `{η,hmax}`
-with thresholds `{ETAE,HMAXE}`. The compiler is not clever enough yet
-and needs to be told explicitly that this is a list of `double`s,
-hence the `(double[])`
+We can now use wavelet adaptation on the list of scalars *{η,hmax}*
+with thresholds *{ETAE,HMAXE}*. The compiler is not clever enough yet
+and needs to be told explicitly that this is a list of *double*s,
+hence the *(double[])*
 [type casting](http://en.wikipedia.org/wiki/Type_conversion). 
 
 The function then returns the number of cells refined. */
@@ -141,7 +145,7 @@ The function then returns the number of cells refined. */
 
 We first specify the terrain database to use to reconstruct the
 topography $z_b$. This KDT database needs to be built beforehand. See the
-[`xyz2kdt` manual](http://gfs.sourceforge.net/wiki/index.php/Xyz2kdt)
+[*xyz2kdt* manual](http://gfs.sourceforge.net/wiki/index.php/Xyz2kdt)
 for explanations on how to do this.
 
 The next line tells the Saint-Venant solver to conserve water surface
@@ -163,8 +167,8 @@ The initial still water surface is at $z=0$ so that the water depth $h$ is... */
 
 /**
 The initial deformation is given by an Okada fault model with the
-following parameters. The `iterate = adapt` option will iterate this
-initialisation until our `adapt()` function above returns zero
+following parameters. The *iterate = adapt* option will iterate this
+initialisation until our *adapt()* function above returns zero
 i.e. until the deformations are resolved properly. */
 
   fault (x = 94.57, y = 3.83,
@@ -223,7 +227,7 @@ event fault5 (t = 1273./60.)
 
 ### At each timestep
 
-We output simple summary statistics for `h` and `u.x` on standard
+We output simple summary statistics for *h* and *u.x* on standard
 error. */
 
 event logfile (i++) {
@@ -248,7 +252,7 @@ with $C_f=10^{-4}$. */
       u.x[] /= a;
 
 /**
-That is also where we update `hmax`. */
+That is also where we update *hmax*. */
 
     if (h[] > dry && h[] + zb[] > hmax[])
       hmax[] = h[] + zb[];
@@ -259,8 +263,8 @@ That is also where we update `hmax`. */
 /**
 ### Snapshots
 
-Every 60 minutes, the $h$, $z_b$ and `hmax` fields are interpolated
-bilinearly onto a `n x n` regular grid and written on standard
+Every 60 minutes, the $h$, $z_b$ and *hmax* fields are interpolated
+bilinearly onto a *n x n* regular grid and written on standard
 output. */
 
 event snapshots (t += 60; t <= 600) {
@@ -282,15 +286,15 @@ will run gnuplot on these files (using the commands in
 
 ### Movies
 
-This is done every minute (`t++`). The static variable `fp` is `NULL`
+This is done every minute (*t++*). The static variable *fp* is *NULL*
 when the simulation starts and is kept between calls (that is what
-`static` means). The first time the event is called we set `fp` to a
-`ppm2mpeg` pipe. This will convert the stream of PPM images into an
+*static* means). The first time the event is called we set *fp* to a
+*ppm2mpeg* pipe. This will convert the stream of PPM images into an
 mpeg video using ffmpeg externally. 
 
-We use the `mask` option of `output_ppm()` to mask out the dry
-topography. Any part of the image for which `m[]` is negative
-(i.e. for which `etam[] < zb[]`) will be masked out. */
+We use the *mask* option of *output_ppm()* to mask out the dry
+topography. Any part of the image for which *m[]* is negative
+(i.e. for which *etam[] < zb[]*) will be masked out. */
 
 event movies (t++) {
   static FILE * fp = popen ("ppm2mpeg > eta.mpg", "w");
@@ -308,7 +312,7 @@ After completion this will give the following animation
 ![[Animation](tsunami/eta.mpg) of the wave elevation. Dark blue is -2 metres
  and less. Dark red is +2 metres and more.](tsunami/eta.png)
 
-We also use the `box` option to only output a subset of the domain
+We also use the *box* option to only output a subset of the domain
 (defined by the lower-left, upper-right coordinates). */
 
   static FILE * fp2 = popen ("ppm2mpeg > eta-zoom.mpg", "w");
@@ -348,7 +352,7 @@ And repeat the operation for the level of refinement...*/
 ### Tide gauges
 
 We define a list of file names, locations and descriptions and use the
-`output_gauges()` function to output timeseries (for each timestep) of
+*output_gauges()* function to output timeseries (for each timestep) of
 $\eta$ for each location. */
 
 Gauge gauges[] = {
@@ -390,12 +394,6 @@ produce this image:
 
 ## Adaptivity
 
-We apply our `adapt()` function at every timestep. */
+And finally we apply our *adapt()* function at every timestep. */
 
 event do_adapt (i++) adapt();
-
-/**
-And finally we call the `run()` method of the Saint-Venant solver to
-perform the integration. */
-
-int main() { run(); }

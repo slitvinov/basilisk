@@ -2,10 +2,11 @@
 
 #define LEVEL 7
 
-void parameters()
+int main()
 {
   X0 = Y0 = -0.5;
   N = 1 << LEVEL;
+  run();
 }
 
 event init (i = 0)
@@ -47,5 +48,3 @@ event adapt (i++) {
   astats s = adapt_wavelet ({h}, (double[]){1e-3}, LEVEL);
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }
-
-int main() { run(); }

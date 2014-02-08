@@ -7,7 +7,7 @@
 // metres to degrees
 double mtd = 360./40075e3;
 
-void parameters()
+int main run()
 {
   // 512^2 grid points
   N = 1 << MAXLEVEL;
@@ -122,5 +122,3 @@ event adapt (i++) {
 
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
 }
-
-int main() { run(); }

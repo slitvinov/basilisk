@@ -1,7 +1,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-// Default parameters, do not change them!! edit parameters.h instead
+// Default parameters
 // number of grid points
 int N = 64;
 // maximum timestep

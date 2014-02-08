@@ -1,10 +1,11 @@
 // lake at rest with variable resolution
 #include "saint-venant.h"
 
-void parameters()
+int main()
 {
   X0 = Y0 = -0.5;
   N = 16;
+  run();
 }
 
 int refine (Point point, void * data)
@@ -29,5 +30,3 @@ event logfile (i = 1)
   foreach ()
     printf ("%g %g %g %g %g\n", x, y, h[], zb[], u.x[]);
 }
-
-int main() { run(); }

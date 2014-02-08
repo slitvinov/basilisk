@@ -3,12 +3,13 @@
 
 #include "navier-stokes/centered.h"
 
-void parameters() {
+int main() {
   X0 = Y0 = -0.5;
   N = 8;
   DT = 1.;
   TOLERANCE = 1e-6;
   stokes = true;
+  run();
 }
 
 p[top] = dirichlet(0);
@@ -36,5 +37,3 @@ event check (i = 1) {
     fprintf (stderr, "%g %g %g\n", x, y, uf.y[]);
 #endif
 }
-
-int main() { run(); }

@@ -11,8 +11,6 @@ double F0 = 1.;
 double G = 1.;
 // Viscosity
 double NU = 0.;
-// user-provided functions
-void parameters (void);
 
 void boundary_uv (vector u)
 {
@@ -151,7 +149,6 @@ event init (i = 0)
 
 void run (void)
 {
-  parameters ();
   init_grid (N);
 
   timer start = timer_start();

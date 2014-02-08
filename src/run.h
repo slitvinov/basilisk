@@ -7,9 +7,6 @@ executes events until termination. */
 #include "utils.h"
 
 /**
-The `parameters()` function is called before grid initialisation. It
-is usually provided by the user. 
-
 The time `t` and timestep `dt` can be accessed as global variables. */
 
 double t = 0., dt = 0.;

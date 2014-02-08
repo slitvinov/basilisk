@@ -25,9 +25,17 @@ int MAXLEVEL;
 /**
 We center the unit box on the origin and set a maximum timestep of 0.1 */
 
-void parameters() {
+int main() {
   X0 = Y0 = -0.5;
   DT = .1;
+
+/**
+We then run the simulation for different levels of refinement. */
+
+  for (MAXLEVEL = 5; MAXLEVEL <= 7; MAXLEVEL++) {
+    N = 1 << MAXLEVEL;
+    run();
+  }
 }
 
 /**
@@ -148,16 +156,6 @@ event movie (i += 10)
   output_ppm (l, fp, 1 << MAXLEVEL);
 }
 #endif
-
-/**
-Finally we run the simulation for different levels of refinement. */
-
-int main() {
-  for (MAXLEVEL = 5; MAXLEVEL <= 7; MAXLEVEL++) {
-    N = 1 << MAXLEVEL;
-    run();
-  }
-}
 
 /**
 ## Results

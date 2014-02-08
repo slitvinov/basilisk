@@ -4,12 +4,13 @@
 #define MAXLEVEL 9
 #define MINLEVEL 7
 
-void parameters()
+int main()
 {
   N = 1 << MAXLEVEL;
   X0 = -0.5;
   Y0 = -1.;
   L0 = 2.;
+  run();
 }
 
 u.x[left]   = u.x[];
@@ -48,5 +49,3 @@ event adapt (i++) {
   astats s = adapt_wavelet ({eta}, (double[]){1e-4}, MAXLEVEL, MINLEVEL);
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }
-
-int main() { run(); }

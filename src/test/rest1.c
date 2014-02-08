@@ -1,10 +1,11 @@
 // lake at rest with emerged island
 #include "saint-venant.h"
 
-void parameters()
+int main()
 {
   X0 = Y0 = -0.5;
   N = 32;
+  run();
 }
 
 int refine (Point point, void * data)
@@ -33,5 +34,3 @@ event logfile (i = 1)
 	    u.y[] < 1e-10 ? 0. : u.y[], 
 	    h[] > dry ? h[] + zb[] - 0.1 : undefined);
 }
-
-int main() { run(); }
