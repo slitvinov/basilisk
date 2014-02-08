@@ -18,3 +18,5 @@
 ## Speed benchmarks
 
 * [Speed of elementary operations on different grids](laplacian.c)
+
+## [All tests](/src/test)
