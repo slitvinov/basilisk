@@ -1,4 +1,4 @@
-## [Systems of conservation laws](/Solvers#)
+## [Systems of conservation laws](/src/conservation.h)
 
 * [Bouncing Saint-Venant bump](bump2D1.c)
 * [1D arterial flow](artery1D.c)
