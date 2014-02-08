@@ -1,0 +1,20 @@
+## [Systems of conservation laws](/Solvers#)
+
+* [Bouncing Saint-Venant bump](bump2D1.c)
+* [1D arterial flow](artery1D.c)
+
+## [Incompressible Euler/Navier--Stokes](/src/navier-stokes/centered.h)
+
+* [Lid-driven cavity at Re=1000](lid.c)
+* [Merging of two vertices](stream.c)
+* [Merging of two vortices (centered Euler solver)](vortex.c)
+
+## [Volume-Of-Fluid](/src/vof.h)
+
+* [Computation of volume fractions from a levelset function](fractions.c)
+* [Computation of volume fractions on a variable-resolution grid](fractions1.c)
+* [Time-reversed VOF advection in a vortex](reversed.c)
+
+## Speed benchmarks
+
+* [Speed of elementary operations on different grids](laplacian.c)
