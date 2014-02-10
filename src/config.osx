@@ -11,3 +11,7 @@ CFLAGS += -Wall
 
 # if gnuplot supports pngcairo, otherwise comment this out
 # PNG = pngcairo
+
+# if you don't have md5sum, replace it with something equivalent
+export GENSUM = shasum
+export CHECKSUM = shasum -c --status
