@@ -440,6 +440,13 @@ static int compdir (char * file, char ** out, int nout, const char * dir)
       }
       free (out);
 
+      // all headers are included once only
+      static int nf = 0;
+      fprintf (fout, 
+	       "#ifndef BASILISK_HEADER_%d\n"
+	       "#define BASILISK_HEADER_%d\n", nf, nf);
+      nf++;
+
       fputs ("#line 1 \"", fout);
       singleslash (path, fout);
       fputs ("\"\n", fout);
@@ -447,8 +454,10 @@ static int compdir (char * file, char ** out, int nout, const char * dir)
     if (include (path, fin, fout))
       cleanup (1, dir);
     fclose (fin);
-    if (fout)
+    if (fout) {
+      fputs ("#endif\n", fout);
       fclose (fout);
+    }
     out[nout++] = path;
     target = 0;
   }
