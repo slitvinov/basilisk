@@ -1383,7 +1383,7 @@ event{WS}+{ID}+{WS}*[(] {
   // if it does, append a number (up to 9)
   char i = '0', found = 1;
   int len = strlen(id), lastfound = -1;
-  id[len+1] = '\0';
+  id[len+2] = '\0';
   while (i <= '9' && found) {
     found = 0;
     for (int j = 0; j < nevents && !found; j++)
@@ -1391,8 +1391,10 @@ event{WS}+{ID}+{WS}*[(] {
 	lastfound = j;
 	found = 1;
       }
-    if (found)
-      id[len] = i++;
+    if (found) {
+      id[len] = '_';
+      id[len+1] = i++;
+    }
   }
   if (lastfound >= 0) {
     eventparent[lastfound] = nevents;
@@ -2045,8 +2047,11 @@ int main (int argc, char ** argv)
 	strcat (preproc, LIBDIR);
 	strcat (preproc, " -E ");
       }
-      if (events)
-	strcat (preproc, " -DDEBUG_EVENTS=1 ");
+      if (events) {
+	strcat (preproc, " -DDEBUG_EVENTS=1 -DBASILISK=\"\\\"");
+	strcat (preproc, BASILISK);
+	strcat (preproc, "\\\"\" ");
+      }
       strcat (preproc, cpp);
       if (debug)
 	fprintf (stderr, "preproc: %s\n", preproc);

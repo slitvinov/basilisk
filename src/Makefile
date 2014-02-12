@@ -14,6 +14,7 @@ qcc: qcc.c include.o rotate.o
 	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
 		-DCC99="\"$(CC99)\"" \
 		-DCPP99="\"$(CPP99)\"" \
+		-DBASILISK="\"$(BASILISK)\"" \
 		qcc.c include.o rotate.o -o qcc
 
 rotate.c: rotate.lex

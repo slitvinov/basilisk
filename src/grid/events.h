@@ -24,7 +24,11 @@ static int event_do (Event * ev, int i, double t)
     return event_finished (ev);
   if (i == ev->i || fabs (t - ev->t) <= 1e-9) {
 #if DEBUG_EVENTS
-    fprintf (stderr, "  %-20s %s:%d\n", ev->name, ev->file, ev->line);
+    char * root = strstr (ev->file, BASILISK);
+    fprintf (stderr, "  %-25s %s%s:%d\n", ev->name, 
+	     root ? "src" : "",
+	     root ? &ev->file[strlen(BASILISK)] : ev->file, 
+	     ev->line);
 #endif
     if ((* ev->action) (i, t)) {
       event_finished (ev);
@@ -133,7 +137,7 @@ static void end_event_do (int i, double t)
 int events (int i, double t)
 {
 #if DEBUG_EVENTS
-  fprintf (stderr, "events (i = %d, t = %g)\n", i, t);
+  fprintf (stderr, "\nevents (i = %d, t = %g)\n", i, t);
 #endif
   int inext = 0, cond = 0, cond1 = 0;
   tnext = HUGE;
