@@ -109,7 +109,7 @@ The function takes the vertex scalar field $\Phi$ as input and fills
 with the surface fractions i.e. the fractions of the faces of the cell
 which are inside the interface.
 
-![Volume and surface fractions](/src/figures/fractions.png) */
+![Volume and surface fractions](/src/figures/fractions.svg) */
 
 struct Fractions {
   scalar Phi, c; // compulsory

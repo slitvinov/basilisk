@@ -94,7 +94,7 @@ volume fraction flux through the face of the cell is given by the dark
 area in the figure below. The corresponding volume fraction can be
 computed using the `rectangle_fraction()` function.
 
-![Volume fraction flux](figures/flux.png)
+![Volume fraction flux](figures/flux.svg)
 
 When the upwind cell is entirely full or empty we can avoid this
 computation. */

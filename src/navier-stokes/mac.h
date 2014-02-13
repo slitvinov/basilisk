@@ -93,7 +93,7 @@ divergence of the tensor at the face locations, we need to
 compute the diagonal components at the center of cells and the
 off-diagonal component at the vertices. 
 
-![Staggering of $\mathbf{u}$ and $\mathbf{S}$](/src/figures/Sxx.png) */
+![Staggering of $\mathbf{u}$ and $\mathbf{S}$](/src/figures/Sxx.svg) */
 
   symmetric tensor S[];
 

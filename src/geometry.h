@@ -7,7 +7,7 @@ computations.
 We consider a square cell of size unity centered on the origin, cut by
 a straight line.
 
-![Cell and interface](/src/figures/square.png)
+![Cell and interface](/src/figures/square.svg)
 
 The line can be described by the equation
 $$
