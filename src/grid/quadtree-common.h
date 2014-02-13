@@ -519,7 +519,7 @@ static void refine_face (Point point, scalar s)
   d[1] = fine(v.x,2,1) - fine(v.x,1,1) + fine(v.y,1,2) - fine(v.y,1,1);
   d[2] = fine(v.x,1,0) - fine(v.x,0,0) + fine(v.y,0,1) - fine(v.y,0,0);
   d[3] = fine(v.x,2,0) - fine(v.x,1,0) + fine(v.y,1,1) - fine(v.y,1,0);
-  assert (d[0] + d[1] + d[2] + d[3] < 1e-3);
+
   p[0] = 0.;
   p[1] = (3.*d[1] + d[2])/4. + d[3]/2.;
   p[2] = (d[1] + 3.*d[2])/4. + d[3]/2.;

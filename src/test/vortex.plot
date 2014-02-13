@@ -26,6 +26,7 @@ unset multiplot
 
 set output 'level.png'
 
+set cbrange [3:8]
 set multiplot layout 2,3 scale 1.6,1.6
 splot 'level-0'
 splot 'level-1'

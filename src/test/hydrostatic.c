@@ -4,7 +4,7 @@ int main() {
   X0 = Y0 = -0.5;
   N = 8;
   DT = 1.;
-  TOLERANCE = 1e-6;
+  TOLERANCE = 1e-7;
   stokes = true;
   run();
 }

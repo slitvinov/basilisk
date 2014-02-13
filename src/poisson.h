@@ -401,16 +401,23 @@ mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
 
 /**
 We allocate a local scalar field and compute the divergence of
-$\mathbf{u}_*$. */
+$\mathbf{u}_*$. The divergence is scaled by *dt* so that the pressure
+has the correct dimension. */
 
   scalar div[];
   foreach()
     div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/(dt*Delta);
 
 /**
-We solve the Poisson problem. */
+We solve the Poisson problem. The tolerance (set with *TOLERANCE*) is
+the maximum relative change in volume of a cell (due to the divergence
+of the flow) during one timestep i.e. the non-dimensional quantity 
+$$
+|\nabla\cdot\mathbf{u}|\Delta t 
+$$ 
+Given the scaling of the divergence above, this gives */
 
-  mgstats mgp = poisson (p, div, alpha, tolerance = TOLERANCE/dt);
+  mgstats mgp = poisson (p, div, alpha, tolerance = TOLERANCE/sq(dt));
 
 /**
 And compute $\mathbf{u}_{n+1}$ using $\mathbf{u}_*$ and $p$. If
