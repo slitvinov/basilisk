@@ -1541,6 +1541,8 @@ reduction{WS}*[(](min|max):{ID}+[)] {
 
 {ID}+{WS}*[(]{WS}*{ID}+{WS}*[)] {
   // function call with a single 'args' assignment
+  if (inarg)
+    REJECT;
   char * s = yytext; space (s);
   int len = s - yytext;
   for (int i = 0; i < nargs && !inarg; i++) {
@@ -1564,6 +1566,8 @@ reduction{WS}*[(](min|max):{ID}+[)] {
 
 {ID}+{WS}*[(] {
   // function call with multiple 'args' assignment
+  if (inarg)
+    REJECT;
   char * s = yytext;
   while (!strchr(" \t\v\n\f(", *s)) s++;
   int len = s - yytext;
