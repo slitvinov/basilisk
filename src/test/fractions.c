@@ -16,7 +16,7 @@ the interface intersects the grid exactly on vertices.
 
 We initialise a levelset function on the vertices of the grid. */
 
-  scalar phi[];
+  vertex scalar phi[];
   foreach_vertex()
     phi[] = sq(0.25) - sq(x) - sq(y);
 

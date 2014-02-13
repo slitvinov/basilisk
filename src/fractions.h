@@ -112,13 +112,15 @@ which are inside the interface.
 ![Volume and surface fractions](/src/figures/fractions.svg) */
 
 struct Fractions {
-  scalar Phi, c; // compulsory
-  face vector s; // optional
+  vertex scalar Phi; // compulsory
+  scalar c;          // compulsory
+  face vector s;     // optional
 };
 
 void fractions (struct Fractions p)
 {
-  scalar Phi = p.Phi, c = p.c;
+  vertex scalar Phi = p.Phi;
+  scalar c = p.c;
   face vector s = automatic (p.s);
 
 /**

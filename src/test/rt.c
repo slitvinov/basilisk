@@ -24,7 +24,7 @@ event init (t = 0) {
   alpha = new face vector;
   alphac = new scalar;
 
-  scalar phi[];
+  vertex scalar phi[];
   foreach_vertex()
     phi[] = 0.05*cos (2.*pi*x) + y;
   fractions (phi, f);

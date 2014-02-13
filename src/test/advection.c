@@ -25,7 +25,7 @@ event init (i = 0)
 }
 
 event velocity (i++) {
-  scalar psi[];
+  vertex scalar psi[];
   foreach_vertex()
     psi[] = - 1.5*sin(2.*pi*t/5.)*sin((x + 0.5)*pi)*sin((y + 0.5)*pi)/pi;
   trash ({u});

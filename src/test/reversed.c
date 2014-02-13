@@ -54,7 +54,7 @@ We define the levelset function $\phi$ on each vertex of the grid and
 compute the corresponding volume fraction field. */
 
 event init (i = 0) {
-  scalar phi[];
+  vertex scalar phi[];
   foreach_vertex()
     phi[] = circle(x,y);
   fractions (phi, f);
@@ -78,7 +78,7 @@ resolution at `MAXLEVEL` and we only refine the volume fraction field
 The velocity field is defined through a streamfunction $\psi$, defined
 on the vertices of the grid. */
 
-  scalar psi[];
+  vertex scalar psi[];
   foreach_vertex()
     psi[] = - 1.5*sin(2.*pi*t/T)*sin((x + 0.5)*pi)*sin((y + 0.5)*pi)/pi;
 

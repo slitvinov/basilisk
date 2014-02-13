@@ -24,7 +24,8 @@ int main()
 /**
 We use a circle of radius 0.3 and initialise the fractions. */
 
-  scalar c[], phi[];
+  vertex scalar phi[];
+  scalar c[];
   face vector s[];
   foreach_vertex()
     phi[] = sq(0.3) - sq(x) - sq(y);

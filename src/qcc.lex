@@ -21,7 +21,7 @@
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
     inforeach_boundary, inforeach_face, inforeach_vertex, nmaybeconst = 0;
-  int invardecl, vartype, varsymmetric, varface, varmaybeconst;
+  int invardecl, vartype, varsymmetric, varface, varvertex, varmaybeconst;
   char * varconst;
   int inval, invalpara;
   int brack, inarray;
@@ -66,7 +66,7 @@
 
   typedef struct { 
     char * v, * constant;
-    int type, args, scope, automatic, symmetric, face, maybeconst;
+    int type, args, scope, automatic, symmetric, face, vertex, maybeconst;
     int i[4];
     char * conditional;
   } var_t;
@@ -82,7 +82,7 @@
 	*q++ = '\0'; na++;
       }
       _varstack[++varstack] = (var_t) { f, NULL, type, na, scope, 
-					0, 0, 0, maybeconst, {-1} };
+					0, 0, 0, 0, maybeconst, {-1} };
       v = &(_varstack[varstack]);
     }
     return v;
@@ -566,6 +566,7 @@
 	       var->constant ? "const_" : "",
 	       var->symmetric ? "symmetric_" : 
 	       var->face ? "face_" : 
+	       var->vertex ? "vertex_" : 
 	       "",
 	       var->type == scalar ? "scalar" : 
 	       var->type == vector ? "vector" : 
@@ -627,6 +628,7 @@
       v->automatic = 1;
       v->symmetric = varsymmetric;
       v->face = varface;    
+      v->vertex = varvertex;    
       if (varconst)
 	v->constant = strdup (varconst);
       fputs (text, yyout);
@@ -637,6 +639,7 @@
       v = varpush (var, vartype, scope, varmaybeconst);
       v->symmetric = varsymmetric;
       v->face = varface;    
+      v->vertex = varvertex;
       fputs (text, yyout);
     }
     if (debug)
@@ -925,8 +928,8 @@ end_foreach{ID}*{SP}*"()" {
   invardecl = varmaybeconst = 0;
 }
 
-{ID}+{WS}*[=]{WS}*new{WS}+(symmetric|face){0,1}*{WS}*(scalar|vector|tensor) |
-[=]{WS}*new{WS}+(symmetric|face){0,1}{WS}*(scalar|vector|tensor) {
+{ID}+{WS}*[=]{WS}*new{WS}+(symmetric|face|vertex){0,1}*{WS}*(scalar|vector|tensor) |
+[=]{WS}*new{WS}+(symmetric|face|vertex){0,1}{WS}*(scalar|vector|tensor) {
   char * type = strchr (yytext, '=');
   type = strstr (type, "new"); space(type); nonspace(type);
   char * symmetric = strstr (type, "symmetric");
@@ -935,6 +938,10 @@ end_foreach{ID}*{SP}*"()" {
   }
   char * face = strstr (type, "face");
   if (face) {
+    space(type); nonspace(type);
+  }
+  char * vertex = strstr (type, "vertex");
+  if (vertex) {
     space(type); nonspace(type);
   }
   int newvartype = (!strcmp (type, "scalar") ? scalar :
@@ -960,7 +967,8 @@ end_foreach{ID}*{SP}*"()" {
     fprintf (yyout, "%s ", yytext);
   }
   var->symmetric = (symmetric != NULL);
-  var->face = (face != NULL);
+  var->face   = (face != NULL);
+  var->vertex = (vertex != NULL);
   fputc ('=', yyout);
   new_field (var);
   if (debug)
@@ -968,6 +976,7 @@ end_foreach{ID}*{SP}*"()" {
 	     fname, line, 
 	     var->symmetric ? "symmetric " : 
 	     var->face ? "face " :
+	     var->vertex ? "vertex " :
 	     "", 
 	     type, var->v);
 }
@@ -1006,9 +1015,11 @@ end_foreach{ID}*{SP}*"()" {
 
 symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
 face{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
+vertex{WS}+scalar{WS}+[a-zA-Z0-9_\[\]]+ |
 (scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ {
   varsymmetric = (strstr(yytext, "symmetric") != NULL);
   varface = (strstr(yytext, "face") != NULL);
+  varvertex = (strstr(yytext, "vertex") != NULL);
   varconst = NULL;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
@@ -1045,7 +1056,7 @@ face{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
     fputs (text, yyout);
 }
 
-const{WS}+(symmetric{WS}+|face{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+{WS}*=[^;]+ {
+const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+{WS}*=[^;]+ {
   ECHO;
   char * s = strchr (yytext, '='); s--;
   while (strchr (" \t\v\n\f", *s)) s--; s++; *s = '\0';
@@ -1053,7 +1064,7 @@ const{WS}+(symmetric{WS}+|face{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+{WS}*=
 	   fname, line, yytext);
 }
 
-const{WS}+(symmetric{WS}+|face{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+\[{WS}*\]{WS}*=[^;]+ {
+const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+\[{WS}*\]{WS}*=[^;]+ {
   // const scalar a[] = 1.;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
@@ -1073,7 +1084,7 @@ const{WS}+(symmetric{WS}+|face{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+\[{WS}
   if (para != 0)
     return yyerror ("constant fields can only appear in declarations");
   varconst = cst;
-  varsymmetric = varface = 0;
+  varsymmetric = varface = varvertex = 0;
   declaration (var, text);
 }
 
@@ -1865,7 +1876,9 @@ void compdir (FILE * fin, FILE * fout, char * grid)
 		 var.i[0], var.v);
       else if (var.type == vector)
 	fprintf (fout, "  init_%svector ((vector){%d,%d}, \"%s\");\n",
-		 var.face ? "face_" : "",
+		 var.face ? "face_" : 
+		 var.vertex ? "vertex_" : 
+		 "",
 		 var.i[0], var.i[1], var.v);
       else if (var.type == tensor)
 	fprintf (fout, "  init_tensor ((tensor){{%d,%d},{%d,%d}}, \"%s\");\n", 

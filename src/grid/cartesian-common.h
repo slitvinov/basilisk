@@ -108,6 +108,14 @@ scalar new_scalar (const char * name)
   return nvar - 1;
 }
 
+scalar new_vertex_scalar (const char * name)
+{
+  scalar s = new_scalar (name);
+  foreach_dimension()
+    s.d.x = -1;
+  return s;
+}
+
 static vector alloc_vector (const char * name)
 {
   vector v;

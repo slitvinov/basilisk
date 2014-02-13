@@ -20,7 +20,7 @@ int main()
 
 event init (i = 0)
 {
-  scalar phi[];
+  vertex scalar phi[];
   foreach_vertex()
     phi[] = circle(x,y);
   fractions (phi, c);

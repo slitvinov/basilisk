@@ -40,7 +40,7 @@ event output (t++) {
 event velocity (i++) {
   adapt_wavelet ({f}, (double[]){1e-2}, 8, 5, list = {f});
 
-  scalar psi[];
+  vertex scalar psi[];
   foreach_vertex()
     psi[] = - 1.5*sin(2.*pi*t/5.)*sin((x + 0.5)*pi)*sin((y + 0.5)*pi)/pi;
   trash ({u});
