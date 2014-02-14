@@ -1901,7 +1901,7 @@ int main (int argc, char ** argv)
   else
     strcpy (command, cc);
   char * file = NULL;
-  int i, dep = 0, tags = 0;
+  int i, dep = 0, tags = 0, source = 0;
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
       ;
@@ -1915,6 +1915,8 @@ int main (int argc, char ** argv)
       events = 1;
     else if (!strcmp (argv[i], "-catch"))
       catch = 1;
+    else if (!strcmp (argv[i], "-source"))
+      source = 1;
     else if (catch && !strncmp (argv[i], "-O", 2))
       ;
     else if (!strcmp (argv[i], "-nolineno"))
@@ -2036,8 +2038,6 @@ int main (int argc, char ** argv)
 	}
 	fputs (s, fout);
       }
-      fputs ("@include \"_boundary.h\"\n"
-	     "@include \"_grid.h\"\n", fout);
       fclose (fout);
       fclose (fin);
       fout = dopen (file, "w");
@@ -2086,6 +2086,47 @@ int main (int argc, char ** argv)
 				    WTERMSIG (status) == SIGQUIT)))
 	cleanup (1, dir);
 
+      fout = dopen ("_tmp", "w");
+
+      fin = dopen (file, "r");
+      char line[1024];
+      while (fgets (line, 1024, fin))
+	if (!strcmp (line, "#include \"_boundarydecl.h\"\n"))
+	  break;
+	else
+	  fputs (line, fout);
+      FILE * fp = dopen ("_boundarydecl.h", "r");
+      int c;
+      while ((c = fgetc (fp)) != EOF)
+	fputc (c, fout);
+      fclose (fp);
+      while (fgets (line, 1024, fin))
+	fputs (line, fout);
+      fclose (fin);
+
+      fin = dopen ("_boundary.h", "r");
+      while ((c = fgetc (fin)) != EOF)
+	fputc (c, fout);
+      fclose (fin);
+
+      fin = dopen ("_grid.h", "r");
+      while ((c = fgetc (fin)) != EOF)
+	fputc (c, fout);
+      fclose (fin);
+
+      fclose (fout);
+
+      char src[80], dst[80];
+      strcpy (src, dir); strcat (src, "/_tmp");
+      if (source) {
+	strcpy (dst, "_");
+      }
+      else {
+	strcpy (dst, dir); strcat (dst, "/");
+      }
+      strcat (dst, file);
+      rename (src, dst);
+
       strcat (command, " -I");
       strcat (command, LIBDIR);
       strcat (command, " ");
@@ -2102,7 +2143,7 @@ int main (int argc, char ** argv)
   else
     strcat (command, command1);
   /* compilation */
-  if (!dep && !tags) {
+  if (!dep && !tags && !source) {
     if (debug)
       fprintf (stderr, "command: %s\n", command);
     status = system (command);
