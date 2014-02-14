@@ -31,6 +31,7 @@ clean:
 	@$(BASILISK)/runtest $@ "$(VALGRIND)"
 
 %.s: %.c $(QCC) Makefile
+	@echo qcc $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm
 	@$(QCC) $(subst -g ,,$(CFLAGS)) -nolineno -S $< || (rm -f $@ && false)
 
 %.prof: %.c

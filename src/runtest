@@ -15,7 +15,6 @@ script()
     cat <<EOF
 rm -f $test.c
 if test -f fail; then
-    cat fail
     exit 1
 fi
 cat warn
@@ -36,7 +35,6 @@ else
     cp -f $log fail
 fi
 if test -f fail; then
-    cat fail
     exit 1
 fi
 touch pass
@@ -51,10 +49,6 @@ expirecache()
 # run locally
 locally()
 {
-    cd $test
-    rm -f warn pass fail $log $out
-    cd ..
-    echo qcc $CFLAGS -o $test/$test $test.c $LIBS -lm;
     qcc $CFLAGS -o $test/$test $test.c $LIBS -lm > $test/warn 2>&1 \
 	|| mv -f $test/warn $test/fail
     cd $test
@@ -73,9 +67,10 @@ remotely()
     qcc -source $CFLAGS $test.c
     mv -f _$test.c $chksum/$test.c
     cp -f $test.*ref $chksum 2> /dev/null || true
+    PCFLAGS=`echo $CFLAGS | sed 's/-grid=[^-]*//'`
     cat <<EOF >$chksum/$test.sh
 #!/bin/sh
-\$CC99 $CFLAGS -I\$HOME/include -o $test $test.c -L\$HOME/lib $LIBS -lm > warn 2>&1 || mv -f warn fail
+\$CC99 $PCFLAGS -I\$HOME/include -o $test $test.c -L\$HOME/lib $LIBS -lm > warn 2>&1 || mv -f warn fail
 rm -f $test.c
 if ! test -f fail; then
   test -s warn || rm -f warn
@@ -97,7 +92,7 @@ if ! test -f fail; then
     touch pass
   fi
 fi
-rm -f $test.c $test.sh $test.*ref
+rm -f $test $test.c $test.sh $test.*ref
 tar czf \$HOME/$chksum.tgz *
 rm -r -f \$HOME/$chksum
 EOF
@@ -111,7 +106,6 @@ EOF
     rm -f $chksum.tgz $test.c $test.*ref pid
     expirecache
     if test -f fail; then
-	rm -f ../$test.$ext
 	echo
 	echo \[$test.$ext\]
 	cat fail
@@ -132,11 +126,17 @@ EOF
 	fi
     fi
     cd ..
+    # generate graphics
+    if test -f $test.plot; then
+	make $test/plot.png
+    fi
 }
 
 if test -f $test.$ext && $CHECKSUM $test.$ext; then
     touch $test.$ext
     echo "make: '$test' is up to date."
+elif test -f $test/.chksum.$ext && $CHECKSUM $test/.chksum.$ext; then
+    echo \[$test.$ext\]
 else
     rm -f $test.$ext $test/pass $test/fail $test/warn $test/plot.png
     expirecache
@@ -152,12 +152,18 @@ else
 	echo \[$test.$ext on $SANDBOX\]
         ( remotely $SANDBOX ) &
 	echo $! > $test/pid
+	$GENSUM $test.s > $test.$ext;
     else
 	locally
+	if test -f $test/pass; then
+	    $GENSUM $test.s > $test.$ext;
+	fi
     fi
 
-    if test -f $test/fail; then
-	exit 1
-    fi
-    $GENSUM $test.s > $test.$ext;
+    $GENSUM $test.s > $test/.chksum.$ext
+fi
+
+if test -f $test/fail; then
+    cat $test/fail
+    exit 1
 fi
