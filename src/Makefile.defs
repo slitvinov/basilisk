@@ -32,7 +32,7 @@ clean:
 
 %.s: %.c $(QCC) Makefile
 	@echo qcc $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm
-	@$(QCC) $(subst -g ,,$(CFLAGS)) -nolineno -S $< || (rm -f $@ && false)
+	@$(QCC) $(subst -g ,,$(subst -O2 ,,$(CFLAGS))) -nolineno -S $< || (rm -f $@ && false)
 
 %.prof: %.c
 	$(QCC) $(subst -DTRASH=1,,$(CFLAGS)) -g -pg $< -o $*/$* -lm

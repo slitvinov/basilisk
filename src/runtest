@@ -136,7 +136,7 @@ if test -f $test.$ext && $CHECKSUM $test.$ext; then
     touch $test.$ext
     echo "make: '$test' is up to date."
 elif test -f $test/.chksum.$ext && $CHECKSUM $test/.chksum.$ext; then
-    echo \[$test.$ext\]
+    :
 else
     rm -f $test.$ext $test/pass $test/fail $test/warn $test/plot.png
     expirecache
@@ -149,21 +149,23 @@ else
     fi
 
     if test -n "$SANDBOX"; then
-	echo \[$test.$ext on $SANDBOX\]
         ( remotely $SANDBOX ) &
-	echo $! > $test/pid
-	$GENSUM $test.s > $test.$ext;
+	echo $SANDBOX \($!\) > $test/pid
     else
 	locally
-	if test -f $test/pass; then
-	    $GENSUM $test.s > $test.$ext;
-	fi
     fi
 
     $GENSUM $test.s > $test/.chksum.$ext
 fi
 
-if test -f $test/fail; then
+if test -f $test/pass; then
+    cp -f $test/.chksum.$ext $test.$ext
+elif test -f $test/fail; then
+    echo \[$test.$ext\]
     cat $test/fail
+    rm -f $test.$ext
     exit 1
+elif test -f $test/pid; then
+    echo \[$test.$ext on `cat $test/pid`\]
+    echo "  running..."
 fi
