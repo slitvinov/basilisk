@@ -26,7 +26,7 @@ nonlinear.tst: nonlinear.s
 	@LIBS="-lgsl -lgslcblas" $(BASILISK)/runtest nonlinear.tst
 
 ponds.tst: ponds.s
-	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/runtest ponds.tst
+	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest ponds.tst
 
 poisson.tst: poisson.ctst
 
@@ -35,6 +35,6 @@ reversed.tst: reversed.ctst
 rotate.tst: rotate.ctst
 
 terrain.tst: terrain.s
-	@LIBS=$(BASILISK)/kdt/kdt.o $(BASILISK)/runtest terrain.tst
+	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst
 
 include $(BASILISK)/Makefile.defs
