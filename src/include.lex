@@ -121,10 +121,8 @@
   static int comment(void);
   static void echo() {
     if (myout) {
-      if (incode) {
+      if (incode)
 	fputs (yytext, myout);
-	somecode = 1;
-      }
       else { // only keep newlines
 	char * s = yytext;
 	while (*s != '\0') {
@@ -138,10 +136,8 @@
 
   static void echo_c (int c) {
     if (myout) {
-      if (incode) {
+      if (incode)
 	fputc (c, myout);
-	somecode = 1;
-      }
       else if (c == '\n') // only keep newlines
 	fputc ('\n', myout);
     }
@@ -152,7 +148,7 @@ ID     [a-zA-Z0-9_]
 SP     [ \t]
 WS     [ \t\v\n\f]
 ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
-BEGINCODE ^[SP]*[~]{3,}c[^\n]*\n
+BEGINCODE ^[SP]*[~]{3,}literatec[^\n]*\n
 ENDCODE   ^[SP]*[~]{3,}[^\n]*\n
 FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
 
@@ -163,7 +159,7 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
     yylineno--;
     return yyerror ("code blocks cannot be nested");
   }
-  incode = 1;
+  incode = somecode = 1;
   if (myout) fputc ('\n', myout);
 }
 
@@ -307,7 +303,7 @@ typedef{WS}+ {
   check_tag (yytext);
 }
 
-"/*"              { echo(); if (comment()) return 1; }
+"/*"              { echo(); if ((!somecode || incode) && comment()) return 1; }
 "//".*            { echo(); /* consume //-comment */ }
 .                   echo();
 [\n]                echo();
@@ -332,8 +328,8 @@ static int getput(void)
 
 static int comment(void)
 {
-  int c;
-  while ((c = getput()) != 0) {
+  int c, lineno = yylineno;
+  while ((c = getput()) != EOF) {
     if (c == '*') {
       while ((c = getput()) == '*')
 	;
@@ -343,7 +339,8 @@ static int comment(void)
 	break;
     }
   }
-  return yyerror ("unterminated comment");
+  fprintf (stderr, "%s:%d: error: unterminated comment\n", fname, lineno);
+  return 1;
 }
 
 void stripname (char * path)
