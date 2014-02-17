@@ -1,3 +1,35 @@
+/**
+# Output functions
+
+## Multiple fields interpolated on a regular grid (text format)
+
+This function interpolates a *list* of fields on a *n x n* regular
+grid. The resulting data are written in text format in the file
+pointed to by *fp*. The correspondance between column numbers and
+variables is summarised in the first line of the file. The data are
+written row-by-row and each row is separated from the next by a
+blank line. This format is compatible with the *splot* command of
+*gnuplot* i.e. one could use something like
+
+~~~bash
+gnuplot> set pm3d map
+gnuplot> splot 'fields' u 1:2:4
+~~~
+
+The arguments and their default values are:
+
+*list*
+: list of fields to output. Default is *all*.
+
+*fp*
+: file pointer. Default is *stdout*.
+
+*n*
+: number of points along each dimension. Default is *N*.
+
+*linear*
+: use first-order (default) or bilinear interpolation. */
+
 struct OutputField {
   scalar * list;
   FILE * fp;
@@ -37,6 +69,32 @@ void output_field (struct OutputField p)
   fflush (p.fp);
 }
 
+/**
+## Single field interpolated on a regular grid (binary format)
+
+This function writes a binary representation of a single field
+interpolated on a regular *n x n* grid. The format is compatible with
+the binary matrix format of gnuplot i.e. one could use
+
+~~~bash
+gnuplot> set pm3d map
+gnuplot> splot 'matrix' binary u 2:1:3
+~~~
+
+The arguments and their default values are:
+
+*f*
+: a scalar field (compulsory).
+
+*fp*
+: file pointer. Default is *stdout*.
+
+*n*
+: number of points along each dimension. Default is *N*.
+
+*linear*
+: use first-order (default) or bilinear interpolation. */
+
 struct OutputMatrix {
   scalar f;
   FILE * fp;
@@ -46,6 +104,8 @@ struct OutputMatrix {
 
 void output_matrix (struct OutputMatrix p)
 {
+  if (p.n == 0) p.n = N;
+  if (!p.fp) p.fp = stdout;
   float fn = p.n;
   float Delta = L0/fn;
   fwrite (&fn, sizeof(float), 1, p.fp);
@@ -71,6 +131,12 @@ void output_matrix (struct OutputMatrix p)
   fflush (p.fp);
 }
 
+/**
+## Colormaps
+
+Colormaps are arrays of (127) red, green, blue triplets. For the
+moment we only use the "jet" colormap. */
+
 #define NCMAP 127
 
 void colormap_jet (double cmap[NCMAP][3])
@@ -94,6 +160,10 @@ void colormap_jet (double cmap[NCMAP][3])
   }
 }
 
+/**
+Given a colormap, a minimum and maximum value, the this function
+returns the red/green/blue triplet corresponding to *val*. */
+
 typedef struct {
   unsigned char r, g, b;
 } color;
@@ -115,6 +185,61 @@ color colormap_color (double cmap[NCMAP][3],
     c1[j] = 255*(cmap[i][j]*(1. - coef) + cmap[i + 1][j]*coef);
   return c;
 }
+
+/**
+## Portable PixMap (PPM) image output
+
+Given a field, this function outputs a colormaped representation as a
+[Portable PixMap](http://en.wikipedia.org/wiki/Netpbm_format) image.
+
+If [ImageMagick](http://www.imagemagick.org/) is installed on the
+system, this image can optionally be converted to any image format
+supported by ImageMagick.
+
+The arguments and their default values are:
+
+*f*
+: a scalar field (compulsory).
+
+*fp*
+: a file pointer. Default is stdout.
+
+*n*
+: number of pixels. Default is *N*.
+
+*file*
+: sets the name of the file used as output for
+ImageMagick. This allows outputs in all formats supported by
+ImageMagick. For example, one could use
+
+~~~c
+output_ppm (f, file = "f.png");
+~~~
+
+to get a [PNG](http://en.wikipedia.org/wiki/Portable_Network_Graphics)
+image.
+
+*min, max*
+: minimum and maximum values used to define the
+colorscale. By default these are set automatically using the *spread*
+parameter. 
+
+*spread*
+: if not specified explicitly, *min* and *max* are set to the average 
+of the field minus (resp. plus) *spread* times the standard deviation. 
+By default *spread* is five. 
+
+*linear*
+: whether to use bilinear or first-order interpolation. Default is 
+first-order.
+
+*box*
+: the lower-left and upper-right coordinates of the domain to consider.
+ Default is the entire domain.
+
+*mask*
+: if set, this field will be used to mask out (in black), the regions 
+of the domain for which *mask* is negative. */
 
 struct OutputPPM {
   scalar f;
@@ -202,6 +327,36 @@ void output_ppm (struct OutputPPM p)
   
   matrix_free (ppm);
 }
+
+/**
+## ESRI ASCII Grid format
+
+The [ESRI GRD format](http://en.wikipedia.org/wiki/Esri_grid) is a
+standard format for importing raster data into [GIS
+systems](http://en.wikipedia.org/wiki/Geographic_information_system).
+
+The arguments and their default values are:
+
+*f*
+: a scalar field (compulsory).
+
+*fp*
+: a file pointer. Default is stdout.
+
+$\Delta$
+: size of a grid element. Default is 1/*N*.
+
+*linear*
+: whether to use bilinear or first-order interpolation. Default is 
+first-order.
+
+*box*
+: the lower-left and upper-right coordinates of the domain to consider.
+ Default is the entire domain.
+
+*mask*
+: if set, this field will be used to mask out, the regions 
+of the domain for which *mask* is negative. */
 
 struct OutputGRD {
   scalar f;
