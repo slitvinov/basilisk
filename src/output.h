@@ -344,7 +344,7 @@ The arguments and their default values are:
 : a file pointer. Default is stdout.
 
 $\Delta$
-: size of a grid element. Default is 1/*N*.
+: size of a grid element. Default is 1/N.
 
 *linear*
 : whether to use bilinear or first-order interpolation. Default is 

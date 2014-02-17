@@ -6,18 +6,18 @@ changes.
 Note that only the documented test cases appear in the list below
 (follow the [All tests](/src/test) link for a complete list).
 
-## [Systems of conservation laws](/src/conservation.h)
+## Systems of conservation laws
 
 * [Bouncing Saint-Venant bump](bump2D1.c)
 * [1D arterial flow](artery1D.c)
 
-## [Incompressible Euler/Navier--Stokes](/src/navier-stokes/centered.h)
+## Incompressible Euler/Navier--Stokes
 
 * [Lid-driven cavity at Re=1000](lid.c)
 * [Merging of two vertices](stream.c)
 * [Merging of two vortices (centered Euler solver)](vortex.c)
 
-## [Volume-Of-Fluid](/src/vof.h)
+## Volume-Of-Fluid
 
 * [Computation of volume fractions from a levelset function](fractions.c)
 * [Computation of volume fractions on a variable-resolution grid](fractions1.c)
