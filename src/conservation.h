@@ -132,12 +132,9 @@ fields. First-order reconstruction is used for the gradient fields. */
   gradients (conserved, slopes);
 
 /**
-The flux fields are dynamically allocated and the left and right
-states of each conserved quantity are locally-allocated. */
+The flux fields are dynamically allocated. */
 
   int len = list_len (conserved);
-  double r[len], l[len]; // right/left Riemann states
-  double f[len];         // fluxes for each conserved quantity
   for (scalar s in conserved) {
     vector f1 = new vector;
     lflux = vectors_append (lflux, f1);
@@ -181,6 +178,8 @@ We are ready to compute the fluxes through each face of the domain. */
 We use the central values of each scalar/vector quantity and the
 pre-computed gradients to compute the left and right states. */
 
+    double r[len], l[len]; // right/left Riemann states
+    double f[len];         // fluxes for each conserved quantity
     double dx = Delta/2.;
     int i = 0;
     scalar s;
