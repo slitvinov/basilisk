@@ -1,6 +1,6 @@
 # Solvers
 
-* [Saint-Venant](src/saint-venant.h)
+* [Saint-Venant](saint-venant.h)
 $$
   \partial_t \int_{\Omega} \mathbf{q} d \Omega =
   \int_{\partial \Omega} \mathbf{f} (
@@ -20,7 +20,7 @@ $$
     hu_xu_y & hu_y^2 + \frac{1}{2} gh^2
   \end{array}\right)
 $$
-* [Systems of conservation laws](src/conservation.h)
+* [Systems of conservation laws](conservation.h)
 $$
 \partial_t\left(\begin{array}{c}
     s_i\\
@@ -30,36 +30,36 @@ $$
     \mathbf{T}_j\\
  \end{array}\right) = 0
 $$
-* [Hele-Shaw/Darcy flows](src/hele-shaw.h)
+* [Hele-Shaw/Darcy flows](hele-shaw.h)
 $$
 \mathbf{u} = \beta\nabla p
 $$
 $$
 \nabla\cdot(\beta\nabla p) = \zeta
 $$
-* [Advection](src/advection.h)
+* [Advection](advection.h)
 $$
 \partial_tf_i+\mathbf{u}\cdot\nabla f_i=0
 $$
-    + [Volume-Of_fluid advection](src/vof.h)
-* [Reaction--Diffusion](src/diffusion.h)
+    + [Volume-Of_fluid advection](vof.h)
+* [Reaction--Diffusion](diffusion.h)
 $$ 
 \partial_tf = \nabla\cdot(D\nabla f) + \beta f + r
 $$ 
-* [Poisson--Helmholtz](src/poisson.h)
+* [Poisson--Helmholtz](poisson.h)
 $$
 \nabla\cdot (\alpha\nabla a) + \lambda a = b
 $$
 * Navier--Stokes
-    + [Streamfunction--Vorticity formulation](src/navier-stokes/stream.h)
+    + [Streamfunction--Vorticity formulation](navier-stokes/stream.h)
 $$
 \partial_t\omega + \mathbf{u}\cdot\nabla\omega = \nu\nabla^2\omega
 $$
 $$
 \nabla^2\psi = \omega
 $$
-    + ["Markers-And-Cells" (MAC or "C-grid") formulation](src/navier-stokes/mac.h)
-    + [Centered formulation](src/navier-stokes/centered.h)
+    + ["Markers-And-Cells" (MAC or "C-grid") formulation](navier-stokes/mac.h)
+    + [Centered formulation](navier-stokes/centered.h)
 $$
 \partial_t\mathbf{u}+\nabla\cdot(\mathbf{u}\otimes\mathbf{u}) = 
 \frac{1}{\rho}\left[-\nabla p + \nabla\cdot(\mu\nabla\mathbf{u})\right] + \mathbf{a}
