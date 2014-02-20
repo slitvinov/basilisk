@@ -123,10 +123,12 @@ Point refine_cell (Point point, scalar * list)
 
   /* refine */
   cell.flags &= ~leaf;
+#if 0
   /* update neighborhood */
   for (int o = -GHOSTS; o <= GHOSTS; o++)
     for (int p = -GHOSTS; p <= GHOSTS; p++)
       neighbor(o,p).neighbors--;
+#endif
 
   /* for each child: (note that using foreach_child() would be nicer
      but it seems to be significanly slower) */
@@ -165,10 +167,12 @@ bool coarsen_cell (Point point, scalar * list)
 
   /* coarsen */
   cell.flags |= leaf;
+#if 0
   /* update neighborhood */
   for (int o = -GHOSTS; o <= GHOSTS; o++)
     for (int p = -GHOSTS; p <= GHOSTS; p++)
       neighbor(o,p).neighbors++;
+#endif
 
   /* for each child */
   for (int k = 0; k < 2; k++)

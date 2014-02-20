@@ -29,12 +29,24 @@
                   // -DTRASH=1
 
 @if _OPENMP
+
 @ include <omp.h>
 @ define OMP(x) Pragma(#x)
 @ define pid() omp_get_thread_num()
+
+@elif _MPI
+@ include <mpi.h>
+@ define OMP(x)
+int pid() {
+  int rank;
+  MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+  return rank;
+}
 @else
+
 @ define OMP(x)
 @ define pid() 0
+
 @endif
 // fixme: _OMPSTART and _OMPEND are only used for working around the
 // lack of min|max reduction operations in OpenMP < 3.1

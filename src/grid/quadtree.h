@@ -9,7 +9,10 @@
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  int flags, neighbors; // number of neighboring leaves
+  int flags, neighbors; // number of active neighbors
+#if _MPI
+  int pid;
+#endif
 } Cell;
 
 enum {
@@ -237,6 +240,7 @@ void recursive (Point point)
 
 @def foreach_cell_post(condition)
   {
+    int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);
     Quadtree point = *((Quadtree *)grid); point.back = grid;
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
@@ -662,21 +666,16 @@ static void update_cache_f (void)
 @def foreach_halo_level(_l) {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  OMP_PARALLEL()
-  Quadtree point = *((Quadtree *)grid); point.back = grid;
-  int _k;
-  OMP(omp for schedule(static))
-  for (_k = 0; _k < point.halo[_l].n; _k++) {
-    point.i = point.halo[_l].p[_k].i;
-    point.j = point.halo[_l].p[_k].j;
-    point.level = _l;
-    POINT_VARIABLES;
-@
-@define end_foreach_halo_level() } OMP_END_PARALLEL() }
-
-@def foreach_halo_levels(start,cond,inc) {
-  for (int _l = start; _l cond; _l inc)
-    foreach_halo_level(_l)
+  for (int _l = start; _l cond; _l inc) {
+    OMP_PARALLEL()
+    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    int _k;
+    OMP(omp for schedule(static))
+    for (_k = 0; _k < point.halo[_l].n; _k++) {
+      point.i = point.halo[_l].p[_k].i;
+      point.j = point.halo[_l].p[_k].j;
+      point.level = _l;
+      POINT_VARIABLES;
 @
 @define end_foreach_halo_levels() end_foreach_halo_level() }
 

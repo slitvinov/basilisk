@@ -10,7 +10,7 @@ all: qcc qplot libkdt
 libkdt:
 	cd kdt && make
 
-qcc: qcc.c include.o rotate.o
+qcc: qcc.c include.o rotate.o config
 	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
 		-DCC99="\"$(CC99)\"" \
 		-DCPP99="\"$(CPP99)\"" \
