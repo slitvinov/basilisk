@@ -37,6 +37,7 @@ done
     DIR=`basename $PWD`
     echo "ALLTESTS = \\"
     showfiles c
+    showfiles 'c\.page' | sed 's/\.page / /g'
     echo ""
     echo "plots: \\"
     showfiles plot | sed 's/\(.*\)\.plot/\1\/plot.png/g'
