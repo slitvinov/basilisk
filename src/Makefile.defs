@@ -87,7 +87,8 @@ Makefile.tests: Makefile $(BASILISK)/tests.sh
 %.tags.d: %.page $(QCC)
 	$(QCC) -MD -tags $<
 
-Makefile.deps: 	$(subst .c,.s.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
+Makefile.deps: 	Makefile.tests \
+		$(subst .c,.s.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(subst .page,.tags.d,$(ALLPAGES))
 	@echo "Updating Makefile.deps"
 	@cat /dev/null $^ > Makefile.deps
