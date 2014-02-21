@@ -123,7 +123,7 @@ Point refine_cell (Point point, scalar * list)
 
   /* refine */
   cell.flags &= ~leaf;
-#if 0
+#if 1
   /* update neighborhood */
   for (int o = -GHOSTS; o <= GHOSTS; o++)
     for (int p = -GHOSTS; p <= GHOSTS; p++)
@@ -167,7 +167,7 @@ bool coarsen_cell (Point point, scalar * list)
 
   /* coarsen */
   cell.flags |= leaf;
-#if 0
+#if 1
   /* update neighborhood */
   for (int o = -GHOSTS; o <= GHOSTS; o++)
     for (int p = -GHOSTS; p <= GHOSTS; p++)
