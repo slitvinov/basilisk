@@ -90,15 +90,16 @@ static double riemann (const double * right, const double * left,
 		       double Delta, double * f, int len, 
 		       double dtmax)
 {
-  double fm[len], fp[len], em[2], ep[2];
-  flux (right, fm, em);
-  flux (left,  fp, ep);
-  double ap = max(ep[1], em[1]); ap = max(ap, 0.);
-  double am = min(ep[0], em[0]); am = min(am, 0.);
-  double a = max(ap, -am);
+  double fr[len], fl[len], er[2], el[2];
+  flux (right, fr, er);
+  flux (left,  fl, el);
+  double ap = max(er[1], el[1]); ap = max(ap, 0.);
+  double am = min(er[0], el[0]); am = min(am, 0.);
+  double a = max(ap, -am); 
+
   if (a > 0.) {
     for (int i = 0; i < len; i++)
-      f[i] = (ap*fm[i] - am*fp[i] + ap*am*(left[i] - right[i]))/(ap - am);
+      f[i] = (ap*fl[i] - am*fr[i] + ap*am*(right[i] - left[i]))/(ap - am);
     double dt = CFL*Delta/a;
     if (dt < dtmax)
       dtmax = dt;
@@ -185,16 +186,16 @@ pre-computed gradients to compute the left and right states. */
     scalar s;
     vector g;
     for (s,g in scalars,scalar_slopes) {
-      l[i] = s[] - dx*g.x[];
-      r[i++] = s[-1,0] + dx*g.x[-1,0];
+      r[i] = s[] - dx*g.x[];
+      l[i++] = s[-1,0] + dx*g.x[-1,0];
     }
     vector v;
     tensor t;
     for (v,t in vectors,vector_slopes) {
-      l[i] = v.x[] - dx*t.x.x[];
-      r[i++] = v.x[-1,0] + dx*t.x.x[-1,0];
-      l[i] = v.y[] - dx*t.y.x[];
-      r[i++] = v.y[-1,0] + dx*t.y.x[-1,0];
+      r[i] = v.x[] - dx*t.x.x[];
+      l[i++] = v.x[-1,0] + dx*t.x.x[-1,0];
+      r[i] = v.y[] - dx*t.y.x[];
+      l[i++] = v.y[-1,0] + dx*t.y.x[-1,0];
     }
 
 /**
