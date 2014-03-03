@@ -38,11 +38,11 @@ event init (t = 0)
   double rhoL = 1., rhoR = 0.125 ;
   double VmL = 0.0, VmR = 0.0 ;
   double pL = 1.0,  pR = 0.1 ;
-  
+
 /**
 Left and right initial states for $\rho$, $\mathbf{w}$ and energy
-$E = 0.5*\rho \mathbf{u}^2 + p/(\gamma-1)$. */
-  
+$E = \rho \mathbf{u}^2/2 + p/(\gamma-1)$. */
+
   foreach() {
     double r = sqrt(sq(x) + sq(y));
     double p;
@@ -56,7 +56,7 @@ $E = 0.5*\rho \mathbf{u}^2 + p/(\gamma-1)$. */
       w.x[] = w.y[] = VmR;
       p = pR;
     }
-    E[] = 0.5*sq(w.x[])*rho[] + p/(gammao - 1.);
+    E[] = rho[]*sq(w.x[])/2. + p/(gammao - 1.);
     w.x[] *= x*rho[]/r;
     w.y[] *= y*rho[]/r;
   }
