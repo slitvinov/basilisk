@@ -251,11 +251,12 @@ extern int datasize;
 
 void init_solver (void);
 
+void delete (scalar * list);
+
 void free_solver()
 {
-  free (_method); _method = NULL;
+  delete (all);
   free (all); all = NULL;
+  free (_method); _method = NULL;
   grid = NULL;
 }
-
-void delete (scalar * list);

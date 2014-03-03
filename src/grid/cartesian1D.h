@@ -68,7 +68,6 @@ void init_grid (int n)
 
 void free_grid (void)
 {
-  delete (all);
   Point * p = grid;
   free (p->data);
   free (p);

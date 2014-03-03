@@ -91,11 +91,11 @@
 
   char * makelist (const char * input, int type);
 
-  char * automatic_list (int scope) {
+  char * automatic_list (int scope, int conditional) {
     char * list = NULL;
     for (int i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
       var_t var = _varstack[i];
-      if (var.automatic && !var.constant && !var.conditional) {
+      if (var.automatic && !var.constant && (conditional || !var.conditional)) {
 	if (list == NULL) {
 	  list = malloc (strlen (var.v) + 3);
 	  strcpy (list, "{");
@@ -111,7 +111,7 @@
   }
 
   void delete_automatic (int scope) {
-    char * list = automatic_list (scope);
+    char * list = automatic_list (scope, 0);
     if (list) {
       strcat (list, "}");
       char * slist = makelist (list, scalar);
@@ -1099,7 +1099,7 @@ const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}
 }
 
 return{WS} {
-  char * list = automatic_list (0);
+  char * list = automatic_list (0, 1);
   if (list) {
     // returning from a function: delete automatic fields before returning
     // note that this assumes that the function scope is always 1 

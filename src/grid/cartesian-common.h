@@ -130,14 +130,14 @@ static vector alloc_vector (const char * name)
 vector new_vector (const char * name)
 {
   vector v = alloc_vector (name);
-  init_vector (v, name);
+  init_vector (v, NULL);
   return v;
 }
 
 vector new_face_vector (const char * name)
 {
   vector v = alloc_vector (name);
-  init_face_vector (v, name);
+  init_face_vector (v, NULL);
   return v;
 }
 
@@ -150,7 +150,7 @@ tensor new_tensor (const char * name)
   vector ty = new_vector (cname);
   tensor t;
   t.x = tx; t.y = ty;
-  init_tensor (t, name);
+  init_tensor (t, NULL);
   return t;
 }
 
@@ -165,7 +165,7 @@ tensor new_symmetric_tensor (const char * name)
   sprintf (cname, "%s.y.y", name);
   t.y.y = new_scalar(cname);
   t.y.x = t.x.y;
-  init_tensor (t, name);
+  init_tensor (t, NULL);
   return t;
 }
 
@@ -216,6 +216,15 @@ void delete (scalar * list)
 {
   if (all == NULL) // everything has already been freed
     return;
+
+  if (list == all) {
+    for (scalar f in all) {
+      free (f.name); f.name = NULL;
+    }
+    all[0] = -1;
+    return;
+  }
+
   trash (list);
   for (scalar f in list) {
     free (f.name); f.name = NULL;
@@ -313,7 +322,8 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   s.prolongation = NULL; 
   s.refine = s.coarsen = NULL;
   s.gradient = NULL;
-  s.name = strdup (name);
+  if (name)
+    s.name = strdup (name);
   foreach_dimension() {
     s.d.x = 0;  // not face
     s.v.x = -1; // not a vector component
@@ -324,8 +334,15 @@ scalar cartesian_init_scalar (scalar s, const char * name)
 
 vector cartesian_init_vector (vector v, const char * name)
 {
+  struct { char * x, * y, * z; } ext = {".x", ".y", ".z"};
   foreach_dimension() {
-    init_scalar (v.x, name);
+    if (name) {
+      char cname[strlen(name) + 3];
+      sprintf (cname, "%s%s", name, ext.x);
+      init_scalar (v.x, cname);
+    }
+    else
+      init_scalar (v.x, NULL);
     /* set default boundary conditions (symmetry) */
     v.x.boundary[right] = v.x.boundary[left] = 
       v.x.boundary_homogeneous[right] = v.x.boundary_homogeneous[left] = 
@@ -348,8 +365,16 @@ vector cartesian_init_face_vector (vector v, const char * name)
 
 tensor cartesian_init_tensor (tensor t, const char * name)
 {
-  foreach_dimension()
-    init_vector (t.x, name);
+  struct { char * x, * y, * z; } ext = {".x", ".y", ".z"};
+  foreach_dimension() {
+    if (name) {
+      char cname[strlen(name) + 3];
+      sprintf (cname, "%s%s", name, ext.x);
+      init_vector (t.x, cname);
+    }
+    else
+      init_vector (t.x, NULL);
+  }
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++) {
     t.x.x.boundary[b] = t.y.y.boundary[b] = 
