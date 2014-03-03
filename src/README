@@ -30,6 +30,7 @@ $$
     \mathbf{T}_j\\
  \end{array}\right) = 0
 $$
+    + [Compressible gas dynamics](compressible.h)
 * [Hele-Shaw/Darcy flows](hele-shaw.h)
 $$
 \mathbf{u} = \beta\nabla p
