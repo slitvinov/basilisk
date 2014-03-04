@@ -425,6 +425,8 @@ void recursive (Point point)
   }
 @
 
+#define update_cache() { if (((Quadtree *)grid)->dirty) update_cache_f(); }
+
 @def foreach(clause)     {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
@@ -628,11 +630,9 @@ void realloc_scalar (void)
 #endif
 }
 
-static void update_cache (void)
+static void update_cache_f (void)
 {
   Quadtree * q = grid;
-  if (!q->dirty)
-    return;
 
   /* empty caches */
   q->leaves.n = 0;
