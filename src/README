@@ -45,7 +45,7 @@ $$
     + [Volume-Of_fluid advection](vof.h)
 * [Reaction--Diffusion](diffusion.h)
 $$ 
-\partial_tf = \nabla\cdot(D\nabla f) + \beta f + r
+\theta\partial_tf = \nabla\cdot(D\nabla f) + \beta f + r
 $$ 
 * [Poisson--Helmholtz](poisson.h)
 $$
