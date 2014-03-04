@@ -11,7 +11,7 @@ libkdt:
 	cd kdt && make
 
 qcc: qcc.c include.o rotate.o config
-	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
+	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
 		-DCC99="\"$(CC99)\"" \
 		-DCPP99="\"$(CPP99)\"" \
 		-DBASILISK="\"$(BASILISK)\"" \
@@ -21,19 +21,19 @@ rotate.c: rotate.lex
 	flex -P rot -o rotate.c rotate.lex
 
 rotate: rotate.c
-	$(CC99) $(CFLAGS) -DTEST rotate.c -o rotate
+	$(CC) $(CFLAGS) -DTEST rotate.c -o rotate
 
 rotate.o: rotate.c
-	$(CC99) $(CFLAGS) -c rotate.c
+	$(CC) $(CFLAGS) -c rotate.c
 
 include.o: include.c
-	$(CC99) $(CFLAGS) -DLIBDIR=\"`pwd`\" -c include.c
+	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" -c include.c
 
 qplot.o: qplot.c
-	$(CC99) $(CFLAGS) -c qplot.c
+	$(CC) $(CFLAGS) -c qplot.c
 
 qplot: qplot.o
-	$(CC99) $(CFLAGS) qplot.o -o qplot
+	$(CC) $(CFLAGS) qplot.o -o qplot
 
 include.c: include.lex
 	flex -P inc -o include.c include.lex

@@ -28,7 +28,8 @@
   }
 
   static Tag * lookup_tag (const char * id) {
-    for (int i = 0; i < ntags; i++)
+    int i;
+    for (i = 0; i < ntags; i++)
       if (!strcmp(tagsa[i].id, id))
 	return &tagsa[i];
     return NULL;

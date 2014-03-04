@@ -11,8 +11,8 @@
 
   static void rotate_string (char * string) {
     char s[] = "123", * j = string;
-    int i = 0, len = strlen (string);
-    for (int k = 0; k <= len + 1; k++, j++) {
+    int i = 0, len = strlen (string), k;
+    for (k = 0; k <= len + 1; k++, j++) {
       if (i < 3) {
 	s[i++] = k <= len ? *j : '\0'; s[i] = '\0';
       }
@@ -65,8 +65,8 @@ val_{ID}*{WS}*\( |
 (val|fine|coarse|allocated|neighbor){WS}*\( {
   int para = 1, dimension = 2;
   char * index[5];
-  int len[5], i = 0, c = input();
-  for (int j = 0; j < 5; j++) {
+  int len[5], i = 0, c = input(), j;
+  for (j = 0; j < 5; j++) {
     index[j] = malloc (sizeof(char));
     index[j][0] = '\0';
     len[j] = 1;
@@ -101,23 +101,23 @@ val_{ID}*{WS}*\( |
   else
     ECHO;
   int ghost = 0;
-  for (int j = start; j <= i && !ghost; j++)
+  for (j = start; j <= i && !ghost; j++)
     if (strlen(index[j]) == 2 && 
 	strchr ("ijk", index[j][0]) && index[j][1] == 'g')
       ghost = 1;
   if (!ghost && i == dimension - 1 + start)
-    for (int j = 0; j < dimension; j++) {
+    for (j = 0; j < dimension; j++) {
       int k = (j + n) % dimension;
       rotate_string (index[k + start]);
       fputc (j < dimension - 1 ? ',' : ')', yyout);
     }
   else
     //  more than dimension indices or ghost indices: do not rotate
-    for (int j = start; j <= i; j++) {
+    for (j = start; j <= i; j++) {
       fputs (index[j], yyout);
       fputc (j < i ? ',' : ')', yyout);
     }
-  for (int j = 0; j < 5; j++)
+  for (j = 0; j < 5; j++)
     free (index[j]);
 }
 

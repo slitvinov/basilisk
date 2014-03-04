@@ -97,7 +97,8 @@
 
   char * automatic_list (int scope, int conditional) {
     char * list = NULL;
-    for (int i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
+    int i;
+    for (i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
       var_t var = _varstack[i];
       if (var.automatic && !var.constant && (conditional || !var.conditional)) {
 	if (list == NULL) {
@@ -125,7 +126,8 @@
       free (slist);
       free (list);
     }
-    for (int i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
+    int i;
+    for (i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
       var_t var = _varstack[i];
       if (var.automatic && var.conditional) {
 	if (debug)
@@ -164,7 +166,8 @@
   }
 
   var_t * varlookup (char * s, int len) {
-    for (int i = varstack; i >= 0; i--)
+    int i;
+    for (i = varstack; i >= 0; i--)
       if (strlen(_varstack[i].v) == len && 
 	  !strncmp(s, _varstack[i].v, len)) {
 	if (_varstack[i].type < 0) // not a field
@@ -177,8 +180,8 @@
   }
 
   int get_vartype (char * s) {
-    int len = strlen (s);
-    for (int i = varstack; i >= 0; i--)
+    int len = strlen (s), i;
+    for (i = varstack; i >= 0; i--)
       if (strlen(_varstack[i].v) == len && 
 	  !strncmp(s, _varstack[i].v, len)) {
 	if (s[len-1] == '.' && _varstack[i].type != vector)
@@ -328,7 +331,8 @@
       int n = 1 << nmaybeconst, bits;
       for (bits = 0; bits < n; bits++) {
 	fputs ("\nif (", yyout);
-	for (int i = 0; i < nmaybeconst; i++) {
+	int i;
+	for (i = 0; i < nmaybeconst; i++) {
 	  fprintf (yyout, "%sis_constant(%s%s)",
 		   (bits & (1 << i)) ? "" : "!",
 		   foreachconst[i]->v,
@@ -337,7 +341,7 @@
 	    fputs (" && ", yyout);
 	}
 	fputs (") {\n", yyout);
-	for (int i = 0; i < nmaybeconst; i++)
+	for (i = 0; i < nmaybeconst; i++)
 	  if (foreachconst[i]->type == scalar) {
 	    if (bits & (1 << i))
 	      fprintf (yyout,
@@ -361,8 +365,8 @@
 		       " _constant[%s.y -_NVARMAX]};\n"
 		       "NOT_UNUSED(_const_%s);\n",
 		       foreachconst[i]->v, foreachconst[i]->v, 
-		       foreachconst[i]->v, foreachconst[i]->v);
-	    for (int c = 'x'; c <= 'y'; c++) {
+		       foreachconst[i]->v);
+	    for (int c = 'x'; c <= 'y'; c++)
 	      if (bits & (1 << i))
 		fprintf (yyout,
 			 "#undef val_%s_%c\n"
@@ -551,10 +555,10 @@
 	}
       }
       else { // static allocation
-	int n = vtype - listtype;
+	int n = vtype - listtype, i;
 	char * constant = var->constant ? "_NVARMAX + " : "";
 	char coord[80];
-	for (int i = 0; i < (1 << n); i++) {
+	for (i = 0; i < (1 << n); i++) {
 	  switch (listtype) {
 	  case scalar:
 	    sprintf (coord, "%s%d,", constant, var->i[i]); break;
@@ -625,7 +629,8 @@
 	else if (var->type == vector) {
 	  fprintf (yyout, " {_NVARMAX + %d,_NVARMAX + %d}", 
 		   nconst, nconst + 1);
-	  for (int i = 0; i < 2; i++)
+	  int i;
+	  for (i = 0; i < 2; i++)
 	    var->i[i] = nconst++;
 	}
 	else
@@ -638,13 +643,15 @@
       }
       else if (var->type == vector) {
 	fprintf (yyout, " {%d,%d}", nvar, nvar + 1);    
-	for (int i = 0; i < 2; i++)
+	int i;
+	for (i = 0; i < 2; i++)
 	  var->i[i] = nvar++;
       }
       else if (var->type == tensor) {
 	fprintf (yyout, " {{%d,%d},{%d,%d}}",
 		 nvar, nvar + 1, nvar + 2, nvar + 3);
-	for (int i = 0; i < 4; i++)
+	int i;
+	for (i = 0; i < 4; i++)
 	  var->i[i] = nvar++;
       }
       else
@@ -771,10 +778,11 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     yyout = foreachfp;
     if (nreduct > 0) {
       fputs ("\n#undef _OMPSTART\n#define _OMPSTART ", yyout);
-      for (int i = 0; i < nreduct; i++)
+      int i;
+      for (i = 0; i < nreduct; i++)
 	fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
       fputs ("\n#undef _OMPEND\n#define _OMPEND ", yyout);
-      for (int i = 0; i < nreduct; i++)
+      for (i = 0; i < nreduct; i++)
 	fprintf (yyout, "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
 		 reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
 		 reductvar[i], reductvar[i], reductvar[i]);
@@ -1198,8 +1206,8 @@ val{WS}*[(]    {
       if (var->constant)
 	fprintf (yyout, "_val_constant(%s", boundaryrep(yytext));
       else if (var->maybeconst) {
-	int found = 0;
-	for (int i = 0; i < nmaybeconst && !found; i++)
+	int found = 0, i;
+	for (i = 0; i < nmaybeconst && !found; i++)
 	  found = !strcmp (foreachconst[i]->v, var->v);
 	if (!found) {
 	  foreachconst = realloc (foreachconst, 
@@ -1408,9 +1416,9 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
   }
   if (nlist != nid)
     return yyerror ("lists must be the same size");
-  static int index = 0;
+  static int index = 0, i;
   char * sc = NULL, * vc = NULL, * tc = NULL;
-  for (int i = 0; i < nid; i++) {
+  for (i = 0; i < nid; i++) {
     var_t * var = varlookup (id[i], strlen(id[i]));
     if (!var) {
       fprintf (stderr, 
@@ -1428,11 +1436,11 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
     if (!tc && var->type == tensor) tc = id[i];
   }
   fprintf (yyout, "if (%s) for (%s = *%s", list[0], id[0], list[0]);
-  for (int i = 1; i < nid; i++)
+  for (i = 1; i < nid; i++)
     fprintf (yyout, ", %s = *%s", id[i], list[i]);
   fprintf (yyout, "; *((scalar *)&%s) >= 0; ", id[0]);
   fprintf (yyout, "%s = *++_i%d", id[0], index);
-  for (int i = 1; i < nid; i++)
+  for (i = 1; i < nid; i++)
     fprintf (yyout, ", %s = *++_i%d", id[i], index + i);
   fputc (')', yyout);
   index += nid;
@@ -1468,7 +1476,8 @@ event{WS}+{ID}+{WS}*[(] {
   id[len+2] = '\0';
   while (i <= '9' && found) {
     found = 0;
-    for (int j = 0; j < nevents && !found; j++)
+    int j;
+    for (j = 0; j < nevents && !found; j++)
       if (!strcmp (id, eventfunc[j])) {
 	lastfound = j;
 	found = 1;
@@ -1574,7 +1583,8 @@ reduction{WS}*[(](min|max):{ID}+[)] {
 {ID}+ {
   var_t * var;
   if (inforeach) {
-    for (int i = 0; i < nreduct; i++)
+    int i;
+    for (i = 0; i < nreduct; i++)
       if (!strcmp (yytext, reductvar[i])) {
 	fputc ('_', yyout);
 	break;
@@ -1642,8 +1652,8 @@ reduction{WS}*[(](min|max):{ID}+[)] {
   if (inarg)
     REJECT;
   char * s = yytext; space (s);
-  int len = s - yytext;
-  for (int i = 0; i < nargs && !inarg; i++) {
+  int len = s - yytext, i;
+  for (i = 0; i < nargs && !inarg; i++) {
     if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {
       char * s = strchr (yytext, '('); s++; nonspace (s);
       char * s1 = s; space (s1); *s1 = '\0';
@@ -1668,8 +1678,8 @@ reduction{WS}*[(](min|max):{ID}+[)] {
     REJECT;
   char * s = yytext;
   while (!strchr(" \t\v\n\f(", *s)) s++;
-  int len = s - yytext;
-  for (int i = 0; i < nargs && !inarg; i++)
+  int len = s - yytext, i;
+  for (i = 0; i < nargs && !inarg; i++)
     if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {
       ECHO; para++;
       inarg = para;
@@ -1889,7 +1899,8 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   fclose (fout);
 
   fout = dopen ("_boundarydecl.h", "w");
-  for (int i = 0; i < nboundary; i++)
+  int i;
+  for (i = 0; i < nboundary; i++)
     fprintf (fout, 
        "static double _boundary%d (Point point, scalar _s);\n"
        "static double _boundary%d_homogeneous (Point point, scalar _s);\n", 
@@ -1909,11 +1920,12 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	 fp);
   fclose (fp);
   /* event functions */
-  for (int i = 0; i < nevents; i++) {
+  for (i = 0; i < nevents; i++) {
     char * id = eventfunc[i];
     fprintf (fout, 
 	     "static int %s (const int i, const double t, Event * _ev);\n", id);
-    for (int j = 0; j < nexpr[i]; j++)
+    int j;
+    for (j = 0; j < nexpr[i]; j++)
       fprintf (fout,
 	       "static int %s_expr%d (int * ip, double * tp, Event * _ev);\n",
 	       id, j);
@@ -1931,8 +1943,10 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   /* events */
   fputs ("  Events = malloc (sizeof (Event));\n"
 	 "  Events[0].last = 1;\n", fout);
-  for (int last = 0; last <= 1; last++)
-    for (int i = 0; i < nevents; i++)
+  int last;
+  for (last = 0; last <= 1; last++) {
+    int i;
+    for (i = 0; i < nevents; i++)
       if (eventchild[i] < 0 && eventlast[i] == last) {
 	int j = i;
 	while (j >= 0) {
@@ -1940,9 +1954,15 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	  j = eventparent[j];
 	}
       }
-  /* scalar attributes */
-  fputs ("  _attribute = calloc (datasize/sizeof(double), "
-	 "sizeof (_Attributes));\n", 
+  fputs ("  { 1 }\n};\n", fout);
+  /* boundaries */
+  for (int i = 0; i < nsetboundary; i++)
+    fprintf (fout, "static void _set_boundary%d (void);\n", 
+	     boundaryindex[i]);
+  /* methods */
+  fputs ("void init_solver (void) {\n", fout);
+  /* scalar methods */
+  fputs ("  _method = calloc (datasize/sizeof(double), sizeof (Methods));\n", 
 	 fout);
   /* list of all scalars */
   fprintf (fout, 
@@ -1956,7 +1976,7 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   if (catch)
     fputs ("  catch_fpe();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);
-  for (int i = varstack; i >= 0; i--) {
+  for (i = varstack; i >= 0; i--) {
     var_t var = _varstack[i];
     if (var.i[0] >= 0) {
       if (var.constant) {
@@ -1990,7 +2010,7 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	assert (0);
     }
   }
-  for (int i = 0; i < nsetboundary; i++)
+  for (i = 0; i < nsetboundary; i++)
     fprintf (fout, "  _set_boundary%d();\n", boundaryindex[i]);
   fputs ("  init_grid (N);\n"
 	 "}\n", fout);
@@ -2321,4 +2341,5 @@ int main (int argc, char ** argv)
     cleanup (WEXITSTATUS (status), dir);
   }
   cleanup (0, dir);
+  return 0;
 }
