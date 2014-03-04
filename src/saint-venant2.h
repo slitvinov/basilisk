@@ -109,7 +109,9 @@ void run (void)
 
   // clone temporary storage
   _method[hu1] = _method[hu];
+  hu1.name = NULL;
   _method[w1]  = _method[w];
+  w1.name = NULL;
 
   timer start = timer_start();
   double t = 0.;
