@@ -663,7 +663,7 @@ static void update_cache_f (void)
   q->dirty = false;
 }
 
-@def foreach_halo_level(_l) {
+@def foreach_halo_levels(start,cond,inc) {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   for (int _l = start; _l cond; _l inc) {
@@ -677,29 +677,32 @@ static void update_cache_f (void)
       point.level = _l;
       POINT_VARIABLES;
 @
-@define end_foreach_halo_levels() end_foreach_halo_level() }
+@define end_foreach_halo_levels() } OMP_END_PARALLEL() } }
 
 /* breadth-first traversal of halos from coarse to fine */
 @def foreach_halo_coarse_to_fine(depth1) {
-  foreach_halo_levels (0, <= depth1, ++)
-    if (!is_active(cell)) {
+  for (int _l = 0; _l <= depth1; _l++)    
+    foreach_halo_level (_l)
+      if (!is_active(cell)) {
 @
-@define end_foreach_halo_coarse_to_fine() } end_foreach_halo_levels() }
+@define end_foreach_halo_coarse_to_fine() } end_foreach_halo_level(); }
 
 /* breadth-first traversal of halos from fine to coarse */
-@def foreach_halo_fine_to_coarse()
-  foreach_halo_levels (depth() - 1, >= 0, --)
-    if (is_active(cell)) {
+@def foreach_halo_fine_to_coarse() {
+  for (int _l = depth() - 1; _l >= 0; _l--)
+    foreach_halo_level (_l)
+      if (is_active(cell)) {
 @
-@define end_foreach_halo_fine_to_coarse() } end_foreach_halo_levels()
+@define end_foreach_halo_fine_to_coarse() } end_foreach_halo_level(); }
 
-@def foreach_halo_vertex()
-  foreach_halo_levels(0, <= depth(), ++)
-    if ((allocated(-1,0) && is_leaf(neighbor(-1,0))) ||
-	(allocated(0,-1) && is_leaf(neighbor(0,-1))) ||
-	(allocated(-1,-1) && is_leaf(neighbor(-1,-1)))) {
+@def foreach_halo_vertex() {
+  for (int _l = 0; _l <= depth(); _l++)
+    foreach_halo_level (_l)
+      if ((allocated(-1,0) && is_leaf(neighbor(-1,0))) ||
+	  (allocated(0,-1) && is_leaf(neighbor(0,-1))) ||
+	  (allocated(-1,-1) && is_leaf(neighbor(-1,-1)))) {
 @
-@define end_foreach_halo_vertex() } end_foreach_halo_levels()
+@define end_foreach_halo_vertex() } end_foreach_halo_level(); }
 
 Point refine_cell (Point point, scalar * list);
 
@@ -768,7 +771,26 @@ void init_grid (int n)
       point = refine_cell (point, NULL);
   update_cache();
   trash (all);
-  init_events();
+}
+
+void free_grid (void)
+{
+  Quadtree * q = grid;
+  free (q->leaves.p);
+  for (int l = 0; l <= q->depth; l++) {
+#if DYNAMIC
+    for (int i = 0; i < _size(l); i++)
+      free (q->m[l][i]);
+#endif
+    free (q->m[l]);
+    free (q->halo[l].p);
+    free (q->active[l].p);
+  }
+  q->m = &(q->m[-1]);
+  free(q->m);
+  free(q->halo);
+  free(q->active);
+  free(q);
 }
 
 void output_cells (FILE * fp);
