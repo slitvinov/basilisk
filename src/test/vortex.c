@@ -73,21 +73,6 @@ $$ */
 }
 
 /**
-For convenience, we also define a function which, given a velocity
-field $\mathbf{u}$, fills a scalar field $\omega$ with the vorticity
-field
-$$
-\omega = \partial_x u_y - \partial_y u_x
-$$ */
-
-void vorticity (vector u, scalar omega)
-{
-  foreach()
-    omega[] = (u.y[1,0] - u.y[-1,0] + u.x[0,-1] - u.x[0,1])/(2.*Delta);
-  boundary ({omega});
-}
-
-/**
 We output some statistics on the vorticity field and Poisson solver at
 the start and end of the simulation. */
 
