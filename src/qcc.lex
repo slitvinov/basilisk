@@ -318,11 +318,9 @@
     return macro;
   }
 
-  void endforeach () {
-    fclose (yyout);
-    yyout = foreachfp;
+  // combinations for each constant field
+  void maybeconst_combinations (int line, void (* body)(void)) {
     if (nmaybeconst) {
-      // combinations for each constant field
       int n = 1 << nmaybeconst, bits;
       for (bits = 0; bits < n; bits++) {
 	fputs ("\nif (", yyout);
@@ -340,11 +338,12 @@
 	    if (bits & (1 << i))
 	      fprintf (yyout,
 		       "const double _const_%s = _constant[%s-_NVARMAX];\n"
+		       "NOT_UNUSED(_const_%s);\n"
 		       "#undef val_%s\n"
 		       "#define val_%s(a,i,j) _const_%s\n",
 		       foreachconst[i]->v, foreachconst[i]->v, 
 		       foreachconst[i]->v, foreachconst[i]->v, 
-		       foreachconst[i]->v);
+		       foreachconst[i]->v, foreachconst[i]->v);
 	    else
 	      fprintf (yyout, 
 		       "#undef val_%s\n"
@@ -355,10 +354,11 @@
 	    if (bits & (1 << i))
 	      fprintf (yyout, "const struct { double x, y; } _const_%s = "
 		       "{_constant[%s.x -_NVARMAX],"
-		       " _constant[%s.y -_NVARMAX]};\n",
+		       " _constant[%s.y -_NVARMAX]};\n"
+		       "NOT_UNUSED(_const_%s);\n",
 		       foreachconst[i]->v, foreachconst[i]->v, 
-		       foreachconst[i]->v);
-	    for (int c = 'x'; c <= 'y'; c++)
+		       foreachconst[i]->v, foreachconst[i]->v);
+	    for (int c = 'x'; c <= 'y'; c++) {
 	      if (bits & (1 << i))
 		fprintf (yyout,
 			 "#undef val_%s_%c\n"
@@ -370,15 +370,21 @@
 			 "#undef val_%s_%c\n"
 			 "#define val_%s_%c(a,i,j) val(a,i,j)\n",
 			 foreachconst[i]->v, c, foreachconst[i]->v, c);
+	    }
 	  }
-	fprintf (yyout, "#line %d\n", foreach_line);
-	foreachbody();
+	fprintf (yyout, "#line %d\n", line);
+	body();
 	fputs (" }", yyout);
       }
     }
     else
-      // no constant field
-      foreachbody();
+      body();
+  }
+
+  void endforeach () {
+    fclose (yyout);
+    yyout = foreachfp;
+    maybeconst_combinations (foreach_line, foreachbody);
     if (nreduct > 0)
       fprintf (yyout,
 	       "\n"
@@ -681,6 +687,23 @@
     return 0;
   }
   
+  void boundary_body (void) {
+    FILE * fp = dopen ("_inboundary.h", "r");
+    int c;
+    while ((c = fgetc (fp)) != EOF)
+      fputc (c, yyout);
+    fclose (fp);
+  }
+
+  int yyerror(const char * s);
+
+  void boundary_homogeneous_body (void) {
+    FILE * fp = dopen ("_inboundary.h", "r");
+    if (homogeneize (fp, yyout))
+      yyerror ("expecting ')'");
+    fclose (fp);
+  }
+
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
 #define space(s) { while (!strchr(" \t\v\n\f", *s)) s++; }
 
@@ -691,7 +714,6 @@
     result = (c == EOF) ? YY_NULL : (buf[0] = c, 1);	      \
   }
 
-  int yyerror(const char * s);
   int getput(void);
   int comment(void);
 %}
@@ -861,21 +883,15 @@ end_foreach{ID}*{SP}*"()" {
     fclose (yyout);
 
     yyout = boundaryheader;
-    FILE * fp = dopen ("_inboundary.h", "r");
-    int c;
-    while ((c = fgetc (fp)) != EOF)
-      fputc (c, yyout);
-    fputs (" } ", yyout);
+    maybeconst_combinations (line, boundary_body);
+    fputs (" return 0.; } ", yyout);
     fprintf (yyout, 
 	     "static double _boundary%d_homogeneous (Point point, scalar _s) {",
 	     nboundary);
     boundary_staggering (boundarydir, boundarycomponent, yyout);
-    fputs (" POINT_VARIABLES; return ", yyout);
-    rewind (fp);
-    if (homogeneize (fp, yyout))
-      return yyerror ("expecting ')'");
-    fclose (fp);
-    fputs (" }\n", yyout);
+    fputs (" POINT_VARIABLES; ", yyout);
+    maybeconst_combinations (line, boundary_homogeneous_body);
+    fputs (" return 0.; }\n", yyout);
 
     yyout = boundaryfp;
     if (scope == 0) {
@@ -1233,12 +1249,14 @@ val{WS}*[(]    {
 	     "static double _boundary%d (Point point, scalar _s) {",
 	     line, fname, nboundary);
     boundary_staggering (boundarydir, boundarycomponent, yyout);
-    fputs (" POINT_VARIABLES; return ", yyout);
+    fputs (" POINT_VARIABLES; ", yyout);
+    nmaybeconst = 0;
     inboundary = inforeach_boundary = 1;
     strcpy (boundaryvar, yytext);
     inforeach = 2;
 
     yyout = dopen ("_inboundary.h", "w");
+    fputs ("return ", yyout);
   }
   else
     REJECT;

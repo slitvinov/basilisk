@@ -42,7 +42,7 @@
 @define _OMPSTART
 @define _OMPEND
 
-@define NOT_UNUSED(x) (x = x)
+@define NOT_UNUSED(x) (void)(x)
 
 @define VARIABLES
 @define val(a,k,l)     data(k,l)[a]
