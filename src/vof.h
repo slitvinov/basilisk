@@ -137,7 +137,7 @@ Once we have computed the fluxes on all faces, we can update the
 volume fraction field according to the one-dimensional advection
 equation
 $$
-\partial_tc = \mathbf{u}_f\cdot\nabla_x c + c\nabla_x\cdot\mathbf{u}_f
+\partial_tc = -\nabla_x\cdot(\mathbf{u}_f c) + c\nabla_x\cdot\mathbf{u}_f
 $$
 The first term is computed using the fluxes. The second term -- which is
 non-zero for the one-dimensional velocity field -- is approximated using
