@@ -181,6 +181,7 @@ struct Adapt {
   int maxlevel;   // maximum level of refinement
   int minlevel;   // minimum level of refinement (default 1)
   scalar * list;  // list of fields to update (default all)
+  scalar * listb; // fields which need BCs (default list)
 };
 
 astats adapt_wavelet (struct Adapt p)
@@ -282,7 +283,7 @@ astats adapt_wavelet (struct Adapt p)
   free (listc);
 
   if (st.nc || st.nf)
-    boundary (p.list);
+    boundary (p.listb ? p.listb : p.list);
 
   return st;
 }

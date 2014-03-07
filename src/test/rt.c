@@ -64,6 +64,11 @@ event interface (t = 0.7) {
 
 #if QUADTREE
 event adapt (i++) {
-  adapt_wavelet ({f}, (double[]){5e-3}, LEVEL, list = {p,u,pf,uf,g,f});
+  /* we need to adapt p to get an initial guess for the next
+     iteration, but we can't apply boundary conditions (for the
+     pressure) because alpha is not consistent and is used to compute
+     the consistent Neumann conditions (see navier-stokes/centered.h). */
+  adapt_wavelet ({f}, (double[]){5e-3}, LEVEL,
+		 list = {p,u,pf,uf,g,f}, listb = {u,pf,uf,g,f});
 }
 #endif
