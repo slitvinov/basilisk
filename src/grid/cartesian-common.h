@@ -177,12 +177,12 @@ void init_const_scalar (scalar s, const char * name, double val)
     nconst = s - _NVARMAX + 1;
     _constant = realloc (_constant, nconst*sizeof (double));
   }
-  _constant[nconst - 1] = val;
+  _constant[s - _NVARMAX] = val;
 }
 
-scalar new_const_scalar (const char * name, double val)
+scalar new_const_scalar (const char * name, int i, double val)
 {
-  scalar s = nconst + _NVARMAX;
+  scalar s = i + _NVARMAX;
   init_const_scalar (s, name, val);
   return s;
 }
@@ -193,9 +193,9 @@ void init_const_vector (vector v, const char * name, double * val)
   init_const_scalar (v.y, name, val[1]);
 }
 
-vector new_const_vector (const char * name, double * val)
+vector new_const_vector (const char * name, int i, double * val)
 {
-  vector v = {nconst + _NVARMAX, nconst + 1 + _NVARMAX};
+  vector v = {i + _NVARMAX, i + 1 + _NVARMAX};
   init_const_vector (v, name, val);
   return v;
 }
@@ -291,12 +291,17 @@ void cartesian_boundary_normal (vector * list)
 
 void cartesian_boundary_tangent (vector * list)
 {
+  vector * listv = NULL;
+  for (vector v in list)
+    if (!is_constant(v.x))
+      listv = vectors_append (listv, v);
   foreach_dimension() {
     for (int d = top; d <= bottom; d++)
       foreach_boundary_face (d)
-	for (vector v in list)
+	for (vector v in listv)
 	  v.x[ghost] = v.x.boundary[d] (point, v.x);
   }
+  free (listv);
 }
 
 static double symmetry (Point point, scalar s)

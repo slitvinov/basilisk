@@ -436,8 +436,15 @@ void quadtree_boundary_centered (scalar * list)
   }
 }
 
-void quadtree_boundary_tangent (vector * list)
+void quadtree_boundary_tangent (vector * listv)
 {
+  vector * list = NULL;
+  for (vector v in listv)
+    if (!is_constant(v.x))
+      list = vectors_append (list, v);
+  if (!list)
+    return;
+
   /* we need to define the normal ghost values on coarse (right/top) boundaries
      (this is not done by boundary_normal()) */
   foreach_boundary_fine_to_coarse(right)
@@ -472,6 +479,8 @@ void quadtree_boundary_tangent (vector * list)
   foreach_boundary_halo (top)
     for (vector u in list)
       u.y[] = (3.*coarse(u.y,0,0) + coarse(u.y,child.x,0))/4.;
+
+  free (list);
 }
 
 Point locate (double xp, double yp)

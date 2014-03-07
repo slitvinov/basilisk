@@ -580,13 +580,17 @@
 	       "internal_error",
 	       var->v);
       if (var->constant) {
-	if (var->type == scalar)
-	  fprintf (yyout, ", %s)", var->constant);
-	else
-	  fprintf (yyout, ", (double [])%s)", var->constant);
+	if (var->type == scalar) {
+	  fprintf (yyout, ", %d, %s", nconst, var->constant);
+	  nconst++;
+	}
+	else {
+	  fprintf (yyout, ", %d, (double [])%s", 
+		   nconst, var->constant);
+	  nconst += 2;
+	}
       }
-      else
-	fputc (')', yyout);
+      fputc (')', yyout);
     }
     else {
       // global constants
@@ -1523,14 +1527,28 @@ reduction{WS}*[(](min|max):{ID}+[)] {
 }
 
 {ID}+ {
+  var_t * var;
   if (inforeach) {
     for (int i = 0; i < nreduct; i++)
       if (!strcmp (yytext, reductvar[i])) {
 	fputc ('_', yyout);
 	break;
       }
+    ECHO;
   }
-  ECHO;
+  else if (scope == 0 && 
+	   (var = varlookup (yytext, strlen(yytext))) &&
+	   var->constant) {
+    // replace global scalar/vector constants
+    if (var->type == scalar)
+      fprintf (yyout, "(_NVARMAX + %d)", var->i[0]);
+    else if (var->type == vector)
+      fprintf (yyout, "{_NVARMAX + %d,_NVARMAX + %d}", var->i[0], var->i[1]);
+    else
+      assert (0);
+  }
+  else
+    ECHO;
 }
 
 {SCALAR}[.][a-wA-Z_0-9]+ {
