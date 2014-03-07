@@ -623,6 +623,12 @@
       else
 	assert (0);
     }
+    if (!var->constant && var->maybeconst) {
+      if (debug)
+	fprintf (stderr, "%s:%d: '%s' cannot be a constant anymore\n", 
+		 fname, line, var->v);
+      var->maybeconst = 0;
+    }
   }
 
   void declaration (char * var, char * text) {
