@@ -38,7 +38,6 @@ event properties (i++) {
     double fm = (f[] + f[-1,0])/2.;
     alpha.x[] = 1./rho(fm);
   }
-  boundary_normal ({alpha});
   foreach()
     alphac[] = 1./rho(f[]);
 }

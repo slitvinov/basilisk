@@ -60,32 +60,51 @@ $\nabla\cdot(\mathbf{u}\otimes\mathbf{u})$ is omitted. This is a
 reference to [Stokes flows](http://en.wikipedia.org/wiki/Stokes_flow)
 for which inertia is negligible compared to viscosity. */
 
-face vector alpha;  // default one
-scalar      alphac; // default one
-face vector mu, a;  // default zero
+const face vector zerof[] = {0.,0.};
+const face vector unityf[] = {1.,1.};
+const scalar unity[] = 1.;
+
+(const) face vector mu = zerof, a = zerof;
+(const) face vector alpha = unityf;
+(const) scalar alphac = unity;
 mgstats mgp, mgpf, mgu;
 bool stokes = false;
 
 /**
+## Boundary conditions
+
+For the default symmetric boundary conditions, we need to ensure that
+the normal component of the velocity is zero after projection. Given
+that
+$$
+\mathbf{u}^{n+1} = \mathbf{u}^\star - \Delta t\alpha\nabla p
+$$
+on the boundary $p$ must verify
+$$
+\nabla p|_{b} = \frac{u^\star_n}{\Delta t\alpha}
+$$
+Taking care about boundary orientation and staggering of *uf*, this
+can be written */
+
+p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]));
+p[left]   = neumann(-uf.x[]/(dt*alpha.x[]));
+p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]));
+p[bottom] = neumann(-uf.y[]/(dt*alpha.y[]));
+
+/**
 ## Initial conditions
 
-The default acceleration is zero. The default density is unity.  The
-default velocity and pressure are zero. */
+The default velocity and pressure are zero. */
 
 event defaults (i = 0)
 {
-  const face vector zero[] = {0.,0.};
-  a = zero;
-  const face vector unity[] = {1.,1.};
-  alpha = unity;
-  
-  CFL = 0.8;
+  CFL = 0.8; dt = 1.;
   foreach() {
     foreach_dimension()
       u.x[] = g.x[] = 0.;
     p[] = pf[] = 0.;
   }
-  boundary ({p,pf,u,g});
+  boundary ({pf,u,g});
 }
 
 /**
@@ -94,7 +113,7 @@ after user initialisation. */
 
 event init (i = 0)
 {
-  boundary ({p,u});
+  boundary ((scalar *){u});
   trash ({uf});
   foreach_face()
     uf.x[] = (u.x[] + u.x[-1,0])/2.;
@@ -127,7 +146,10 @@ The fluid properties such as specific volume (fields $\alpha$ and
 $\alpha_c$) or dynamic viscosity (face field $\mu_f$) -- at time
 $t+\Delta t/2$ -- can be defined by overloading this event. */
 
-event properties (i++,last);
+event properties (i++,last) {
+  boundary_normal ({alpha, mu});
+  boundary_tangent ({alpha, mu});
+}
 
 /**
 ### Predicted face velocity field
@@ -208,10 +230,9 @@ $t+\Delta t$. */
 
 event viscous_term (i++,last)
 {
-  if (mu.x) {
-    const scalar unity[] = 1.;
+  if (mu.x != zerof.x) {
     correction (dt);
-    mgu = viscosity (u, mu, alphac ? alphac : unity, dt);
+    mgu = viscosity (u, mu, alphac, dt);
     correction (-dt);
   }
 
@@ -241,58 +262,11 @@ event acceleration (i++,last)
 {
 
 /**
-We first reset the centered acceleration/pressure gradient field. */
+We add the acceleration term to the face velocity field. */
 
-  trash ({g});
-  foreach()
-    foreach_dimension()
-      g.x[] = 0.;
-
-/**
-We then add the acceleration term to the face velocity field. */
-
-  if (a.x) {
-    (const) face vector af = a;
-    boundary_normal ({af});
-    foreach_face()
-      uf.x[] += dt*af.x[];
-
-/**
-We then apply the boundary conditions to the provisionary face
-velocity field.
-
-When Dirichlet conditions are applied to the normal velocity, the
-Neumann condition applied on the pressure field is not necessarily
-consistent with the cancellation of the acceleration term. While this
-is not an issue for the face velocity field (whose value is specified
-on the boundary), this is a problem for the centered velocity field:
-as the pressure gradient applied to the centered velocity field is the
-average of the face pressure gradients, the normal component of the
-centered velocity field close to a boundary will only see half the
-pressure gradient required to balance the acceleration term. To
-compensate for this, we substract from the centered acceleration term
-$\mathbf{g}$ half the acceleration term, but only in the case where
-Dirichlet conditions are applied to the normal component. */
-
-    foreach_dimension() {
-      foreach_boundary (right,false) {
-	double ac = dt*(af.x[] + af.x[1,0])/2.;
-	u.x[] += ac;
-	double ub = (u.x[] + u.x.boundary[right] (point, u.x))/2.;
-	u.x[] -= ac;
-	g.x[] -= (uf.x[ghost] - ub)/(2.*dt);
-	uf.x[ghost] = ub;
-      }
-      foreach_boundary (left,false) {
-	double ac = dt*(af.x[] + af.x[1,0])/2.;
-	u.x[] += ac;
-	double ub = (u.x[] + u.x.boundary[left] (point, u.x))/2.;
-	u.x[] -= ac;
-	g.x[] -= (uf.x[] - ub)/(2.*dt);
-	uf.x[] = ub;
-      }
-    }
-  }
+  boundary_normal ({a});
+  foreach_face()
+    uf.x[] += dt*a.x[];
   boundary_normal ({uf}); 
 }
 
@@ -305,30 +279,30 @@ next timestep). */
 
 event projection (i++,last)
 {
+  boundary ({p});
   mgp = project (uf, p, alpha, dt);
 
 /**
 We then compute a face field $\mathbf{g}_f$ combining both
 acceleration and pressure gradient. */
 
-  (const) face vector af = a, alphaf = alpha;
   face vector gf[];
   foreach_face()
-    gf.x[] = af.x[] - alphaf.x[]*(p[] - p[-1,0])/Delta;
+    gf.x[] = a.x[] - alpha.x[]*(p[] - p[-1,0])/Delta;
   boundary_normal ({gf});
 
 /**
 We average these face values to obtain the centered, combined
 acceleration and pressure gradient field. */
 
+  trash ({g});
   foreach()
     foreach_dimension()
-      g.x[] += (gf.x[] + gf.x[1,0])/2.;
+      g.x[] = (gf.x[] + gf.x[1,0])/2.;
   boundary ((scalar *){g});
 
 /**
 And finally add this term to the centered velocity field. */
 
-  // check BCs for g when it is refined
   correction (dt);
 }

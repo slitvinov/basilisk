@@ -1536,7 +1536,7 @@ reduction{WS}*[(](min|max):{ID}+[)] {
       }
     ECHO;
   }
-  else if (scope == 0 && 
+  else if (scope == 0 && para == 0 &&
 	   (var = varlookup (yytext, strlen(yytext))) &&
 	   var->constant) {
     // replace global scalar/vector constants

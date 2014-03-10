@@ -46,7 +46,7 @@ The default boundary conditions are symmetry (i.e. slip walls). We
 need no-slip on three boundaries and $u=1$ on the top
 boundary i.e. */
 
-u.x[top]    = dirichlet(1);
+u.x[top] = dirichlet(1);
 
 /**
 For the other no-slip boundaries this gives */
