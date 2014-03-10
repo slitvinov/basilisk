@@ -19,7 +19,6 @@ if test -f fail; then
 fi
 cat warn
 test -s warn || rm -f warn
-echo \[$test.$ext\]
 if $valgrind ./$test 2> $log > $out; then
     if test -f $test.$ref; then
       ref=$ref
@@ -49,6 +48,7 @@ expirecache()
 # run locally
 locally()
 {
+    echo \[$test.$ext\]
     qcc $CFLAGS -o $test/$test $test.c $LIBS -lm > $test/warn 2>&1 \
 	|| mv -f $test/warn $test/fail
     cd $test
@@ -135,8 +135,6 @@ EOF
 if test -f $test.$ext && $CHECKSUM $test.$ext; then
     touch $test.$ext
     echo "make: '$test' is up to date."
-elif test -f $test/.chksum.$ext && $CHECKSUM $test/.chksum.$ext; then
-    :
 else
     rm -f $test.$ext $test/pass $test/fail $test/warn $test/plot.png
     expirecache
@@ -155,13 +153,10 @@ else
 	locally
     fi
 
-    $GENSUM $test.s > $test/.chksum.$ext
+    $GENSUM $test.s > $test.$ext
 fi
 
-if test -f $test/pass; then
-    cp -f $test/.chksum.$ext $test.$ext
-elif test -f $test/fail; then
-    echo \[$test.$ext\]
+if test -f $test/fail; then
     cat $test/fail
     rm -f $test.$ext
     exit 1
