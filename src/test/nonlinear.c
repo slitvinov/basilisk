@@ -75,8 +75,10 @@ double error()
 double energy()
 {
   double se = 0.;
-  foreach(reduction(+:se))
-    se += (h[]*ke[] + G*h[]*(h[]/2. + b[]))*sq(Delta);
+  foreach(reduction(+:se)) {
+    double ke = (sq(u.x[] + u.x[1,0]) + sq(u.y[] + u.y[0,1]))/8.;
+    se += (h[]*ke + G*h[]*(h[]/2. + b[]))*sq(Delta);
+  }
   return se;
 }
 
