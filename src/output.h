@@ -1,7 +1,7 @@
 /**
 # Output functions
 
-## Multiple fields interpolated on a regular grid (text format)
+## *output_field()*: Multiple fields interpolated on a regular grid (text format)
 
 This function interpolates a *list* of fields on a *n x n* regular
 grid. The resulting data are written in text format in the file
@@ -70,7 +70,7 @@ void output_field (struct OutputField p)
 }
 
 /**
-## Single field interpolated on a regular grid (binary format)
+## *output_matrix()*: Single field interpolated on a regular grid (binary format)
 
 This function writes a binary representation of a single field
 interpolated on a regular *n x n* grid. The format is compatible with
@@ -187,7 +187,7 @@ color colormap_color (double cmap[NCMAP][3],
 }
 
 /**
-## Portable PixMap (PPM) image output
+## *output_ppm()*: Portable PixMap (PPM) image output
 
 Given a field, this function outputs a colormaped representation as a
 [Portable PixMap](http://en.wikipedia.org/wiki/Netpbm_format) image.
@@ -329,7 +329,7 @@ void output_ppm (struct OutputPPM p)
 }
 
 /**
-## ESRI ASCII Grid format
+## *output_grd()*: ESRI ASCII Grid format
 
 The [ESRI GRD format](http://en.wikipedia.org/wiki/Esri_grid) is a
 standard format for importing raster data into [GIS
