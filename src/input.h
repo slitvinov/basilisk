@@ -1,5 +1,5 @@
 /**
-# Importing Portable Gray Map (PGM) images
+# *input_pgm()*: Importing Portable Gray Map (PGM) images
 
 This function reads in the
 [PGM](http://en.wikipedia.org/wiki/Netpbm_format) file in file *fp*
