@@ -71,14 +71,14 @@ $$
 
 # Output functions
 
-* [Multiple fields interpolated on a regular grid (text format)](output.h#multiple-fields-interpolated-on-a-regular-grid-text-format)
-* [Single field interpolated on a regular grid (binary format)](output.h#single-field-interpolated-on-a-regular-grid-binary-format)
-* [Portable PixMap (PPM) image output](output.h#portable-pixmap-ppm-image-output)
-* [ESRI ASCII Grid format](output.h#esri-ascii-grid-format)
+* [Multiple fields interpolated on a regular grid (text format)](output.h#output_field-multiple-fields-interpolated-on-a-regular-grid-text-format)
+* [Single field interpolated on a regular grid (binary format)](output.h#output_matrix-single-field-interpolated-on-a-regular-grid-binary-format)
+* [Portable PixMap (PPM) image output](output.h#output_ppm-portable-pixmap-ppm-image-output)
+* [ESRI ASCII Grid format](output.h#output_grd-esri-ascii-grid-format)
 
 # Input functions
 
-* [Importing Portable Gray Map (PGM) images](input.h#importing-portable-gray-map-pgm-images)
+* [Importing Portable Gray Map (PGM) images](input.h#input_pgm-importing-portable-gray-map-pgm-images)
 
 # Tracking floating-point exceptions
 
