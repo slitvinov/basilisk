@@ -63,6 +63,9 @@ ln -s config.gcc config
 make
 ~~~
 
+Note that on 32-bits systems you need to use *config.gcc.32bits*
+instead.
+
 If you are using another system/compiler, find a config file which
 looks close to yours, then try
 
