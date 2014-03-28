@@ -50,6 +50,14 @@ mgstats diffusion (struct Diffusion p)
 {
 
 /**
+If *dt* is zero we don't do anything. */
+
+  if (p.dt == 0.) {
+    mgstats s = {0};
+    return s;
+  }
+
+/**
 We define $f$ and $r$ for convenience. */
 
   scalar f = p.f, r = automatic (p.r);
@@ -92,3 +100,4 @@ Finally we solve the system. */
 
   return poisson (f, r, p.D, lambda);
 }
+

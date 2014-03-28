@@ -24,3 +24,8 @@ The integration is performed using the Bell-Collela-Glaz scheme. */
 event tracer_advection (i++,last) {
   advection (tracers, uf, dt);
 }
+
+/**
+Diffusion can be added by overloading this hook. */
+
+event tracer_diffusion (i++,last);
