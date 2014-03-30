@@ -74,7 +74,7 @@ remotely()
 rm -f $test.c
 if ! test -f fail; then
   test -s warn || rm -f warn
-  if $valgrind ./$test 2> $log > $out; then
+  if timeout 1h $valgrind ./$test 2> $log > $out; then
     if test -f $test.$ref; then
       ref=$ref
     else
