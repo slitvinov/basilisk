@@ -9,6 +9,7 @@ include $(BASILISK)/config
 include Makefile.tests
 
 QCC = $(BASILISK)/qcc
+BASILISK_ROOT=$(subst /src,,$(BASILISK))
 
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(filter-out $(EXCLUDE),$(ALLTESTS)))) Makefile.deps
 
@@ -29,6 +30,15 @@ clean:
 
 %.vtst: %.s
 	@$(BASILISK)/runtest $@ "$(VALGRIND)"
+
+%.h: %.h.page
+	ln -s $< $@
+
+%.c: %.c.page
+	ln -s $< $@
+
+%.plot: %.plot.page
+	ln -s $< $@
 
 %.s: %.c $(QCC) Makefile
 	@echo qcc $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm
@@ -57,7 +67,7 @@ clean:
 
 %.tags: %.page $(QCC)
 	$(QCC) -tags $<
-	rm -f $(subst src,cache/src,$(PWD))/$<
+	rm -f $(subst $(BASILISK_ROOT),$(BASILISK_ROOT)/cache,$(PWD))/$<
 
 %.itags: %.tags $(subst .page,.tags,$(ALLPAGES)) $(BASILISK)/includedin.sh
 	sh $(BASILISK)/includedin.sh $(subst .tags,,$<) > $@

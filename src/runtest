@@ -140,10 +140,11 @@ else
     expirecache
     mkdir -p $test && cp -f $test.c $test
     cp -f $test.*ref $test 2> /dev/null || true
-    if test -d $BASILISK_WIKI/static -a \
-	-f $test.c.page -a \
-	! -L $BASILISK_WIKI/static/$dir/$test; then
-	ln -s $PWD/$test $BASILISK_WIKI/static/$dir/$test
+    if test -d $BASILISK_WIKI/static -a -f $test.c.page; then
+	if test ! -L $BASILISK_WIKI/static/$dir/$test; then
+	    mkdir -p $BASILISK_WIKI/static/$dir
+	    ln -s $PWD/$test $BASILISK_WIKI/static/$dir/$test
+	fi
     fi
 
     if test -n "$SANDBOX"; then
