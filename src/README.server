@@ -1,0 +1,27 @@
+# How to configure a Basilisk server
+
+~~~bash
+sudo apt-get install tsp make gcc
+~~~
+
+Install the KDT library and binaries in
+
+~~~bash
+$HOME/lib/libkdt.a
+$HOME/include/kdt/kdt.h
+$HOME/bin/ppm2mpeg
+$HOME/bin/xyz2kdt
+~~~
+
+Append this to the start of `.bashrc`
+
+~~~bash
+# number of simultaneous Task Spooler jobs
+export TS_SLOTS=8
+
+# path to local binaries
+export PATH=$PATH:$HOME/bin
+
+# howto compile C99 programs
+export CC99="gcc -O2 -Wall -std=c99 -D_XOPEN_SOURCE=700 -DHAVE_GETOPT_H=1 -D_GNU_SOURCE=1"
+~~~
