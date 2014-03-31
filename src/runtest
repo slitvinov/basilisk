@@ -19,7 +19,30 @@ if test -f fail; then
 fi
 cat warn
 test -s warn || rm -f warn
-if $valgrind ./$test 2> $log > $out; then
+
+pass=true
+if test -n "$valgrind" -o -z `which gdb`; then
+  if ! $valgrind ./$test 2> $log > $out; then
+     pass=false
+  fi
+else
+  if ! gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log; then
+     pass=false
+     awk '
+     {
+       if (NF > 0)
+         a[nb++] = \$0;
+     }
+     / at .*:[0-9]*\$/ {
+       for (i = 0; i < nb - 1; i++)
+	 print \$(NF) ":error: " a[i];
+     }
+     ' < gdb.log >> $log
+  fi
+  rm -f gdb.log
+fi
+
+if \$pass; then
     if test -f $test.$ref; then
       ref=$ref
     else
@@ -74,7 +97,30 @@ remotely()
 rm -f $test.c
 if ! test -f fail; then
   test -s warn || rm -f warn
-  if timeout 1h $valgrind ./$test 2> $log > $out; then
+
+  pass=true
+  if test -n "$valgrind" -o -z `which gdb`; then
+    if ! timeout 1h $valgrind ./$test 2> $log > $out; then
+       pass=false
+    fi
+  else
+    if ! timeout 1h gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log; then
+       pass=false
+       awk '
+       {
+         if (NF > 0)
+           a[nb++] = \$0;
+       }
+       / at .*:[0-9]*\$/ {
+         for (i = 0; i < nb - 1; i++)
+   	   print \$(NF) ":error: " a[i];
+       }
+       ' < gdb.log >> $log
+    fi
+    rm -f gdb.log
+  fi
+
+  if \$pass; then
     if test -f $test.$ref; then
       ref=$ref
     else
