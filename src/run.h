@@ -20,17 +20,17 @@ void run (void)
   int i = 0; long tnc = 0;
   while (events (i, t)) {
 
-/**
-We store the total number of cells advanced in time for computing
-speed statistics. */
+    /**
+    We store the total number of cells advanced in time for computing
+    speed statistics. */
 
     foreach(reduction(+:tnc))
       tnc++;
     i++; t = tnext;
   }
 
-/**
-Time/speed statistics are written out on standard output. */
+  /**
+  Time/speed statistics are written out on standard output. */
 
   timer_print (start, i, tnc);
 

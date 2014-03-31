@@ -63,15 +63,15 @@ with the source terms for each conserved quantity. */
 static void momentum_source (scalar * current, scalar * updates)
 {
 
-/**
-We recover the current fields and their variations from the lists... */
+  /**
+  We recover the current fields and their variations from the lists... */
 
   scalar a = current[0], q = current[1], da = updates[0], dq = updates[1];
 
-/**
-We initialise the source terms for each conserved variable. Note that
-*a* and *da*, *q* and *dq* may be the same fields, so that care needs
-to be taken with the order of operations. */
+  /**
+  We initialise the source terms for each conserved variable. Note that
+  *a* and *da*, *q* and *dq* may be the same fields, so that care needs
+  to be taken with the order of operations. */
 
   foreach() {
     dq[] = - e2*q[]/a[];

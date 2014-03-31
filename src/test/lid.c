@@ -35,8 +35,8 @@ int main()
   // CFL number
   CFL = 0.8;
 
-/**
-We then call the `run()` method of the Navier--Stokes solver. */
+  /**
+  We then call the `run()` method of the Navier--Stokes solver. */
 
   run();
 }

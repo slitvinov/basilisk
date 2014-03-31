@@ -113,15 +113,15 @@ static double riemann (const double * right, const double * left,
 double update (scalar * conserved, scalar * updates, double dtmax)
 {
 
-/**
-We declare an empty list of fluxes which will be filled with fluxes
-for each scalar and vector quantity. */
+  /**
+  We declare an empty list of fluxes which will be filled with fluxes
+  for each scalar and vector quantity. */
 
   vector * lflux = NULL;
 
-/**
-The gradients of each quantity are stored in a list of dynamically-allocated
-fields. First-order reconstruction is used for the gradient fields. */
+  /**
+  The gradients of each quantity are stored in a list of dynamically-allocated
+  fields. First-order reconstruction is used for the gradient fields. */
 
   vector * slopes = NULL;
   for (scalar s in conserved) {
@@ -132,8 +132,8 @@ fields. First-order reconstruction is used for the gradient fields. */
   }
   gradients (conserved, slopes);
 
-/**
-The flux fields are dynamically allocated. */
+  /**
+  The flux fields are dynamically allocated. */
 
   int len = list_len (conserved);
   for (scalar s in conserved) {
@@ -141,44 +141,44 @@ The flux fields are dynamically allocated. */
     lflux = vectors_append (lflux, f1);
   }
 
-/**
-The predictor-corrector scheme treats all fields as scalars (stored in
-the `conserved` list). We need to recover vector and tensor quantities
-from these lists. To do so, knowing the number of scalar fields, we
-split the scalar list into a list of scalars and a list of vectors. */
-
+  /**
+  The predictor-corrector scheme treats all fields as scalars (stored in
+  the `conserved` list). We need to recover vector and tensor quantities
+  from these lists. To do so, knowing the number of scalar fields, we
+  split the scalar list into a list of scalars and a list of vectors. */
+  
   int scalars_len = list_len (scalars);
 
   scalar * scalars = list_copy (conserved);
   if (scalars) scalars[scalars_len] = -1;
   vector * vectors = vectors_from_scalars (&conserved[scalars_len]);
-
-/**
-We then do the same for the gradients i.e. split the list of vectors
-into a list of vectors and a list of tensors. */
+  
+  /**
+  We then do the same for the gradients i.e. split the list of vectors
+  into a list of vectors and a list of tensors. */
 
   vector * scalar_slopes = vectors_copy (slopes);
   if (scalar_slopes) scalar_slopes[scalars_len] = (vector){-1,-1};
   tensor * vector_slopes = tensors_from_vectors (&slopes[scalars_len]);
 
-/**
-And again for the fluxes. */
-
+  /**
+  And again for the fluxes. */
+  
   vector * scalar_fluxes = vectors_copy (lflux);
   if (scalar_fluxes) scalar_fluxes[scalars_len] = (vector){-1,-1};
   tensor * vector_fluxes = tensors_from_vectors (&lflux[scalars_len]);
 
-/**
-We are ready to compute the fluxes through each face of the domain. */
-
+  /**
+  We are ready to compute the fluxes through each face of the domain. */
+  
   foreach_face (reduction (min:dtmax)) {
 
-/**
-#### Left/right state reconstruction 
-
-We use the central values of each scalar/vector quantity and the
-pre-computed gradients to compute the left and right states. */
-
+    /**
+    #### Left/right state reconstruction 
+    
+    We use the central values of each scalar/vector quantity and the
+    pre-computed gradients to compute the left and right states. */
+    
     double r[len], l[len]; // right/left Riemann states
     double f[len];         // fluxes for each conserved quantity
     double dx = Delta/2.;
@@ -198,12 +198,12 @@ pre-computed gradients to compute the left and right states. */
       l[i++] = v.y[-1,0] + dx*t.y.x[-1,0];
     }
 
-/**
-#### Riemann problem
-
-We then call the generic Riemann solver and store the resulting fluxes
-in the pre-allocated fields. */
-
+    /**
+    #### Riemann problem
+    
+    We then call the generic Riemann solver and store the resulting fluxes
+    in the pre-allocated fields. */
+    
     dtmax = riemann (r, l, Delta, f, len, dtmax);
     i = 0;
     for (vector fs in scalar_fluxes)
@@ -216,11 +216,11 @@ in the pre-allocated fields. */
 
   boundary_normal (lflux);
 
-/**
-#### Update
-
-The update for each scalar quantity is the divergence of the fluxes. */
-
+  /**
+  #### Update
+  
+  The update for each scalar quantity is the divergence of the fluxes. */
+  
   sources (conserved, updates);
   foreach() {
     scalar ds;
@@ -229,12 +229,12 @@ The update for each scalar quantity is the divergence of the fluxes. */
       ds[] += (f.x[] - f.x[1,0] + f.y[] - f.y[0,1])/Delta;
   }
 
-/**
-#### Cleanup
-
-We finally deallocate the memory used to store lists and gradient
-fields. */
-
+  /**
+  #### Cleanup
+  
+  We finally deallocate the memory used to store lists and gradient
+  fields. */
+  
   free (scalars);
   free (vectors);
   free (scalar_slopes);
@@ -245,6 +245,6 @@ fields. */
   free (slopes);
   delete ((scalar *) lflux);
   free (lflux);
-
+  
   return dtmax;
 }

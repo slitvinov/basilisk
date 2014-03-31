@@ -49,21 +49,21 @@ struct Diffusion {
 mgstats diffusion (struct Diffusion p)
 {
 
-/**
-If *dt* is zero we don't do anything. */
+  /**
+  If *dt* is zero we don't do anything. */
 
   if (p.dt == 0.) {
     mgstats s = {0};
     return s;
   }
 
-/**
-We define $f$ and $r$ for convenience. */
+  /**
+  We define $f$ and $r$ for convenience. */
 
   scalar f = p.f, r = automatic (p.r);
 
-/**
-We define a (possibly constant) field equal to $\theta/dt$. */
+  /**
+  We define a (possibly constant) field equal to $\theta/dt$. */
 
   const scalar idt[] = - 1./p.dt;
   (const) scalar theta_idt = p.theta ? p.theta : idt;
@@ -74,8 +74,8 @@ We define a (possibly constant) field equal to $\theta/dt$. */
       theta_idt[] *= idt[];
   }
 
-/**
-We use `r` to store the r.h.s. of the Poisson--Helmholtz solver. */
+  /**
+  We use `r` to store the r.h.s. of the Poisson--Helmholtz solver. */
 
   if (p.r)
     foreach()
@@ -84,8 +84,8 @@ We use `r` to store the r.h.s. of the Poisson--Helmholtz solver. */
     foreach()
       r[] = theta_idt[]*f[];
 
-/**
-If $\beta$ is provided, we use it to store the diagonal term $\lambda$. */
+  /**
+  If $\beta$ is provided, we use it to store the diagonal term $\lambda$. */
 
   scalar lambda = theta_idt;
   if (p.beta) {
@@ -95,9 +95,8 @@ If $\beta$ is provided, we use it to store the diagonal term $\lambda$. */
     lambda = beta;
   }
 
-/**
-Finally we solve the system. */
+  /**
+  Finally we solve the system. */
 
   return poisson (f, r, p.D, lambda);
 }
-

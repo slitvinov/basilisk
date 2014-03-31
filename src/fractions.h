@@ -34,24 +34,24 @@ fraction. */
 double fraction_prolongation (Point point, scalar c)
 {
 
-/**
-If the parent cell is empty or full, we just use the same value for
-the fine cell. */
+  /**
+  If the parent cell is empty or full, we just use the same value for
+  the fine cell. */
 
   double cc = coarse(c,0,0);
   if (cc <= 0. || cc >= 1.)
     return cc;
 
-/**
-Otherwise, we reconstruct the interface in the parent cell. */
+  /**
+  Otherwise, we reconstruct the interface in the parent cell. */
 
   coord n = mycs (parent, c);
   double alpha = line_alpha (cc, n.x, n.y);
 
-/**
-And compute the volume fraction in the quadrant of the coarse cell
-matching the fine cell. We use symmetries to simplify the
-combinations. */
+  /**
+  And compute the volume fraction in the quadrant of the coarse cell
+  matching the fine cell. We use symmetries to simplify the
+  combinations. */
 
   return rectangle_fraction (child.x*n.x, child.y*n.y, alpha, 
 			     0., 0., 0.5, 0.5);
@@ -123,80 +123,80 @@ void fractions (struct Fractions p)
   scalar c = p.c;
   face vector s = automatic (p.s);
 
-/**
-### Surface fraction computation
-
-We start by computing the surface fractions. */
+  /**
+  ### Surface fraction computation
+  
+  We start by computing the surface fractions. */
 
   foreach_face() {
 
-/**
-If the values of $\Phi$ on the vertices of the face have opposite
-signs, we know that the face is cut by the interface. */
+    /**
+    If the values of $\Phi$ on the vertices of the face have opposite
+    signs, we know that the face is cut by the interface. */
 
     if (Phi[]*Phi[0,1] < 0.) {
 
-/**
-In that case we can find an approximation of the interface position by
-simple linear interpolation. We also check the sign of one of the
-vertices to orient the interface properly. */
+      /**
+      In that case we can find an approximation of the interface position by
+      simple linear interpolation. We also check the sign of one of the
+      vertices to orient the interface properly. */
 
       s.x[] = Phi[]/(Phi[] - Phi[0,1]);
       if (Phi[] < 0.)
 	s.x[] = 1. - s.x[];
     }
 
-/**
-If the values of $\Phi$ on the vertices of the face have the same sign
-(or are zero), then the face is either entirely outside or entirely
-inside the interface. We check the sign of both vertices to treat
-limit cases properly (when the interface intersects the face exactly
-on one of the vertices). */
+    /**
+    If the values of $\Phi$ on the vertices of the face have the same sign
+    (or are zero), then the face is either entirely outside or entirely
+    inside the interface. We check the sign of both vertices to treat
+    limit cases properly (when the interface intersects the face exactly
+    on one of the vertices). */
 
     else
       s.x[] = (Phi[] > 0. || Phi[0,1] > 0.);
   }
 
-/**
-We make sure that surface fractions are defined conservatively (on
-quadtree meshes). */
+  /**
+  We make sure that surface fractions are defined conservatively (on
+  quadtree meshes). */
 
   boundary_normal ({s});
 
-/**
-### Volume fraction computation */
+  /**
+  ### Volume fraction computation */
 
   foreach() {
 
-/**
-We first compute the normal to the interface. This can be done easily
-using the surface fractions. The idea is to compute the circulation of
-the normal along the boundary $\partial\Omega$ of the fraction of the
-cell $\Omega$ inside the interface. Since this is a closed curve, we
-have
-$$
-\oint_{\partial\Omega}\mathbf{n}\;dl = 0
-$$ 
-We can further decompose the integral into its parts along the faces
-of the square and the part along the interface. For the case pictured
-above, we get for one component (and similarly for the other)
-$$
-- s_x[] + \oint_{\Phi=0}n_x\;dl = 0
-$$
-If we now define the *average normal* to the interface as
-$$
-\overline{\mathbf{n}} = \oint_{\Phi=0}\mathbf{n}\;dl
-$$
-We have in the general case
-$$
-\overline{\mathbf{n}}_x = s_x[] - s_x[1,0]
-$$
-and
-$$
-|\overline{\mathbf{n}}| = \oint_{\Phi=0}\;dl
-$$ 
-Note also that this average normal is exact in the case of a linear
-interface. */
+    /**
+    We first compute the normal to the interface. This can be done easily
+    using the surface fractions. The idea is to compute the circulation of
+    the normal along the boundary $\partial\Omega$ of the fraction of the
+    cell $\Omega$ inside the interface. Since this is a closed curve, we
+    have
+    $$
+    \oint_{\partial\Omega}\mathbf{n}\;dl = 0
+    $$ 
+    We can further decompose the integral into its parts along the faces
+    of the square and the part along the interface. For the case pictured
+    above, we get for one component (and similarly for the other)
+    $$
+    - s_x[] + \oint_{\Phi=0}n_x\;dl = 0
+    $$
+    If we now define the *average normal* to the interface as
+    $$
+    \overline{\mathbf{n}} = \oint_{\Phi=0}\mathbf{n}\;dl
+    $$
+    We have in the general case
+    $$
+    \overline{\mathbf{n}}_x = s_x[] - s_x[1,0]
+    $$
+    and
+    $$
+    |\overline{\mathbf{n}}| = \oint_{\Phi=0}\;dl
+    $$ 
+    Note also that this average normal is exact in the case of a linear
+    interface. */
 
     coord n;
     double nn = 0.;
@@ -204,27 +204,27 @@ interface. */
       n.x = s.x[] - s.x[1,0];
       nn += fabs(n.x);
     }
-
-/**
-If the norm is zero, the cell is full or empty and the volume fraction
-is identical to one of the surface fractions. */
+    
+    /**
+    If the norm is zero, the cell is full or empty and the volume fraction
+    is identical to one of the surface fractions. */
 
     if (nn == 0.)
       c[] = s.x[];
 
-/**
-Otherwise we are in a cell containing the interface. We first
-normalise the normal. */
+    /**
+    Otherwise we are in a cell containing the interface. We first
+    normalise the normal. */
 
     else {
       foreach_dimension()
 	n.x /= nn;
 
-/**
-To find the intercept $\alpha$, we look for a face which is cut by the
-interface, find the coordinate $a$ of the intersection and use it to
-derive $\alpha$. */
-
+      /**
+      To find the intercept $\alpha$, we look for a face which is cut by the
+      interface, find the coordinate $a$ of the intersection and use it to
+      derive $\alpha$. */
+      
       double alpha = undefined;
       for (int i = 0; i <= 1; i++)
 	foreach_dimension()
@@ -233,27 +233,27 @@ derive $\alpha$. */
 	    alpha = n.x*(i - 0.5) + n.y*a;
 	  }
 
-/**
-Once we have $\mathbf{n}$ and $\alpha$, the (linear) interface is
-fully defined and we can compute the volume fraction using our
-pre-defined function. */
+      /**
+      Once we have $\mathbf{n}$ and $\alpha$, the (linear) interface is
+      fully defined and we can compute the volume fraction using our
+      pre-defined function. */
 
       c[] = line_area (n.x, n.y, alpha);
     }
   }
 
-/**
-On a quadtree grid, we set the prolongation and refinement functions
-we defined above. */
+  /**
+  On a quadtree grid, we set the prolongation and refinement functions
+  we defined above. */
 
 #if QUADTREE
   c.prolongation = fraction_prolongation;
   c.refine = fraction_refine;
 #endif
 
-/**
-Finally we apply the boundary conditions and deallocate the local
-frace fraction field if necessary. */
+  /**
+  Finally we apply the boundary conditions and deallocate the local
+  frace fraction field if necessary. */
 
   boundary ({c});
 }
@@ -299,18 +299,18 @@ void reconstruction (const scalar c, vector n, scalar alpha)
 {
   foreach() {
 
-/**
-If the cell is empty or full, we set $\mathbf{n}$ and $\alpha$ only to
-avoid using unitialised values in `alpha_prolongation()`. */
+    /**
+    If the cell is empty or full, we set $\mathbf{n}$ and $\alpha$ only to
+    avoid using unitialised values in `alpha_prolongation()`. */
 
     if (c[] <= 0. || c[] >= 1.)
       alpha[] = n.x[] = n.y[] = 0.;
     else {
 
-/**
-Otherwise, we compute the interface normal using the
-Mixed-Youngs-Centered scheme, copy the result into the normal field
-and compute the intercept $\alpha$ using our predefined function. */
+      /**
+      Otherwise, we compute the interface normal using the
+      Mixed-Youngs-Centered scheme, copy the result into the normal field
+      and compute the intercept $\alpha$ using our predefined function. */
 
       coord m = mycs (point, c);
       // coord m = youngs_normal (point, c);
@@ -322,27 +322,27 @@ and compute the intercept $\alpha$ using our predefined function. */
 
 #if QUADTREE
 
-/**
-On a quadtree grid, we set the prolongation functions defined above.
-We do not restrict the normal or the intercept (they are recomputed
-from the volume fraction when needed on the coarse mesh) */
+  /**
+  On a quadtree grid, we set the prolongation functions defined above.
+  We do not restrict the normal or the intercept (they are recomputed
+  from the volume fraction when needed on the coarse mesh) */
 
   n.x.coarsen = n.y.coarsen = alpha.coarsen = coarsen_none;
   n.x.prolongation = n.y.prolongation = injection;
 
-/**
-For $\alpha$ we store the normal field in the `v` attribute (which is
-not really meant to be used this way) to be able to pass it to the
-prolongation function. */
+  /**
+  For $\alpha$ we store the normal field in the `v` attribute (which is
+  not really meant to be used this way) to be able to pass it to the
+  prolongation function. */
 
   alpha.v = n;
   alpha.prolongation = alpha_prolongation;
 #endif
 
-/**
-Finally we apply the boundary conditions to define $\mathbf{n}$ and
-$\alpha$ everywhere (using the prolongation functions when necessary
-on quadtree grids). */
+  /**
+  Finally we apply the boundary conditions to define $\mathbf{n}$ and
+  $\alpha$ everywhere (using the prolongation functions when necessary
+  on quadtree grids). */
 
   boundary ({n, alpha});
 }

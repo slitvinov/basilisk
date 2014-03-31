@@ -236,9 +236,9 @@ event viscous_term (i++,last)
     correction (-dt);
   }
 
-/**
-The (provisionary) face velocity field at time $t+\Delta t$ is
-obtained by simple interpolation. */
+  /**
+  The (provisionary) face velocity field at time $t+\Delta t$ is
+  obtained by simple interpolation. */
 
   trash ({uf});
   foreach_face()
@@ -261,8 +261,8 @@ averaging. */
 event acceleration (i++,last)
 {
 
-/**
-We add the acceleration term to the face velocity field. */
+  /**
+  We add the acceleration term to the face velocity field. */
 
   boundary_normal ({a});
   foreach_face()
@@ -282,18 +282,18 @@ event projection (i++,last)
   boundary ({p});
   mgp = project (uf, p, alpha, dt);
 
-/**
-We then compute a face field $\mathbf{g}_f$ combining both
-acceleration and pressure gradient. */
+  /**
+  We then compute a face field $\mathbf{g}_f$ combining both
+  acceleration and pressure gradient. */
 
   face vector gf[];
   foreach_face()
     gf.x[] = a.x[] - alpha.x[]*(p[] - p[-1,0])/Delta;
   boundary_normal ({gf});
 
-/**
-We average these face values to obtain the centered, combined
-acceleration and pressure gradient field. */
+  /**
+  We average these face values to obtain the centered, combined
+  acceleration and pressure gradient field. */
 
   trash ({g});
   foreach()
@@ -301,8 +301,8 @@ acceleration and pressure gradient field. */
       g.x[] = (gf.x[] + gf.x[1,0])/2.;
   boundary ((scalar *){g});
 
-/**
-And finally add this term to the centered velocity field. */
+  /**
+  And finally add this term to the centered velocity field. */
 
   correction (dt);
 }

@@ -87,43 +87,43 @@ event stability (i++,last) {
 event advance (i++,last)
 {
 
-/**
-We allocate a local symmetric tensor field. To be able to compute the
-divergence of the tensor at the face locations, we need to
-compute the diagonal components at the center of cells and the
-off-diagonal component at the vertices. 
-
-![Staggering of $\mathbf{u}$ and $\mathbf{S}$](/src/figures/Sxx.svg) */
-
+  /**
+  We allocate a local symmetric tensor field. To be able to compute the
+  divergence of the tensor at the face locations, we need to
+  compute the diagonal components at the center of cells and the
+  off-diagonal component at the vertices. 
+  
+  ![Staggering of $\mathbf{u}$ and $\mathbf{S}$](/src/figures/Sxx.svg) */
+  
   symmetric tensor S[];
 
-/**
-We average the velocity components at the center to compute the
-diagonal components. */
+  /**
+  We average the velocity components at the center to compute the
+  diagonal components. */
 
   foreach()
     foreach_dimension()
       S.x.x[] = - sq(u.x[] + u.x[1,0])/4. + 2.*nu*(u.x[1,0] - u.x[])/Delta;
 
-/**
-We average horizontally and vertically to compute the off-diagonal
-component at the vertices. */
+  /**
+  We average horizontally and vertically to compute the off-diagonal
+  component at the vertices. */
 
   foreach_vertex()
     S.x.y[] = 
       - (u.x[] + u.x[0,-1])*(u.y[] + u.y[-1,0])/4. +
       nu*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/Delta;
 
-/**
-We only need to apply boundary conditions to the diagonal components. */
+  /**
+  We only need to apply boundary conditions to the diagonal components. */
 
   boundary ({S.x.x, S.y.y});
 
-/**
-Finally we compute
-$$
-\mathbf{u}_* = \mathbf{u}_n + dt\nabla\cdot\mathbf{S}
-$$ */
+  /**
+  Finally we compute
+  $$
+  \mathbf{u}_* = \mathbf{u}_n + dt\nabla\cdot\mathbf{S}
+  $$ */
 
   foreach_face()
     u.x[] += dt*(S.x.x[] - S.x.x[-1,0] + S.x.y[0,1] - S.x.y[])/Delta;

@@ -21,8 +21,8 @@ int main()
 
   refine_function (band, NULL, all);
 
-/**
-We use a circle of radius 0.3 and initialise the fractions. */
+  /**
+  We use a circle of radius 0.3 and initialise the fractions. */
 
   vertex scalar phi[];
   scalar c[];
@@ -31,8 +31,8 @@ We use a circle of radius 0.3 and initialise the fractions. */
     phi[] = sq(0.3) - sq(x) - sq(y);
   fractions (phi, c, s);
 
-/**
-Output the reconstruced facets and cells. */
+  /**
+  Output the reconstruced facets and cells. */
 
   output_facets (c, stdout, s);
   output_facets (c, stderr);
@@ -40,10 +40,10 @@ Output the reconstruced facets and cells. */
   output_cells (fp);
   fclose (fp);
 
-/**
-Finally, we reconstruct the interface and display the reconstructed
-facets only in the "halo cells". This is a check of the consistency of
-the boundary conditions applied to $\mathbf{n}$ and $\alpha$. */
+  /**
+  Finally, we reconstruct the interface and display the reconstructed
+  facets only in the "halo cells". This is a check of the consistency of
+  the boundary conditions applied to $\mathbf{n}$ and $\alpha$. */
 
   vector n[];
   scalar alpha[];

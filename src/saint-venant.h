@@ -124,9 +124,9 @@ the initial defaults. */
 event defaults (i = 0)
 {
 
-/**
-We overload the default 'advance' function of the predictor-corrector
-scheme and setup the refinement and coarsening methods on quadtrees. */
+  /**
+  We overload the default 'advance' function of the predictor-corrector
+  scheme and setup the refinement and coarsening methods on quadtrees. */
 
   advance = advance_saint_venant;  
 #if QUADTREE
@@ -156,16 +156,16 @@ Various approximate Riemann solvers are defined in [riemann.h](). */
 double update (scalar * evolving, scalar * updates, double dtmax)
 {
 
-/**
-We first recover the currently evolving fields (as set by the
-predictor-corrector scheme). */
+  /**
+  We first recover the currently evolving fields (as set by the
+  predictor-corrector scheme). */
 
   scalar h = evolving[0];
   vector u = { evolving[1], evolving[2] };
 
-/**
-The gradients are stored in locally-allocated fields. First-order
-reconstruction is used for the gradient fields. */
+  /**
+  The gradients are stored in locally-allocated fields. First-order
+  reconstruction is used for the gradient fields. */
 
   vector gh[], geta[];
   tensor gu[];
@@ -173,29 +173,29 @@ reconstruction is used for the gradient fields. */
     s.gradient = zero;
   gradients ({h, eta, u}, {gh, geta, gu});
 
-/**
-`Fh` and `Fq` will contain the fluxes for $h$ and $h\mathbf{u}$
-respectively and `S` is necessary to store the asymmetric topographic
-source term. */
+  /**
+  `Fh` and `Fq` will contain the fluxes for $h$ and $h\mathbf{u}$
+  respectively and `S` is necessary to store the asymmetric topographic
+  source term. */
 
   vector Fh[], S[];
   tensor Fq[];
 
-/**
-The faces which are "wet" on at least one side are traversed. */
+  /**
+  The faces which are "wet" on at least one side are traversed. */
 
   foreach_face (reduction (min:dtmax)) {
     double hi = h[], hn = h[-1,0];
     if (hi > dry || hn > dry) {
 
-/**
-#### Left/right state reconstruction
-
-The gradients computed above are used to reconstruct the left and
-right states of the primary fields $h$, $\mathbf{u}$, $z_b$. The
-"interface" topography $z_{lr}$ is reconstructed using the hydrostatic
-reconstruction of [Audusse et al, 2004](/src/references.bib#audusse2004) */
-    
+      /**
+      #### Left/right state reconstruction
+      
+      The gradients computed above are used to reconstruct the left and
+      right states of the primary fields $h$, $\mathbf{u}$, $z_b$. The
+      "interface" topography $z_{lr}$ is reconstructed using the hydrostatic
+      reconstruction of [Audusse et al, 2004](/src/references.bib#audusse2004) */
+      
       double dx = Delta/2.;
       double zi = eta[] - hi;
       double zl = zi - dx*(geta.x[] - gh.x[]);
@@ -211,22 +211,22 @@ reconstruction of [Audusse et al, 2004](/src/references.bib#audusse2004) */
       double um = u.x[-1,0] + dx*gu.x.x[-1,0];
       double hm = max(0., hr + zr - zlr);
 
-/**
-#### Riemann solver
-
-We can now call one of the approximate Riemann solvers to get the fluxes. */
+      /**
+      #### Riemann solver
+      
+      We can now call one of the approximate Riemann solvers to get the fluxes. */
 
       double fh, fu, fv;
       kurganov (hm, hp, um, up, Delta, &fh, &fu, &dtmax);
       fv = (fh > 0. ? u.y[-1,0] + dx*gu.y.x[-1,0] : u.y[] - dx*gu.y.x[])*fh;
-
-/**
-#### Topographic source term
-
-In the case of adaptive refinement, care must be taken to ensure
-well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
-
-#if QUADTREE
+      
+      /**
+      #### Topographic source term
+      
+      In the case of adaptive refinement, care must be taken to ensure
+      well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
+      
+      #if QUADTREE
       if (!(cell.flags & (fghost|active))) {
 	hi = coarse(h,0,0);
 	zi = coarse(zb,0,0);
@@ -235,13 +235,13 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
 	hn = coarse(h,-1,0);
 	zn = coarse(zb,-1,0);
       }
-#endif
+      #endif
       double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
       double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
-
-/**
-#### Flux update */
-
+      
+      /**
+      #### Flux update */
+      
       Fh.x[]   = fh;
       Fq.x.x[] = fu - sl;
       S.x[]    = fu - sr;
@@ -253,12 +253,12 @@ well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
   
   boundary_normal ({Fh, S, Fq});
 
-/**
-#### Updates for evolving quantities
-
-We store the divergence of the fluxes in the update fields. Note that
-these are updates for $h$ and $h\mathbf{u}$ (not $\mathbf{u}$). */
-
+  /**
+  #### Updates for evolving quantities
+  
+  We store the divergence of the fluxes in the update fields. Note that
+  these are updates for $h$ and $h\mathbf{u}$ (not $\mathbf{u}$). */
+  
   scalar dh = updates[0];
   vector dhu = { updates[1], updates[2] };
   
@@ -300,12 +300,12 @@ static void refine_elevation (Point point, scalar h)
   }
   else {
 
-/**
-The "dry" case is a bit more complicated. We look in a 3x3
-neighborhood of the coarse parent cell and compute a depth-weighted
-average of the "wet" surface elevation $\eta$. We need to do this
-because we cannot assume a priori that the surrounding wet cells are
-necessarily close to e.g. $\eta = 0$. */
+    /**
+    The "dry" case is a bit more complicated. We look in a 3x3
+    neighborhood of the coarse parent cell and compute a depth-weighted
+    average of the "wet" surface elevation $\eta$. We need to do this
+    because we cannot assume a priori that the surrounding wet cells are
+    necessarily close to e.g. $\eta = 0$. */
 
     double v = 0., eta = 0.; // water surface elevation
     // 3x3 neighbourhood
@@ -319,17 +319,17 @@ necessarily close to e.g. $\eta = 0$. */
       eta /= v; // volume-averaged eta of neighbouring wet cells
     else
 
-/**
-If none of the surrounding cells is wet, we assume a default sealevel
-at zero. */
+      /**
+      If none of the surrounding cells is wet, we assume a default sealevel
+      at zero. */
 
       eta = 0.;
 
-/**
-We then reconstruct the water depth in each child using $\eta$ (of the
-parent cell i.e. a first-order interpolation in contrast to the wet
-case above) and $z_b$ of the child cells. */
-
+    /**
+    We then reconstruct the water depth in each child using $\eta$ (of the
+    parent cell i.e. a first-order interpolation in contrast to the wet
+    case above) and $z_b$ of the child cells. */
+    
     // reconstruct water depth h from eta and zb
     foreach_child()
       h[] = max(0, eta - zb[]);
@@ -349,9 +349,9 @@ static void coarsen_elevation (Point point, scalar h)
       v += h[];
     }
 
-/**
-... and use this in combination with $z_b$ (of the coarse cell) to
-compute the water depth $h$.  */
+  /**
+  ... and use this in combination with $z_b$ (of the coarse cell) to
+  compute the water depth $h$.  */
     
   if (v > 0.)
     h[] = max(0., eta/v - zb[]);

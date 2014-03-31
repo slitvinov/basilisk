@@ -45,13 +45,13 @@ int main()
   N = 1 << MAXLEVEL;
 #endif
 
-/**
-Here we setup the domain geometry. For the moment Basilisk only
-supports square domains. For this example we have to use degrees as
-horizontal units because that is what the topographic database uses
-(eventually coordinate mappings will give more flexibility). We set
-the size of the box *L0* and the coordinates of the lower-left corner
-*(X0,Y0)*. */
+  /**
+  Here we setup the domain geometry. For the moment Basilisk only
+  supports square domains. For this example we have to use degrees as
+  horizontal units because that is what the topographic database uses
+  (eventually coordinate mappings will give more flexibility). We set
+  the size of the box *L0* and the coordinates of the lower-left corner
+  *(X0,Y0)*. */
 
   // the domain is 54 degrees squared
   L0 = 54.;
@@ -59,19 +59,19 @@ the size of the box *L0* and the coordinates of the lower-left corner
   X0 = 94 - L0/2.;
   Y0 = 8. - L0/2.;
 
-/**
-*G* is the acceleration of gravity required by the Saint-Venant
-solver. This is the only dimensional parameter. We rescale it so that
-time is in minutes, horizontal distances in degrees and vertical
-distances in metres. This is a trick to circumvent the current lack of
-coordinate mapping. */
+  /**
+  *G* is the acceleration of gravity required by the Saint-Venant
+  solver. This is the only dimensional parameter. We rescale it so that
+  time is in minutes, horizontal distances in degrees and vertical
+  distances in metres. This is a trick to circumvent the current lack of
+  coordinate mapping. */
 
   // acceleration of gravity in degrees^2/min^2/m
   G = 9.81*sq(mtd)*sq(60.);
 
-/**
-We then call the *run()* method of the Saint-Venant solver to
-perform the integration. */
+  /**
+  We then call the *run()* method of the Saint-Venant solver to
+  perform the integration. */
 
   run();
 }
@@ -122,14 +122,14 @@ int adapt() {
     eta[] = h[] > dry ? h[] + zb[] : 0;
   boundary ({eta});
 
-/**
-We can now use wavelet adaptation on the list of scalars *{η,hmax}*
-with thresholds *{ETAE,HMAXE}*. The compiler is not clever enough yet
-and needs to be told explicitly that this is a list of *double*s,
-hence the *(double[])*
-[type casting](http://en.wikipedia.org/wiki/Type_conversion). 
-
-The function then returns the number of cells refined. */
+  /**
+  We can now use wavelet adaptation on the list of scalars *{η,hmax}*
+  with thresholds *{ETAE,HMAXE}*. The compiler is not clever enough yet
+  and needs to be told explicitly that this is a list of *double*s,
+  hence the *(double[])*
+  [type casting](http://en.wikipedia.org/wiki/Type_conversion). 
+  
+  The function then returns the number of cells refined. */
 
   astats s = adapt_wavelet ({eta, hmax}, (double[]){ETAE,HMAXE},
 			    MAXLEVEL, MINLEVEL);
@@ -158,19 +158,20 @@ event init (i = 0)
   terrain (zb, "/home/popinet/terrain/etopo2", NULL);
   conserve_elevation();
 
-/**
-The initial still water surface is at $z=0$ so that the water depth $h$ is... */
+  /**
+  The initial still water surface is at $z=0$ so that the water depth
+  $h$ is... */
 
   foreach()
     h[] = max(0., - zb[]);
   boundary ({h});
 
-/**
-The initial deformation is given by an Okada fault model with the
-following parameters. The *iterate = adapt* option will iterate this
-initialisation until our *adapt()* function above returns zero
-i.e. until the deformations are resolved properly. */
-
+  /**
+  The initial deformation is given by an Okada fault model with the
+  following parameters. The *iterate = adapt* option will iterate this
+  initialisation until our *adapt()* function above returns zero
+  i.e. until the deformations are resolved properly. */
+  
   fault (x = 94.57, y = 3.83,
 	 depth = 11.4857e3,
 	 strike = 323, dip = 12, rake = 90,
@@ -238,21 +239,21 @@ event logfile (i++) {
   fprintf (stderr, "%g %d %g %g %g %g %g %g\n", t, i, s.min, s.max, s.sum, 
 	   n.rms, n.max, dt);
 
-/**
-We also use a simple implicit scheme to implement quadratic bottom
-friction i.e.
-$$
-\frac{d\mathbf{u}}{dt} = - C_f|\mathbf{u}|\frac{\mathbf{u}}{h}
-$$
-with $C_f=10^{-4}$. */
-
+  /**
+  We also use a simple implicit scheme to implement quadratic bottom
+  friction i.e.
+  $$
+  \frac{d\mathbf{u}}{dt} = - C_f|\mathbf{u}|\frac{\mathbf{u}}{h}
+  $$
+  with $C_f=10^{-4}$. */
+  
   foreach() {
     double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(u)/(h[]*mtd);
     foreach_dimension()
       u.x[] /= a;
 
-/**
-That is also where we update *hmax*. */
+    /**
+    That is also where we update *hmax*. */
 
     if (h[] > dry && h[] + zb[] > hmax[])
       hmax[] = h[] + zb[];
@@ -306,24 +307,24 @@ event movies (t++) {
   boundary ({m, etam});
   output_ppm (etam, fp, mask = m, min = -2, max = 2, n = 512, linear = true);
 
-/**
-After completion this will give the following animation
-
-![[Animation](tsunami/eta.mpg) of the wave elevation. Dark blue is -2 metres
- and less. Dark red is +2 metres and more.](tsunami/eta.png)
-
-We also use the *box* option to only output a subset of the domain
-(defined by the lower-left, upper-right coordinates). */
-
+  /**
+  After completion this will give the following animation
+  
+  ![[Animation](tsunami/eta.mpg) of the wave elevation. Dark blue is -2 metres
+  and less. Dark red is +2 metres and more.](tsunami/eta.png)
+  
+  We also use the *box* option to only output a subset of the domain
+  (defined by the lower-left, upper-right coordinates). */
+  
   static FILE * fp2 = popen ("ppm2mpeg > eta-zoom.mpg", "w");
   output_ppm (etam, fp2, mask = m, min = -2, max = 2, n = 512, linear = true,
 	      box = {{89,8},{98,16}});
 
-/**
-![[Animation](tsunami/eta-zoom.mpg) of the wave elevation. Dark blue is 
--2 metres and less. Dark red is +2 metres and more.](tsunami/eta-zoom.png)
-
-And repeat the operation for the level of refinement...*/
+  /**
+  ![[Animation](tsunami/eta-zoom.mpg) of the wave elevation. Dark blue is 
+  -2 metres and less. Dark red is +2 metres and more.](tsunami/eta-zoom.png)
+  
+  And repeat the operation for the level of refinement...*/
 
   static FILE * fp1 = popen ("ppm2mpeg > level.mpg", "w");
   scalar l = etam;
@@ -331,12 +332,12 @@ And repeat the operation for the level of refinement...*/
     l[] = level;
   output_ppm (l, fp1, min = MINLEVEL, max = MAXLEVEL, n = 512);
 
-/**
-![[Animation](tsunami/level.mpg) of the level of refinement. Dark blue is 5
- and dark red is 10.](tsunami/level.png)
-
-...and for the process id for parallel runs. */
-
+  /**
+  ![[Animation](tsunami/level.mpg) of the level of refinement. Dark blue is 5
+  and dark red is 10.](tsunami/level.png)
+  
+  ...and for the process id for parallel runs. */
+  
 #if _OPENMP
   static FILE * fp3 = popen ("ppm2mpeg > pid.mpg", "w");
   foreach()

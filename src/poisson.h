@@ -34,16 +34,16 @@ static void boundary_homogeneous (scalar * a, scalar * da, int l)
 {
 #if QUADTREE
 
-/**
-On quadtree meshes, we also need to make sure that stencils are
-consistent. We first restrict the solution from level *l* up to
-coarser levels. */
+  /**
+  On quadtree meshes, we also need to make sure that stencils are
+  consistent. We first restrict the solution from level *l* up to
+  coarser levels. */
 
   halo_restriction (l, da, NULL);
 
-/**
-We then apply boundary conditions on all levels coarser than *l*
-and/or on leaf cells. */
+  /**
+  We then apply boundary conditions on all levels coarser than *l*
+  and/or on leaf cells. */
 
   for (int b = 0; b < nboundary; b++)
     foreach_boundary_cell (b, true)
@@ -56,8 +56,8 @@ and/or on leaf cells. */
 	  continue;
       }
 
-/**
-Finally we prolongate the solution down to level *l*. */
+  /**
+  Finally we prolongate the solution down to level *l*. */
 
   halo_prolongation (l, da);
 
@@ -87,26 +87,28 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
 	       int nrelax, int minlevel)
 {
 
-/**
-We first define the residual on all levels. */
+  /**
+  We first define the residual on all levels. */
 
   restriction (res);
 
-/**
-We then proceed from the coarsest grid (`minlevel`) down to the finest grid. */
+  /**
+  We then proceed from the coarsest grid (`minlevel`) down to the
+  finest grid. */
 
   for (int l = minlevel; l <= depth(); l++) {
 
-/**
-On the coarsest grid, we take zero as initial guess. */
+    /**
+    On the coarsest grid, we take zero as initial guess. */
+
     if (l == minlevel)
       foreach_level_or_leaf (l)
 	for (scalar s in da)
 	  s[] = 0.;
 
-/**
-On all other grids, we take as initial guess the approximate solution
-on the coarser grid bilinearly interpolated onto the current grid. */
+    /**
+    On all other grids, we take as initial guess the approximate solution
+    on the coarser grid bilinearly interpolated onto the current grid. */
 
     else
       foreach_level (l)
@@ -115,9 +117,9 @@ on the coarser grid bilinearly interpolated onto the current grid. */
 		 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
 		 coarse(s,child.x,child.y))/16.;
 
-/**
-We then apply homogeneous boundary conditions and do several
-iterations of the relaxation function to refine the initial guess. */
+    /**
+    We then apply homogeneous boundary conditions and do several
+    iterations of the relaxation function to refine the initial guess. */
 
     boundary_homogeneous (a, da, l);
     for (int i = 0; i < nrelax; i++) {
@@ -126,8 +128,8 @@ iterations of the relaxation function to refine the initial guess. */
     }
   }
 
-/**
-And finally we apply the resulting correction to `a`. */
+  /**
+  And finally we apply the resulting correction to `a`. */
 
   foreach() {
     scalar s, ds;
@@ -173,10 +175,10 @@ mgstats mg_solve (scalar * a, scalar * b,
 		  void * data)
 {
 
-/**
-The list of residual fields will be allocated by the residual()
-function. We allocate a new correction field for each of the scalars
-in `a`. */
+  /**
+  The list of residual fields will be allocated by the residual()
+  function. We allocate a new correction field for each of the scalars
+  in `a`. */
 
   scalar * res = NULL, * da = NULL;
   for (scalar s in a) {
@@ -184,8 +186,8 @@ in `a`. */
     da = list_append (da, ds);
   }
 
-/**
-We initialise the structure storing convergence statistics. */
+  /**
+  We initialise the structure storing convergence statistics. */
 
   mgstats s = {0, 0., 0.};
   double sum = 0.;
@@ -194,23 +196,23 @@ We initialise the structure storing convergence statistics. */
       sum += s[];
   s.sum = sum;
 
-/**
-Here we compute the initial residual field and its maximum. */
+  /**
+  Here we compute the initial residual field and its maximum. */
 
   s.resb = s.resa = residual (a, b, &res, data);
 
-/**
-We then iterates until convergence or until `NITERMAX` is reached. Note
-also that we force the solver to apply at least one cycle, even if the
-initial residual is lower than `TOLERANCE`. */
+  /**
+  We then iterates until convergence or until `NITERMAX` is reached. Note
+  also that we force the solver to apply at least one cycle, even if the
+  initial residual is lower than `TOLERANCE`. */
 
   for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.resa > TOLERANCE); s.i++) {
     mg_cycle (a, res, da, relax, data, 4, 0);
     s.resa = residual (a, b, &res, data);
   }
 
-/**
-If we have reached the maximum number of iterations, we warn the user. */
+  /**
+  If we have reached the maximum number of iterations, we warn the user. */
 
   if (s.i == NITERMAX)
     fprintf (stderr, 
@@ -218,8 +220,8 @@ If we have reached the maximum number of iterations, we warn the user. */
 	     "  sum: %g\n", 
 	     NITERMAX, s.sum);
 
-/**
-We deallocate the residual and correction fields and free the lists. */
+  /**
+  We deallocate the residual and correction fields and free the lists. */
 
   delete (res); free (res);
   delete (da);  free (da);
@@ -262,9 +264,9 @@ static void relax (scalar * al, scalar * bl, int l, void * data)
   (const) face vector alpha = p->alpha;
   (const) scalar lambda = p->lambda;
 
-/**
-We use the face values of $\alpha$ to weight the gradients of the
-5-points Laplacian operator. We get the relaxation function. */
+  /**
+  We use the face values of $\alpha$ to weight the gradients of the
+  5-points Laplacian operator. We get the relaxation function. */
 
   foreach_level_or_leaf (l)
     a[] = (alpha.x[1,0]*a[1,0] + alpha.x[]*a[-1,0] + 
@@ -282,9 +284,9 @@ static double residual (scalar * al, scalar * bl, scalar ** resl, void * data)
 {
   scalar a = al[0], b = bl[0];
 
-/**
-If the residual field is not already allocated we allocate it as well
-as the associated list. */
+  /**
+  If the residual field is not already allocated we allocate it as well
+  as the associated list. */
 
   scalar res;
   if (*resl)
@@ -337,10 +339,10 @@ $$ */
 mgstats poisson (struct Poisson p)
 {
 
-/**
-If $\alpha$ or $\lambda$ are not set, we replace them with constant
-unity vector (resp. zero scalar) fields. Note that the user is free to
-provide $\alpha$ and $\beta$ as constant fields. */
+  /**
+  If $\alpha$ or $\lambda$ are not set, we replace them with constant
+  unity vector (resp. zero scalar) fields. Note that the user is free to
+  provide $\alpha$ and $\beta$ as constant fields. */
 
   if (p.alpha.x) {
     face vector alpha = p.alpha;
@@ -359,9 +361,9 @@ provide $\alpha$ and $\beta$ as constant fields. */
     p.lambda = lambda;
   }
 
-/**
-If *tolerance* is set it supersedes the default of the multigrid
-solver. */
+  /**
+  If *tolerance* is set it supersedes the default of the multigrid
+  solver. */
 
   double defaultol = TOLERANCE;
   if (p.tolerance)
@@ -370,8 +372,8 @@ solver. */
   scalar a = p.a, b = p.b;
   mgstats s = mg_solve ({a}, {b}, residual, relax, &p);
 
-/**
-We restore the default. */
+  /**
+  We restore the default. */
 
   if (p.tolerance)
     TOLERANCE = defaultol;
@@ -399,29 +401,29 @@ $$ */
 mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
 {
 
-/**
-We allocate a local scalar field and compute the divergence of
-$\mathbf{u}_*$. The divergence is scaled by *dt* so that the pressure
-has the correct dimension. */
+  /**
+  We allocate a local scalar field and compute the divergence of
+  $\mathbf{u}_*$. The divergence is scaled by *dt* so that the pressure
+  has the correct dimension. */
 
   scalar div[];
   foreach()
     div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/(dt*Delta);
 
-/**
-We solve the Poisson problem. The tolerance (set with *TOLERANCE*) is
-the maximum relative change in volume of a cell (due to the divergence
-of the flow) during one timestep i.e. the non-dimensional quantity 
-$$
-|\nabla\cdot\mathbf{u}|\Delta t 
-$$ 
-Given the scaling of the divergence above, this gives */
+  /**
+  We solve the Poisson problem. The tolerance (set with *TOLERANCE*) is
+  the maximum relative change in volume of a cell (due to the divergence
+  of the flow) during one timestep i.e. the non-dimensional quantity 
+  $$
+  |\nabla\cdot\mathbf{u}|\Delta t 
+  $$ 
+  Given the scaling of the divergence above, this gives */
 
   mgstats mgp = poisson (p, div, alpha, tolerance = TOLERANCE/sq(dt));
 
-/**
-And compute $\mathbf{u}_{n+1}$ using $\mathbf{u}_*$ and $p$. If
-$\alpha$ is not defined we set it to one. */
+  /**
+  And compute $\mathbf{u}_{n+1}$ using $\mathbf{u}_*$ and $p$. If
+  $\alpha$ is not defined we set it to one. */
 
   if (alpha.x)
     foreach_face()

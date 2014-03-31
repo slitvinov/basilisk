@@ -54,9 +54,9 @@ int main()
   L0 = 64;
   TOLERANCE = 1e-4;
 
-/**
-Here $\mu$ is the control parameter.  For $\mu > 0$ the system is
-supercritical (Hopf bifurcation). We test several values of $\mu$. */
+  /**
+  Here $\mu$ is the control parameter.  For $\mu > 0$ the system is
+  supercritical (Hopf bifurcation). We test several values of $\mu$. */
 
   mu = 0.04; run();
   mu = 0.1;  run();
@@ -69,16 +69,16 @@ supercritical (Hopf bifurcation). We test several values of $\mu$. */
 event init (i = 0)
 {
 
-/**
-The marginal stability is obtained for `kb = kbcrit`. */
+  /**
+  The marginal stability is obtained for `kb = kbcrit`. */
 
   double nu = sqrt(1./D);
   double kbcrit = sq(1. + ka*nu);
   kb = kbcrit*(1. + mu);
 
-/**
-The (unstable) stationary solution is $C_1 = ka$ and $C_2 = kb/ka$. It
-is perturbed by a random noise in [-0.01:0.01]. */
+  /**
+  The (unstable) stationary solution is $C_1 = ka$ and $C_2 = kb/ka$. It
+  is perturbed by a random noise in [-0.01:0.01]. */
 
   foreach() {
     C1[] = ka ; 
@@ -117,22 +117,22 @@ event final (t = 3000)
 event integration (i++)
 {
 
-/**
-We first set the timestep according to the timing of upcoming
-events. We choose a maximum timestep of 1 which ensures the stability
-of the reactive terms for this example. */
+  /**
+  We first set the timestep according to the timing of upcoming
+  events. We choose a maximum timestep of 1 which ensures the stability
+  of the reactive terms for this example. */
 
   dt = dtnext (t, 1.);
 
-/**
-We can rewrite the evolution equations as
-$$
-\partial_t C_1 = \nabla^2 C_1 + k k_a + k (C_1 C_2 - k_b - 1) C_1
-$$
-$$
-\partial_t C_2 = D \nabla^2 C_2  + k k_b C_1 - k C_1^2 C_2
-$$
-And use the diffusion solver to advance the system from $t$ to $t+dt$. */
+  /**
+  We can rewrite the evolution equations as
+  $$
+  \partial_t C_1 = \nabla^2 C_1 + k k_a + k (C_1 C_2 - k_b - 1) C_1
+  $$
+  $$
+  \partial_t C_2 = D \nabla^2 C_2  + k k_b C_1 - k C_1^2 C_2
+  $$
+  And use the diffusion solver to advance the system from $t$ to $t+dt$. */
 
   scalar r[], beta[];
   

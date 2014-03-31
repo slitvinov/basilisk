@@ -14,28 +14,28 @@ void tracer_fluxes (const scalar f,
 		    (const) scalar src)
 {
 
-/**
-We first compute the cell-centered gradient of *f* in a locally-allocated
-vector field. */
-
+  /**
+  We first compute the cell-centered gradient of *f* in a locally-allocated
+  vector field. */
+  
   vector g[];
   gradients ({f}, {g});
 
-/**
-For each face, the flux is composed of two parts... */
+  /**
+  For each face, the flux is composed of two parts... */
 
   foreach_face() {
 
-/**
-A normal component... */
+    /**
+    A normal component... */
 
     double un = dt*u.x[]/Delta, s = sign(un);
     int i = -(s + 1.)/2.;
     double f2 = f[i,0] + src[i,0]*dt/2. +
       s*min(1., 1. - s*un)*g.x[i,0]*Delta/2.;
 
-/**
-and a tangential component... */
+    /**
+    and a tangential component... */
 
     double vn = u.y[i,0] + u.y[i,1];
     double fyy = vn < 0. ? f[i,1] - f[i,0] : f[i,0] - f[i,-1];
@@ -43,9 +43,9 @@ and a tangential component... */
     flux.x[] = f2*u.x[];
   }
 
-/**
-Boundary conditions ensure the consistency of fluxes across
-variable-resolution boundaries (on adaptive meshes). */
+  /**
+  Boundary conditions ensure the consistency of fluxes across
+  variable-resolution boundaries (on adaptive meshes). */
 
   boundary_normal ({flux});
 }
@@ -65,8 +65,8 @@ struct Advection {
 void advection (struct Advection p)
 {
 
-/**
-If *src* is not provided we set all the source terms to zero. */
+  /**
+  If *src* is not provided we set all the source terms to zero. */
   
   scalar * lsrc = p.src;
   if (!lsrc) {

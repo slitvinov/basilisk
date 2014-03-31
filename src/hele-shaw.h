@@ -61,9 +61,9 @@ event pressure (i++, last)
 {
   mgp = poisson (p, zeta, beta);
 
-/**
-We then update the velocity field by computing the face pressure
-gradients. */
+  /**
+  We then update the velocity field by computing the face pressure
+  gradients. */
 
   trash ({u});
   foreach_face()

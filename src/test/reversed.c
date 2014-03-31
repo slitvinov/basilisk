@@ -28,9 +28,9 @@ We center the unit box on the origin and set a maximum timestep of 0.1 */
 int main() {
   X0 = Y0 = -0.5;
   DT = .1;
-
-/**
-We then run the simulation for different levels of refinement. */
+  
+  /**
+  We then run the simulation for different levels of refinement. */
 
   for (MAXLEVEL = 5; MAXLEVEL <= 7; MAXLEVEL++) {
     N = 1 << MAXLEVEL;
@@ -62,31 +62,31 @@ event init (i = 0) {
 
 event velocity (i++) {
 
-/**
-This event defines the velocity field.
-
-On quadtrees we first adapt the grid so that the estimated error on
-the volume fraction is smaller than $5\times 10^{-3}$. We limit the
-resolution at `MAXLEVEL` and we only refine the volume fraction field
-`f`. */
+  /**
+  This event defines the velocity field.
+  
+  On quadtrees we first adapt the grid so that the estimated error on
+  the volume fraction is smaller than $5\times 10^{-3}$. We limit the
+  resolution at `MAXLEVEL` and we only refine the volume fraction field
+  `f`. */
 
 #if QUADTREE
   adapt_wavelet ({f}, (double[]){5e-3}, MAXLEVEL, list = {f});
 #endif
 
-/**
-The velocity field is defined through a streamfunction $\psi$, defined
-on the vertices of the grid. */
+  /**
+  The velocity field is defined through a streamfunction $\psi$, defined
+  on the vertices of the grid. */
 
   vertex scalar psi[];
   foreach_vertex()
     psi[] = - 1.5*sin(2.*pi*t/T)*sin((x + 0.5)*pi)*sin((y + 0.5)*pi)/pi;
-
-/**
-We can then differentiate the streamfunction to get the velocity
-components. This guarantees that the velocity field is exactly
-non-divergent. */
-
+  
+  /**
+  We can then differentiate the streamfunction to get the velocity
+  components. This guarantees that the velocity field is exactly
+  non-divergent. */
+  
   trash ({u});
   struct { double x, y; } f = {-1.,1.};
   foreach_face()

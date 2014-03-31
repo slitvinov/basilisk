@@ -37,11 +37,11 @@ event init (t = 0)
   psi[top]    = dirichlet(0);
   psi[bottom] = dirichlet(0);
 
-/**
-We then initialise both fields, using the same initial condition for
-the vorticity as in [stream.c](), and apply boundary conditions. Note
-that it is necessary to initialise the streamfunction, as the Poisson
-solver requires an initial guess. */
+  /**
+  We then initialise both fields, using the same initial condition for
+  the vorticity as in [stream.c](), and apply boundary conditions. Note
+  that it is necessary to initialise the streamfunction, as the Poisson
+  solver requires an initial guess. */
 
   double dd = 0.1;
   foreach() {
@@ -51,19 +51,19 @@ solver requires an initial guess. */
   }
   boundary ({psi,omega});
 
-/**
-We then solve the Poisson equation
-$$
-\nabla^2\psi = \omega
-$$
-and compute the centered velocity components by differentation of the
-streamfunction i.e.
-$$
-u_x = - \partial_y\psi
-$$
-$$
-u_y = \partial_x\psi
-$$ */
+  /**
+  We then solve the Poisson equation
+  $$
+  \nabla^2\psi = \omega
+  $$
+  and compute the centered velocity components by differentation of the
+  streamfunction i.e.
+  $$
+  u_x = - \partial_y\psi
+  $$
+  $$
+  u_y = \partial_x\psi
+  $$ */
 
   poisson (psi, omega);
   struct { double x, y; } f = {-1.,1.};

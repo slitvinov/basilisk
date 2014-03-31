@@ -18,26 +18,26 @@ int main ()
     int nloops, i;
     clock_t start, end;
 
-/**
-We fill `a` with a simple function. */
+    /**
+    We fill `a` with a simple function. */
 
     foreach()
       a[] = cos(2.*pi*x)*sin(2.*pi*y);
     boundary ({a});
 
-/** 
-We set a number of loops proportional to the number of grid
-points so that times are comparable on all grids. */
+    /**
+    We set a number of loops proportional to the number of grid
+    points so that times are comparable on all grids. */
 
     nloops = i = (1 << 25) >> 2*l;
 
-/**
-Here we compute
-$$
-b = \nabla^2 a
-$$
-using a 5-points Laplacian operator. */
-
+    /**
+    Here we compute
+    $$
+    b = \nabla^2 a
+    $$
+    using a 5-points Laplacian operator. */
+    
     start = clock();
     while (i--)
       foreach()
@@ -46,8 +46,8 @@ using a 5-points Laplacian operator. */
     printf ("lap %d %g\n", l, 
 	    1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)));
     
-/**
-Something simpler: the sum of `a` over the entire mesh. */
+    /**
+    Something simpler: the sum of `a` over the entire mesh. */
 
     nloops = i = (1 << 25) >> 2*l;
     double sum = 0.;
@@ -59,8 +59,8 @@ Something simpler: the sum of `a` over the entire mesh. */
     printf ("sum %d %g %g\n", l, 
 	    1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)), sum);
 
-/**
-And finally the restriction operator. */
+    /**
+    And finally the restriction operator. */
 
     nloops = i = (1 << 25) >> 2*l;
     start = clock();

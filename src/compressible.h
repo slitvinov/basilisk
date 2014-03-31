@@ -61,10 +61,10 @@ then vectors). */
 void flux (const double * s, double * f, double e[2])
 {
 
-/**
-We first recover each value ($\rho$, $E$, $w_x$ and $w_y$) and then
-compute the corresponding fluxes (`f[0]`, `f[1]`, `f[2]` and
-`f[3]`). */
+  /**
+  We first recover each value ($\rho$, $E$, $w_x$ and $w_y$) and then
+  compute the corresponding fluxes (`f[0]`, `f[1]`, `f[2]` and
+  `f[3]`). */
 
   double rho = s[0], E = s[1], wn = s[2], wt = s[3];
   double un = wn/rho, p = (gammao - 1.)*(E - 0.5*(sq(wn) + sq(wt))/rho);
@@ -75,9 +75,9 @@ compute the corresponding fluxes (`f[0]`, `f[1]`, `f[2]` and
   f[2] = un*wn + p;
   f[3] = un*wt;
 
-/**
-The minimum and maximum eigenvalues for the Euler system are the
-characteristic speeds $u \pm \sqrt(\gamma p / \rho)$. */
+  /**
+  The minimum and maximum eigenvalues for the Euler system are the
+  characteristic speeds $u \pm \sqrt(\gamma p / \rho)$. */
 
   double c = sqrt(gammao*p/rho);
   e[0] = un - c; // min
