@@ -173,7 +173,7 @@ EOF
     fi
     cd ..
     # generate graphics
-    if test -f $test.plot; then
+    if test -f $test.plot -o -f $test.plot.page; then
 	make $test/plot.png
     fi
 }
