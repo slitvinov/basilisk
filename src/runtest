@@ -176,6 +176,7 @@ EOF
     if test -f $test.plot -o -f $test.plot.page; then
 	make $test/plot.png
     fi
+    make $test/plots
 }
 
 if test -f $test.$ext && $CHECKSUM $test.$ext; then

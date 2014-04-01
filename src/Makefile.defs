@@ -59,6 +59,9 @@ clean:
 %/plot.png: %.plot
 	cd $* && gnuplot -e "batch=1; PNG=\"$(PNG)\"; set term $(PNG) enhanced font \",10\"; set output 'plot.png'; set macros;" ../$< || rm -f plot.png
 
+%/plots: %.c
+	cd $* && PNG=$(PNG) sh $(BASILISK)/gnuplot.sh < ../$<
+
 %.pdf: %.h
 	pandoc -o $@ $<
 
