@@ -101,6 +101,20 @@ Results are presented in terms of $\rho$ and normal velocity $u_n$ for
 Cartesian (7 levels) and adaptive (8 levels) computations. The
 numerical results compare very well with Toro's numerical experiments.
 
-![Radial density profile](explosion/plot.png)
+~~~gnuplot Radial density profile
+set xrange [0:1]
+set xlabel 'r'
 
-![Radial velocity profile](explosion/velocity.png) */
+set output 'rho.png'
+set ylabel 'rho'
+plot './out' u 1:2 w p pt 7 ps 0.2 t 'Adaptive', \
+     './cout' u 1:2 w p pt 7 ps 0.2 t 'Cartesian'
+~~~
+
+~~~gnuplot Normal velocity
+set output 'velocity.png'
+set ylabel 'Normal velocity'
+plot './out' u 1:3 w p pt 7 ps 0.2 t 'Adaptive', \
+     './cout' u 1:3 w p pt 7 ps 0.2 t 'Cartesian'
+~~~ 
+*/
