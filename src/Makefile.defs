@@ -23,13 +23,13 @@ clean:
 .PRECIOUS: %.prof %.s
 
 %.tst: %.s
-	@$(BASILISK)/runtest $@
+	@PNG=$(PNG) $(BASILISK)/runtest $@
 
 %.ctst: %.s
-	@CFLAGS="-grid=multigrid $(CFLAGS)" $(BASILISK)/runtest $@
+	@CFLAGS="-grid=multigrid $(CFLAGS)" PNG=$(PNG) $(BASILISK)/runtest $@
 
 %.vtst: %.s
-	@$(BASILISK)/runtest $@ "$(VALGRIND)"
+	@PNG=$(PNG) $(BASILISK)/runtest $@ "$(VALGRIND)"
 
 %.h: %.h.page
 	ln -s $< $@
@@ -57,10 +57,11 @@ clean:
 	dot -Tpng -o $@ < $<
 
 %/plot.png: %.plot
-	cd $* && gnuplot -e "batch=1; PNG=\"$(PNG)\"; set term $(PNG) enhanced font \",10\"; set output 'plot.png'; set macros;" ../$< || rm -f plot.png
+	cd $* && gnuplot -e "batch=1; set term $(PNG) enhanced font \",10\"; set output 'plot.png'; set macros;" ../$< || rm -f plot.png
 
-%/plots: %.c
-	cd $* && PNG=$(PNG) sh $(BASILISK)/gnuplot.sh < ../$<
+%/plots: %.tst
+	cd $* && awk -f $(BASILISK)/gnuplot.awk < ../$*.c > plots && \
+	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh || rm -f plots
 
 %.pdf: %.h
 	pandoc -o $@ $<

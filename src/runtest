@@ -176,16 +176,21 @@ EOF
     if test -f $test.plot -o -f $test.plot.page; then
 	make $test/plot.png
     fi
-    make $test/plots
+    cd $test
+    sh gnuplot.sh
 }
 
 if test -f $test.$ext && $CHECKSUM $test.$ext; then
     touch $test.$ext
     echo "make: '$test' is up to date."
+    if test -n "$SANDBOX"; then
+	make $test/plots
+    fi
 else
-    rm -f $test.$ext $test/pass $test/fail $test/warn $test/plot.png
+    rm -f $test.$ext $test/*
     expirecache
     mkdir -p $test && cp -f $test.c $test
+    awk -f $BASILISK/gnuplot.awk < $test.c > $test/plots
     cp -f $test.*ref $test 2> /dev/null || true
     if test -d $BASILISK_WIKI/static -a -f $test.c.page; then
 	if test ! -L $BASILISK_WIKI/static/$dir/$test; then
@@ -199,6 +204,7 @@ else
 	echo $SANDBOX \($!\) > $test/pid
     else
 	locally
+	rm -f $test/plots
     fi
 
     $GENSUM $test.s > $test.$ext
