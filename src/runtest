@@ -177,14 +177,44 @@ EOF
 	make $test/plot.png
     fi
     cd $test
-    sh gnuplot.sh
+    if ! sh $BASILISK/gnuplot.sh > .tmp; then
+	cat .tmp >> warn
+	rm -f .tmp
+    fi
 }
 
-if test -f $test.$ext && $CHECKSUM $test.$ext; then
+checksum()
+{
+    if grep $1 $2 | $CHECKSUM; then 
+	return 0;
+    else
+	return 1;
+    fi
+}
+
+# check sum for test.c
+source_modified=false
+if ! test -f $test.$ext || ! test -f $test.s || \
+    ! checksum $test.c $test.$ext; then
+    echo qcc $CFLAGS -o $test/$test $test.c $LIBS -lm
+    if ! qcc `echo " $CFLAGS " | sed -e 's/ -O[0-9] / /g' -e 's/ -g / /g'` \
+	-nolineno -S $test.c; then
+	rm -f $test.s
+	exit 1
+    fi
+    if test -f $test.$ext; then
+	sed "1s/.*/`$GENSUM $test.c`/" $test.$ext > $test.$ext.1
+	mv -f $test.$ext.1 $test.$ext
+    fi
+    source_modified=true
+fi
+
+# check sum for test.s
+if test -f $test.$ext && checksum $test.s $test.$ext; then
     touch $test.$ext
     echo "make: '$test' is up to date."
-    if test -n "$SANDBOX"; then
-	make $test/plots
+    if test -n "$SANDBOX" && $source_modified; then
+	rm -f $test/warn && make $test/plots
     fi
 else
     rm -f $test.$ext $test/*
@@ -207,9 +237,13 @@ else
 	rm -f $test/plots
     fi
 
-    $GENSUM $test.s > $test.$ext
+    $GENSUM $test.c > $test.$ext
+    $GENSUM $test.s >> $test.$ext
 fi
 
+if test -f $test/warn; then
+    cat $test/warn
+fi
 if test -f $test/fail; then
     cat $test/fail
     rm -f $test.$ext

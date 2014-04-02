@@ -20,15 +20,15 @@ itags: $(subst .h.page,.h.itags,$(ALLPAGES))
 clean:
 	rm -f *.o *.s *.*tst *.d *.prof Makefile.deps
 
-.PRECIOUS: %.prof %.s
+.PRECIOUS: %.prof
 
-%.tst: %.s
+%.tst: %.c Makefile $(QCC)
 	@PNG=$(PNG) $(BASILISK)/runtest $@
 
-%.ctst: %.s
+%.ctst: %.c Makefile $(QCC)
 	@CFLAGS="-grid=multigrid $(CFLAGS)" PNG=$(PNG) $(BASILISK)/runtest $@
 
-%.vtst: %.s
+%.vtst: %.c Makefile $(QCC)
 	@PNG=$(PNG) $(BASILISK)/runtest $@ "$(VALGRIND)"
 
 %.h: %.h.page
@@ -39,11 +39,6 @@ clean:
 
 %.plot: %.plot.page
 	ln -s $< $@
-
-%.s: %.c $(QCC) Makefile
-	@echo qcc $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm
-	@rm -f $*/warn
-	@$(QCC) $(subst -g ,,$(subst -O2 ,,$(CFLAGS))) -nolineno -S $< || (rm -f $@ && false)
 
 %.prof: %.c
 	$(QCC) $(subst -DTRASH=1,,$(CFLAGS)) -g -pg $< -o $*/$* -lm
@@ -57,7 +52,7 @@ clean:
 	dot -Tpng -o $@ < $<
 
 %/plot.png: %.plot
-	cd $* && gnuplot -e "batch=1; set term $(PNG) enhanced font \",10\"; set output 'plot.png'; set macros;" ../$< || rm -f plot.png
+	cd $* && gnuplot -e "batch=1; PNG=\"$(PNG)\"; set term $(PNG) enhanced font \",10\"; set output 'plot.png'; set macros;" ../$< || rm -f plot.png
 
 %/plots: %.tst
 	cd $* && awk -f $(BASILISK)/gnuplot.awk < ../$*.c > plots && \
@@ -95,14 +90,14 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 Makefile.tests: Makefile $(BASILISK)/tests.sh
 	sh $(BASILISK)/tests.sh
 
-%.s.d: %.c $(QCC)
+%.tst.d: %.c $(QCC)
 	$(QCC) -MD -o $@ $<
 
 %.tags.d: %.page $(QCC)
 	$(QCC) -MD -tags $<
 
 Makefile.deps: 	Makefile.tests \
-		$(subst .c,.s.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
+		$(subst .c,.tst.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(subst .page,.tags.d,$(ALLPAGES))
 	@echo "Updating Makefile.deps"
 	@cat /dev/null $^ > Makefile.deps
