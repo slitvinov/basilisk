@@ -136,4 +136,14 @@ event printdata (t += 0.1; t <= 1.) {
 We get the following comparison between the numerical solution and the
 linear theory for the flow rate $Q$.
 
-![](artery1D/plot.png) */
+~~~gnuplot
+set output 'plot.png'
+Amp = 0.01
+e2 = 0.1
+set yrange [0.008:]
+set ylabel 'Q'
+set xlabel 'x'
+plot 'log' w l t 'numerical', Amp*exp(-e2/2.*x) t 'linear theory'
+~~~
+*/
+
