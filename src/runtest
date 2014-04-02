@@ -217,7 +217,12 @@ if test -f $test.$ext && checksum $test.s $test.$ext; then
 	rm -f $test/warn && make $test/plots
     fi
 else
-    rm -f $test.$ext $test/*
+    if test -n "$SANDBOX" -a -f $test/pid; then
+	echo Killing `cat $test/pid`
+	kill `cat $test/pid`
+    fi
+
+    rm -r -f $test.$ext $test/*
     expirecache
     mkdir -p $test && cp -f $test.c $test
     awk -f $BASILISK/gnuplot.awk < $test.c > $test/plots
@@ -231,7 +236,7 @@ else
 
     if test -n "$SANDBOX"; then
         ( remotely $SANDBOX ) &
-	echo $SANDBOX \($!\) > $test/pid
+	echo $! > $test/pid
     else
 	locally
 	rm -f $test/plots
@@ -249,6 +254,6 @@ if test -f $test/fail; then
     rm -f $test.$ext
     exit 1
 elif test -f $test/pid; then
-    echo \[$test.$ext on `cat $test/pid`\]
+    echo \[$test.$ext on $SANDBOX \(`cat $test/pid`\)\]
     echo "  running..."
 fi
