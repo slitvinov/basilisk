@@ -64,4 +64,11 @@ int main()
 This gives this figure where "exact" uses `c` and `s`, "VOF" uses
 only `c` and "halo" is the halo cell reconstuction.
 
-![Exact and VOF-reconstucted interface](fractions1/plot.png) */
+~~~gnuplot Exact and VOF-reconstucted interface
+set output 'plot.png'
+set size ratio -1
+set key out
+plot 'cells' w l t '', 'out' w l t "exact", '< grep -v halo log' w l t "VOF", \
+     '< grep halo log' u 2:3 w p t 'halo'
+~~~
+*/
