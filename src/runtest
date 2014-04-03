@@ -145,7 +145,7 @@ EOF
     tar czf $chksum.tgz $chksum
     rm -r -f $chksum
     scp -q $chksum.tgz $rhost: && rm -f $chksum.tgz
-    ssh $rhost sh -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -n -f nice -19 sh $test.sh\""
+    ssh $rhost sh -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -n nice -19 sh $test.sh\" && sleep 0 && tsp -p && tsp -w" > tspid.$ext
     scp -q $rhost:$chksum.tgz $chksum.tgz
     ssh $rhost rm -r -f $chksum.tgz
     tar xmzf $chksum.tgz
@@ -222,6 +222,8 @@ else
     if test -n "$SANDBOX" -a -f $test/pid.$ext; then
 	echo Killing `cat $test/pid.$ext`
 	kill `cat $test/pid.$ext`
+	ssh $SANDBOX kill `cat $test/tspid.$ext`
+	rm -f $test/*pid.$ext
     fi
 
     rm -f $test.$ext $test/pass \
