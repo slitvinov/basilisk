@@ -452,7 +452,7 @@ static int compdir (char * file, char ** out, int nout, const char * dir)
       cleanup (1, dir);
     fclose (fin);
     if (fout) {
-      fputs ("#endif\n", fout);
+      fputs ("\n#endif\n", fout);
       fclose (fout);
     }
     out[nout++] = path;
