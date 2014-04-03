@@ -145,12 +145,11 @@ EOF
     tar czf $chksum.tgz $chksum
     rm -r -f $chksum
     scp -q $chksum.tgz $rhost: && rm -f $chksum.tgz
-    ssh $rhost sh -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -n -f sh $test.sh\""
+    ssh $rhost sh -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -n -f nice -19 sh $test.sh\""
     scp -q $rhost:$chksum.tgz $chksum.tgz
     ssh $rhost rm -r -f $chksum.tgz
     tar xmzf $chksum.tgz
-    rm -f $chksum.tgz $test.c $test.*ref pid
-    expirecache
+    rm -f $chksum.tgz $test.c $test.*ref
     if test -f fail; then
 	echo
 	echo \[$test.$ext\]
@@ -181,6 +180,9 @@ EOF
 	cat .tmp >> warn
 	rm -f .tmp
     fi
+    # Complete
+    rm -f pid.$ext
+    expirecache
 }
 
 checksum()
@@ -212,18 +214,21 @@ fi
 # check sum for test.s
 if test -f $test.$ext && checksum $test.s $test.$ext; then
     touch $test.$ext
-    echo "make: '$test' is up to date."
+    echo "make: '$test.$ext' is up to date."
     if test -n "$SANDBOX" && $source_modified; then
 	rm -f $test/warn && make $test/plots
     fi
 else
-    if test -n "$SANDBOX" -a -f $test/pid; then
-	echo Killing `cat $test/pid`
-	kill `cat $test/pid`
+    if test -n "$SANDBOX" -a -f $test/pid.$ext; then
+	echo Killing `cat $test/pid.$ext`
+	kill `cat $test/pid.$ext`
     fi
 
-    rm -r -f $test.$ext $test/*
+    rm -f $test.$ext $test/pass \
+	$test/fail $test/warn $test/plot.png $test/plots
+    $GENSUM $test.c $test.s > $test.$ext
     expirecache
+
     mkdir -p $test && cp -f $test.c $test
     awk -f $BASILISK/gnuplot.awk < $test.c > $test/plots
     cp -f $test.*ref $test 2> /dev/null || true
@@ -236,14 +241,11 @@ else
 
     if test -n "$SANDBOX"; then
         ( remotely $SANDBOX ) &
-	echo $! > $test/pid
+	echo $! > $test/pid.$ext
     else
 	locally
 	rm -f $test/plots
     fi
-
-    $GENSUM $test.c > $test.$ext
-    $GENSUM $test.s >> $test.$ext
 fi
 
 if test -f $test/warn; then
@@ -253,7 +255,7 @@ if test -f $test/fail; then
     cat $test/fail
     rm -f $test.$ext
     exit 1
-elif test -f $test/pid; then
-    echo \[$test.$ext on $SANDBOX \(`cat $test/pid`\)\]
+elif test -f $test/pid.$ext; then
+    echo \[$test.$ext on $SANDBOX \(`cat $test/pid.$ext`\)\]
     echo "  running..."
 fi
