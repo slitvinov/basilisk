@@ -40,7 +40,13 @@ int main()
 }
 
 /**
-This gives this figure where "exact" uses `c` and `s` and "VOF" uses
-only `c`.
+This gives this figure where "exact" uses *c* and *s* and "VOF" uses
+only *c*.
 
-![Exact and VOF-reconstucted interface](fractions/plot.png) */
+~~~gnuplot Exact and VOF-reconstucted interface
+set output 'plot.png'
+set size ratio -1
+set key out
+plot 'out' w l t "exact", 'log' w l t "VOF"
+~~~
+*/
