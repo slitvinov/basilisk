@@ -87,8 +87,38 @@ graphs in a post-processing step.
 
 This step is not automatically executed when doing *make
 test.tst*. This allows for example to run the test suite on *bare
-bones* systems which do not have gnuplot installed. To run this step,
-one needs to do
+bones* systems which do not have gnuplot installed.
+
+The makefile system knows about two kinds of graphics: *"inline" plots*
+and *"offline" plots*.
+
+### Inline plots
+
+These are generated using gnuplot commands embedded directly in
+the documentation comments of the source code (*mytest.c*). Using 
+the standard wiki syntax for scripts these commands appear as
+
+    ~~~gnuplot Caption
+    set output 'plotname.png'
+    ...
+    ~~~
+
+and are replaced by the corresponding figure when the page is displayed
+in the wiki. Note that the *set output* command is compulsory.
+
+To generate the figures from the command line, just do
+
+~~~bash
+make mytest/plots
+~~~
+
+### Offline plots
+
+Alternatively, one can put the gnuplot commands in a separate 
+*mytest.plot* file. Note that this method offers few advantages
+compared to "inline plots" (the prefered option).
+
+To generate the corresponding plots, one can the do
 
 ~~~bash
 make bump2D1/plot.png
