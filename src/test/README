@@ -118,7 +118,7 @@ Alternatively, one can put the gnuplot commands in a separate
 *mytest.plot* file. Note that this method offers few advantages
 compared to "inline plots" (the prefered option).
 
-To generate the corresponding plots, one can the do
+To generate the corresponding plots, one can then do
 
 ~~~bash
 make bump2D1/plot.png
