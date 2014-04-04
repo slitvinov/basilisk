@@ -181,7 +181,7 @@ EOF
 	rm -f .tmp
     fi
     # Complete
-    rm -f pid.$ext
+    rm -f *pid.$ext
     expirecache
 }
 
