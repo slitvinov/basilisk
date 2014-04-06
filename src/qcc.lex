@@ -2054,7 +2054,7 @@ int main (int argc, char ** argv)
 	     "  int64_t lnan = 0x7ff0000000000001;\n"
 	     "  assert (sizeof (int64_t) == sizeof (double));\n"
 	     "  memcpy (&undefined, &lnan, sizeof (double));\n"
-	     "  feenableexcept (FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW);\n"
+	     "  feenableexcept (FE_DIVBYZERO|FE_INVALID);\n"
 	     "}\n",
 	     fout);
 #else
