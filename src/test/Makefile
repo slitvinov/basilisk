@@ -19,15 +19,15 @@ laplacian.tst: laplacian.ctst
 lidmac.c: lid.c
 	ln -s lid.c lidmac.c
 
-lidmac.tst: lidmac.s
+lidmac.tst: lidmac.c
 	@CFLAGS="$(CFLAGS) -DMAC=1" $(BASILISK)/runtest lidmac.tst
 
 lid.tst: lidmac.tst
 
-nonlinear.tst: nonlinear.s
+nonlinear.tst: nonlinear.c
 	@LIBS="-lgsl -lgslcblas" $(BASILISK)/runtest nonlinear.tst
 
-ponds.tst: ponds.s
+ponds.tst: ponds.c
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest ponds.tst
 
 poisson.tst: poisson.ctst
@@ -36,7 +36,7 @@ reversed.tst: reversed.ctst
 
 rotate.tst: rotate.ctst
 
-terrain.tst: terrain.s
+terrain.tst: terrain.c
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst
 
 include $(BASILISK)/Makefile.defs
