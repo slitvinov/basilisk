@@ -44,7 +44,7 @@ tar xzf basilisk.tar.gz
 ~~~
 
 If you don't have `wget`, just follow the
-[link](http://basilisk.fr/basilisk/basilisk.tar.gz), save the file or
+[link](/basilisk/basilisk.tar.gz), save the file or
 extract the archive where you want to install it.
 
 ### Compilation
