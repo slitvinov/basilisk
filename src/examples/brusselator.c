@@ -154,8 +154,9 @@ event integration (i++)
 We get the following stable [Turing
 patterns](http://en.wikipedia.org/wiki/The_Chemical_Basis_of_Morphogenesis).
 
---------------------------------- ---------------------------------------------------- ---------------------------------
-  ![](brusselator/mu-0.04.png)             ![](brusselator/mu-0.1.png)                    ![](brusselator/mu-0.98.png)
-     $\mu=0.04$                                $\mu=0.1$ (stripes)                            $\mu=0.98$ (hexagons)     
-                                    [Animation of the transitions](brusselator/f.mpg)
---------------------------------- ---------------------------------------------------- --------------------------------- */
+|:------:|:-----:|:-----:|
+| ![](brusselator/mu-0.04.png) | ![](brusselator/mu-0.1.png) | ![](brusselator/mu-0.98.png) |
+| $\mu=0.04$                   |    $\mu=0.1$ (stripes)      |    $\mu=0.98$ (hexagons)     |
+
+  : [Animation of the transitions](brusselator/f.mpg)
+*/
