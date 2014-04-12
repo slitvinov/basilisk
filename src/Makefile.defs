@@ -22,6 +22,8 @@ clean:
 
 .PRECIOUS: %.prof
 
+.DELETE_ON_ERROR:
+
 %.tst: %.c Makefile $(QCC)
 	@PNG=$(PNG) $(BASILISK)/runtest $@
 

@@ -4,7 +4,7 @@
 CC99 = gcc -std=c99 -D_XOPEN_SOURCE=700 -DHAVE_GETOPT_H=1
 
 # other useful (non-standard) flags
-CFLAGS += -Wall
+CFLAGS += -g -Wall
 
 # if you have valgrind, otherwise comment this out
 # VALGRIND = valgrind -q --tool=memcheck

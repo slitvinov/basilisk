@@ -12,55 +12,53 @@ dir=`echo $PWD | sed "s:$BASILISK_WIKI/::"`
 
 script()
 {
-    cat <<EOF
-rm -f $test.c
-if test -f fail; then
-    exit 1
-fi
-cat warn
-test -s warn || rm -f warn
+    rm -f $test.c
+    if test -f fail; then
+	return 1
+    fi
+    cat warn
+    test -s warn || rm -f warn
 
-pass=true
-if test -n "$valgrind" -o -z `which gdb`; then
-  if ! $valgrind ./$test 2> $log > $out; then
-     pass=false
-  fi
-else
-  if ! gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log; then
-     pass=false
-     awk '
+    pass=true
+    if test -n "$valgrind" -o -z `which gdb`; then
+	if ! $valgrind ./$test 2> $log > $out; then
+	    pass=false
+	fi
+    else
+	if ! gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log; then
+	    pass=false
+	    awk '
      {
        if (NF > 0)
-         a[nb++] = \$0;
+         a[nb++] = $0;
      }
-     / at .*:[0-9]*\$/ {
+     / at .*:[0-9]*$/ {
        for (i = 0; i < nb - 1; i++)
-	 print \$(NF) ":error: " a[i];
+	 print $(NF) ":error: " a[i];
      }
      ' < gdb.log >> $log
-  fi
-  rm -f gdb.log
-fi
+	fi
+	rm -f gdb.log
+    fi
 
-if \$pass; then
-    if test -f $test.$ref; then
-      ref=$ref
+    if $pass; then
+	if test -f $test.$ref; then
+	    ref=$ref
+	else
+	    ref=ref
+	fi
+	if test -f $test.$ref; then
+            echo diff $log $test.$ref > fail
+            diff $log $test.$ref >> fail && rm -f fail
+            rm -f $test.$ref
+	fi
     else
-      ref=ref
+	cp -f $log fail
     fi
-    if test -f $test.\$ref; then
-        echo diff $log $test.\$ref > fail
-        diff $log $test.\$ref >> fail && rm -f fail
-        rm -f $test.\$ref
+    if test -f fail; then
+	return 1
     fi
-else
-    cp -f $log fail
-fi
-if test -f fail; then
-    exit 1
-fi
-touch pass
-EOF
+    touch pass
 }
 
 expirecache()
@@ -75,7 +73,7 @@ locally()
     qcc $CFLAGS -o $test/$test $test.c $LIBS -lm > $test/warn 2>&1 \
 	|| mv -f $test/warn $test/fail
     cd $test
-    script | sh
+    script
     expirecache
     cd ..
 }
