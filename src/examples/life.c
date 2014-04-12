@@ -52,21 +52,12 @@ event movie (i += 5; i < 1000)
 {
 
   /**
-  The filename is `age-000.ppm`, `age-001.ppm` etc... */
-
-  char name[80];
-  static int nf = 0;
-  sprintf (name, "age-%03d.ppm", nf++);
-  FILE * fp = fopen (name, "w");
-
-  /**
   We mask out dead cells (i.e. cells for which `age` is zero). */
 
   scalar m[];
   foreach()
     m[] = age[] ? 1 : -1;
-  output_ppm (age, fp, 512, mask = m, linear = false );
-  fclose (fp);
+  output_ppm (age, n = 512, mask = m, linear = false );
 }
 
 /**
@@ -76,12 +67,10 @@ GIF animation. */
 event gif (t = end) {
 
   /**
-  We first convert each PPM file into GIF (this is the most
+  We first convert each PPM image into GIF (this is the most
   time-consuming operation!)... */
 
-  system ("for f in *.ppm; do"
-	  "  convert $f `basename $f .ppm`.gif && rm -f $f;"
-	  "done;"
+  system ("convert out age-%04d.gif && rm -f out;"
 
 	  /**
 	  ... then use `gifsicle` to create the final compressed
