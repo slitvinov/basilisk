@@ -134,12 +134,13 @@ void output_matrix (struct OutputMatrix p)
 /**
 ## Colormaps
 
-Colormaps are arrays of (127) red, green, blue triplets. For the
-moment we only use the "jet" colormap. */
+Colormaps are arrays of (127) red, green, blue triplets. */
 
 #define NCMAP 127
 
-void colormap_jet (double cmap[NCMAP][3])
+typedef void (* colormap) (double cmap[NCMAP][3]);
+
+void jet (double cmap[NCMAP][3])
 {
   for (int i = 0; i < NCMAP; i++) {
     cmap[i][0] = 
@@ -160,8 +161,67 @@ void colormap_jet (double cmap[NCMAP][3])
   }
 }
 
+void cool_warm (double cmap[NCMAP][3])
+{
+  /* diverging cool-warm from:
+   *  http://www.sandia.gov/~kmorel/documents/ColorMaps/CoolWarmFloat33.csv
+   * see also:
+   *  Diverging Color Maps for Scientific Visualization (Expanded)
+   *  Kenneth Moreland
+   */
+  static double basemap[33][3] = {
+    {0.2298057,   0.298717966, 0.753683153},
+    {0.26623388,  0.353094838, 0.801466763},
+    {0.30386891,  0.406535296, 0.84495867},
+    {0.342804478, 0.458757618, 0.883725899},
+    {0.38301334,  0.50941904,  0.917387822},
+    {0.424369608, 0.558148092, 0.945619588},
+    {0.46666708,  0.604562568, 0.968154911},
+    {0.509635204, 0.648280772, 0.98478814},
+    {0.552953156, 0.688929332, 0.995375608},
+    {0.596262162, 0.726149107, 0.999836203},
+    {0.639176211, 0.759599947, 0.998151185},
+    {0.681291281, 0.788964712, 0.990363227},
+    {0.722193294, 0.813952739, 0.976574709},
+    {0.761464949, 0.834302879, 0.956945269},
+    {0.798691636, 0.849786142, 0.931688648},
+    {0.833466556, 0.860207984, 0.901068838},
+    {0.865395197, 0.86541021,  0.865395561},
+    {0.897787179, 0.848937047, 0.820880546},
+    {0.924127593, 0.827384882, 0.774508472},
+    {0.944468518, 0.800927443, 0.726736146},
+    {0.958852946, 0.769767752, 0.678007945},
+    {0.96732803,  0.734132809, 0.628751763},
+    {0.969954137, 0.694266682, 0.579375448},
+    {0.966811177, 0.650421156, 0.530263762},
+    {0.958003065, 0.602842431, 0.481775914},
+    {0.943660866, 0.551750968, 0.434243684},
+    {0.923944917, 0.49730856,  0.387970225},
+    {0.89904617,  0.439559467, 0.343229596},
+    {0.869186849, 0.378313092, 0.300267182},
+    {0.834620542, 0.312874446, 0.259301199},
+    {0.795631745, 0.24128379,  0.220525627},
+    {0.752534934, 0.157246067, 0.184115123},
+    {0.705673158, 0.01555616,  0.150232812}	
+  };
+  
+  for (int i = 0; i < NCMAP; i++) {
+    double x = i*(32 - 1e-10)/(NCMAP - 1);
+    int j = x; x -= j;
+    for (int k = 0; k < 3; k++)
+      cmap[i][k] = (1. - x)*basemap[j][k] + x*basemap[j+1][k];
+  }
+}
+
+void gray (double cmap[NCMAP][3])
+{
+  for (int i = 0; i < NCMAP; i++)
+    for (int k = 0; k < 3; k++)
+      cmap[i][k] = i/(NCMAP - 1.);
+}
+
 /**
-Given a colormap, a minimum and maximum value, the this function
+Given a colormap and a minimum and maximum value, this function
 returns the red/green/blue triplet corresponding to *val*. */
 
 typedef struct {
@@ -239,7 +299,11 @@ first-order.
 
 *mask*
 : if set, this field will be used to mask out (in black), the regions 
-of the domain for which *mask* is negative. */
+of the domain for which *mask* is negative. 
+
+*map*
+: the colormap: *jet*, *cool_warm* or *gray*. Default is *jet*.
+*/
 
 struct OutputPPM {
   scalar f;
@@ -250,6 +314,7 @@ struct OutputPPM {
   bool linear;
   double box[2][2];
   scalar mask;
+  colormap map;
 };
 
 void output_ppm (struct OutputPPM p)
@@ -266,6 +331,8 @@ void output_ppm (struct OutputPPM p)
     p.box[0][0] = X0;      p.box[0][1] = Y0;
     p.box[1][0] = X0 + L0; p.box[1][1] = Y0 + L0;
   }
+  if (!p.map)
+    p.map = jet;
 
   double fn = p.n;
   double Delta = (p.box[1][0] - p.box[0][0])/fn;
@@ -273,7 +340,7 @@ void output_ppm (struct OutputPPM p)
   
   color ** ppm = matrix_new (ny, p.n, sizeof(color));
   double cmap[NCMAP][3];
-  colormap_jet (cmap);
+  p.map (cmap);
   OMP_PARALLEL()
   OMP(omp for schedule(static))
   for (int j = 0; j < ny; j++) {
