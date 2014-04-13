@@ -1,3 +1,4 @@
 * [The 2004 Indian Ocean tsunami](tsunami.c)
 * [Coupled reaction–diffusion equations: the Brusselator](brusselator.c)
+* [The complex Ginzburg--Landau equation](ginzburg-landau.c)
 * [Conway’s game of life](life.c)

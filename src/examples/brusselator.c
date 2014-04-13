@@ -44,9 +44,8 @@ mgstats mgd1, mgd2;
 /**
 ## Parameters
 
-We change the size of the domain `L0` and choose a timestep (which
-ensures the stability of the reactive terms). We also set the
-tolerance on the implicit diffusion solver. */
+We change the size of the domain `L0` and set the tolerance of the
+implicit diffusion solver. */
 
 int main()
 {
