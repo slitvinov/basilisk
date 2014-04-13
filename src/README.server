@@ -25,3 +25,43 @@ export PATH=$PATH:$HOME/bin
 # howto compile C99 programs
 export CC99="gcc -O2 -Wall -std=c99 -D_XOPEN_SOURCE=700 -DHAVE_GETOPT_H=1 -D_GNU_SOURCE=1"
 ~~~
+
+If you also intend to generate graphics etc... on the server, do
+
+~~~bash
+sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind gifsicle
+~~~
+
+## Using the server
+
+You first need to allow the client to connect to the server through
+SSH. This implies adding the SSH public key of the client account to
+the "authorized keys" on the server.
+
+You can then do (on the client), something like:
+
+~~~bash
+SANDBOX=basilisk@server.domain.net make simulation.tst
+~~~
+
+You should then get
+
+~~~bash
+qcc -g -O2 -g -Wall -o simulation/simulation simulation.c -lm
+[simulation.tst on basilisk@server.domain.net (12725)]
+  running...
+~~~
+
+If you then do `ls simulation/*pid*`, you will see two files:
+*pid.tst* and *tspid.tst*, they contain the PID of the process running
+on the client and on the server respectively. When the simulation
+completes on the server, data are copied to the client, both processes
+terminate and these `*pid*` files are removed.
+
+If you modify your simulation and redo `make` as above, before the old
+simulation has completed, the old processes will be killed and only
+the new simulation will run on the server.
+
+The status of the completed simulation is indicated by either an
+(empty) *pass* file (in the simulation directory), or a *fail* file
+containing the error messages.

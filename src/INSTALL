@@ -97,13 +97,14 @@ echo "export PATH=$PATH:$PWD" >> ~/.bashrc
 - smpeg-plaympeg
 - graphviz
 - valgrind
+- gifsicle
 
 and also
 [gprof2dot](http://code.google.com/p/jrfonseca/wiki/Gprof2Dot). On a
 Debian-like system you just need to do
 
 ~~~bash
-sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind
+sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind gifsicle
 ~~~
 
 ## Getting started
