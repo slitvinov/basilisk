@@ -2,3 +2,7 @@
 * [Coupled reaction–diffusion equations: the Brusselator](brusselator.c)
 * [The complex Ginzburg--Landau equation](ginzburg-landau.c)
 * [Conway’s game of life](life.c)
+
+## See also
+
+* [Test cases](/src/test/README)
