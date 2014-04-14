@@ -1,11 +1,13 @@
 # Examples
 
-If you would like to run the examples, first read [*"Running and creating test cases (and
+If you would like to run the examples, first read [*"Running and
+creating test cases (and
 examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 
 * [The 2004 Indian Ocean tsunami](tsunami.c)
 * [Coupled reaction–diffusion equations: the Brusselator](brusselator.c)
 * [The complex Ginzburg--Landau equation](ginzburg-landau.c)
+* [Decaying two-dimensional turbulence](turbulence.c)
 * [Conway’s game of life](life.c)
 
 ## See also
