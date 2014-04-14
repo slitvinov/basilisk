@@ -781,7 +781,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 	       "  return ret; "
 	       "} ");
     fprintf (yyout, 
-	     "static int %s (const int i, const double t) { ",
+	     "static int %s (const int i, const double t, Event * _ev) { ",
 	     eventid[nevents]);
     assert (nevents < EVMAX);
     nexpr[nevents] = inevent;
@@ -934,7 +934,7 @@ end_foreach{ID}*{SP}*"()" {
 	     "  *ip = i; *tp = t; "
 	     "  return ret; "
 	     "} "
-	     "static int %s_expr%d (int * ip, double * tp) { "
+	     "static int %s_expr%d (int * ip, double * tp, Event * _ev) { "
 	     "  int i = *ip; double t = *tp; "
 	     "  int ret = (", eventid[nevents], inevent++);
   }
@@ -1440,7 +1440,7 @@ event{WS}+{ID}+{WS}*[(] {
     eventchild[nevents] = lastfound;
   }
   fprintf (yyout, 
-	   "static int %s_expr%d (int * ip, double * tp) {"
+	   "static int %s_expr%d (int * ip, double * tp, Event * _ev) {"
 	   "  int i = *ip; double t = *tp;"
 	   "  int ret = (", id, inevent++);
   eventscope = scope; eventpara = ++para;
@@ -1812,7 +1812,7 @@ FILE * dopen (const char * fname, const char * mode)
 void write_event (int i, FILE * fout)
 {
   char * id = eventid[i];
-  fprintf (fout, "  { 0, %d, %s, {", nexpr[i], id);
+  fprintf (fout, "  event_register ((Event){ 0, %d, %s, {", nexpr[i], id);
   int j;
   for (j = 0; j < nexpr[i] - 1; j++)
     fprintf (fout, "%s_expr%d, ", id, j);
@@ -1825,7 +1825,7 @@ void write_event (int i, FILE * fout)
     fprintf (fout, "%s_array,\n", id);
   else
     fprintf (fout, "((void *)0),\n");
-  fprintf (fout, "    \"%s\", %d, \"%s\"},\n", eventfile[i], 
+  fprintf (fout, "    \"%s\", %d, \"%s\"});\n", eventfile[i], 
 	   nolineno ? 0 : eventline[i], id);
 }
 
@@ -1848,20 +1848,28 @@ void compdir (FILE * fin, FILE * fout, char * grid)
   fprintf (fout,
 	   "int datasize = %d*sizeof (double);\n",
 	   nvar);
-  /* events */
+  /* event functions */
   for (int i = 0; i < nevents; i++) {
     char * id = eventid[i];
-    fprintf (fout, "static int %s (const int i, const double t);\n", id);
+    fprintf (fout, "static int %s (const int i, const double t, Event * _ev);\n", id);
     for (int j = 0; j < nexpr[i]; j++)
       fprintf (fout,
-	       "static int %s_expr%d (int * ip, double * tp);\n",
+	       "static int %s_expr%d (int * ip, double * tp, Event * _ev);\n",
 	       id, j);
     if (eventarray[i])
       fprintf (fout, "static %s %s_array[] = %s,-1};\n", 
 	       eventarray[i] == 'i' ? "int" : "double", id,
 	       eventarray_elems[i]);
   }
-  fputs ("Event Events[] = {\n", fout);
+  /* boundaries */
+  for (int i = 0; i < nsetboundary; i++)
+    fprintf (fout, "static void _set_boundary%d (void);\n", 
+	     boundaryindex[i]);
+  /* init_solver() */
+  fputs ("void init_solver (void) {\n", fout);
+  /* events */
+  fputs ("  Events = malloc (sizeof (Event));\n"
+	 "  Events[0].last = 1;\n", fout);
   for (int last = 0; last <= 1; last++)
     for (int i = 0; i < nevents; i++)
       if (eventchild[i] < 0 && eventlast[i] == last) {
@@ -1873,13 +1881,6 @@ void compdir (FILE * fin, FILE * fout, char * grid)
 	  j = eventchild[j];
 	} while (j >= 0);
       }
-  fputs ("  { 1 }\n};\n", fout);
-  /* boundaries */
-  for (int i = 0; i < nsetboundary; i++)
-    fprintf (fout, "static void _set_boundary%d (void);\n", 
-	     boundaryindex[i]);
-  /* methods */
-  fputs ("void init_solver (void) {\n", fout);
   /* scalar methods */
   fputs ("  _method = calloc (datasize/sizeof(double), sizeof (Methods));\n", 
 	 fout);
@@ -1931,7 +1932,7 @@ void compdir (FILE * fin, FILE * fout, char * grid)
   }
   for (int i = 0; i < nsetboundary; i++)
     fprintf (fout, "  _set_boundary%d();\n", boundaryindex[i]);
-  fputs ("  init_events();\n}\n", fout);
+  fputs ("}\n", fout);
   fclose (fout);
 }
 

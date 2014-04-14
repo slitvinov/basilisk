@@ -208,11 +208,11 @@ vector (* init_face_vector) (vector, const char *);
 // events 
 
 typedef struct _Event Event;
-typedef int (* Expr) (int *, double *);
+typedef int (* Expr) (int *, double *, Event *);
 
 struct _Event {
   int last, nexpr;
-  int (* action) (const int, const double);
+  int (* action) (const int, const double, Event *);
   Expr expr[3];
   int * arrayi;
   double * arrayt;
@@ -221,10 +221,14 @@ struct _Event {
   char * name;
   double t;
   int i, a;
+  void * data;
 };
+
+static Event * Events = NULL; // all events
 
 double tnext = HUGE; // time of next event
 void init_events (void);
+void event_register (Event event);
 
 // boundary conditions for each direction/variable
 

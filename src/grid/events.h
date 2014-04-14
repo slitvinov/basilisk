@@ -3,11 +3,94 @@
 #define INC  ev->expr[2]
 #define END_EVENT 1234567890
 
+static void event_error (Event * ev, const char * s)
+{
+  fprintf (stderr, "%s:%d: error: %s\n", ev->file, ev->line, s);
+  exit (1);
+}
+
+static void init_event (Event * ev)
+{
+  if (ev->arrayi || ev->arrayt) {
+    ev->i = ev->t = -1;
+    if (ev->arrayi)
+      ev->i = ev->arrayi[0];
+    else 
+      ev->t = ev->arrayt[0];
+    ev->a = 1;
+    ev->expr[1] = NULL;
+  }
+  else {
+    if (ev->nexpr > 0) {
+      Expr init = NULL, cond = NULL, inc = NULL;
+      for (int j = 0; j < ev->nexpr; j++) {
+	int i = -123456; double t = i;
+	(* ev->expr[j]) (&i, &t, ev);
+	if (i == -123456 && t == -123456) {
+	  /* nothing done to i and t: this must be the condition */
+	  if (cond)
+	    event_error (ev, "events can only use a single condition");
+	  cond = ev->expr[j];
+	}
+	else {
+	  /* this is either an initialisation or an increment */
+	  int i1 = i; double t1 = t;
+	  (* ev->expr[j]) (&i1, &t1, ev);
+	  if (i1 == i && t1 == t) {
+	    /* applying twice does not change anything: this is an
+	       initialisation */
+	    if (init)
+	      event_error (ev, "events can only use a single initialisation");
+	    init = ev->expr[j];
+	  }
+	  else {
+	    /* this is the increment */
+	    if (inc)
+	      event_error (ev, "events can only use a single increment");
+	    inc = ev->expr[j];
+	  }
+	}
+      }
+      INIT = init;
+      COND = cond;
+      INC  = inc;
+      ev->nexpr = 0;
+    }
+    ev->i = ev->t = -1;
+    ev->a = 0;
+    if (INIT) {
+      (* INIT) (&ev->i, &ev->t, ev);
+      if (ev->i == END_EVENT || ev->t == END_EVENT) {
+	ev->i = END_EVENT; ev->t = -1;
+      }
+    }
+    else if (INC) {
+      (* INC) (&ev->i, &ev->t, ev);
+      if (ev->i != -1)
+	ev->i = 0;
+      if (ev->t != -1)
+	ev->t = 0;
+    }
+  }
+}
+
+void event_register (Event event) {
+  assert (Events);
+  int n = 0;
+  for (Event * ev = Events; !ev->last; ev++)
+    n++;
+  assert (!event.last);
+  Events[n] = event;
+  init_event (&Events[n]);
+  Events = realloc (Events, (n + 2)*sizeof (Event));
+  Events[n + 1].last = true;
+}
+
 static int event_cond (Event * ev, int i, double t)
 {
   if (!COND)
     return true;
-  return (* COND) (&i, &t);
+  return (* COND) (&i, &t, ev);
 }
 
 enum { event_done, event_alive, event_stop };
@@ -30,7 +113,7 @@ static int event_do (Event * ev, int i, double t)
 	     root ? &ev->file[strlen(BASILISK)] : ev->file, 
 	     ev->line);
 #endif
-    if ((* ev->action) (i, t)) {
+    if ((* ev->action) (i, t, ev)) {
       event_finished (ev);
       return event_stop;
     }
@@ -45,7 +128,7 @@ static int event_do (Event * ev, int i, double t)
 	return event_finished (ev);
     }
     else if (INC) {
-      (* INC) (&ev->i, &ev->t);
+      (* INC) (&ev->i, &ev->t, ev);
       if (!event_cond (ev, i + 1, ev->t))
 	return event_finished (ev);
     }
@@ -54,84 +137,11 @@ static int event_do (Event * ev, int i, double t)
   return event_alive;
 }
 
-static void event_error (Event * ev, const char * s)
-{
-  fprintf (stderr, "%s:%d: error: %s\n", ev->file, ev->line, s);
-  exit (1);
-}
-
-extern Event Events[];
-
-void init_events (void)
-{
-  for (Event * ev = Events; !ev->last; ev++) 
-    if (ev->arrayi || ev->arrayt) {
-      ev->i = ev->t = -1;
-      if (ev->arrayi)
-	ev->i = ev->arrayi[0];
-      else 
-	ev->t = ev->arrayt[0];
-      ev->a = 1;
-      ev->expr[1] = NULL;
-    }
-    else {
-      if (ev->nexpr > 0) {
-	Expr init = NULL, cond = NULL, inc = NULL;
-	for (int j = 0; j < ev->nexpr; j++) {
-	  int i = -123456; double t = i;
-	  (* ev->expr[j]) (&i, &t);
-	  if (i == -123456 && t == -123456) {
-	    /* nothing done to i and t: this must be the condition */
-	    if (cond)
-	      event_error (ev, "events can only use a single condition");
-	    cond = ev->expr[j];
-	  }
-	  else {
-	    /* this is either an initialisation or an increment */
-	    int i1 = i; double t1 = t;
-	    (* ev->expr[j]) (&i1, &t1);
-	    if (i1 == i && t1 == t) {
-	      /* applying twice does not change anything: this is an
-		 initialisation */
-	      if (init)
-		event_error (ev, "events can only use a single initialisation");
-	      init = ev->expr[j];
-	    }
-	    else {
-	      /* this is the increment */
-	      if (inc)
-		event_error (ev, "events can only use a single increment");
-	      inc = ev->expr[j];
-	    }
-	  }
-	}
-	INIT = init;
-	COND = cond;
-	INC  = inc;
-	ev->nexpr = 0;
-      }
-      ev->i = ev->t = -1;
-      if (INIT) {
-	(* INIT) (&ev->i, &ev->t);
-	if (ev->i == END_EVENT || ev->t == END_EVENT) {
-	  ev->i = END_EVENT; ev->t = -1;
-	}
-      }
-      else if (INC) {
-	(* INC) (&ev->i, &ev->t);
-	if (ev->i != -1)
-	  ev->i = 0;
-	if (ev->t != -1)
-	  ev->t = 0;
-      }
-  }
-}
-
 static void end_event_do (int i, double t)
 {
   for (Event * ev = Events; !ev->last; ev++)
     if (ev->i == END_EVENT)
-      ev->action (i, t);
+      ev->action (i, t, ev);
 }
 
 int events (int i, double t)
