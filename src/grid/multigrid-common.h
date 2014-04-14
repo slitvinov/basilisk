@@ -39,9 +39,9 @@ void restriction (scalar * list)
   for (scalar s in list) 
     if (!is_constant(s)) {
       if (s.face)
-	lists = vectors_append (lists, s.v);
+	lists = vectors_add (lists, s.v);
       else
-	listc = list_append (listc, s);
+	listc = list_add (listc, s);
     }
   if (lists)
     boundary_normal (lists);

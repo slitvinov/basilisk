@@ -262,9 +262,9 @@ void boundary (scalar * list)
   vector * lists = NULL;
   for (scalar s in list) {
     if (s.face)
-      lists = vectors_append (lists, s.v);
+      lists = vectors_add (lists, s.v);
     else
-      listc = list_append (listc, s);
+      listc = list_add (listc, s);
   }
   if (listc) {
     boundary_centered (listc);
@@ -294,7 +294,7 @@ void cartesian_boundary_tangent (vector * list)
   vector * listv = NULL;
   for (vector v in list)
     if (!is_constant(v.x))
-      listv = vectors_append (listv, v);
+      listv = vectors_add (listv, v);
   foreach_dimension() {
     for (int d = top; d <= bottom; d++)
       foreach_boundary_face (d)

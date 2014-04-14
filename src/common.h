@@ -78,14 +78,19 @@ int list_len (scalar * list)
 
 scalar * list_append (scalar * list, scalar s)
 {
-  for (scalar t in list)
-    if (t == s)
-      return list;
   int len = list_len (list);
   list = realloc (list, sizeof (scalar)*(len + 2));
   list[len] = s;
   list[len + 1] = -1;
   return list;
+}
+
+scalar * list_add (scalar * list, scalar s)
+{
+  for (scalar t in list)
+    if (t == s)
+      return list;
+  return list_append (list, s);
 }
 
 int list_lookup (scalar * l, scalar s)
@@ -124,14 +129,19 @@ int vectors_len (vector * list)
 
 vector * vectors_append (vector * list, vector v)
 {
-  for (vector w in list)
-    if (w.x == v.x && w.y == v.y)
-      return list;
   int len = vectors_len (list);
   list = realloc (list, sizeof (vector)*(len + 2));
   list[len] = v;
   list[len + 1] = (vector){-1,-1};
   return list;
+}
+
+vector * vectors_add (vector * list, vector v)
+{
+  for (vector w in list)
+    if (w.x == v.x && w.y == v.y)
+      return list;
+  return vectors_append (list, v);
 }
 
 vector * vectors_copy (vector * l)

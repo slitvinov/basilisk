@@ -75,6 +75,7 @@ void advection (struct Advection p)
       lsrc = list_append (lsrc, zero);
   }
 
+  assert (list_len(p.tracers) == list_len(lsrc));
   scalar f, src;
   for (f,src in p.tracers,lsrc) {
     vector flux[];

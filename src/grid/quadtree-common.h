@@ -196,7 +196,7 @@ astats adapt_wavelet (struct Adapt p)
   scalar * listc = NULL;
   for (scalar s in p.list)
     if (s.coarsen != refine_none)
-      listc = list_append (listc, s);
+      listc = list_add (listc, s);
 
   // refinement
   foreach_cell() {
@@ -334,7 +334,7 @@ void halo_restriction_flux (vector * list)
   vector * listv = NULL;
   for (vector v in list)
     if (!is_constant(v.x))
-      listv = vectors_append (listv, v);
+      listv = vectors_add (listv, v);
 
   if (listv)
     foreach_halo_fine_to_coarse()
@@ -392,9 +392,9 @@ void quadtree_boundary_centered (scalar * list)
   scalar * listdef = NULL, * listc = NULL;
   for (scalar s in list) {
     if (s.coarsen == coarsen_average)
-      listdef = list_append (listdef, s);
+      listdef = list_add (listdef, s);
     else if (s.coarsen != refine_none)
-      listc = list_append (listc, s);
+      listc = list_add (listc, s);
   }
 
   if (listdef || listc) {
@@ -419,7 +419,7 @@ void quadtree_boundary_centered (scalar * list)
   scalar * listr = NULL;
   for (scalar s in list)
     if (s.refine != refine_none)
-      listr = list_append (listr, s);
+      listr = list_add (listr, s);
 
   if (listr) {
     halo_prolongation (depth(), listr);
@@ -442,7 +442,7 @@ void quadtree_boundary_tangent (vector * listv)
   vector * list = NULL;
   for (vector v in listv)
     if (!is_constant(v.x))
-      list = vectors_append (list, v);
+      list = vectors_add (list, v);
   if (!list)
     return;
 
