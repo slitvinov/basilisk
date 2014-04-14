@@ -11,10 +11,8 @@ vorticity--streamfunction formulation. */
 The domain is square, of size unity and centered on the origin. The
 resolution is constant at $256^2$. */
 
-#define LEVEL 8
-
 int main() {
-  N = 1 << LEVEL;
+  N = 256;
   X0 = Y0 = -0.5;
   run();
 }
