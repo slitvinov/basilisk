@@ -51,7 +51,7 @@
   int boundarycomponent, nboundary = 0, nsetboundary = 0;
   int boundaryindex[80];
 
-  int infunction, infunctiondecl, functionscope, functionpara;
+  int infunction, infunctiondecl, functionscope, functionpara, inmain;
   char * return_type = NULL;
   FILE * dopen (const char * fname, const char * mode);
 
@@ -800,6 +800,10 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     ECHO;
   if (infunction && functionpara == 1 && scope == functionscope)
     infunction_declarations();
+  if (inmain == 1 && scope == 0) {
+    fputs (" init_solver(); ", yyout);
+    inmain = 2;
+  }
   scope++;
 }
 
@@ -807,6 +811,10 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   scope--;
   if (scope < 0)
     return yyerror ("mismatched '}'");
+  if (inmain == 2 && scope == 0) {
+    fputs (" free_solver(); ", yyout);
+    inmain = 0;
+  }    
   varpop();
   if (foreachdim && scope == foreachdim - 1) {
     if (scope != 0 || infunctionproto)
@@ -945,6 +953,8 @@ end_foreach{ID}*{SP}*"()" {
   else if (inreturn) {
     fputs ("; ", yyout);
     delete_automatic (0);
+    if (inmain == 2)
+      fputs (" free_solver(); ", yyout);
     fputs (" return _ret; }", yyout);
     inreturn = 0;
   }
@@ -1492,6 +1502,8 @@ end {
     if (debug)
       fprintf (stderr, "%s:%d: function '%s' returns '%s'\n", 
 	       fname, line, s1, yytext);
+    if (!strcmp (s1, "main") && !strcmp (yytext, "int"))
+      inmain = 1;
   }
   else
     REJECT;
@@ -1764,7 +1776,7 @@ int endfor (FILE * fin, FILE * fout)
   foreach_child = 0;
   inboundary = nboundary = nsetboundary = 0;
   infunction = 0;
-  infunctionproto = 0;
+  infunctionproto = inmain = 0;
   inarg = 0;
   boundaryheader = dopen ("_boundary.h", "w");
   int ret = yylex();

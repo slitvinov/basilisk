@@ -74,6 +74,11 @@ static void init_event (Event * ev)
   }
 }
 
+void init_events (void) {
+  for (Event * ev = Events; !ev->last; ev++)
+    init_event (ev);
+}
+
 void event_register (Event event) {
   assert (Events);
   int n = 0;

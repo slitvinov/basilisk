@@ -76,7 +76,7 @@ void cartesian_trash (void * alist)
 
 void init_grid (int n)
 {
-  init_solver();
+  init_events();
   Point * p = malloc(sizeof(Point));
   size_t len = (n + 2)*(n + 2)*datasize;
   p->n = n;
@@ -106,7 +106,6 @@ void free_grid (void)
   Point * p = grid;
   free (p->data);
   free (p);
-  free_solver();
 }
 
 Point locate (double xp, double yp)

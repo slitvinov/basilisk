@@ -161,7 +161,7 @@ void multigrid_trash (void * alist)
 
 void init_grid (int n)
 {
-  init_solver();
+  init_events();
   int r = 0;
   while (n > 1) {
     if (n % 2) {
@@ -207,7 +207,6 @@ void free_grid (void)
     free (m->d[l]);
   free(m->d);
   free(m);
-  free_solver();
 }
 
 Point locate (double xp, double yp)

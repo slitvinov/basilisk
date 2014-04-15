@@ -711,7 +711,7 @@ Point refine_cell (Point point, scalar * list);
 
 void init_grid (int n)
 {
-  init_solver();
+  init_events();
   int depth = 0;
   while (n > 1) {
     if (n % 2) {
@@ -767,7 +767,6 @@ void free_grid (void)
   free(q->halo);
   free(q->active);
   free(q);
-  free_solver();
 }
 
 void output_cells (FILE * fp);
