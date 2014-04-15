@@ -54,10 +54,16 @@ extern int py_register_event (PyObject * action, PyObject * i);
 class scalar(int):
     def __init__(self,i):
         self = i
-    def get(self,x,y=0):
-        return interpolate(self,x,y)
-    def set(self,f):
-        py_scalar_init(self,f)
+    def __setattr__(self, name, value):
+        if name == "f":
+            py_scalar_init(self,value)
+        else:
+            self.__dict__[name] = value
+    def f(self,x,y=0):
+        ret = interpolate(self,x,y)
+        if ret > 1e100:
+            ret = None
+        return ret
     def norm(self):
         return normf(self)
     def stats(self):
