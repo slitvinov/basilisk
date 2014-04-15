@@ -200,7 +200,7 @@ vector new_const_vector (const char * name, int i, double * val)
   return v;
 }
 
-scalar * clone (scalar * l)
+scalar * list_clone (scalar * l)
 {
   scalar * list = NULL;
   for (scalar s in l) {

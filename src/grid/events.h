@@ -57,7 +57,6 @@ static void init_event (Event * ev)
       ev->nexpr = 0;
     }
     ev->i = ev->t = -1;
-    ev->a = 0;
     if (INIT) {
       (* INIT) (&ev->i, &ev->t, ev);
       if (ev->i == END_EVENT || ev->t == END_EVENT) {

@@ -51,7 +51,7 @@ void run()
   int i = 0; long tnc = 0;
   while (events (i, t)) {
     // list of updates
-    scalar * updates = clone (evolving);
+    scalar * updates = list_clone (evolving);
     dt = dtnext (t, update (evolving, updates, DT));
     if (gradient != zero) {
       /* 2nd-order time-integration */
