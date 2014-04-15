@@ -2086,6 +2086,12 @@ int main (int argc, char ** argv)
 	cleanup (1, dir);
       }
       FILE * fout = dopen (cpp, "w");
+      if (swig)
+	fputs ("@include <Python.h>\n", fout);
+      fputs ("@if _XOPEN_SOURCE < 700\n"
+	     "  @undef _XOPEN_SOURCE\n"
+	     "  @define _XOPEN_SOURCE 700\n"
+	     "@endif\n", fout);
 #if _GNU_SOURCE
       fputs ("@include <stdint.h>\n"
 	     "@include <string.h>\n"

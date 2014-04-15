@@ -1,7 +1,7 @@
 # -*-Makefile-*-
 
 # how to launch the C99 compiler
-CC99 = xlc_r -qlanglvl=stdc99 -D_XOPEN_SOURCE=700
+CC99 = xlc_r -qlanglvl=stdc99
 
 # other useful (non-standard) flags
 CFLAGS +=

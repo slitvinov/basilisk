@@ -1,5 +1,3 @@
-#include <Python.h>
-
 int py_scalar_init (scalar s, PyObject * f) {
   if (!PyCallable_Check(f)) {
     fprintf (stderr, "parameter must be callable");
