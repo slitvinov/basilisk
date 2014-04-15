@@ -89,6 +89,16 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		grep 'not whitelisted' && rm -f $@ ) || cp -f $< $@
 	@test -f $@
 
+# python modules
+%.i: %.c $(QCC)
+	$(QCC) $(CFLAGS) -python -c $(MDFLAGS) -I$(PYTHONPATH) $<
+
+%.py: %.i
+	swig -python $*.i
+	$(CC) $(CFLAGS) -c $(MDFLAGS) -I$(PYTHONPATH) $*_wrap.c
+	$(CC) -shared $*.o $*_wrap.o -o _$*.so
+
+# generated makefiles
 Makefile.tests: Makefile $(BASILISK)/tests.sh
 	sh $(BASILISK)/tests.sh
 

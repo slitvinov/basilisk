@@ -11,3 +11,8 @@ VALGRIND = valgrind -q --tool=memcheck
 
 # if gnuplot supports pngcairo, otherwise comment this out
 PNG = pngcairo
+
+# configuration for python modules (requires swig)
+MDFLAGS = -fpic
+PYTHONPATH = /usr/include/python2.7
+

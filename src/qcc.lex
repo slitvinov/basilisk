@@ -1841,7 +1841,15 @@ void write_event (int i, FILE * fout)
 	   nolineno ? 0 : eventline[i], id);
 }
 
-void compdir (FILE * fin, FILE * fout, char * grid)
+static const char * typestr (var_t var) {
+  return (var.type == scalar ? "scalar" :
+	  var.type == vector ? "vector" :
+	  var.type == tensor ? "tensor" : "");
+}
+
+void compdir (FILE * fin, FILE * fout, FILE * swigfp, 
+	      char * swigname,
+	      char * grid)
 {
   if (endfor (fin, fout))
     cleanup (1, dir);
@@ -1946,6 +1954,31 @@ void compdir (FILE * fin, FILE * fout, char * grid)
     fprintf (fout, "  _set_boundary%d();\n", boundaryindex[i]);
   fputs ("}\n", fout);
   fclose (fout);
+  
+  /* SWIG interface */
+  if (swigfp) {
+    fputs ("\n%{\n", swigfp);
+    for (int i = varstack; i >= 0; i--) {
+      var_t var = _varstack[i];
+      if (var.i[0] >= 0 && !var.constant)
+	fprintf (swigfp, "  extern %s %s;\n", typestr (var), var.v);
+    }
+    fputs ("%}\n\n", swigfp);
+    for (int i = varstack; i >= 0; i--) {
+      var_t var = _varstack[i];
+      if (var.i[0] >= 0 && !var.constant)
+	fprintf (swigfp, "extern %s %s;\n", typestr (var), var.v);
+    }
+    fputs ("\n%pythoncode %{\n", swigfp);
+    for (int i = varstack; i >= 0; i--) {
+      var_t var = _varstack[i];
+      if (var.i[0] >= 0 && !var.constant)
+	fprintf (swigfp, "%s = %s(_%s.cvar.%s)\n",
+		 var.v, typestr (var), swigname, var.v);
+    }
+    fputs ("%}\n", swigfp);
+    fclose (swigfp);
+  }
 }
 
 int main (int argc, char ** argv)
@@ -1956,7 +1989,7 @@ int main (int argc, char ** argv)
   else
     strcpy (command, cc);
   char * file = NULL;
-  int i, dep = 0, tags = 0, source = 0;
+  int i, dep = 0, tags = 0, source = 0, swig = 0;
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
       ;
@@ -1964,6 +1997,8 @@ int main (int argc, char ** argv)
       dep = 1;
     else if (!strcmp (argv[i], "-tags"))
       tags = 1;
+    else if (!strcmp (argv[i], "-python"))
+      swig = 1;
     else if (!strcmp (argv[i], "-debug"))
       debug = 1;
     else if (!strcmp (argv[i], "-events"))
@@ -2017,6 +2052,19 @@ int main (int argc, char ** argv)
     char * out[100], * grid = NULL;
     int default_grid;
     includes (argc, argv, out, &grid, &default_grid, dep || tags ? NULL : dir);
+    FILE * swigfp = NULL;
+    char swigname[80] = "";
+    if (swig) {
+      strcpy (swigname, file);
+      char * dot = strchr (swigname, '.');
+      *dot = '\0'; strcat (swigname, ".i");
+      swigfp = fopen (swigname, "a");
+      if (!swigfp) {
+	fprintf (stderr, "qcc: could not open '%s': ", swigname);
+	return 1;
+      }
+      *dot = '\0';
+    }
     if (!dep && !tags) {
       char * basename = strdup (file), * ext = basename;
       while (*ext != '\0' && *ext != '.') ext++;
@@ -2093,6 +2141,8 @@ int main (int argc, char ** argv)
 	}
 	fputs (s, fout);
       }
+      if (swigfp)
+	fputs ("#include \"python.h\"\n", fout);
       fclose (fout);
       fclose (fin);
       fout = dopen (file, "w");
@@ -2134,7 +2184,7 @@ int main (int argc, char ** argv)
 	cleanup (1, dir);
       }
 
-      compdir (fin, fout, grid);
+      compdir (fin, fout, swigfp, swigname, grid);
       int status = pclose (fin);
       if (status == -1 ||
 	  (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || 

@@ -14,6 +14,7 @@
 
   Tag * tagsa = NULL;
   int ntags = 0, target = 1, keywords_only = 0, scope = 0, intypedef = 0;
+  FILE * swigfp = NULL;
 
   static void append_tag (Tag t) {
     ntags++;
@@ -205,6 +206,15 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
 	fputs ("incl ", ftags);
 	singleslash (shortpath(path), ftags);
 	fprintf (ftags, " %s %d\n", fname, yylineno - 1);
+      }
+      if (swigfp && target && strncmp (shortpath(path), "/src//grid/", 11)) {
+	char * dot = strstr (path, ".h");
+	if (dot) {
+	  strcpy (dot, ".i");
+	  fputs ("%include \"", swigfp);
+	  singleslash (path, swigfp);
+	  fputs ("\"\n", swigfp);
+	}
       }
       free (path);
       fclose (fp);
@@ -465,7 +475,7 @@ int includes (int argc, char ** argv, char ** out,
 	      char ** grid1, int * default_grid,
 	      const char * dir)
 {
-  int depend = 0, nout = 0, tags = 0;
+  int depend = 0, nout = 0, tags = 0, swig = 0;
   char * file = NULL, * output = NULL;
   int i;
   for (i = 1; i < argc; i++) {
@@ -475,6 +485,8 @@ int includes (int argc, char ** argv, char ** out,
       depend = 1;
     else if (!strcmp (argv[i], "-tags"))
       tags = 1;
+    else if (!strcmp (argv[i], "-python"))
+      swig = 1;
     else if (!strcmp (argv[i], "-debug"))
       debug = 1;
     else if (!strcmp (argv[i], "-o"))
@@ -538,6 +550,23 @@ int includes (int argc, char ** argv, char ** out,
     }
   }
   if (file) {
+    if (swig) {
+      char swigname[80];
+      strcpy (swigname, file);
+      char * dot = strchr (swigname, '.');
+      *dot = '\0'; strcat (swigname, ".i");
+      swigfp = fopen (swigname, "w");
+      if (!swigfp) {
+	fprintf (stderr, "include: could not open '%s': ", swigname);
+	perror ("");
+	cleanup (1, dir);
+      }
+      *dot = '\0';
+      fprintf (swigfp, "%%module %s\n", swigname);
+      fputs ("%include \"", swigfp);
+      fputs (LIBDIR, swigfp);
+      fputs ("/common.i\"\n", swigfp);
+    }
     target = 1;
     nout = compdir (file, out, 0, dir);
     if (!hasgrid) {
@@ -553,6 +582,17 @@ int includes (int argc, char ** argv, char ** out,
       target = 0;
       nout = compdir (path, out, nout, dir);
       hasgrid = 0;
+    }
+    if (swigfp) {
+      char * path, pythonpath[80] = "python.h";
+      FILE * fp = openpath (pythonpath, "r", &path);
+      if (!fp) {
+	perror (pythonpath);
+	cleanup (1, dir);
+      }
+      fclose (fp);
+      target = 0;
+      nout = compdir (path, out, nout, dir);
     }
     if (ftags) {
       // reprocess the target file for keywords
@@ -571,6 +611,8 @@ int includes (int argc, char ** argv, char ** out,
   }
   if (ftags)
     fclose (ftags);
+  if (swigfp)
+    fclose (swigfp);
   *grid1 = grid;
   *default_grid = !hasgrid;
   return nout;

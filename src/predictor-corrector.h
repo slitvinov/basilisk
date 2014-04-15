@@ -25,8 +25,8 @@ static void advance_generic (scalar * output, scalar * input, scalar * updates,
   boundary (output);
 }
 
-void (* advance) (scalar * output, scalar * input, scalar * updates,
-		  double dt) = advance_generic;
+static void (* advance) (scalar * output, scalar * input, scalar * updates,
+			 double dt) = advance_generic;
 
 event defaults (i = 0)
 {
