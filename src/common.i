@@ -22,7 +22,7 @@
 
   extern double interpolate (scalar s, double x, double y);
   extern int py_scalar_init (scalar s, PyObject * f);
-  extern int py_register_event (PyObject * action, PyObject * i);
+  extern int py_register_event (PyObject * action, PyObject * i, PyObject * t);
 %}
 
 typedef int scalar;
@@ -44,7 +44,7 @@ extern void init_grid (int n);
 extern void free_grid (void);
 extern double interpolate (scalar s, double x = 0., double y = 0.);
 extern int py_scalar_init (scalar s, PyObject * f);
-extern int py_register_event (PyObject * action, PyObject * i);
+extern int py_register_event (PyObject * action, PyObject * i, PyObject * t);
 
 %init %{
   init_solver();
@@ -80,5 +80,5 @@ class tensor:
         self.y = vector(t.y)
 
 def event (action, i = None, t = None):
-    py_register_event(action, i)
+    py_register_event(action, i, t)
 %}
