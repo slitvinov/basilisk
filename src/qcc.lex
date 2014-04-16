@@ -30,6 +30,7 @@
   #define EVMAX 100
   int inevent, eventscope, eventpara;
   char eventarray[EVMAX], * eventfile[EVMAX], * eventid[EVMAX];
+  char * eventfunc[EVMAX];
   char * eventarray_elems[EVMAX];
   int nexpr[EVMAX], eventline[EVMAX], eventparent[EVMAX], eventchild[EVMAX];
   int eventlast[EVMAX];
@@ -782,7 +783,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 	       "} ");
     fprintf (yyout, 
 	     "static int %s (const int i, const double t, Event * _ev) { ",
-	     eventid[nevents]);
+	     eventfunc[nevents]);
     assert (nevents < EVMAX);
     nexpr[nevents] = inevent;
     inevent = 4;
@@ -944,7 +945,7 @@ end_foreach{ID}*{SP}*"()" {
 	     "} "
 	     "static int %s_expr%d (int * ip, double * tp, Event * _ev) { "
 	     "  int i = *ip; double t = *tp; "
-	     "  int ret = (", eventid[nevents], inevent++);
+	     "  int ret = (", eventfunc[nevents], inevent++);
   }
   else if (inevent == 4 && scope == eventscope && para == eventpara - 1) {
     ECHO;
@@ -1428,6 +1429,7 @@ event{WS}+{ID}+{WS}*[(] {
   char * s = id; while (!strchr(" \t\v\n\f(", *s)) s++; *s = '\0';
   eventparent[nevents] = eventchild[nevents] = -1;
   eventlast[nevents] = 0;
+  eventid[nevents] = strdup (id);
   // check whether an event with the same name already exists
   // if it does, append a number (up to 9)
   char i = '0', found = 1;
@@ -1436,7 +1438,7 @@ event{WS}+{ID}+{WS}*[(] {
   while (i <= '9' && found) {
     found = 0;
     for (int j = 0; j < nevents && !found; j++)
-      if (!strcmp (id, eventid[j])) {
+      if (!strcmp (id, eventfunc[j])) {
 	lastfound = j;
 	found = 1;
       }
@@ -1456,8 +1458,8 @@ event{WS}+{ID}+{WS}*[(] {
   eventscope = scope; eventpara = ++para;
   eventarray[nevents] = 0;
   eventfile[nevents] = strdup (fname);
-  eventid[nevents] = strdup (id);
   eventline[nevents] = line;
+  eventfunc[nevents] = strdup (id);
 }
 
 [it]{WS}*={WS}*[{][^}]*[}] {
@@ -1823,22 +1825,22 @@ FILE * dopen (const char * fname, const char * mode)
 
 void write_event (int i, FILE * fout)
 {
-  char * id = eventid[i];
-  fprintf (fout, "  event_register ((Event){ 0, %d, %s, {", nexpr[i], id);
+  char * func = eventfunc[i];
+  fprintf (fout, "  event_register ((Event){ 0, %d, %s, {", nexpr[i], func);
   int j;
   for (j = 0; j < nexpr[i] - 1; j++)
-    fprintf (fout, "%s_expr%d, ", id, j);
-  fprintf (fout, "%s_expr%d}, ", id, j);
+    fprintf (fout, "%s_expr%d, ", func, j);
+  fprintf (fout, "%s_expr%d}, ", func, j);
   if (eventarray[i] == 'i')
-    fprintf (fout, "%s_array, ", id);
+    fprintf (fout, "%s_array, ", func);
   else
     fprintf (fout, "((void *)0), ");
   if (eventarray[i] == 't')
-    fprintf (fout, "%s_array,\n", id);
+    fprintf (fout, "%s_array,\n", func);
   else
     fprintf (fout, "((void *)0),\n");
   fprintf (fout, "    \"%s\", %d, \"%s\"});\n", eventfile[i], 
-	   nolineno ? 0 : eventline[i], id);
+	   nolineno ? 0 : eventline[i], eventid[i]);
 }
 
 static const char * typestr (var_t var) {
@@ -1870,7 +1872,7 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	   nvar);
   /* event functions */
   for (int i = 0; i < nevents; i++) {
-    char * id = eventid[i];
+    char * id = eventfunc[i];
     fprintf (fout, "static int %s (const int i, const double t, Event * _ev);\n", id);
     for (int j = 0; j < nexpr[i]; j++)
       fprintf (fout,
@@ -1894,12 +1896,10 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
     for (int i = 0; i < nevents; i++)
       if (eventchild[i] < 0 && eventlast[i] == last) {
 	int j = i;
-	while (eventparent[j] >= 0)
-	  j = eventparent[j];
-	do {
+	while (j >= 0) {
 	  write_event (j, fout);
-	  j = eventchild[j];
-	} while (j >= 0);
+	  j = eventparent[j];
+	}
       }
   /* scalar methods */
   fputs ("  _method = calloc (datasize/sizeof(double), sizeof (Methods));\n", 

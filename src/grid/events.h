@@ -80,14 +80,20 @@ void init_events (void) {
 
 void event_register (Event event) {
   assert (Events);
-  int n = 0;
-  for (Event * ev = Events; !ev->last; ev++)
-    n++;
   assert (!event.last);
-  Events[n] = event;
-  init_event (&Events[n]);
+  int n = 0, found = -1;
+  for (Event * ev = Events; !ev->last; ev++) {
+    if (found < 0 && !strcmp (event.name, ev->name))
+      found = n;
+    n++;
+  }
   Events = realloc (Events, (n + 2)*sizeof (Event));
   Events[n + 1].last = true;
+  if (found >= 0)
+    for (; n > found; n--)
+      Events[n] = Events[n-1];
+  Events[n] = event;
+  init_event (&Events[n]);
 }
 
 static int event_cond (Event * ev, int i, double t)
