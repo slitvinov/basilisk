@@ -1,4 +1,8 @@
 %{
+  #define SWIG_FILE_WITH_INIT
+  #define face
+  #define vertex
+
   typedef int scalar;
   typedef struct {
     scalar x, y;
@@ -18,9 +22,7 @@
   extern void init_solver (void);
   extern void init_grid (int n);
   extern void free_grid (void);
-  extern void run (void);
 
-  extern double interpolate (scalar s, double x, double y);
   extern int py_scalar_init (scalar s, PyObject * f);
   extern int py_register_event (PyObject * action, PyObject * i, PyObject * t);
 %}
@@ -42,15 +44,18 @@ extern void size (double L = 1.);
 
 extern void init_grid (int n);
 extern void free_grid (void);
-extern double interpolate (scalar s, double x = 0., double y = 0.);
 extern int py_scalar_init (scalar s, PyObject * f);
 extern int py_register_event (PyObject * action, PyObject * i, PyObject * t);
 
+%include "numpy.i"
+
 %init %{
+  import_array();
   init_solver();
 %}
 
 %pythoncode %{
+from numpy import empty_like
 class scalar(int):
     def __init__(self,i):
         self = i
@@ -60,10 +65,16 @@ class scalar(int):
         else:
             self.__dict__[name] = value
     def f(self,x,y=0):
-        ret = interpolate(self,x,y)
-        if ret > 1e100:
-            ret = None
-        return ret
+        try:
+            ndim = x.ndim
+        except AttributeError:
+            return interpolate(self,x,y)
+        if ndim == 1:
+            return _interpolate1D(self,x,x.size)
+        elif ndim == 2:
+            z = empty_like(x)
+            _interpolate2D(self,x,y,z)
+            return z
     def norm(self):
         return normf(self)
     def stats(self):

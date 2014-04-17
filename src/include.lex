@@ -207,7 +207,7 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
 	singleslash (shortpath(path), ftags);
 	fprintf (ftags, " %s %d\n", fname, yylineno - 1);
       }
-      if (swigfp && target && strncmp (shortpath(path), "/src//grid/", 11)) {
+      if (swigfp && target) {
 	char * dot = strstr (path, ".h");
 	if (dot) {
 	  strcpy (dot, ".i");

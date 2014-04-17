@@ -8,7 +8,10 @@ int py_scalar_init (scalar s, PyObject * f) {
   Py_DECREF (code);
   int n = PyInt_AsLong (nargs);
   Py_DECREF (nargs);
-  char * format = (n == 1 ? "(d)" : n == 2 ? "(dd)" : n == 3 ? "(ddd)" :
+  char * format = (n == 0 ? "()" :
+		   n == 1 ? "(d)" : 
+		   n == 2 ? "(dd)" : 
+		   n == 3 ? "(ddd)" :
 		   "(error)");
   foreach() {
     PyObject * arglist = Py_BuildValue (format, x, y); // z
@@ -29,6 +32,18 @@ typedef struct {
   PyObject * i, * t, * action;
 } PyEvent;
 
+static double get_double (PyObject * item) {
+  if (PyFloat_Check (item))
+    return PyFloat_AsDouble (item);
+  else if (PyInt_Check (item))
+    return PyInt_AsLong (item);
+  else {
+    fprintf (stderr, "expecting a float\n");
+    exit (1);
+  }
+  return 0;
+}
+
 static int py_start (int * i, double * t, Event * ev) {
   PyEvent * p = ev->data;
   if (p->i != Py_None) {
@@ -47,13 +62,15 @@ static int py_start (int * i, double * t, Event * ev) {
   else {
     if (PyFloat_Check (p->t))
       *t = PyFloat_AsDouble (p->t);
+    else if (PyInt_Check (p->t))
+      *t = PyInt_AsLong (p->t);
     else {
       PyObject * item = PySequence_GetItem (p->t, (ev->a = 0));
-      if (!item || !PyFloat_Check(item)) {
+      if (!item) {
 	fprintf (stderr, "expecting a float\n");
 	exit (1);
       }
-      *t = PyFloat_AsDouble (item);
+      *t = get_double (item);
       Py_DECREF (item);
     }    
   }
@@ -83,7 +100,7 @@ static int py_inc (int * i, double * t, Event * ev) {
   else {
     if (ev->a < PySequence_Size (p->t)) {
       PyObject * item = PySequence_GetItem (p->t, ev->a);
-      *t = PyFloat_AsDouble (item);
+      *t = get_double (item);
       Py_DECREF (item);
     }
     else
