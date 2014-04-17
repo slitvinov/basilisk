@@ -106,8 +106,9 @@ void cartesian1D_trash (void * alist)
 Point locate (double xp, double yp)
 {
   Point point = *((Point *)grid);
-  point.i = (xp - X0)/L0*point.n + 1;
-  point.level = (point.i >= 1 && point.i <= point.n) ? 0 : - 1;
+  double a = (xp - X0)/L0*point.n;
+  point.i = a + 1;
+  point.level = (a > -0.5 && a < point.n + 0.5) ? 0 : - 1;
   return point;
 }
 

@@ -213,11 +213,13 @@ Point locate (double xp, double yp)
 {
   Point point = *((Point *)grid);
   point.n = 1 << point.depth;
-  point.i = (xp - X0)/L0*point.n + GHOSTS;
-  point.j = (yp - Y0)/L0*point.n + GHOSTS;
+  double a = (xp - X0)/L0*point.n;
+  point.i = a + GHOSTS;
+  double b = (yp - Y0)/L0*point.n;
+  point.j = b + GHOSTS;
   point.level = 
-    (point.i >= GHOSTS && point.i < point.n + GHOSTS &&
-     point.j >= GHOSTS && point.j < point.n + GHOSTS) ? point.depth : - 1;
+    (a >= 0.5 - GHOSTS && a < point.n + GHOSTS - 0.5 &&
+     b >= 0.5 - GHOSTS && b < point.n + GHOSTS - 0.5) ? point.depth : - 1;
   return point;
 }
 
