@@ -19,12 +19,7 @@
     extern double L0;
     L0 = L;
   }
-  extern void init_solver (void);
-  extern void init_grid (int n);
-  extern void free_grid (void);
-
-  extern int py_scalar_init (scalar s, PyObject * f);
-  extern int py_register_event (PyObject * action, PyObject * i, PyObject * t);
+  extern void init_solver();
 %}
 
 typedef int scalar;
@@ -42,10 +37,17 @@ typedef struct {
 extern void origin (double x = 0., double y = 0.);
 extern void size (double L = 1.);
 
-extern void init_grid (int n);
-extern void free_grid (void);
-extern int py_scalar_init (scalar s, PyObject * f);
-extern int py_register_event (PyObject * action, PyObject * i, PyObject * t);
+%rename(_events) events;
+%inline %{
+    extern void init_grid (int n);
+    extern void free_grid (void);
+    extern int events (int i, double t);
+    extern double tnext;
+
+    extern int py_scalar_init (scalar s, PyObject * f);
+    extern int py_register_event (PyObject * action, PyObject * i, 
+                                  PyObject * t);
+%}
 
 %include "numpy.i"
 
@@ -92,4 +94,8 @@ class tensor:
 
 def event (action, i = None, t = None):
     py_register_event(action, i, t)
+
+from random import uniform
+def noise():
+    return uniform(-1.,1.)
 %}
