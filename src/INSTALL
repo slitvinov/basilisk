@@ -107,6 +107,17 @@ Debian-like system you just need to do
 sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind gifsicle
 ~~~
 
+## Using Basilisk with python
+
+You will need [SWIG](http://www.swig.org/) which can easily be installed with
+
+~~~bash
+sudo apt-get install swig
+~~~
+
+You also need to setup the *MDFLAGS* and *PYTHONPATH* variables in your
+*config* file.
+
 ## Getting started
 
 The best place to start is the [tutorial](/Tutorial).

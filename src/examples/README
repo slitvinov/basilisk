@@ -10,6 +10,10 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [Decaying two-dimensional turbulence](turbulence.c)
 * [Conway’s game of life](life.c)
 
+## Python interface
+
+* [Decaying two-dimensional turbulence](turbulence.py)
+
 ## See also
 
 * [Test cases](/src/test/README)
