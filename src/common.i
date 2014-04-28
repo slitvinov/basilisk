@@ -37,16 +37,13 @@ typedef struct {
 extern void origin (double x = 0., double y = 0.);
 extern void size (double L = 1.);
 
-%rename(_events) events;
 %inline %{
-    extern void init_grid (int n);
-    extern void free_grid (void);
-    extern int events (int i, double t);
-    extern double tnext;
+  extern void init_grid (int n);
+  extern void free_grid (void);
 
-    extern int py_scalar_init (scalar s, PyObject * f);
-    extern int py_register_event (PyObject * action, PyObject * i, 
-                                  PyObject * t);
+  extern int py_scalar_init (scalar s, PyObject * f);
+  extern int py_register_event (PyObject * action, PyObject * i, 
+				PyObject * t);
 %}
 
 %include "numpy.i"

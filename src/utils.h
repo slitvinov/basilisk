@@ -2,8 +2,6 @@
 #include <sys/time.h>
 
 // Default parameters
-// number of grid points
-int N = 64;
 // maximum timestep
 double DT = 1e10;
 // CFL number

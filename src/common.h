@@ -53,6 +53,8 @@ void * grid = NULL;
 double X0 = 0., Y0 = 0.;
 // size of the box
 double L0 = 1.;
+// number of grid points
+int N = 64;
 
 typedef int scalar;
 
