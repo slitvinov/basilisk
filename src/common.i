@@ -22,6 +22,7 @@
   extern void init_solver();
 %}
 
+%rename(_scalar) scalar;
 typedef int scalar;
 
 %rename(_vector) vector;
@@ -34,9 +35,45 @@ typedef struct {
   vector x, y;
 } tensor;
 
+// scalar lists
+%typemap(in) scalar * {
+  /* Check if is a list */
+  if (PyList_Check($input)) {
+    int size = PyList_Size($input);
+    int i = 0;
+    $1 = (scalar *) malloc((size+1)*sizeof(scalar));
+    for (i = 0; i < size; i++) {
+      PyObject *o = PyList_GetItem($input,i);
+      if (PyInt_Check(o))
+	$1[i] = PyInt_AsLong(PyList_GetItem($input,i));
+      else {
+	PyErr_SetString(PyExc_TypeError,"list must contain scalars");
+	free($1);
+	return NULL;
+      }
+    }
+    $1[i] = -1;
+  } else {
+    PyErr_SetString(PyExc_TypeError,"not a list");
+    return NULL;
+  }
+}
+
+// This cleans up the scalar * array we malloc'd before the function call
+%typemap(freearg) scalar * {
+  free((char *) $1);
+}
+
 extern void origin (double x = 0., double y = 0.);
 extern void size (double L = 1.);
 
+%exception py_scalar_init {
+  $action
+  if (result) {
+     PyErr_SetString(PyExc_RuntimeError, "initialization failed");
+     return NULL;
+  }
+}
 %inline %{
   extern void init_grid (int n);
   extern void free_grid (void);
@@ -56,8 +93,13 @@ extern void size (double L = 1.);
 %pythoncode %{
 from numpy import empty_like
 class scalar(int):
-    def __init__(self,i):
-        self = i
+    def __new__(cls,i=None):
+        if i == None:
+            i = new_scalar("python")
+	return int.__new__(cls,i)
+    def __del__(self):
+        if callable(_delete):
+            _delete([self])
     def __setattr__(self, name, value):
         if name == "f":
             py_scalar_init(self,value)
