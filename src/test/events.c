@@ -15,6 +15,7 @@ event event6 (t = end) fprintf (stderr, "end: %g\n", t);
 
 int main (int argc, char * argv[])
 {
+  init_grid(1);
   double t = 0.;
   int i = 0;
   while (events (i, t)) {

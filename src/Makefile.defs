@@ -20,17 +20,17 @@ itags: $(subst .h.page,.h.itags,$(ALLPAGES))
 clean:
 	rm -f *.o *.s *.*tst *.d *.prof Makefile.deps
 
-.PRECIOUS: %.prof
+.PRECIOUS: %.prof %.s
 
 .DELETE_ON_ERROR:
 
-%.tst: %.c Makefile $(QCC)
+%.tst: %.s
 	@PNG=$(PNG) $(BASILISK)/runtest $@
 
-%.ctst: %.c Makefile $(QCC)
+%.ctst: %.s
 	@CFLAGS="-grid=multigrid $(CFLAGS)" PNG=$(PNG) $(BASILISK)/runtest $@
 
-%.vtst: %.c Makefile $(QCC)
+%.vtst: %.s
 	@PNG=$(PNG) $(BASILISK)/runtest $@ "$(VALGRIND)"
 
 %.h: %.h.page
@@ -41,6 +41,11 @@ clean:
 
 %.plot: %.plot.page
 	ln -s $< $@
+
+%.s: %.c $(QCC) Makefile
+	@echo qcc $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm
+	@rm -f $*/warn
+	@$(QCC) $(subst -g ,,$(subst -O2 ,,$(CFLAGS))) -nolineno -S $< || (rm -f $@ && false)
 
 %.prof: %.c
 	$(QCC) $(subst -DTRASH=1,,$(CFLAGS)) -g -pg $< -o $*/$* -lm
@@ -102,14 +107,14 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 Makefile.tests: Makefile $(BASILISK)/tests.sh
 	sh $(BASILISK)/tests.sh
 
-%.tst.d: %.c $(QCC)
+%.s.d: %.c $(QCC)
 	$(QCC) -MD -o $@ $<
 
 %.tags.d: %.page $(QCC)
 	$(QCC) -MD -tags $<
 
 Makefile.deps: 	Makefile.tests \
-		$(subst .c,.tst.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
+		$(subst .c,.s.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(subst .page,.tags.d,$(ALLPAGES))
 	@echo "Updating Makefile.deps"
 	@cat /dev/null $^ > Makefile.deps
