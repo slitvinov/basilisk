@@ -13,9 +13,8 @@ f[left]  = 1.;
 
 int main()
 {
-  L0 = 7.5e-2;
-  N = 1 << MAXLEVEL;
-  TOLERANCE = 1e-3;
+  size (7.5e-2);
+  init_grid (1 << MAXLEVEL);
   run();
 }
 

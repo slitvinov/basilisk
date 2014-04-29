@@ -62,7 +62,7 @@ int main (int argc, char ** argv)
   int n = 1024;
   init_grid (n);
 
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
   double R0 = 0.1;
   foreach()
     h[] = exp(-(x*x + y*y)/sq(R0));

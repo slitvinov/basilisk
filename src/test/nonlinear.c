@@ -4,11 +4,11 @@
 
 int main() {
   // coordinates of lower-left corner
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0,5);
   // number of grid points
-  N = 128;
+  init_grid (128);
   // size of the box
-  L0 = 1.;
+  size (1.);
   // acceleration of gravity
   G = 1.;
   // Coriolis parameter

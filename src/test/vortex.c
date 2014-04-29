@@ -9,15 +9,15 @@ convert a vorticity field into a velocity field. */
 
 /**
 The domain is centered on $(0,0)$ and the maximum level of refinement
-is 8 i.e. the initial grid has $N=2^8=256$ grid points per
+is 8 i.e. the initial grid has $2^8=256$ grid points per
 dimension. */
 
 #define MAXLEVEL 8
 
 int main()
 {
-  X0 = Y0 = -0.5;
-  N = 1 << MAXLEVEL;
+  origin (-0.5, -0.5);
+  init_grid (1 << MAXLEVEL);
   run();
 }
 

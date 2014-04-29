@@ -12,8 +12,8 @@ The domain is square, of size unity and centered on the origin. The
 resolution is constant at $256^2$. */
 
 int main() {
-  N = 256;
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
+  init_grid (256);
   run();
 }
 

@@ -20,9 +20,9 @@ controlling the numerical scheme. */
 int main()
 { 
   // coordinates of lower-left corner
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
   // number of grid points
-  N = 64;
+  init_grid (64);
   // viscosity
 #if MAC
   nu = 1e-3;

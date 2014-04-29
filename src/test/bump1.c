@@ -23,8 +23,8 @@ void flux (const double * s, double * f, double e[2])
 int main()
 {
   theta = 1.;
-  X0 = Y0 = -0.5;
-  N = 500;
+  origin (-0.5, -0.5);
+  init_grid (500);
   run();
 }
 

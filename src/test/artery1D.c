@@ -102,7 +102,7 @@ envelope of the flux rate behaves like $Q=Amp\times e^{-e2/2x}$ [Wang at
 al., 2013]. */
 
 int main() {
-  N = 400;
+  init_grid (400);
   e1 = 0.5 ;
   e2 = 0.1 ;
   omega = 1.;

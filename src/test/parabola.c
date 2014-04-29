@@ -11,8 +11,8 @@ double Bf = 5.;
 
 int main()
 {
-  X0 = -5000.;
-  L0 = 10000.;
+  origin (-5000, 0);
+  size (10000.);
   G = 9.81;
   for (N = 32; N <= 512; N *= 2) {
     e1 = e2 = emax = 0.;

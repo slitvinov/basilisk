@@ -19,7 +19,7 @@ a[bottom] = dirichlet (solution(x, y));
 
 int main (int argc, char ** argv)
 {
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
   int depth = argc < 2 ? 9 : atoi(argv[1]), nrelax = 4;
   init_grid(1 << depth);
 

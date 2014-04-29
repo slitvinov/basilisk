@@ -8,7 +8,7 @@ int main (int argc, char ** argv)
   int n = 2048;
   init_grid (n);
 
-  X0 = Y0 = -1;
+  origin (-1, -1);
   double R0 = 0.1;
   foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));

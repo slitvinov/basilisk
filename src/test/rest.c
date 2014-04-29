@@ -3,8 +3,8 @@
 
 int main()
 {
-  X0 = Y0 = -0.5;
-  N = 16;
+  origin (-0.5, -0.5);
+  init_grid (16);
   run();
 }
 

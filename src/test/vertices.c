@@ -5,7 +5,7 @@ static int refine_func (Point point, void * data)
 
 int main()
 {
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
   init_grid(8);
   refine_function (refine_func, NULL, NULL);
   output_cells (stdout);

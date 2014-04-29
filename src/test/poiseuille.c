@@ -2,7 +2,7 @@
 #include "navier-stokes/centered.h"
 
 int main() {
-  Y0 = -0.5;
+  origin (0, -0.5);
   stokes = true;
   TOLERANCE = 1e-5;
   for (N = 8; N <= 64; N *= 2)

@@ -9,11 +9,11 @@ executes events until termination. */
 /**
 The time `t` and timestep `dt` can be accessed as global variables. */
 
-double t = 0., dt = 0.;
+double t = 0., dt = 1.;
 
 void run (void)
 {
-  t = dt = 0.;
+  t = 0.; dt = 1.;
   init_grid (N);
 
   timer start = timer_start();

@@ -16,7 +16,7 @@ static int band (Point point, void * data)
 
 int main()
 {
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
   init_grid (16);
 
   refine_function (band, NULL, all);

@@ -7,9 +7,9 @@ scalar f[];
 scalar * interfaces = {f};
 
 int main() {
-  L0 = 4;
-  X0 = Y0 = -2;
-  N = 1 << LEVEL;
+  size (4);
+  origin (-2, -2);
+  init_grid (1 << LEVEL);
   // viscosity
   const face vector muc[] = {0.00313,0.00313};
   mu = muc;

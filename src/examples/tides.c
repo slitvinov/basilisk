@@ -10,12 +10,11 @@ double mtd = 360./40075e3;
 int main run()
 {
   // 512^2 grid points
-  N = 1 << MAXLEVEL;
+  init_grid (1 << MAXLEVEL);
   // the domain is 5 degrees squared
-  L0 = 5.;
+  size (5.);
   // centered on 174,-40.8 longitude,latitude
-  X0 = 174 - L0/2.;
-  Y0 = -40.8 - L0/2.;
+  origin (174 - L0/2., -40.8 - L0/2.);
   /* rescale G so that time is in minutes, horizontal length scales in
      degrees and vertical length scales in metres */
   G = 9.81*sq(mtd)*sq(60.);

@@ -11,14 +11,6 @@
     vector x, y;
   } tensor;
 
-  static void origin (double x, double y) {
-    extern double X0, Y0;
-    X0 = x; Y0 = y;
-  } 
-  static void size (double L) {
-    extern double L0;
-    L0 = L;
-  }
   extern void init_solver();
 %}
 
@@ -64,9 +56,6 @@ typedef struct {
   free((char *) $1);
 }
 
-extern void origin (double x = 0., double y = 0.);
-extern void size (double L = 1.);
-
 %exception py_scalar_init {
   $action
   if (result) {
@@ -77,6 +66,8 @@ extern void size (double L = 1.);
 %inline %{
   extern void init_grid (int n);
   extern void free_grid (void);
+  extern void origin (double x, double y);
+  extern void size (double L);
 
   extern int py_scalar_init (scalar s, PyObject * f);
   extern int py_register_event (PyObject * action, PyObject * i, 

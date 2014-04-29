@@ -50,9 +50,9 @@
 // the grid
 void * grid = NULL;
 // coordinates of the lower-left corner of the box
-double X0 = 0., Y0 = 0.;
+static double X0 = 0., Y0 = 0.;
 // size of the box
-double L0 = 1.;
+static double L0 = 1.;
 // number of grid points
 static int N = 64;
 
@@ -67,6 +67,14 @@ typedef struct {
 } tensor;
 
 #define norm(v) (sqrt(sq(v.x[]) + sq(v.y[])))
+
+void origin (double x, double y) {
+  X0 = x; Y0 = y;
+}
+
+void size (double L) {
+  L0 = L;
+}
 
 // lists
 

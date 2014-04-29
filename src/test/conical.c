@@ -11,9 +11,9 @@
 
 int main()
 {
-  L0 = 27.6;
   G = 9.81;
-  N = 1 << MAXLEVEL;
+  size (27.6);
+  init_grid (1 << MAXLEVEL);
   run();
 }
 

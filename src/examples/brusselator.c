@@ -49,8 +49,8 @@ implicit diffusion solver. */
 
 int main()
 {
-  N = 128;
-  L0 = 64;
+  init_grid (128);
+  size (64);
   TOLERANCE = 1e-4;
 
   /**

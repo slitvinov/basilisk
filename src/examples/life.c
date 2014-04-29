@@ -19,8 +19,8 @@ $256^2$ cells. */
 
 int main()
 {
-  X0 = Y0 = -0.5;
-  N = 256;
+  origin (-0.5, -0.5);
+  init_grid (256);
 
   /**
   The generic `run()` function implements the main time loop. */

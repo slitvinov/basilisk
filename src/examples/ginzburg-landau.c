@@ -49,9 +49,9 @@ mgstats mgd1, mgd2;
 We change the size of the domain `L0`. */
 
 int main() {
-  L0 = 100;
   beta = 1.5;
-  N = 256;
+  size (100);
+  init_grid (256);
   run();
 }
 

@@ -9,9 +9,9 @@ int MAXLEVEL;
 int main()
 {
   // coordinates of lower-left corner
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
   for (MAXLEVEL = 5; MAXLEVEL <= 7; MAXLEVEL++) {
-    N = 1 << MAXLEVEL;
+    init_grid (1 << MAXLEVEL);
     run ();
   }
 }

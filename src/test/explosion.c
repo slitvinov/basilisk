@@ -19,9 +19,9 @@ The domain spans $[-1:1]\times[-1:1]$. */
 #define LEVEL 7
 
 int main() {
-  X0 = Y0 = -1.;
-  L0 = 2.;
-  N = 1 << LEVEL;
+  origin (-1, -1);
+  size (2.);
+  init_grid (1 << LEVEL);
   run(); 
 }
 

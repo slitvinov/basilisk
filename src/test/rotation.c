@@ -7,7 +7,7 @@ scalar * tracers = {f};
 int main()
 {
   // coordinates of lower-left corner
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
   // maximum timestep
   DT = .1;
   // CFL number

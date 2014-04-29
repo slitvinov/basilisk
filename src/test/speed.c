@@ -6,7 +6,7 @@ scalar h[];
 
 int main (int argc, char ** argv)
 {
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
   int n = 1024;
   init_grid (n);
 

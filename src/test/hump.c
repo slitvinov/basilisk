@@ -6,10 +6,9 @@
 
 int main()
 {
-  N = 1 << MAXLEVEL;
-  X0 = -0.5;
-  Y0 = -1.;
-  L0 = 2.;
+  init_grid (1 << MAXLEVEL);
+  origin (-0.5, -1.);
+  size (2.);
   run();
 }
 

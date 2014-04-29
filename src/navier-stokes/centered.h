@@ -98,7 +98,7 @@ The default velocity and pressure are zero. */
 
 event defaults (i = 0)
 {
-  CFL = 0.8; dt = 1.;
+  CFL = 0.8;
   foreach() {
     foreach_dimension()
       u.x[] = g.x[] = 0.;

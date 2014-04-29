@@ -39,10 +39,10 @@ int main()
 {
 #if QUADTREE
   // 32^2 grid points to start with
-  N = 1 << MINLEVEL;
+  init_grid (1 << MINLEVEL);
 #else // Cartesian
   // 1024^2 grid points
-  N = 1 << MAXLEVEL;
+  init_grid (1 << MAXLEVEL);
 #endif
 
   /**
@@ -54,10 +54,9 @@ int main()
   *(X0,Y0)*. */
 
   // the domain is 54 degrees squared
-  L0 = 54.;
+  size (54.);
   // centered on 94,8 longitude,latitude
-  X0 = 94 - L0/2.;
-  Y0 = 8. - L0/2.;
+  origin (94 - L0/2., 8. - L0/2.);
 
   /**
   *G* is the acceleration of gravity required by the Saint-Venant

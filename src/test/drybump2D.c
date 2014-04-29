@@ -4,8 +4,8 @@
 
 int main()
 {
-  X0 = Y0 = -0.5;
-  N = 1 << LEVEL;
+  origin (-0.5, -0.5);
+  init_grid (1 << LEVEL);
   run();
 }
 

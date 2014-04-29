@@ -24,7 +24,7 @@ int refine_circle (Point point, void * data)
 
 void solve (int depth)
 {
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5);
   int nrelax = 4;
   init_grid(1);
 
