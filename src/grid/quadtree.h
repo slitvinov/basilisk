@@ -709,9 +709,35 @@ static void update_cache_f (void)
 
 Point refine_cell (Point point, scalar * list);
 
+void free_grid (void)
+{
+  if (!grid)
+    return;
+  Quadtree * q = grid;
+  free (q->leaves.p);
+  for (int l = 0; l <= q->depth; l++) {
+#if DYNAMIC
+    for (int i = 0; i < _size(l); i++)
+      free (q->m[l][i]);
+#endif
+    free (q->m[l]);
+    free (q->halo[l].p);
+    free (q->active[l].p);
+  }
+  q->m = &(q->m[-1]);
+  free (q->m);
+  free (q->halo);
+  free (q->active);
+  free (q);
+  grid = NULL;
+}
+
 void init_grid (int n)
 {
-  init_events();
+  Quadtree * q = grid;
+  if (q && n == 1 << q->depth)
+    return;
+  free_grid();
   int depth = 0;
   while (n > 1) {
     if (n % 2) {
@@ -721,7 +747,7 @@ void init_grid (int n)
     n /= 2;
     depth++;
   }
-  Quadtree * q = malloc (sizeof (Quadtree));
+  q = malloc (sizeof (Quadtree));
   q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
   q->m = malloc(sizeof (char *)*2);
   /* make sure we don't try to access level -1 */
@@ -742,31 +768,13 @@ void init_grid (int n)
   q->halo = calloc (1, sizeof (CacheLevel));
   q->dirty = true;
   grid = q;
+  N = 1 << depth;
   while (depth--)
     foreach_leaf()
       point = refine_cell (point, NULL);
   update_cache();
   trash (all);
-}
-
-void free_grid (void)
-{
-  Quadtree * q = grid;
-  free (q->leaves.p);
-  for (int l = 0; l <= q->depth; l++) {
-#if DYNAMIC
-    for (int i = 0; i < _size(l); i++)
-      free (q->m[l][i]);
-#endif
-    free (q->m[l]);
-    free (q->halo[l].p);
-    free (q->active[l].p);
-  }
-  q->m = &(q->m[-1]);
-  free(q->m);
-  free(q->halo);
-  free(q->active);
-  free(q);
+  init_events();
 }
 
 void output_cells (FILE * fp);

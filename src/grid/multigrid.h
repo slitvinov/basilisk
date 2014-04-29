@@ -159,9 +159,24 @@ void multigrid_trash (void * alist)
 	((double *)(&p.d[p.level][i*datasize]))[s] = undefined;
 }
 
+void free_grid (void)
+{
+  if (!grid)
+    return;
+  Point * m = grid;
+  for (int l = 0; l <= m->depth; l++)
+    free (m->d[l]);
+  free (m->d);
+  free (m);
+  grid = NULL;
+}
+
 void init_grid (int n)
 {
-  init_events();
+  Point * m = grid;
+  if (m && n == 1 << m->depth)
+    return;
+  free_grid();
   int r = 0;
   while (n > 1) {
     if (n % 2) {
@@ -171,8 +186,9 @@ void init_grid (int n)
     n /= 2;
     r++;
   }
-  Point * m = malloc(sizeof(Point));
+  m = malloc(sizeof(Point));
   m->depth = r;
+  N = 1 << r;
   m->d = malloc(sizeof(Point *)*(r + 1));
   for (int l = 0; l <= r; l++) {
     size_t len = _size(l)*datasize;
@@ -185,6 +201,7 @@ void init_grid (int n)
   }
   grid = m;
   trash (all);
+  init_events();
 }
 
 void realloc_scalar (void)
@@ -198,15 +215,6 @@ void realloc_scalar (void)
     for (int i = len - 1; i > 0; i--, data -= oldatasize)
       memmove (data + i*sizeof(double), data, oldatasize);  
   }
-}
-
-void free_grid (void)
-{
-  Point * m = grid;
-  for (int l = 0; l <= m->depth; l++)
-    free (m->d[l]);
-  free(m->d);
-  free(m);
 }
 
 Point locate (double xp, double yp)

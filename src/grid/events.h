@@ -73,9 +73,29 @@ static void init_event (Event * ev)
   }
 }
 
+enum { event_done, event_alive, event_stop };
+
+static int event_finished (Event * ev)
+{
+  ev->t = ev->i = -1;
+  return event_done;
+}
+
 void init_events (void) {
-  for (Event * ev = Events; !ev->last; ev++)
-    init_event (ev);
+  for (Event * ev = Events; !ev->last; ev++) 
+    if (!strcmp (ev->name, "defaults")) {
+#if DEBUG_EVENTS
+      char * root = strstr (ev->file, BASILISK);
+      fprintf (stderr, "  %-25s %s%s:%d\n", ev->name, 
+	       root ? "src" : "",
+	       root ? &ev->file[strlen(BASILISK)] : ev->file, 
+	       ev->line);
+#endif
+      ev->action (0, 0., ev);
+      event_finished (ev);
+    }
+    else
+      init_event (ev);
 }
 
 void event_register (Event event) {
@@ -101,14 +121,6 @@ static int event_cond (Event * ev, int i, double t)
   if (!COND)
     return true;
   return (* COND) (&i, &t, ev);
-}
-
-enum { event_done, event_alive, event_stop };
-
-static int event_finished (Event * ev)
-{
-  ev->t = ev->i = -1;
-  return event_done;
 }
 
 static int event_do (Event * ev, int i, double t)

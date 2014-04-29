@@ -1952,7 +1952,8 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   }
   for (int i = 0; i < nsetboundary; i++)
     fprintf (fout, "  _set_boundary%d();\n", boundaryindex[i]);
-  fputs ("}\n", fout);
+  fputs ("  init_grid (N);\n"
+	 "}\n", fout);
   fclose (fout);
   
   /* SWIG interface */

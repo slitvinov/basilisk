@@ -1,8 +1,4 @@
 %{
-  static void resolution (int n) {
-    extern int N;
-    N = n;
-  }
   extern double interpolate (scalar v, double xp, double yp);
 %}
 
@@ -20,7 +16,6 @@
   extern void vorticity (const vector u, scalar omega);
 %}
 
-extern void resolution (int n);
 extern double interpolate (scalar v, double xp, double yp = 0.);
 
 %apply (double * IN_ARRAY1, int DIM1) {(double * x, int len1)};

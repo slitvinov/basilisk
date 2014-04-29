@@ -74,12 +74,25 @@ void cartesian_trash (void * alist)
       ((double *)(&p->data[i*datasize]))[s] = undefined;
 }
 
+void free_grid (void)
+{
+  if (!grid)
+    return;
+  Point * p = grid;
+  free (p->data);
+  free (p);
+  grid = NULL;
+}
+
 void init_grid (int n)
 {
-  init_events();
-  Point * p = malloc(sizeof(Point));
+  Point * p = grid;
+  if (p && n == p->n)
+    return;
+  free_grid();
+  p = malloc(sizeof(Point));
   size_t len = (n + 2)*(n + 2)*datasize;
-  p->n = n;
+  p->n = N = n;
   p->data = malloc (len);
   /* trash the data just to make sure it's either explicitly
      initialised or never touched */
@@ -88,6 +101,7 @@ void init_grid (int n)
     v[i] = undefined;
   grid = p;
   trash (all);
+  init_events();
 }
 
 void realloc_scalar (void)
@@ -99,13 +113,6 @@ void realloc_scalar (void)
   char * data = p->data + (len - 1)*oldatasize;
   for (int i = len - 1; i > 0; i--, data -= oldatasize)
     memmove (data + i*sizeof(double), data, oldatasize);  
-}
-
-void free_grid (void)
-{
-  Point * p = grid;
-  free (p->data);
-  free (p);
 }
 
 Point locate (double xp, double yp)

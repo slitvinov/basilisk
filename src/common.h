@@ -54,7 +54,7 @@ double X0 = 0., Y0 = 0.;
 // size of the box
 double L0 = 1.;
 // number of grid points
-int N = 64;
+static int N = 64;
 
 typedef int scalar;
 
@@ -266,13 +266,13 @@ double  * _constant = NULL;
 extern int datasize;
 
 void init_solver (void);
-
 void delete (scalar * list);
+void free_grid (void);
 
 void free_solver()
 {
   delete (all);
   free (all); all = NULL;
   free (_method); _method = NULL;
-  grid = NULL;
+  free_grid();
 }

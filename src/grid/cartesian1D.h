@@ -50,12 +50,25 @@ struct _Point {
 @
 @define end_foreach_boundary_ghost() } _OMPEND }
 
+void free_grid (void)
+{
+  if (!grid)
+    return;
+  Point * p = grid;
+  free (p->data);
+  free (p);
+  grid = NULL;
+}
+
 void init_grid (int n)
 {
-  init_events();
-  Point * p = malloc(sizeof(Point));
+  Point * p = grid;
+  if (p && p->n == n)
+    return;
+  free_grid();
+  p = malloc(sizeof(Point));
   size_t len = (n + 2)*datasize;
-  p->n = n;
+  p->n = N = n;
   p->data = malloc (len);
   /* trash the data just to make sure it's either explicitly
      initialised or never touched */
@@ -64,13 +77,7 @@ void init_grid (int n)
     v[i] = undefined;
   grid = p;
   trash (all);
-}
-
-void free_grid (void)
-{
-  Point * p = grid;
-  free (p->data);
-  free (p);
+  init_events();
 }
 
 void realloc_scalar (void)
