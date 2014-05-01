@@ -86,6 +86,7 @@ $$
 Taking care about boundary orientation and staggering of *uf*, this
 can be written */
 
+// fixme: this does not work with -DTRASH=1
 p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]));
 p[left]   = neumann(-uf.x[]/(dt*alpha.x[]));
 p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]));

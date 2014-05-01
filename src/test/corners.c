@@ -4,10 +4,9 @@ int main ()
   scalar s[];
   foreach()
     s[] = 1.;
+  boundary ({s});
   restriction ({s});
-
-  for (int l = 0; l <= 1; l++)
-    boundary_level ({s}, l);
+  boundary_restriction ({s});
 
   for (int l = 0; l <= 1; l++) {
     fprintf (stderr, "level %d\n", l);

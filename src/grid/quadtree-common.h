@@ -317,19 +317,41 @@ int refine_function (int (* func) (Point point, void * data),
   return nf;
 }
 
-void halo_restriction (int l, scalar * def, scalar * list)
+static void boundary_halo_restriction (scalar * list, int l)
 {
-  if (l < 0) l = depth();
-  foreach_halo_levels (l - 1, >= 0, --)
-    if (is_active(cell)) {
-      for (scalar s in def)
-	s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
-      for (scalar s in list)
-	s.coarsen (point, s);
+  for (int b = 0; b < nboundary; b++)
+    foreach_boundary_cell (b, true) {
+      if (is_active (cell)) {
+	if (level == l) {
+	  if (cell.neighbors > 0)
+	    for (scalar s in list)
+	      s[ghost] = s.boundary[b] (point, s);
+	  continue;
+	}
+      }
+      else
+	continue;
     }
 }
 
-void halo_restriction_flux (vector * list)
+static void halo_restriction (scalar * def, scalar * listc, int l)
+{
+  scalar * list = list_concat (def, listc);
+  boundary_halo_restriction (list, l);
+  for (l--; l >= 0; l--) {
+    foreach_halo_level (l)
+      if (is_active(cell)) {
+	for (scalar s in def)
+	  s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+	for (scalar s in listc)
+	  s.coarsen (point, s);
+      }
+    boundary_halo_restriction (list, l);
+  }
+  free (list);
+}
+
+static void halo_restriction_flux (vector * list)
 {
   vector * listv = NULL;
   for (vector v in list)
@@ -350,7 +372,29 @@ void halo_restriction_flux (vector * list)
   free (listv);
 }
 
-void halo_prolongation (int depth, scalar * list)
+static void boundary_halo_prolongation (scalar * list, int l)
+{
+  for (int b = 0; b < nboundary; b++) {
+    foreach_boundary_cell (b, true) {
+      if (level > l)
+	continue;
+      else if (!is_active (cell)) {
+	if (cell.neighbors > 0) {
+	  for (scalar s in list)
+	    s[ghost] = s.boundary[b] (point, s);
+	}
+	else
+	  continue;
+      }
+    }
+    if (l < depth())
+      foreach_boundary_level (b, l, true)
+	for (scalar s in list)
+	  s[ghost] = s.boundary[b] (point, s);
+  }
+}
+
+static void halo_prolongation (scalar * list, int depth)
 {
   foreach_halo_coarse_to_fine (depth)
     for (scalar s in list) {
@@ -368,6 +412,7 @@ void halo_prolongation (int depth, scalar * list)
 	       3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
 	       coarse(s,child.x,child.y))/16.;	
     }
+  boundary_halo_prolongation (list, depth);
 }
 
 // Multigrid methods
@@ -387,8 +432,11 @@ void quadtree_boundary_restriction (scalar * list)
 
 // Cartesian methods
 
-void quadtree_boundary_centered (scalar * list)
+void quadtree_boundary_level (scalar * list, int l)
 {
+  if (l < 0)
+    l = depth();
+
   scalar * listdef = NULL, * listc = NULL;
   for (scalar s in list) {
     if (s.coarsen == coarsen_average)
@@ -398,20 +446,7 @@ void quadtree_boundary_centered (scalar * list)
   }
 
   if (listdef || listc) {
-    halo_restriction (-1, listdef, listc);
-    for (int b = 0; b < nboundary; b++)
-      foreach_boundary_cell (b, true) {
-	if (is_active (cell)) {
-	  if (cell.neighbors > 0) {
-	    for (scalar s in listdef)
-	      s[ghost] = s.boundary[b] (point, s);
-	    for (scalar s in listc)
-	      s[ghost] = s.boundary[b] (point, s);
-	  }
-	}
-	else
-	  continue;
-      }
+    halo_restriction (listdef, listc, l);
     free (listdef);
     free (listc);
   }
@@ -422,17 +457,7 @@ void quadtree_boundary_centered (scalar * list)
       listr = list_add (listr, s);
 
   if (listr) {
-    halo_prolongation (depth(), listr);
-    for (int b = 0; b < nboundary; b++)
-      foreach_boundary_cell (b, true)
-	if (!is_active (cell)) {
-	  if (cell.neighbors > 0) {
-	    for (scalar s in listr)
-	      s[ghost] = s.boundary[b] (point, s);
-	  }
-	  else
-	    continue;
-	}
+    halo_prolongation (listr, l);
     free (listr);
   }
 }
@@ -552,9 +577,9 @@ void quadtree_methods()
 {
   multigrid_methods();
   init_scalar           = quadtree_init_scalar;
-  boundary_centered     = quadtree_boundary_centered;
+  init_face_vector      = quadtree_init_face_vector;
+  boundary_level        = quadtree_boundary_level;
   boundary_normal       = halo_restriction_flux;
   boundary_tangent      = quadtree_boundary_tangent;
   boundary_restriction  = quadtree_boundary_restriction;
-  init_face_vector = quadtree_init_face_vector;
 }

@@ -48,29 +48,13 @@ int main (int argc, char ** argv)
 
   start = clock ();
   for (i = 0; i < 10000; i++)
-    halo_prolongation (depth(), {h});
+    halo_prolongation ({h}, depth());
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   printf ("---- update_halos ----\n");
   printf ("%d halo points\n", nhalos);
   printf ("%4d iterations:     %6g CPU, %.3g halos.steps/s\n",
 	  i, cpu, nhalos*i/cpu);
-
-  start = clock ();
-  for (i = 0; i < 2000; i++)
-    boundary_level ({h, h, h, h, h, h, h, h, h, h}, depth());
-  end = clock ();
-  cpu = ((double) (end - start))/CLOCKS_PER_SEC;
-
-  int nbounds = 0;
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_level (b, depth(), true)
-      nbounds++;
-
-  printf ("---- boundary_level ----\n");
-  printf ("%d boundary points\n", nbounds);
-  printf ("%4d iterations:     %6g CPU, %.3g boundary.steps/s\n",
-	  i, cpu, nbounds*i*10/cpu);
 
   free_grid();
 }

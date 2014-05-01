@@ -238,9 +238,9 @@ void delete (scalar * list)
 
 // Cartesian methods
 
-void (* boundary_centered) (scalar *);
-void (* boundary_normal)   (vector *);
-void (* boundary_tangent)  (vector *);
+void (* boundary_level)   (scalar *, int l);
+void (* boundary_normal)  (vector *);
+void (* boundary_tangent) (vector *);
 
 void boundary_face (vector * list)
 {
@@ -267,7 +267,7 @@ void boundary (scalar * list)
       listc = list_add (listc, s);
   }
   if (listc) {
-    boundary_centered (listc);
+    boundary_level (listc, -1);
     free (listc);
   }
   if (lists) {
@@ -276,7 +276,7 @@ void boundary (scalar * list)
   }
 }
 
-void cartesian_boundary_centered (scalar * list)
+void cartesian_boundary_level (scalar * list, int l)
 {
   for (int b = 0; b < nboundary; b++)
     foreach_boundary (b, true) // also traverse corners
@@ -439,7 +439,7 @@ void cartesian_methods()
   init_scalar       = cartesian_init_scalar;
   init_vector       = cartesian_init_vector;
   init_tensor       = cartesian_init_tensor;
-  boundary_centered = cartesian_boundary_centered;
+  boundary_level    = cartesian_boundary_level;
   boundary_normal   = cartesian_boundary_normal;
   boundary_tangent  = cartesian_boundary_tangent;
   debug             = cartesian_debug;

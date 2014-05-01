@@ -669,21 +669,26 @@ static void update_cache_f (void)
   q->dirty = false;
 }
 
-@def foreach_halo_levels(start,cond,inc) {
+@def foreach_halo_level(_l) {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  for (int _l = start; _l cond; _l inc) {
-    OMP_PARALLEL()
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
-    int _k;
-    OMP(omp for schedule(static))
-    for (_k = 0; _k < point.halo[_l].n; _k++) {
-      point.i = point.halo[_l].p[_k].i;
-      point.j = point.halo[_l].p[_k].j;
-      point.level = _l;
-      POINT_VARIABLES;
+  OMP_PARALLEL()
+  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  int _k;
+  OMP(omp for schedule(static))
+  for (_k = 0; _k < point.halo[_l].n; _k++) {
+    point.i = point.halo[_l].p[_k].i;
+    point.j = point.halo[_l].p[_k].j;
+    point.level = _l;
+    POINT_VARIABLES;
 @
-@define end_foreach_halo_levels() } OMP_END_PARALLEL() } }
+@define end_foreach_halo_level() } OMP_END_PARALLEL() }
+
+@def foreach_halo_levels(start,cond,inc) {
+  for (int _l = start; _l cond; _l inc)
+    foreach_halo_level(_l)
+@
+@define end_foreach_halo_levels() end_foreach_halo_level() }
 
 /* breadth-first traversal of halos from coarse to fine */
 @def foreach_halo_coarse_to_fine(depth1) {

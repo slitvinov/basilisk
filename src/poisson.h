@@ -22,62 +22,11 @@ $$
 where the right-hand-side is often called the *residual* of the
 approximate solution $\tilde{a}$.
 
-## Homogeneous boundary conditions
-
-To close the problem, we also need to define the boundary conditions
-applicable to $da$. They will be the *homogeneous* equivalent of the
-boundary conditions applied to $\tilde{a}$. The function below applies
-the homogeneous boundary conditions of `a` to `da` for level `l` of
-the multigrid hierarchy. */
-
-static void boundary_homogeneous (scalar * a, scalar * da, int l)
-{
-#if QUADTREE
-
-  /**
-  On quadtree meshes, we also need to make sure that stencils are
-  consistent. We first restrict the solution from level *l* up to
-  coarser levels. */
-
-  halo_restriction (l, da, NULL);
-
-  /**
-  We then apply boundary conditions on all levels coarser than *l*
-  and/or on leaf cells. */
-
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell (b, true)
-      if (level <= l || is_leaf(cell)) {
-	scalar s, ds;
-	for (s, ds in a, da)
-	  ds[ghost] = s.boundary_homogeneous[b] (point, ds);
-	corners();
-	if (level == l || is_leaf(cell))
-	  continue;
-      }
-
-  /**
-  Finally we prolongate the solution down to level *l*. */
-
-  halo_prolongation (l, da);
-
-#else
-
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_level (b, l, true) {
-      scalar s, ds;
-      for (s, ds in a, da)
-	ds[ghost] = s.boundary_homogeneous[b] (point, ds);
-    }
-#endif
-}
-
-/**
 ## Multigrid cycle
 
 Here we implement the multigrid cycle proper. Given an initial guess
-`a`, a residual `res`, a correction field `da` and a relaxation
-function `relax`, we will provide an improved guess at the end of the
+*a*, a residual *res*, a correction field *da* and a relaxation
+function *relax*, we will provide an improved guess at the end of the
 cycle. */
 
 void mg_cycle (scalar * a, scalar * res, scalar * da,
@@ -86,6 +35,16 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
 	       void * data,
 	       int nrelax, int minlevel)
 {
+  /**
+  The boundary conditions for the correction fields are the
+  *homogeneous* equivalent of the boundary conditions applied to
+  *a*. */
+
+  for (int b = 0; b < nboundary; b++) {
+    scalar s, ds;
+    for (s, ds in a, da)
+      ds.boundary[b] = s.boundary_homogeneous[b];
+  }
 
   /**
   We first define the residual on all levels. */
@@ -93,7 +52,7 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
   restriction (res);
 
   /**
-  We then proceed from the coarsest grid (`minlevel`) down to the
+  We then proceed from the coarsest grid (*minlevel*) down to the
   finest grid. */
 
   for (int l = minlevel; l <= depth(); l++) {
@@ -121,15 +80,15 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
     We then apply homogeneous boundary conditions and do several
     iterations of the relaxation function to refine the initial guess. */
 
-    boundary_homogeneous (a, da, l);
+    boundary_level (da, l);
     for (int i = 0; i < nrelax; i++) {
       relax (da, res, l, data);
-      boundary_homogeneous (a, da, l);
+      boundary_level (da, l);
     }
   }
 
   /**
-  And finally we apply the resulting correction to `a`. */
+  And finally we apply the resulting correction to *a*. */
 
   foreach() {
     scalar s, ds;
@@ -146,8 +105,8 @@ The multigrid solver itself uses successive calls to the multigrid
 cycle to refine an initial guess until a specified tolerance is
 reached. 
 
-The maximum number of iterations is controlled by `NITERMAX` and the
-tolerance by `TOLERANCE` with the default values below. */
+The maximum number of iterations is controlled by *NITERMAX* and the
+tolerance by *TOLERANCE* with the default values below. */
 
 int NITERMAX = 100;
 double TOLERANCE = 1e-3;
@@ -164,7 +123,7 @@ typedef struct {
 /**
 The user needs to provide a function which computes the residual field
 (and returns its maximum) as well as the relaxation function. The
-user-defined pointer `data` can be used to pass arguments to these
+user-defined pointer *data* can be used to pass arguments to these
 functions. */
 
 mgstats mg_solve (scalar * a, scalar * b,
@@ -178,7 +137,7 @@ mgstats mg_solve (scalar * a, scalar * b,
   /**
   The list of residual fields will be allocated by the residual()
   function. We allocate a new correction field for each of the scalars
-  in `a`. */
+  in *a*. */
 
   scalar * res = NULL, * da = NULL;
   for (scalar s in a) {
@@ -202,9 +161,9 @@ mgstats mg_solve (scalar * a, scalar * b,
   s.resb = s.resa = residual (a, b, &res, data);
 
   /**
-  We then iterates until convergence or until `NITERMAX` is reached. Note
+  We then iterates until convergence or until *NITERMAX* is reached. Note
   also that we force the solver to apply at least one cycle, even if the
-  initial residual is lower than `TOLERANCE`. */
+  initial residual is lower than *TOLERANCE*. */
 
   for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.resa > TOLERANCE); s.i++) {
     mg_cycle (a, res, da, relax, data, 4, 0);

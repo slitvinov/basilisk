@@ -24,7 +24,6 @@
 
 // Multigrid methods
 
-void (* boundary_level)       (scalar *, int);
 void (* boundary_restriction) (scalar *);
 
 void coarsen_average (Point point, scalar s)
@@ -142,6 +141,8 @@ vector multigrid_init_face_vector (vector v, const char * name)
 
 void multigrid_boundary_level (scalar * list, int l)
 {
+  if (l < 0)
+    l = depth();
   // traverse the boundaries of a given level
   for (int b = 0; b < nboundary; b++)
     foreach_boundary_level (b, l, true) // also traverse corners
@@ -153,7 +154,7 @@ void multigrid_boundary_restriction (scalar * list)
 {
   // traverse the boundaries of all coarse levels (i.e. not the leaves)
   for (int l = 0; l < depth(); l++)
-    boundary_level (list, l);
+    multigrid_boundary_level (list, l);
 }
 
 void multigrid_debug (Point point)
