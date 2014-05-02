@@ -54,7 +54,7 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
     scalar a = u.x;
     foreach_face()
       g.x[] = mu.x[]*(a[] - a[-1,0])/Delta;
-    boundary_normal ({g});
+    boundary_flux ({g});
     foreach (reduction(max:maxres)) {
       res.x[] = r.x[] - u.x[] + dt*alpha[]/Delta*
         (g.x[1,0] - g.x[] + g.y[0,1] - g.y[]

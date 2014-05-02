@@ -22,12 +22,6 @@
 @
 @endif
 
-// scalar attributes
-
-attribute {
-  double (* prolongation) (Point, scalar);
-};
-
 // Multigrid methods
 
 void (* boundary_restriction) (scalar *);
@@ -40,33 +34,37 @@ void coarsen_average (Point point, scalar s)
 void restriction (scalar * list)
 {
   scalar * listc = NULL;
-  vector * lists = NULL;
+  vector * listf = NULL;
   for (scalar s in list) 
     if (!is_constant(s)) {
       if (s.face)
-	lists = vectors_add (lists, s.v);
+	listf = vectors_add (listf, s.v);
       else
 	listc = list_add (listc, s);
     }
-  if (lists)
-    boundary_normal (lists);
-  if (lists || listc)
+  if (listf)
+    boundary_flux (listf);
+  if (listf || listc)
     foreach_fine_to_coarse() {
       for (scalar s in listc)
 	s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
-      for (vector v in lists)
+      for (vector v in listf)
 	foreach_dimension()
 	  v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
     }
   free (listc);
-  if (lists) {
+  if (listf) {
+#if 1
+    assert (false);
+#else
     foreach_boundary_fine_to_coarse(right)
-      for (vector v in lists)
+      for (vector v in listf)
 	v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
     foreach_boundary_fine_to_coarse(top)
-      for (vector v in lists)
+      for (vector v in listf)
 	v.y[] = (fine(v.y,0,0) + fine(v.y,1,0))/2.;
-    free (lists);
+#endif
+    free (listf);
   }
 }
 
@@ -137,6 +135,14 @@ void coarsen_face (Point point, scalar s)
     v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
 }
 
+vector multigrid_init_face_vector (vector v, const char * name)
+{
+  v = cartesian_init_face_vector (v, name);
+  v.x.coarsen = coarsen_face;
+  v.y.coarsen = none;
+  return v;
+}
+
 void multigrid_boundary_level (scalar * list, int l)
 {
   if (l < 0)
@@ -152,7 +158,7 @@ void multigrid_boundary_restriction (scalar * list)
 {
   // traverse the boundaries of all coarse levels (i.e. not the leaves)
   for (int l = 0; l < depth(); l++)
-    multigrid_boundary_level (list, l);
+    boundary_level (list, l);
 }
 
 void multigrid_debug (Point point)
@@ -201,7 +207,7 @@ void multigrid_debug (Point point)
 void multigrid_methods()
 {
   cartesian_methods();
-  debug = multigrid_debug;
-  boundary_level = multigrid_boundary_level;
+  debug                = multigrid_debug;
   boundary_restriction = multigrid_boundary_restriction;
+  init_face_vector = multigrid_init_face_vector;
 }

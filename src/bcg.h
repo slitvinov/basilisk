@@ -47,7 +47,7 @@ void tracer_fluxes (const scalar f,
   Boundary conditions ensure the consistency of fluxes across
   variable-resolution boundaries (on adaptive meshes). */
 
-  boundary_normal ({flux});
+  boundary_flux ({flux});
 }
 
 /**

@@ -37,11 +37,8 @@
 @elif _MPI
 @ include <mpi.h>
 @ define OMP(x)
-int pid() {
-  int rank;
-  MPI_Comm_rank (MPI_COMM_WORLD, &rank);
-  return rank;
-}
+static int mpi_rank;
+#define pid() mpi_rank
 @else
 
 @ define OMP(x)
@@ -287,3 +284,10 @@ extern int datasize;
 
 void init_solver (void);
 
+void free_solver()
+{
+  delete (all);
+  free (all); all = NULL;
+  free (_method); _method = NULL;
+  free_grid();
+}

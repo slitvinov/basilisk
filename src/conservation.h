@@ -214,7 +214,7 @@ double update (scalar * conserved, scalar * updates, double dtmax)
     }
   }
 
-  boundary_normal (lflux);
+  boundary_flux (lflux);
 
   /**
   #### Update

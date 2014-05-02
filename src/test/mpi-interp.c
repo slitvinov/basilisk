@@ -15,6 +15,12 @@ int main (int argc, char ** argv)
   /* initial coarsening (see halo.c) */
   double tolerance = 1e-4;
   adapt_wavelet ({h}, &tolerance, 11);
+  mpi_partitioning();
+
+  trash ({h});
+  foreach()
+    h[] = exp(-(x*x + y*y)/(R0*R0));
+  boundary ({h});
 
   double max = 0.;
   foreach_halo() {
@@ -24,7 +30,10 @@ int main (int argc, char ** argv)
       max = fabs(e);
   }
 
-  fprintf (stderr, "maximum error on halos: %g\n", max);
+  long nc = 0;
+  foreach()
+    nc++;
+  fprintf (stderr, "maximum error on halos: %g, %ld leaves\n", max, nc);
 
   free_grid ();
 

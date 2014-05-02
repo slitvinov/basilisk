@@ -268,8 +268,6 @@ double update (scalar * evolving, scalar * updates, double dtmax)
       Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
   }
   
-  }
-
   boundary_normal ({Fh, S, Fq});
 
   /**

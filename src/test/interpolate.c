@@ -7,7 +7,7 @@ scalar v[];
 double radius;
 
 int refine_func (Point point, void * data) {
-  return x*x + y*y > radius*radius;
+  return sq(x) + sq(y) > sq(radius);
 }
 
 int main (int argc, char ** argv)

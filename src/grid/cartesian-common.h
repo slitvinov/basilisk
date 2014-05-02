@@ -18,39 +18,7 @@ void (* debug)    (Point);
 
 #include "fpe.h"
 
-@ifndef is_face_x
-@ define is_face_x() true
-@ define is_face_y() true
-@endif
-
-@ifndef foreach_boundary_ghost
-@ def foreach_boundary_ghost(dir)
-  foreach_boundary(dir,false) {
-    point.i += ig; point.j += jg;
-    ig = -ig; jg = -jg;
-    POINT_VARIABLES;
-@
-@ def end_foreach_boundary_ghost()
-    ig = -ig; jg = -jg;
-  } end_foreach_boundary()
-@
-@endif
-
-@ifndef foreach_boundary_face_ghost
-@ def foreach_boundary_face_ghost(dir)
-  foreach_boundary_face(dir) {
-    point.i += ig; point.j += jg;
-    ig = -ig; jg = -jg;
-    POINT_VARIABLES;
-@
-@ def end_foreach_boundary_face_ghost()
-    ig = -ig; jg = -jg;
-  } end_foreach_boundary_face()
-@
-@endif
-
 @define end_foreach_face()
-@define end_foreach_vertex()
 
 #define output_stencil(v,fp) _output_stencil(point,v,#v,fp)
 void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
@@ -253,30 +221,29 @@ void free_solver()
 // Cartesian methods
 
 void (* boundary_level)   (scalar *, int l);
-void (* boundary_normal)  (vector *);
-void (* boundary_tangent) (vector *);
+void (* boundary_flux)    (vector *);
 
-void boundary_face (vector * list)
+void boundary_tangent (vector * list)
 {
-  foreach_dimension() {
-    foreach_boundary (right,false)
-      for (vector u in list)
-	u.x[ghost] = u.x.boundary[right] (point, u.x);
-    foreach_boundary (left,false)
-      for (vector u in list)
-	u.x[] = u.x.boundary[left] (point, u.x);
+  vector * listv = NULL;
+  for (vector v in list)
+    if (!is_constant(v.x))
+      listv = vectors_append (listv, v);
+  if (listv) {
+    Boundary ** i = boundaries, * b;
+    while ((b = *i++))
+      b->tangent (b, listv);
   }
-  boundary_normal (list);
-  boundary_tangent (list);
+  free (listv);
 }
 
 void boundary (scalar * list)
 {
   scalar * listc = NULL;
-  vector * lists = NULL;
+  vector * listf = NULL;
   for (scalar s in list) {
     if (s.face)
-      lists = vectors_add (lists, s.v);
+      listf = vectors_add (listf, s.v);
     else
       listc = list_add (listc, s);
   }
@@ -284,38 +251,31 @@ void boundary (scalar * list)
     boundary_level (listc, -1);
     free (listc);
   }
-  if (lists) {
-    boundary_face (lists);
-    free (lists);
+  if (listf) {
+    Boundary ** i = boundaries, * b;
+    while ((b = *i++))
+      b->normal (b, listf);
+    boundary_flux (listf);
+    boundary_tangent (listf);
+    free (listf);
   }
 }
+
+@def boundary_iterate(type,list,l) {
+  Boundary ** i = boundaries, * b;
+  while ((b = *i++))
+    b->type (b, list, l);
+}
+@
 
 void cartesian_boundary_level (scalar * list, int l)
 {
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary (b, true) // also traverse corners
-      for (scalar s in list)
-	s[ghost] = s.boundary[b] (point, s);
+  boundary_iterate (level, list, l);
 }
 
-void cartesian_boundary_normal (vector * list)
+void cartesian_boundary_flux (vector * list)
 {
   // nothing to do
-}
-
-void cartesian_boundary_tangent (vector * list)
-{
-  vector * listv = NULL;
-  for (vector v in list)
-    if (!is_constant(v.x))
-      listv = vectors_add (listv, v);
-  foreach_dimension() {
-    for (int d = top; d <= bottom; d++)
-      foreach_boundary_face (d)
-	for (vector v in listv)
-	  v.x[ghost] = v.x.boundary[d] (point, v.x);
-  }
-  free (listv);
 }
 
 static double symmetry (Point point, scalar s)
@@ -464,12 +424,11 @@ void cartesian_debug (Point point)
 
 void cartesian_methods()
 {
-  init_scalar       = cartesian_init_scalar;
-  init_vector       = cartesian_init_vector;
-  init_tensor       = cartesian_init_tensor;
-  boundary_level    = cartesian_boundary_level;
-  boundary_normal   = cartesian_boundary_normal;
-  boundary_tangent  = cartesian_boundary_tangent;
-  debug             = cartesian_debug;
-  init_face_vector  = cartesian_init_face_vector;
+  init_scalar      = cartesian_init_scalar;
+  init_vector      = cartesian_init_vector;
+  init_tensor      = cartesian_init_tensor;
+  init_face_vector = cartesian_init_face_vector;
+  boundary_level   = cartesian_boundary_level;
+  boundary_flux    = cartesian_boundary_flux;
+  debug            = cartesian_debug;
 }

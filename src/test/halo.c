@@ -20,9 +20,6 @@ int main (int argc, char ** argv)
     fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
   foreach_halo_fine_to_coarse()
     fprintf (stderr, "%g %g %d %d res\n", x, y, level, cell.neighbors);
-  for (int d = 0; d < nboundary; d++)
-    foreach_boundary (d, true)
-      fprintf (stderr, "%g %g %d %d boundary\n", x, y, level, cell.neighbors);
   output_cells (stdout);
 
   free_grid ();

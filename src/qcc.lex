@@ -20,7 +20,7 @@
   int nvar = 0, nconst = 0, nevents = 0;
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
-    inforeach_boundary, inforeach_face, inforeach_vertex, nmaybeconst = 0;
+    inforeach_boundary, inforeach_face, nmaybeconst = 0;
   int invardecl, vartype, varsymmetric, varface, varvertex, varmaybeconst;
   char * varconst;
   int inval, invalpara;
@@ -220,7 +220,7 @@
   void foreachbody() {
     if (inforeach_face) {
       // foreach_face()
-      fputs ("foreach()", yyout);
+      fputs ("foreach_face_generic()", yyout);
       FILE * fp = dopen ("_foreach_body.h", "r");
       if (foreach_face_xy == face_xy) {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
@@ -239,64 +239,7 @@
 	writefile (fp, 'x', 'y', foreach_line, "is_face_y()");
 	fputs (" } ", yyout);
       }
-      fputs (" end_foreach()\n", yyout);
-      if (foreach_face_xy != face_x) {
-	fputs ("foreach_boundary_ghost (top) {\n", yyout);
-	if (foreach_face_xy == face_xy)
-	  writefile (fp, 'y', 'x', foreach_line, NULL);
-	else
-	  writefile (fp, 'x', 'y', foreach_line, NULL);
-	fputs ("} end_foreach_boundary_ghost();\n", yyout);
-	fputs ("#ifdef foreach_boundary_ghost_halo\n"
-	       "foreach_boundary_ghost_halo (top) {\n", yyout);
-	if (foreach_face_xy == face_xy)
-	  writefile (fp, 'y', 'x', foreach_line, NULL);
-	else
-	  writefile (fp, 'x', 'y', foreach_line, NULL);
-	fputs ("} end_foreach_boundary_ghost_halo();\n"
-	       "#endif\n", yyout);
-      }
-      if (foreach_face_xy != face_y) {
-	fputs ("foreach_boundary_ghost (right) {\n", yyout);
-	writefile (fp, 'x', 'y', foreach_line, NULL);
-	fputs ("} end_foreach_boundary_ghost();\n", yyout);
-	fputs ("#ifdef foreach_boundary_ghost_halo\n"
-	       "foreach_boundary_ghost_halo (right) {\n", yyout);
-	writefile (fp, 'x', 'y', foreach_line, NULL);
-	fputs ("} end_foreach_boundary_ghost_halo();\n"
-	       "#endif\n", yyout);
-      }
-      fprintf (yyout, "#line %d\n", line);
-      fclose (fp);
-    }
-    else if (inforeach_vertex) {
-      // foreach_vertex()
-      FILE * fp = dopen ("_foreach_body.h", "r");
-      fputs ("foreach() { x -= Delta/2.; y -= Delta/2.; ", yyout);
-      writefile (fp, 'x', 'y', foreach_line, NULL);
-      fputs (" } end_foreach()\n", yyout);
-      fputs ("foreach_boundary_face_ghost (top) { x -= Delta/2.;\n", yyout);
-      writefile (fp, 'x', 'y', foreach_line, NULL);
-      fputs ("} end_foreach_boundary_face_ghost();\n"
-	     "#ifdef foreach_boundary_face_ghost_halo\n"
-	     "foreach_boundary_face_ghost_halo (top) {\n", yyout);
-      writefile (fp, 'x', 'y', foreach_line, NULL);
-      fputs ("} end_foreach_boundary_face_ghost_halo();\n"
-	     "#endif\n"
-	     "foreach_boundary_face_ghost (right) { y -= Delta/2.;\n", yyout);
-      writefile (fp, 'x', 'y', foreach_line, NULL);
-      fputs ("} end_foreach_boundary_face_ghost();\n"
-	     "#ifdef foreach_boundary_face_ghost_halo\n"
-	     "foreach_boundary_face_ghost_halo (right) {\n", yyout);
-      writefile (fp, 'x', 'y', foreach_line, NULL);
-      fputs ("} end_foreach_boundary_face_ghost_halo();\n"
-	     "#endif\n", yyout);
-      fputs ("#ifdef foreach_halo_vertex\n"
-	     "foreach_halo_vertex () { x -= Delta/2.; y -= Delta/2.;\n",
-	     yyout);
-      writefile (fp, 'x', 'y', foreach_line, NULL);
-      fputs ("} end_foreach_halo_vertex();\n"
-	     "#endif\n", yyout);
+      fputs (" end_foreach_face_generic()\n", yyout);
       fprintf (yyout, "#line %d\n", line);
       fclose (fp);
     }
@@ -365,8 +308,9 @@
 		       " _constant[%s.y -_NVARMAX]};\n"
 		       "NOT_UNUSED(_const_%s);\n",
 		       foreachconst[i]->v, foreachconst[i]->v, 
-		       foreachconst[i]->v);
-	    for (int c = 'x'; c <= 'y'; c++)
+		       foreachconst[i]->v, foreachconst[i]->v);
+	    int c;
+	    for (c = 'x'; c <= 'y'; c++)
 	      if (bits & (1 << i))
 		fprintf (yyout,
 			 "#undef val_%s_%c\n"
@@ -378,7 +322,6 @@
 			 "#undef val_%s_%c\n"
 			 "#define val_%s_%c(a,i,j) val(a,i,j)\n",
 			 foreachconst[i]->v, c, foreachconst[i]->v, c);
-	    }
 	  }
 	fprintf (yyout, "#line %d\n", line);
 	body();
@@ -403,7 +346,7 @@
 	       "#line %d\n",
 	       line + 1);
     fputs (" }", yyout);
-    inforeach = inforeach_boundary = inforeach_face = inforeach_vertex = 0;
+    inforeach = inforeach_boundary = inforeach_face = 0;
   }
 
   void endevent() {
@@ -891,7 +834,6 @@ foreach{ID}* {
   foreachfp = yyout;
   yyout = dopen ("_foreach.h", "w");
   inforeach_boundary = (!strncmp(foreachs, "foreach_boundary", 16));
-  inforeach_vertex = (!strcmp(foreachs, "foreach_vertex"));
   inforeach_face = (!strcmp(foreachs, "foreach_face"));
   ECHO;
 }
@@ -1810,7 +1752,7 @@ int endfor (FILE * fin, FILE * fout)
   yyout = fout;
   line = 1, scope = para = 0;
   inforeach = foreachscope = foreachpara = 
-    inforeach_boundary = inforeach_face = inforeach_vertex = 0;
+    inforeach_boundary = inforeach_face = 0;
   invardecl = 0;
   inval = invalpara = 0;
   brack = inarray = 0;
@@ -1940,13 +1882,17 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	     boundaryindex[i]);
   /* init_solver() */
   fputs ("void init_solver (void) {\n", fout);
+  /* MPI */
+  fputs ("#if _MPI\n"
+	 "  void mpi_init();\n"
+	 "  mpi_init();\n"
+	 "#endif\n",
+	 fout);
   /* events */
   fputs ("  Events = malloc (sizeof (Event));\n"
 	 "  Events[0].last = 1;\n", fout);
-  int last;
-  for (last = 0; last <= 1; last++) {
-    int i;
-    for (i = 0; i < nevents; i++)
+  for (int last = 0; last <= 1; last++)
+    for (int i = 0; i < nevents; i++)
       if (eventchild[i] < 0 && eventlast[i] == last) {
 	int j = i;
 	while (j >= 0) {

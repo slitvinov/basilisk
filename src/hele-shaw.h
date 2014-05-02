@@ -68,6 +68,6 @@ event pressure (i++, last)
   trash ({u});
   foreach_face()
     u.x[] = beta.x[]*(p[] - p[-1,0])/Delta;
-  boundary_normal ({u});
+  boundary_flux ({u});
   boundary_tangent ({u});
 }

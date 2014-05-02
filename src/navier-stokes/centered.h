@@ -118,7 +118,7 @@ event init (i = 0)
   trash ({uf});
   foreach_face()
     uf.x[] = (u.x[] + u.x[-1,0])/2.;
-  boundary_normal ({uf});
+  boundary_flux ({uf});
   boundary_tangent ({uf});
 }
 
@@ -148,7 +148,7 @@ $\alpha_c$) or dynamic viscosity (face field $\mu_f$) -- at time
 $t+\Delta t/2$ -- can be defined by overloading this event. */
 
 event properties (i++,last) {
-  boundary_normal ({alpha, mu});
+  boundary_flux ({alpha, mu});
   boundary_tangent ({alpha, mu});
 }
 
@@ -265,10 +265,10 @@ event acceleration (i++,last)
   /**
   We add the acceleration term to the face velocity field. */
 
-  boundary_normal ({a});
+  boundary_flux ({a});
   foreach_face()
     uf.x[] += dt*a.x[];
-  boundary_normal ({uf}); 
+  boundary_flux ({uf}); 
 }
 
 /**
@@ -290,7 +290,7 @@ event projection (i++,last)
   face vector gf[];
   foreach_face()
     gf.x[] = a.x[] - alpha.x[]*(p[] - p[-1,0])/Delta;
-  boundary_normal ({gf});
+  boundary_flux ({gf});
 
   /**
   We average these face values to obtain the centered, combined

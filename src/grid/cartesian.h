@@ -30,35 +30,27 @@ struct _Point {
 @
 @define end_foreach() }} OMP_END_PARALLEL()
 
-@def foreach_boundary(d,corners)
+@def foreach_face_generic(clause)
   OMP_PARALLEL()
-  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point = *((Point *)grid);
-  int _start = 1, _end = point.n;
-  /* traverse corners only for top and bottom */
-  if (corners && d > left) { _start--; _end++; }
   int _k;
-  OMP(omp for schedule(static))
-  for (_k = _start; _k <= _end; _k++) {
-    point.i = d > left ? _k : d == right ? point.n : 1;
-    point.j = d < top  ? _k : d == top   ? point.n : 1;
-    POINT_VARIABLES
+  OMP(omp for schedule(static) clause)
+  for (_k = 1; _k <= point.n + 1; _k++) {
+    point.i = _k;
+    for (point.j = 1; point.j <= point.n + 1; point.j++) {
+      POINT_VARIABLES
 @
-@define end_foreach_boundary() } OMP_END_PARALLEL()
+@define end_foreach_face_generic() }} OMP_END_PARALLEL()
 
-@def foreach_boundary_face(d)
-  // fixme: x,y coordinates are not correct
-  OMP_PARALLEL()
-  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point point = *((Point *)grid);
-  int _start = 1, _end = point.n + 1, _k;
-  OMP(omp for schedule(static))
-  for (_k = _start; _k <= _end; _k++) {
-    point.i = d > left ? _k : d == right ? point.n : 1;
-    point.j = d < top  ? _k : d == top   ? point.n : 1;
-    POINT_VARIABLES
+@def foreach_vertex()
+foreach_face_generic() {
+  x -= Delta/2.; y -= Delta/2.;
 @
-@define end_foreach_boundary_face() } OMP_END_PARALLEL()
+@define end_foreach_vertex() } end_foreach_face_generic()
+
+@define is_face_x() (point.j <= point.n)
+@define is_face_y() (point.i <= point.n)
 
 #if TRASH
 # undef trash
@@ -74,10 +66,79 @@ void cartesian_trash (void * alist)
       ((double *)(&p->data[i*datasize]))[s] = undefined;
 }
 
+static void box_boundary_level (const Boundary * b, scalar * list, int l)
+{
+  int d = ((BoxBoundary *)b)->d;
+
+  OMP_PARALLEL()
+  Point point = *((Point *)grid);
+  ig = _ig[d]; jg = _jg[d];
+  int _start = 1, _end = point.n, _k;
+  /* traverse corners only for top and bottom */
+  if (d > left) { _start--; _end++; }
+  OMP(omp for schedule(static))
+  for (_k = _start; _k <= _end; _k++) {
+    point.i = d > left ? _k : d == right ? point.n : 1;
+    point.j = d < top  ? _k : d == top   ? point.n : 1;
+    for (scalar s in list)
+      val(s,ig,jg) = _method[s].boundary[d] (point, s);
+  }
+  OMP_END_PARALLEL()
+}
+
+static void box_boundary_normal (const Boundary * b, vector * list)
+{
+  int d = ((BoxBoundary *)b)->d;
+  int component = d/2; // index of normal component
+
+  OMP_PARALLEL()
+  Point point = *((Point *)grid);
+  // set the indices of the normal face component in direction d
+  if (d % 2) {
+    ig = jg = 0;
+  }
+  else {
+    ig = _ig[d]; jg = _jg[d];
+  }
+  int _start = 1, _end = point.n + 1, _k;
+  OMP(omp for schedule(static))
+  for (_k = _start; _k < _end; _k++) {
+    point.i = d > left ? _k : d == right ? point.n : 1;
+    point.j = d < top  ? _k : d == top   ? point.n : 1;
+    for (vector v in list) {
+      scalar s = (&v.x)[component];
+      val(s,ig,jg) = _method[s].boundary[d] (point, s);
+    }
+  }
+  OMP_END_PARALLEL()
+}
+
+static void box_boundary_tangent (const Boundary * b, vector * list)
+{
+  int d = ((BoxBoundary *)b)->d;
+  int component = (d/2 + 1) % 2; // index of tangential component
+
+  OMP_PARALLEL()
+  Point point = *((Point *)grid);
+  ig = _ig[d]; jg = _jg[d];
+  int _start = 1, _end = point.n + 1, _k;
+  OMP(omp for schedule(static))
+  for (_k = _start; _k <= _end; _k++) {
+    point.i = d > left ? _k : d == right ? point.n : 1;
+    point.j = d < top  ? _k : d == top   ? point.n : 1;
+    for (vector v in list) {
+      scalar s = (&v.x)[component];
+      val(s,ig,jg) = _method[s].boundary[d] (point, s);
+    }
+  }
+  OMP_END_PARALLEL()
+}
+
 void free_grid (void)
 {
   if (!grid)
     return;
+  free_boundaries();
   Point * p = grid;
   free (p->data);
   free (p);
@@ -101,6 +162,15 @@ void init_grid (int n)
     v[i] = undefined;
   grid = p;
   trash (all);
+  for (int d = 0; d < nboundary; d++) {
+    BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
+    box->d = d;
+    Boundary * b = (Boundary *) box;
+    b->level   = box_boundary_level;
+    b->normal  = box_boundary_normal;
+    b->tangent = box_boundary_tangent;
+    add_boundary (b);
+  }
   init_events();
 }
 

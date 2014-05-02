@@ -76,9 +76,11 @@ struct _Point {
 #endif
   int i, j, level;  /* the current cell index and level */
 
-  Cache        leaves;  /* leaf indices */
-  CacheLevel * halo;    /* halo indices for each level */
-  CacheLevel * active;  /* active cells indices for each level */
+  Cache        leaves;   /* leaf indices */
+  Cache        faces;    /* face indices */
+  Cache        vertices; /* vertex indices */
+  CacheLevel * halo;     /* halo indices for each level */
+  CacheLevel * active;   /* active cells indices for each level */
 
   bool dirty;       /* whether caches should be updated */
 };
@@ -310,8 +312,8 @@ void recursive (Point point)
 	continue;
       switch (stage) {
       case 0: case _CORNER: {
-          POINT_VARIABLES;
-  	  /* do something */
+	POINT_VARIABLES;
+	/* do something */
 @
 @def end_foreach_boundary_cell()
         }
@@ -336,118 +338,129 @@ void recursive (Point point)
   }
 @
 
-@def foreach_boundary_cell_post(dir,condition)
-  {
-    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
-    int _d = dir; NOT_UNUSED(_d);
-    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
-    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
-    while (_s >= 0) {
-      int stage;
-      _pop (point.level, point.i, point.j, stage);
-      if (!allocated (0,0))
-	continue;
-      switch (stage) {
-      case 0: {
-	POINT_VARIABLES;
-	if (condition) {
-	  if (point.level == point.depth) {
-	    _push (point.level, point.i, point.j, 4);
-	  }
-	  else {
-	    _push (point.level, point.i, point.j, 1);
-	    int k = _d > left ? _LEFT : _RIGHT - _d;
-	    int l = _d < top  ? _TOP  : _TOP + 2 - _d;
-	    _push (point.level + 1, k, l, 0);
-	  }
-	}
-	break;
-      }
-      case 1: {
-	 _push (point.level, point.i, point.j, 4);
-	int k = _d > left ? _RIGHT : _RIGHT - _d;
-	int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;
-	_push (point.level + 1, k, l, 0);
-	break;
-      }
-      case 4: {
-        POINT_VARIABLES;
-	/* do something */	
-@
-@def end_foreach_boundary_cell_post()
-      }
-      }
-    }
-  }
-@
-
-@def foreach_boundary_face(dir)
-  { _OMPSTART /* for face reduction */
-    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
-    int _d = dir; NOT_UNUSED(_d);
-    struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
-    _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
-    while (_s >= 0) {
-      int stage;
-      _pop (point.level, point.i, point.j, stage);
-      if (!allocated (0,0))
-	continue;
-      switch (stage) {
-      case 0: case _CORNER: 
-	if (is_leaf (cell) || is_corner (cell)) {
-	  if (is_leaf (cell)) {
-	    if (_d < top) {
-	      if (!is_leaf(neighbor(0,1)))
-		_push (point.level, point.i, point.j + 1, _CORNER);
-	    } else {
-	      if (!is_leaf(neighbor(1,0)))
-		_push (point.level, point.i + 1, point.j, _CORNER);
-	    }
-	  }
-          POINT_VARIABLES;
-  	  /* do something */
-@
-@def end_foreach_boundary_face()
-          continue;
-        }
-        /* children */
-        if (point.level < point.depth) {
-	  _push (point.level, point.i, point.j, 1);
-	  int k = _d > left ? _LEFT : _RIGHT - _d;
-	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;
-	  _push (point.level + 1, k, l, 0);
-	}
-	break;
-      case 1: {
-  	  int k = _d > left ? _RIGHT : _RIGHT - _d;
-	  int l = _d < top  ? _BOTTOM  : _TOP + 2 - _d;
-	  _push (point.level + 1, k, l, 0);
-	  break;
-        }
-      }
-    }  _OMPEND
-  }
-@
-
 #define update_cache() { if (((Quadtree *)grid)->dirty) update_cache_f(); }
 
-@def foreach(clause)     {
+static void update_cache_f (void)
+{
+  Quadtree * q = grid;
+
+  /* empty caches */
+  q->leaves.n = q->faces.n = q->vertices.n = 0;
+  for (int l = 0; l <= depth(); l++)
+    q->halo[l].n = q->active[l].n  = 0;
+
+  foreach_cell() {
+    if (!is_active (cell)) {
+      if (cell.neighbors > 0)
+	/* update halo cache (prolongation) */
+	cache_level_append (&q->halo[level], point);
+      else
+	continue;
+    }
+    else
+#if _MPI
+      if (cell.pid == pid())
+#endif
+    {
+      if (is_leaf (cell)) {
+	cache_append (&q->leaves, point);
+	cache_append (&q->vertices, point);
+	if (!is_refined(neighbor(-1,0)) || !is_refined(neighbor(0,-1)))
+	  cache_append (&q->faces, point);
+	if (!is_active(neighbor(1,0))) {
+	  point.i++;
+	  cache_append (&q->faces, point);
+	  point.i--;
+	}
+	if (!is_active(neighbor(0,1))) {
+	  point.j++;
+	  cache_append (&q->faces, point);
+	  point.j--;
+	}
+	if (!is_leaf(neighbor(1,1))) {
+	  point.i++; point.j++;
+	  cache_append (&q->vertices, point);
+	  point.i--; point.j--;
+	}
+	if (!is_leaf(neighbor(0,-1)) && !is_leaf(neighbor(1,0))) {
+	  point.i++;
+	  cache_append (&q->vertices, point);
+	  point.i--;
+	}
+	if (!is_leaf(neighbor(-1,0)) && !is_leaf(neighbor(0,1))) {
+	  point.j++;
+	  cache_append (&q->vertices, point);
+	  point.j--;
+	}
+      }
+      else if (cell.neighbors > 0)
+	/* update halo cache (restriction) */
+	cache_level_append (&q->halo[level], point);
+      /* update active cache */
+      cache_level_append (&q->active[level], point);
+    }
+  }
+
+  /* update ghost cell flags */
+  for (int d = 0; d < nboundary; d++)
+    foreach_boundary_cell (d, true) {
+      neighbor(ghost).flags = fghost;
+      if (!is_active (cell))
+	continue;
+    }
+
+  q->dirty = false;
+}
+
+@def foreach_cache(_cache,clause) {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   OMP_PARALLEL()
   Quadtree point = *((Quadtree *)grid); point.back = grid;
   int _k;
   OMP(omp for schedule(static) clause)
-  for (_k = 0; _k < point.leaves.n; _k++) {
-    point.i = point.leaves.p[_k].i;
-    point.j = point.leaves.p[_k].j;
-    point.level = point.leaves.p[_k].level;
+  for (_k = 0; _k < _cache.n; _k++) {
+    point.i = _cache.p[_k].i;
+    point.j = _cache.p[_k].j;
+    point.level = _cache.p[_k].level;
     POINT_VARIABLES;
 @
-@define end_foreach() } OMP_END_PARALLEL() }
+@define end_foreach_cache() } OMP_END_PARALLEL() }
 
+@def foreach_cache_level(_cache,_l) {
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  OMP_PARALLEL()
+  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  point.level = _l;
+  int _k;
+  OMP(omp for schedule(static))
+  for (_k = 0; _k < _cache.n; _k++) {
+    point.i = _cache.p[_k].i;
+    point.j = _cache.p[_k].j;
+    POINT_VARIABLES;
+@
+@define end_foreach_cache_level() } OMP_END_PARALLEL() }
+
+@define foreach(clause) foreach_cache(((Quadtree *)grid)->leaves, clause)
+@define end_foreach()   end_foreach_cache()
+
+@define foreach_face_generic(clause) foreach_cache(((Quadtree *)grid)->faces, clause)
+@define end_foreach_face_generic() end_foreach_cache()
+
+@def is_face_x() ((is_active(cell) || is_active(neighbor(-1,0))) && 
+		  !is_refined(neighbor(-1,0)))
+@
+@def is_face_y() ((is_active(cell) || is_active(neighbor(0,-1))) && 
+		  !is_refined(neighbor(0,-1)))
+@
+
+@def foreach_vertex(clause) 
+  foreach_cache(((Quadtree *)grid)->vertices, clause) {
+    x -= Delta/2.; y -= Delta/2.;
+@
+@define end_foreach_vertex() } end_foreach_cache()
+
+// fixme: use foreach_cache_level()
 @def foreach_fine_to_coarse(clause)     {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
@@ -637,9 +650,11 @@ static void update_cache_f (void)
 
   foreach_cell() {
     if (!is_active (cell)) {
-      assert (cell.neighbors > 0);
-      /* update halo cache (prolongation) */
-      cache_level_append (&q->halo[level], point);
+      if (cell.neighbors > 0)
+	/* update halo cache (prolongation) */
+	cache_level_append (&q->halo[level], point);
+      else
+	continue;
     }
     else {
       if (is_leaf (cell))
@@ -665,19 +680,10 @@ static void update_cache_f (void)
 
 @def foreach_halo_levels(start,cond,inc) {
   update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  for (int _l = start; _l cond; _l inc) {
-    OMP_PARALLEL()
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
-    int _k;
-    OMP(omp for schedule(static))
-    for (_k = 0; _k < point.halo[_l].n; _k++) {
-      point.i = point.halo[_l].p[_k].i;
-      point.j = point.halo[_l].p[_k].j;
-      point.level = _l;
-      POINT_VARIABLES;
+  CacheLevel _halo = ((Quadtree *)grid)->halo[_l];
+  foreach_cache_level (_halo, _l)
 @
-@define end_foreach_halo_levels() } OMP_END_PARALLEL() } }
+@define end_foreach_halo_level() end_foreach_cache_level(); }
 
 /* breadth-first traversal of halos from coarse to fine */
 @def foreach_halo_coarse_to_fine(depth1) {
@@ -687,6 +693,9 @@ static void update_cache_f (void)
 @
 @define end_foreach_halo_coarse_to_fine() } end_foreach_halo_level(); }
 
+@define foreach_halo()     foreach_halo_coarse_to_fine(depth())
+@define end_foreach_halo() end_foreach_halo_coarse_to_fine()
+
 /* breadth-first traversal of halos from fine to coarse */
 @def foreach_halo_fine_to_coarse() {
   for (int _l = depth() - 1; _l >= 0; _l--)
@@ -695,39 +704,131 @@ static void update_cache_f (void)
 @
 @define end_foreach_halo_fine_to_coarse() } end_foreach_halo_level(); }
 
-@def foreach_halo_vertex() {
-  for (int _l = 0; _l <= depth(); _l++)
-    foreach_halo_level (_l)
-      if ((allocated(-1,0) && is_leaf(neighbor(-1,0))) ||
-	  (allocated(0,-1) && is_leaf(neighbor(0,-1))) ||
-	  (allocated(-1,-1) && is_leaf(neighbor(-1,-1)))) {
-@
-@define end_foreach_halo_vertex() } end_foreach_halo_level(); }
+static void box_boundary_level (const Boundary * b, scalar * list, int l)
+{
+  int d = ((BoxBoundary *)b)->d;
+  if (l < 0) {
+    foreach_boundary_cell (d, true)
+      if (is_leaf (cell)) {
+	for (scalar s in list)
+	  s[ghost] = s.boundary[d] (point, s);
+	continue;
+      }
+  }
+  else
+    foreach_boundary_cell (d, true) {
+      if (level == l) {
+	for (scalar s in list)
+	  s[ghost] = s.boundary[d] (point, s);
+	continue;
+      }
+      else if (is_leaf (cell))
+	continue;
+    }
+}
+
+static void box_boundary_tangent (const Boundary * b, vector * list)
+{
+  int d = ((BoxBoundary *)b)->d;
+  int component = (d/2 + 1) % 2; // index of tangential component
+
+  foreach_boundary_cell (d, true)
+    if (is_leaf (cell)) {
+      for (vector v in list) {
+	scalar s = (&v.x)[component];
+	s[ghost] = s.boundary[d] (point, s);
+      }
+      continue;
+    }
+}
+
+static void box_boundary_halo_restriction (const Boundary * b, 
+					   scalar * list, int l)
+{
+  int d = ((BoxBoundary *)b)->d;
+  foreach_boundary_cell (d, true) {
+    if (is_active (cell)) {
+      if (level == l) {
+	if (cell.neighbors > 0)
+	  for (scalar s in list)
+	    s[ghost] = s.boundary[d] (point, s);
+	continue;
+      }
+    }
+    else
+      continue;
+  }
+}
+
+static void box_boundary_halo_prolongation (const Boundary * b,
+					    scalar * list, int l)
+{
+  int d = ((BoxBoundary *)b)->d;
+  // boundary conditions for halo prolongation
+  foreach_boundary_cell (d, true) {
+    if (level > l)
+      continue;
+    else if (!is_active (cell)) {
+      if (cell.neighbors > 0) {
+	for (scalar s in list)
+	  s[ghost] = s.boundary[d] (point, s);
+      }
+      else
+	continue;
+    }
+  }
+  // boundary conditions for cells at level l
+  if (l < depth())
+    foreach_boundary_cell (d, true) {
+      if (level == l) {
+	for (scalar s in list)
+	  s[ghost] = s.boundary[d] (point, s);
+	corners(); /* we need this otherwise we'd skip corners */
+	continue;
+      }
+      else if (is_leaf(cell))
+	continue;
+    }
+}
 
 Point refine_cell (Point point, scalar * list);
+
+static void free_cache (CacheLevel * c)
+{
+  Quadtree * q = grid;
+  for (int l = 0; l <= q->depth; l++)
+    if (c[l].n > 0)
+      free (c[l].p);
+  free (c);
+}
 
 void free_grid (void)
 {
   if (!grid)
     return;
+  free_boundaries();
   Quadtree * q = grid;
   free (q->leaves.p);
+  free (q->faces.p);
+  free (q->vertices.p);
   for (int l = 0; l <= q->depth; l++) {
 #if DYNAMIC
     for (int i = 0; i < _size(l); i++)
       free (q->m[l][i]);
 #endif
     free (q->m[l]);
-    free (q->halo[l].p);
-    free (q->active[l].p);
   }
   q->m = &(q->m[-1]);
-  free (q->m);
-  free (q->halo);
-  free (q->active);
-  free (q);
+  free(q->m);
+  free_cache (q->halo);
+  free_cache (q->active);
+  free(q);
   grid = NULL;
 }
+
+#if _MPI
+# include "quadtree-mpi.h"
+#endif
 
 void init_grid (int n)
 {
@@ -735,6 +836,7 @@ void init_grid (int n)
   if (q && n == 1 << q->depth)
     return;
   free_grid();
+
   int depth = 0;
   while (n > 1) {
     if (n % 2) {
@@ -744,7 +846,7 @@ void init_grid (int n)
     n /= 2;
     depth++;
   }
-  q = malloc (sizeof (Quadtree));
+  q = calloc (1, sizeof (Quadtree));
   q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
   q->m = malloc(sizeof (char *)*2);
   /* make sure we don't try to access level -1 */
@@ -760,7 +862,12 @@ void init_grid (int n)
 #endif
   CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
   CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
+#if _MPI
+  CELL(q->m, 0, 2 + 2*GHOSTS).pid = pid();
+#endif
   cache_init (&q->leaves);
+  cache_init (&q->faces);
+  cache_init (&q->vertices);
   q->active = calloc (1, sizeof (CacheLevel));
   q->halo = calloc (1, sizeof (CacheLevel));
   q->dirty = true;
@@ -771,26 +878,21 @@ void init_grid (int n)
       point = refine_cell (point, NULL);
   update_cache();
   trash (all);
-}
-
-void free_grid (void)
-{
-  Quadtree * q = grid;
-  free (q->leaves.p);
-  for (int l = 0; l <= q->depth; l++) {
-#if DYNAMIC
-    for (int i = 0; i < _size(l); i++)
-      free (q->m[l][i]);
+#if _MPI
+  mpi_boundary_new();
 #endif
-    free (q->m[l]);
-    free (q->halo[l].p);
-    free (q->active[l].p);
+  for (int d = 0; d < nboundary; d++) {
+    BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
+    box->d = d;
+    Boundary * b = (Boundary *) box;
+    b->level             = box_boundary_level;
+    b->normal            = NULL;
+    b->tangent           = box_boundary_tangent;
+    b->halo_restriction  = box_boundary_halo_restriction;
+    b->halo_prolongation = box_boundary_halo_prolongation;
+    add_boundary (b);
   }
-  q->m = &(q->m[-1]);
-  free(q->m);
-  free(q->halo);
-  free(q->active);
-  free(q);
+  init_events();
 }
 
 void output_cells (FILE * fp);

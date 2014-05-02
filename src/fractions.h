@@ -161,7 +161,7 @@ void fractions (struct Fractions p)
   We make sure that surface fractions are defined conservatively (on
   quadtree meshes). */
 
-  boundary_normal ({s});
+  boundary_flux ({s});
 
   /**
   ### Volume fraction computation */

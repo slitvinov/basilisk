@@ -128,7 +128,7 @@ $Q$. */
 
 event printdata (t += 0.1; t <= 1.) {
   foreach()
-    fprintf (stderr, "%g %g\n", x, q[]);
+    fprintf (stderr, "%g %.6f \n", x, q[]);
   fprintf (stderr, "\n\n");
 }
 

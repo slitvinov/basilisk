@@ -28,32 +28,85 @@ struct _Point {
 @
 @define end_foreach() } OMP_END_PARALLEL()
 
-@def foreach_boundary(d,corners)
-  {
-  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+@def foreach_face_generic(clause)
+  OMP_PARALLEL()
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point = *((Point *)grid);
-  {
-    point.i = d == right ? point.n : 1;
+  int _k;
+  OMP(omp for schedule(static) clause)
+  for (_k = 1; _k <= point.n + 1; _k++) {
+    point.i = _k;
     POINT_VARIABLES
 @
-@define end_foreach_boundary() }}
+@define end_foreach_face_generic() } OMP_END_PARALLEL()
 
-@define foreach_boundary_face(d)    foreach_boundary(d,true)
-@define end_foreach_boundary_face() end_foreach_boundary()
-
-@def foreach_boundary_ghost(d) { _OMPSTART /* for face reduction */
-  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point point = *((Point *)grid);
-  {
-    point.i = (d == right ? point.n : 1) + ig;
-    POINT_VARIABLES
+@def foreach_vertex()
+foreach_face_generic() {
+  x -= Delta/2.;
 @
-@define end_foreach_boundary_ghost() } _OMPEND }
+@define end_foreach_vertex() } end_foreach_face_generic()
+
+@define is_face_x() (true)
+@define is_face_y() (point.i <= point.n)
+
+static void box_boundary_level (const Boundary * b, scalar * list, int l)
+{
+  int d = ((BoxBoundary *)b)->d;
+  Point point = *((Point *)grid);
+  ig = _ig[d]; jg = _jg[d];
+  point.i = d == right ? point.n : 1;
+  {
+    POINT_VARIABLES;
+    for (scalar s in list)
+      val(s,ig,jg) = _method[s].boundary[d] (point, s);
+  }
+}
+
+static void box_boundary_normal (const Boundary * b, vector * list)
+{
+  int d = ((BoxBoundary *)b)->d;
+  int component = d/2; // index of normal component
+
+  Point point = *((Point *)grid);
+  // set the indices of the normal face component in direction d
+  if (d % 2) {
+    ig = jg = 0;
+  }
+  else {
+    ig = _ig[d]; jg = _jg[d];
+  }
+  point.i = d == right ? point.n : 1;
+  {
+    POINT_VARIABLES;
+    for (vector v in list) {
+      scalar s = (&v.x)[component];
+      val(s,ig,jg) = _method[s].boundary[d] (point, s);
+    }
+  }
+}
+
+static void box_boundary_tangent (const Boundary * b, vector * list)
+{
+  // fixme: should not need this
+  int d = ((BoxBoundary *)b)->d;
+  int component = (d/2 + 1) % 2; // index of tangential component
+  Point point = *((Point *)grid);
+  ig = _ig[d]; jg = _jg[d];
+  point.i = d == right ? point.n : 1;
+  {
+    POINT_VARIABLES;
+    for (vector v in list) {
+      scalar s = (&v.x)[component];
+      val(s,ig,jg) = _method[s].boundary[d] (point, s);
+    }
+  }
+}
 
 void free_grid (void)
 {
   if (!grid)
     return;
+  free_boundaries();
   Point * p = grid;
   free (p->data);
   free (p);
@@ -77,6 +130,15 @@ void init_grid (int n)
     v[i] = undefined;
   grid = p;
   trash (all);
+  for (int d = 0; d < nboundary; d++) {
+    BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
+    box->d = d;
+    Boundary * b = (Boundary *) box;
+    b->level   = box_boundary_level;
+    b->normal  = box_boundary_normal;
+    b->tangent = box_boundary_tangent;
+    add_boundary (b);
+  }
   init_events();
 }
 

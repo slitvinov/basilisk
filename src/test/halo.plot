@@ -149,6 +149,5 @@ plot \
      '< grep halo log | awk "(\$3==5){print \$0}"' pt 7 lc 1 t 'halo 5', \
      '< grep halo log | awk "(\$3==4){print \$0}"' pt 7 lc 2 t 'halo 4', \
      '< grep res log | awk "(\$3==4){print \$0}"' pt 5 lc 3 t 'res 4', \
-     '< grep res log | awk "(\$3==3){print \$0}"' pt 5 lc 4 t 'res 3', \
-     '< grep boundary log' pt 3 lc 4 t 'boundary'
+     '< grep res log | awk "(\$3==3){print \$0}"' pt 5 lc 4 t 'res 3'
 #    EOF

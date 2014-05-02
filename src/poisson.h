@@ -251,7 +251,7 @@ static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
   face vector g[];
   foreach_face()
     g.x[] = alpha.x[]*(a[] - a[-1,0])/Delta;
-  boundary_normal ({g});
+  boundary_flux ({g});
   foreach (reduction(max:maxres)) {
     res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta
       - lambda[]*a[];
@@ -377,7 +377,7 @@ mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
   else
     foreach_face()
       u.x[] -= dt*(p[] - p[-1,0])/Delta;
-  boundary_normal ({u});
+  boundary_flux ({u});
   boundary_tangent ({u});
 
   return mgp;
