@@ -4,7 +4,7 @@
 
 int main() {
   // coordinates of lower-left corner
-  origin (-0.5, -0,5);
+  origin (-0.5, -0.5);
   // number of grid points
   init_grid (128);
   // size of the box
