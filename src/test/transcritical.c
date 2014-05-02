@@ -1,23 +1,26 @@
 #include "grid/cartesian1D.h"
-#include "saint-venant2.h"
+#include "saint-venant.h"
 
 int main()
 {
   origin (-0.5, -0.5);
-  init_grid (100);
+  init_grid (500);
   run();
 }
 
-void init()
+u.x[left] = neumann(0);
+u.x[right] = neumann(0);
+
+event init (t = 0)
 {
   foreach() {
-    w[] = 1.;
-    B[] = 0.25*(cos(pi*x/0.1) + 1.)*(fabs(x) < 0.1);
-    hu[] = 0.3*(w[] - B[]);
+    zb[] = 0.25*(cos(pi*x/0.1) + 1.)*(fabs(x) < 0.1);
+    u.x[] = 0.3;
+    h[] = 1. - zb[];
   }
 }
 
 event logfile (t = 1.8) {
   foreach()
-    fprintf (stderr, "%g %g %g %g\n", x, w[], hu[], B[]);
+    fprintf (stderr, "%g %g %g %g\n", x, eta[], h[]*u.x[], zb[]);
 }
