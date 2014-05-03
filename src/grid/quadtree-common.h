@@ -125,7 +125,6 @@ astats adapt_wavelet (struct Adapt p)
     p.list = all;
 
   restriction (p.slist);
-  boundary_restriction (p.slist);
 
   astats st = {0, 0};
   scalar * listc = NULL;

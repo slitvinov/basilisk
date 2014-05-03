@@ -494,6 +494,9 @@ static void update_cache_f (void)
 @
 @define end_foreach_level() } OMP_END_PARALLEL() }
 
+@define foreach_coarse_level(l) foreach_level(l) if (!is_leaf(cell)) {
+@define end_foreach_coarse_level() } end_foreach_level()
+
 @def foreach_level_or_leaf(l) {
   for (int _l1 = l; _l1 >= 0; _l1--)
     foreach_level(_l1)
@@ -826,10 +829,6 @@ void free_grid (void)
   grid = NULL;
 }
 
-#if _MPI
-# include "quadtree-mpi.h"
-#endif
-
 void init_grid (int n)
 {
   Quadtree * q = grid;
@@ -879,13 +878,14 @@ void init_grid (int n)
   update_cache();
   trash (all);
 #if _MPI
+  void mpi_boundary_new();
   mpi_boundary_new();
 #endif
   for (int d = 0; d < nboundary; d++) {
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
     box->d = d;
     Boundary * b = (Boundary *) box;
-    b->level             = box_boundary_level;
+    b->level = b->restriction = box_boundary_level;
     b->normal            = NULL;
     b->tangent           = box_boundary_tangent;
     b->halo_restriction  = box_boundary_halo_restriction;
@@ -930,3 +930,7 @@ void check_two_one (void)
 }
 
 #include "quadtree-common.h"
+
+#if _MPI
+# include "quadtree-mpi.h"
+#endif

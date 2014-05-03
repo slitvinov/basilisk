@@ -261,13 +261,6 @@ void boundary (scalar * list)
   }
 }
 
-@def boundary_iterate(type,list,l) {
-  Boundary ** i = boundaries, * b;
-  while ((b = *i++))
-    b->type (b, list, l);
-}
-@
-
 void cartesian_boundary_level (scalar * list, int l)
 {
   boundary_iterate (level, list, l);

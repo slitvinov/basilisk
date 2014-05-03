@@ -268,7 +268,7 @@ void init_grid (int n)
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
     box->d = d;
     Boundary * b = (Boundary *) box;
-    b->level   = box_boundary_level;
+    b->level   = b->restriction = box_boundary_level;
     b->normal  = box_boundary_normal;
     b->tangent = box_boundary_tangent;
     add_boundary (b);

@@ -35,16 +35,39 @@
 @ define pid() omp_get_thread_num()
 
 @elif _MPI
+
 @ include <mpi.h>
 @ define OMP(x)
+
 static int mpi_rank;
 #define pid() mpi_rank
-@else
+
+void mpi_init()
+{
+  int initialized;
+  MPI_Initialized (&initialized);
+  if (!initialized) {
+    MPI_Init (NULL, NULL);
+    MPI_Errhandler_set (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+    atexit ((void (*)(void)) MPI_Finalize);
+    MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
+    if (mpi_rank > 0) {
+      char name[80];
+      sprintf (name, "out-%d", mpi_rank);
+      stdout = freopen (name, "w", stdout);
+      sprintf (name, "log-%d", mpi_rank);
+      stderr = freopen (name, "w", stderr);
+    }
+  }
+}
+
+@else // not MPI, not OpemMP
 
 @ define OMP(x)
 @ define pid() 0
 
 @endif
+
 // fixme: _OMPSTART and _OMPEND are only used for working around the
 // lack of min|max reduction operations in OpenMP < 3.1
 @define OMP_PARALLEL()     OMP(omp parallel) { _OMPSTART

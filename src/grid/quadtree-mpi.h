@@ -1,22 +1,3 @@
-void mpi_init()
-{
-  int initialized;
-  MPI_Initialized (&initialized);
-  if (!initialized) {
-    MPI_Init (NULL, NULL);
-    MPI_Errhandler_set (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
-    atexit ((void (*)(void)) MPI_Finalize);
-    MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
-    if (mpi_rank > 0) {
-      char name[80];
-      sprintf (name, "out-%d", mpi_rank);
-      stdout = freopen (name, "w", stdout);
-      sprintf (name, "log-%d", mpi_rank);
-      stderr = freopen (name, "w", stderr);
-    }
-  }
-}
-
 typedef struct {
   Boundary parent;
   
@@ -96,7 +77,8 @@ void mpi_boundary_new()
 {
   mpi_boundary = calloc (1, sizeof (MpiBoundary));
   mpi_boundary->destroy = mpi_boundary_destroy;
-  mpi_boundary->halo_restriction = mpi_boundary_halo_restriction;
+  mpi_boundary->restriction = mpi_boundary->halo_restriction = 
+    mpi_boundary_halo_restriction;
   mpi_boundary->halo_prolongation = mpi_boundary_halo_prolongation;
   add_boundary (mpi_boundary);
 }
@@ -172,8 +154,10 @@ void mpi_partitioning()
     }
 
 #if DEBUG
+  void output_cells (FILE * fp);
+
   char name[80];
-  sprintf (name, "log-%d", pid());
+  sprintf (name, "halo-%d", pid());
   FILE * logfile = fopen (name, "w");
 
   sprintf (name, "cells-%d", pid());
@@ -198,7 +182,7 @@ void mpi_partitioning()
   foreach_cell() {
     if (!is_active (cell))
       continue;
-    else if (cell.pid != pid() && cell.neighbors > 0)
+    else if (cell.pid != pid())
       fprintf (fp, "%g %g %d %d\n", x, y, cell.pid, level);
   }
   fclose (fp);
@@ -214,7 +198,7 @@ void mpi_partitioning()
   foreach_cell() {
     if (!is_active (cell))
       continue;
-    else if (cell.pid != pid() && cell.neighbors > 0) {
+    else if (cell.pid != pid()) {
       int i;
       for (i = 0; i < m->nrcv; i++)
 	if (cell.pid == m->rcv[i])

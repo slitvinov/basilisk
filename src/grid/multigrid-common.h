@@ -24,7 +24,7 @@
 
 // Multigrid methods
 
-void (* boundary_restriction) (scalar *);
+// Multigrid methods
 
 void coarsen_average (Point point, scalar s)
 {
@@ -45,12 +45,16 @@ void restriction (scalar * list)
   if (listf)
     boundary_flux (listf);
   if (listf || listc)
-    foreach_fine_to_coarse() {
-      for (scalar s in listc)
-	s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
-      for (vector v in listf)
-	foreach_dimension()
-	  v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+    for (int l = depth() - 1; l >= 0; l--) {
+      foreach_coarse_level(l) {
+	for (scalar s in listc)
+	  s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+	for (vector v in listf)
+	  foreach_dimension()
+	    v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+      }
+      boundary_iterate (restriction, listc, l);
+      assert (listf == NULL);
     }
   free (listc);
   if (listf) {
@@ -71,7 +75,6 @@ void restriction (scalar * list)
 void wavelet (scalar s, scalar w)
 {
   restriction ({s});
-  boundary_restriction ({s});
   foreach_fine_to_coarse() {
     if (s.prolongation)
       /* difference between fine value and its prolongation */
