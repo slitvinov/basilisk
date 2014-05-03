@@ -459,24 +459,7 @@ void recursive (Point point)
 @
 @define end_foreach_fine_to_coarse() } } OMP_END_PARALLEL() } }
 
-@def foreach_level_or_leaf(l)     {
-  update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  for (int _l = l; _l >= 0; _l--) {
-    OMP_PARALLEL()
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
-    point.level = _l;
-    int _k;
-    OMP(omp for schedule(static))
-    for (_k = 0; _k < point.active[_l].n; _k++) {
-      point.i = point.active[_l].p[_k].i;
-      point.j = point.active[_l].p[_k].j;
-      POINT_VARIABLES;
-      if (_l == l || is_leaf (cell)) {
-@
-@define end_foreach_level_or_leaf() } } OMP_END_PARALLEL() } }
-
-@def foreach_level(l)     {
+@def foreach_level(l) {
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   int _l = l;
@@ -491,6 +474,13 @@ void recursive (Point point)
     POINT_VARIABLES;
 @
 @define end_foreach_level() } OMP_END_PARALLEL() }
+
+@def foreach_level_or_leaf(l) {
+  for (int _l1 = l; _l1 >= 0; _l1--)
+    foreach_level(_l1)
+      if (_l1 == l || is_leaf (cell)) {
+@
+@define end_foreach_level_or_leaf() } end_foreach_level(); }
 
 @define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
 @define end_foreach_leaf()        continue; } end_foreach_cell()
