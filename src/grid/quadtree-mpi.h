@@ -39,7 +39,7 @@ static void mpi_boundary_halo_restriction (const Boundary * b,
     if (m->snd_halo[i][l].n > 0) {
       buf[i] = malloc (sizeof (double)*m->snd_halo[i][l].n*len);
       double * b = buf[i];
-      foreach_cache_level(m->snd_halo[i][l], l)
+      foreach_cache_level(m->snd_halo[i][l], l,)
 	for (scalar s in list)
 	  *b++ = s[];
       MPI_Isend (buf[i], m->snd_halo[i][l].n*len, MPI_DOUBLE, m->snd[i], l, 
@@ -53,7 +53,7 @@ static void mpi_boundary_halo_restriction (const Boundary * b,
       MPI_Status s;
       MPI_Recv (buf, m->rcv_halo[i][l].n*len, MPI_DOUBLE, m->rcv[i], l, 
 		MPI_COMM_WORLD, &s);
-      foreach_cache_level(m->rcv_halo[i][l], l)
+      foreach_cache_level(m->rcv_halo[i][l], l,)
 	for (scalar s in list)
 	  s[] = *b++;
     }
@@ -256,7 +256,7 @@ void mpi_partitioning()
   fp = fopen (name, "w");
   for (int i = 0; i < m->nsnd; i++)
     for (int j = 0; j <= depth(); j++)
-      foreach_cache_level (m->snd_halo[i][j], j)
+      foreach_cache_level (m->snd_halo[i][j], j,)
 	fprintf (fp, "%g %g %d %d\n", x, y, m->snd[i], cell.neighbors);
   fclose (fp);
 #endif

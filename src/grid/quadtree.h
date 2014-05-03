@@ -427,13 +427,13 @@ static void update_cache_f (void)
 @
 @define end_foreach_cache() } OMP_END_PARALLEL() }
 
-@def foreach_cache_level(_cache,_l) {
+@def foreach_cache_level(_cache,_l,clause) {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   OMP_PARALLEL()
   Quadtree point = *((Quadtree *)grid); point.back = grid;
   point.level = _l;
   int _k;
-  OMP(omp for schedule(static))
+  OMP(omp for schedule(static) clause)
   for (_k = 0; _k < _cache.n; _k++) {
     point.i = _cache.p[_k].i;
     point.j = _cache.p[_k].j;
@@ -460,39 +460,21 @@ static void update_cache_f (void)
 @
 @define end_foreach_vertex() } end_foreach_cache()
 
-// fixme: use foreach_cache_level()
 @def foreach_fine_to_coarse(clause)     {
   update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   for (int _l = depth() - 1; _l >= 0; _l--) {
-    OMP_PARALLEL()
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
-    point.level = _l;
-    int _k;
-    OMP(omp for schedule(static) clause)
-    for (_k = 0; _k < point.active[_l].n; _k++) {
-      point.i = point.active[_l].p[_k].i;
-      point.j = point.active[_l].p[_k].j;
-      POINT_VARIABLES;
+    CacheLevel _active = ((Quadtree *)grid)->active[_l];
+    foreach_cache_level (_active,_l,clause)
       if (!is_leaf (cell)) {
 @
-@define end_foreach_fine_to_coarse() } } OMP_END_PARALLEL() } }
+@define end_foreach_fine_to_coarse() } end_foreach_cache_level(); } }
 
 @def foreach_level(l) {
   update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  int _l = l;
-  OMP_PARALLEL()
-  Quadtree point = *((Quadtree *)grid); point.back = grid;
-  point.level = _l;
-  int _k;
-  OMP(omp for schedule(static))
-  for (_k = 0; _k < point.active[_l].n; _k++) {
-    point.i = point.active[_l].p[_k].i;
-    point.j = point.active[_l].p[_k].j;
-    POINT_VARIABLES;
+  CacheLevel _active = ((Quadtree *)grid)->active[l];
+  foreach_cache_level (_active,l,)
 @
-@define end_foreach_level() } OMP_END_PARALLEL() }
+@define end_foreach_level() end_foreach_cache_level(); }
 
 @define foreach_coarse_level(l) foreach_level(l) if (!is_leaf(cell)) {
 @define end_foreach_coarse_level() } end_foreach_level()
@@ -684,7 +666,7 @@ static void update_cache_f (void)
 @def foreach_halo_levels(start,cond,inc) {
   update_cache();
   CacheLevel _halo = ((Quadtree *)grid)->halo[_l];
-  foreach_cache_level (_halo, _l)
+  foreach_cache_level (_halo, _l,)
 @
 @define end_foreach_halo_level() end_foreach_cache_level(); }
 
