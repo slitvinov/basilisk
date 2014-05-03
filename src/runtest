@@ -24,6 +24,10 @@ script()
 	if ! $valgrind ./$test 2> $log > $out; then
 	    pass=false
 	fi
+    elif test -n "$MPIRUN"; then
+	if ! $MPIRUN ./$test 2> $log > $out; then
+	    pass=false
+	fi
     else
 	if ! gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log; then
 	    pass=false

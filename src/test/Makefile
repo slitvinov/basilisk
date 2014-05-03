@@ -57,4 +57,7 @@ rotate.tst: rotate.ctst
 terrain.tst: terrain.s
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst
 
+mpi-restriction.tst: mpi-restriction.s
+	@MPIRUN="mpirun -np 3" $(BASILISK)/runtest mpi-restriction.tst
+
 include $(BASILISK)/Makefile.defs
