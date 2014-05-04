@@ -60,6 +60,9 @@ terrain.tst: terrain.s
 mpi-restriction.tst: mpi-restriction.s
 	@MPIRUN="mpirun -np 3" $(BASILISK)/runtest mpi-restriction.tst
 
+mpi-reduce.tst: mpi-reduce.s
+	@MPIRUN="mpirun -np 3" $(BASILISK)/runtest mpi-reduce.tst
+
 indexing.tst: indexing.s
 	@MPIRUN="mpirun -np 3" $(BASILISK)/runtest indexing.tst
 

@@ -30,14 +30,21 @@
 
 @if _OPENMP
 
-@ include <omp.h>
-@ define OMP(x) Pragma(#x)
-@ define pid() omp_get_thread_num()
+@include <omp.h>
+@define OMP(x) Pragma(#x)
+@define pid() omp_get_thread_num()
+@define mpi_all_reduce(v,type,op)
 
 @elif _MPI
 
-@ include <mpi.h>
-@ define OMP(x)
+@include <mpi.h>
+@define OMP(x)
+@def mpi_all_reduce(v,type,op) {
+  union { int a; float b; double c;} global;
+  MPI_Allreduce (&(v), &global, 1, type, op, MPI_COMM_WORLD);
+  memcpy (&(v), &global, sizeof (v));
+}
+@
 
 static int mpi_rank;
 #define pid() mpi_rank
@@ -63,8 +70,8 @@ void mpi_init()
 
 @else // not MPI, not OpemMP
 
-@ define OMP(x)
-@ define pid() 0
+@define OMP(x)
+@define pid() 0
 
 @endif
 

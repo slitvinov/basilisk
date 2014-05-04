@@ -723,12 +723,22 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
       fputs ("\n#undef _OMPSTART\n#define _OMPSTART ", yyout);
       int i;
       for (i = 0; i < nreduct; i++)
-	fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
+	if (strcmp (reduction[i], "+"))
+	  fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
       fputs ("\n#undef _OMPEND\n#define _OMPEND ", yyout);
-      for (i = 0; i < nreduct; i++)
-	fprintf (yyout, "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
-		 reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
-		 reductvar[i], reductvar[i], reductvar[i]);
+      for (i = 0; i < nreduct; i++) {
+	if (strcmp (reduction[i], "+"))
+	  fprintf (yyout,
+		   "OMP(omp critical) if (_%s %s %s) %s = _%s; ",
+		   reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
+		   reductvar[i], reductvar[i], reductvar[i]);
+	fprintf (yyout,
+		 "mpi_all_reduce (%s, MPI_DOUBLE, %s); ",
+		 reductvar[i], 
+		 !strcmp(reduction[i], "min") ? "MPI_MIN" : 
+		 !strcmp(reduction[i], "max") ? "MPI_MAX" : 
+		 "MPI_SUM");
+      }
       fprintf (yyout, "\n#line %d\n", foreach_line);
     }
     yyout = dopen ("_foreach_body.h", "w");
@@ -1500,7 +1510,7 @@ foreach_dimension{WS}*[(]{WS}*[)] {
   foreachdimline = line;
 }
 
-reduction{WS}*[(](min|max):{ID}+[)] {
+reduction{WS}*[(](min|max|\+):{ID}+[)] {
   char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':');
   *s1 = '\0'; s1++;
   assert (nreduct < REDUCTMAX);
@@ -1527,7 +1537,7 @@ reduction{WS}*[(](min|max):{ID}+[)] {
   if (inforeach) {
     int i;
     for (i = 0; i < nreduct; i++)
-      if (!strcmp (yytext, reductvar[i])) {
+      if (strcmp ("+", reduction[i]) && !strcmp (yytext, reductvar[i])) {
 	fputc ('_', yyout);
 	break;
       }
