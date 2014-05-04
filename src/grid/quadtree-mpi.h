@@ -97,6 +97,7 @@ void mpi_partitioning()
   nf = nf/size + 1;
 
   // set the pid of each cell
+  scalar nactive[];
   int i = 0;
   foreach_cell_post (is_active (cell) || cell.neighbors > 0) {
     if (is_active (cell)) {
@@ -112,7 +113,7 @@ void mpi_partitioning()
 	      cell.pid = pid();
       }
     }
-    cell.neighbors = 0;
+    nactive[] = 0;
   }
 
   foreach_halo_coarse_to_fine(depth())
@@ -123,34 +124,26 @@ void mpi_partitioning()
   foreach_cell() {
     if (cell.pid != pid() || !is_active (cell))
       continue;
-    else {
+    else
       /* update neighborhood */
       for (int o = -GHOSTS; o <= GHOSTS; o++)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)
-	  neighbor(o,p).neighbors++;
-    }
+	  if (!is_ghost(neighbor(o,p)))
+	    nactive[o,p]++;
   }
 
-  // Remove cells which do not have any neighbors
-  foreach_cell() {
-    if (cell.neighbors == 0) {
+  // Remove cells which do not have any active neighbors
+  foreach_cell()
+    if (nactive[] == 0) {
+      if (is_leaf (cell))
+	/* update neighborhood */
+	for (int o = -GHOSTS; o <= GHOSTS; o++)
+	  for (int p = -GHOSTS; p <= GHOSTS; p++)
+	    if (allocated(o,p))
+	      neighbor(o,p).neighbors--;
       free (allocated(0,0));
       allocated(0,0) = NULL;
       point.back->dirty = true;
-    }
-    else
-      cell.neighbors = 0;
-  }
-
-  // set the number of leaf neighboring cells
-  foreach_cell()
-    if (is_leaf (cell)) {
-      /* update neighborhood */
-      for (int o = -GHOSTS; o <= GHOSTS; o++)
-	for (int p = -GHOSTS; p <= GHOSTS; p++)
-	  if (allocated(o,p))
-	    neighbor(o,p).neighbors++;
-      continue;
     }
 
 #if DEBUG
