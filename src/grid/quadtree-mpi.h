@@ -261,3 +261,61 @@ void mpi_partitioning()
   fclose (fp);
 #endif
 }
+
+/**
+# *z_indexing()*: fills *index* with the Z-ordering index.
+   
+On a single processor, we would just need something like
+
+~~~literatec
+double i = 0;
+foreach()
+  index[] = i++;
+~~~
+
+In parallel, this is a bit more difficult. */
+
+void z_indexing (scalar index)
+{
+  /**
+  ## Size of subtrees
+
+  We first compute the size of each subtree. We use *index* to store
+  this. */
+  
+  scalar size = index;
+
+  /**
+  The size of leaf "subtrees" is one. */
+
+  foreach()
+    size[] = 1;
+
+  /**
+  We do a (parallel) restriction to compute the size of non-leaf
+  subtrees. */
+
+  for (int l = depth() - 1; l >= 0; l--) {
+    foreach_coarse_level(l)
+      size[] = (fine(size,0,0) + fine(size,1,0) + 
+		fine(size,0,1) + fine(size,1,1));
+    boundary_iterate (restriction, {size}, l);
+  }
+
+  /**
+  ## Indexing
+  
+  Indexing can then be done locally. */
+
+  double i = 0;
+  foreach_cell() {
+    if (is_leaf(cell)) {
+      index[] = i++;
+      continue;
+    }
+    else if (cell.pid != pid()) {
+      i += size[];
+      continue;
+    }
+  }
+}
