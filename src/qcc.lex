@@ -1877,7 +1877,7 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	       eventarray_elems[i]);
   }
   /* boundaries */
-  for (int i = 0; i < nsetboundary; i++)
+  for (i = 0; i < nsetboundary; i++)
     fprintf (fout, "static void _set_boundary%d (void);\n", 
 	     boundaryindex[i]);
   /* init_solver() */
@@ -1891,8 +1891,9 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   /* events */
   fputs ("  Events = malloc (sizeof (Event));\n"
 	 "  Events[0].last = 1;\n", fout);
-  for (int last = 0; last <= 1; last++)
-    for (int i = 0; i < nevents; i++)
+  int last;
+  for (last = 0; last <= 1; last++)
+    for (i = 0; i < nevents; i++)
       if (eventchild[i] < 0 && eventlast[i] == last) {
 	int j = i;
 	while (j >= 0) {
@@ -1916,9 +1917,9 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	   "  for (int i = 0; i < %d; i++)\n"
 	   "    all[i] = i;\n"
 	   "  all[%d] = -1;\n", nvar + 1, nvar, nvar);
-#if _GNU_SOURCE
-  fputs ("  set_fpe();\n", fout);
-#endif
+  fputs ("#if _GNU_SOURCE\n"
+	 "  set_fpe();\n"
+	 "#endif\n", fout);
   if (catch)
     fputs ("  catch_fpe();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);
@@ -1964,20 +1965,21 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   
   /* SWIG interface */
   if (swigfp) {
+    int i;
     fputs ("\n%{\n", swigfp);
-    for (int i = varstack; i >= 0; i--) {
+    for (i = varstack; i >= 0; i--) {
       var_t var = _varstack[i];
       if (var.i[0] >= 0 && !var.constant)
 	fprintf (swigfp, "  extern %s %s;\n", typestr (var), var.v);
     }
     fputs ("%}\n\n", swigfp);
-    for (int i = varstack; i >= 0; i--) {
+    for (i = varstack; i >= 0; i--) {
       var_t var = _varstack[i];
       if (var.i[0] >= 0 && !var.constant)
 	fprintf (swigfp, "extern %s %s;\n", typestr (var), var.v);
     }
     fputs ("\n%pythoncode %{\n", swigfp);
-    for (int i = varstack; i >= 0; i--) {
+    for (i = varstack; i >= 0; i--) {
       var_t var = _varstack[i];
       if (var.i[0] >= 0 && !var.constant)
 	fprintf (swigfp, "%s = %s(_%s.cvar.%s)\n",
@@ -2101,13 +2103,13 @@ int main (int argc, char ** argv)
       fputs ("@if _XOPEN_SOURCE < 700\n"
 	     "  @undef _XOPEN_SOURCE\n"
 	     "  @define _XOPEN_SOURCE 700\n"
-	     "@endif\n", fout);
-#if _GNU_SOURCE
-      fputs ("@include <stdint.h>\n"
+	     "@endif\n"
+	     "#if _GNU_SOURCE\n"
+	     "@include <stdint.h>\n"
 	     "@include <string.h>\n"
-	     "@include <fenv.h>\n", 
+	     "@include <fenv.h>\n"
+	     "#endif\n",
 	     fout);
-#endif
       if (catch)
 	fputs ("#define TRASH 1\n"
 	       "#define _CATCH last_point = point;\n", 
@@ -2119,24 +2121,23 @@ int main (int argc, char ** argv)
       if (catch)
 	fputs ("void catch_fpe (void);\n", fout);
       /* undefined value */
-#if _GNU_SOURCE
       /* Initialises unused memory with "signaling NaNs".  
        * This is probably not very portable, tested with
        * gcc (Debian 4.4.5-8) 4.4.5 on Linux 2.6.32-5-amd64.
        * This blog was useful:
        *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
        */
-      fputs ("double undefined;\n"
+      fputs ("#if _GNU_SOURCE\n"
+	     "double undefined;\n"
 	     "static void set_fpe (void) {\n"
 	     "  int64_t lnan = 0x7ff0000000000001;\n"
 	     "  assert (sizeof (int64_t) == sizeof (double));\n"
 	     "  memcpy (&undefined, &lnan, sizeof (double));\n"
 	     "  feenableexcept (FE_DIVBYZERO|FE_INVALID);\n"
-	     "}\n",
-	     fout);
-#else
-      fputs ("#define undefined DBL_MAX\n", fout);
-#endif
+	     "}\n"
+	     "#else\n"
+	     "#  define undefined DBL_MAX\n"
+	     "#endif\n", fout);
       /* grid */
       if (default_grid)
 	fprintf (fout, "#include \"grid/%s.h\"\n", grid);

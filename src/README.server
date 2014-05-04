@@ -23,7 +23,7 @@ export TS_SLOTS=8
 export PATH=$PATH:$HOME/bin
 
 # howto compile C99 programs
-export CC99="gcc -O2 -Wall -std=c99 -D_XOPEN_SOURCE=700 -DHAVE_GETOPT_H=1 -D_GNU_SOURCE=1"
+export CC99="gcc -O2 -Wall -std=c99 -D_GNU_SOURCE=1"
 ~~~
 
 If you also intend to generate graphics etc... on the server, do

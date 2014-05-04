@@ -9,13 +9,13 @@ libkdt.a: kdt.o
 	ar cr libkdt.a kdt.o
 
 kdt.o: kdt.c
-	$(CC99) $(CFLAGS) -D_FILE_OFFSET_BITS=64 -c kdt.c
+	$(CC) $(CFLAGS) -D_FILE_OFFSET_BITS=64 -c kdt.c
 
 xyz2kdt: xyz2kdt.c kdt.o kdt.h
-	$(CC99) $(CFLAGS) xyz2kdt.c kdt.o -o xyz2kdt -lm
+	$(CC) $(CFLAGS) xyz2kdt.c kdt.o -o xyz2kdt -lm
 
 kdtquery: kdtquery.c kdt.o kdt.h
-	$(CC99) $(CFLAGS) kdtquery.c kdt.o -o kdtquery -lm
+	$(CC) $(CFLAGS) kdtquery.c kdt.o -o kdtquery -lm
 
 clean:
 	rm -f *.o
