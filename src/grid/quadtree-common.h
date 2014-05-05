@@ -38,12 +38,10 @@ Point refine_cell (Point point, scalar * list)
 
   /* refine */
   cell.flags &= ~leaf;
-#if 1
   /* update neighborhood */
   for (int o = -GHOSTS; o <= GHOSTS; o++)
     for (int p = -GHOSTS; p <= GHOSTS; p++)
       neighbor(o,p).neighbors--;
-#endif
 
   /* for each child: (note that using foreach_child() would be nicer
      but it seems to be significanly slower) */
@@ -53,9 +51,9 @@ Point refine_cell (Point point, scalar * list)
       if (dimension == 2)
 	assert(!(child(k,l).flags & active));
       child(k,l).flags |= (active | leaf);
-#if _MPI
+@if _MPI
       child(k,l).pid = cell.pid;
-#endif
+@endif
       /* update neighborhood */
       for (int o = -GHOSTS; o <= GHOSTS; o++)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)
@@ -392,10 +390,10 @@ void quadtree_boundary_tangent (vector * listv)
 Point locate (double xp, double yp)
 {
   foreach_cell() {
-#if _MPI
+@if _MPI
     if (cell.pid != pid())
       continue;
-#endif
+@endif
     Delta /= 2.;
     if (xp < x - Delta || xp > x + Delta || yp < y - Delta || yp > y + Delta)
       continue;

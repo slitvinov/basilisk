@@ -312,3 +312,4 @@ void z_indexing (scalar index)
     }
   }
 }
+

@@ -2116,11 +2116,11 @@ int main (int argc, char ** argv)
 	     "  @undef _XOPEN_SOURCE\n"
 	     "  @define _XOPEN_SOURCE 700\n"
 	     "@endif\n"
-	     "#if _GNU_SOURCE\n"
+	     "@if _GNU_SOURCE\n"
 	     "@include <stdint.h>\n"
 	     "@include <string.h>\n"
 	     "@include <fenv.h>\n"
-	     "#endif\n",
+	     "@endif\n",
 	     fout);
       if (catch)
 	fputs ("#define TRASH 1\n"
@@ -2139,7 +2139,7 @@ int main (int argc, char ** argv)
        * This blog was useful:
        *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
        */
-      fputs ("#if _GNU_SOURCE\n"
+      fputs ("@if _GNU_SOURCE\n"
 	     "double undefined;\n"
 	     "static void set_fpe (void) {\n"
 	     "  int64_t lnan = 0x7ff0000000000001;\n"
@@ -2147,9 +2147,9 @@ int main (int argc, char ** argv)
 	     "  memcpy (&undefined, &lnan, sizeof (double));\n"
 	     "  feenableexcept (FE_DIVBYZERO|FE_INVALID);\n"
 	     "}\n"
-	     "#else\n"
-	     "#  define undefined DBL_MAX\n"
-	     "#endif\n", fout);
+	     "@else\n"
+	     "@  define undefined DBL_MAX\n"
+	     "@endif\n", fout);
       /* grid */
       if (default_grid)
 	fprintf (fout, "#include \"grid/%s.h\"\n", grid);
@@ -2171,7 +2171,7 @@ int main (int argc, char ** argv)
 	fputs (s, fout);
       }
       if (swigfp)
-	fputs ("#include \"python.h\"\n", fout);
+	fputs ("@include \"python.h\"\n", fout);
       fclose (fout);
       fclose (fin);
       fout = dopen (file, "w");
@@ -2186,18 +2186,12 @@ int main (int argc, char ** argv)
       strcat (preproc, " && ");
       if (!cppcommand && strcmp (CPP99, ""))
 	cppcommand = CPP99;
-      if (cppcommand) {
-	strcat (preproc, cppcommand);
-	strcat (preproc, " -I. -I");
-	strcat (preproc, LIBDIR);
-	strcat (preproc, " ");
-      }
-      else {
-	strcat (preproc, command);
-	strcat (preproc, " -I. -I");
-	strcat (preproc, LIBDIR);
-	strcat (preproc, " -E ");
-      }
+      if (!cppcommand)
+	cppcommand = "cpp";
+      strcat (preproc, cppcommand);
+      strcat (preproc, " -I. -I");
+      strcat (preproc, LIBDIR);
+      strcat (preproc, " ");
       if (events) {
 	strcat (preproc, " -DDEBUG_EVENTS=1 -DBASILISK=\"\\\"");
 	strcat (preproc, BASILISK);

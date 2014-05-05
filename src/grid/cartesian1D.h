@@ -153,10 +153,10 @@ void realloc_scalar (void)
     memmove (data + i*sizeof(double), data, oldatasize);
 }
 
-#if TRASH
-# undef trash
-# define trash cartesian1D_trash
-#endif
+@if TRASH
+@ undef trash
+@ define trash cartesian1D_trash
+@endif
 
 void cartesian1D_trash (void * alist)
 {

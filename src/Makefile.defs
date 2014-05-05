@@ -1,12 +1,15 @@
 # -*-Makefile-*-
 
 PNG = png
-export GENSUM = md5sum
-export CHECKSUM = md5sum -c --status
-export CFLAGS
+GENSUM = md5sum
+CHECKSUM = md5sum -c --status
 
 include $(BASILISK)/config
 include Makefile.tests
+
+export GENSUM
+export CHECKSUM
+export CFLAGS
 
 QCC = $(BASILISK)/qcc
 BASILISK_ROOT=$(subst /src,,$(BASILISK))

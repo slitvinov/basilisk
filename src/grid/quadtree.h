@@ -10,9 +10,9 @@
 
 typedef struct {
   int flags, neighbors; // number of active neighbors
-#if _MPI
+@if _MPI
   int pid;
-#endif
+@endif
 } Cell;
 
 enum {
@@ -358,9 +358,9 @@ static void update_cache_f (void)
 	continue;
     }
     else
-#if _MPI
+@if _MPI
       if (cell.pid == pid())
-#endif
+@endif
     {
       if (is_leaf (cell)) {
 	cache_append (&q->leaves, point);
@@ -504,10 +504,10 @@ static void update_cache_f (void)
 }
 @
 
-#if TRASH
-# undef trash
-# define trash quadtree_trash
-#endif
+@if TRASH
+@ undef trash
+@ define trash quadtree_trash
+@endif
 
 void quadtree_trash (void * alist)
 {
@@ -577,12 +577,12 @@ void alloc_children (Quadtree * p)
     for (int l = - GHOSTS; l < 2 + GHOSTS; l++)
       if (!m[_childindex(k,l)]) {
 	m[_childindex(k,l)] = calloc (1, sizeof(Cell) + datasize);
-#if TRASH
+@if TRASH
 	char * data = m[_childindex(k,l)] + sizeof(Cell);
 	int nv = datasize/sizeof(double);
 	for (int j = 0; j < nv; j++)
 	  ((double *)data)[j] = undefined;
-#endif
+@endif
       }
 #endif
 }
@@ -843,9 +843,9 @@ void init_grid (int n)
 #endif
   CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
   CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
-#if _MPI
+@if _MPI
   CELL(q->m, 0, 2 + 2*GHOSTS).pid = pid();
-#endif
+@endif
   cache_init (&q->leaves);
   cache_init (&q->faces);
   cache_init (&q->vertices);
@@ -859,10 +859,10 @@ void init_grid (int n)
       point = refine_cell (point, NULL);
   update_cache();
   trash (all);
-#if _MPI
+@if _MPI
   void mpi_boundary_new();
   mpi_boundary_new();
-#endif
+@endif
   for (int d = 0; d < nboundary; d++) {
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
     box->d = d;
@@ -913,6 +913,6 @@ void check_two_one (void)
 
 #include "quadtree-common.h"
 
-#if _MPI
-# include "quadtree-mpi.h"
-#endif
+@if _MPI
+#include "quadtree-mpi.h"
+@endif

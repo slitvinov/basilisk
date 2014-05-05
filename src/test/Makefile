@@ -1,3 +1,5 @@
+include $(BASILISK)/Makefile.defs
+
 # the default CFLAGS are set in $(BASILISK)/config
 CFLAGS += -O2
 
@@ -66,4 +68,3 @@ mpi-reduce.tst: mpi-reduce.s
 indexing.tst: indexing.s
 	@EXEC="mpirun -np 3" $(BASILISK)/runtest indexing.tst
 
-include $(BASILISK)/Makefile.defs

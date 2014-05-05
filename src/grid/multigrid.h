@@ -134,10 +134,10 @@ foreach_face_generic() {
 }
 @
 
-#if TRASH
-# undef trash
-# define trash multigrid_trash
-#endif
+@if TRASH
+@ undef trash
+@ define trash multigrid_trash
+@endif
 
 void multigrid_trash (void * alist)
 {

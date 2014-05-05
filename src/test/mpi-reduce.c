@@ -3,9 +3,7 @@
 int main ()
 {
   init_grid (64);
-#if _MPI
   mpi_partitioning();
-#endif
 
   scalar s[];
   foreach()

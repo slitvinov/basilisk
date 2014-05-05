@@ -13,5 +13,5 @@ CFLAGS += -g -Wall
 # PNG = pngcairo
 
 # if you don't have md5sum, replace it with something equivalent
-export GENSUM = shasum
-export CHECKSUM = shasum -c --status
+GENSUM = shasum
+CHECKSUM = shasum -c --status

@@ -52,10 +52,10 @@ foreach_face_generic() {
 @define is_face_x() (point.j <= point.n)
 @define is_face_y() (point.i <= point.n)
 
-#if TRASH
-# undef trash
-# define trash cartesian_trash
-#endif
+@if TRASH
+@ undef trash
+@ define trash cartesian_trash
+@endif
 
 void cartesian_trash (void * alist)
 {

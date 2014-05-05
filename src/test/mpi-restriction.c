@@ -11,9 +11,7 @@ int main (int argc, char * argv[])
   X0 = Y0 = -0.5;
   init_grid (1);
   while (refine_function (refine_circle, &depth, NULL));
-#if _MPI
   mpi_partitioning();
-#endif
 
   scalar s[];
   foreach()

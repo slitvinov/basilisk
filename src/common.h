@@ -72,6 +72,7 @@ void mpi_init()
 
 @define OMP(x)
 @define pid() 0
+@define mpi_all_reduce(v,type,op)
 
 @endif
 

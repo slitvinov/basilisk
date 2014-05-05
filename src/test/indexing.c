@@ -19,9 +19,7 @@ int main (int argc, char ** argv)
   foreach()
     reference[] = i++;
 
-#if _MPI
   mpi_partitioning();
-#endif
 
   scalar index[];
   z_indexing (index);
