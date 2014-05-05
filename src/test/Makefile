@@ -58,12 +58,12 @@ terrain.tst: terrain.s
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst
 
 mpi-restriction.tst: mpi-restriction.s
-	@MPIRUN="mpirun -np 3" $(BASILISK)/runtest mpi-restriction.tst
+	@EXEC="mpirun -np 3" $(BASILISK)/runtest mpi-restriction.tst
 
 mpi-reduce.tst: mpi-reduce.s
-	@MPIRUN="mpirun -np 3" $(BASILISK)/runtest mpi-reduce.tst
+	@EXEC="mpirun -np 3" $(BASILISK)/runtest mpi-reduce.tst
 
 indexing.tst: indexing.s
-	@MPIRUN="mpirun -np 3" $(BASILISK)/runtest indexing.tst
+	@EXEC="mpirun -np 3" $(BASILISK)/runtest indexing.tst
 
 include $(BASILISK)/Makefile.defs

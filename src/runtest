@@ -6,7 +6,6 @@ case $ext in
     ctst) log=clog; out=cout; ref=cref; ;;
     *)    log=log;  out=out; ref=ref; ;;
 esac
-valgrind=$2
 BASILISK_WIKI=`echo $BASILISK | sed 's:/src$::'`
 dir=`echo $PWD | sed "s:$BASILISK_WIKI/::"`
 
@@ -20,12 +19,8 @@ script()
     test -s warn || rm -f warn
 
     pass=true
-    if test -n "$valgrind" -o -z `which gdb`; then
-	if ! $valgrind ./$test 2> $log > $out; then
-	    pass=false
-	fi
-    elif test -n "$MPIRUN"; then
-	if ! $MPIRUN ./$test 2> $log > $out; then
+    if test -n "$EXEC" -o -z `which gdb`; then
+	if ! $EXEC ./$test 2> $log > $out; then
 	    pass=false
 	fi
     else
@@ -101,8 +96,8 @@ if ! test -f fail; then
   test -s warn || rm -f warn
 
   pass=true
-  if test -n "$valgrind" -o -z `which gdb`; then
-    if ! timeout 1h $valgrind ./$test 2> $log > $out; then
+  if test -n "$EXEC" -o -z `which gdb`; then
+    if ! timeout 1h $EXEC ./$test 2> $log > $out; then
        pass=false
     fi
   else

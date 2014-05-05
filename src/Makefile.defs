@@ -31,7 +31,7 @@ clean:
 	@CFLAGS="-grid=multigrid $(CFLAGS)" PNG=$(PNG) $(BASILISK)/runtest $@
 
 %.vtst: %.s
-	@PNG=$(PNG) $(BASILISK)/runtest $@ "$(VALGRIND)"
+	@PNG=$(PNG) EXEC="$(VALGRIND)" $(BASILISK)/runtest $@
 
 %.h: %.h.page
 	ln -s $< $@
