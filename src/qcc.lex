@@ -1511,6 +1511,8 @@ foreach_dimension{WS}*[(]{WS}*[)] {
 }
 
 reduction{WS}*[(](min|max|\+):{ID}+[)] {
+  if (strchr(yytext, '+'))
+    ECHO;
   char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':');
   *s1 = '\0'; s1++;
   assert (nreduct < REDUCTMAX);

@@ -1,10 +1,10 @@
 #include <stdarg.h>
 #include <kdt/kdt.h>
-#ifdef _OPENMP
-# define NPROC omp_get_max_threads()
-#else
-# define NPROC 1
-#endif
+@if _OPENMP
+@ define NPROC omp_get_max_threads()
+@else
+@ define NPROC 1
+@endif
 
 attribute {
   void ** kdt;
