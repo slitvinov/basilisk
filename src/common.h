@@ -24,7 +24,6 @@
 @define clamp(x,a,b) ((x) < (a) ? (a) : (x) > (b) ? (b) : (x))
 @define swap(type,a,b) { type tmp = a; a = b; b = tmp; }
 
-@define GHOSTS  1 // number of ghost layers
 @define trash(x)  // data trashing is disabled by default. Turn it on with
                   // -DTRASH=1
 

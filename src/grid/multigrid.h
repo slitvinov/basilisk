@@ -1,4 +1,5 @@
 #define GRIDNAME "Multigrid"
+#define GHOSTS 1
 
 #define I      (point.i - GHOSTS)
 #define J      (point.j - GHOSTS)

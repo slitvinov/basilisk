@@ -1,4 +1,5 @@
 #define GRIDNAME "Cartesian"
+#define GHOSTS 1
 
 #define I     (point.i - 1)
 #define J     (point.j - 1)
