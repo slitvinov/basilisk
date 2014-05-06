@@ -98,16 +98,16 @@ void terrain (scalar zb, ...)
 
   zb.refine = refine_terrain;
   scalar n = new scalar;
-  n.refine = refine_none;
-  n.coarsen = refine_none;
+  n.refine = none;
+  n.coarsen = none;
   _terrain[zb].n = n;
   scalar dmin = new scalar;
-  dmin.refine = refine_none;
-  dmin.coarsen = refine_none;
+  dmin.refine = none;
+  dmin.coarsen = none;
   _terrain[zb].dmin = dmin;
   scalar dmax = new scalar;
-  dmax.refine = refine_none;
-  dmax.coarsen = refine_none;
+  dmax.refine = none;
+  dmax.coarsen = none;
   _terrain[zb].dmax = dmax;
 
   trash ({zb});

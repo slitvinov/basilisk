@@ -121,8 +121,8 @@ void refine_reset (Point point, scalar v)
       fine(v,k,l) = 0.;
 }
 
-void refine_none  (Point point, scalar v) {}
-void coarsen_none (Point point, scalar v) {}
+static void nothing() {}
+static void * none = nothing;
 
 void coarsen_face (Point point, scalar s)
 {
@@ -135,7 +135,7 @@ vector multigrid_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_face_vector (v, name);
   v.x.coarsen = coarsen_face;
-  v.y.coarsen = coarsen_none;
+  v.y.coarsen = none;
   return v;
 }
 

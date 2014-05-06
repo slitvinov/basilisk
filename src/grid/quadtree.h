@@ -631,11 +631,9 @@ static void update_cache_f (void)
 
   foreach_cell() {
     if (!is_active (cell)) {
-      if (cell.neighbors > 0)
-	/* update halo cache (prolongation) */
-	cache_level_append (&q->halo[level], point);
-      else
-	continue;
+      assert (cell.neighbors > 0);
+      /* update halo cache (prolongation) */
+      cache_level_append (&q->halo[level], point);
     }
     else {
       if (is_leaf (cell))

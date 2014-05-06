@@ -327,7 +327,7 @@ void reconstruction (const scalar c, vector n, scalar alpha)
   We do not restrict the normal or the intercept (they are recomputed
   from the volume fraction when needed on the coarse mesh) */
 
-  n.x.coarsen = n.y.coarsen = alpha.coarsen = coarsen_none;
+  n.x.coarsen = n.y.coarsen = alpha.coarsen = none;
   n.x.prolongation = n.y.prolongation = injection;
 
   /**
