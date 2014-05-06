@@ -624,46 +624,7 @@ void realloc_scalar (void)
 #endif
 }
 
-static void update_cache_f (void)
-{
-  Quadtree * q = grid;
-
-  /* empty caches */
-  q->leaves.n = 0;
-  for (int l = 0; l <= depth(); l++)
-    q->halo[l].n = q->active[l].n = 0;
-
-  foreach_cell() {
-    if (!is_active (cell)) {
-      if (cell.neighbors > 0)
-	/* update halo cache (prolongation) */
-	cache_level_append (&q->halo[level], point);
-      else
-	continue;
-    }
-    else {
-      if (is_leaf (cell))
-	cache_append (&q->leaves, point);
-      else if (cell.neighbors > 0)
-	/* update halo cache (restriction) */
-	cache_level_append (&q->halo[level], point);
-      /* update active cache */
-      cache_level_append (&q->active[level], point);
-    }
-  }
-
-  /* update ghost cell flags */
-  for (int d = 0; d < nboundary; d++)
-    foreach_boundary_cell (d, true) {
-      neighbor(ghost).flags = fghost;
-      if (!is_active (cell))
-	continue;
-    }
-
-  q->dirty = false;
-}
-
-@def foreach_halo_levels(start,cond,inc) {
+@def foreach_halo_level(_l) {
   update_cache();
   CacheLevel _halo = ((Quadtree *)grid)->halo[_l];
   foreach_cache_level (_halo, _l,)
