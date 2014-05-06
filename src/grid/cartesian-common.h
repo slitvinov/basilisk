@@ -408,30 +408,43 @@ void output_cells (FILE * fp)
 
 void cartesian_debug (Point point)
 {
-  FILE * fp = fopen ("cells", "w");
+  char name[80] = "cells";
+  if (pid() > 0)
+    sprintf (name, "cells-%d", pid());
+  FILE * fp = fopen (name, "w");
   output_cells (fp);
   fclose (fp);
 
-  fp = fopen ("stencil", "w");
+  char stencil[80] = "stencil";
+  if (pid() > 0)
+    sprintf (stencil, "stencil-%d", pid());
+  fp = fopen (stencil, "w");
+  for (scalar v in all)
+    fprintf (fp, "x y %s ", v.name);
+  fputc ('\n', fp);
   for (int k = -1; k <= 1; k++)
     for (int l = -1; l <= 1; l++) {
-      fprintf (fp, "%g %g", x + k*Delta, y + l*Delta);
-      if (allocated (k,l)) {
-	for (scalar v in all)
-	  fprintf (fp, " %g", v[k,l]);
+      for (scalar v in all) {
+	fprintf (fp, "%g %g ", 
+		 x + k*Delta + v.d.x*Delta/2., 
+		 y + l*Delta + v.d.y*Delta/2.);
+	if (allocated(k,l))
+	  fprintf (fp, "%g ", v[k,l]);
+	else
+	  fputs ("n/a ", fp);
       }
-      else
-	for (scalar v in all)
-	  fprintf (fp, " n/a");
       fputc ('\n', fp);
     }
   fclose (fp);
 
-  fputs ("Last point stencils can be displayed using e.g.\n"
-	 "gnuplot> v=0\n"
-	 "gnuplot> plot 'cells' w l lc 0, "
-	 "'stencil' u 1:2:3+v w labels tc lt 1",
-	 stderr);
+  fprintf (stderr, 
+	   "Last point stencils can be displayed using (in gnuplot)\n"
+	   "  set size ratio -1\n"
+	   "  set key outside\n"
+	   "  v=0\n"
+	   "  plot '%s' w l lc 0, "
+	   "'%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 1 title columnhead(3+3*v)",
+	   name, stencil);
 }
 
 void cartesian_methods()

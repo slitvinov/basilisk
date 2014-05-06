@@ -110,6 +110,8 @@ static size_t _size (size_t l)
 @def foreach_boundary(d,corners) foreach_boundary_level(d,point.depth,corners) @
 @def end_foreach_boundary() end_foreach_boundary_level() @
 
+@define is_coarse() (point.level < depth())
+
 @def foreach_fine_to_coarse() {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point _p = *((Point *)grid);

@@ -116,7 +116,7 @@ Makefile.tests: Makefile $(BASILISK)/tests.sh
 Makefile.deps: 	Makefile.tests \
 		$(subst .c,.s.d,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(subst .page,.tags.d,$(ALLPAGES))
-	@echo "Updating Makefile.deps"
+	@echo "updating Makefile.deps"
 	@cat /dev/null $^ > Makefile.deps
 
 include Makefile.deps

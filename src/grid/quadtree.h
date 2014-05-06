@@ -24,6 +24,7 @@ enum {
 #define is_ghost(cell)   ((cell).flags & fghost)
 #define is_refined(cell) (is_active(cell) && !is_leaf(cell))
 #define is_corner(cell)  (stage == _CORNER)
+#define is_coarse()      (!is_leaf(cell))
 
 // Caches
 

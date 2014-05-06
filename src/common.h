@@ -44,7 +44,7 @@
 
 @define NOT_UNUSED(x) (void)(x)
 
-@define VARIABLES
+@define VARIABLES      _CATCH;
 @define val(a,k,l)     data(k,l)[a]
 
 // the grid
@@ -253,6 +253,7 @@ int _ig[nboundary] = {1,-1,0,0},
 @define neumann_homogeneous()   (val(_s,0,0))
 
 typedef struct _Point Point;
+static Point last_point;
 
 // methods for each scalar
 
