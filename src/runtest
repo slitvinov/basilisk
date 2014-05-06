@@ -178,7 +178,9 @@ EOF
     cd ..
     # generate graphics
     if test -f $test.plot -o -f $test.plot.page; then
-	make $test/plot.png
+	if ! make $test/plot.png > $test/.tmp 2>&1; then
+	    cat $test/.tmp >> warn
+	fi
     fi
     cd $test
     if ! sh $BASILISK/gnuplot.sh > .tmp; then
