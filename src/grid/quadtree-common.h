@@ -50,10 +50,7 @@ Point refine_cell (Point point, scalar * list)
     for (int l = 0; l < 2; l++) {
       if (dimension == 2)
 	assert(!(child(k,l).flags & active));
-      child(k,l).flags |= (active | leaf);
-@if _MPI
-      child(k,l).pid = cell.pid;
-@endif
+      child(k,l).flags |= (active|leaf);
       /* update neighborhood */
       for (int o = -GHOSTS; o <= GHOSTS; o++)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)
@@ -312,17 +309,14 @@ static void halo_prolongation (scalar * list, int depth)
 
 Point locate (double xp, double yp)
 {
-  foreach_cell() {
-@if _MPI
-    if (cell.pid != pid())
-      continue;
-@endif
-    Delta /= 2.;
-    if (xp < x - Delta || xp > x + Delta || yp < y - Delta || yp > y + Delta)
-      continue;
-    if (is_leaf (cell))
-      return point;
-  }
+  foreach_cell() 
+    if (is_local(cell)) {
+      Delta /= 2.;
+      if (xp < x - Delta || xp > x + Delta || yp < y - Delta || yp > y + Delta)
+	continue;
+      if (is_leaf (cell))
+	return point;
+    }
   Point point = { .level = -1 };
   return point;
 }
@@ -417,5 +411,4 @@ void quadtree_methods()
   init_face_vector     = quadtree_init_face_vector;
   boundary_level       = quadtree_boundary_level;
   boundary_flux        = halo_restriction_flux;
-  //  boundary_restriction = quadtree_boundary_;
 }

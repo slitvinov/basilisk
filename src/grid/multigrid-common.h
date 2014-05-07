@@ -44,7 +44,8 @@ void restriction (scalar * list)
     }
   if (listf)
     boundary_flux (listf);
-  if (listf || listc)
+  if (listf || listc) {
+    boundary_iterate (restriction, listc, depth());
     for (int l = depth() - 1; l >= 0; l--) {
       foreach_coarse_level(l) {
 	for (scalar s in listc)
@@ -56,6 +57,7 @@ void restriction (scalar * list)
       boundary_iterate (restriction, listc, l);
       assert (listf == NULL);
     }
+  }
   free (listc);
   if (listf) {
 #if 1

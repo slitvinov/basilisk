@@ -10,16 +10,14 @@
 
 typedef struct {
   int flags, neighbors; // number of active neighbors
-@if _MPI
-  int pid;
-@endif
 } Cell;
 
 enum {
   active  = 1 << 0,
   leaf    = 1 << 1,
   fghost  = 1 << 2,
-  refined = 1 << 3
+  refined = 1 << 3,
+  remote  = 1 << 4
 };
 
 #define _CORNER 4
@@ -29,6 +27,12 @@ enum {
 #define is_refined(cell) (is_active(cell) && !is_leaf(cell))
 #define is_corner(cell)  (stage == _CORNER)
 #define is_coarse()      (!is_leaf(cell))
+
+@if _MPI
+@define is_local(cell) (!((cell).flags & remote))
+@else
+@define is_local(cell) true
+@endif
 
 // Caches
 
@@ -220,7 +224,7 @@ void recursive (Point point)
 	continue;
       switch (stage) {
       case 0: {
-        POINT_VARIABLES;
+	POINT_VARIABLES;
 	/* do something */
 @
 @def end_foreach_cell()
@@ -349,57 +353,52 @@ static void update_cache_f (void)
   for (int l = 0; l <= depth(); l++)
     q->halo[l].n = q->active[l].n  = 0;
 
-  foreach_cell() {
-    if (!is_active (cell)) {
-      if (cell.neighbors > 0)
+  foreach_cell()
+    if (is_local(cell)) {
+      if (!is_active (cell)) {
+	assert (cell.neighbors > 0);
 	/* update halo cache (prolongation) */
 	cache_level_append (&q->halo[level], point);
-      else
-	continue;
-    }
-    else
-@if _MPI
-      if (cell.pid == pid())
-@endif
-    {
-      if (is_leaf (cell)) {
-	cache_append (&q->leaves, point);
-	cache_append (&q->vertices, point);
-	if (!is_refined(neighbor(-1,0)) || !is_refined(neighbor(0,-1)))
-	  cache_append (&q->faces, point);
-	if (!is_active(neighbor(1,0))) {
-	  point.i++;
-	  cache_append (&q->faces, point);
-	  point.i--;
-	}
-	if (!is_active(neighbor(0,1))) {
-	  point.j++;
-	  cache_append (&q->faces, point);
-	  point.j--;
-	}
-	if (!is_leaf(neighbor(1,1))) {
-	  point.i++; point.j++;
-	  cache_append (&q->vertices, point);
-	  point.i--; point.j--;
-	}
-	if (!is_leaf(neighbor(0,-1)) && !is_leaf(neighbor(1,0))) {
-	  point.i++;
-	  cache_append (&q->vertices, point);
-	  point.i--;
-	}
-	if (!is_leaf(neighbor(-1,0)) && !is_leaf(neighbor(0,1))) {
-	  point.j++;
-	  cache_append (&q->vertices, point);
-	  point.j--;
-	}
       }
-      else if (cell.neighbors > 0)
-	/* update halo cache (restriction) */
-	cache_level_append (&q->halo[level], point);
-      /* update active cache */
-      cache_level_append (&q->active[level], point);
+      else {
+	if (is_leaf (cell)) {
+	  cache_append (&q->leaves, point);
+	  cache_append (&q->vertices, point);
+	  if (!is_refined(neighbor(-1,0)) || !is_refined(neighbor(0,-1)))
+	    cache_append (&q->faces, point);
+	  if (!is_active(neighbor(1,0))) {
+	    point.i++;
+	    cache_append (&q->faces, point);
+	    point.i--;
+	  }
+	  if (!is_active(neighbor(0,1))) {
+	    point.j++;
+	    cache_append (&q->faces, point);
+	    point.j--;
+	  }
+	  if (!is_leaf(neighbor(1,1))) {
+	    point.i++; point.j++;
+	    cache_append (&q->vertices, point);
+	    point.i--; point.j--;
+	  }
+	  if (!is_leaf(neighbor(0,-1)) && !is_leaf(neighbor(1,0))) {
+	    point.i++;
+	    cache_append (&q->vertices, point);
+	    point.i--;
+	  }
+	  if (!is_leaf(neighbor(-1,0)) && !is_leaf(neighbor(0,1))) {
+	    point.j++;
+	    cache_append (&q->vertices, point);
+	    point.j--;
+	  }
+	}
+	else if (cell.neighbors > 0)
+	  /* update halo cache (restriction) */
+	  cache_level_append (&q->halo[level], point);
+	/* update active cache */
+	cache_level_append (&q->active[level], point);
+      }
     }
-  }
 
   /* update ghost cell flags */
   for (int d = 0; d < nboundary; d++)
@@ -693,15 +692,13 @@ static void box_boundary_halo_restriction (const Boundary * b,
 {
   int d = ((BoxBoundary *)b)->d;
   foreach_boundary_cell (d, true) {
-    if (is_active (cell)) {
-      if (level == l) {
-	if (cell.neighbors > 0)
-	  for (scalar s in list)
-	    s[ghost] = s.boundary[d] (point, s);
-	continue;
-      }
+    if (level == l) {
+      if (cell.neighbors > 0)
+	for (scalar s in list)
+	  s[ghost] = s.boundary[d] (point, s);
+      continue;
     }
-    else
+    else if (is_leaf (cell))
       continue;
   }
 }
@@ -714,14 +711,9 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   foreach_boundary_cell (d, true) {
     if (level > l)
       continue;
-    else if (!is_active (cell)) {
-      if (cell.neighbors > 0) {
-	for (scalar s in list)
-	  s[ghost] = s.boundary[d] (point, s);
-      }
-      else
-	continue;
-    }
+    else if (!is_active (cell) && cell.neighbors > 0)
+      for (scalar s in list)
+	s[ghost] = s.boundary[d] (point, s);
   }
   // boundary conditions for cells at level l
   if (l < depth())
@@ -802,11 +794,8 @@ void init_grid (int n)
 #else
   q->m[0] = alloc_cells (0);
 #endif
-  CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
+  CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf|active);
   CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
-@if _MPI
-  CELL(q->m, 0, 2 + 2*GHOSTS).pid = pid();
-@endif
   cache_init (&q->leaves);
   cache_init (&q->faces);
   cache_init (&q->vertices);

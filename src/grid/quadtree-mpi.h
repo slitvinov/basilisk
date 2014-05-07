@@ -97,32 +97,32 @@ void mpi_partitioning()
   nf = nf/size + 1;
 
   // set the pid of each cell
-  scalar nactive[];
+  scalar nactive[], pid[];
   int i = 0;
   foreach_cell_post (is_active (cell) || cell.neighbors > 0) {
     if (is_active (cell)) {
       if (is_leaf (cell))
-	cell.pid = i++/nf;
+	pid[] = i++/nf;
       else {
-	cell.pid = -1;
+	pid[] = -1;
 	for (int i = 0; i <= 1; i++)
 	  for (int j = 0; j <= 1; j++)
-	    if (cell.pid == -1)
-	      cell.pid = child(i,j).pid;
-	    else if (child(i,j).pid == pid())
-	      cell.pid = pid();
+	    if (pid[] == -1)
+	      pid[] = fine(pid,i,j);
+	    else if (fine(pid,i,j) == pid())
+	      pid[] = pid();
       }
     }
     nactive[] = 0;
   }
 
   foreach_halo_coarse_to_fine(depth())
-    cell.pid = aparent(0,0).pid;
+    pid[] = coarse(pid,0,0);
 
   // set the number of active neighboring cells belonging to the
   // current process
   foreach_cell() {
-    if (cell.pid != pid() || !is_active (cell))
+    if (pid[] != pid() || !is_active (cell))
       continue;
     else
       /* update neighborhood */
@@ -146,41 +146,6 @@ void mpi_partitioning()
       point.back->dirty = true;
     }
 
-#if DEBUG
-  void output_cells (FILE * fp);
-
-  char name[80];
-  sprintf (name, "halo-%d", pid());
-  FILE * logfile = fopen (name, "w");
-
-  sprintf (name, "cells-%d", pid());
-  FILE * fp = fopen (name, "w");
-  output_cells (fp);
-  fclose (fp);
-
-  // local halo
-  foreach_halo_coarse_to_fine(depth())
-    fprintf (logfile, "%g %g %d %d\n", x, y, cell.pid, level);
-
-  // local restriction
-  sprintf (name, "restrict-%d", pid());
-  fp = fopen (name, "w");
-  foreach_halo_fine_to_coarse()
-    fprintf (fp, "%g %g %d %d\n", x, y, cell.pid, level);
-  fclose (fp);
-
-  // MPI communication for leaf-level restriction
-  sprintf (name, "mpi-%d", pid());
-  fp = fopen (name, "w");  
-  foreach_cell() {
-    if (!is_active (cell))
-      continue;
-    else if (cell.pid != pid())
-      fprintf (fp, "%g %g %d %d\n", x, y, cell.pid, level);
-  }
-  fclose (fp);
-#endif
-
   /* this is the adjacency vector i.e. adjacency_rcv[x] is different from
      zero if we need to receive data from proc x */
   int adjacency_rcv[size];
@@ -189,24 +154,30 @@ void mpi_partitioning()
 
   /* we build arrays of ghost cell indices for leaf-level restriction */
   foreach_cell() {
-    if (!is_active (cell))
-      continue;
-    else if (cell.pid != pid()) {
+    if (!is_active (cell)) {
+      assert (cell.neighbors > 0);
+      cell.flags &= ~remote;
+    }
+    else if (pid[] != pid()) {
       int i;
       for (i = 0; i < m->nrcv; i++)
-	if (cell.pid == m->rcv[i])
+	if (pid[] == m->rcv[i])
 	  break;
       if (i == m->nrcv) {
 	m->rcv = realloc (m->rcv, ++m->nrcv*sizeof (int));
-	m->rcv[m->nrcv-1] = cell.pid;
+	m->rcv[m->nrcv-1] = pid[];
 	m->rcv_halo = realloc (m->rcv_halo, m->nrcv*sizeof (CacheLevel *));
 	m->rcv_halo[m->nrcv-1] = malloc ((depth() + 1)*sizeof (CacheLevel));
 	for (int j = 0; j <= depth(); j++)
 	  cache_level_init (&m->rcv_halo[m->nrcv-1][j]);
       }
       cache_level_append (&m->rcv_halo[i][level], point);
-      adjacency_rcv[cell.pid]++;
+      adjacency_rcv[(int)pid[]]++;
+      cell.flags &= ~(active|leaf);
+      cell.flags |= remote;
     }
+    else
+      cell.flags &= ~remote;
   }
 
   /* we do a global transpose of the adjacency vector
@@ -245,6 +216,29 @@ void mpi_partitioning()
     }
 
 #if DEBUG
+  void output_cells (FILE * fp);
+
+  char name[80];
+  sprintf (name, "halo-%d", pid());
+  FILE * fp = fopen (name, "w");
+
+  // local halo
+  foreach_halo_coarse_to_fine(depth())
+    fprintf (fp, "%g %g %g %d\n", x, y, pid[], level);
+  fclose (fp);
+
+  sprintf (name, "cells-%d", pid());
+  fp = fopen (name, "w");
+  output_cells (fp);
+  fclose (fp);
+
+  // local restriction
+  sprintf (name, "restrict-%d", pid());
+  fp = fopen (name, "w");
+  foreach_halo_fine_to_coarse()
+    fprintf (fp, "%g %g %g %d\n", x, y, pid[], level);
+  fclose (fp);
+
   sprintf (name, "ghost-%d", pid());
   fp = fopen (name, "w");
   for (int i = 0; i < m->nsnd; i++)
@@ -306,7 +300,7 @@ void z_indexing (scalar index)
       index[] = i++;
       continue;
     }
-    else if (cell.pid != pid()) {
+    else if (!is_local(cell)) {
       i += size[];
       continue;
     }
