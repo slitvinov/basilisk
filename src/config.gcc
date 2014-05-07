@@ -1,13 +1,13 @@
 # -*-Makefile-*-
 
 # how to launch the C99 compiler
-CC99 = gcc -std=c99 -D_XOPEN_SOURCE=700 -DHAVE_GETOPT_H=1 -D_GNU_SOURCE=1
+CC99 = gcc -std=c99 -D_GNU_SOURCE=1
 
 # other useful (non-standard) flags
 CFLAGS += -g -Wall
 
 # if you have valgrind, otherwise comment this out
-VALGRIND = valgrind -q --tool=memcheck
+VALGRIND = valgrind -q --tool=memcheck --suppressions=$(BASILISK)/openmpi.supp
 
 # if gnuplot supports pngcairo, otherwise comment this out
 PNG = pngcairo

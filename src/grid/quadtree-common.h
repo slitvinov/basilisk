@@ -284,25 +284,27 @@ static void halo_restriction_flux (vector * list)
   free (listv);
 }
 
-static void boundary_halo_prolongation (scalar * list, int l)
+static void halo_prolongation (scalar * list, int depth)
 {
-  for (int b = 0; b < nboundary; b++) {
-    foreach_boundary_cell (b, true) {
-      if (level > l)
-	continue;
-      else if (!is_active (cell)) {
-	if (cell.neighbors > 0) {
-	  for (scalar s in list)
-	    s[ghost] = s.boundary[b] (point, s);
+  for (int l = 0; l <= depth; l++) {
+    foreach_halo_level(l)
+      if (!is_active(cell))
+	for (scalar s in list) {
+	  if (s.gradient) { // linear interpolation (e.g. with limiting)
+	    double sc = coarse(s,0,0);
+	    s[] = sc;
+	    foreach_dimension()
+	      s[] += s.gradient (coarse(s,-1,0), sc, coarse(s,1,0))*child.x/4.;
+	  }
+	  else if (s.prolongation) // variable-specific prolongation (e.g. VOF)
+	    s[] = s.prolongation (point, s);
+	  else
+	    /* default is bilinear interpolation from coarser level */
+	    s[] = (9.*coarse(s,0,0) + 
+		   3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
+		   coarse(s,child.x,child.y))/16.;	
 	}
-	else
-	  continue;
-      }
-    }
-    if (l < depth())
-      foreach_boundary_level (b, l, true)
-	for (scalar s in list)
-	  s[ghost] = s.boundary[b] (point, s);
+    boundary_iterate (halo_prolongation, list, l);
   }
 }
 
@@ -343,83 +345,6 @@ void quadtree_boundary_restriction (scalar * list)
 }
 
 // Cartesian methods
-
-void quadtree_boundary_level (scalar * list, int l)
-{
-  if (l < 0)
-    l = depth();
-
-  scalar * listdef = NULL, * listc = NULL;
-  for (scalar s in list) {
-    if (s.coarsen == coarsen_average)
-      listdef = list_add (listdef, s);
-    else if (s.coarsen != refine_none)
-      listc = list_add (listc, s);
-  }
-
-  if (listdef || listc) {
-    halo_restriction (listdef, listc, l);
-    free (listdef);
-    free (listc);
-  }
-
-  scalar * listr = NULL;
-  for (scalar s in list)
-    if (s.refine != refine_none)
-      listr = list_add (listr, s);
-
-  if (listr) {
-    halo_prolongation (listr, l);
-    free (listr);
-  }
-}
-
-void quadtree_boundary_tangent (vector * listv)
-{
-  vector * list = NULL;
-  for (vector v in listv)
-    if (!is_constant(v.x))
-      list = vectors_add (list, v);
-  if (!list)
-    return;
-
-  /* we need to define the normal ghost values on coarse (right/top) boundaries
-     (this is not done by boundary_normal()) */
-  foreach_boundary_fine_to_coarse(right)
-    for (vector u in list)
-      u.x[] = (fine(u.x,0,0) + fine(u.x,0,1))/2.;
-  foreach_boundary_fine_to_coarse(top)
-    for (vector u in list)
-      u.y[] = (fine(u.y,0,0) + fine(u.y,1,0))/2.;
-
-  cartesian_boundary_tangent (list);
-
-  // interior halos
-  foreach_halo()
-    foreach_dimension()
-      // fixme: this does not work for static quadtrees 
-      // because allocated() is always true
-      if (allocated(-1,0) && !is_leaf(neighbor(-1,0))) {
-	if (child.x < 0) {
-	  for (vector u in list)
-	    u.x[] = (3.*coarse(u.x,0,0) + coarse(u.x,0,child.y))/4.;
-	}
-	else
-	  for (vector u in list)
-	    u.x[] = (3.*coarse(u.x,0,0) + coarse(u.x,0,child.y) +
-		     3.*coarse(u.x,1,0) + coarse(u.x,1,child.y))/8.;
-      }
-
-  // we need to do the same for the (right/top) boundary halos
-  foreach_boundary_halo (right)
-    for (vector u in list)
-      u.x[] = (3.*coarse(u.x,0,0) + coarse(u.x,0,child.y))/4.;
-  foreach_boundary_halo (top)
-    for (vector u in list)
-      u.y[] = (3.*coarse(u.y,0,0) + coarse(u.y,child.x,0))/4.;
-
-  free (list);
-}
 
 Point locate (double xp, double yp)
 {

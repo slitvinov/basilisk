@@ -17,7 +17,9 @@ enum {
   active  = 1 << 0,
   leaf    = 1 << 1,
   fghost  = 1 << 2,
-  refined = 1 << 3
+  refined = 1 << 3,
+  halo    = 1 << 4,
+  remote  = 1 << 5
 };
 
 #define _CORNER 4
@@ -342,6 +344,21 @@ void recursive (Point point)
   }
 @
 
+@def foreach_child() {
+  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
+  point.level++;
+  for (int _k = 0; _k < 2; _k++)
+    for (int _l = 0; _l < 2; _l++) {
+      point.i = _i + _k; point.j = _j + _l;
+      POINT_VARIABLES;
+@
+@def end_foreach_child()
+  }
+  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2;
+  point.level--;
+}
+@
+
 #define update_cache() { if (((Quadtree *)grid)->dirty) update_cache_f(); }
 
 static void update_cache_f (void)
@@ -353,7 +370,7 @@ static void update_cache_f (void)
   for (int l = 0; l <= depth(); l++)
     q->halo[l].n = q->active[l].n  = 0;
 
-  foreach_cell()
+  foreach_cell() {
     if (is_local(cell)) {
       if (!is_active (cell)) {
 	assert (cell.neighbors > 0);
@@ -392,18 +409,25 @@ static void update_cache_f (void)
 	    point.j--;
 	  }
 	}
-	else if (cell.neighbors > 0)
+	else if (cell.neighbors > 0 || (cell.flags & halo)) {
 	  /* update halo cache (restriction) */
 	  cache_level_append (&q->halo[level], point);
+	  /* all (coarse) children also need to be restricted */
+	  foreach_child()
+	    cell.flags |= halo;
+	}
 	/* update active cache */
 	cache_level_append (&q->active[level], point);
       }
     }
+    cell.flags &= ~halo;
+  }
 
   /* update ghost cell flags */
   for (int d = 0; d < nboundary; d++)
     foreach_boundary_cell (d, true) {
-      neighbor(ghost).flags = fghost;
+      if (allocated(ghost))
+	neighbor(ghost).flags = fghost;
       if (!is_active (cell))
 	continue;
     }
@@ -487,21 +511,6 @@ static void update_cache_f (void)
 
 @define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
 @define end_foreach_leaf()        continue; } end_foreach_cell()
-
-@def foreach_child() {
-  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
-  point.level++;
-  for (int _k = 0; _k < 2; _k++)
-    for (int _l = 0; _l < 2; _l++) {
-      point.i = _i + _k; point.j = _j + _l;
-      POINT_VARIABLES;
-@
-@def end_foreach_child()
-  }
-  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2;
-  point.level--;
-}
-@
 
 @if TRASH
 @ undef trash
@@ -623,46 +632,7 @@ void realloc_scalar (void)
 #endif
 }
 
-static void update_cache_f (void)
-{
-  Quadtree * q = grid;
-
-  /* empty caches */
-  q->leaves.n = 0;
-  for (int l = 0; l <= depth(); l++)
-    q->halo[l].n = q->active[l].n = 0;
-
-  foreach_cell() {
-    if (!is_active (cell)) {
-      if (cell.neighbors > 0)
-	/* update halo cache (prolongation) */
-	cache_level_append (&q->halo[level], point);
-      else
-	continue;
-    }
-    else {
-      if (is_leaf (cell))
-	cache_append (&q->leaves, point);
-      else if (cell.neighbors > 0)
-	/* update halo cache (restriction) */
-	cache_level_append (&q->halo[level], point);
-      /* update active cache */
-      cache_level_append (&q->active[level], point);
-    }
-  }
-
-  /* update ghost cell flags */
-  for (int d = 0; d < nboundary; d++)
-    foreach_boundary_cell (d, true) {
-      neighbor(ghost).flags = fghost;
-      if (!is_active (cell))
-	continue;
-    }
-
-  q->dirty = false;
-}
-
-@def foreach_halo_levels(start,cond,inc) {
+@def foreach_halo_level(_l) {
   update_cache();
   CacheLevel _halo = ((Quadtree *)grid)->halo[_l];
   foreach_cache_level (_halo, _l,)
@@ -750,7 +720,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   foreach_boundary_cell (d, true) {
     if (level > l)
       continue;
-    else if (!is_active (cell) && cell.neighbors > 0)
+    else if (!is_active (cell) && cell.neighbors > 0 && allocated(ghost))
       for (scalar s in list)
 	s[ghost] = s.boundary[d] (point, s);
   }
@@ -833,8 +803,8 @@ void init_grid (int n)
 #else
   q->m[0] = alloc_cells (0);
 #endif
-  CELL(q->m, 0, 2 + 2*GHOSTS).flags |= (leaf | active);
-  CELL(q->m, 0, 2 + 2*GHOSTS).neighbors = 1; // only itself as neighbor
+  CELL(q->m, 0, 2*GHOSTS*(GHOSTS + 1)).flags |= (leaf|active);
+  CELL(q->m, 0, 2*GHOSTS*(GHOSTS + 1)).neighbors = 1; // only itself as neighbor
   cache_init (&q->leaves);
   cache_init (&q->faces);
   cache_init (&q->vertices);
