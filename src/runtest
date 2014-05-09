@@ -9,6 +9,12 @@ esac
 BASILISK_WIKI=`echo $BASILISK | sed 's:/src$::'`
 dir=`echo $PWD | sed "s:$BASILISK_WIKI/::"`
 
+for opt in $CFLAGS; do
+    case $opt in
+	-catch) test -z "$EXEC" && EXEC=" "; # turn off gdb
+    esac
+done
+
 script()
 {
     rm -f $test.c
@@ -22,6 +28,12 @@ script()
     if test -n "$EXEC" -o -z `which gdb`; then
 	if ! $EXEC ./$test 2> $log > $out; then
 	    pass=false
+	    if test "$EXEC" = " " -a -f core -a -n `which gdb`; then
+		cat $log
+		grep "^  " $log > plot
+		xterm -e "gnuplot plot -" &
+		gdb -q ./$test core
+	    fi
 	fi
     else
 	if ! gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log; then
@@ -222,7 +234,7 @@ elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
     fi
 
     rm -f $test.$ext $test/pass \
-	$test/fail $test/fail.* $test/warn $test/plot.png $test/plots
+	$test/fail $test/warn $test/plot.png $test/plots
     $GENSUM $test.c $test.s > $test.$ext
     expirecache
 
