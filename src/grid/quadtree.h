@@ -359,6 +359,17 @@ void recursive (Point point)
 }
 @
 
+@def foreach_child_direction(d) {
+  static int _ii[4][2] = {{1,1}, {0,0}, {0,1}, {0,1}};
+  static int _jj[4][2] = {{0,1}, {0,1}, {1,1}, {0,0}};
+  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
+  point.level++;
+  for (int _k = 0; _k < 2; _k++) {
+    point.i = _i + _ii[d][_k]; point.j = _j + _jj[d][_k];
+    POINT_VARIABLES;
+@
+@define end_foreach_child_direction() end_foreach_child()
+
 #define update_cache() { if (((Quadtree *)grid)->dirty) update_cache_f(); }
 
 static void update_cache_f (void)

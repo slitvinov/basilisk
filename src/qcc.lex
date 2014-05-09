@@ -826,7 +826,8 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     infunctionproto = 0;
 }
 
-foreach_child {
+
+(foreach_child|foreach_child_direction) {
   fputs (" { ", yyout);
   ECHO;
   foreach_child = 1; foreach_child_scope = scope; foreach_child_para = para;
