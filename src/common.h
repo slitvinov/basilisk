@@ -116,6 +116,40 @@ void size (double L) {
   L0 = L;
 }
 
+// boundary conditions for each direction/variable
+
+enum { right, left, top, bottom, nboundary };
+// ghost cell coordinates for each direction
+int _ig[nboundary] = {1,-1,0,0}, 
+    _jg[nboundary] = {0,0,1,-1};
+
+@define dirichlet(x)            (2.*(x) - val(_s,0,0))
+@define dirichlet_homogeneous() (- val(_s,0,0))
+@define neumann(x)              (Delta*(x) + val(_s,0,0))
+@define neumann_homogeneous()   (val(_s,0,0))
+
+typedef struct _Point Point;
+static Point last_point;
+
+// methods for each scalar
+
+typedef struct {
+  double (* boundary[nboundary])             (Point, scalar);
+  double (* boundary_homogeneous[nboundary]) (Point, scalar);
+  double (* prolongation)                    (Point, scalar);
+  void   (* refine)                          (Point, scalar);
+  void   (* coarsen)                         (Point, scalar);
+  double (* gradient)                        (double, double, double);
+  char * name;
+  struct { int x, y; } d; // staggering
+  vector v;
+  bool   face;
+} Methods;
+
+Methods * _method;
+double  * _constant = NULL;
+extern int datasize;
+
 // lists
 
 int list_len (scalar * list)
@@ -167,6 +201,14 @@ scalar * list_concat (scalar * l1, scalar * l2)
   for (scalar s in l2)
     l3 = list_append (l3, s);
   return l3;
+}
+
+void list_print (scalar * l, FILE * fp)
+{
+  int i = 0;
+  for (scalar s in l)
+    fprintf (fp, "%s%s", i++ == 0 ? "{" : ",", s.name);
+  fputs (i > 0 ? "}\n" : "{}\n", fp);
 }
 
 int vectors_len (vector * list)
@@ -295,20 +337,22 @@ int _ig[nboundary] = {1,-1,0,0},
 typedef struct _Point Point;
 static Point last_point;
 
-// attributes for each scalar
+// methods for each scalar
 
-@include "_attributes.h"
-
-attribute {
+typedef struct {
   double (* boundary[nboundary])             (Point, scalar);
   double (* boundary_homogeneous[nboundary]) (Point, scalar);
+  double (* prolongation)                    (Point, scalar);
+  void   (* refine)                          (Point, scalar);
+  void   (* coarsen)                         (Point, scalar);
   double (* gradient)                        (double, double, double);
   char * name;
   struct { int x, y; } d; // staggering
   vector v;
   bool   face;
-};
+} Methods;
 
+Methods * _method;
 double  * _constant = NULL;
 extern int datasize;
 
