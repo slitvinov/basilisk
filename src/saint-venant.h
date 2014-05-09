@@ -197,6 +197,14 @@ double update (scalar * evolving, scalar * updates, double dtmax)
   gradients ({h, eta, u}, {gh, geta, gu});
 
   /**
+  `Fh` and `Fq` will contain the fluxes for $h$ and $h\mathbf{u}$
+  respectively and `S` is necessary to store the asymmetric topographic
+  source term. */
+
+  vector Fh[], S[];
+  tensor Fq[];
+
+  /**
   The faces which are "wet" on at least one side are traversed. */
 
   foreach_face (reduction (min:dtmax)) {
