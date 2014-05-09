@@ -16,10 +16,12 @@ int main (int argc, char ** argv)
   
   adapt_wavelet ({h}, (double []){1e-2}, 5);
 
-  foreach_halo()
-    fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
-  foreach_halo_fine_to_coarse()
-    fprintf (stderr, "%g %g %d %d res\n", x, y, level, cell.neighbors);
+  for (int l = 0; l < depth(); l++)
+    foreach_halo (prolongation, l)
+      fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
+  for (int l = depth() - 1; l >= 0; l--)
+    foreach_halo (restriction, l)
+      fprintf (stderr, "%g %g %d %d res\n", x, y, level, cell.neighbors);
   output_cells (stdout);
 
   free_grid ();

@@ -41,10 +41,12 @@ int main (int argc, char ** argv)
 	  i - 1, cpu - cpu0, leaves*(i - 1)/(cpu - cpu0));
 
   int nhalos = 0;
-  foreach_halo() {
-    printf ("%g %g %d %d\n", x, y, level, cell.neighbors);
-    nhalos++;
-  }
+  for (int l = 0; l < depth(); l++)
+    foreach_halo (prolongation, l) 
+      foreach_child() {
+      //        printf ("%g %g %d %d\n", x, y, level, cell.neighbors);
+        nhalos++;
+      }
 
   start = clock ();
   for (i = 0; i < 10000; i++)

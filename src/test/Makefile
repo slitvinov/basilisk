@@ -1,9 +1,9 @@
+all: check slow
+
 include $(BASILISK)/Makefile.defs
 
 # the default CFLAGS are set in $(BASILISK)/config
 CFLAGS += -O2
-
-all: check slow
 
 # list only non-default (!.tst) tests
 check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst

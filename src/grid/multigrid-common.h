@@ -131,7 +131,7 @@ void refine_reset (Point point, scalar v)
 }
 
 static void nothing() {}
-void * none = nothing;
+static void * none = nothing;
 
 void coarsen_face (Point point, scalar s)
 {

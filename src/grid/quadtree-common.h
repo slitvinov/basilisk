@@ -38,23 +38,17 @@ Point refine_cell (Point point, scalar * list)
 
   /* refine */
   cell.flags &= ~leaf;
+
   /* update neighborhood */
-  for (int o = -GHOSTS; o <= GHOSTS; o++)
-    for (int p = -GHOSTS; p <= GHOSTS; p++)
-      neighbor(o,p).neighbors--;
+  increment_neighbors (&point);
 
   /* for each child: (note that using foreach_child() would be nicer
      but it seems to be significanly slower) */
-  alloc_children (&point);
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
       if (dimension == 2)
 	assert(!(child(k,l).flags & active));
       child(k,l).flags |= (active|leaf);
-      /* update neighborhood */
-      for (int o = -GHOSTS; o <= GHOSTS; o++)
-	for (int p = -GHOSTS; p <= GHOSTS; p++)
-	  child(k+o,l+p).neighbors++;
     }
 
   /* initialise scalars */
@@ -80,24 +74,15 @@ bool coarsen_cell (Point point, scalar * list)
 
   /* coarsen */
   cell.flags |= leaf;
-#if 1
-  /* update neighborhood */
-  for (int o = -GHOSTS; o <= GHOSTS; o++)
-    for (int p = -GHOSTS; p <= GHOSTS; p++)
-      neighbor(o,p).neighbors++;
-#endif
 
   /* for each child */
   for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++) {
+    for (int l = 0; l < 2; l++)
       child(k,l).flags &= ~(leaf|active);
-      /* update neighborhood */
-      for (int o = -GHOSTS; o <= GHOSTS; o++)
-	for (int p = -GHOSTS; p <= GHOSTS; p++)
-	  child(k+o,l+p).neighbors--;
-    }
 
-  free_children (&point);
+  /* update neighborhood */
+  decrement_neighbors (&point);
+
   return true;
 }
 
@@ -251,13 +236,12 @@ static void halo_restriction (scalar * def, scalar * listc, int l)
   scalar * list = list_concat (def, listc);
   boundary_iterate (halo_restriction, list, l);
   for (l--; l >= 0; l--) {
-    foreach_halo_level (l)
-      if (is_active(cell)) {
-	for (scalar s in def)
-	  s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
-	for (scalar s in listc)
-	  s.coarsen (point, s);
-      }
+    foreach_halo (restriction, l) {
+      for (scalar s in def)
+	s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+      for (scalar s in listc)
+	s.coarsen (point, s);
+    }
     boundary_iterate (halo_restriction, list, l);
   }
   free (list);
@@ -271,40 +255,31 @@ static void halo_restriction_flux (vector * list)
       listv = vectors_add (listv, v);
 
   if (listv)
-    foreach_halo_fine_to_coarse()
-      foreach_dimension() {
-        // if (is_leaf (neighbor(-1,0)))
-        for (vector f in listv)
-	  f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
-	if (is_leaf (neighbor(1,0)))
-	  for (vector f in listv)
-	    f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
-      }
+    for (int l = depth() - 1; l >= 0; l--)
+      foreach_halo (restriction, l)
+	foreach_dimension() {
+          // if (is_leaf (neighbor(-1,0)))
+          for (vector f in listv)
+	    f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+	  if (is_leaf (neighbor(1,0)))
+	    for (vector f in listv)
+	      f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
+        }
 
   free (listv);
 }
 
 static void halo_prolongation (scalar * list, int depth)
 {
-  for (int l = 0; l <= depth; l++) {
-    foreach_halo_level(l)
-      if (!is_active(cell))
-	for (scalar s in list) {
-	  if (s.gradient) { // linear interpolation (e.g. with limiting)
-	    double sc = coarse(s,0,0);
-	    s[] = sc;
-	    foreach_dimension()
-	      s[] += s.gradient (coarse(s,-1,0), sc, coarse(s,1,0))*child.x/4.;
-	  }
-	  else if (s.prolongation) // variable-specific prolongation (e.g. VOF)
-	    s[] = s.prolongation (point, s);
-	  else
-	    /* default is bilinear interpolation from coarser level */
-	    s[] = (9.*coarse(s,0,0) + 
-		   3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
-		   coarse(s,child.x,child.y))/16.;	
-	}
-    boundary_iterate (halo_prolongation, list, l);
+  for (scalar s in list)
+    if (s.gradient)
+      s.refine = refine_linear; // fixme: this should be done automatically
+
+  for (int l = 0; l < depth; l++) {
+    foreach_halo (prolongation, l)
+      for (scalar s in list)
+	s.refine (point, s);
+    boundary_iterate (halo_prolongation, list, l + 1);
   }
 }
 
@@ -363,7 +338,7 @@ Point locate (double xp, double yp)
 static scalar quadtree_init_scalar (scalar s, const char * name)
 {
   s = cartesian_init_scalar (s, name);
-  s.refine = refine_linear;
+  s.refine  = refine_linear; // or bilinear ?
   s.coarsen = coarsen_average;
   return s;
 }

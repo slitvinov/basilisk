@@ -1,16 +1,16 @@
 #define GRIDNAME "Quadtree"
 #define dimension 2
 
-#define DYNAMIC 1 // use dynamic data allocation
+#define DYNAMIC 0 // use dynamic data allocation
 #define TWO_ONE 1 // enforce 2:1 refinement ratio
-#define GHOSTS  2
+#define GHOSTS  1
 
 #define I     (point.i - GHOSTS)
 #define J     (point.j - GHOSTS)
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  int flags, neighbors; // number of active neighbors
+  int flags, neighbors; // number of refined neighbors
 } Cell;
 
 enum {
@@ -85,8 +85,9 @@ struct _Point {
   Cache        leaves;   /* leaf indices */
   Cache        faces;    /* face indices */
   Cache        vertices; /* vertex indices */
-  CacheLevel * halo;     /* halo indices for each level */
   CacheLevel * active;   /* active cells indices for each level */
+  CacheLevel * prolongation; /* halo prolongation indices for each level */
+  CacheLevel * restriction;  /* halo restriction indices for each level */
 
   bool dirty;       /* whether caches should be updated */
 };
@@ -379,60 +380,65 @@ static void update_cache_f (void)
   /* empty caches */
   q->leaves.n = q->faces.n = q->vertices.n = 0;
   for (int l = 0; l <= depth(); l++)
-    q->halo[l].n = q->active[l].n  = 0;
+    q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
 
-  foreach_cell() {
+  foreach_cell()
     if (is_local(cell)) {
-      if (!is_active (cell)) {
-	assert (cell.neighbors > 0);
-	/* update halo cache (prolongation) */
-	cache_level_append (&q->halo[level], point);
-      }
-      else {
-	if (is_leaf (cell)) {
-	  cache_append (&q->leaves, point);
+      if (is_leaf (cell)) {
+	cache_append (&q->leaves, point);
+	// faces
+	if (!is_refined(neighbor(-1,0)) || !is_refined(neighbor(0,-1)))
+	  cache_append (&q->faces, point);
+	if (!is_active(neighbor(1,0))) {
+	  point.i++;
+	  cache_append (&q->faces, point);
+	  point.i--;
+	}
+	if (!is_active(neighbor(0,1))) {
+	  point.j++;
+	  cache_append (&q->faces, point);
+	  point.j--;
+	}
+	// vertices
+	cache_append (&q->vertices, point);
+	if (!is_leaf(neighbor(1,1))) {
+	  point.i++; point.j++;
 	  cache_append (&q->vertices, point);
-	  if (!is_refined(neighbor(-1,0)) || !is_refined(neighbor(0,-1)))
-	    cache_append (&q->faces, point);
-	  if (!is_active(neighbor(1,0))) {
-	    point.i++;
-	    cache_append (&q->faces, point);
-	    point.i--;
-	  }
-	  if (!is_active(neighbor(0,1))) {
-	    point.j++;
-	    cache_append (&q->faces, point);
-	    point.j--;
-	  }
-	  if (!is_leaf(neighbor(1,1))) {
-	    point.i++; point.j++;
-	    cache_append (&q->vertices, point);
-	    point.i--; point.j--;
-	  }
-	  if (!is_leaf(neighbor(0,-1)) && !is_leaf(neighbor(1,0))) {
-	    point.i++;
-	    cache_append (&q->vertices, point);
-	    point.i--;
-	  }
-	  if (!is_leaf(neighbor(-1,0)) && !is_leaf(neighbor(0,1))) {
-	    point.j++;
-	    cache_append (&q->vertices, point);
-	    point.j--;
-	  }
+	  point.i--; point.j--;
 	}
-	else if (cell.neighbors > 0 || (cell.flags & halo)) {
-	  /* update halo cache (restriction) */
-	  cache_level_append (&q->halo[level], point);
-	  /* all (coarse) children also need to be restricted */
-	  foreach_child()
-	    cell.flags |= halo;
+	if (!is_leaf(neighbor(0,-1)) && !is_leaf(neighbor(1,0))) {
+	  point.i++;
+	  cache_append (&q->vertices, point);
+	  point.i--;
 	}
-	/* update active cache */
-	cache_level_append (&q->active[level], point);
+	if (!is_leaf(neighbor(-1,0)) && !is_leaf(neighbor(0,1))) {
+	  point.j++;
+	  cache_append (&q->vertices, point);
+	  point.j--;
+	}
+	// halo prolongation
+        if (cell.neighbors > 0)
+	  cache_level_append (&q->prolongation[level], point);
+	cell.flags &= ~halo;
+	continue;
       }
+      else { // not a leaf
+	bool restriction = level > 0 ? (aparent(0,0).flags & halo) : false;
+	for (int k = -GHOSTS; k <= GHOSTS && !restriction; k++)
+	  for (int l = -GHOSTS; l <= GHOSTS && !restriction; l++)
+	    if (is_leaf(neighbor(k,l)))
+	      restriction = true;
+	if (restriction) {
+	  // halo restriction
+	  cell.flags |= halo;
+	  cache_level_append (&q->restriction[level], point);
+	}
+	else
+	  cell.flags &= ~halo;
+      }
+      // active cells
+      cache_level_append (&q->active[level], point);
     }
-    cell.flags &= ~halo;
-  }
 
   /* update ghost cell flags */
   for (int d = 0; d < nboundary; d++)
@@ -554,16 +560,14 @@ char * alloc_cells (int l)
 {
   int len = _size(l), cellsize = sizeof(Cell) + datasize;
   char * m = calloc (len, cellsize);
-  /* trash the data just to make sure it's either explicitly
-     initialised or never touched */
-  char * data = m + sizeof(Cell);
-  int nv = datasize/sizeof(double);
-  for (int i = 0; i < len; i++, data += cellsize)
-    for (int j = 0; j < nv; j++)
-      ((double *)data)[j] = undefined;
   return m;
 }
 #endif // !DYNAMIC
+
+@def cache_level_resize(name)
+q->name = realloc (q->name, (q->depth + 1)*sizeof (CacheLevel));
+cache_level_init (&q->name[q->depth]);
+@
 
 void alloc_layer (Quadtree * p)
 {
@@ -579,16 +583,14 @@ void alloc_layer (Quadtree * p)
   q->m = &(q->m[1]); p->m = q->m;
   q->m[q->depth] = alloc_cells (q->depth);
 #endif
-  q->active = realloc (q->active, (q->depth + 1)*sizeof (CacheLevel));
-  cache_level_init (&q->active[q->depth]);
-  q->halo = realloc (q->halo, (q->depth + 1)*sizeof (CacheLevel));
-  cache_level_init (&q->halo[q->depth]);
+  cache_level_resize (active);
+  cache_level_resize (prolongation);
+  cache_level_resize (restriction);
 }
 
-void alloc_children (Quadtree * p)
+static void alloc_children (Quadtree * q, int k, int l)
 {
-  p->back->dirty = true;
-  if (p->level == p->depth) alloc_layer(p);
+  if (q->level == q->depth) alloc_layer(q);
 #if DYNAMIC
   char ** m = ((char ***)p->m)[p->level+1];
   Point point = *((Point *)p);
@@ -603,12 +605,36 @@ void alloc_children (Quadtree * p)
 	  ((double *)data)[j] = undefined;
 @endif
       }
+#else // !DYNAMIC
+  // fixme: this should work but does not yet (also see below)
+  return;
+@if TRASH
+  Point point = *((Point *)q);
+  point.i += k; point.j += l;
+  // foreach child
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++)
+      for (scalar s in all)
+	fine(s,k,l) = undefined;
+@endif
 #endif
 }
 
-void free_children (Quadtree * p)
+void increment_neighbors (Quadtree * p)
 {
   p->back->dirty = true;
+  Point point = *((Point *)p);
+  for (int k = -GHOSTS; k <= GHOSTS; k++)
+    for (int l = -GHOSTS; l <= GHOSTS; l++) {
+      if (neighbor(k,l).neighbors == 0)
+	alloc_children (&point, k, l);
+      neighbor(k,l).neighbors++;
+    }
+  *((Point *)p) = point;
+}
+
+static void free_children (Quadtree * q, int k, int l)
+{
 #if DYNAMIC
   char ** m = ((char ***)p->m)[p->level+1];
   Point point = *((Point *)p);
@@ -619,6 +645,18 @@ void free_children (Quadtree * p)
 	m[_childindex(k,l)] = NULL;
       }
 #endif
+}
+
+void decrement_neighbors (Quadtree * p)
+{
+  p->back->dirty = true;
+  Point point = *((Point *)p);
+  for (int k = -GHOSTS; k <= GHOSTS; k++)
+    for (int l = -GHOSTS; l <= GHOSTS; l++) {
+      neighbor(k,l).neighbors--;
+      if (neighbor(k,l).neighbors == 0)
+	free_children(p,k,l);
+    }
 }
 
 void realloc_scalar (void)
@@ -643,31 +681,12 @@ void realloc_scalar (void)
 #endif
 }
 
-@def foreach_halo_level(_l) {
+@def foreach_halo(name,_l) {
   update_cache();
-  CacheLevel _halo = ((Quadtree *)grid)->halo[_l];
-  foreach_cache_level (_halo, _l,)
+  CacheLevel _cache = ((Quadtree *)grid)->name[_l];
+  foreach_cache_level (_cache, _l,)
 @
-@define end_foreach_halo_level() end_foreach_cache_level(); }
-
-/* breadth-first traversal of halos from coarse to fine */
-@def foreach_halo_coarse_to_fine(depth1) {
-  for (int _l = 0; _l <= depth1; _l++)    
-    foreach_halo_level (_l)
-      if (!is_active(cell)) {
-@
-@define end_foreach_halo_coarse_to_fine() } end_foreach_halo_level(); }
-
-@define foreach_halo()     foreach_halo_coarse_to_fine(depth())
-@define end_foreach_halo() end_foreach_halo_coarse_to_fine()
-
-/* breadth-first traversal of halos from fine to coarse */
-@def foreach_halo_fine_to_coarse() {
-  for (int _l = depth() - 1; _l >= 0; _l--)
-    foreach_halo_level (_l)
-      if (is_active(cell)) {
-@
-@define end_foreach_halo_fine_to_coarse() } end_foreach_halo_level(); }
+@define end_foreach_halo() end_foreach_cache_level(); }
 
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
@@ -677,6 +696,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
       if (is_leaf (cell)) {
 	for (scalar s in list)
 	  s[ghost] = s.boundary[d] (point, s);
+	corners(); /* we need this otherwise we'd skip corners */
 	continue;
       }
   }
@@ -685,6 +705,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
       if (level == l) {
 	for (scalar s in list)
 	  s[ghost] = s.boundary[d] (point, s);
+	corners(); /* we need this otherwise we'd skip corners */
 	continue;
       }
       else if (is_leaf (cell))
@@ -707,46 +728,30 @@ static void box_boundary_tangent (const Boundary * b, vector * list)
     }
 }
 
-static void box_boundary_halo_restriction (const Boundary * b, 
-					   scalar * list, int l)
-{
-  int d = ((BoxBoundary *)b)->d;
-  foreach_boundary_cell (d, true) {
-    if (level == l) {
-      if (cell.neighbors > 0)
-	for (scalar s in list)
-	  s[ghost] = s.boundary[d] (point, s);
-      continue;
-    }
-    else if (is_leaf (cell))
-      continue;
-  }
-}
-
 static void box_boundary_halo_prolongation (const Boundary * b,
 					    scalar * list, int l)
 {
+  // see test/boundary_halo.c
   int d = ((BoxBoundary *)b)->d;
-  // boundary conditions for halo prolongation
   foreach_boundary_cell (d, true) {
-    if (level > l)
-      continue;
-    else if (!is_active (cell) && cell.neighbors > 0 && allocated(ghost))
-      for (scalar s in list)
-	s[ghost] = s.boundary[d] (point, s);
-  }
-  // boundary conditions for cells at level l
-  if (l < depth())
-    foreach_boundary_cell (d, true) {
-      if (level == l) {
+    if (level == l) {
+      if (is_leaf(cell) || (cell.flags & halo) || is_corner(cell)) {
+	// leaf or halo restriction
 	for (scalar s in list)
 	  s[ghost] = s.boundary[d] (point, s);
-	corners(); /* we need this otherwise we'd skip corners */
-	continue;
+	corners();
       }
-      else if (is_leaf(cell))
-	continue;
+      continue;
     }
+    else if (is_leaf(cell)) {
+      if (level == l - 1 && cell.neighbors > 0)
+	// halo prolongation
+	foreach_child_direction(d)
+	  for (scalar s in list)
+	    s[ghost] = s.boundary[d] (point, s);
+      continue;
+    }
+  }
 }
 
 Point refine_cell (Point point, scalar * list);
@@ -778,8 +783,9 @@ void free_grid (void)
   }
   q->m = &(q->m[-1]);
   free(q->m);
-  free_cache (q->halo);
   free_cache (q->active);
+  free_cache (q->prolongation);
+  free_cache (q->restriction);
   free(q);
   grid = NULL;
 }
@@ -815,12 +821,12 @@ void init_grid (int n)
   q->m[0] = alloc_cells (0);
 #endif
   CELL(q->m, 0, 2*GHOSTS*(GHOSTS + 1)).flags |= (leaf|active);
-  CELL(q->m, 0, 2*GHOSTS*(GHOSTS + 1)).neighbors = 1; // only itself as neighbor
   cache_init (&q->leaves);
   cache_init (&q->faces);
   cache_init (&q->vertices);
   q->active = calloc (1, sizeof (CacheLevel));
-  q->halo = calloc (1, sizeof (CacheLevel));
+  q->prolongation = calloc (1, sizeof (CacheLevel));
+  q->restriction = calloc (1, sizeof (CacheLevel));
   q->dirty = true;
   grid = q;
   N = 1 << depth;
@@ -840,14 +846,12 @@ void init_grid (int n)
     b->level = b->restriction = box_boundary_level;
     b->normal            = NULL;
     b->tangent           = box_boundary_tangent;
-    b->halo_restriction  = box_boundary_halo_restriction;
+    b->halo_restriction  = none;
     b->halo_prolongation = box_boundary_halo_prolongation;
     add_boundary (b);
   }
   init_events();
 }
-
-void output_cells (FILE * fp);
 
 void check_two_one (void)
 {

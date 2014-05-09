@@ -116,6 +116,9 @@ void size (double L) {
   L0 = L;
 }
 
+static void nothing() {}
+static void * none = nothing;
+
 // boundary conditions for each direction/variable
 
 enum { right, left, top, bottom, nboundary };
