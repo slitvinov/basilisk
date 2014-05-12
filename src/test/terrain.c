@@ -17,11 +17,13 @@ int main ()
     foreach()
       e[] = zb[] - sin(3.*pi*x)*cos(2.*pi*y);
     if (l == 7)
-      output_field ({zb, e}, stdout, n = 128);
+      foreach() {
+	scalar n = _terrain[zb].n;
+	printf ("%g %g %g %g %g\n", x, y, zb[], e[], n[]);
+      }
     norm n = normf (e);
     stats s = statsf (zb.n);
     fprintf (stderr, "%d %.6f %.6f %.6f %g %g\n", l, n.avg, n.rms, n.max, 
 	     s.min, s.max);
-    free_grid();
   }
 }

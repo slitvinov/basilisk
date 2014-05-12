@@ -384,6 +384,8 @@ static void update_cache_f (void)
 
   foreach_cell()
     if (is_local(cell)) {
+      // active cells
+      cache_level_append (&q->active[level], point);
       if (is_leaf (cell)) {
 	cache_append (&q->leaves, point);
 	// faces
@@ -436,8 +438,6 @@ static void update_cache_f (void)
 	else
 	  cell.flags &= ~halo;
       }
-      // active cells
-      cache_level_append (&q->active[level], point);
     }
 
   /* update ghost cell flags */
