@@ -184,11 +184,6 @@ double minmod2 (double s0, double s1, double s2)
   return 0.;
 }
 
-double zero (double s0, double s1, double s2)
-{
-  return 0.;
-}
-
 void gradients (scalar * f, vector * g)
 {
   assert (list_len(f) == vectors_len(g));

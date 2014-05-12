@@ -127,7 +127,7 @@ double update (scalar * conserved, scalar * updates, double dtmax)
   for (scalar s in conserved) {
     vector slope = new vector;
     foreach_dimension()
-      slope.x.gradient = zero;
+      slope.x.gradient = none;
     slopes = vectors_append (slopes, slope);
   }
   gradients (conserved, slopes);

@@ -116,8 +116,8 @@ void size (double L) {
   L0 = L;
 }
 
-static void nothing() {}
-static void * none = nothing;
+static double nothing() { return 0.; }
+void * none = nothing;
 
 // boundary conditions for each direction/variable
 

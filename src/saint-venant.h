@@ -193,7 +193,7 @@ double update (scalar * evolving, scalar * updates, double dtmax)
   vector gh[], geta[];
   tensor gu[];
   for (scalar s in {gh, geta, gu})
-    s.gradient = zero;
+    s.gradient = none;
   gradients ({h, eta, u}, {gh, geta, gu});
 
   /**
