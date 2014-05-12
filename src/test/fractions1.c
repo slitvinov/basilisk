@@ -49,13 +49,15 @@ int main()
   scalar alpha[];
   reconstruction (c, n, alpha);
   coord p[2];
-  foreach_halo() {
-    coord m = {n.x[],n.y[]};
-    if (facets (c[], m, alpha[], p) == 2)
-      fprintf (stderr, "halo %g %g\nhalo %g %g\nhalo\n", 
-	       x + p[0].x*Delta, y + p[0].y*Delta, 
-	       x + p[1].x*Delta, y + p[1].y*Delta);
-  }
+  for (int l = 0; l < depth(); l++)
+    foreach_halo (prolongation, l) 
+      foreach_child() {
+        coord m = {n.x[],n.y[]};
+	if (facets (c[], m, alpha[], p) == 2)
+	  fprintf (stderr, "halo %g %g\nhalo %g %g\nhalo\n", 
+		   x + p[0].x*Delta, y + p[0].y*Delta, 
+		   x + p[1].x*Delta, y + p[1].y*Delta);
+      }
 
   free_grid ();
 }

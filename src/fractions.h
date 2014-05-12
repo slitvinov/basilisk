@@ -22,57 +22,42 @@ For the normal to the interface, we don't use any interpolation from
 coarse to fine i.e. we use straight "injection". */
 
 #if QUADTREE
-static double injection (Point point, scalar s)
+static void injection (Point point, scalar s)
 {
-  return coarse(s,0,0);
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++)
+      fine(s,k,l) = s[];
 }
 
 /**
 Once we have the normal in the fine cell, we can compute the volume
 fraction. */
 
-double fraction_prolongation (Point point, scalar c)
+static void fraction_refine (Point point, scalar c)
 {
-
+  
   /**
   If the parent cell is empty or full, we just use the same value for
   the fine cell. */
 
-  double cc = coarse(c,0,0);
-  if (cc <= 0. || cc >= 1.)
-    return cc;
-
-  /**
-  Otherwise, we reconstruct the interface in the parent cell. */
-
-  coord n = mycs (parent, c);
-  double alpha = line_alpha (cc, n.x, n.y);
-
-  /**
-  And compute the volume fraction in the quadrant of the coarse cell
-  matching the fine cell. We use symmetries to simplify the
-  combinations. */
-
-  return rectangle_fraction (child.x*n.x, child.y*n.y, alpha, 
-			     0., 0., 0.5, 0.5);
-}
-
-/**
-The refinement function is almost exactly the same but applied to all
-the children of the coarse cell. Unfortunately, we cannot just use
-several applications of the prolongation function above, because of
-performance. */
-
-void fraction_refine (Point point, scalar c)
-{
   double cc = c[];
   if (cc <= 0. || cc >= 1.)
     for (int k = 0; k < 2; k++)
       for (int l = 0; l < 2; l++)
 	fine(c,k,l) = cc;
   else {
+
+    /**
+    Otherwise, we reconstruct the interface in the parent cell. */
+
     coord n = mycs (point, c);
     double alpha = line_alpha (cc, n.x, n.y);
+
+    /**
+    And compute the volume fraction in the quadrant of the coarse cell
+    matching the fine cells. We use symmetries to simplify the
+    combinations. */
+
     for (int k = 0; k < 2; k++)
       for (int l = 0; l < 2; l++)
 	fine(c,k,l) = rectangle_fraction ((2*k - 1)*n.x, (2*l - 1)*n.y, alpha,
@@ -84,10 +69,12 @@ void fraction_refine (Point point, scalar c)
 Finally, we also need to prolongate the reconstructed value of
 $\alpha$. This is done with the simple formula below. */
 
-static double alpha_prolongation (Point point, scalar alpha)
+static void alpha_refine (Point point, scalar alpha)
 {
   vector n = alpha.v;
-  return 2.*coarse(alpha,0,0) - (child.x*n.x[] + child.y*n.y[])/2.;
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++)
+      fine(alpha,k,l) = 2.*alpha[] - ((2*k - 1)*n.x[] + (2*l - 1)*n.y[])/2.;
 }
 #endif // QUADTREE
 
@@ -243,11 +230,10 @@ void fractions (struct Fractions p)
   }
 
   /**
-  On a quadtree grid, we set the prolongation and refinement functions
-  we defined above. */
+  On a quadtree grid, we set the refinement functions we defined
+  above. */
 
 #if QUADTREE
-  c.prolongation = fraction_prolongation;
   c.refine = fraction_refine;
 #endif
 
@@ -301,7 +287,7 @@ void reconstruction (const scalar c, vector n, scalar alpha)
 
     /**
     If the cell is empty or full, we set $\mathbf{n}$ and $\alpha$ only to
-    avoid using unitialised values in `alpha_prolongation()`. */
+    avoid using uninitialised values in `alpha_refine()`. */
 
     if (c[] <= 0. || c[] >= 1.)
       alpha[] = n.x[] = n.y[] = 0.;
@@ -323,12 +309,11 @@ void reconstruction (const scalar c, vector n, scalar alpha)
 #if QUADTREE
 
   /**
-  On a quadtree grid, we set the prolongation functions defined above.
+  On a quadtree grid, we set the prolongation function defined above.
   We do not restrict the normal or the intercept (they are recomputed
-  from the volume fraction when needed on the coarse mesh) */
+  from the volume fraction when needed on the coarse mesh). */
 
-  n.x.coarsen = n.y.coarsen = alpha.coarsen = none;
-  n.x.prolongation = n.y.prolongation = injection;
+  n.x.refine = n.y.refine = injection;
 
   /**
   For $\alpha$ we store the normal field in the `v` attribute (which is
@@ -336,7 +321,7 @@ void reconstruction (const scalar c, vector n, scalar alpha)
   prolongation function. */
 
   alpha.v = n;
-  alpha.prolongation = alpha_prolongation;
+  alpha.refine = alpha_refine;
 #endif
 
   /**
