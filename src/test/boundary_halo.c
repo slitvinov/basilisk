@@ -10,12 +10,16 @@ int refine_func (Point point, void * data) {
   return sq(x) + sq(y) > sq(radius);
 }
 
-void boundary_halo (int d, int l) {
+void boundary_halo (int d, int l, int depth) {
   foreach_boundary_cell (d, true) {
     if (level == l) {
-      if (is_leaf(cell) || (cell.flags & halo) || is_corner(cell)) {
+      if (level == depth ||
+	  is_leaf(cell) || (cell.flags & halo) || is_corner(cell)) {
 	fprintf (stderr, "%g %g %s\n", x, y,
-		 is_leaf(cell) ? "L" : is_corner(cell) ? "C" : "R");
+		 level == depth ?  "D" :
+		 is_leaf(cell) ?   "L" : 
+		 is_corner(cell) ? "C" : 
+		                   "R");
 	corners();
       }
       continue;
@@ -53,9 +57,9 @@ int main (int argc, char ** argv)
       fprintf (fp, "%d %g %g\n", l, x, y);
   fclose (fp);
 
-  boundary_halo (top, 3);
-  boundary_halo (left, 4);
-  boundary_halo (right, 5);
+  boundary_halo (top, 3, 4);
+  boundary_halo (left, 4, 5);
+  boundary_halo (right, 5, 6);
 
   free_grid();
 }

@@ -729,13 +729,17 @@ static void box_boundary_tangent (const Boundary * b, vector * list)
 }
 
 static void box_boundary_halo_prolongation (const Boundary * b,
-					    scalar * list, int l)
+					    scalar * list, 
+					    int l, int depth)
 {
   // see test/boundary_halo.c
   int d = ((BoxBoundary *)b)->d;
   foreach_boundary_cell (d, true) {
     if (level == l) {
-      if (is_leaf(cell) || (cell.flags & halo) || is_corner(cell)) {
+      if (l == depth ||          // target level
+	  is_leaf(cell) ||       // leaves
+	  (cell.flags & halo) || // restriction halo
+	  is_corner(cell)) {     // corners
 	// leaf or halo restriction
 	for (scalar s in list)
 	  s[ghost] = s.boundary[d] (point, s);

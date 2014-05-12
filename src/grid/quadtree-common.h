@@ -275,11 +275,12 @@ static void halo_prolongation (scalar * list, int depth)
     if (s.gradient)
       s.refine = refine_linear; // fixme: this should be done automatically
 
+  boundary_iterate (halo_prolongation, list, 0, 0);
   for (int l = 0; l < depth; l++) {
     foreach_halo (prolongation, l)
       for (scalar s in list)
 	s.refine (point, s);
-    boundary_iterate (halo_prolongation, list, l + 1);
+    boundary_iterate (halo_prolongation, list, l + 1, depth);
   }
 }
 
