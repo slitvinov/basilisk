@@ -63,8 +63,8 @@ int main()
 }
 
 /**
-This gives this figure where "exact" uses `c` and `s`, "VOF" uses
-only `c` and "halo" is the halo cell reconstuction.
+This gives this figure where "exact" uses *c* and *s*, "VOF" uses
+only *c* and "halo" is the halo cell reconstuction.
 
 ~~~gnuplot Exact and VOF-reconstucted interface
 set output 'plot.png'
