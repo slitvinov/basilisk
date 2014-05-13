@@ -229,11 +229,8 @@ void boundary_tangent (vector * list)
   for (vector v in list)
     if (!is_constant(v.x))
       listv = vectors_append (listv, v);
-  if (listv) {
-    Boundary ** i = boundaries, * b;
-    while ((b = *i++))
-      b->tangent (b, listv);
-  }
+  if (listv)
+    boundary_iterate (tangent, listv);
   free (listv);
 }
 
@@ -252,9 +249,7 @@ void boundary (scalar * list)
     free (listc);
   }
   if (listf) {
-    Boundary ** i = boundaries, * b;
-    while ((b = *i++))
-      b->normal (b, listf);
+    boundary_iterate (normal, listf);
     boundary_flux (listf);
     boundary_tangent (listf);
     free (listf);

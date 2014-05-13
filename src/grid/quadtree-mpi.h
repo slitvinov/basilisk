@@ -67,10 +67,6 @@ static void mpi_boundary_halo_restriction (const Boundary * b,
     }
 }
 
-static void mpi_boundary_halo_prolongation (const Boundary * b,
-					    scalar * list, int l)
-{}
-
 static Boundary * mpi_boundary = NULL;
 
 void mpi_boundary_new()
@@ -79,7 +75,7 @@ void mpi_boundary_new()
   mpi_boundary->destroy = mpi_boundary_destroy;
   mpi_boundary->restriction = mpi_boundary->halo_restriction = 
     mpi_boundary_halo_restriction;
-  mpi_boundary->halo_prolongation = mpi_boundary_halo_prolongation;
+  mpi_boundary->halo_prolongation = none;
   add_boundary (mpi_boundary);
 }
 
@@ -97,9 +93,9 @@ void mpi_partitioning()
   nf = nf/size + 1;
 
   // set the pid of each cell
-  scalar nactive[], pid[];
+  scalar pid[];
   int i = 0;
-  foreach_cell_post (is_active (cell) || cell.neighbors > 0) {
+  foreach_cell_post (is_active (cell) || cell.neighbors > 0)
     if (is_active (cell)) {
       if (is_leaf (cell))
 	pid[] = i++/nf;
@@ -113,38 +109,6 @@ void mpi_partitioning()
 	      pid[] = pid();
       }
     }
-    nactive[] = 0;
-  }
-
-  foreach_halo_coarse_to_fine(depth())
-    pid[] = coarse(pid,0,0);
-
-  // set the number of active neighboring cells belonging to the
-  // current process
-  foreach_cell() {
-    if (pid[] != pid() || !is_active (cell))
-      continue;
-    else
-      /* update neighborhood */
-      for (int o = -GHOSTS; o <= GHOSTS; o++)
-	for (int p = -GHOSTS; p <= GHOSTS; p++)
-	  if (!is_ghost(neighbor(o,p)))
-	    nactive[o,p]++;
-  }
-
-  // Remove cells which do not have any active neighbors
-  foreach_cell()
-    if (nactive[] == 0) {
-      if (is_leaf (cell))
-	/* update neighborhood */
-	for (int o = -GHOSTS; o <= GHOSTS; o++)
-	  for (int p = -GHOSTS; p <= GHOSTS; p++)
-	    if (allocated(o,p))
-	      neighbor(o,p).neighbors--;
-      free (allocated(0,0));
-      allocated(0,0) = NULL;
-      point.back->dirty = true;
-    }
 
   /* this is the adjacency vector i.e. adjacency_rcv[x] is different from
      zero if we need to receive data from proc x */
@@ -152,32 +116,40 @@ void mpi_partitioning()
   for (int i = 0; i < size; i++)
     adjacency_rcv[i] = 0;
 
-  /* we build arrays of ghost cell indices for leaf-level restriction */
+  /* we build arrays of ghost cell indices for restriction */
+  ((Quadtree *)grid)->dirty = true;
   foreach_cell() {
-    if (!is_active (cell)) {
-      assert (cell.neighbors > 0);
-      cell.flags &= ~remote;
-    }
-    else if (pid[] != pid()) {
-      int i;
-      for (i = 0; i < m->nrcv; i++)
-	if (pid[] == m->rcv[i])
-	  break;
-      if (i == m->nrcv) {
-	m->rcv = realloc (m->rcv, ++m->nrcv*sizeof (int));
-	m->rcv[m->nrcv-1] = pid[];
-	m->rcv_halo = realloc (m->rcv_halo, m->nrcv*sizeof (CacheLevel *));
-	m->rcv_halo[m->nrcv-1] = malloc ((depth() + 1)*sizeof (CacheLevel));
-	for (int j = 0; j <= depth(); j++)
-	  cache_level_init (&m->rcv_halo[m->nrcv-1][j]);
-      }
-      cache_level_append (&m->rcv_halo[i][level], point);
-      adjacency_rcv[(int)pid[]]++;
-      cell.flags &= ~(active|leaf);
+    if (pid[] != pid())
       cell.flags |= remote;
-    }
     else
       cell.flags &= ~remote;
+    if (pid[] != pid()) {
+      if (!is_leaf(cell))
+	decrement_neighbors (&point);
+      int nactive = 0;
+      for (int o = -GHOSTS; o <= GHOSTS; o++)
+	for (int p = -GHOSTS; p <= GHOSTS; p++)
+	  if (is_active(neighbor(o,p)) && pid[o,p] == pid())
+	    nactive++;
+      if (nactive > 0) {
+	int i;
+	for (i = 0; i < m->nrcv; i++)
+	  if (pid[] == m->rcv[i])
+	    break;
+	if (i == m->nrcv) {
+	  m->rcv = realloc (m->rcv, ++m->nrcv*sizeof (int));
+	  m->rcv[m->nrcv-1] = pid[];
+	  m->rcv_halo = realloc (m->rcv_halo, m->nrcv*sizeof (CacheLevel *));
+	  m->rcv_halo[m->nrcv-1] = malloc ((depth() + 1)*sizeof (CacheLevel));
+	  for (int j = 0; j <= depth(); j++)
+	    cache_level_init (&m->rcv_halo[m->nrcv-1][j]);
+	}
+	cache_level_append (&m->rcv_halo[i][level], point);
+	adjacency_rcv[(int)pid[]]++;
+      }
+    }
+    if (is_leaf(cell))
+      continue;
   }
 
   /* we do a global transpose of the adjacency vector
@@ -223,8 +195,10 @@ void mpi_partitioning()
   FILE * fp = fopen (name, "w");
 
   // local halo
-  foreach_halo_coarse_to_fine(depth())
-    fprintf (fp, "%g %g %g %d\n", x, y, pid[], level);
+  for (int l = 0; l < depth(); l++)
+    foreach_halo (prolongation, l)
+      foreach_child()
+        fprintf (fp, "%g %g %g %d\n", x, y, pid[], level);
   fclose (fp);
 
   sprintf (name, "cells-%d", pid());
@@ -232,11 +206,18 @@ void mpi_partitioning()
   output_cells (fp);
   fclose (fp);
 
+  sprintf (name, "neighbors-%d", pid());
+  fp = fopen (name, "w");
+  foreach()
+    fprintf (fp, "%g %g %d\n", x, y, cell.neighbors);
+  fclose (fp);
+
   // local restriction
   sprintf (name, "restrict-%d", pid());
   fp = fopen (name, "w");
-  foreach_halo_fine_to_coarse()
-    fprintf (fp, "%g %g %g %d\n", x, y, pid[], level);
+  for (int l = 0; l < depth(); l++)
+    foreach_halo (restriction, l)
+      fprintf (fp, "%g %g %g %d %d\n", x, y, pid[], level, cell.neighbors);
   fclose (fp);
 
   sprintf (name, "ghost-%d", pid());

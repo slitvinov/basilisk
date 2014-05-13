@@ -3,7 +3,7 @@
 
 #define DYNAMIC 0 // use dynamic data allocation
 #define TWO_ONE 1 // enforce 2:1 refinement ratio
-#define GHOSTS  1
+#define GHOSTS  2
 
 #define I     (point.i - GHOSTS)
 #define J     (point.j - GHOSTS)
@@ -382,7 +382,7 @@ static void update_cache_f (void)
   for (int l = 0; l <= depth(); l++)
     q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
 
-  foreach_cell()
+  foreach_cell() {
     if (is_local(cell)) {
       // active cells
       cache_level_append (&q->active[level], point);
@@ -439,6 +439,13 @@ static void update_cache_f (void)
 	  cell.flags &= ~halo;
       }
     }
+    else if (is_leaf(cell)) {
+      // halo prolongation (non-local cell)
+      if (cell.neighbors > 0)
+	cache_level_append (&q->prolongation[level], point);
+      continue;
+    }
+  }
 
   /* update ghost cell flags */
   for (int d = 0; d < nboundary; d++)
@@ -592,6 +599,7 @@ static void alloc_children (Quadtree * q, int k, int l)
 {
   if (q->level == q->depth) alloc_layer(q);
 #if DYNAMIC
+  assert (false); // not implemented
   char ** m = ((char ***)p->m)[p->level+1];
   Point point = *((Point *)p);
   for (int k = - GHOSTS; k < 2 + GHOSTS; k++)
@@ -624,8 +632,8 @@ void increment_neighbors (Quadtree * p)
 {
   p->back->dirty = true;
   Point point = *((Point *)p);
-  for (int k = -GHOSTS; k <= GHOSTS; k++)
-    for (int l = -GHOSTS; l <= GHOSTS; l++) {
+  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
+    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++) {
       if (neighbor(k,l).neighbors == 0)
 	alloc_children (&point, k, l);
       neighbor(k,l).neighbors++;
@@ -636,6 +644,7 @@ void increment_neighbors (Quadtree * p)
 static void free_children (Quadtree * q, int k, int l)
 {
 #if DYNAMIC
+  assert (false); // not implemented
   char ** m = ((char ***)p->m)[p->level+1];
   Point point = *((Point *)p);
   for (int k = - GHOSTS; k < 2 + GHOSTS; k++)
@@ -651,8 +660,8 @@ void decrement_neighbors (Quadtree * p)
 {
   p->back->dirty = true;
   Point point = *((Point *)p);
-  for (int k = -GHOSTS; k <= GHOSTS; k++)
-    for (int l = -GHOSTS; l <= GHOSTS; l++) {
+  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
+    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++) {
       neighbor(k,l).neighbors--;
       if (neighbor(k,l).neighbors == 0)
 	free_children(p,k,l);
