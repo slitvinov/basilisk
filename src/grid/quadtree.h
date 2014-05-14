@@ -18,8 +18,7 @@ enum {
   leaf    = 1 << 1,
   fghost  = 1 << 2,
   refined = 1 << 3,
-  halo    = 1 << 4,
-  remote  = 1 << 5
+  halo    = 1 << 4
 };
 
 #define _CORNER 4
@@ -29,12 +28,6 @@ enum {
 #define is_refined(cell) (is_active(cell) && !is_leaf(cell))
 #define is_corner(cell)  (stage == _CORNER)
 #define is_coarse()      (!is_leaf(cell))
-
-@if _MPI
-@define is_local(cell) (!((cell).flags & remote))
-@else
-@define is_local(cell) true
-@endif
 
 // Caches
 
@@ -103,14 +96,14 @@ static void cache_level_append (CacheLevel * c, Point p)
   c->n++;
 }
 
-static void cache_append (Cache * c, Point p)
+static void cache_append (Cache * c, Point p, int k, int l)
 {
   if (c->n >= c->nm) {
     c->nm += 100;
     c->p = realloc (c->p, sizeof (Index)*c->nm);
   }
-  c->p[c->n].i = p.i;
-  c->p[c->n].j = p.j;
+  c->p[c->n].i = p.i + k;
+  c->p[c->n].j = p.j + l;
   c->p[c->n].level = p.level;
   c->n++;
 }
@@ -383,41 +376,26 @@ static void update_cache_f (void)
     q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
 
   foreach_cell() {
-    if (is_local(cell)) {
+    if (is_active(cell)) {
       // active cells
       cache_level_append (&q->active[level], point);
       if (is_leaf (cell)) {
-	cache_append (&q->leaves, point);
+	cache_append (&q->leaves, point, 0, 0);
 	// faces
 	if (!is_refined(neighbor(-1,0)) || !is_refined(neighbor(0,-1)))
-	  cache_append (&q->faces, point);
-	if (!is_active(neighbor(1,0))) {
-	  point.i++;
-	  cache_append (&q->faces, point);
-	  point.i--;
-	}
-	if (!is_active(neighbor(0,1))) {
-	  point.j++;
-	  cache_append (&q->faces, point);
-	  point.j--;
-	}
+	  cache_append (&q->faces, point, 0, 0);
+	if (!is_active(neighbor(1,0)))
+	  cache_append (&q->faces, point, 1, 0);
+	if (!is_active(neighbor(0,1)))
+	  cache_append (&q->faces, point, 0, 1);
 	// vertices
-	cache_append (&q->vertices, point);
-	if (!is_leaf(neighbor(1,1))) {
-	  point.i++; point.j++;
-	  cache_append (&q->vertices, point);
-	  point.i--; point.j--;
-	}
-	if (!is_leaf(neighbor(0,-1)) && !is_leaf(neighbor(1,0))) {
-	  point.i++;
-	  cache_append (&q->vertices, point);
-	  point.i--;
-	}
-	if (!is_leaf(neighbor(-1,0)) && !is_leaf(neighbor(0,1))) {
-	  point.j++;
-	  cache_append (&q->vertices, point);
-	  point.j--;
-	}
+	cache_append (&q->vertices, point, 0, 0);
+	if (!is_leaf(neighbor(1,1)))
+	  cache_append (&q->vertices, point, 1, 1);
+	if (!is_leaf(neighbor(0,-1)) && !is_leaf(neighbor(1,0)))
+	  cache_append (&q->vertices, point, 1, 0);
+	if (!is_leaf(neighbor(-1,0)) && !is_leaf(neighbor(0,1)))
+	  cache_append (&q->vertices, point, 0, 1);
 	// halo prolongation
         if (cell.neighbors > 0)
 	  cache_level_append (&q->prolongation[level], point);
@@ -439,8 +417,9 @@ static void update_cache_f (void)
 	  cell.flags &= ~halo;
       }
     }
+    // !is_active(cell)
     else if (is_leaf(cell)) {
-      // halo prolongation (non-local cell)
+      // non-local halo prolongation
       if (cell.neighbors > 0)
 	cache_level_append (&q->prolongation[level], point);
       continue;

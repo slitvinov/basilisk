@@ -108,6 +108,8 @@ void mpi_partitioning()
 	    else if (fine(pid,i,j) == pid())
 	      pid[] = pid();
       }
+      if (pid[] != pid())
+	cell.flags &= ~active;
     }
 
   /* this is the adjacency vector i.e. adjacency_rcv[x] is different from
@@ -119,17 +121,21 @@ void mpi_partitioning()
   /* we build arrays of ghost cell indices for restriction */
   ((Quadtree *)grid)->dirty = true;
   foreach_cell() {
-    if (pid[] != pid())
-      cell.flags |= remote;
-    else
-      cell.flags &= ~remote;
-    if (pid[] != pid()) {
-      if (!is_leaf(cell))
-	decrement_neighbors (&point);
+    if (!is_active(cell)) {
+      if (!is_leaf(cell)) {
+	// decrement_neighbors (&point);
+	for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
+	  for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
+	    if (!is_active(neighbor(k,l))) {
+	      neighbor(k,l).neighbors--;
+	      if (neighbor(k,l).neighbors == 0)
+		free_children((Quadtree *)grid,k,l);
+	    }
+      }
       int nactive = 0;
       for (int o = -GHOSTS; o <= GHOSTS; o++)
 	for (int p = -GHOSTS; p <= GHOSTS; p++)
-	  if (is_active(neighbor(o,p)) && pid[o,p] == pid())
+	  if (is_active(neighbor(o,p)))
 	    nactive++;
       if (nactive > 0) {
 	int i;
@@ -281,7 +287,7 @@ void z_indexing (scalar index)
       index[] = i++;
       continue;
     }
-    else if (!is_local(cell)) {
+    else if (!is_active(cell)) {
       i += size[];
       continue;
     }

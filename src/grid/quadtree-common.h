@@ -325,7 +325,7 @@ void quadtree_boundary_restriction (scalar * list)
 Point locate (double xp, double yp)
 {
   foreach_cell() 
-    if (is_local(cell)) {
+    if (is_active(cell)) {
       Delta /= 2.;
       if (xp < x - Delta || xp > x + Delta || yp < y - Delta || yp > y + Delta)
 	continue;

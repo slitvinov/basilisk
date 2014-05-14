@@ -42,8 +42,14 @@ int main (int argc, char * argv[])
     
   // check restriction 
   foreach_fine_to_coarse() {
-    fprintf (stderr, "%g %g %g %d\n", x, y, s[], level);
+    fprintf (stderr, "res %g %g %g %d\n", x, y, s[], level);
     assert (s[] == 1.);
+  }
+
+  // check face traversal
+  foreach_face() {
+    fprintf (stderr, "face %g %g %g\n", x, y, s[] - s[-1,0]);
+    assert (s[] == s[-1,0]);
   }
 
   free_grid();
