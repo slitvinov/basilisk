@@ -339,7 +339,7 @@ Point locate (double xp, double yp)
 static scalar quadtree_init_scalar (scalar s, const char * name)
 {
   s = cartesian_init_scalar (s, name);
-  s.refine  = refine_linear; // or bilinear ?
+  s.refine  = refine_bilinear;
   s.coarsen = coarsen_average;
   return s;
 }

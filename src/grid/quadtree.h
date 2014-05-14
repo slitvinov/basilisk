@@ -18,7 +18,10 @@ enum {
   leaf    = 1 << 1,
   fghost  = 1 << 2,
   refined = 1 << 3,
-  halo    = 1 << 4
+  halo    = 1 << 4,
+
+  face_x = 1 << 0,
+  face_y = 1 << 1
 };
 
 #define _CORNER 4
@@ -47,7 +50,8 @@ static void cache_level_init (CacheLevel * c)
 }
 
 typedef struct {
-  int i, j, level;
+  int i, j;
+  short level, flags;
 } Index;
 
 typedef struct {
@@ -96,7 +100,7 @@ static void cache_level_append (CacheLevel * c, Point p)
   c->n++;
 }
 
-static void cache_append (Cache * c, Point p, int k, int l)
+static void cache_append (Cache * c, Point p, int k, int l, short flags)
 {
   if (c->n >= c->nm) {
     c->nm += 100;
@@ -105,6 +109,7 @@ static void cache_append (Cache * c, Point p, int k, int l)
   c->p[c->n].i = p.i + k;
   c->p[c->n].j = p.j + l;
   c->p[c->n].level = p.level;
+  c->p[c->n].flags = flags;
   c->n++;
 }
 
@@ -376,26 +381,30 @@ static void update_cache_f (void)
     q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
 
   foreach_cell() {
-    if (is_active(cell)) {
+    if (is_active(cell)) { // always true in serial
       // active cells
       cache_level_append (&q->active[level], point);
       if (is_leaf (cell)) {
-	cache_append (&q->leaves, point, 0, 0);
+	cache_append (&q->leaves, point, 0, 0, 0);
 	// faces
-	if (!is_refined(neighbor(-1,0)) || !is_refined(neighbor(0,-1)))
-	  cache_append (&q->faces, point, 0, 0);
+	short flags = 0;
+	foreach_dimension()
+	  if (!is_refined(neighbor(-1,0)))
+	    flags |= face_x;
+	if (flags)
+	  cache_append (&q->faces, point, 0, 0, flags);
 	if (!is_active(neighbor(1,0)))
-	  cache_append (&q->faces, point, 1, 0);
+	  cache_append (&q->faces, point, 1, 0, face_x);
 	if (!is_active(neighbor(0,1)))
-	  cache_append (&q->faces, point, 0, 1);
+	  cache_append (&q->faces, point, 0, 1, face_y);
 	// vertices
-	cache_append (&q->vertices, point, 0, 0);
+	cache_append (&q->vertices, point, 0, 0, 0);
 	if (!is_leaf(neighbor(1,1)))
-	  cache_append (&q->vertices, point, 1, 1);
+	  cache_append (&q->vertices, point, 1, 1, 0);
 	if (!is_leaf(neighbor(0,-1)) && !is_leaf(neighbor(1,0)))
-	  cache_append (&q->vertices, point, 1, 0);
+	  cache_append (&q->vertices, point, 1, 0, 0);
 	if (!is_leaf(neighbor(-1,0)) && !is_leaf(neighbor(0,1)))
-	  cache_append (&q->vertices, point, 0, 1);
+	  cache_append (&q->vertices, point, 0, 1, 0);
 	// halo prolongation
         if (cell.neighbors > 0)
 	  cache_level_append (&q->prolongation[level], point);
@@ -443,12 +452,13 @@ static void update_cache_f (void)
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   OMP_PARALLEL()
   Quadtree point = *((Quadtree *)grid); point.back = grid;
-  int _k;
+  int _k; short _flags; NOT_UNUSED(_flags);
   OMP(omp for schedule(static) clause)
   for (_k = 0; _k < _cache.n; _k++) {
     point.i = _cache.p[_k].i;
     point.j = _cache.p[_k].j;
     point.level = _cache.p[_k].level;
+    _flags = _cache.p[_k].flags;
     POINT_VARIABLES;
 @
 @define end_foreach_cache() } OMP_END_PARALLEL() }
@@ -470,15 +480,12 @@ static void update_cache_f (void)
 @define foreach(clause) foreach_cache(((Quadtree *)grid)->leaves, clause)
 @define end_foreach()   end_foreach_cache()
 
-@define foreach_face_generic(clause) foreach_cache(((Quadtree *)grid)->faces, clause)
+@def foreach_face_generic(clause) 
+  foreach_cache(((Quadtree *)grid)->faces, clause) @
 @define end_foreach_face_generic() end_foreach_cache()
 
-@def is_face_x() ((is_active(cell) || is_active(neighbor(-1,0))) && 
-		  !is_refined(neighbor(-1,0)))
-@
-@def is_face_y() ((is_active(cell) || is_active(neighbor(0,-1))) && 
-		  !is_refined(neighbor(0,-1)))
-@
+@define is_face_x() (_flags & face_x)
+@define is_face_y() (_flags & face_y)
 
 @def foreach_vertex(clause) 
   foreach_cache(((Quadtree *)grid)->vertices, clause) {

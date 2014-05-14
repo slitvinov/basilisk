@@ -53,9 +53,13 @@ static void mpi_boundary_halo_restriction (const Boundary * b,
       MPI_Status s;
       MPI_Recv (buf, m->rcv_halo[i][l].n*len, MPI_DOUBLE, m->rcv[i], l, 
 		MPI_COMM_WORLD, &s);
-      foreach_cache_level(m->rcv_halo[i][l], l,)
+      foreach_cache_level(m->rcv_halo[i][l], l,) {
+#if DEBUG
+	fprintf (stderr, "%g %g rcv\n", x, y);
+#endif
 	for (scalar s in list)
 	  s[] = *b++;
+      }
     }
 
   /* check that ghost values where received OK and free send buffers */
@@ -79,7 +83,7 @@ void mpi_boundary_new()
   add_boundary (mpi_boundary);
 }
 
-#define DEBUG 0
+#define DEBUG 1
 
 void mpi_partitioning()
 {
