@@ -130,6 +130,8 @@ event defaults (i = 0)
 
   advance = advance_saint_venant;  
 #if QUADTREE
+  for (scalar s in {h,zb,u,eta})
+    s.refine = s.prolongation1 = refine_linear;
   eta.refine  = refine_eta;
   eta.coarsen = coarsen_eta;
 #endif
@@ -192,8 +194,12 @@ double update (scalar * evolving, scalar * updates, double dtmax)
 
   vector gh[], geta[];
   tensor gu[];
-  for (scalar s in {gh, geta, gu})
+  for (scalar s in {gh, geta, gu}) {
     s.gradient = none;
+    #if QUADTREE
+      s.prolongation1 = refine_linear;
+    #endif
+  }
   gradients ({h, eta, u}, {gh, geta, gu});
 
   /**
@@ -252,15 +258,16 @@ double update (scalar * evolving, scalar * updates, double dtmax)
       well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
       
       #if QUADTREE
-      if (!(cell.flags & (fghost|active))) {
-	hi = coarse(h,0,0);
-	zi = coarse(zb,0,0);
-      }
-      if (!(neighbor(-1,0).flags & (fghost|active))) {
-	hn = coarse(h,-1,0);
-	zn = coarse(zb,-1,0);
-      }
+        if (!(cell.flags & (fghost|active))) {
+  	  hi = coarse(h,0,0);
+	  zi = coarse(zb,0,0);
+	}
+	if (!(neighbor(-1,0).flags & (fghost|active))) {
+	  hn = coarse(h,-1,0);
+	  zn = coarse(zb,-1,0);
+	}
       #endif
+
       double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
       double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
       

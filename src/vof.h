@@ -34,7 +34,7 @@ event defaults (i = 0)
 #if QUADTREE
   for (scalar c in interfaces) {
     c.prolongation = fraction_prolongation;
-    c.refine = fraction_refine;
+    c.refine = c.prolongation1 = fraction_refine;
   }
 #endif
 }

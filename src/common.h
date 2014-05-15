@@ -38,15 +38,20 @@
 
 @include <mpi.h>
 @define OMP(x)
+
+@if FAKE_MPI
+@define mpi_all_reduce(v,type,op)
+@else
 @def mpi_all_reduce(v,type,op) {
   union { int a; float b; double c;} global;
   MPI_Allreduce (&(v), &global, 1, type, op, MPI_COMM_WORLD);
   memcpy (&(v), &global, sizeof (v));
 }
 @
+@endif
 
 static int mpi_rank;
-#define pid() mpi_rank
+@define pid() mpi_rank
 
 void mpi_init()
 {
@@ -140,6 +145,7 @@ typedef struct {
   double (* boundary[nboundary])             (Point, scalar);
   double (* boundary_homogeneous[nboundary]) (Point, scalar);
   double (* prolongation)                    (Point, scalar);
+  void   (* prolongation1)                   (Point, scalar);
   void   (* refine)                          (Point, scalar);
   void   (* coarsen)                         (Point, scalar);
   double (* gradient)                        (double, double, double);

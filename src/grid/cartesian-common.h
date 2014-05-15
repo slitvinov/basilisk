@@ -291,6 +291,8 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
+  s.prolongation = NULL; 
+  s.refine = s.coarsen = NULL;
   s.gradient = NULL;
   foreach_dimension() {
     s.d.x = 0;  // not face

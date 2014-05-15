@@ -271,15 +271,11 @@ static void halo_restriction_flux (vector * list)
 
 static void halo_prolongation (scalar * list, int depth)
 {
-  for (scalar s in list)
-    if (s.gradient)
-      s.refine = refine_linear; // fixme: this should be done automatically
-
   boundary_iterate (halo_prolongation, list, 0, 0);
   for (int l = 0; l < depth; l++) {
     foreach_halo (prolongation, l)
       for (scalar s in list)
-	s.refine (point, s);
+	s.prolongation1 (point, s);
     boundary_iterate (halo_prolongation, list, l + 1, depth);
   }
 }
@@ -339,7 +335,7 @@ Point locate (double xp, double yp)
 static scalar quadtree_init_scalar (scalar s, const char * name)
 {
   s = cartesian_init_scalar (s, name);
-  s.refine  = refine_bilinear;
+  s.refine = s.prolongation1 = refine_bilinear;
   s.coarsen = coarsen_average;
   return s;
 }
