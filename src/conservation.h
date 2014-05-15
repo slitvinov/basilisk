@@ -67,6 +67,16 @@ scalar * evolving;
 event defaults (i = 0)
 {
   evolving = list_concat (scalars, (scalar *) vectors);
+
+  /**
+  On quadtrees we need to replace the default bilinear
+  refinement/prolongation with linear so that reconstructed values
+  also use slope limiting. */
+
+  #if QUADTREE
+  for (scalar s in evolving)
+    s.refine = s.prolongation1 = refine_linear;
+  #endif
 }
 
 /**
@@ -126,8 +136,12 @@ double update (scalar * conserved, scalar * updates, double dtmax)
   vector * slopes = NULL;
   for (scalar s in conserved) {
     vector slope = new vector;
-    foreach_dimension()
+    foreach_dimension() {
       slope.x.gradient = none;
+#if QUADTREE
+      slope.x.prolongation1 = refine_linear;
+#endif
+    }
     slopes = vectors_append (slopes, slope);
   }
   gradients (conserved, slopes);
