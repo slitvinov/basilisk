@@ -1,7 +1,7 @@
 #define GRIDNAME "Quadtree"
 #define dimension 2
 
-#define DYNAMIC 0 // use dynamic data allocation
+#define DYNAMIC 1 // use dynamic data allocation
 #define TWO_ONE 1 // enforce 2:1 refinement ratio
 #define GHOSTS  2
 
@@ -584,34 +584,24 @@ void alloc_layer (Quadtree * p)
 static void alloc_children (Quadtree * q, int k, int l)
 {
   if (q->level == q->depth) alloc_layer(q);
-#if DYNAMIC
-  assert (false); // not implemented
-  char ** m = ((char ***)p->m)[p->level+1];
-  Point point = *((Point *)p);
-  for (int k = - GHOSTS; k < 2 + GHOSTS; k++)
-    for (int l = - GHOSTS; l < 2 + GHOSTS; l++)
-      if (!m[_childindex(k,l)]) {
-	m[_childindex(k,l)] = calloc (1, sizeof(Cell) + datasize);
-@if TRASH
-	char * data = m[_childindex(k,l)] + sizeof(Cell);
-	int nv = datasize/sizeof(double);
-	for (int j = 0; j < nv; j++)
-	  ((double *)data)[j] = undefined;
-@endif
-      }
-#else // !DYNAMIC
-  // fixme: this should work but does not yet (also see below)
-  return;
-@if TRASH
   Point point = *((Point *)q);
   point.i += k; point.j += l;
+
+#if DYNAMIC
+  char ** m = ((char ***)q->m)[q->level+1];
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++)
+      if (!m[_childindex(k,l)])
+	m[_childindex(k,l)] = calloc (1, sizeof(Cell) + datasize);
+#endif // !DYNAMIC
+
+@if TRASH
   // foreach child
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++)
       for (scalar s in all)
 	fine(s,k,l) = undefined;
 @endif
-#endif
 }
 
 void increment_neighbors (Quadtree * p)
@@ -630,15 +620,14 @@ void increment_neighbors (Quadtree * p)
 static void free_children (Quadtree * q, int k, int l)
 {
 #if DYNAMIC
-  assert (false); // not implemented
-  char ** m = ((char ***)p->m)[p->level+1];
-  Point point = *((Point *)p);
-  for (int k = - GHOSTS; k < 2 + GHOSTS; k++)
-    for (int l = - GHOSTS; l < 2 + GHOSTS; l++)
-      if (!((Cell *) m[_childindex(k,l)])->neighbors) {
-	free (m[_childindex(k,l)]);
-	m[_childindex(k,l)] = NULL;
-      }
+  Point point = *((Point *)q);
+  point.i += k; point.j += l;
+  char ** m = ((char ***)q->m)[q->level+1];
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++) {
+      free (m[_childindex(k,l)]);
+      m[_childindex(k,l)] = NULL;
+    }
 #endif
 }
 
@@ -746,8 +735,9 @@ static void box_boundary_halo_prolongation (const Boundary * b,
       if (level == l - 1 && cell.neighbors > 0)
 	// halo prolongation
 	foreach_child_direction(d)
-	  for (scalar s in list)
-	    s[ghost] = s.boundary[d] (point, s);
+	  if (allocated(ig,jg))
+	    for (scalar s in list)
+	      s[ghost] = s.boundary[d] (point, s);
       continue;
     }
   }
