@@ -1,4 +1,4 @@
-all: check slow
+all: check
 
 include $(BASILISK)/Makefile.defs
 
@@ -7,10 +7,6 @@ CFLAGS += -O2
 
 # list only non-default (!.tst) tests
 check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst
-
-# these tests will not be done by the default 'check' target
-slow: nonlinear.tst advection.tst rotation.tst \
-	bump2D.tst hump.tst drybump2D.tst ponds.tst conical.tst
 
 # these tests have special depencies/compilation requirements
 
