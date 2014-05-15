@@ -255,33 +255,22 @@ int _ig[nboundary] = {1,-1,0,0},
 typedef struct _Point Point;
 static Point last_point;
 
-// methods for each scalar
+// attributes for each scalar
 
-typedef struct {
+@include "_attributes.h"
+
+attribute {
   double (* boundary[nboundary])             (Point, scalar);
   double (* boundary_homogeneous[nboundary]) (Point, scalar);
-  double (* prolongation)                    (Point, scalar);
-  void   (* refine)                          (Point, scalar);
-  void   (* coarsen)                         (Point, scalar);
   double (* gradient)                        (double, double, double);
   char * name;
   struct { int x, y; } d; // staggering
   vector v;
   bool   face;
-} Methods;
+};
 
-Methods * _method;
 double  * _constant = NULL;
 extern int datasize;
 
 void init_solver (void);
-void delete (scalar * list);
-void free_grid (void);
 
-void free_solver()
-{
-  delete (all);
-  free (all); all = NULL;
-  free (_method); _method = NULL;
-  free_grid();
-}

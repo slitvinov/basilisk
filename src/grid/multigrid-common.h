@@ -22,6 +22,12 @@
 @
 @endif
 
+// scalar attributes
+
+attribute {
+  double (* prolongation) (Point, scalar);
+};
+
 // Multigrid methods
 
 void (* boundary_restriction) (scalar *);
@@ -131,14 +137,6 @@ void coarsen_face (Point point, scalar s)
     v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
 }
 
-vector multigrid_init_face_vector (vector v, const char * name)
-{
-  v = cartesian_init_face_vector (v, name);
-  v.x.coarsen = coarsen_face;
-  v.y.coarsen = none;
-  return v;
-}
-
 void multigrid_boundary_level (scalar * list, int l)
 {
   if (l < 0)
@@ -206,5 +204,4 @@ void multigrid_methods()
   debug = multigrid_debug;
   boundary_level = multigrid_boundary_level;
   boundary_restriction = multigrid_boundary_restriction;
-  init_face_vector = multigrid_init_face_vector;
 }

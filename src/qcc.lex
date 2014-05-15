@@ -40,6 +40,9 @@
 
   int foreach_child, foreach_child_scope, foreach_child_para;
 
+  int inattr, attrscope, attrline;
+  FILE * attrfp;
+
   #define REDUCTMAX 10
   char foreachs[80], * fname;
   FILE * foreachfp;
@@ -403,6 +406,22 @@
     fprintf (yyout, "  return 0; } ");
     inevent = 0;
     nevents++;
+  }
+
+  void endattr() {
+    inattr = 0;
+    fclose (yyout); yyout = attrfp;
+    FILE * fp = dopen ("_attribute.h", "r");
+    FILE * out = dopen ("_attributes.h", "a");
+    fprintf (out, "\n#line %d \"%s\"\n", attrline, fname);
+    int c;
+    while ((c = fgetc (fp)) != EOF) {
+      if (c == '\n')
+	fputc (c, yyout);
+      fputc (c, out);
+    }
+    fclose (fp);
+    fclose (out);
   }
 
   void infunction_declarations() {
@@ -822,7 +841,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
       ECHO;
     endforeachdim ();
   }
-  else
+  else if (!inattr || scope != attrscope)
     ECHO;
   if (foreach_child && foreach_child_scope == scope) {
     fputs (" end_foreach_child(); }", yyout);
@@ -836,7 +855,9 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   if (inforeach && scope == foreachscope)
     endforeach ();
   else if (inevent && scope == eventscope)
-    endevent ();
+    endevent();
+  if (inattr && scope == attrscope)
+    endattr ();
   if (scope == 0)
     infunctionproto = 0;
 }
@@ -872,6 +893,12 @@ end_foreach{ID}*{SP}*"()" {
 	     fname, line, foreachs, yytext);
     return 1;
   }
+}
+
+attribute{WS}+"{" {
+  inattr = 1; attrscope = scope++; attrline = line;
+  attrfp = yyout;
+  yyout = dopen ("_attribute.h", "w");
 }
 
 ; {
@@ -922,8 +949,9 @@ end_foreach{ID}*{SP}*"()" {
     }
     /* function/file scope */
     fprintf (yyout,
-	     "_method[%s].boundary[%s] = _boundary%d; "
-	     "_method[%s].boundary_homogeneous[%s] = _boundary%d_homogeneous;",
+	     "_attribute[%s].boundary[%s] = _boundary%d; "
+	     "_attribute[%s].boundary_homogeneous[%s] = "
+	     "_boundary%d_homogeneous;",
 	     boundaryvar, boundarydir, nboundary,
 	     boundaryvar, boundarydir, nboundary);
     if (scope == 0)
@@ -1566,7 +1594,7 @@ reduction{WS}*[(](min|max):{ID}+[)] {
 }
 
 {SCALAR}[.][a-wA-Z_0-9]+ {
-  // scalar methods
+  // scalar attributes
   char * dot1 = strchr (yytext, '.');
   var_t * var = varlookup (yytext, strlen(yytext) - strlen(dot1));
   if (var) {
@@ -1576,9 +1604,9 @@ reduction{WS}*[(](min|max):{ID}+[)] {
       dot1 = strchr (dot1 + 1, '.');
     }
     dot[0] = '\0'; dot++;
-    fprintf (yyout, "_method[%s].%s", yytext, dot);
+    fprintf (yyout, "_attribute[%s].%s", yytext, dot);
     if (debug)
-      fprintf (stderr, "%s:%d: _method[%s].%s\n", fname, line, yytext, dot);
+      fprintf (stderr, "%s:%d: _attribute[%s].%s\n", fname, line, yytext, dot);
   }
   else
     ECHO;
@@ -1773,7 +1801,7 @@ int endfor (FILE * fin, FILE * fout)
   invardecl = 0;
   inval = invalpara = 0;
   brack = inarray = 0;
-  inevent = inreturn = 0;
+  inevent = inreturn = inattr = 0;
   foreachdim = 0;
   foreach_child = 0;
   inboundary = nboundary = nsetboundary = 0;
@@ -1870,10 +1898,18 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   fprintf (fout,
 	   "int datasize = %d*sizeof (double);\n",
 	   nvar);
+  /* attributes */
+  FILE * fp = dopen ("_attributes.h", "a");
+  fputs ("\n"
+	 "} _Attributes;\n"
+	 "_Attributes * _attribute;\n",
+	 fp);
+  fclose (fp);
   /* event functions */
   for (int i = 0; i < nevents; i++) {
     char * id = eventfunc[i];
-    fprintf (fout, "static int %s (const int i, const double t, Event * _ev);\n", id);
+    fprintf (fout, 
+	     "static int %s (const int i, const double t, Event * _ev);\n", id);
     for (int j = 0; j < nexpr[i]; j++)
       fprintf (fout,
 	       "static int %s_expr%d (int * ip, double * tp, Event * _ev);\n",
@@ -1901,8 +1937,9 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	  j = eventparent[j];
 	}
       }
-  /* scalar methods */
-  fputs ("  _method = calloc (datasize/sizeof(double), sizeof (Methods));\n", 
+  /* scalar attributes */
+  fputs ("  _attribute = calloc (datasize/sizeof(double), "
+	 "sizeof (_Attributes));\n", 
 	 fout);
   /* list of all scalars */
   fprintf (fout, 
@@ -2086,6 +2123,9 @@ int main (int argc, char ** argv)
 	perror (file);
 	cleanup (1, dir);
       }
+      FILE * fp = dopen ("_attributes.h", "w");
+      fputs ("typedef struct {\n", fp);
+      fclose (fp);
       FILE * fout = dopen (cpp, "w");
       if (swig)
 	fputs ("@include <Python.h>\n", fout);
@@ -2202,16 +2242,28 @@ int main (int argc, char ** argv)
 
       fin = dopen (file, "r");
       char line[1024];
+      int c;
+      // includes _attributes.h
+      while (fgets (line, 1024, fin))
+	if (!strcmp (line, "#include \"_attributes.h\"\n"))
+	  break;
+	else
+	  fputs (line, fout);
+      fp = dopen ("_attributes.h", "r");
+      while ((c = fgetc (fp)) != EOF)
+	fputc (c, fout);
+      fclose (fp);
+      // includes _boundarydecl.h
       while (fgets (line, 1024, fin))
 	if (!strcmp (line, "#include \"_boundarydecl.h\"\n"))
 	  break;
 	else
 	  fputs (line, fout);
-      FILE * fp = dopen ("_boundarydecl.h", "r");
-      int c;
+      fp = dopen ("_boundarydecl.h", "r");
       while ((c = fgetc (fp)) != EOF)
 	fputc (c, fout);
       fclose (fp);
+      // rest of the file
       while (fgets (line, 1024, fin))
 	fputs (line, fout);
       fclose (fin);

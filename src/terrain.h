@@ -6,13 +6,10 @@
 # define NPROC 1
 #endif
 
-typedef struct {
-  Kdt *** kdt;
+attribute {
+  void ** kdt;
   scalar n, dmin, dmax;
-} Terrain;
-
-Terrain * _terrain = NULL;
-int _nterrain = 0;
+};
 
 static int includes (KdtRect rect, Point * p)
 {
@@ -37,16 +34,16 @@ static void reconstruct_terrain (Point point, scalar zb)
   Delta /= 2.;
   KdtRect rect = {{x - Delta, x + Delta},
 		  {y - Delta, y + Delta}};
-  for (Kdt ** kdt = _terrain[zb].kdt[pid()]; *kdt; kdt++)
+  for (Kdt ** kdt = zb.kdt[pid()]; *kdt; kdt++)
     kdt_query_sum (*kdt,
 		   (KdtCheck) includes,
 		   (KdtCheck) intersects, &point,
 		   rect, &s);
-  val(_terrain[zb].n,0,0) = s.n;
+  val(zb.n,0,0) = s.n;
   if (s.w > 0.) {
     zb[] = s.H0/s.w;
-    val(_terrain[zb].dmin,0,0) = s.Hmin;
-    val(_terrain[zb].dmax,0,0) = s.Hmax;
+    val(zb.dmin,0,0) = s.Hmin;
+    val(zb.dmax,0,0) = s.Hmax;
   }
   else {
     /* not enough points in database, use bilinear interpolation
@@ -57,8 +54,8 @@ static void reconstruct_terrain (Point point, scalar zb)
 	      coarse(zb,child.x,child.y))/16.;
     else
       zb[] = 0.; // no points at level 0!
-    val(_terrain[zb].dmin,0,0) = nodata;
-    val(_terrain[zb].dmax,0,0) = nodata;
+    val(zb.dmin,0,0) = nodata;
+    val(zb.dmax,0,0) = nodata;
   }
 }
 
@@ -69,12 +66,8 @@ static void refine_terrain (Point point, scalar zb)
 }
 
 void terrain (scalar zb, ...)
-{  
-  if (zb >= _nterrain) {
-    _terrain = realloc (_terrain, sizeof (Terrain)*(zb + 1));
-    _nterrain = zb + 1;
-  }
-  _terrain[zb].kdt = calloc (NPROC, sizeof (Kdt **));
+{
+  zb.kdt = calloc (NPROC, sizeof (Kdt **));
 
   int nt = 0;
   va_list ap;
@@ -82,8 +75,8 @@ void terrain (scalar zb, ...)
   char * name;
   while ((name = va_arg (ap, char *))) {
     for (int i = 0; i < NPROC; i++) {
-      Kdt ** kdt = _terrain[zb].kdt[i];
-      _terrain[zb].kdt[i] = kdt = realloc (kdt, sizeof(Kdt *)*(nt + 2));
+      Kdt ** kdt = zb.kdt[i];
+      zb.kdt[i] = kdt = realloc (kdt, sizeof(Kdt *)*(nt + 2));
       kdt[nt] = kdt_new();
       kdt[nt + 1] = NULL;
       if (kdt_open (kdt[nt], name)) {
@@ -100,15 +93,15 @@ void terrain (scalar zb, ...)
   scalar n = new scalar;
   n.refine = none;
   n.coarsen = none;
-  _terrain[zb].n = n;
+  zb.n = n;
   scalar dmin = new scalar;
   dmin.refine = none;
   dmin.coarsen = none;
-  _terrain[zb].dmin = dmin;
+  zb.dmin = dmin;
   scalar dmax = new scalar;
   dmax.refine = none;
   dmax.coarsen = none;
-  _terrain[zb].dmax = dmax;
+  zb.dmax = dmax;
 
   trash ({zb});
   for (int l = 0; l <= depth(); l++) {

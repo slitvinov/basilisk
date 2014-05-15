@@ -97,8 +97,7 @@ scalar new_scalar (const char * name)
   // need to allocate a new slot
   assert (nvar < _NVARMAX);
   datasize += sizeof(double); nvar++;
-  _method = realloc (_method, nvar*sizeof (Methods));
-  _method[nvar - 1] = (Methods){{NULL, NULL, NULL}};
+  _attribute = realloc (_attribute, nvar*sizeof (_Attributes));
   all = realloc (all, sizeof (scalar)*(nvar + 1));
   all[nvar - 1] = nvar - 1;
   all[nvar] = -1;
@@ -205,7 +204,7 @@ scalar * list_clone (scalar * l)
   scalar * list = NULL;
   for (scalar s in l) {
     scalar c = new scalar;
-    _method[c] = _method[s];
+    _attribute[c] = _attribute[s];
     c.name = NULL;
     list = list_append (list, c);
   }
@@ -234,6 +233,14 @@ void delete (scalar * list)
       for (; *s >= 0; s++)
 	s[0] = s[1];
   }
+}
+
+void free_solver()
+{
+  delete (all);
+  free (all); all = NULL;
+  free (_attribute); _attribute = NULL;
+  free_grid();
 }
 
 // Cartesian methods
@@ -321,11 +328,11 @@ static double noflux (Point point, scalar s)
 
 scalar cartesian_init_scalar (scalar s, const char * name)
 {
+  // reset all attributes
+  _attribute[s] = (const _Attributes){};
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
-  s.prolongation = NULL; 
-  s.refine = s.coarsen = NULL;
   s.gradient = NULL;
   if (name)
     s.name = strdup (name);
