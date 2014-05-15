@@ -83,14 +83,21 @@ timer timer_start (void)
   return t;
 }
 
+double timer_elapsed (timer t)
+{
+  struct timeval tvend;
+  gettimeofday (&tvend, NULL);
+  return ((tvend.tv_sec - t.tv.tv_sec) + 
+	  (tvend.tv_usec - t.tv.tv_usec)/1e6);
+}
+
 void timer_print (timer t, int i, long tnc)
 {
   clock_t end = clock ();
   struct timeval tvend;
   gettimeofday (&tvend, NULL);
   double cpu = ((double) (end - t.c))/CLOCKS_PER_SEC;
-  double real = ((tvend.tv_sec - t.tv.tv_sec) + 
-		 (tvend.tv_usec - t.tv.tv_usec)/1e6);
+  double real = timer_elapsed (t);
   if (tnc < 0) {
     tnc = 0;
     foreach(reduction(+:tnc)) tnc++;
