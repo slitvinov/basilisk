@@ -552,16 +552,19 @@
       }
       else { // static allocation
 	int n = vtype - listtype;
-	char coord[20];
+	char * constant = var->constant ? "_NVARMAX + " : "";
+	char coord[80];
 	for (int i = 0; i < (1 << n); i++) {
 	  switch (listtype) {
 	  case scalar:
-	    sprintf (coord, "%d,", var->i[i]); break;
+	    sprintf (coord, "%s%d,", constant, var->i[i]); break;
 	  case vector:
-	    sprintf (coord, "{%d,%d},", var->i[2*i], var->i[2*i+1]); break;
+	    sprintf (coord, "{%s%d,%s%d},", 
+		     constant, var->i[2*i], constant, var->i[2*i+1]); break;
 	  case tensor:
-	    sprintf (coord, "{{%d,%d},{%d,%d}},",
-		     var->i[4*i], var->i[4*i+1], var->i[4*i+2], var->i[4*i+3]);
+	    sprintf (coord, "{{%s%d,%s%d},{%s%d,%s%d}},",
+		     constant, var->i[4*i], constant, var->i[4*i+1], 
+		     constant, var->i[4*i+2], constant, var->i[4*i+3]);
 	    break;
 	  default: assert (0);
 	  }
