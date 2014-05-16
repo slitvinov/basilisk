@@ -141,3 +141,10 @@ The results on `mesu` (UPMC's cluster) are
 64 cores
 # Quadtree, 2810 steps, 13266.5 CPU, 410.9 real, 4.16e+05 points.step/s, 28 var
 ~~~
+
+The results on `heyward.dalembert.upmc.fr` are
+
+~~~bash
+8 cores
+# Quadtree, 2811 steps, 1771.72 CPU, 427.3 real, 4.01e+05 points.step/s, 28 var
+~~~
