@@ -146,5 +146,5 @@ The results on `heyward.dalembert.upmc.fr` are
 
 ~~~bash
 8 cores
-# Quadtree, 2811 steps, 1771.72 CPU, 427.3 real, 4.01e+05 points.step/s, 28 var
+# Quadtree, 2810 steps, 1692.4 CPU, 393.6 real, 4.31e+05 points.step/s, 28 var
 ~~~
