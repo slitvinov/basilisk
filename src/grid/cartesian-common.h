@@ -199,12 +199,17 @@ vector new_const_vector (const char * name, int i, double * val)
   return v;
 }
 
+void scalar_clone (scalar a, scalar b)
+{
+  _attribute[a] = _attribute[b];
+}
+
 scalar * list_clone (scalar * l)
 {
   scalar * list = NULL;
   for (scalar s in l) {
     scalar c = new scalar;
-    _attribute[c] = _attribute[s];
+    scalar_clone (c, s);
     c.name = NULL;
     list = list_append (list, c);
   }

@@ -153,7 +153,7 @@ void fault (struct Okada p)
 {
   scalar hold[];
   // save the initial water depth
-  _method[hold] = _method[h]; // clone h into hold
+  scalar_clone (hold, h);
   foreach()
     hold[] = h[];
   boundary ({hold});
