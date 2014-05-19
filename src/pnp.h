@@ -2,12 +2,14 @@
 # Ohmic conduction flux of charged species
 
 This function computes the fluxes due to ohmic conduction appearing in
-the Nerst--Planck equations. The species charge concentrations are
-then updated using the explicit scheme
+the [Nernst--Planck
+equation](http://en.wikipedia.org/wiki/Nernst%E2%80%93Planck_equation). The
+species charge concentrations are then updated using the explicit
+scheme
 $$
-n^{n+1}_i = n^n_i +\Delta t \, \nabla \cdot( K_i n^n_i \nabla \phi^n)
+c^{n+1}_i = c^n_i +\Delta t \, \nabla \cdot( K_i c^n_i \nabla \phi^n)
 $$ 
-where $n_i$ is the volume density of the $i$-specie, $K_i$ its volume
+where $c_i$ is the volume density of the $i$-specie, $K_i$ its volume
 electric conductivity and $\phi$ the electric potential. */
 
 extern scalar phi;
