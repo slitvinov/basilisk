@@ -78,17 +78,17 @@ void wavelet (scalar s, scalar w)
 {
   restriction ({s});
   foreach_fine_to_coarse() {
-    if (s.prolongation)
+    double sc[4];
+    int c = 0;
+    foreach_child()
+      sc[c++] = s[];
+    s.prolongation (point, s);
+    c = 0;
+    foreach_child() {
       /* difference between fine value and its prolongation */
-      foreach_child()
-	w[] = s[] - s.prolongation (point, s);
-    else
-      /* difference between fine value and bilinearly-interpolated
-	 coarse value */
-      foreach_child()
-	w[] = s[] - (9.*coarse(s,0,0) + 
-		     3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
-		     coarse(s,child.x,child.y))/16.;
+      w[] = sc[c] - s[];
+      s[] = sc[c++];
+    }
   }
   /* root cell */
   foreach_level(0) w[] = 0.;

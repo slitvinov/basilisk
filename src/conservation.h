@@ -75,7 +75,7 @@ event defaults (i = 0)
 
   #if QUADTREE
   for (scalar s in evolving)
-    s.refine = s.prolongation1 = refine_linear;
+    s.refine = s.prolongation = refine_linear;
   #endif
 }
 
@@ -139,7 +139,7 @@ double update (scalar * conserved, scalar * updates, double dtmax)
     foreach_dimension() {
       slope.x.gradient = none;
 #if QUADTREE
-      slope.x.prolongation1 = refine_linear;
+      slope.x.prolongation = refine_linear;
 #endif
     }
     slopes = vectors_append (slopes, slope);

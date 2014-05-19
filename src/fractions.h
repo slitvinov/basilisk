@@ -234,7 +234,7 @@ void fractions (struct Fractions p)
   above. */
 
 #if QUADTREE
-  c.refine = c.prolongation1 = fraction_refine;
+  c.refine = c.prolongation = fraction_refine;
 #endif
 
   /**
@@ -313,8 +313,8 @@ void reconstruction (const scalar c, vector n, scalar alpha)
   We do not restrict the normal or the intercept (they are recomputed
   from the volume fraction when needed on the coarse mesh). */
 
-  n.x.refine = n.x.prolongation1 = 
-    n.y.refine = n.y.prolongation1 = injection;
+  n.x.refine = n.x.prolongation = 
+    n.y.refine = n.y.prolongation = injection;
 
   /**
   For $\alpha$ we store the normal field in the `v` attribute (which is
@@ -322,7 +322,7 @@ void reconstruction (const scalar c, vector n, scalar alpha)
   prolongation function. */
 
   alpha.v = n;
-  alpha.refine = alpha.prolongation1 = alpha_refine;
+  alpha.refine = alpha.prolongation = alpha_refine;
 #endif
 
   /**

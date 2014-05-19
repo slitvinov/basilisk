@@ -131,7 +131,7 @@ event defaults (i = 0)
   advance = advance_saint_venant;  
 #if QUADTREE
   for (scalar s in {h,zb,u,eta})
-    s.refine = s.prolongation1 = refine_linear;
+    s.refine = s.prolongation = refine_linear;
   eta.refine  = refine_eta;
   eta.coarsen = coarsen_eta;
 #endif
@@ -197,7 +197,7 @@ double update (scalar * evolving, scalar * updates, double dtmax)
   for (scalar s in {gh, geta, gu}) {
     s.gradient = none;
     #if QUADTREE
-      s.prolongation1 = refine_linear;
+      s.prolongation = refine_linear;
     #endif
   }
   gradients ({h, eta, u}, {gh, geta, gu});

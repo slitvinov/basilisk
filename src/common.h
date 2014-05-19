@@ -144,8 +144,7 @@ static Point last_point;
 typedef struct {
   double (* boundary[nboundary])             (Point, scalar);
   double (* boundary_homogeneous[nboundary]) (Point, scalar);
-  double (* prolongation)                    (Point, scalar);
-  void   (* prolongation1)                   (Point, scalar);
+  void   (* prolongation)                    (Point, scalar);
   void   (* refine)                          (Point, scalar);
   void   (* coarsen)                         (Point, scalar);
   double (* gradient)                        (double, double, double);

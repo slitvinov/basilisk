@@ -99,6 +99,11 @@ struct Adapt {
   scalar * listb; // fields which need BCs (default list)
 };
 
+enum {
+  too_coarse = 1 << user,
+  too_fine   = 1 << (user + 1)
+};
+
 astats adapt_wavelet (struct Adapt p)
 {
   if (p.list == NULL)
@@ -115,33 +120,41 @@ astats adapt_wavelet (struct Adapt p)
   // refinement
   foreach_cell() {
     if (is_leaf (cell)) {
-      if (level < p.maxlevel) {
-	int i = 0, refine = false;
-	for (scalar s in p.slist) {
-	  double w = s.prolongation ?
-	    /* difference between fine value and its prolongation */
-	    s[] - s.prolongation (point, s) :
-	    /* difference between fine value and bilinearly-interpolated
-	       coarse value */
-	    s[] - (9.*coarse(s,0,0) + 
-		   3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
-		   coarse(s,child.x,child.y))/16.;
-	  if (fabs(w) > p.max[i++]) {
-	    refine = true; // error is too large
-	    break; // no need to check other fields
-	  }
-	}
-	if (refine) {
-	  point = refine_cell (point, p.list);
-	  st.nf++;
-	}
+      if (cell.flags & too_coarse) {
+	cell.flags &= ~too_coarse;
+	point = refine_cell (point, p.list);
+	st.nf++;
       }
       continue;
     }
     // !is_leaf (cell)
-    else if (cell.flags & refined)
-      // cell has already been refined, skip its children
-      continue;
+    else {
+      if (cell.flags & refined)
+	// cell has already been refined, skip its children
+	continue;
+      foreach_child()
+	cell.flags &= ~(too_coarse|too_fine);
+      int i = 0;
+      for (scalar s in p.slist) {
+	double max = p.max[i++], sc[4];
+	int c = 0;
+	foreach_child()
+	  sc[c++] = s[];
+	s.prolongation (point, s);
+	c = 0;
+	foreach_child() {
+	  double e = fabs(sc[c] - s[]);
+	  if (e > max)
+	    cell.flags |= too_coarse;
+	  else if (e <= max/1.5)
+	    cell.flags |= too_fine;
+	  s[] = sc[c++];
+	}
+      }
+      // cell is too fine, its children cannot be refined
+      if (level == p.maxlevel - 1)
+	continue;
+    }
   }
 
   // coarsening
@@ -151,46 +164,17 @@ astats adapt_wavelet (struct Adapt p)
       if (is_leaf (cell))
 	continue;
       else if (level == l) {
-	if (cell.flags & refined) {
-	  // cell was refined previously, unset the flag and skip its children
+	if (cell.flags & refined)
+	  // cell was refined previously, unset the flag
 	  cell.flags &= ~refined;
-	  continue;
+	else if (cell.flags & too_fine) {
+	  bool coarsen = true;
+	  foreach_child()
+	    if (!(cell.flags & too_fine))
+	      coarsen = false;
+	  if (coarsen && coarsen_cell (point, listc))
+	    st.nc++;
 	}
-	int i = 0, coarsen = true;
-	for (scalar s in p.slist) {
-	  double error;
-	  if (s.prolongation) {
-	    /* difference between fine value and its prolongation */
-	    error = fabs (s[] - s.prolongation (point, s));
-	    foreach_child() {
-	      double e = fabs(s[] - s.prolongation (point, s));
-	      if (e > error)
-		error = e;
-	    }
-	  }
-	  else {
-	    /* difference between fine value and bilinearly-interpolated
-	       coarse value */
-	    error = fabs (s[] - (9.*coarse(s,0,0) + 
-				 3.*(coarse(s,child.x,0) + 
-				     coarse(s,0,child.y)) + 
-				 coarse(s,child.x,child.y))/16.);
-	    for (int k = 0; k < 2; k++)
-	      for (int l = 0; l < 2; l++) {
-		double e = fabs(fine(s,k,l) - (9.*s[] + 
-					       3.*(s[2*k-1,0] + s[0,2*l-1]) + 
-					       s[2*k-1,2*l-1])/16.);
-		if (e > error)
-		  error = e;
-	      }
-	  }
-	  if (error > p.max[i++]/1.5) {
-	    coarsen = false; // error is too large
-	    break; // no need to check other fields
-	  }
-	}
-	if (coarsen && coarsen_cell (point, listc))
-	  st.nc++;
 	continue;
       }
     }
@@ -275,7 +259,7 @@ static void halo_prolongation (scalar * list, int depth)
   for (int l = 0; l < depth; l++) {
     foreach_halo (prolongation, l)
       for (scalar s in list)
-	s.prolongation1 (point, s);
+	s.prolongation (point, s);
     boundary_iterate (halo_prolongation, list, l + 1, depth);
   }
 }
@@ -335,7 +319,7 @@ Point locate (double xp, double yp)
 static scalar quadtree_init_scalar (scalar s, const char * name)
 {
   s = cartesian_init_scalar (s, name);
-  s.refine = s.prolongation1 = refine_bilinear;
+  s.refine = s.prolongation = refine_bilinear;
   s.coarsen = coarsen_average;
   return s;
 }
