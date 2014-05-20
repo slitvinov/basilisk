@@ -112,6 +112,7 @@ struct Okada {
   double length, width, vU[3], U;
   double R;
   int (* iterate) (void);
+  bool flat;
 };
 
 void okada (struct Okada p)
@@ -135,8 +136,14 @@ void okada (struct Okada p)
   double x0 = p.length/2., y0 = p.width/2.*cos (p.dip*dtr);
   
   foreach() {
-    x = p.R*cos(y*dtr)*dtheta(x, p.x)*dtr;
-    y = p.R*dtheta(y, p.y)*dtr;
+    if (p.flat) {
+      x -= p.x;
+      y -= p.y;
+    }
+    else {
+      x = p.R*cos(y*dtr)*dtheta(x, p.x)*dtr;
+      y = p.R*dtheta(y, p.y)*dtr;
+    }
     double x1 =   cosa*x + sina*y;
     double y1 = - sina*x + cosa*y;
     double oka[3];
