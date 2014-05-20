@@ -201,7 +201,9 @@ vector new_const_vector (const char * name, int i, double * val)
 
 void scalar_clone (scalar a, scalar b)
 {
+  free (a.name);
   _attribute[a] = _attribute[b];
+  a.name = NULL;
 }
 
 scalar * list_clone (scalar * l)
@@ -210,7 +212,6 @@ scalar * list_clone (scalar * l)
   for (scalar s in l) {
     scalar c = new scalar;
     scalar_clone (c, s);
-    c.name = NULL;
     list = list_append (list, c);
   }
   return list;
@@ -221,17 +222,17 @@ void delete (scalar * list)
   if (all == NULL) // everything has already been freed
     return;
 
+  for (scalar f in list) {
+    free (f.name); f.name = NULL;
+  }
+
   if (list == all) {
-    for (scalar f in all) {
-      free (f.name); f.name = NULL;
-    }
     all[0] = -1;
     return;
   }
 
   trash (list);
   for (scalar f in list) {
-    free (f.name); f.name = NULL;
     scalar * s = all;
     for (; *s >= 0 && *s != f; s++);
     if (*s == f)
@@ -244,6 +245,7 @@ void free_solver()
 {
   delete (all);
   free (all); all = NULL;
+  free (Events); Events = NULL;
   free (_attribute); _attribute = NULL;
   free_grid();
 }
@@ -333,14 +335,15 @@ static double noflux (Point point, scalar s)
 
 scalar cartesian_init_scalar (scalar s, const char * name)
 {
+  // keep name
+  char * pname = name ? strdup (name) : s.name;
   // reset all attributes
   _attribute[s] = (const _Attributes){};
+  s.name = pname;
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
   s.gradient = NULL;
-  if (name)
-    s.name = strdup (name);
   foreach_dimension() {
     s.d.x = 0;  // not face
     s.v.x = -1; // not a vector component
