@@ -7,12 +7,13 @@ grep "incl .*/"$src \
     awk -v basilisk=$BASILISK '
             function title(fname) {
               getline <fname
-              if ($1 != "/**")
+              if ($1 != "/**" && $1 != "\"\"\"")
                 return " ";
               while ($1 != "#")
                 getline <fname;
               gsub("# ", "", $0);
               gsub("*/$", "", $0);
+              gsub("\"\"\"$", "", $0);
               return $0;
             }
             {
