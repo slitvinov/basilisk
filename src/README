@@ -68,6 +68,10 @@ $$
 $$
 \nabla\cdot\mathbf{u} = 0
 $$
+* [Ohmic conduction flux of charged species](pnp.h)
+$$
+\partial_tc_i = \nabla \cdot( K_i c_i \nabla \phi)
+$$
 
 # Output functions
 
