@@ -12,7 +12,7 @@
 
 /**
 We assume a fully dissolved binary system with ion $Cp$ and counterion $Cm$
-of valence $z$, $|z|=1$).*/
+of valence $z$, ($|z|=1$). */
 
 scalar phi[];
 scalar Cp[], Cm[];
@@ -21,8 +21,9 @@ int z[2] = {1,-1};
 scalar * sp = {Cp, Cm};
 
 /**
-Ions are repelled by the electrode due it positive volume conductivity
-while counterions are atracted (negative conductivity), */
+Ions are repelled by the electrode due to its positive volume
+conductivity while counterions are atracted (negative
+conductivity). */
 
 #if 1
 const face vector kp[] = {1., 1.};
@@ -31,17 +32,17 @@ vector * K = {kp, km};
 #endif
 
 /**
-On the left it is placed the charged planar electrode set to a constant
-potential $\phi =1$. The concentrations of the positive and negative ions
-depend exponentially on the voltage electrode, /*
+On the left the charged planar electrode is set to a constant
+potential $\phi =1$. The concentrations of the positive and negative
+ions depend exponentially on the voltage electrode. */
 
 phi[left]  = dirichlet(Volt);
 Cp[left]   = dirichlet (exp(-Volt));
 Cm[left]   = dirichlet (exp(Volt));
 
 /**
-On the right it is located the liquid bulk. Then, the electrical potential
-should be zero. Also, the ion concentrations should match the bulk
+In the bulk of the liquid, on the right boundary, the electrical
+potential is zero and the ion concentrations match the bulk
 concentration i.e */
 
 phi[right] = dirichlet (0.);
@@ -49,8 +50,8 @@ Cp[right]  = dirichlet (1.);
 Cm[right]  = dirichlet (1.);
 
 /**
-Initially, we set the ions concentration to their bulk values imposing
-a linear decay of electric potential $phi$ */
+Initially, we set the ion concentrationa to their bulk values together
+with a linear decay of the electric potential $\phi$. */
  
 event init (i = 0)
 {
@@ -76,14 +77,14 @@ event integration (i++) {
 #endif
 
   /**
-  Then, the concentrations the thermal diffusion is taken into account, */
+  Then, the thermal diffusion is taken into account. */
 
   for (scalar s in sp)
     diffusion (s, dt);
 
   /**
   The electric potential $\phi$ has to be re-calculated since the net
-  bulk charge has changed,*/
+  bulk charge has changed. */
 
   scalar rhs[];
   foreach() {
@@ -103,10 +104,20 @@ event result (t = 3.5) {
 /**
 ## Results
 
-After processing by gnuplot (i.e. using `make debye/plot.png` with
-[debye.plot]()) we get
+We compare the numerical results (symbols) with the analytical
+solution (lines).
 
-![Profiles of electric potential and concentrations](debye/plot.png) */
+~~~gnuplot Profiles of electric potential and concentrations
+set xlabel 'x'
+gamma = tanh(0.25)
+fi(x) = 2*log((1+gamma*exp(-sqrt(2)*x))/(1-gamma*exp(-sqrt(2)*x)))
+nplus(x) = exp(-fi(x))
+nminus(x) = exp(fi(x))
+plot 'log' u 1:2 notitle, fi(x) t '{/Symbol f}',\
+     'log' u 1:3 notitle, nplus(x) t 'n+',\
+     'log' u 1:4 notitle, nminus(x) t 'n-' lt 7
+~~~
+*/
 
 int main() {
   N = 32;
