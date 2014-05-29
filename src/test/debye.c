@@ -1,5 +1,35 @@
 /**
-# Gouy-Chapman Debye layer */
+# Gouy-Chapman Debye layer 
+
+The [Debye layer](http://en.wikipedia.org/wiki/Double_layer_%28interfacial%29) 
+is the ionic concentration and potential distribution 
+structure that appears on the surface of a charged electrode 
+in contact with solvents in which are dissolved ionic species. 
+Louis Georges Gouy and David Leonard Chapman at the beginning of the XX century
+proposed a model of the Debye layer resulting of the combined effect 
+of its thermal diffusion and its electrostatic attraction or repulsion. 
+In effect, in a stationary situation and assuming fluid at rest, the 
+Poisson-Nernst-Planck equations are,
+
+$$
+0 = \nabla \cdot (e \omega^i z^i c^i \nabla \phi) + \nabla \cdot 
+(\omega^i k_B T \nabla c^i) \quad \mbox{being} \quad 
+\nabla \cdot (\epsilon \nabla \phi) = \sum_i e c^i
+$$
+
+where $\phi$ is the electric potential and $c^i$ is the number of $i$-ions 
+per volume. $\omega^i$ and $z^i$ are the $i$-ion mobility and valence. 
+$k_B$ is the Boltzmann constant, $e$ is the electron charge, 
+$\epsilon$ the electrical permittivity and $T$ the temperature.
+
+The above equations, written in dimensionless form, reduces in the case of 
+a fully dissolved binary system in a planar geometry to,
+
+$$
+\hat{c}_+ = exp (-\hat{phi}), \, \hat{c}_- = exp (\hat{phi}) 
+\quad \mbox{with} \quad (\hat{phi})_{xx} = 2 \sinh (\hat{phi}).   
+$$
+*/
 
 #include "grid/multigrid.h"
 #include "poisson.h"
@@ -11,8 +41,8 @@
 #define DT 0.01
 
 /**
-We assume a fully dissolved binary system with ion $Cp$ and counterion $Cm$
-of valence $z$, ($|z|=1$). */
+We assume a fully dissolved binary system labelling the positive ion as $Cp$ 
+and the counterion as $Cm$. The valence is one, ($|z|=1$). */
 
 scalar phi[];
 scalar Cp[], Cm[];
@@ -22,7 +52,7 @@ scalar * sp = {Cp, Cm};
 
 /**
 Ions are repelled by the electrode due to its positive volume
-conductivity while counterions are atracted (negative
+conductivity while counterions are attracted (negative
 conductivity). */
 
 #if 1
@@ -50,7 +80,7 @@ Cp[right]  = dirichlet (1.);
 Cm[right]  = dirichlet (1.);
 
 /**
-Initially, we set the ion concentrationa to their bulk values together
+Initially, we set the ion concentration to their bulk values together
 with a linear decay of the electric potential $\phi$. */
  
 event init (i = 0)
