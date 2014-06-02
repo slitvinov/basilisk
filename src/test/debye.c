@@ -27,8 +27,8 @@ The above equations, written in dimensionless form, reduces in the
 case of a fully dissolved binary system in a planar geometry to,
 
 $$
-\hat{c}_+ = exp (-\hat{phi}), \, \hat{c}_- = exp (\hat{phi}) 
-\quad \mbox{with} \quad (\hat{phi})_{xx} = 2 \sinh (\hat{phi}).   
+\hat{c}_+ = exp (-\hat{\phi}), \, \hat{c}_- = exp (\hat{\phi}) 
+\quad \mbox{with} \quad (\hat{\phi})_{xx} = 2 \sinh (\hat{\phi}).   
 $$
 */
 
