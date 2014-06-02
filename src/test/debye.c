@@ -1,14 +1,15 @@
 /**
-# Gouy-Chapman Debye layer 
+# Gouy-Chapman Debye layer
 
-The [Debye layer](http://en.wikipedia.org/wiki/Double_layer_%28interfacial%29) 
-is the ionic concentration and potential distribution 
-structure that appears on the surface of a charged electrode 
-in contact with solvents in which are dissolved ionic species. 
-Louis Georges Gouy and David Leonard Chapman at the beginning of the XX century
-proposed a model of the Debye layer resulting of the combined effect 
-of its thermal diffusion and its electrostatic attraction or repulsion. 
-In effect, in a stationary situation and assuming fluid at rest, the 
+The [Debye
+layer](http://en.wikipedia.org/wiki/Double_layer_%28interfacial%29) is
+the ionic concentration and potential distribution structure that
+appears on the surface of a charged electrode in contact with solvents
+in which are dissolved ionic species.  Louis Georges Gouy and David
+Leonard Chapman at the beginning of the XX century proposed a model of
+the Debye layer resulting from the combined effect of its thermal
+diffusion and its electrostatic attraction or repulsion.  In effect,
+in a stationary situation and assuming fluid at rest, the
 Poisson-Nernst-Planck equations are,
 
 $$
@@ -17,13 +18,13 @@ $$
 \nabla \cdot (\epsilon \nabla \phi) = \sum_i e c^i
 $$
 
-where $\phi$ is the electric potential and $c^i$ is the number of $i$-ions 
-per volume. $\omega^i$ and $z^i$ are the $i$-ion mobility and valence. 
-$k_B$ is the Boltzmann constant, $e$ is the electron charge, 
+where $\phi$ is the electric potential and $c^i$ is the number of
+$i$-ions per volume. $\omega^i$ and $z^i$ are the $i$-ion mobility and
+valence.  $k_B$ is the Boltzmann constant, $e$ is the electron charge,
 $\epsilon$ the electrical permittivity and $T$ the temperature.
 
-The above equations, written in dimensionless form, reduces in the case of 
-a fully dissolved binary system in a planar geometry to,
+The above equations, written in dimensionless form, reduces in the
+case of a fully dissolved binary system in a planar geometry to,
 
 $$
 \hat{c}_+ = exp (-\hat{phi}), \, \hat{c}_- = exp (\hat{phi}) 
