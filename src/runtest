@@ -155,7 +155,7 @@ EOF
     rm -f ssh.log
 
     if test -f fail; then
-	rm -f ../$test.$ext
+	mv -f ../$test.$ext fail.$ext
 	echo
 	echo \[$test.$ext\]
 	cat fail
@@ -213,7 +213,8 @@ if test -f $test.$ext && checksum $test.s $test.$ext; then
     if test -n "$SANDBOX" && $source_modified; then
 	rm -f $test/warn && make $test/plots
     fi
-else
+# check sum for test.s in fail.tst
+elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
     if test -n "$SANDBOX" -a -f $test/pid.$ext; then
 	echo Killing `cat $test/pid.$ext`
 	kill `cat $test/pid.$ext`
@@ -222,7 +223,7 @@ else
     fi
 
     rm -f $test.$ext $test/pass \
-	$test/fail $test/warn $test/plot.png $test/plots
+	$test/fail $test/fail.* $test/warn $test/plot.png $test/plots
     $GENSUM $test.c $test.s > $test.$ext
     expirecache
 
