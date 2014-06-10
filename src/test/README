@@ -108,7 +108,9 @@ the standard wiki syntax for scripts these commands appear as
     ~~~
 
 and are replaced by the corresponding figure when the page is displayed
-in the wiki. Note that the *set output* command is compulsory.
+in the wiki. Note that the *set output* command is optional. If you 
+don't supply a file name, a unique name looking like *_plot1.png* will be
+generated automatically.
 
 To generate the figures from the command line, just do
 
