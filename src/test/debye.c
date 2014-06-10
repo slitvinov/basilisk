@@ -13,13 +13,13 @@ in a stationary situation and assuming fluid at rest, the
 Poisson-Nernst-Planck equations are,
 
 $$
-0 = \nabla \cdot (e \omega^i z^i c^i \nabla \phi) + \nabla \cdot 
-(\omega^i k_B T \nabla c^i) \quad \mbox{being} \quad 
-\nabla \cdot (\epsilon \nabla \phi) = \sum_i e c^i
+0 = \nabla \cdot (e \omega_i z_i c_i \nabla \phi) + \nabla \cdot 
+(\omega_i k_B T \nabla c_i) \quad \mbox{with} \quad 
+\nabla \cdot (\epsilon \nabla \phi) = \sum_i e c_i
 $$
 
-where $\phi$ is the electric potential and $c^i$ is the number of
-$i$-ions per volume. $\omega^i$ and $z^i$ are the $i$-ion mobility and
+where $\phi$ is the electric potential and $c_i$ is the number of
+$i$-ions per volume. $\omega_i$ and $z_i$ are the $i$-ion mobility and
 valence.  $k_B$ is the Boltzmann constant, $e$ is the electron charge,
 $\epsilon$ the electrical permittivity and $T$ the temperature.
 
@@ -67,9 +67,9 @@ On the left the charged planar electrode is set to a constant
 potential $\phi =1$. The concentrations of the positive and negative
 ions depend exponentially on the voltage electrode. */
 
-phi[left]  = dirichlet(Volt);
-Cp[left]   = dirichlet (exp(-Volt));
-Cm[left]   = dirichlet (exp(Volt));
+phi[left] = dirichlet(Volt);
+Cp[left]  = dirichlet (exp(-Volt));
+Cm[left]  = dirichlet (exp(Volt));
 
 /**
 In the bulk of the liquid, on the right boundary, the electrical
