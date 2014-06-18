@@ -79,6 +79,7 @@ $$
 * [Single field interpolated on a regular grid (binary format)](output.h#output_matrix-single-field-interpolated-on-a-regular-grid-binary-format)
 * [Portable PixMap (PPM) image output](output.h#output_ppm-portable-pixmap-ppm-image-output)
 * [Volume-Of-Fluid facets](fractions.h#interface-output)
+* [Gerris simulation format](output.h#output_gfs-gerris-simulation-format)
 * [ESRI ASCII Grid format](output.h#output_grd-esri-ascii-grid-format)
 * [VTK format](vtk.h)
 

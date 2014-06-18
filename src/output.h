@@ -494,3 +494,97 @@ void output_grd (struct OutputGRD p)
 
   fflush (p.fp);
 }
+
+#if QUADTREE
+
+/**
+## *output_gfs()*: Gerris simulation format
+
+The function writes simulation data in the format used in
+[Gerris](http://gfs.sf.net) simulation files. These files can be read
+with GfsView.
+
+The arguments and their default values are:
+
+*fp*
+: a file pointer. Default is stdout.
+
+*list*
+: a list of scalar fields to write. Default is *all*. 
+
+*t*
+: the physical time. Default is zero. */
+
+struct OutputGfs {
+  FILE * fp;
+  scalar * list;
+  double t;
+};
+
+static char * replace_dot (const char * input)
+{
+  char * name = strdup (input), * i = name;
+  while (*i != '\0') {
+    if (*i == '.')
+      *i = '_';
+    i++;
+  }
+  return name;
+}
+
+void output_gfs (struct OutputGfs p)
+{
+  if (p.fp == NULL) p.fp = stdout;
+  if (p.list == NULL) p.list = all;
+
+  fprintf (p.fp, 
+	   "1 0 GfsSimulation GfsBox GfsGEdge { binary = 1"
+	   " x = %g y = %g ",
+	   0.5 + X0/L0, 0.5 + Y0/L0);
+  if (p.list != NULL && p.list[0] != -1) {
+    scalar s = p.list[0];
+    char * name = replace_dot (s.name);
+    fprintf (p.fp, "variables = %s", name);
+    free (name);
+    for (int i = 1; i < list_len(p.list); i++) {
+      scalar s = p.list[i];
+      char * name = replace_dot (s.name);
+      fprintf (p.fp, ",%s", name);
+      free (name);
+    }
+    fputc (' ', p.fp);
+  }
+  fputs ("} {\n", p.fp);
+  if (p.t > 0.)
+    fprintf (p.fp, "  Time { t = %g }\n", p.t);
+  if (L0 != 1.)
+    fprintf (p.fp, "  PhysicalParams { L = %g }\n", L0);
+  fputs ("}\nGfsBox { x = 0 y = 0 z = 0 } {\n", p.fp);
+
+  // see gerris/ftt.c:ftt_cell_write()
+  //     gerris/domain.c:gfs_cell_write()
+  bool root = true;
+  foreach_cell() {
+    unsigned flags = 
+      root ? 0 :
+      child.x == -1 && child.y ==  1 ? 0 :
+      child.x ==  1 && child.y ==  1 ? 1 :
+      child.x == -1 && child.y == -1 ? 2 : 
+      3;
+    root = false;
+    if (is_leaf(cell))
+      flags |= (1 << 4);
+    fwrite (&flags, sizeof (unsigned), 1, p.fp);
+    double a = -1;
+    fwrite (&a, sizeof (double), 1, p.fp);
+    for (scalar s in p.list) {
+      a = s[];
+      fwrite (&a, sizeof (double), 1, p.fp);
+    }
+    if (is_leaf(cell))
+      continue;
+  }
+  fputs ("}\n", p.fp);
+}
+
+#endif // QUADTREE
