@@ -194,13 +194,14 @@ void gradients (scalar * f, vector * g)
   assert (list_len(f) == vectors_len(g));
   foreach() {
     scalar s; vector v;
-    for (s,v in f,g)
+    for (s,v in f,g) {
       if (s.gradient)
 	foreach_dimension()
 	  v.x[] = s.gradient (s[-1,0], s[], s[1,0])/Delta;
       else // centered
 	foreach_dimension()
 	  v.x[] = (s[1,0] - s[-1,0])/(2.*Delta);
+    }
   }
   boundary ((scalar *) g);
 }
