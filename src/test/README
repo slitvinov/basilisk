@@ -18,6 +18,11 @@ Note that only the documented test cases appear in the list below
 * [Merging of two vertices](stream.c)
 * [Merging of two vortices (centered Euler solver)](vortex.c)
 
+## Shallow-water flows
+
+* [Simple Saint-Venant Riemann problem](bore1.c)
+* [Undular bores for the Green-Naghdi equations](bore.c)
+
 ## Volume-Of-Fluid
 
 * [Computation of volume fractions from a levelset function](fractions.c)

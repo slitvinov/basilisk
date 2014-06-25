@@ -12,6 +12,8 @@ slow: nonlinear.tst advection.tst rotation.tst \
 
 # these tests have special depencies/compilation requirements
 
+bore.tst: bore1.tst
+
 explosion.tst: explosion.ctst
 
 laplacian.tst: laplacian.ctst
