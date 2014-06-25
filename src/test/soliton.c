@@ -3,16 +3,12 @@
 
 The [Green-Naghdi](/src/green-naghdi.h) system of equations admits
 solitary wave solutions of the form
-
 $$
-h(\zeta) = h_1 + (h_2 - h_1){\rm sech}^2
-    \left(\frac{\zeta}{2}\sqrt{\frac{3(h_2-h_1)}{h_2h_1^2}}\right)
+h(\zeta) = h_1 + (h_2 - h_1)\mbox{sech}^2\left(\frac{\zeta}{2}\sqrt{\frac{3(h_2-h_1)}{h_2h_1^2}}\right)
 $$
-
 $$
 u(\zeta) = D\left(1-\frac{h_1}{h(\zeta)}\right)
 $$
-
 with $\zeta = x - ct$ and the soliton velocity $c^2=gh_2$. */
 
 #include "grid/multigrid1D.h"
