@@ -191,10 +191,11 @@ double update (scalar * evolving, scalar * updates, double dtmax)
       /**
       #### Left/right state reconstruction
       
-      The gradients computed above are used to reconstruct the left and
-      right states of the primary fields $h$, $\mathbf{u}$, $z_b$. The
-      "interface" topography $z_{lr}$ is reconstructed using the hydrostatic
-      reconstruction of [Audusse et al, 2004](/src/references.bib#audusse2004) */
+      The gradients computed above are used to reconstruct the left
+      and right states of the primary fields $h$, $\mathbf{u}$,
+      $z_b$. The "interface" topography $z_{lr}$ is reconstructed
+      using the hydrostatic reconstruction of [Audusse et al,
+      2004](/src/references.bib#audusse2004) */
       
       double dx = Delta/2.;
       double zi = eta[] - hi;
@@ -214,7 +215,8 @@ double update (scalar * evolving, scalar * updates, double dtmax)
       /**
       #### Riemann solver
       
-      We can now call one of the approximate Riemann solvers to get the fluxes. */
+      We can now call one of the approximate Riemann solvers to get
+      the fluxes. */
 
       double fh, fu, fv;
       kurganov (hm, hp, um, up, Delta, &fh, &fu, &dtmax);
