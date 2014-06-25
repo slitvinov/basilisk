@@ -22,6 +22,7 @@ Note that only the documented test cases appear in the list below
 
 * [Simple Saint-Venant Riemann problem](bore1.c)
 * [Undular bores for the Green-Naghdi equations](bore.c)
+* [Green-Naghdi soliton](soliton.c)
 
 ## Volume-Of-Fluid
 
