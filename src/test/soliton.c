@@ -3,21 +3,24 @@
 
 The [Green-Naghdi](/src/green-naghdi.h) system of equations admits
 solitary wave solutions of the form
+
 $$
 h(\zeta) = h_1 + (h_2 - h_1){\rm sech}^2
     \left(\frac{\zeta}{2}\sqrt{\frac{3(h_2-h_1)}{h_2h_1^2}}\right)
 $$
+
 $$
 u(\zeta) = D\left(1-\frac{h_1}{h(\zeta)}\right)
 $$
+
 with $\zeta = x - ct$ and the soliton velocity $c^2=gh_2$. */
 
 #include "grid/multigrid1D.h"
 #include "green-naghdi.h"
 
 /**
-The domain is 700 metres long, the acceleration of gravity is $10$
-m/s$^{-2}$. We compute the solution in one dimension for a number of
+The domain is 700 metres long, the acceleration of gravity is $10
+m/s^{-2}$. We compute the solution in one dimension for a number of
 grid points varying between 128 and 1024. */
 
 int main()
@@ -31,7 +34,7 @@ int main()
 
 /**
 We follow [Le Métayer et al, 2010](/src/references.bib#lemetayer2010)
-(section 6.1.2) for $h_1$ and $h_2$. */
+(section 6.1.2) for the values of $h_1$ and $h_2$. */
 
 double h1 = 10, h2 = 12.1;
 
@@ -42,16 +45,16 @@ double sech2 (double x) {
 
 double soliton (double x, double t)
 {
-  double D = sqrt(G*h2), psi = x - D*t;
+  double c = sqrt(G*h2), psi = x - c*t;
   return h1 + (h2 - h1)*sech2 (psi/2.*sqrt(3.*(h2 - h1)/(h2*h1*h1)));
 }
 
 event init (i = 0)
 {
-  double D = sqrt(G*h2);
+  double c = sqrt(G*h2);
   foreach() {
     h[] = soliton (x, t);
-    u[] = D*(1. - h1/h[]);
+    u[] = c*(1. - h1/h[]);
   }
 }
 
@@ -96,4 +99,5 @@ set grid
 fit a*x+b 'log' u (log($1)):(log($2)) via a,b
 plot [100:1250]'log' u 1:($2) pt 7 t '', \
      exp(b)*x**a t sprintf("%.0f/N^{%4.2f}", exp(b), -a)
-~~~ */
+~~~
+*/

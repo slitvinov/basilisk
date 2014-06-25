@@ -12,7 +12,7 @@ Saint-Venant equations). */
 
 /**
 The domain is 600 metres long, centered on the origin. The
-acceleration of gravity is set to $10$ m/s$^{-2}$. The problem is
+acceleration of gravity is set to $10 m/s^{-2}$. The problem is
 solved in one dimension with 2048 grid points. */
 
 int main()
@@ -61,4 +61,5 @@ plot '../bore1/out' w l t 'Saint-Venant', 'out' w l t 'Green-Naghdi'
 set xlabel 'x'
 set ylabel 'u'
 plot '../bore1/out' u 1:3 w l t 'Saint-Venant', 'out' u 1:3 w l t 'Green-Naghdi'
-~~~ */
+~~~
+*/

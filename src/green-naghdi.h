@@ -17,11 +17,11 @@ This solver is built following the ideas of [Le Métayer et al,
 
 Using the non-local change of variable
 $$
-K = $\left( 1 +\mathcal{T} \right) u$
+K = \left( 1 +\mathcal{T} \right) u
 $$
 with the operator $\mathcal{T}$ defined as
 $$
-\mathcal{T}w = $- \frac{1}{3 h} \nabla \left( h^3 \nabla\cdot w \right)$
+\mathcal{T}w = - \frac{1}{3 h} \nabla \left( h^3 \nabla\cdot w \right)
 $$
 the Green-Naghdi system of equations can be written (in one dimension)
 $$
@@ -34,10 +34,9 @@ with
 $$
 \alpha = -\frac{2}{3}h^3(\partial_xu)^2
 $$
-This system can be solved using the solver for systems of conservation laws.
-
-The operator $\mathcal{T}$ can be inverted (to recover $u$ from $K$)
-with the Poisson solver. */
+This system can be solved using the solver for systems of conservation
+laws, and the operator $\mathcal{T}$ can be inverted with the Poisson
+solver (to recover $u$ from $K$). */
 
 #include "conservation.h"
 #include "poisson.h"
@@ -45,10 +44,8 @@ with the Poisson solver. */
 /**
 The primary variables are the fluid depth $h$ and the velocity $u$. We
 need to declare $hK$ and $\alpha$ as conserved variables so that they
-are accessible when computing fluxes. 
-
-The Poisson solver statistics are stored in *mgu*.
-*/
+are accessible when computing fluxes. The Poisson solver statistics
+are stored in *mgu*. */
 
 scalar u[], h[], hK[], alpha[];
 scalar * scalars = {h, hK, u, alpha};
@@ -60,9 +57,7 @@ double G = 1.;
 /**
 The fluxes for the conservative variables $h$ and $hK$ are computed as
 functions of the reconstructed values of $h$, $hK$, $u$ and
-$\alpha$. 
-
-The fluxes for $u$ and $\alpha$ are set to zero. */
+$\alpha$. The fluxes for $u$ and $\alpha$ are set to zero. */
 
 void flux (const double * s, double * f, double e[2])
 {
@@ -88,14 +83,13 @@ static void u_from_hK (scalar u, scalar hK, scalar h, scalar alpha)
   
   /**
   Knowing $h$ and $hK$, we can compute the value of $u$ by inverting
-  the operator $\mathcal{T}$. 
-  
-  In one dimension, we rearrange the terms to get
+  the operator $\mathcal{T}$. In one dimension, we rearrange the terms
+  to obtain
   $$
   \frac{\partial}{\partial x}
   \left(- \frac{h^3}{3}\frac{\partial u}{\partial x}\right) + hu = hK
   $$
-  This is a Poisson-Helmholtz equation wich can be solved with the
+  This is a Poisson-Helmholtz equation which can be solved with the
   [generic Poisson
   solver](poisson.h#application-to-the-poissonhelmholtz-equation). */
 
@@ -121,14 +115,11 @@ static void u_from_hK (scalar u, scalar hK, scalar h, scalar alpha)
 /**
 ## Time update
 
-The default update function of the predictor-corrector scheme computed
+The default update function of the predictor-corrector scheme computes
 the new values by simply adding the computed conservative fluxes to
-the current values.  
-
-We also need to update the values of $u$ and $\alpha$ (using the
-function above).
-
-To do this, we overload the default update function. */
+the current values. We also need to update the values of $u$ and
+$\alpha$ (using the function above). To do this, we overload the
+default update function. */
 
 static void advance_green_naghdi (scalar * output, scalar * input, 
 				  scalar * updates, double dt)
@@ -149,9 +140,8 @@ static void advance_green_naghdi (scalar * output, scalar * input,
   u_from_hK (uo, hKo, ho, alphao);
 }
 
-event defaults (i = 0) {
+event defaults (i = 0)
   advance = advance_green_naghdi;
-}
 
 /**
 ## Initial conditions
