@@ -32,13 +32,13 @@ event init (i = 0)
 {
   foreach() {
     h[] = x < 0. ? 1.8 : 1.;
-    u[] = 0.;
+    u.x[] = 0.;
   }
 }
 
 event output (t = 48) {
   foreach()
-    fprintf (stdout, "%g %g %g\n", x, h[], u[]);
+    fprintf (stdout, "%g %g %g\n", x, h[], u.x[]);
   fprintf (stdout, "\n");
 }
 

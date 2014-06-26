@@ -4,7 +4,8 @@
 The [Green-Naghdi](/src/green-naghdi.h) system of equations admits
 solitary wave solutions of the form
 $$
-h(\zeta) = h_1 + (h_2 - h_1)\mbox{sech}^2\left(\frac{\zeta}{2}\sqrt{\frac{3(h_2-h_1)}{h_2h_1^2}}\right)
+h(\zeta) = h_1 + (h_2 - h_1)\mbox{sech}^2
+    \left(\frac{\zeta}{2}\sqrt{\frac{3(h_2-h_1)}{h_2h_1^2}}\right)
 $$
 $$
 u(\zeta) = D\left(1-\frac{h_1}{h(\zeta)}\right)
@@ -50,7 +51,7 @@ event init (i = 0)
   double c = sqrt(G*h2);
   foreach() {
     h[] = soliton (x, t);
-    u[] = c*(1. - h1/h[]);
+    u.x[] = c*(1. - h1/h[]);
   }
 }
 
@@ -60,7 +61,7 @@ We output the profiles and reference solution at regular intervals. */
 event output (t = {0,7.3,14.6,21.9,29.2}) {
   if (N == 256) {
     foreach()
-      fprintf (stdout, "%g %g %g %g\n", x, h[], u[], soliton (x, t));
+      fprintf (stdout, "%g %g %g %g\n", x, h[], u.x[], soliton (x, t));
     fprintf (stdout, "\n");
   }
 }
@@ -92,7 +93,7 @@ set xlabel 'N'
 set ylabel 'max|e|/a'
 set xtics 128,2,1024
 set grid
-fit a*x+b 'log' u (log($1)):(log($2)) via a,b
+fit [5:] a*x+b 'log' u (log($1)):(log($2)) via a,b
 plot [100:1250]'log' u 1:($2) pt 7 t '', \
      exp(b)*x**a t sprintf("%.0f/N^{%4.2f}", exp(b), -a)
 ~~~
