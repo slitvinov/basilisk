@@ -147,6 +147,19 @@ event init (i = 0)
 }
 
 /**
+Optional source terms can be added by overloading the *sources* function
+pointer. */
+
+static void no_sources (scalar * current, scalar * updates)
+{
+  foreach()
+    for (scalar s in updates)
+      s[] = 0.;
+}
+
+void (* sources) (scalar * current, scalar * updates) = no_sources;
+
+/**
 ### Computing fluxes
 
 Various approximate Riemann solvers are defined in [riemann.h](). */
@@ -263,11 +276,12 @@ double update (scalar * evolving, scalar * updates, double dtmax)
   
   scalar dh = updates[0];
   vector dhu = { updates[1], updates[2] };
-  
+
+  sources (evolving, updates);
   foreach() {
-    dh[] = (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/Delta;
+    dh[] += (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/Delta;
     foreach_dimension()
-      dhu.x[] = (Fq.x.x[] + Fq.x.y[] - S.x[1,0] - Fq.x.y[0,1])/Delta;
+      dhu.x[] += (Fq.x.x[] + Fq.x.y[] - S.x[1,0] - Fq.x.y[0,1])/Delta;
   }
 
   return dtmax;
