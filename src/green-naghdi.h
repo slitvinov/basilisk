@@ -17,8 +17,8 @@ of the [Saint-Venant solver](saint-venant.h). Following [Bonneton et
 al, 2011](/src/references.bib#bonneton2011), this source term can be
 written in one dimension
 $$
-\[ \partial_t \left( hu \right) + \ldots = h \left( \frac{g}{\alpha}
-   \partial_x \eta - D \right) \]
+\partial_t \left( hu \right) + \ldots = h \left( \frac{g}{\alpha}
+   \partial_x \eta - D \right)
 $$
 where $D$ verifies
 $$
