@@ -3,7 +3,7 @@
 
 The Green-Naghdi equations (also known as the Serre or fully nonlinear
 Boussinesq equations) can be seen as an extension of the [Saint-Venant
-equations](saint-venant.h) to the next order in term of the
+equations](saint-venant.h) to the next order $O(\mu^2)$ in term of the
 *shallowness parameter*
 $$
 \mu = \frac{h_0^2}{L^2}
@@ -15,10 +15,10 @@ contrast to the Saint-Venant equations the Green-Naghdi equations have
 The solver is built by adding a source term to the momentum equation
 of the [Saint-Venant solver](saint-venant.h). Following [Bonneton et
 al, 2011](/src/references.bib#bonneton2011), this source term can be
-written in one dimension
+written
 $$
 \partial_t \left( hu \right) + \ldots = h \left( \frac{g}{\alpha}
-   \partial_x \eta - D \right)
+   \nabla \eta - D \right)
 $$
 where $D$ verifies
 $$
@@ -26,9 +26,12 @@ $$
 $$
 and
 $$
-b = h \left( \frac{g}{\alpha} \partial_x \eta + 2 h \partial_x h \left(
-\partial_x u \right)^2 + \frac{4}{3} h^2 \partial_x u \partial_x^2 u \right)
+b = \left[ \frac{g}{\alpha} \nabla \eta +\mathcal{Q}_1 \left( u \right)
+\right]
 $$
+With $\mathcal{T}$ a linear operator to be defined below, as well as
+$\mathcal{Q}_1 \left( u \right)$.
+
 This linear system can be inverted with the multigrid Poisson
 solver. We declare *D* as a global variable so that it can be re-used
 as initial guess for the Poisson solution. The solver statistics will
@@ -39,6 +42,33 @@ be stored in *mgD*. */
 
 scalar D[];
 mgstats mgD;
+
+/**
+We first define some useful macros, following the notations in
+[Bonneton et al, 2011](/src/references.bib#bonneton2011).
+
+Simple centered-difference approximations of the first and second
+derivatives of a field. */
+
+#define dx(s)  ((s[1,0] - s[-1,0])/(2.*Delta))
+#define d2x(s) ((s[1,0] + s[-1,0] - 2.*s[])/sq(Delta))
+
+/**
+The definitions of the ${\mathcal{R}_1$ and ${\mathcal{R}_2$ operators
+$$
+\begin{array}{lll}
+  \mathcal{R}_1 \left[ h, z_b \right] w & = & - \frac{1}{3 h} \nabla \left(
+  h^3 w \right) - \frac{h}{2} w \nabla z_b\\
+  & = & - h [ \frac{h^{}}{3} \nabla w + w \left( \nabla h + \frac{1}{2}
+  \nabla z_b \right)]\\
+  \mathcal{R}_2 \left[ h, z_b \right] w & = & \frac{1}{2 h} \nabla \left( h^2
+  w \right) + w \nabla z_b\\
+  & = & \frac{h}{2} \nabla w + w \nabla \left( z_b + h \right)
+\end{array}
+$$ */
+
+#define R1(h,zb,w) (-h[]*(h[]/3.*dx(w) + w[]*(dx(h) + dx(zb)/2.)))
+#define R2(h,zb,w) (h[]/2.*dx(w) + w[]*(dx(zb) + dx(h)))
 
 /**
 To add the source term to the Saint-Venant system we overload the
@@ -53,25 +83,55 @@ static void green_naghdi (scalar * current, scalar * updates)
   double alpha = 1.;
 
   /**
-  We first compute the right-hand-side $b$. */
+  We first compute the right-hand-side $b$. The general form for the
+  $\mathcal{Q}_1$ operator is (eq. (9) of Bonneton et al, 2011).
+  $$
+  \mathcal{Q}_1 \left[ h, z_b \right] \left( V \right) = -
+  2\mathcal{R}_1 \left( \partial_1 V \cdot \partial_2 V^{\perp} + \left(
+  \nabla \cdot V \right)^2 \right) +\mathcal{R}_2 \left( V \cdot \left(
+  V \cdot \nabla \right) \nabla z_b \right)
+  $$
+  In one-dimension, this gives
+  $$
+  \mathcal{Q}_1 \left[ h, z_b \right](u) = - 2\mathcal{R}_1(c) +\mathcal{R}_2(d)
+  $$
+  with $c = (\partial_xu_x)^2$ and $d = u_x^2\partial^2_xz_b$.
+  */
 
-  scalar b[];
+  scalar b[], c[], d[], lambda[];
   foreach() {
-    double dxu = (u.x[1,0] - u.x[-1,0])/(2.*Delta);
-    b[] = h[]*(G/alpha*(eta[1,0] - eta[-1,0])/2. +
-	       h[]*(h[1,0] - h[-1,0])*sq(dxu) +
-	       4./3.*sq(h[])*dxu*(u.x[1,0] + u.x[-1,0] - 2.*u.x[])/Delta)/Delta;
+    c[] = sq(dx(u.x));
+    d[] = sq(u.x[])*d2x(zb);
+  }
+  boundary ({c,d});
+
+  /**
+  The general form for $\mathcal{T}$ is
+  $$
+  \mathcal{T} \left[ h, z_b \right] w & = & \mathcal{R}_1 \left[ h, z_b
+  \right] \left( \nabla \cdot w \right) +\mathcal{R}_2 \left[ h, z_b \right]
+  \left( \nabla z_b \cdot w \right)
+  $$
+  which gives in one dimension the Poisson-Helmholtz problem
+  $$
+  - \partial_x \left( \alpha \frac{h^3}{3} \partial_x D \right) + h [ \alpha
+  \left( \partial_x \eta \partial_x z_b + \frac{h}{2} \partial^2_x z_b
+  \right) + 1] D = \partial_x \left( \beta \partial_x D \right) + hD = b
+  $$
+  We can now compute $b$ and $\lambda$. We also make sure that
+  $\lambda$ is non-zero by setting a minimal value for $h$ (*dry* is a
+  small number defined in the Saint-Venant solver) so that the system
+  is invertible even in dry areas. */
+
+  foreach() {
+    double dxzb = dx(zb), dxeta = dxzb + dx(h);
+    b[] = h[]*(G/alpha*dxeta - 2.*R1(h,zb,c) + R2(h,zb,d));
+    lambda[] = max(h[],dry)*(alpha*(dxeta*dxzb + h[]/2.*d2x(zb)) + 1.);
   }
 
   /**
-  The equation for $D$ can be rewritten (using the definition of
-  $\mathcal{T}$)
-  $$
-  - \partial_x \left( \alpha \frac{h^3}{3} \partial_x D \right) + hD = 
-  \partial_x \left( \beta \partial_x D \right) + hD = b
-  $$
-  This is a Poisson-Helmholtz problem which we solve with the
-  multigrid solver. */
+  Finally we solve the Poisson-Helmholtz problem with the multigrid
+  solver. */
 
   face vector beta[];
   foreach_face() {
@@ -79,10 +139,10 @@ static void green_naghdi (scalar * current, scalar * updates)
     beta.x[] = - alpha*hf*hf*hf/3.;
   }
   boundary_normal ({beta});
-  mgD = poisson (D, b, beta, h);
+  mgD = poisson (D, b, beta, lambda);
 
   /**
-  We can then compute the updates for $h$ (0) and $hu$. Note that we
+  We can then compute the updates for $h$ (zero) and $hu$. Note that we
   need to be careful here as *current* and *updates* can be identical
   i.e. *h* and *dh*, *u* and *dhu* can be identical. */
 
@@ -90,10 +150,24 @@ static void green_naghdi (scalar * current, scalar * updates)
   vector dhu = { updates[1], updates[2] };
 
   foreach() {
-    dhu.x[] = h[]*(G/alpha*(eta[1,0] - eta[-1,0])/(2.*Delta) - D[]);
+
+    /**
+    We only apply the Green-Naghdi source term when the slope of the
+    free surface is smaller than one. The idea is to turn off
+    dispersion in areas where the wave is "breaking" (i.e. hydraulic
+    jumps). */
+
+    if (fabs(dx(eta)) < 1.)
+      dhu.x[] = h[]*(G/alpha*dx(eta) - D[]);
+    else
+      dhu.x[] = 0.;
     dh[] = dhu.y[] = 0.;
   }
 }
+
+/**
+In the default setup, we replace the default source terms with our
+function. */
 
 event defaults (i = 0) {
   sources = green_naghdi;
