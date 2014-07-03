@@ -1,5 +1,5 @@
 # the default CFLAGS are set in $(BASILISK)/config
-CFLAGS += -g -O2
+CFLAGS += -O2
 
 all: check slow
 
@@ -11,6 +11,14 @@ slow: nonlinear.tst advection.tst rotation.tst \
 	bump2D.tst hump.tst drybump2D.tst ponds.tst conical.tst
 
 # these tests have special depencies/compilation requirements
+
+seawallsv.c: seawall.c
+	ln -s seawall.c seawallsv.c 
+
+seawallsv.tst: seawallsv.s
+	@CFLAGS="$(CFLAGS) -DSAINT_VENANT=1" $(BASILISK)/runtest seawallsv.tst
+
+seawall.tst: seawallsv.tst
 
 bore.tst: bore1.tst
 
