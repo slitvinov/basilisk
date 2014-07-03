@@ -7,16 +7,6 @@ BEGIN { nplots = 0 }
 	gnuplot = 0;
 }
 
-/^[ \t]*set[ \t]+output/ {
-    if (gnuplot)
-	output = 1;
-}
-
-/^[ \t]*(plot|splot)/ {
-    if (gnuplot && !output)
-	print "set output '_plot" nplots++ ".png'";
-}
-
 {
     if (gnuplot)
 	print $0;
@@ -26,5 +16,5 @@ BEGIN { nplots = 0 }
 
 /^[ \t]*~~~gnuplot/ {
     gnuplot = 1;
-    output = 0;
+    print "set output '_plot" nplots++ ".png'";
 }
