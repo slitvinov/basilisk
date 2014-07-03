@@ -83,7 +83,7 @@ event timeseries (i++; t <= 12) {
   /**
   We also add a quadratic bottom friction term of the form
   $$
-  \partial_tu.x = - 10^{-2}|\mathbf{u}|u.x
+  \partial_tu_x = - 10^{-2}|\mathbf{u}|u_x/h
   $$ */
   
   foreach() {
@@ -94,7 +94,7 @@ event timeseries (i++; t <= 12) {
   
   /**
   The coordinates of the various gauges are given in the legend of
-  Figure 8 of Hsiao amd Lin. */
+  Figure 8 of Hsiao and Lin. */
   
   static FILE * fp0 = fopen ("g0", "w");
   fprintf (fp0, "%g %g\n", t, interpolate (eta, 5.9, 0));
@@ -152,14 +152,15 @@ plot [2:12]'../wg40' pt 7 ps 0.7 t 'WG40', \
            'g40' w l lt 3 lw 2 t ''
 unset multiplot
 ~~~
+
 The agreement is very satisfactory for this difficult problem and can
 be compared with the 2D Navier-Stokes VOF simulations of Hsiao and Lin
 (Figure 8 left column), as well as with the results of [Lannes and
-Marche, 2014](/src/references.bib#lannes2014). Dispersive effects are
-particularly clear for gauge 3 after 6 seconds and are well reproduced
-by the model.
+Marche, 2014](/src/references.bib#lannes2014) (Figure 10). Dispersive
+effects are particularly clear for gauge 3 after 6 seconds and are
+well reproduced by the model.
 
-The results for the Saint-Venant solver are the thin magental lines.
+The results for the Saint-Venant solver are the thin magenta lines.
 
 We also output wave profiles at times corresponding to those of Figure
 2 of Hsiao and Lin. */
@@ -211,8 +212,9 @@ plot [10.2:11.2]'../seawallsv/p-3.71' u 1:($2+$4) w l lc -1 lw 2, \
 
 unset multiplot
 ~~~
+
 The results are displayed both for the Green-Naghdi solver (left
 column) and for the Saint-Venant solver (right column).  The
 Green-Naghdi results are again remarkably similar to the experimental
-snapshots of Hsiao and Lin (Figure 2) given the complexity of the wave
+snapshots of Hsiao and Lin (Figure 2) despite the complexity of the wave
 breaking process. */

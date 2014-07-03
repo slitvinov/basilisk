@@ -54,13 +54,13 @@ derivatives of a field. */
 #define d2x(s) ((s[1,0] + s[-1,0] - 2.*s[])/sq(Delta))
 
 /**
-The definitions of the ${\mathcal{R}_1$ and ${\mathcal{R}_2$ operators
+The definitions of the $\mathcal{R}_1$ and $\mathcal{R}_2$ operators
 $$
 \begin{array}{lll}
   \mathcal{R}_1 \left[ h, z_b \right] w & = & - \frac{1}{3 h} \nabla \left(
   h^3 w \right) - \frac{h}{2} w \nabla z_b\\
-  & = & - h [ \frac{h^{}}{3} \nabla w + w \left( \nabla h + \frac{1}{2}
-  \nabla z_b \right)]\\
+  & = & - h \left[ \frac{h^{}}{3} \nabla w + w \left( \nabla h + \frac{1}{2}
+  \nabla z_b \right)\right]\\
   \mathcal{R}_2 \left[ h, z_b \right] w & = & \frac{1}{2 h} \nabla \left( h^2
   w \right) + w \nabla z_b\\
   & = & \frac{h}{2} \nabla w + w \nabla \left( z_b + h \right)
@@ -108,15 +108,16 @@ static void green_naghdi (scalar * current, scalar * updates)
   /**
   The general form for $\mathcal{T}$ is
   $$
-  \mathcal{T} \left[ h, z_b \right] w & = & \mathcal{R}_1 \left[ h, z_b
+  \mathcal{T} \left[ h, z_b \right] w = \mathcal{R}_1 \left[ h, z_b
   \right] \left( \nabla \cdot w \right) +\mathcal{R}_2 \left[ h, z_b \right]
   \left( \nabla z_b \cdot w \right)
   $$
   which gives in one dimension the Poisson-Helmholtz problem
   $$
-  - \partial_x \left( \alpha \frac{h^3}{3} \partial_x D \right) + h [ \alpha
-  \left( \partial_x \eta \partial_x z_b + \frac{h}{2} \partial^2_x z_b
-  \right) + 1] D = \partial_x \left( \beta \partial_x D \right) + hD = b
+  - \partial_x \left( \alpha \frac{h^3}{3} \partial_x D \right) + h
+  \left[ \alpha \left( \partial_x \eta \partial_x z_b + \frac{h}{2}
+  \partial^2_x z_b \right) + 1\right] D = \partial_x \left( \beta
+  \partial_x D \right) + \lambda D = b
   $$
   We can now compute $b$ and $\lambda$. We also make sure that
   $\lambda$ is non-zero by setting a minimal value for $h$ (*dry* is a
