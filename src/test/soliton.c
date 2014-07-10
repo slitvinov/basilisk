@@ -4,21 +4,21 @@
 The [Green-Naghdi](/src/green-naghdi.h) system of equations admits
 solitary wave solutions of the form
 $$
-h(\zeta) = h_1 + (h_2 - h_1)\mbox{sech}^2
-    \left(\frac{\zeta}{2}\sqrt{\frac{3(h_2-h_1)}{h_2h_1^2}}\right)
+\eta(\psi) = ah_0\mbox{sech}^2\left(\psi\frac{\sqrt{3ah_0}}
+ {2h_0\sqrt{h_0(1+a)}}\right)
 $$
 $$
-u(\zeta) = D\left(1-\frac{h_1}{h(\zeta)}\right)
+u(\psi) = \frac{c\eta}{h_0+\eta}
 $$
-with $\zeta = x - ct$ and the soliton velocity $c^2=gh_2$. */
+with $\psi = x - ct$ and the soliton velocity $c^2=g(1+a)h_0$. */
 
 #include "grid/multigrid1D.h"
 #include "green-naghdi.h"
 
 /**
-The domain is 700 metres long, the acceleration of gravity is $10
-m/s^{-2}$. We compute the solution in one dimension for a number of
-grid points varying between 128 and 1024. */
+The domain is 700 metres long, the acceleration of gravity is 10
+m/s^2^. We compute the solution in one dimension for a number of grid
+points varying between 128 and 1024. */
 
 int main()
 {
@@ -31,9 +31,9 @@ int main()
 
 /**
 We follow [Le Métayer et al, 2010](/src/references.bib#lemetayer2010)
-(section 6.1.2) for the values of $h_1$ and $h_2$. */
+(section 6.1.2) for the values of $h_0$ and $a$. */
 
-double h1 = 10, h2 = 12.1;
+double h0 = 10, a = 0.21;
 
 double sech2 (double x) {
   double a = 2./(exp(x) + exp(-x));
@@ -42,16 +42,18 @@ double sech2 (double x) {
 
 double soliton (double x, double t)
 {
-  double c = sqrt(G*h2), psi = x - c*t;
-  return h1 + (h2 - h1)*sech2 (psi/2.*sqrt(3.*(h2 - h1)/(h2*h1*h1)));
+  double c = sqrt(G*(1. + a)*h0), psi = x - c*t;
+  double k = sqrt(3.*a*h0)/(2.*h0*sqrt(h0*(1. + a)));
+  return a*h0*sech2 (k*psi);
 }
 
 event init (i = 0)
 {
-  double c = sqrt(G*h2);
+  double c = sqrt(G*(1. + a)*h0);
   foreach() {
-    h[] = soliton (x, t);
-    u.x[] = c*(1. - h1/h[]);
+    double eta = soliton (x, t);
+    h[] = h0 + eta;
+    u.x[] = c*eta/(h0 + eta);
   }
 }
 
@@ -61,7 +63,7 @@ We output the profiles and reference solution at regular intervals. */
 event output (t = {0,7.3,14.6,21.9,29.2}) {
   if (N == 256) {
     foreach()
-      fprintf (stdout, "%g %g %g %g\n", x, h[], u.x[], soliton (x, t));
+      fprintf (stdout, "%g %g %g %g\n", x, h[] - h0, u.x[], soliton (x, t));
     fprintf (stdout, "\n");
   }
 }
@@ -73,8 +75,8 @@ at $t = 29.2$. */
 event error (t = end) {
   scalar e[];
   foreach()
-    e[] = h[] - soliton (x, t);
-  fprintf (stderr, "%d %g\n", N, normf(e).max/(h2 - h1));
+    e[] = h[] - h0 - soliton (x, t);
+  fprintf (stderr, "%d %g\n", N, normf(e).max/(a*h0));
 }
 
 /**
