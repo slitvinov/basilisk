@@ -101,8 +101,12 @@ Point refine_cell (Point point, scalar * list)
 #if TWO_ONE
   /* refine neighborhood if required */
   if (level > 0)
-    for (int k = 0; k != 2*child.x; k += child.x)
+    for (int k = 0; k != 2*child.x; k += child.x) {
+#if dimension == 1
+      int l = 0;
+#else
       for (int l = 0; l != 2*child.y; l += child.y)
+#endif
 	if (aparent(k,l).flags & leaf) {
 	  Point p = point;
 	  /* fixme: this should be made
@@ -114,6 +118,7 @@ Point refine_cell (Point point, scalar * list)
 	  assert (p.m == point.m);
 	  aparent(k,l).flags |= refined;
 	}
+    }
 #endif
 
   /* refine */
@@ -128,7 +133,8 @@ Point refine_cell (Point point, scalar * list)
   alloc_children (&point);
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
-      assert(!(child(k,l).flags & active));
+      if (dimension == 2)
+	assert(!(child(k,l).flags & active));
       child(k,l).flags |= (active | leaf);
       /* update neighborhood */
       for (int o = -GHOSTS; o <= GHOSTS; o++)
@@ -408,7 +414,7 @@ static void halo_prolongation (scalar * list, int depth)
       if (s.gradient) { // linear interpolation (e.g. with limiting)
 	double sc = coarse(s,0,0);
 	s[] = sc;
-	foreach_dimension()
+       	foreach_dimension()
 	  s[] += s.gradient (coarse(s,-1,0), sc, coarse(s,1,0))*child.x/4.;
       }
       else if (s.prolongation) // variable-specific prolongation (e.g. VOF)
