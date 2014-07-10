@@ -17,16 +17,16 @@ of the [Saint-Venant solver](saint-venant.h). Following [Bonneton et
 al, 2011](/src/references.bib#bonneton2011), this source term can be
 written
 $$
-\partial_t \left( hu \right) + \ldots = h \left( \frac{g}{\alpha}
+\partial_t \left( hu \right) + \ldots = h \left( \frac{g}{\alpha_d}
    \nabla \eta - D \right)
 $$
 where $D$ verifies
 $$
-\alpha h\mathcal{T} \left( D \right) + hD = b
+\alpha_d h\mathcal{T} \left( D \right) + hD = b
 $$
 and
 $$
-b = \left[ \frac{g}{\alpha} \nabla \eta +\mathcal{Q}_1 \left( u \right)
+b = \left[ \frac{g}{\alpha_d} \nabla \eta +\mathcal{Q}_1 \left( u \right)
 \right]
 $$
 With $\mathcal{T}$ a linear operator to be defined below, as well as
@@ -35,13 +35,17 @@ $\mathcal{Q}_1 \left( u \right)$.
 This linear system can be inverted with the multigrid Poisson
 solver. We declare *D* as a global variable so that it can be re-used
 as initial guess for the Poisson solution. The solver statistics will
-be stored in *mgD*. */
+be stored in *mgD*. The *breaking* parameter defines the slope above
+which dispersive terms are turned off. The $\alpha_d$ parameter
+controls the optimisation of the dispersion relation (see [Bonneton et
+al, 2011](/src/references.bib#bonneton2011)). */
 
 #include "saint-venant.h"
 #include "poisson.h"
 
-scalar D[];
+vector D[];
 mgstats mgD;
+double breaking = 1., alpha_d = 1.153;
 
 /**
 We first define some useful macros, following the notations in
@@ -51,7 +55,10 @@ Simple centered-difference approximations of the first and second
 derivatives of a field. */
 
 #define dx(s)  ((s[1,0] - s[-1,0])/(2.*Delta))
+#define dy(s)  ((s[0,1] - s[0,-1])/(2.*Delta))
 #define d2x(s) ((s[1,0] + s[-1,0] - 2.*s[])/sq(Delta))
+#define d2y(s) ((s[0,1] + s[0,-1] - 2.*s[])/sq(Delta))
+#define d2xy(s) ((s[1,1] - s[1,-1] - s[-1,1] + s[-1,-1])/sq(2.*Delta))
 
 /**
 The definitions of the $\mathcal{R}_1$ and $\mathcal{R}_2$ operators
@@ -71,6 +78,138 @@ $$ */
 #define R2(h,zb,w) (h[]/2.*dx(w) + w[]*(dx(zb) + dx(h)))
 
 /**
+## Inversion of the linear system
+
+To invert the linear system which defines $D$, we need to write
+discretised versions of the residual and relaxation operators. The
+functions take generic multilevel parameters and a user-defined
+structure which contains solution-specific parameters, in our case the
+$h$, $zb$ fields. */
+
+struct GreenNaghdi {
+  scalar h, zb;
+};
+
+static double residual_GN (scalar * a, scalar * r, scalar ** presl,
+			   void * data)
+{
+  /**
+  We first recover all the parameters from the generic pointers and
+  rename them according to our notations. */
+  
+  scalar * resl = *presl;
+
+  if (!resl) {
+    for (scalar s in a) {
+      scalar res = new scalar;
+      resl = list_append (resl, res);
+    }
+    *presl = resl;
+  }
+
+  struct GreenNaghdi * p = data;
+  scalar h = p->h, zb = p->zb;
+  vector D = {a[0], a[1]}, b = {r[0], r[1]}, res = {resl[0], resl[1]};
+
+  /**
+  The general form for $\mathcal{T}$ is
+  $$
+  \mathcal{T} \left[ h, z_b \right] w = \mathcal{R}_1 \left[ h, z_b
+  \right]  \left( \nabla \cdot w \right) + \mathcal{R}_2 \left[ h, z_b
+  \right]  \left( \nabla z_b \cdot w \right)
+  $$
+  which gives the linear problem
+  $$
+  \alpha_d h \mathcal{T} \left( D \right) + hD = b
+  $$
+  $$
+  \alpha_d h \mathcal{R}_1 \left( \nabla \cdot D \right) + \alpha_d h
+  \mathcal{R}_2 \left( \nabla z_b \cdot D \right) + hD = b
+  $$
+  $$
+  - \alpha_d h^2  \left[ \frac{h}{3} \nabla \left( \nabla \cdot D \right)
+  + \left( \nabla \cdot D \right)  \left( \nabla h + \frac{1}{2} \nabla z_b
+  \right)\right] + \alpha_d h \left[ \frac{h}{2} \nabla \left( \nabla z_b \cdot D
+  \right) + \left( \nabla z_b \cdot D \right) \nabla \eta \right] + hD = b
+  $$
+  Expanding the operators for the $x$-component gives
+  $$
+  \begin{eqnarray*}
+  - \frac{\alpha_d}{3} \partial_x \left( h^3 \partial_x D_x \right) + h \left[
+  \alpha_d \left( \partial_x \eta \partial_x z_b + \frac{h}{2} \partial^2_x z_b
+  \right) + 1 \right] D_x + &  & \\
+  \alpha_d h \left[ \left( \frac{h}{2} \partial^2_{xy} z_b + \partial_x \eta
+  \partial_y z_b \right) D_y + \frac{h}{2} \partial_y z_b \partial_x D_y -
+  \frac{h^2}{3} \partial^2_{xy} D_y - h \partial_y D_y  \left( \partial_x h +
+  \frac{1}{2} \partial_x z_b \right) \right] & = & b_x
+  \end{eqnarray*}
+  $$
+  The $y$-component is obtained by rotation of the indices. */
+ 
+  double maxres = 0.;
+  foreach (reduction(max:maxres))
+    foreach_dimension() {
+    
+      /**
+      To prevent trouble when wetting and drying, we define non-zero
+      values for the central, left and right depths (cubed). */
+
+      double hc = max(h[], dry);
+      double hl3 = (h[] + h[-1,0])/2., hr3 = (h[] + h[1,0])/2.;
+      hl3 = hl3 > dry ? cube(hl3) : cube(dry);
+      hr3 = hr3 > dry ? cube(hr3) : cube(dry);
+      
+      /**
+      Finally we translate the formula above to its discrete
+      version. */
+
+      double dxh = dx(h), dxzb = dx(zb), dxeta = dxzb + dxh;
+      res.x[] = b.x[] -
+	(-alpha_d/3.*(hr3*D.x[1,0] + hl3*D.x[-1,0] - 
+		    (hr3 + hl3)*D.x[])/sq(Delta) +
+	 hc*(alpha_d*(dxeta*dxzb + hc/2.*d2x(zb)) + 1.)*D.x[] +
+	 alpha_d*hc*((hc/2.*d2xy(zb) + dxeta*dy(zb))*D.y[] + 
+		    hc/2.*dy(zb)*dx(D.y) - sq(hc)/3.*d2xy(D.y)
+		    - hc*dy(D.y)*(dxh + dxzb/2.)));
+
+      /**
+      The function also need to return the maximum residual. */
+
+      if (fabs (res.x[]) > maxres)
+	maxres = fabs (res.x[]);
+    }
+  return maxres;
+}
+
+/**
+The relaxation function is built by copying and pasting the
+residual implementation above and inverting manually for $D_x$. */
+
+static void relax_GN (scalar * a, scalar * r, int l, void * data)
+{
+  struct GreenNaghdi * p = data;
+  scalar h = p->h, zb = p->zb;
+  vector D = {a[0], a[1]}, b = {r[0], r[1]};
+  foreach_level_or_leaf (l)
+    foreach_dimension() {
+      double hc = max(h[], dry);
+      double hl3 = (h[] + h[-1,0])/2., hr3 = (h[] + h[1,0])/2.;
+      hl3 = hl3 > dry ? cube(hl3) : cube(dry);
+      hr3 = hr3 > dry ? cube(hr3) : cube(dry);
+      double dxh = dx(h), dxzb = dx(zb), dxeta = dxzb + dxh;
+      D.x[] = (b.x[] -
+	       (-alpha_d/3.*(hr3*D.x[1,0] + hl3*D.x[-1,0])/sq(Delta) +
+		alpha_d*hc*((hc/2.*d2xy(zb) + dxeta*dy(zb))*D.y[] + 
+			   hc/2.*dy(zb)*dx(D.y) - sq(hc)/3.*d2xy(D.y)
+			   - hc*dy(D.y)*(dxh + dxzb/2.))))/
+	(alpha_d*(hr3 + hl3)/(3.*sq(Delta)) + 
+	 hc*(alpha_d*(dxeta*dxzb + hc/2.*d2x(zb)) + 1.));
+  }
+}
+
+/**
+## Source term computation
+
 To add the source term to the Saint-Venant system we overload the
 default *sources* function with this one. The function takes
 a list of the current evolving scalar fields and fills the
@@ -80,67 +219,63 @@ static void green_naghdi (scalar * current, scalar * updates)
 {
   scalar h = current[0];
   vector u = { current[1], current[2] };
-  double alpha = 1.;
 
   /**
   We first compute the right-hand-side $b$. The general form for the
   $\mathcal{Q}_1$ operator is (eq. (9) of Bonneton et al, 2011).
   $$
-  \mathcal{Q}_1 \left[ h, z_b \right] \left( V \right) = -
-  2\mathcal{R}_1 \left( \partial_1 V \cdot \partial_2 V^{\perp} + \left(
-  \nabla \cdot V \right)^2 \right) +\mathcal{R}_2 \left( V \cdot \left(
-  V \cdot \nabla \right) \nabla z_b \right)
+  \mathcal{Q}_1 \left[ h, z_b \right] \left( u \right) = - 2 \mathcal{R}_1 
+  \left( c \right) + \mathcal{R}_2  \left( d \right)
   $$
-  In one-dimension, this gives
+  with
   $$
-  \mathcal{Q}_1 \left[ h, z_b \right](u) = - 2\mathcal{R}_1(c) +\mathcal{R}_2(d)
+  \begin{eqnarray*}
+  c & = & \partial_1 u \cdot \partial_2 u^{\perp} + \left( \nabla \cdot u
+  \right)^2\\
+  & = & - \partial_x u_x \partial_y u_y + \partial_x u_y \partial_y u_x +
+  \left( \partial_x u_x + \partial_y u_y \right)^2\\
+  d & = & u \cdot \left( u \cdot \nabla \right) \nabla z_b\\
+  & = & u_x  \left( u_x \partial_x^2 z_b + u_y \partial_{xy}^2 z_b \right) +
+  u_y  \left( u_y \partial_y^2 z_b + u_x \partial_{xy}^2 z_b \right)\\
+  & = & u^2_x \partial_x^2 z_b + u^2_y \partial_y^2 z_b + 2 u_x u_y
+  \partial_{xy}^2 z_b
+  \end{eqnarray*}
   $$
-  with $c = (\partial_xu_x)^2$ and $d = u_x^2\partial^2_xz_b$.
   */
 
-  scalar b[], c[], d[], lambda[];
+  scalar c[], d[];
   foreach() {
-    c[] = sq(dx(u.x));
-    d[] = sq(u.x[])*d2x(zb);
+    double dxux = dx(u.x), dyuy = dy(u.y);
+    c[] = - dxux*dyuy + dx(u.y)*dy(u.x) + sq(dxux + dyuy);
+    d[] = sq(u.x[])*d2x(zb) + sq(u.y[])*d2y(zb) + 2.*u.x[]*u.y[]*d2xy(zb);
   }
   boundary ({c,d});
 
   /**
-  The general form for $\mathcal{T}$ is
+  We can now compute $b$
   $$
-  \mathcal{T} \left[ h, z_b \right] w = \mathcal{R}_1 \left[ h, z_b
-  \right] \left( \nabla \cdot w \right) +\mathcal{R}_2 \left[ h, z_b \right]
-  \left( \nabla z_b \cdot w \right)
-  $$
-  which gives in one dimension the Poisson-Helmholtz problem
-  $$
-  - \partial_x \left( \alpha \frac{h^3}{3} \partial_x D \right) + h
-  \left[ \alpha \left( \partial_x \eta \partial_x z_b + \frac{h}{2}
-  \partial^2_x z_b \right) + 1\right] D = \partial_x \left( \beta
-  \partial_x D \right) + \lambda D = b
-  $$
-  We can now compute $b$ and $\lambda$. We also make sure that
-  $\lambda$ is non-zero by setting a minimal value for $h$ (*dry* is a
-  small number defined in the Saint-Venant solver) so that the system
-  is invertible even in dry areas. */
+  b = \left[ \frac{g}{\alpha_d} \nabla \eta +\mathcal{Q}_1 \left( u \right)
+  \right]
+  $$ */
 
-  foreach() {
-    double dxzb = dx(zb), dxeta = dxzb + dx(h);
-    b[] = h[]*(G/alpha*dxeta - 2.*R1(h,zb,c) + R2(h,zb,d));
-    lambda[] = max(h[],dry)*(alpha*(dxeta*dxzb + h[]/2.*d2x(zb)) + 1.);
-  }
+  vector b[];
+  foreach()
+    foreach_dimension() {
+      double dxzb = dx(zb), dxeta = dxzb + dx(h);
+      b.x[] = h[]*(G/alpha_d*dxeta - 2.*R1(h,zb,c) + R2(h,zb,d));
+    }
 
   /**
-  Finally we solve the Poisson-Helmholtz problem with the multigrid
-  solver. */
+  Finally we solve the linear problem with the multigrid
+  solver using the relaxation and residual functions defined above. 
+  We need to restrict $h$ and $z_b$ as their values will be required 
+  for relaxation on coarse grids. */
 
-  face vector beta[];
-  foreach_face() {
-    double hf = (h[] + h[-1,0])/2.;
-    beta.x[] = - alpha*hf*hf*hf/3.;
-  }
-  boundary_normal ({beta});
-  mgD = poisson (D, b, beta, lambda);
+  struct GreenNaghdi gn;
+  gn.h = h; gn.zb = zb;
+  restriction ({h,zb});
+  boundary_restriction ({h,zb});
+  mgD = mg_solve ((scalar *){D}, (scalar *){b}, residual_GN, relax_GN, &gn);
 
   /**
   We can then compute the updates for $h$ (zero) and $hu$. Note that we
@@ -154,15 +289,17 @@ static void green_naghdi (scalar * current, scalar * updates)
 
     /**
     We only apply the Green-Naghdi source term when the slope of the
-    free surface is smaller than one. The idea is to turn off
-    dispersion in areas where the wave is "breaking" (i.e. hydraulic
-    jumps). */
+    free surface is smaller than *breaking*. The idea is to turn off
+    dispersion in areas where the wave is "breaking" (i.e. in
+    hydraulic jumps). */
 
-    if (fabs(dx(eta)) < 1.)
-      dhu.x[] = h[]*(G/alpha*dx(eta) - D[]);
+    if (fabs(dx(eta)) < breaking && fabs(dy(eta)) < breaking)
+      foreach_dimension()
+	dhu.x[] = h[]*(G/alpha_d*dx(eta) - D.x[]);
     else
-      dhu.x[] = 0.;
-    dh[] = dhu.y[] = 0.;
+      foreach_dimension()
+	dhu.x[] = 0.;
+    dh[] = 0.;
   }
 }
 
@@ -173,6 +310,7 @@ function. */
 event defaults (i = 0) {
   sources = green_naghdi;
   foreach()
-    D[] = 0.;
-  boundary ({D});
+    foreach_dimension()
+      D.x[] = 0.;
+  boundary ((scalar *){D});
 }

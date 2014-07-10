@@ -17,7 +17,8 @@ with $\psi = x - ct$ and the soliton velocity $c^2=g(1+a)h_0$. */
 
 /**
 The domain is 700 metres long, the acceleration of gravity is 10
-m/s^2^. We compute the solution in one dimension for a number of grid
+m/s^2^. We need to set the dispersion parameter $\alpha_d$ to one.
+We compute the solution in one dimension for a number of grid
 points varying between 128 and 1024. */
 
 int main()
@@ -25,6 +26,7 @@ int main()
   X0 = -200.;
   L0 = 700.;
   G = 10.;
+  alpha_d = 1.;
   for (N = 128; N <= 1024; N *= 2)
     run();
 }

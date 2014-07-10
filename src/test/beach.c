@@ -27,6 +27,7 @@ int main() {
   L0 = 6.*L;
   N = 1024;
   G = 1.;
+  alpha_d = 1.;
   
   /**
   We try to tune the "breaking slope" to get better agreement for
@@ -126,7 +127,7 @@ set xrange [-20:12]
 set yrange [-0.2:0.6]
 set ytics -0.2,0.2,0.6
 set key top left
-set multiplot layout 6,2 scale 1.1,1.1
+set multiplot layout 6,2 scale 1.05,1.1
 unset xtics
 plot 'out-10' w l lw 2 t 't=10', '' u 1:3 w filledcu lc -1 t '', \
      '../t-10' pt 6 lc -1 ps 0.5 t ''

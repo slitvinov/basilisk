@@ -22,16 +22,18 @@ $$
 $$
     + [Green-Naghdi](green-naghdi.h)
 $$
-\partial_th + \partial_x(hu) = 0
+  \partial_t \int_{\Omega} \mathbf{q} d \Omega =
+  \int_{\partial \Omega} \mathbf{f} (
+  \mathbf{q}) \cdot \mathbf{n}d \partial
+  \Omega - \int_{\Omega} hg \nabla z_b +
+  h \left( \frac{g}{\alpha}\nabla \eta - D \right)
 $$
 $$
-\partial_thK + \partial_x\left(hKu +\frac{gh^2}{2}+\alpha\right) = 0
+\alpha h\mathcal{T} \left( D \right) + hD = b
 $$
 $$
-K = u - \frac{1}{3 h} \nabla \left( h^3 \nabla\cdot u \right)
-$$
-$$
-\alpha = -\frac{2}{3}h^3(\partial_xu)^2
+b = \left[ \frac{g}{\alpha} \nabla \eta +\mathcal{Q}_1 \left( u \right)
+\right]
 $$
 * [Systems of conservation laws](conservation.h)
 $$
