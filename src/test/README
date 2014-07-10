@@ -25,6 +25,7 @@ Note that only the documented test cases appear in the list below
 * [Green-Naghdi soliton](soliton.c)
 * [Solitary wave run-up on a plane beach](beach.c)
 * [Solitary wave overtopping a seawall](seawall.c)
+* [Sinusoidal wave propagation over a bar](bar.c)
 
 ## Volume-Of-Fluid
 
