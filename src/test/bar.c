@@ -67,7 +67,7 @@ event gnuplot (t += 0.05) {
   static FILE * fp = popen ("gnuplot", "w");
   if (t > 39.5)
     fprintf (fp,
-	     "set term pngcairo enhanced size 800,200 font \",8\"\n"
+	     "set term pngcairo enhanced size 640,200 font \",8\"\n"
 	     "set output 'snapshot.png'\n");
   fprintf (fp,
 	   "set title 't = %.2f'\n"
@@ -111,7 +111,7 @@ relation. Note that using the optimised dispersion relation (with
 $\alpa_d=1.153$) is necessary to obtain such an agreement.
 
 ~~~gnuplot Comparison of experimental and numerical timeseries
-set term @PNG enhanced size 800,600 font ",8"
+set term @PNG enhanced size 640,480 font ",8"
 set xrange [33:39]
 set yrange [-2:4]
 set ytics -2,2,4

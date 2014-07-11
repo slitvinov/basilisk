@@ -122,7 +122,7 @@ this latter model seems to do a better job of capturing breaking
 around $t=20$ (they use a more sophisticated breaking criterion).
 
 ~~~gnuplot Comparison of model predictions and experimental snapshots
-set term @PNG enhanced size 800,800 font ",8"
+set term @PNG enhanced size 640,640 font ",8"
 set xrange [-20:12]
 set yrange [-0.2:0.6]
 set ytics -0.2,0.2,0.6
