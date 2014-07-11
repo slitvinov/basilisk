@@ -63,12 +63,8 @@ runs and to generate a snapshot at $t=40$.
 ![Snapshot of waves. The top of the bar is seen in black.](bar/snapshot.png)
 */
 
-event gnuplot (t += 0.05) {
-  static FILE * fp = popen ("gnuplot", "w");
-  if (t > 39.5)
-    fprintf (fp,
-	     "set term pngcairo enhanced size 640,200 font \",8\"\n"
-	     "set output 'snapshot.png'\n");
+void plot_profile (double t, FILE * fp)
+{
   fprintf (fp,
 	   "set title 't = %.2f'\n"
 	   "p [0:25][-0.12:0.04]'-' u 1:3:2 w filledcu lc 3 t '',"
@@ -76,7 +72,22 @@ event gnuplot (t += 0.05) {
   foreach()
     fprintf (fp, "%g %g %g\n", x, eta[], zb[]);
   fprintf (fp, "e\n\n");
+  fflush (fp);
+}
+
+event gnuplot (t += 0.05) {
+  static FILE * fp = popen ("gnuplot", "w");
+  plot_profile (t, fp);
   fprintf (stderr, "%g %g\n", t, interpolate (eta, 17.3, 0.));
+}
+
+event gnuplot (t = end) {
+  FILE * fp = popen ("gnuplot", "w");
+  fprintf (fp,
+           "set term pngcairo enhanced size 640,200 font \",8\"\n"
+           "set output 'snapshot.png'\n");
+  plot_profile (t, fp);
+  pclose (fp);
 }
 
 /**
@@ -108,7 +119,7 @@ for gauge 9, but probably not as good as that in [Lannes and Marche,
 2014](/src/references.bib#lannes2014) (figure 12), who used a
 higher-order scheme, and a three-parameter optimised dispersion
 relation. Note that using the optimised dispersion relation (with
-$\alpa_d=1.153$) is necessary to obtain such an agreement.
+$\alpha_d=1.153$) is necessary to obtain such an agreement.
 
 ~~~gnuplot Comparison of experimental and numerical timeseries
 set term @PNG enhanced size 640,480 font ",8"
