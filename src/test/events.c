@@ -13,6 +13,9 @@ event event5 (t += 1; t <= 20) fprintf (stderr, "t++: %g\n", t);
 
 event event6 (t = end) fprintf (stderr, "end: %g\n", t);
 
+event event7 (t = 10; t <= 12; i++)
+  fprintf (stderr, "event7: %d %g\n", i, t);
+
 int main (int argc, char * argv[])
 {
   double t = 0.;

@@ -150,7 +150,10 @@ static int event_do (Event * ev, int i, double t)
 	return event_finished (ev);
     }
     else if (INC) {
+      int i0 = ev->i;
       (* INC) (&ev->i, &ev->t, ev);
+      if (i0 == -1 && ev->i != i0)
+	ev->i += i + 1;
       if (!event_cond (ev, i + 1, ev->t))
 	return event_finished (ev);
     }
