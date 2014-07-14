@@ -90,22 +90,11 @@ struct GreenNaghdi {
   scalar h, zb;
 };
 
-static double residual_GN (scalar * a, scalar * r, scalar ** presl,
-			   void * data)
+static double residual_GN (scalar * a, scalar * r, scalar * resl, void * data)
 {
   /**
   We first recover all the parameters from the generic pointers and
   rename them according to our notations. */
-  
-  scalar * resl = *presl;
-
-  if (!resl) {
-    for (scalar s in a) {
-      scalar res = new scalar;
-      resl = list_append (resl, res);
-    }
-    *presl = resl;
-  }
 
   struct GreenNaghdi * p = data;
   scalar h = p->h, zb = p->zb;

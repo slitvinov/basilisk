@@ -127,7 +127,7 @@ user-defined pointer *data* can be used to pass arguments to these
 functions. */
 
 mgstats mg_solve (scalar * a, scalar * b,
-		  double (* residual) (scalar * a, scalar * b, scalar ** res,
+		  double (* residual) (scalar * a, scalar * b, scalar * res,
 				       void * data),
 		  void (* relax) (scalar * da, scalar * res, int depth, 
 				  void * data),
@@ -135,14 +135,14 @@ mgstats mg_solve (scalar * a, scalar * b,
 {
 
   /**
-  The list of residual fields will be allocated by the residual()
-  function. We allocate a new correction field for each of the scalars
+  We allocate a new correction and residual field for each of the scalars
   in *a*. */
 
-  scalar * res = NULL, * da = NULL;
+  scalar * da = NULL, * res = NULL;
   for (scalar s in a) {
-    scalar ds = new scalar;
+    scalar ds = new scalar, r = new scalar;
     da = list_append (da, ds);
+    res = list_append (res, r);
   }
 
   /**
@@ -158,7 +158,7 @@ mgstats mg_solve (scalar * a, scalar * b,
   /**
   Here we compute the initial residual field and its maximum. */
 
-  s.resb = s.resa = residual (a, b, &res, data);
+  s.resb = s.resa = residual (a, b, res, data);
 
   /**
   We then iterates until convergence or until *NITERMAX* is reached. Note
@@ -167,7 +167,7 @@ mgstats mg_solve (scalar * a, scalar * b,
 
   for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.resa > TOLERANCE); s.i++) {
     mg_cycle (a, res, da, relax, data, 4, 0);
-    s.resa = residual (a, b, &res, data);
+    s.resa = residual (a, b, res, data);
   }
 
   /**
@@ -239,22 +239,9 @@ The equivalent residual function is obtained in a similar way in the
 case of a Cartesian grid, however the case of the quadtree mesh
 requires more careful consideration... */
 
-static double residual (scalar * al, scalar * bl, scalar ** resl, void * data)
+static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
 {
-  scalar a = al[0], b = bl[0];
-
-  /**
-  If the residual field is not already allocated we allocate it as well
-  as the associated list. */
-
-  scalar res;
-  if (*resl)
-    res = (*resl)[0];
-  else {
-    res = new scalar;
-    *resl = list_append (NULL, res);
-  }
-
+  scalar a = al[0], b = bl[0], res = resl[0];
   struct Poisson * p = data;
   (const) face vector alpha = p->alpha;
   (const) scalar lambda = p->lambda;

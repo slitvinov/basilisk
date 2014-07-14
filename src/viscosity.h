@@ -38,19 +38,9 @@ static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
 #endif
 }
 
-static double residual_viscosity (scalar * a, scalar * b, scalar ** presl, 
+static double residual_viscosity (scalar * a, scalar * b, scalar * resl, 
 				  void * data)
 {
-  scalar * resl = *presl;
-
-  if (!resl) {
-    for (scalar s in a) {
-      scalar res = new scalar;
-      resl = list_append (resl, res);
-    }
-    *presl = resl;
-  }
-
   struct Viscosity * p = data;
   (const) face vector mu = p->mu;
   (const) scalar alpha = p->alpha;
