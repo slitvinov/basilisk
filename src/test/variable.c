@@ -41,10 +41,10 @@ int main (int argc, char ** argv)
   clock_t start = clock(), iter[NITER];
   double maxres[NITER];
   scalar * lres = {res};
-  residual ({a}, {b}, &lres, &p);
+  residual ({a}, {b}, lres, &p);
   for (int i = 0; i < NITER; i++) {
     mg_cycle ({a}, lres, {dp}, relax, &p, nrelax, 0);
-    residual ({a}, {b}, &lres, &p);
+    residual ({a}, {b}, lres, &p);
     double max = 0.;
     foreach()
       if (fabs(res[]) > max)
