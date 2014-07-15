@@ -147,7 +147,7 @@ event outputfile (t = {9, 12, 13, 14, 20})
   ~~~gnuplot Evolution of free surface (left) and mesh (right)
   ! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
  
-  set term @PNG enhanced size 900,1600 font ",8"
+  set term @PNG enhanced size 640,1120 font ",8"
   set output 'evolution.png'
 
   unset key
@@ -210,7 +210,7 @@ event logfile (i++) {
 
   ~~~gnuplot Timeseries of surface elevation. Numerical results and experimental data (symbols).
   reset
-  set term @PNG enhanced size 600,800
+  set term @PNG enhanced size 640,800
   set output 'gauges.png'
   set multiplot layout 5,1 scale 1.,1.
   set xrange [3:20]

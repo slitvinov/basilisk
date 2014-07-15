@@ -20,6 +20,14 @@ seawallsv.tst: seawallsv.s
 
 seawall.tst: seawallsv.tst
 
+conicalsv.c: conical.c
+	ln -s conical.c conicalsv.c 
+
+conicalsv.tst: conicalsv.s
+	@CFLAGS="$(CFLAGS) -DSAINT_VENANT=1" $(BASILISK)/runtest conicalsv.tst
+
+conical.tst: conicalsv.tst
+
 bore.tst: bore1.tst
 
 explosion.tst: explosion.ctst
