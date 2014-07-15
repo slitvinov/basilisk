@@ -20,12 +20,6 @@ int main() {
   N = 2048;
   L0 = 50;
   G = 9.81;
-
-  /**
-  We turn off limiting to more accurately describe the (non-breaking)
-  dynamics. */
-
-  gradient = NULL;
   run();
 }
 
