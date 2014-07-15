@@ -46,11 +46,23 @@ set term @PNG enhanced size 600,800
 set output 'gauges.png'
 set multiplot layout 5,1 scale 1.,1.
 set xrange [3:20]
-plot 'WG3' u 1:($2-0.32) w l t 'WG3'
-plot 'WG6' u 1:($2-0.32) w l t 'WG6'
-plot 'WG9' u 1:($2-0.32) w l t 'WG9'
-plot 'WG16' u 1:($2-0.32) w l t 'WG16'
-plot 'WG22' u 1:($2-0.32) w l t 'WG22'
+t0=22.
+h0=0.32
+plot '../ts2b.txt' u ($1-t0):($4-0.001) pt 7 ps 0.25 t '', \
+     '../conicalsv/WG3' u 1:($2-h0) w l lt 4 t '', \
+     './WG3' u 1:($2-h0) w l lw 2 lt 3 t 'WG3'
+plot '../ts2b.txt' u ($1-t0):($6-0.0004) pt 7 ps 0.25 t '', \
+     '../conicalsv/WG6' u 1:($2-h0) w l lt 4 t '', \
+     './WG6' u 1:($2-h0) w l lw 2 lt 3 t 'WG6'
+plot '../ts2b.txt' u ($1-t0):($7) pt 7 ps 0.25 t '', \
+     '../conicalsv/WG9' u 1:($2-h0) w l lt 4 t '', \
+     './WG9' u 1:($2-h0) w l lw 2 lt 3 t 'WG9'
+plot '../ts2b.txt' u ($1-t0):($8-0.0017) pt 7 ps 0.25 t '', \
+     '../conicalsv/WG16' u 1:($2-h0) w l lt 4 t '', \
+     './WG16' u 1:($2-h0) w l lw 2 lt 3 t 'WG16'
+plot '../ts2b.txt' u ($1-t0):($9+0.0015) pt 7 ps 0.25 t '', \
+     '../conicalsv/WG22' u 1:($2-h0) w l lt 4 t '', \
+     './WG22' u 1:($2-h0) w l lw 2 lt 3 t 'WG22'
 unset multiplot
 
 ! rm -f conical-?

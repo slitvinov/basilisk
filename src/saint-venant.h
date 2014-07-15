@@ -308,8 +308,12 @@ static void refine_elevation (Point point, scalar h)
   if (h[] >= dry) {
     double eta = zb[] + h[];   // water surface elevation  
     struct { double x, y; } g; // gradient of eta
-    foreach_dimension()
-      g.x = gradient (zb[-1,0] + h[-1,0], eta, zb[1,0] + h[1,0])/4.;
+    if (gradient)
+      foreach_dimension()
+	g.x = gradient (zb[-1,0] + h[-1,0], eta, zb[1,0] + h[1,0])/4.;
+    else
+      foreach_dimension()
+	g.x = (zb[1,0] - zb[-1,0])/(2.*Delta);
     // reconstruct water depth h from eta and zb
     foreach_child()
       h[] = max(0, eta + g.x*child.x + g.y*child.y - zb[]);
@@ -396,7 +400,7 @@ This can be used to implement open boundary conditions at low
 is to set the velocity normal to the boundary so that the water level
 relaxes towards its desired value (`ref`). */
 
-#define radiation(ref) (sqrt (G*h[]) - sqrt(G*max((ref) - zb[], 0.)))
+#define radiation(ref) (sqrt (G*max(h[],0.)) - sqrt(G*max((ref) - zb[], 0.)))
 
 /**
 ## Tide gauges
