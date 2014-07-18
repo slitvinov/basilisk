@@ -47,6 +47,7 @@ event init (i = 0)
   
   ~~~gnuplot Bathymetry
   set term @PNG enhanced size 640,640 font ",8"
+  set output 'bathy.png'
   set pm3d map
   set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1, \
                         0.375 0.05882 1 0.9333, 0.5 0.5647 1 0.4392,	  \
@@ -56,6 +57,8 @@ event init (i = 0)
   set xlabel 'x (m)'
   set ylabel 'y (m)'
   splot [-10:12][-10:10]'end' u 1:2:4 w pm3d t ''
+  # we remove the large border left by gnuplot using ImageMagick
+  ! mogrify -trim +repage bathy.png
   ~~~
   */
 
@@ -126,11 +129,14 @@ event end (t = 50) {
 
 /**
 ~~~gnuplot Instantaneous wave field at $t=50$
+set output 'snapshot.png'
 a0 = 0.026
 splot [-10:12][-10:10]'end' u 1:2:($3/a0) w pm3d t ''
+! mogrify -trim +repage snapshot.png
 ~~~
 
 ~~~gnuplot Maximum wave amplitude
+set output 'maxa.png'
 set label 1 "section 2" at 2.5,-6,1 rotate front
 set label 2 "section 3" at 4.5,-6,1 rotate front
 set label 3 "section 5" at 8.5,-6,1 rotate front
@@ -153,6 +159,7 @@ splot [-10:12][-10:10]'end' u 1:2:($5/a0) w pm3d t '', \
 10 0 1
 e
 unset label
+! mogrify -trim +repage maxa.png
 ~~~
 
 The results are comparable to [Lannes and Marche,

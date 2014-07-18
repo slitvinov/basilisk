@@ -61,7 +61,7 @@ clean:
 %/plot.png: %.plot
 	cd $* && gnuplot -e "batch=1; PNG=\"$(PNG)\"; set term $(PNG) enhanced font \",10\"; set output 'plot.png'; set macros;" ../$< || rm -f plot.png
 
-%/plots: %.tst
+%/plots: %.c
 	cd $* && awk -f $(BASILISK)/gnuplot.awk < ../$*.c > plots && \
 	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh || rm -f plots
 
