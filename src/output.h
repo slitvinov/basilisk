@@ -548,9 +548,11 @@ void output_gfs (struct OutputGfs p)
     free (name);
     for (int i = 1; i < list_len(p.list); i++) {
       scalar s = p.list[i];
-      char * name = replace_dot (s.name);
-      fprintf (p.fp, ",%s", name);
-      free (name);
+      if (s.name) {
+	char * name = replace_dot (s.name);
+	fprintf (p.fp, ",%s", name);
+	free (name);
+      }
     }
     fputc (' ', p.fp);
   }
@@ -577,10 +579,11 @@ void output_gfs (struct OutputGfs p)
     fwrite (&flags, sizeof (unsigned), 1, p.fp);
     double a = -1;
     fwrite (&a, sizeof (double), 1, p.fp);
-    for (scalar s in p.list) {
-      a = s[];
-      fwrite (&a, sizeof (double), 1, p.fp);
-    }
+    for (scalar s in p.list)
+      if (s.name) {
+	a = s[];
+	fwrite (&a, sizeof (double), 1, p.fp);
+      }
     if (is_leaf(cell))
       continue;
   }
