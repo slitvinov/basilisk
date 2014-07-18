@@ -59,7 +59,7 @@ static void reconstruct_terrain (Point point, scalar zb)
   }
 }
 
-static void refine_terrain (Point point, scalar zb)
+void refine_terrain (Point point, scalar zb)
 {
   foreach_child()
     reconstruct_terrain (point, zb);
@@ -89,19 +89,22 @@ void terrain (scalar zb, ...)
   }
   va_end (ap);
 
-  zb.refine = refine_terrain;
   scalar n = new scalar;
+  scalar dmin = new scalar;
+  scalar dmax = new scalar;
+  zb.n = n;
+  zb.dmin = dmin;
+  zb.dmax = dmax;
+
+#if QUADTREE
+  zb.refine = refine_terrain;
   n.refine = none;
   n.coarsen = none;
-  zb.n = n;
-  scalar dmin = new scalar;
   dmin.refine = none;
   dmin.coarsen = none;
-  zb.dmin = dmin;
-  scalar dmax = new scalar;
   dmax.refine = none;
   dmax.coarsen = none;
-  zb.dmax = dmax;
+#endif
 
   trash ({zb});
   for (int l = 0; l <= depth(); l++) {
