@@ -83,21 +83,17 @@ $$ */
 To invert the linear system which defines $D$, we need to write
 discretised versions of the residual and relaxation operators. The
 functions take generic multilevel parameters and a user-defined
-structure which contains solution-specific parameters, in our case the
-$h$, $zb$ fields. */
-
-struct GreenNaghdi {
-  scalar h, zb;
-};
+structure which contains solution-specific parameters, in our case a
+list of the $h$, $zb$ and *wet* fields. */
 
 static double residual_GN (scalar * a, scalar * r, scalar * resl, void * data)
 {
   /**
   We first recover all the parameters from the generic pointers and
   rename them according to our notations. */
-
-  struct GreenNaghdi * p = data;
-  scalar h = p->h, zb = p->zb;
+  
+  scalar * list = data;
+  scalar h = list[0], zb = list[1], wet = list[2];
   vector D = {a[0], a[1]}, b = {r[0], r[1]}, res = {resl[0], resl[1]};
 
   /**
@@ -138,35 +134,33 @@ static double residual_GN (scalar * a, scalar * r, scalar * resl, void * data)
   double maxres = 0.;
   foreach (reduction(max:maxres))
     foreach_dimension() {
-    
-      /**
-      To prevent trouble when wetting and drying, we define non-zero
-      values for the central, left and right depths (cubed). */
-
-      double hc = max(h[], dry);
-      double hl3 = (h[] + h[-1,0])/2., hr3 = (h[] + h[1,0])/2.;
-      hl3 = hl3 > dry ? cube(hl3) : cube(dry);
-      hr3 = hr3 > dry ? cube(hr3) : cube(dry);
+      if (wet[-1,0] == 1 && wet[] == 1 && wet[1,0] == 1) {
+	double hc = h[], dxh = dx(h), dxzb = dx(zb), dxeta = dxzb + dxh;
+	double hl3 = (hc + h[-1,0])/2.; hl3 = cube(hl3);
+	double hr3 = (hc + h[1,0])/2.;  hr3 = cube(hr3);
+	
+	/**
+	Finally we translate the formula above to its discrete
+	version. */
+	
+	res.x[] = b.x[] -
+	  (-alpha_d/3.*(hr3*D.x[1,0] + hl3*D.x[-1,0] - 
+			(hr3 + hl3)*D.x[])/sq(Delta) +
+	   hc*(alpha_d*(dxeta*dxzb + hc/2.*d2x(zb)) + 1.)*D.x[] +
+	   alpha_d*hc*((hc/2.*d2xy(zb) + dxeta*dy(zb))*D.y[] + 
+		       hc/2.*dy(zb)*dx(D.y) - sq(hc)/3.*d2xy(D.y)
+		       - hc*dy(D.y)*(dxh + dxzb/2.)));
+      }
+      else
+	res.x[] = 0.;
       
-      /**
-      Finally we translate the formula above to its discrete
-      version. */
-
-      double dxh = dx(h), dxzb = dx(zb), dxeta = dxzb + dxh;
-      res.x[] = b.x[] -
-	(-alpha_d/3.*(hr3*D.x[1,0] + hl3*D.x[-1,0] - 
-		    (hr3 + hl3)*D.x[])/sq(Delta) +
-	 hc*(alpha_d*(dxeta*dxzb + hc/2.*d2x(zb)) + 1.)*D.x[] +
-	 alpha_d*hc*((hc/2.*d2xy(zb) + dxeta*dy(zb))*D.y[] + 
-		    hc/2.*dy(zb)*dx(D.y) - sq(hc)/3.*d2xy(D.y)
-		    - hc*dy(D.y)*(dxh + dxzb/2.)));
-
       /**
       The function also need to return the maximum residual. */
 
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
     }
+
   return maxres;
 }
 
@@ -176,24 +170,26 @@ residual implementation above and inverting manually for $D_x$. */
 
 static void relax_GN (scalar * a, scalar * r, int l, void * data)
 {
-  struct GreenNaghdi * p = data;
-  scalar h = p->h, zb = p->zb;
+  scalar * list = data;
+  scalar h = list[0], zb = list[1], wet = list[2];
   vector D = {a[0], a[1]}, b = {r[0], r[1]};
   foreach_level_or_leaf (l)
     foreach_dimension() {
-      double hc = max(h[], dry);
-      double hl3 = (h[] + h[-1,0])/2., hr3 = (h[] + h[1,0])/2.;
-      hl3 = hl3 > dry ? cube(hl3) : cube(dry);
-      hr3 = hr3 > dry ? cube(hr3) : cube(dry);
-      double dxh = dx(h), dxzb = dx(zb), dxeta = dxzb + dxh;
-      D.x[] = (b.x[] -
-	       (-alpha_d/3.*(hr3*D.x[1,0] + hl3*D.x[-1,0])/sq(Delta) +
-		alpha_d*hc*((hc/2.*d2xy(zb) + dxeta*dy(zb))*D.y[] + 
-			   hc/2.*dy(zb)*dx(D.y) - sq(hc)/3.*d2xy(D.y)
-			   - hc*dy(D.y)*(dxh + dxzb/2.))))/
-	(alpha_d*(hr3 + hl3)/(3.*sq(Delta)) + 
-	 hc*(alpha_d*(dxeta*dxzb + hc/2.*d2x(zb)) + 1.));
-  }
+      if (wet[-1,0] == 1 && wet[] == 1 && wet[1,0] == 1) {
+	double hc = h[], dxh = dx(h), dxzb = dx(zb), dxeta = dxzb + dxh;
+	double hl3 = (hc + h[-1,0])/2.; hl3 = cube(hl3);
+	double hr3 = (hc + h[1,0])/2.;  hr3 = cube(hr3);
+	D.x[] = (b.x[] -
+		 (-alpha_d/3.*(hr3*D.x[1,0] + hl3*D.x[-1,0])/sq(Delta) +
+		  alpha_d*hc*((hc/2.*d2xy(zb) + dxeta*dy(zb))*D.y[] + 
+			      hc/2.*dy(zb)*dx(D.y) - sq(hc)/3.*d2xy(D.y)
+			      - hc*dy(D.y)*(dxh + dxzb/2.))))/
+	  (alpha_d*(hr3 + hl3)/(3.*sq(Delta)) + 
+	   hc*(alpha_d*(dxeta*dxzb + hc/2.*d2x(zb)) + 1.));
+      }
+      else
+	D.x[] = 0.;
+    }
 }
 
 /**
@@ -230,29 +226,40 @@ static void green_naghdi (scalar * current, scalar * updates)
   \partial_{xy}^2 z_b
   \end{eqnarray*}
   $$
-  */
-
-  scalar c[], d[];
-  foreach() {
-    double dxux = dx(u.x), dyuy = dy(u.y);
-    c[] = - dxux*dyuy + dx(u.y)*dy(u.x) + sq(dxux + dyuy);
-    d[] = sq(u.x[])*d2x(zb) + sq(u.y[])*d2y(zb) + 2.*u.x[]*u.y[]*d2xy(zb);
-  }
-  boundary ({c,d});
-
-  /**
-  We can now compute $b$
-  $$
-  b = \left[ \frac{g}{\alpha_d} \nabla \eta +\mathcal{Q}_1 \left( u \right)
-  \right]
-  $$ */
+  Note that we declare field *c* and *d* in a new scope, so that the
+  corresponding memory is freed after we have computed $b$. */
 
   vector b[];
-  foreach()
-    foreach_dimension() {
-      double dxzb = dx(zb), dxeta = dxzb + dx(h);
-      b.x[] = h[]*(G/alpha_d*dxeta - 2.*R1(h,zb,c) + R2(h,zb,d));
+  {
+    scalar c[], d[];
+    foreach() {
+      double dxux = dx(u.x), dyuy = dy(u.y);
+      c[] = - dxux*dyuy + dx(u.y)*dy(u.x) + sq(dxux + dyuy);
+      d[] = sq(u.x[])*d2x(zb) + sq(u.y[])*d2y(zb) + 2.*u.x[]*u.y[]*d2xy(zb);
     }
+    boundary ({c,d});
+
+    /**
+    We can now compute $b$
+    $$
+    b = \left[ \frac{g}{\alpha_d} \nabla \eta +\mathcal{Q}_1 \left( u \right)
+    \right]
+    $$ */
+
+    foreach()
+      foreach_dimension()
+        b.x[] = h[]*(G/alpha_d*dx(eta) - 2.*R1(h,zb,c) + R2(h,zb,d));
+  }
+
+  /**
+  We declare a new field which will track whether cells are completely
+  wet. This is necessary to turn off dispersive terms close to the
+  shore so that lake-at-rest balance is maintained. */
+
+  scalar wet[];
+  foreach()
+    wet[] = h[] > dry;
+  boundary ({wet});
 
   /**
   Finally we solve the linear problem with the multigrid
@@ -260,11 +267,10 @@ static void green_naghdi (scalar * current, scalar * updates)
   We need to restrict $h$ and $z_b$ as their values will be required 
   for relaxation on coarse grids. */
 
-  struct GreenNaghdi gn;
-  gn.h = h; gn.zb = zb;
-  restriction ({h,zb});
-  boundary_restriction ({h,zb});
-  mgD = mg_solve ((scalar *){D}, (scalar *){b}, residual_GN, relax_GN, &gn);
+  scalar * list = {h, zb, wet};
+  restriction (list);
+  boundary_restriction (list);
+  mgD = mg_solve ((scalar *){D}, (scalar *){b}, residual_GN, relax_GN, list);
 
   /**
   We can then compute the updates for $h$ (zero) and $hu$. Note that we
@@ -280,11 +286,16 @@ static void green_naghdi (scalar * current, scalar * updates)
     We only apply the Green-Naghdi source term when the slope of the
     free surface is smaller than *breaking*. The idea is to turn off
     dispersion in areas where the wave is "breaking" (i.e. in
-    hydraulic jumps). */
+    hydraulic jumps). We also turn off dispersive terms close to shore
+    so that lake-at-rest balance is maintained. */
 
     if (fabs(dx(eta)) < breaking && fabs(dy(eta)) < breaking)
-      foreach_dimension()
-	dhu.x[] = h[]*(G/alpha_d*dx(eta) - D.x[]);
+      foreach_dimension() {
+	if (wet[-1,0] == 1 && wet[] == 1 && wet[1,0] == 1)
+	  dhu.x[] = h[]*(G/alpha_d*dx(eta) - D.x[]);
+	else
+	  dhu.x[] = 0.;
+      }
     else
       foreach_dimension()
 	dhu.x[] = 0.;

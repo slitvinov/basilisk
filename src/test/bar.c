@@ -71,7 +71,7 @@ void plot_profile (double t, FILE * fp)
 event gnuplot (t += 0.05) {
   static FILE * fp = popen ("gnuplot", "w");
   plot_profile (t, fp);
-  fprintf (stderr, "%g %g\n", t, interpolate (eta, 17.3, 0.));
+  fprintf (stderr, "%g %f\n", t, interpolate (eta, 17.3, 0.));
 }
 
 event gnuplot (t = end) {

@@ -189,7 +189,6 @@ event logfile (i++) {
     fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
   fprintf (stderr, "%g %d %g %g %.8f %g %g %.4g %g\n", 
 	   t, i, s.min, s.max, s.sum, dt, n.rms, n.max, dt);
-  assert (s.min >= 0.);
 
   /**
   Here we output surface elevation at the various gauges... */
@@ -198,7 +197,7 @@ event logfile (i++) {
 }
 
 /**
-... and compare it with experimental data both for the Green-Naghdi
+... and compare it with experimental data for the Green-Naghdi
 solver (blue) and the Saint-Venant solver (magenta). The results for
 the Green-Naghdi solver are very similar to those of [Kazolea et al,
 2012](/src/references.bib#kazolea2012), Figure 14 and [Lannes and
