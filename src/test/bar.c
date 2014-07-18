@@ -54,15 +54,14 @@ event init (i = 0) {
 We use gnuplot to visualise the wave profile as the simulation
 runs and to generate a snapshot at $t=40$. 
 
-![Snapshot of waves. The top of the bar is seen in black.](bar/snapshot.png)
+![Snapshot of waves. The top of the bar is seen in white.](bar/snapshot.png)
 */
 
 void plot_profile (double t, FILE * fp)
 {
   fprintf (fp,
 	   "set title 't = %.2f'\n"
-	   "p [0:25][-0.12:0.04]'-' u 1:3:2 w filledcu lc 3 t '',"
-	   " '' u 1:(-0.4):3 t '' w filledcu lc -1\n", t);
+	   "p [0:25][-0.12:0.04]'-' u 1:3:2 w filledcu lc 3 t ''\n", t);
   foreach()
     fprintf (fp, "%g %g %g\n", x, eta[], zb[]);
   fprintf (fp, "e\n\n");

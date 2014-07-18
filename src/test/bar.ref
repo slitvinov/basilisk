@@ -799,11 +799,3 @@
 39.9 0.00245477
 39.95 0.000692321
 40 -0.00149182
-
-gnuplot> p [0:25][-0.12:0.04]'-' u 1:3:2 w filledcu lc 3 t '', '' u 1:(-0.4):3 t '' w filledcu lc -1
-                                                                                                   ^
-         line 2050: warning: Skipping data file with no valid points
-
-gnuplot> p [0:25][-0.12:0.04]'-' u 1:3:2 w filledcu lc 3 t '', '' u 1:(-0.4):3 t '' w filledcu lc -1
-                                                                                                   ^
-         line 1642450: warning: Skipping data file with no valid points
