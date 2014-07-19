@@ -177,22 +177,24 @@ double update (scalar * evolving, scalar * updates, double dtmax)
   vector u = { evolving[1], evolving[2] };
 
   /**
-  The gradients are stored in locally-allocated fields. First-order
-  reconstruction is used for the gradient fields. */
-
-  vector gh[], geta[];
-  tensor gu[];
-  for (scalar s in {gh, geta, gu})
-    s.gradient = zero;
-  gradients ({h, eta, u}, {gh, geta, gu});
-
-  /**
   `Fh` and `Fq` will contain the fluxes for $h$ and $h\mathbf{u}$
   respectively and `S` is necessary to store the asymmetric topographic
   source term. */
 
   vector Fh[], S[];
   tensor Fq[];
+
+  /**
+  The gradients are stored in locally-allocated fields. First-order
+  reconstruction is used for the gradient fields. */
+
+  {
+
+  vector gh[], geta[];
+  tensor gu[];
+  for (scalar s in {gh, geta, gu})
+    s.gradient = zero;
+  gradients ({h, eta, u}, {gh, geta, gu});
 
   /**
   The faces which are "wet" on at least one side are traversed. */
@@ -266,6 +268,8 @@ double update (scalar * evolving, scalar * updates, double dtmax)
       Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
   }
   
+  }
+
   boundary_normal ({Fh, S, Fq});
 
   /**

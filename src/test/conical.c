@@ -12,8 +12,10 @@ al, 2013](/src/references.bib#hou2013), [Nikolos and Delis,
 
 #if SAINT_VENANT
 # include "saint-venant.h"
+# define MGD 0
 #else
 # include "green-naghdi.h"
+# define MGD mgD.i
 #endif
 
 /**
@@ -186,9 +188,9 @@ event logfile (i++) {
   stats s = statsf (h);
   norm n = normf (u.x);
   if (i == 0)
-    fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
-  fprintf (stderr, "%g %d %g %g %.8f %g %g %.4g %g\n", 
-	   t, i, s.min, s.max, s.sum, dt, n.rms, n.max, dt);
+    fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt mgD.i\n");
+  fprintf (stderr, "%g %d %g %g %.8f %g %.4g %g %d\n", 
+	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, MGD);
 
   /**
   Here we output surface elevation at the various gauges... */

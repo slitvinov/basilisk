@@ -150,18 +150,22 @@ static double residual_GN (scalar * a, scalar * r, scalar * resl, void * data)
 	   alpha_d*hc*((hc/2.*d2xy(zb) + dxeta*dy(zb))*D.y[] + 
 		       hc/2.*dy(zb)*dx(D.y) - sq(hc)/3.*d2xy(D.y)
 		       - hc*dy(D.y)*(dxh + dxzb/2.)));
+      
+	/**
+	The function also need to return the maximum residual. */
+	
+	if (fabs (res.x[]) > maxres)
+	  maxres = fabs (res.x[]);
       }
       else
 	res.x[] = 0.;
-      
-      /**
-      The function also need to return the maximum residual. */
-
-      if (fabs (res.x[]) > maxres)
-	maxres = fabs (res.x[]);
     }
 
-  return maxres;
+  /**
+  The maximum residual is normalised by gravity i.e. the tolerance is
+  the relative acceleration times the depth. */
+
+  return maxres/G;
 }
 
 /**
@@ -309,6 +313,10 @@ function. */
 
 event defaults (i = 0) {
   sources = green_naghdi;
+
+  /**
+  We need an initial guess for the dispersive term. */
+
   foreach()
     foreach_dimension()
       D.x[] = 0.;
