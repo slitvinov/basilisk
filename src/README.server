@@ -29,7 +29,7 @@ export CC99="gcc -O2 -Wall -std=c99 -D_GNU_SOURCE=1"
 If you also intend to generate graphics etc... on the server, do
 
 ~~~bash
-sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind gifsicle
+sudo apt-get install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle
 ~~~
 
 ## Using the server

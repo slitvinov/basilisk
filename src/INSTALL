@@ -93,7 +93,7 @@ echo "export PATH=$PATH:$PWD" >> ~/.bashrc
 
 - gnuplot (> 4.2)
 - imagemagick
-- ffmpeg
+- libav-tools
 - smpeg-plaympeg
 - graphviz
 - valgrind
@@ -104,7 +104,7 @@ and also
 Debian-like system you just need to do
 
 ~~~bash
-sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind gifsicle
+sudo apt-get install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle
 ~~~
 
 ## Using Basilisk with python

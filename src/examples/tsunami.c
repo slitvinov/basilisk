@@ -290,7 +290,7 @@ This is done every minute (*t++*). The static variable *fp* is *NULL*
 when the simulation starts and is kept between calls (that is what
 *static* means). The first time the event is called we set *fp* to a
 *ppm2mpeg* pipe. This will convert the stream of PPM images into an
-mpeg video using ffmpeg externally. 
+mpeg video. 
 
 We use the *mask* option of *output_ppm()* to mask out the dry
 topography. Any part of the image for which *m[]* is negative
