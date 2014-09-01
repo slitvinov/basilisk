@@ -258,14 +258,14 @@ double update (scalar * evolving, scalar * updates, double dtmax)
       well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
       
       #if QUADTREE
-        if (!(cell.flags & (fghost|active))) {
-  	  hi = coarse(h,0,0);
-	  zi = coarse(zb,0,0);
-	}
-	if (!(neighbor(-1,0).flags & (fghost|active))) {
-	  hn = coarse(h,-1,0);
-	  zn = coarse(zb,-1,0);
-	}
+      if (!is_active(cell) && is_active(aparent(0,0))) {
+	hi = coarse(h,0,0);
+	zi = coarse(zb,0,0);
+      }
+      if (!is_active(neighbor(-1,0)) && is_active(aparent(-1,0))) {
+	hn = coarse(h,-1,0);
+	zn = coarse(zb,-1,0);
+      }
       #endif
 
       double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));

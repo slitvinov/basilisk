@@ -62,7 +62,7 @@ bottom fputs (n % 2 ? "left"   : "bottom", yyout);
 {ID}+   ECHO;
 
 val_{ID}*{WS}*\( |
-(val|fine|coarse|allocated|neighbor){WS}*\( {
+(val|fine|coarse|allocated|neighbor|aparent){WS}*\( {
   int para = 1, dimension = 2;
   char * index[5];
   int len[5], i = 0, c = input(), j;

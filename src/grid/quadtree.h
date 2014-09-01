@@ -16,11 +16,10 @@ typedef struct {
 enum {
   active  = 1 << 0,
   leaf    = 1 << 1,
-  fghost  = 1 << 2,
-  refined = 1 << 3,
-  halo    = 1 << 4,
-  local   = 1 << 5,
-  user    = 6,
+  refined = 1 << 2,
+  halo    = 1 << 3,
+  local   = 1 << 4,
+  user    = 5,
 
   face_x = 1 << 0,
   face_y = 1 << 1
@@ -29,7 +28,6 @@ enum {
 #define _CORNER 4
 #define is_active(cell)  ((cell).flags & active)
 #define is_leaf(cell)    ((cell).flags & leaf)
-#define is_ghost(cell)   ((cell).flags & fghost)
 #define is_refined(cell) (is_active(cell) && !is_leaf(cell))
 #define is_corner(cell)  (stage == _CORNER)
 #define is_coarse()      (!is_leaf(cell))
@@ -438,15 +436,6 @@ static void update_cache_f (void)
       continue;
     }
   }
-
-  /* update ghost cell flags */
-  for (int d = 0; d < nboundary; d++)
-    foreach_boundary_cell (d, true) {
-      if (allocated(ghost))
-	neighbor(ghost).flags = fghost;
-      if (!is_active (cell))
-	continue;
-    }
 
   q->dirty = false;
 }
