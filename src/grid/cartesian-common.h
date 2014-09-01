@@ -360,8 +360,8 @@ void cartesian_debug (Point point)
   for (scalar v in all)
     fprintf (fp, "x y %s ", v.name);
   fputc ('\n', fp);
-  for (int k = -1; k <= 1; k++)
-    for (int l = -1; l <= 1; l++) {
+  for (int k = -2; k <= 2; k++)
+    for (int l = -2; l <= 2; l++) {
       for (scalar v in all) {
 	fprintf (fp, "%g %g ", 
 		 x + k*Delta + v.d.x*Delta/2., 

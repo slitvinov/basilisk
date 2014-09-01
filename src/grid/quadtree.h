@@ -674,8 +674,13 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   if (l < 0) {
     foreach_boundary_cell (d, true)
       if (is_leaf (cell)) {
-	for (scalar s in lright)
+	for (scalar s in lright) {
 	  s[ghost] = s.boundary[d] (point, s);
+	  point.i -= ig; point.j -= jg;
+	  double vb = s.boundary[d] (point, s);
+	  point.i += ig; point.j += jg;
+	  s[2*ig,2*jg] = vb;
+	}
 	for (scalar s in lleft)
 	  s[] = s.boundary[d] (point, s);
 	corners(); /* we need this otherwise we'd skip corners */
@@ -685,8 +690,13 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   else
     foreach_boundary_cell (d, true) {
       if (level == l) {
-	for (scalar s in lright)
+	for (scalar s in lright) {
 	  s[ghost] = s.boundary[d] (point, s);
+	  point.i -= ig; point.j -= jg;
+	  double vb = s.boundary[d] (point, s);
+	  point.i += ig; point.j += jg;
+	  s[2*ig,2*jg] = vb;
+	}
 	for (scalar s in lleft)
 	  s[] = s.boundary[d] (point, s);
 	corners(); /* we need this otherwise we'd skip corners */
@@ -801,8 +811,13 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	  (cell.flags & halo) || // restriction halo
 	  is_corner(cell)) {     // corners
 	// leaf or halo restriction
-	for (scalar s in centered)
+	for (scalar s in centered) {
 	  s[ghost] = s.boundary[d] (point, s);
+	  point.i -= ig; point.j -= jg;
+	  double vb = s.boundary[d] (point, s);
+	  point.i += ig; point.j += jg;
+	  s[2*ig,2*jg] = vb;
+	}
 	corners();
       }
       continue;
@@ -814,6 +829,13 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	  if (allocated(ig,jg))
 	    for (scalar s in centered)
 	      s[ghost] = s.boundary[d] (point, s);
+	  if (allocated(2*ig,2*jg))
+	    for (scalar s in centered) {
+	      point.i -= ig; point.j -= jg;
+	      double vb = s.boundary[d] (point, s);
+	      point.i += ig; point.j += jg;
+	      s[2*ig,2*jg] = vb;
+	    }
 	}
       continue;
     }
