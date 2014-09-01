@@ -1,4 +1,5 @@
 #define GRIDNAME "Multigrid 1D"
+#define GHOSTS 1
 
 #define I      (point.i - GHOSTS)
 #define J      -0.5
@@ -70,31 +71,27 @@ static size_t _size (size_t l)
 @
 @define end_foreach() } OMP_END_PARALLEL()
 
-@def foreach_boundary_level(d,l,corners) {
-  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point point = *((Point *)grid);
-  point.level = l; point.n = 1 << point.level;
-  {
-    point.i = d == right ? point.n : 1;
-    POINT_VARIABLES
-@
-@define end_foreach_boundary_level() }}
-
-@define foreach_boundary_face(d) foreach_boundary_level(d,point.depth,true)
-@define end_foreach_boundary_face() end_foreach_boundary_level()
-
-@def foreach_boundary(d,corners) foreach_boundary_level(d,point.depth,corners) @
-@def end_foreach_boundary() end_foreach_boundary_level() @
-
-@def foreach_boundary_ghost(d) { _OMPSTART /* for face reduction */
-  int ig = _ig[d], jg = _jg[d];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+@def foreach_face_generic(clause)
+  OMP_PARALLEL()
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point = *((Point *)grid);
   point.level = point.depth; point.n = 1 << point.level;
-  {
-    point.i = (d == right ? point.n : 1) + ig;
+  int _k;
+  OMP(omp for schedule(static) clause)
+  for (_k = GHOSTS; _k <= point.n + GHOSTS; _k++) {
+    point.i = _k;
     POINT_VARIABLES
 @
-@define end_foreach_boundary_ghost() } _OMPEND }
+@define end_foreach_face_generic() } OMP_END_PARALLEL()
+
+@def foreach_vertex()
+foreach_face_generic() {
+  x -= Delta/2.;
+@
+@define end_foreach_vertex() } end_foreach_face_generic()
+
+@define is_face_x() (point.j <= point.n)
+@define is_face_y() false
 
 @define is_coarse() (point.level < depth())
 
@@ -145,10 +142,53 @@ void multigrid_trash (void * alist)
 	((double *)(&p.d[p.level][i*datasize]))[s] = undefined;
 }
 
+static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
+{
+  int d = ((BoxBoundary *)b)->d;
+
+  Point point = *((Point *)grid);
+  ig = d % 2 ? 0 : _ig[d]; jg = 0;
+  point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
+  assert (d <= left);
+  point.i = d == right ? point.n + GHOSTS : GHOSTS;
+  for (scalar s in list)
+    val(s,ig,jg) = s.boundary[d] (point, s);
+}
+
+static void box_boundary_level (const Boundary * b, scalar * list, int l)
+{
+  int d = ((BoxBoundary *)b)->d;
+  scalar * centered = NULL, * normal = NULL;
+
+  int component = d/2;
+  for (scalar s in list)
+    if (!is_constant(s) && s.boundary[d]) {
+      if (s.face) {
+	if ((&s.d.x)[component])
+	  normal = list_add (normal, s);
+      }	
+      else
+	centered = list_add (centered, s);
+    }
+
+  Point point = *((Point *)grid);
+  ig = _ig[d]; jg = 0;
+  point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
+  assert (d <= left);
+  point.i = d == right ? point.n + GHOSTS - 1 : GHOSTS;
+  for (scalar s in centered)
+    val(s,ig,jg) = s.boundary[d] (point, s);
+  free (centered);
+
+  box_boundary_level_normal (b, normal, l);
+  free (normal);
+}
+
 void free_grid (void)
 {
   if (!grid)
     return;
+  free_boundaries();
   Point * m = grid;
   for (int l = 0; l <= m->depth; l++)
     free (m->d[l]);
@@ -187,6 +227,13 @@ void init_grid (int n)
   }
   grid = m;
   trash (all);
+  for (int d = 0; d < top; d++) {
+    BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
+    box->d = d;
+    Boundary * b = (Boundary *) box;
+    b->level = b->restriction = box_boundary_level;
+    add_boundary (b);
+  }
   init_events();
 }
 
