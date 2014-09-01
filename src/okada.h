@@ -166,6 +166,7 @@ void fault (struct Okada p)
   boundary ({hold});
 
   p.d = h;
+  int nitermax = 20;
   do {
     okada (p);
     // h[] now contains the Okada vertical displacement
@@ -174,5 +175,5 @@ void fault (struct Okada p)
       h[] = hold[] > dry ? max (0., hold[] + h[]) : hold[];
       eta[] = zb[] + h[];
     }
-  } while (p.iterate && p.iterate());
+  } while (p.iterate && p.iterate() && nitermax--);
 }
