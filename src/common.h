@@ -151,7 +151,7 @@ typedef struct {
   char * name;
   struct { int x, y; } d; // staggering
   vector v;
-  bool   face;
+  bool   face, normal;
 } Methods;
 
 Methods * _method;
@@ -217,6 +217,25 @@ void list_print (scalar * l, FILE * fp)
   for (scalar s in l)
     fprintf (fp, "%s%s", i++ == 0 ? "{" : ",", s.name);
   fputs (i > 0 ? "}\n" : "{}\n", fp);
+}
+
+/**
+Given a list of scalars this functions splits it into two lists: a
+list of scalars defined on the faces in direction d and the
+rest. */
+
+void list_split (scalar * list, int d,
+		 scalar ** faces, scalar ** rest)
+{
+  *faces = *rest = NULL;
+  int component = d/2;
+  for (scalar s in list)
+    if (!is_constant(s) && s.boundary[d]) {
+      if (s.face && d % 2 && (&s.d.x)[component])
+	*faces = list_add (*faces, s);
+      else
+	*rest = list_add (*rest, s);
+    }
 }
 
 int vectors_len (vector * list)

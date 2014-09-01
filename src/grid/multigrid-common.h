@@ -45,33 +45,23 @@ void restriction (scalar * list)
   if (listf)
     boundary_flux (listf);
   if (listf || listc) {
-    boundary_iterate (restriction, listc, depth());
+    boundary_iterate (restriction, list, depth());
     for (int l = depth() - 1; l >= 0; l--) {
       foreach_coarse_level(l) {
+	// fixme: this ignores the s.coarsen() method...
 	for (scalar s in listc)
 	  s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
 	for (vector v in listf)
-	  foreach_dimension()
+	  foreach_dimension() {
 	    v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+	    v.x[1,0] = (fine(v.x,2,0) + fine(v.x,2,1))/2.;
+	  }
       }
-      boundary_iterate (restriction, listc, l);
-      assert (listf == NULL);
+      boundary_iterate (restriction, list, l);
     }
   }
   free (listc);
-  if (listf) {
-#if 1
-    assert (false);
-#else
-    foreach_boundary_fine_to_coarse(right)
-      for (vector v in listf)
-	v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-    foreach_boundary_fine_to_coarse(top)
-      for (vector v in listf)
-	v.y[] = (fine(v.y,0,0) + fine(v.y,1,0))/2.;
-#endif
-    free (listf);
-  }
+  free (listf);
 }
 
 void wavelet (scalar s, scalar w)
@@ -136,8 +126,10 @@ static void * none = nothing;
 void coarsen_face (Point point, scalar s)
 {
   vector v = s.v;
-  foreach_dimension()
+  foreach_dimension() {
     v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+    v.x[1,0] = (fine(v.x,2,0) + fine(v.x,2,1))/2.;
+  }
 }
 
 vector multigrid_init_face_vector (vector v, const char * name)

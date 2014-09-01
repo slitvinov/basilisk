@@ -25,12 +25,9 @@ event init (i = 0) {
 
 event logfile (i++)
 {
-  double flux = 0.;
-  foreach_boundary (left, false)
-    flux += u.x[]*Delta;
   stats s = statsf (f);
-  fprintf (stderr, "%d %g %d %g %g %g %g\n", 
-	   i, t, mgp.i, flux, s.sum, s.min, s.max);
+  fprintf (stderr, "%d %g %d %g %g %g\n", 
+	   i, t, mgp.i, s.sum, s.min, s.max);
 }
 
 event movies (t += 0.2)

@@ -83,10 +83,9 @@ on the boundary $p$ must verify
 $$
 \nabla p|_{b} = \frac{u^\star_n}{\Delta t\alpha}
 $$
-Taking care about boundary orientation and staggering of *uf*, this
+Taking care of boundary orientation and staggering of *uf*, this
 can be written */
 
-// fixme: this does not work with -DTRASH=1
 p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]));
 p[left]   = neumann(-uf.x[]/(dt*alpha.x[]));
 p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]));
@@ -95,7 +94,10 @@ p[bottom] = neumann(-uf.y[]/(dt*alpha.y[]));
 /**
 ## Initial conditions
 
-The default velocity and pressure are zero. */
+The default velocity and pressure are zero. 
+
+On quadtrees, refinement of the face-centered velocity field needs to
+preserve the divergence-free condition. */
 
 event defaults (i = 0)
 {
@@ -106,6 +108,9 @@ event defaults (i = 0)
     p[] = pf[] = 0.;
   }
   boundary ({pf,u,g});
+#if QUADTREE
+  uf.x.refine = refine_face_solenoidal;
+#endif
 }
 
 /**
@@ -118,8 +123,7 @@ event init (i = 0)
   trash ({uf});
   foreach_face()
     uf.x[] = (u.x[] + u.x[-1,0])/2.;
-  boundary_flux ({uf});
-  boundary_tangent ({uf});
+  boundary ((scalar *){uf});
 }
 
 /**
@@ -148,8 +152,7 @@ $\alpha_c$) or dynamic viscosity (face field $\mu_f$) -- at time
 $t+\Delta t/2$ -- can be defined by overloading this event. */
 
 event properties (i++,last) {
-  boundary_flux ({alpha, mu});
-  boundary_tangent ({alpha, mu});
+  boundary ((scalar *){alpha, mu});
 }
 
 /**
@@ -261,14 +264,17 @@ averaging. */
 
 event acceleration (i++,last)
 {
-
-  /**
-  We add the acceleration term to the face velocity field. */
-
   boundary_flux ({a});
   foreach_face()
     uf.x[] += dt*a.x[];
-  boundary_flux ({uf}); 
+
+  /**
+  We apply boundary conditions but only in the tangential direction so
+  that the acceleration term is preserved on the boundary. */
+
+  uf.x.normal = uf.y.normal = false;
+  boundary ((scalar *){uf});
+  uf.x.normal = uf.y.normal = true;  
 }
 
 /**

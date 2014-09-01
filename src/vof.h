@@ -111,15 +111,17 @@ static void sweep_x (scalar c, scalar cc)
   On quadtree grids, we need to make sure that the fluxes match at
   fine/coarse cell boundaries i.e. we need to *restrict* the fluxes from
   fine cells to coarse cells. This is what is usually done, for all
-  dimensions, by the `boundary_normal()` function. Here, we only need to
+  dimensions, by the `boundary_flux()` function. Here, we only need to
   do it for a single dimension (x). */
 
 #if QUADTREE
-  foreach_halo_fine_to_coarse() {
-    flux[] = (fine(flux,0,0) + fine(flux,0,1))/2.;
-    if (is_leaf (neighbor(1,0)))
-      flux[1,0] = (fine(flux,2,0) + fine(flux,2,1))/2.;
-  }
+  for (int l = depth() - 1; l >= 0; l--)
+    foreach_halo (restriction, l) {
+      if (is_leaf (neighbor(-1,0)))
+	flux[] = (fine(flux,0,0) + fine(flux,0,1))/2.;
+      if (is_leaf (neighbor(1,0)))
+	flux[1,0] = (fine(flux,2,0) + fine(flux,2,1))/2.;
+    }
 #endif
 
   /**

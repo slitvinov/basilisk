@@ -87,4 +87,14 @@ event outputfile (t <= 1200.; t += 1200./8) {
 // int event (t += 100)
 //  output_matrix (h, stdout, N, true);
 
-event adapt (i++) { adapt_wavelet ({h}, (double[]){1e-2}, LEVEL, 4); }
+event adapt (i++) {
+  // we dot this so that wavelets use the default bilinear
+  // interpolation this is less noisy than the linear + gradient
+  // limiters used in Saint-Venant not sure whether this is better
+  // though.
+  scalar h1[];
+  foreach()
+    h1[] = h[];
+  boundary ({h1});
+  adapt_wavelet ({h1}, (double[]){1e-2}, LEVEL, 4); 
+}

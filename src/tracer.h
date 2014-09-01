@@ -17,6 +17,18 @@ extern face vector uf;
 extern double dt;
 
 /**
+On adaptive meshes, tracers need to use linear interpolation (rather
+than the default bilinear interpolation) to ensure conservation when
+refining cells. */
+
+#if QUADTREE
+event defaults (i = 0) {
+  for (scalar s in tracers)
+    s.refine = refine_linear;
+}
+#endif
+
+/**
 The integration is performed using the Bell-Collela-Glaz scheme. */
 
 #include "bcg.h"

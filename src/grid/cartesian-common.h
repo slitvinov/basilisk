@@ -220,40 +220,18 @@ void free_solver()
 
 // Cartesian methods
 
-void (* boundary_level)   (scalar *, int l);
-void (* boundary_flux)    (vector *);
-
-void boundary_tangent (vector * list)
-{
-  vector * listv = NULL;
-  for (vector v in list)
-    if (!is_constant(v.x))
-      listv = vectors_append (listv, v);
-  if (listv)
-    boundary_iterate (tangent, listv);
-  free (listv);
-}
+void (* boundary_level) (scalar *, int l);
+void (* boundary_flux)  (vector *);
 
 void boundary (scalar * list)
 {
-  scalar * listc = NULL;
   vector * listf = NULL;
-  for (scalar s in list) {
-    if (s.face)
+  for (scalar s in list)
+    if (!is_constant(s) && s.face)
       listf = vectors_add (listf, s.v);
-    else
-      listc = list_add (listc, s);
-  }
-  if (listc) {
-    boundary_level (listc, -1);
-    free (listc);
-  }
-  if (listf) {
-    boundary_iterate (normal, listf);
+  if (listf)
     boundary_flux (listf);
-    boundary_tangent (listf);
-    free (listf);
-  }
+  boundary_level (list, -1);
 }
 
 void cartesian_boundary_level (scalar * list, int l)
@@ -274,11 +252,6 @@ static double symmetry (Point point, scalar s)
 static double antisymmetry (Point point, scalar s)
 {
   return -s[];
-}
-
-static double noflux (Point point, scalar s)
-{
-  return 0.;
 }
 
 scalar cartesian_init_scalar (scalar s, const char * name)
@@ -326,9 +299,9 @@ vector cartesian_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_vector (v, name);
   foreach_dimension() {
-    v.x.boundary[right] = v.x.boundary[left] = noflux;  
+    v.x.boundary[right] = v.x.boundary[left] = NULL;
     v.x.d.x = -1;
-    v.x.face = true;
+    v.x.face = v.x.normal = true;
   }
   return v;
 }

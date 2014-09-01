@@ -52,6 +52,14 @@ event defaults (i = 0)
 }
 
 /**
+We need to explicitly set the zero normal velocity condition. */
+
+u.x[left]   = dirichlet(0);
+u.x[right]  = dirichlet(0);
+u.y[top]    = dirichlet(0);
+u.y[bottom] = dirichlet(0);
+
+/**
 We apply boundary conditions again after user initialisation. */
 
 event init (i = 0)

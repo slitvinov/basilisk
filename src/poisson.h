@@ -176,8 +176,8 @@ mgstats mg_solve (scalar * a, scalar * b,
   if (s.i == NITERMAX)
     fprintf (stderr, 
 	     "WARNING: convergence not reached after %d iterations\n"
-	     "  sum: %g\n", 
-	     NITERMAX, s.sum);
+	     "  res: %g sum: %g\n", 
+	     NITERMAX, s.resa, s.sum);
 
   /**
   We deallocate the residual and correction fields and free the lists. */
@@ -232,6 +232,15 @@ static void relax (scalar * al, scalar * bl, int l, void * data)
 	   alpha.y[0,1]*a[0,1] + alpha.y[]*a[0,-1] 
 	   - sq(Delta)*b[])
     /(alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[] - lambda[]*sq(Delta));
+
+#if TRASH
+  scalar a1[];
+  foreach_level_or_leaf (l)
+    a1[] = a[];
+  trash ({a});
+  foreach_level_or_leaf (l)
+    a[] = a1[];
+#endif
 }
 
 /**
@@ -377,8 +386,7 @@ mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
   else
     foreach_face()
       u.x[] -= dt*(p[] - p[-1,0])/Delta;
-  boundary_flux ({u});
-  boundary_tangent ({u});
+  boundary ((scalar *){u});
 
   return mgp;
 }

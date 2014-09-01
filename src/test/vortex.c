@@ -127,11 +127,18 @@ event output (t += 5) {
 If we are using a quadtree grid, it is adapted using wavelet error
 control on both components of the velocity field. Note that the error
 thresholds need to be specified twice (once for each component of
-vector $\mathbf{u}$). */
+vector $\mathbf{u}$). 
+
+We need to adapt p to get an initial guess for the next iteration, but
+we can't apply boundary conditions (for the pressure) because alpha is
+not consistent and is used to compute the consistent Neumann
+conditions (see
+[navier-stokes/centered.h](/src/navier-stokes/centered.h)). */
 
 #if QUADTREE
 event adapt (i++) {
-  adapt_wavelet ((scalar *){u}, (double[]){1e-4,1e-4}, MAXLEVEL);
+  adapt_wavelet ((scalar *){u}, (double[]){5e-5,5e-5}, MAXLEVEL,
+		 list = {p,u,pf,uf,g}, listb = {u,pf,uf,g});
 }
 #endif
 

@@ -19,6 +19,8 @@ enum {
   fghost  = 1 << 2,
   refined = 1 << 3,
   halo    = 1 << 4,
+  local   = 1 << 5,
+  user    = 6,
 
   face_x = 1 << 0,
   face_y = 1 << 1
@@ -307,7 +309,8 @@ void recursive (Point point)
     int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
     Quadtree point = *((Quadtree *)grid); point.back = grid;
     int _d = dir; NOT_UNUSED(_d);
-    int _corners = corners;
+    /* traverse corners only for top and bottom */
+    bool _corners = (corners);
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
     while (_s >= 0) {
@@ -415,7 +418,7 @@ static void update_cache_f (void)
 	bool restriction = level > 0 ? (aparent(0,0).flags & halo) : false;
 	for (int k = -GHOSTS; k <= GHOSTS && !restriction; k++)
 	  for (int l = -GHOSTS; l <= GHOSTS && !restriction; l++)
-	    if (is_leaf(neighbor(k,l)))
+	    if (allocated(k,l) && is_leaf(neighbor(k,l)))
 	      restriction = true;
 	if (restriction) {
 	  // halo restriction
@@ -426,6 +429,7 @@ static void update_cache_f (void)
 	  cell.flags &= ~halo;
       }
     }
+@if _MPI
     // !is_active(cell)
     else if (is_leaf(cell)) {
       // non-local halo prolongation
@@ -675,11 +679,16 @@ void realloc_scalar (void)
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
   int d = ((BoxBoundary *)b)->d;
+  scalar * lleft, * lright;
+  list_split (list, d, &lleft, &lright);
+
   if (l < 0) {
     foreach_boundary_cell (d, true)
       if (is_leaf (cell)) {
-	for (scalar s in list)
+	for (scalar s in lright)
 	  s[ghost] = s.boundary[d] (point, s);
+	for (scalar s in lleft)
+	  s[] = s.boundary[d] (point, s);
 	corners(); /* we need this otherwise we'd skip corners */
 	continue;
       }
@@ -687,37 +696,66 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   else
     foreach_boundary_cell (d, true) {
       if (level == l) {
-	for (scalar s in list)
+	for (scalar s in lright)
 	  s[ghost] = s.boundary[d] (point, s);
+	for (scalar s in lleft)
+	  s[] = s.boundary[d] (point, s);
 	corners(); /* we need this otherwise we'd skip corners */
 	continue;
       }
       else if (is_leaf (cell))
 	continue;
     }
+
+  free (lleft);
+  free (lright);
 }
 
-static void box_boundary_tangent (const Boundary * b, vector * list)
+static void box_boundary_halo_prolongation_normal (const Boundary * b,
+						   scalar * list, 
+						   int l, int depth)
 {
-  int d = ((BoxBoundary *)b)->d;
-  int component = (d/2 + 1) % 2; // index of tangential component
+  // see test/boundary_halo.c
+  int d = ((BoxBoundary *)b)->d, in, jn;
+  if (d % 2)
+    in = jn = 0;
+  else {
+    in = _ig[d]; jn = _jg[d];
+  }
 
-  foreach_boundary_cell (d, true)
-    if (is_leaf (cell)) {
-      for (vector v in list) {
-	scalar s = (&v.x)[component];
-	s[ghost] = s.boundary[d] (point, s);
+  foreach_boundary_cell (d, false) {
+    if (level == l) {
+      if (l == depth ||          // target level
+	  is_leaf(cell) ||       // leaves
+	  (cell.flags & halo) || // restriction halo
+	  is_corner(cell)) {     // corners
+	// leaf or halo restriction
+	for (scalar s in list)
+	  s[in,jn] = s.boundary[d] (point, s);
+	corners();
       }
       continue;
     }
+    else if (is_leaf(cell)) {
+      if (level == l - 1 && cell.neighbors > 0)
+	// halo prolongation
+	foreach_child_direction(d) {
+	  if (allocated(in,jn))
+	    for (scalar s in list)
+	      s[in,jn] = s.boundary[d] (point, s);
+	}
+      continue;
+    }
+  }
 }
 
-static void box_boundary_halo_prolongation (const Boundary * b,
-					    scalar * list, 
-					    int l, int depth)
+static void box_boundary_halo_prolongation_tangent (const Boundary * b,
+						    scalar * list, 
+						    int l, int depth)
 {
   // see test/boundary_halo.c
   int d = ((BoxBoundary *)b)->d;
+
   foreach_boundary_cell (d, true) {
     if (level == l) {
       if (l == depth ||          // target level
@@ -734,13 +772,69 @@ static void box_boundary_halo_prolongation (const Boundary * b,
     else if (is_leaf(cell)) {
       if (level == l - 1 && cell.neighbors > 0)
 	// halo prolongation
-	foreach_child_direction(d)
+	foreach_child_direction(d) {
 	  if (allocated(ig,jg))
 	    for (scalar s in list)
 	      s[ghost] = s.boundary[d] (point, s);
+	}
       continue;
     }
-  }
+  }  
+}
+
+static void box_boundary_halo_prolongation (const Boundary * b,
+					    scalar * list, 
+					    int l, int depth)
+{
+  // see test/boundary_halo.c
+  int d = ((BoxBoundary *)b)->d;
+  scalar * centered = NULL, * normal = NULL, * tangent = NULL;
+
+  int component = d/2;
+  for (scalar s in list)
+    if (!is_constant(s) && s.boundary[d]) {
+      if (s.face) {
+	if ((&s.d.x)[component]) {
+	  if (s.normal)
+	    normal = list_add (normal, s);
+	}
+	else
+	  tangent = list_add (tangent, s);
+      }	
+      else
+	centered = list_add (centered, s);
+    }
+
+  foreach_boundary_cell (d, d > left) {
+    if (level == l) {
+      if (l == depth ||          // target level
+	  is_leaf(cell) ||       // leaves
+	  (cell.flags & halo) || // restriction halo
+	  is_corner(cell)) {     // corners
+	// leaf or halo restriction
+	for (scalar s in centered)
+	  s[ghost] = s.boundary[d] (point, s);
+	corners();
+      }
+      continue;
+    }
+    else if (is_leaf(cell)) {
+      if (level == l - 1 && cell.neighbors > 0)
+	// halo prolongation
+	foreach_child_direction(d) {
+	  if (allocated(ig,jg))
+	    for (scalar s in centered)
+	      s[ghost] = s.boundary[d] (point, s);
+	}
+      continue;
+    }
+  }  
+  free (centered);
+
+  box_boundary_halo_prolongation_normal (b, normal, l, depth);
+  free (normal);
+  box_boundary_halo_prolongation_tangent (b, tangent, l, depth);
+  free (tangent);
 }
 
 Point refine_cell (Point point, scalar * list);
@@ -833,8 +927,6 @@ void init_grid (int n)
     box->d = d;
     Boundary * b = (Boundary *) box;
     b->level = b->restriction = box_boundary_level;
-    b->normal            = NULL;
-    b->tangent           = box_boundary_tangent;
     b->halo_restriction  = none;
     b->halo_prolongation = box_boundary_halo_prolongation;
     add_boundary (b);

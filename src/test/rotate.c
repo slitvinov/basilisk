@@ -1,4 +1,3 @@
-// #include "grid/cartesian.h"
 #include "advection.h"
 #include "vof.h"
 
@@ -42,7 +41,7 @@ event velocity (i++) {
 
 event logfile (t = {0,end}) {
   stats s = statsf (c);
-  fprintf (stderr, "# %f %.12f %g %g\n", t, s.sum, s.min, s.max);
+  fprintf (stderr, "# %f %.12f %f %g\n", t, s.sum, s.min, s.max);
 }
 
 event interface (t += end/10.) {

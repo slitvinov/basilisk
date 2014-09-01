@@ -36,7 +36,7 @@ script()
 	    fi
 	fi
     else
-	if ! gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log; then
+	if ! gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log 2> gdb.err; then
 	    pass=false
 	    awk '
      {
@@ -113,7 +113,7 @@ if ! test -f fail; then
        pass=false
     fi
   else
-    if ! timeout 1h gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log; then
+    if ! timeout 1h gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log 2> gdb.err; then
        pass=false
        awk '
        {

@@ -44,7 +44,7 @@ event defaults (i = 0)
 void run()
 {
   t = 0.;
-  init_grid(N);
+  init_grid (N);
 
   // main loop
   timer start = timer_start();
@@ -69,5 +69,5 @@ void run()
   }
   timer_print (start, i, tnc);
 
-  free_grid ();
+  free_grid();
 }

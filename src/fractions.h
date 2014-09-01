@@ -16,22 +16,9 @@ We will use basic geometric functions for square cut cells and the
 
 On quadtrees, we need to define how to coarsen (i.e. "restrict") or
 refine (i.e. "prolongate") interface definitions (see [geometry.h]()
-for a basic explanation of how interfaces are defined).
-
-For the normal to the interface, we don't use any interpolation from
-coarse to fine i.e. we use straight "injection". */
+for a basic explanation of how interfaces are defined). */
 
 #if QUADTREE
-static void injection (Point point, scalar s)
-{
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      fine(s,k,l) = s[];
-}
-
-/**
-Once we have the normal in the fine cell, we can compute the volume
-fraction. */
 
 static void fraction_refine (Point point, scalar c)
 {
@@ -76,6 +63,7 @@ static void alpha_refine (Point point, scalar alpha)
     for (int l = 0; l < 2; l++)
       fine(alpha,k,l) = 2.*alpha[] - ((2*k - 1)*n.x[] + (2*l - 1)*n.y[])/2.;
 }
+
 #endif // QUADTREE
 
 /**
@@ -309,12 +297,12 @@ void reconstruction (const scalar c, vector n, scalar alpha)
 #if QUADTREE
 
   /**
-  On a quadtree grid, we set the prolongation function defined above.
-  We do not restrict the normal or the intercept (they are recomputed
-  from the volume fraction when needed on the coarse mesh). */
+  On a quadtree grid, for the normal to the interface, we don't use
+  any interpolation from coarse to fine i.e. we use straight
+  "injection". */
 
   n.x.refine = n.x.prolongation = 
-    n.y.refine = n.y.prolongation = injection;
+    n.y.refine = n.y.prolongation = refine_injection;
 
   /**
   For $\alpha$ we store the normal field in the `v` attribute (which is

@@ -4,6 +4,11 @@
 scalar f[];
 scalar * tracers = {f};
 
+u.x[left]   = dirichlet(0.);
+u.x[right]  = dirichlet(0.);
+u.y[top]    = dirichlet(0.);
+u.y[bottom] = dirichlet(0.);
+
 int main()
 {
   // coordinates of lower-left corner

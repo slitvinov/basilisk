@@ -1,7 +1,11 @@
 /* tangential interpolation on face vector fields  */
 
 scalar h[];
-vector u[];
+face vector u[];
+
+double R0 = 0.1;
+u.x[right] = dirichlet(exp(-(x*x + y*y)/(R0*R0)));
+u.y[top] = dirichlet(exp(-(x*x + y*y)/(R0*R0)));
 
 int main (int argc, char ** argv)
 {
@@ -9,19 +13,17 @@ int main (int argc, char ** argv)
   init_grid (n);
 
   origin (-1, -1);
-  double R0 = 0.1;
   foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));
   boundary ({h});
   
   /* initial coarsening (see halo.c) */
-  double tolerance = 1.5e-4;
+  double tolerance = 2e-4;
   adapt_wavelet ({h}, &tolerance, 11, list = {h});
 
   foreach_face(x) u.x[] = exp(-(x*x + y*y)/(R0*R0));
   foreach_face(y) u.y[] = exp(-(x*x + y*y)/(R0*R0));
-  boundary_normal ({u});
-  boundary_tangent ({u});
+  boundary ((scalar *){u});
   //  output_cells (stdout);
 
   double max = 0;

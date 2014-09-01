@@ -6,6 +6,11 @@
 scalar f[];
 scalar * interfaces = {f};
 
+uf.x[left]   = dirichlet(0);
+uf.x[right]  = dirichlet(0);
+uf.y[top]    = dirichlet(0);
+uf.y[bottom] = dirichlet(0);
+
 int main() {
   size (4);
   origin (-2, -2);
@@ -47,7 +52,7 @@ event logfile (i++) {
   printf ("%g %d %g %g %g %g %d %d %d\n", 
 	  t, i, dt, s.sum - 8., s.min, s.max - 1., mgp.i, mgpf.i, mgu.i);
   assert (s.min >= -1e-10 && s.max <= 1. + 1e-10);
-  assert (fabs (s.sum - 8.) < 1e-4);
+  assert (fabs (s.sum - 8.) < 5e-5);
 }
 
 // event interface (t = {0,0.7,0.8,0.9,1.}) {
@@ -60,6 +65,13 @@ event interface (t = 0.7) {
   output_field ({l}, fp);
   fclose (fp);
 }
+
+#if 0
+event gfsview (i += 10) {
+  static FILE * fp = popen("gfsview2D -s rt.gfv", "w");
+  output_gfs (fp, t = t);
+}
+#endif
 
 #if QUADTREE
 event adapt (i++) {

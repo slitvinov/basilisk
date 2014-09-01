@@ -56,6 +56,18 @@ u.y[left]   = dirichlet(0);
 u.y[right]  = dirichlet(0);
 
 /**
+For the colocated solver, imposing boundary conditions for the normal
+components of the (face-centered) advection velocity improves the
+results. Ideally, this should be done automatically by the solver. */
+
+#if !MAC
+uf.x[left]   = dirichlet(0);
+uf.x[right]  = dirichlet(0);
+uf.y[top]    = dirichlet(0);
+uf.y[bottom] = dirichlet(0);
+#endif
+
+/**
 We define an auxilliary function which computes the total kinetic
 energy. The function works both for face and centered
 discretisations of the velocity. */

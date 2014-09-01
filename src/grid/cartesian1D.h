@@ -53,54 +53,20 @@ foreach_face_generic() {
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
   int d = ((BoxBoundary *)b)->d;
+  scalar * lleft, * lright;
+  list_split (list, d, &lleft, &lright);
   Point point = *((Point *)grid);
   ig = _ig[d]; jg = _jg[d];
   point.i = d == right ? point.n : 1;
   {
     POINT_VARIABLES;
-    for (scalar s in list)
-      val(s,ig,jg) = _method[s].boundary[d] (point, s);
+    for (scalar s in lright)
+      val(s,ig,jg) = s.boundary[d] (point, s);
+    for (scalar s in lleft)
+      val(s,0,0) = s.boundary[d] (point, s);
   }
-}
-
-static void box_boundary_normal (const Boundary * b, vector * list)
-{
-  int d = ((BoxBoundary *)b)->d;
-  int component = d/2; // index of normal component
-
-  Point point = *((Point *)grid);
-  // set the indices of the normal face component in direction d
-  if (d % 2) {
-    ig = jg = 0;
-  }
-  else {
-    ig = _ig[d]; jg = _jg[d];
-  }
-  point.i = d == right ? point.n : 1;
-  {
-    POINT_VARIABLES;
-    for (vector v in list) {
-      scalar s = (&v.x)[component];
-      val(s,ig,jg) = _method[s].boundary[d] (point, s);
-    }
-  }
-}
-
-static void box_boundary_tangent (const Boundary * b, vector * list)
-{
-  // fixme: should not need this
-  int d = ((BoxBoundary *)b)->d;
-  int component = (d/2 + 1) % 2; // index of tangential component
-  Point point = *((Point *)grid);
-  ig = _ig[d]; jg = _jg[d];
-  point.i = d == right ? point.n : 1;
-  {
-    POINT_VARIABLES;
-    for (vector v in list) {
-      scalar s = (&v.x)[component];
-      val(s,ig,jg) = _method[s].boundary[d] (point, s);
-    }
-  }
+  free (lleft);
+  free (lright);
 }
 
 void free_grid (void)
@@ -136,8 +102,6 @@ void init_grid (int n)
     box->d = d;
     Boundary * b = (Boundary *) box;
     b->level   = box_boundary_level;
-    b->normal  = box_boundary_normal;
-    b->tangent = box_boundary_tangent;
     add_boundary (b);
   }
   init_events();

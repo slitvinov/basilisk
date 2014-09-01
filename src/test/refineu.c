@@ -15,6 +15,8 @@ static double solution (double x, double y)
 #endif
 }
 
+// fixme: this does not work with -DTRASH=1
+
 u.x[right]  = solution(x,y);
 u.x[left]   = solution(x,y);
 u.y[top]    = solution(x,y);

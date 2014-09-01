@@ -140,13 +140,15 @@ astats adapt_wavelet (struct Adapt p)
 	int c = 0;
 	foreach_child()
 	  sc[c++] = s[];
-	s.prolongation (point, s);
+       	s.prolongation (point, s);
 	c = 0;
 	foreach_child() {
 	  double e = fabs(sc[c] - s[]);
-	  if (e > max)
+	  if (e > max) {
+	    cell.flags &= ~too_fine;
 	    cell.flags |= too_coarse;
-	  else if (e <= max/1.5)
+	  }
+	  else if (e <= max/1.5 && !(cell.flags & too_coarse))
 	    cell.flags |= too_fine;
 	  s[] = sc[c++];
 	}
@@ -238,29 +240,20 @@ static void halo_restriction_flux (vector * list)
     if (!is_constant(v.x))
       listv = vectors_add (listv, v);
 
-  if (listv)
+  if (listv) {
     for (int l = depth() - 1; l >= 0; l--)
-      foreach_halo (restriction, l)
+      foreach_halo (restriction, l) {
 	foreach_dimension() {
-          // if (is_leaf (neighbor(-1,0)))
-          for (vector f in listv)
-	    f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+	  if (is_leaf (neighbor(-1,0)))
+	    for (vector f in listv)
+	      f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
 	  if (is_leaf (neighbor(1,0)))
 	    for (vector f in listv)
 	      f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
         }
-
-  free (listv);
-}
-
-static void halo_prolongation (scalar * list, int depth)
-{
-  boundary_iterate (halo_prolongation, list, 0, 0);
-  for (int l = 0; l < depth; l++) {
-    foreach_halo (prolongation, l)
-      for (scalar s in list)
-	s.prolongation (point, s);
-    boundary_iterate (halo_prolongation, list, l + 1, depth);
+      }
+    boundary_iterate (halo_restriction_flux, listv);
+    free (listv);
   }
 }
 
@@ -328,12 +321,12 @@ static void refine_face (Point point, scalar s)
 {
   vector v = s.v;
   foreach_dimension() {
-    if (is_leaf(neighbor(-1,0)) || is_ghost(neighbor(-1,0))) {
+    if (is_leaf(neighbor(-1,0)) || !is_active(neighbor(-1,0))) {
       double g = (v.x[0,+1] - v.x[0,-1])/8.;
       fine(v.x,0,0) = v.x[] - g;
       fine(v.x,0,1) = v.x[] + g;
     }
-    if (is_leaf(neighbor(+1,0)) || is_ghost(neighbor(+1,0))) {
+    if (is_leaf(neighbor(+1,0)) || !is_active(neighbor(+1,0))) {
       double g = (v.x[1,+1] - v.x[1,-1])/8.;
       fine(v.x,2,0) = v.x[1,0] - g;
       fine(v.x,2,1) = v.x[1,0] + g;
@@ -341,7 +334,13 @@ static void refine_face (Point point, scalar s)
     fine(v.x,1,0) = (fine(v.x,0,0) + fine(v.x,2,0))/2.;
     fine(v.x,1,1) = (fine(v.x,0,1) + fine(v.x,2,1))/2.;
   }
+}
 
+void refine_face_solenoidal (Point point, scalar s)
+{
+  refine_face (point, s);
+
+  vector v = s.v;
   // local projection, see section 3.3 of Popinet, JCP, 2009
   double d[4], p[4];
   d[0] = fine(v.x,1,1) - fine(v.x,0,1) + fine(v.y,0,2) - fine(v.y,0,1);
@@ -364,7 +363,7 @@ vector quadtree_init_face_vector (vector v, const char * name)
   v = cartesian_init_face_vector (v, name);
   v.x.coarsen = coarsen_face;
   v.y.coarsen = none;
-  v.x.refine = refine_face;
+  v.x.refine = v.x.prolongation = refine_face;
   v.y.refine = none;
   return v;
 }
@@ -375,12 +374,13 @@ static void quadtree_boundary_level (scalar * list, int l)
     l = depth();
 
   scalar * listdef = NULL, * listc = NULL;
-  for (scalar s in list) {
-    if (s.coarsen == coarsen_average)
-      listdef = list_add (listdef, s);
-    else if (s.coarsen != none)
-      listc = list_add (listc, s);
-  }
+  for (scalar s in list) 
+    if (!is_constant (s)) {
+      if (s.coarsen == coarsen_average)
+	listdef = list_add (listdef, s);
+      else if (s.coarsen != none)
+	listc = list_add (listc, s);
+    }
 
   if (listdef || listc) {
     halo_restriction (listdef, listc, l);
@@ -390,11 +390,17 @@ static void quadtree_boundary_level (scalar * list, int l)
 
   scalar * listr = NULL;
   for (scalar s in list)
-    if (s.refine != none)
+    if (!is_constant (s) && s.refine != none)
       listr = list_add (listr, s);
 
   if (listr) {
-    halo_prolongation (listr, l);
+    boundary_iterate (halo_prolongation, list, 0, l);
+    for (int i = 0; i < l; i++) {
+      foreach_halo (prolongation, i)
+	for (scalar s in listr)
+	  s.prolongation (point, s);
+      boundary_iterate (halo_prolongation, list, i + 1, l);
+    }
     free (listr);
   }
 }

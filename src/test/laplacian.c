@@ -11,9 +11,15 @@ We use a square, regular, Cartesian grid and vary the resolution from
 
 scalar a[], b[];
 
-int main ()
+int main (int argc, char * argv[])
 {
-  for (int l = 4; l <= 11; l++) {
+  int start, end;
+  if (argc == 1) {
+    start = 4; end = 11;
+  }
+  else
+    start = end = atoi(argv[1]);
+  for (int l = start; l <= end; l++) {
     init_grid (1 << l);
     int nloops, i;
     clock_t start, end;

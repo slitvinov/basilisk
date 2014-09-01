@@ -2187,9 +2187,12 @@ int main (int argc, char ** argv)
       strcat (preproc, " && ");
       if (!cppcommand && strcmp (CPP99, ""))
 	cppcommand = CPP99;
-      if (!cppcommand)
-	cppcommand = "cpp";
-      strcat (preproc, cppcommand);
+      if (!cppcommand) {
+	strcat (preproc, command);
+	strcat (preproc, " -E");
+      }
+      else
+	strcat (preproc, cppcommand);
       strcat (preproc, " -I. -I");
       strcat (preproc, LIBDIR);
       strcat (preproc, " ");

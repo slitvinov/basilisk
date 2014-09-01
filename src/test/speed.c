@@ -49,8 +49,17 @@ int main (int argc, char ** argv)
       }
 
   start = clock ();
-  for (i = 0; i < 10000; i++)
-    halo_prolongation ({h}, depth());
+  for (i = 0; i < 10000; i++) {
+    scalar * list = {h};
+    int l = depth();
+    boundary_iterate (halo_prolongation, list, 0, l);
+    for (int i = 0; i < l; i++) {
+      foreach_halo (prolongation, i)
+	for (scalar s in list)
+	  s.prolongation (point, s);
+      boundary_iterate (halo_prolongation, list, i + 1, l);
+    }
+  }
   end = clock ();
   cpu = ((double) (end - start))/CLOCKS_PER_SEC;
   printf ("---- update_halos ----\n");

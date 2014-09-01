@@ -59,6 +59,14 @@ event outputfile (t <= 1.2; t += 1.2/8) {
 }
 
 event adapt (i++) {
-  astats s = adapt_wavelet ({h}, (double[]){1e-3}, LEVEL);
+  // we dot this so that wavelets use the default bilinear
+  // interpolation this is less noisy than the linear + gradient
+  // limiters used in Saint-Venant not sure whether this is better
+  // though.
+  scalar h1[];
+  foreach()
+    h1[] = h[];
+  boundary ({h1});
+  astats s = adapt_wavelet ({h1}, (double[]){1e-3}, LEVEL);
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }
