@@ -90,6 +90,11 @@ typedef struct {
   int nc, nf;
 } astats;
 
+enum {
+  too_coarse = 1 << user,
+  too_fine   = 1 << (user + 1)
+};
+
 struct Adapt {
   scalar * slist; // list of scalars
   double * max;   // tolerance for each scalar
@@ -97,11 +102,6 @@ struct Adapt {
   int minlevel;   // minimum level of refinement (default 1)
   scalar * list;  // list of fields to update (default all)
   scalar * listb; // fields which need BCs (default list)
-};
-
-enum {
-  too_coarse = 1 << user,
-  too_fine   = 1 << (user + 1)
 };
 
 astats adapt_wavelet (struct Adapt p)
@@ -317,6 +317,27 @@ static scalar quadtree_init_scalar (scalar s, const char * name)
   return s;
 }
 
+static void prolongation_face (Point point, scalar s)
+{
+  vector v = s.v;
+  foreach_dimension()
+    if ((!is_leaf(neighbor(0,-1)) && is_active(neighbor(0,-1))) || 
+	(!is_leaf(neighbor(0,+1)) && is_active(neighbor(0,+1)))) {
+      if (is_leaf(neighbor(-1,0)) || !is_active(neighbor(-1,0))) {
+	double g = (v.x[0,+1] - v.x[0,-1])/8.;
+	fine(v.x,0,0) = v.x[] - g;
+	fine(v.x,0,1) = v.x[] + g;
+      }
+      if (is_leaf(neighbor(+1,0)) || !is_active(neighbor(+1,0))) {
+	double g = (v.x[1,+1] - v.x[1,-1])/8.;
+	fine(v.x,2,0) = v.x[1,0] - g;
+	fine(v.x,2,1) = v.x[1,0] + g;
+      }
+      fine(v.x,1,0) = (fine(v.x,0,0) + fine(v.x,2,0))/2.;
+      fine(v.x,1,1) = (fine(v.x,0,1) + fine(v.x,2,1))/2.;
+    }
+}
+
 static void refine_face (Point point, scalar s)
 {
   vector v = s.v;
@@ -363,7 +384,8 @@ vector quadtree_init_face_vector (vector v, const char * name)
   v = cartesian_init_face_vector (v, name);
   v.x.coarsen = coarsen_face;
   v.y.coarsen = none;
-  v.x.refine = v.x.prolongation = refine_face;
+  v.x.prolongation = prolongation_face;
+  v.x.refine = refine_face;
   v.y.refine = none;
   return v;
 }
