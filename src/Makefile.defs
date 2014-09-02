@@ -9,6 +9,7 @@ include Makefile.tests
 
 export GENSUM
 export CHECKSUM
+export CC99
 export CFLAGS
 
 QCC = $(BASILISK)/qcc

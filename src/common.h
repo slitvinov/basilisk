@@ -7,6 +7,8 @@
 @include <limits.h>
 @include <assert.h>
 @include <math.h>
+@include <time.h>
+@include <sys/time.h>
 
 @define pi 3.14159265358979
 @undef HUGE
@@ -350,3 +352,26 @@ void init_events (void);
 void event_register (Event event);
 
 void init_solver (void);
+
+// timers
+
+typedef struct {
+  clock_t c;
+  struct timeval tv;
+} timer;
+
+timer timer_start (void)
+{
+  timer t;
+  t.c = clock();
+  gettimeofday (&t.tv, NULL);
+  return t;
+}
+
+double timer_elapsed (timer t)
+{
+  struct timeval tvend;
+  gettimeofday (&tvend, NULL);
+  return ((tvend.tv_sec - t.tv.tv_sec) + 
+	  (tvend.tv_usec - t.tv.tv_usec)/1e6);
+}

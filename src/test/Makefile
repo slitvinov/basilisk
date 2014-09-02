@@ -57,6 +57,13 @@ rotate.tst: rotate.ctst
 terrain.tst: terrain.s
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst
 
+# MPI tests
+
+indexing.tst:		CC = mpicc -D_MPI=1
+mpi-restriction.tst:	CC = mpicc -D_MPI=1
+mpi-reduce.tst:		CC = mpicc -D_MPI=1
+mpi-interp.tst:		CC = mpicc -D_MPI=1
+
 mpi-restriction.tst: mpi-restriction.s
 	@EXEC="mpirun -np 3" $(BASILISK)/runtest mpi-restriction.tst
 

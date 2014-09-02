@@ -1,7 +1,7 @@
 # -*-Makefile-*-
 
 # how to launch the C99 compiler
-CC99 = gcc -std=c99
+CC99 = $(CC) -std=c99
 
 # other useful (non-standard) flags
 # trick to turn off extended precision on 32-bits intel systems

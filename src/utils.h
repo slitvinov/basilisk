@@ -1,6 +1,3 @@
-#include <time.h>
-#include <sys/time.h>
-
 // Default parameters
 // maximum timestep
 double DT = 1e10;
@@ -68,27 +65,6 @@ double interpolate (scalar v, double xp, double yp)
 	  v[i,0]*x*(1. - y) + 
 	  v[0,j]*(1. - x)*y + 
 	  v[i,j]*x*y);
-}
-
-typedef struct {
-  clock_t c;
-  struct timeval tv;
-} timer;
-
-timer timer_start (void)
-{
-  timer t;
-  t.c = clock();
-  gettimeofday (&t.tv, NULL);
-  return t;
-}
-
-double timer_elapsed (timer t)
-{
-  struct timeval tvend;
-  gettimeofday (&tvend, NULL);
-  return ((tvend.tv_sec - t.tv.tv_sec) + 
-	  (tvend.tv_usec - t.tv.tv_usec)/1e6);
 }
 
 void timer_print (timer t, int i, long tnc)

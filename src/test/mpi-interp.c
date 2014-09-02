@@ -23,12 +23,14 @@ int main (int argc, char ** argv)
   boundary ({h});
 
   double max = 0.;
-  foreach_halo() {
-    double e = exp(-(x*x+y*y)/(R0*R0)) - h[];
-    printf ("%g %g %d %d %g %g\n", x, y, level, cell.neighbors, h[], e);
-    if (fabs(e) > max)
-      max = fabs(e);
-  }
+  for (int l = 0; l < depth(); l++)
+    foreach_halo (prolongation, l) 
+      foreach_child() {
+        double e = exp(-(x*x+y*y)/(R0*R0)) - h[];
+	printf ("%g %g %d %d %g %g\n", x, y, level, cell.neighbors, h[], e);
+	if (fabs(e) > max)
+	  max = fabs(e);
+    }
 
   long nc = 0;
   foreach()

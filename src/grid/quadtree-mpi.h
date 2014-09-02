@@ -1,3 +1,7 @@
+// fixme: this does not work with dynamic quadtrees
+
+#define DEBUG 0
+
 typedef struct {
   Boundary parent;
   
