@@ -1914,15 +1914,9 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	  j = eventparent[j];
 	}
       }
-  fputs ("  { 1 }\n};\n", fout);
-  /* boundaries */
-  for (int i = 0; i < nsetboundary; i++)
-    fprintf (fout, "static void _set_boundary%d (void);\n", 
-	     boundaryindex[i]);
-  /* methods */
-  fputs ("void init_solver (void) {\n", fout);
-  /* scalar methods */
-  fputs ("  _method = calloc (datasize/sizeof(double), sizeof (Methods));\n", 
+  /* scalar attributes */
+  fputs ("  _attribute = calloc (datasize/sizeof(double), "
+	 "sizeof (_Attributes));\n", 
 	 fout);
   /* list of all scalars */
   fprintf (fout, 

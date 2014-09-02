@@ -34,6 +34,16 @@ Note that only the documented test cases appear in the list below
 * [Computation of volume fractions on a variable-resolution grid](fractions1.c)
 * [Time-reversed VOF advection in a vortex](reversed.c)
 
+## Electrohydrodynamics
+
+* [Gouy-Chapman Debye layer](debye.c)
+
+## MPI
+
+* [Reduction operations](mpi-reduce.c)
+* [Boundary conditions and restriction](mpi-restriction.c)
+* [Z-order indexing](indexing.c)
+
 ## Speed benchmarks
 
 * [Speed of elementary operations on different grids](laplacian.c)

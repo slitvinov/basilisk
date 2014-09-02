@@ -273,7 +273,6 @@ static void green_naghdi (scalar * current, scalar * updates)
 
   scalar * list = {h, zb, wet};
   restriction (list);
-  boundary_restriction (list);
   mgD = mg_solve ((scalar *){D}, (scalar *){b}, residual_GN, relax_GN, list);
 
   /**

@@ -234,7 +234,7 @@ elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
     fi
 
     rm -f $test.$ext $test/pass \
-	$test/fail $test/warn $test/plot.png $test/plots
+	$test/fail $test/fail.* $test/warn $test/plot.png $test/plots $test/core
     $GENSUM $test.c $test.s > $test.$ext
     expirecache
 

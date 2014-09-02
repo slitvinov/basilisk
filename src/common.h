@@ -139,24 +139,24 @@ int _ig[nboundary] = {1,-1,0,0},
 typedef struct _Point Point;
 static Point last_point;
 
-// methods for each scalar
+double  * _constant = NULL;
+extern int datasize;
 
-typedef struct {
+#include "grid/boundaries.h"
+
+// attributes for each scalar
+
+@include "_attributes.h"
+
+attribute {
   double (* boundary[nboundary])             (Point, scalar);
   double (* boundary_homogeneous[nboundary]) (Point, scalar);
-  void   (* prolongation)                    (Point, scalar);
-  void   (* refine)                          (Point, scalar);
-  void   (* coarsen)                         (Point, scalar);
   double (* gradient)                        (double, double, double);
   char * name;
   struct { int x, y; } d; // staggering
   vector v;
   bool   face, normal;
-} Methods;
-
-Methods * _method;
-double  * _constant = NULL;
-extern int datasize;
+};
 
 // lists
 
@@ -349,46 +349,4 @@ double tnext = HUGE; // time of next event
 void init_events (void);
 void event_register (Event event);
 
-// boundary conditions for each direction/variable
-
-enum { right, left, top, bottom, nboundary };
-// ghost cell coordinates for each direction
-int _ig[nboundary] = {1,-1,0,0}, 
-    _jg[nboundary] = {0,0,1,-1};
-
-@define dirichlet(x)            (2.*(x) - val(_s,0,0))
-@define dirichlet_homogeneous() (- val(_s,0,0))
-@define neumann(x)              (Delta*(x) + val(_s,0,0))
-@define neumann_homogeneous()   (val(_s,0,0))
-
-typedef struct _Point Point;
-static Point last_point;
-
-// methods for each scalar
-
-typedef struct {
-  double (* boundary[nboundary])             (Point, scalar);
-  double (* boundary_homogeneous[nboundary]) (Point, scalar);
-  double (* prolongation)                    (Point, scalar);
-  void   (* refine)                          (Point, scalar);
-  void   (* coarsen)                         (Point, scalar);
-  double (* gradient)                        (double, double, double);
-  char * name;
-  struct { int x, y; } d; // staggering
-  vector v;
-  bool   face;
-} Methods;
-
-Methods * _method;
-double  * _constant = NULL;
-extern int datasize;
-
 void init_solver (void);
-
-void free_solver()
-{
-  delete (all);
-  free (all); all = NULL;
-  free (_method); _method = NULL;
-  free_grid();
-}

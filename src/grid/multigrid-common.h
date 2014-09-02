@@ -7,22 +7,17 @@
 @ define end_foreach_level_or_leaf end_foreach_level
 @endif
 
-@ifndef foreach_boundary_fine_to_coarse
-@ def foreach_boundary_fine_to_coarse(dir) {
-  for (int _l = depth() - 1; _l >= 0; _l--)
-    foreach_boundary_level (dir,_l,false) {
-      point.i += ig; point.j += jg;
-      ig = -ig; jg = -jg;
-      POINT_VARIABLES;
-@
-@ def end_foreach_boundary_fine_to_coarse()
-      ig = -ig; jg = -jg;
-    } end_foreach_boundary_level() 
-  }
-@
+@ifndef foreach_coarse_level
+@ define foreach_coarse_level      foreach_level
+@ define end_foreach_coarse_level  end_foreach_level
 @endif
 
-// Multigrid methods
+// scalar attributes
+
+attribute {
+  void (* prolongation) (Point, scalar);
+  void (* coarsen)      (Point, scalar);
+};
 
 // Multigrid methods
 
@@ -120,8 +115,12 @@ void refine_reset (Point point, scalar v)
       fine(v,k,l) = 0.;
 }
 
-static void nothing() {}
-static void * none = nothing;
+void refine_injection (Point point, scalar v)
+{
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++)
+      fine(v,k,l) = v[];
+}
 
 void coarsen_face (Point point, scalar s)
 {
@@ -138,24 +137,6 @@ vector multigrid_init_face_vector (vector v, const char * name)
   v.x.coarsen = coarsen_face;
   v.y.coarsen = none;
   return v;
-}
-
-void multigrid_boundary_level (scalar * list, int l)
-{
-  if (l < 0)
-    l = depth();
-  // traverse the boundaries of a given level
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_level (b, l, true) // also traverse corners
-      for (scalar s in list)
-	s[ghost] = s.boundary[b] (point, s);
-}
-
-void multigrid_boundary_restriction (scalar * list)
-{
-  // traverse the boundaries of all coarse levels (i.e. not the leaves)
-  for (int l = 0; l < depth(); l++)
-    boundary_level (list, l);
 }
 
 void multigrid_debug (Point point)
@@ -205,6 +186,5 @@ void multigrid_methods()
 {
   cartesian_methods();
   debug                = multigrid_debug;
-  boundary_restriction = multigrid_boundary_restriction;
-  init_face_vector = multigrid_init_face_vector;
+  init_face_vector     = multigrid_init_face_vector;
 }

@@ -84,14 +84,14 @@ static size_t _size (size_t l)
 @
 @define end_foreach_face_generic() } OMP_END_PARALLEL()
 
+@define is_face_x() true
+@define is_face_y() (point.i <= point.n)
+
 @def foreach_vertex()
 foreach_face_generic() {
   x -= Delta/2.;
 @
 @define end_foreach_vertex() } end_foreach_face_generic()
-
-@define is_face_x() (point.j <= point.n)
-@define is_face_y() false
 
 @define is_coarse() (point.level < depth())
 

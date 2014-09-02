@@ -6,7 +6,6 @@
 
 attribute {
   void   (* refine)       (Point, scalar);
-  void   (* coarsen)      (Point, scalar);
 };
 
 // Quadtree methods
@@ -257,42 +256,6 @@ static void halo_restriction_flux (vector * list)
   }
 }
 
-static void halo_prolongation (scalar * list, int depth)
-{
-  foreach_halo_coarse_to_fine (depth)
-    for (scalar s in list) {
-      if (s.gradient) { // linear interpolation (e.g. with limiting)
-	double sc = coarse(s,0,0);
-	s[] = sc;
-	foreach_dimension()
-	  s[] += s.gradient (coarse(s,-1,0), sc, coarse(s,1,0))*child.x/4.;
-      }
-      else if (s.prolongation) // variable-specific prolongation (e.g. VOF)
-	s[] = s.prolongation (point, s);
-      else
-	/* default is bilinear interpolation from coarser level */
-	s[] = (9.*coarse(s,0,0) + 
-	       3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
-	       coarse(s,child.x,child.y))/16.;	
-    }
-  boundary_halo_prolongation (list, depth);
-}
-
-// Multigrid methods
-
-void quadtree_boundary_restriction (scalar * list)
-{
-  // traverse the boundaries of all coarse levels (i.e. not the leaves)
-  for (int b = 0; b < nboundary; b++)
-    foreach_boundary_cell (b, true) {
-      if (is_leaf (cell))
-	continue;
-      else
-	for (scalar s in list)
-	  s[ghost] = s.boundary[b] (point, s);
-    }
-}
-
 // Cartesian methods
 
 Point locate (double xp, double yp)
@@ -430,8 +393,8 @@ static void quadtree_boundary_level (scalar * list, int l)
 void quadtree_methods()
 {
   multigrid_methods();
-  init_scalar          = quadtree_init_scalar;
-  init_face_vector     = quadtree_init_face_vector;
-  boundary_level       = quadtree_boundary_level;
-  boundary_flux        = halo_restriction_flux;
+  init_scalar      = quadtree_init_scalar;
+  init_face_vector = quadtree_init_face_vector;
+  boundary_level   = quadtree_boundary_level;
+  boundary_flux    = halo_restriction_flux;
 }

@@ -71,14 +71,14 @@ event velocity (i++)
 {
   mgpsi = poisson (psi, omega);
 
-/**
-Using the new streamfunction, we can then update the components of the
-velocity field. Since they are face relative to the
-streamfunction, we need to average the gradients, which gives the
-discrete expression below (for the horizontal velocity component). The
-expression for the vertical velocity component is obtained by
-automatic permutation of the indices but requires a change of sign:
-this is done through the pseudo-vector `f`. */
+  /**
+  Using the new streamfunction, we can then update the components of
+  the velocity field. Since they are defined on faces we need to
+  average the gradients, which gives the discrete expression below
+  (for the horizontal velocity component). The expression for the
+  vertical velocity component is obtained by automatic permutation of
+  the indices but requires a change of sign: this is done through the
+  pseudo-vector `f`. */
 
   trash ({u});
   struct { double x, y; } f = {-1.,1.};
