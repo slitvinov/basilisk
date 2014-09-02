@@ -1,5 +1,5 @@
 #define GRIDNAME "Multigrid"
-#define GHOSTS 1
+#define GHOSTS 2
 
 #define I      (point.i - GHOSTS)
 #define J      (point.j - GHOSTS)
@@ -97,8 +97,8 @@ foreach_face_generic() {
 @
 @define end_foreach_vertex() } end_foreach_face_generic()
 
-@define is_face_x() (point.j <= point.n)
-@define is_face_y() (point.i <= point.n)
+@define is_face_x() (point.j <= point.n + GHOSTS - 1)
+@define is_face_y() (point.i <= point.n + GHOSTS - 1)
 
 @define is_coarse() (point.level < depth())
 
@@ -183,13 +183,20 @@ static void box_boundary_level_tangent (const Boundary * b,
   Point point = *((Point *)grid);
   ig = _ig[d]; jg = _jg[d];
   point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
-  int _start = GHOSTS, _end = point.n + 2*GHOSTS, _k;  
+  int _start = GHOSTS, _end = point.n + GHOSTS, _k;  
   OMP(omp for schedule(static))
-  for (_k = _start; _k < _end; _k++) {
+  for (_k = _start; _k <= _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-    for (scalar s in list)
+    for (scalar s in list) {
       val(s,ig,jg) = s.boundary[d] (point, s);
+#if GHOSTS == 2
+      point.i -= ig; point.j -= jg;
+      double vb = s.boundary[d] (point, s);
+      point.i += ig; point.j += jg;
+      val(s,2*ig,2*jg) = vb;
+#endif
+    }
   }
   OMP_END_PARALLEL();
 }
@@ -223,8 +230,15 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   for (_k = _start; _k < _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-    for (scalar s in centered)
+    for (scalar s in centered) {
       val(s,ig,jg) = s.boundary[d] (point, s);
+#if GHOSTS == 2
+      point.i -= ig; point.j -= jg;
+      double vb = s.boundary[d] (point, s);
+      point.i += ig; point.j += jg;
+      val(s,2*ig,2*jg) = vb;
+#endif
+    }
   }
   OMP_END_PARALLEL();
   free (centered);

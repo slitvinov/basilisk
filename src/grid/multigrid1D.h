@@ -85,7 +85,7 @@ static size_t _size (size_t l)
 @define end_foreach_face_generic() } OMP_END_PARALLEL()
 
 @define is_face_x() true
-@define is_face_y() (point.i <= point.n)
+@define is_face_y() (point.i <= point.n + GHOSTS - 1)
 
 @def foreach_vertex()
 foreach_face_generic() {
