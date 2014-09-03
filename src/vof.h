@@ -143,8 +143,10 @@ static void sweep_x (scalar c, scalar cc)
   non-zero for the one-dimensional velocity field -- is approximated using
   a centered volume fraction field `cc` which will be defined below. */
 
-  foreach()
+  foreach() {
     c[] += dt*(flux[] - flux[1,0] + cc[]*(uf.x[1,0] - uf.x[]))/Delta;
+    c[] = clamp (c[], 0, 1);
+  }
   boundary ({c});
 }
 
