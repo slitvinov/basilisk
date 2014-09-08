@@ -1715,7 +1715,7 @@ static{WS}+FILE{WS}*[*]{WS}*{ID}+{WS}*= {
   char * id = s;
   space (s);
   *s = '\0';
-  fprintf (yyout, "NULL; if (!%s) %s = ", id, id);
+  fprintf (yyout, "NULL; if (!%s || i == 0) %s = ", id, id);
 }
   
 "/*"                                    { ECHO; if (comment()) return 1; }

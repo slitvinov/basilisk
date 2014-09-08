@@ -93,7 +93,7 @@ Here we create an mpeg animation of the $C_1$ concentration. The
 `spread` parameter sets the color scale to $\pm$ twice the standard
 deviation. */
 
-event movie (i += 10)
+event movie (i = 1; i += 10)
 {
   static FILE * fp1 = popen ("ppm2mpeg > f.mpg", "w");
   output_ppm (C1, fp1, 200, linear = true, spread = 2);

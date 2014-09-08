@@ -33,6 +33,9 @@ event acceleration (i++)
       list = list_add (list, c);
       if (!c.kappa)
 	c.kappa = new scalar;
+      foreach()
+	c[] = clamp (c[], 0, 1);
+      boundary ({c});
       curvature (c, c.kappa);
     }
 
