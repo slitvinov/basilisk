@@ -22,6 +22,5 @@ int main ()
     stats s = statsf (zb.n);
     fprintf (stderr, "%d %.6f %.6f %.6f %g %g\n", l, n.avg, n.rms, n.max, 
 	     s.min, s.max);
-    free_grid();
   }
 }
