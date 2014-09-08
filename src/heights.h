@@ -62,7 +62,7 @@ void heights (scalar c, vector h)
 	  cs.x[] = c[2*j,0];
       // boundary conditions
       // a) shift coarse level by 1 for pairs of adjacent cells
-      foreach_level (l-1) 
+      foreach_level (l-1)
 	foreach_dimension() {
 	  cs.x[] = c[j,0];
 	  cs.x[j,0] = c[2*j,0];
@@ -116,19 +116,5 @@ void curvature (scalar c, scalar kappa)
   kappa.prolongation = refine_injection;
   kappa.coarsen = coarsen_curvature;
 #endif
-  boundary ({kappa});
-
-  // "diffuse" curvature around the interface
-  foreach()
-    if (kappa[] == nodata) {
-      double k = 0., s = 0.;
-      for (int i = -1; i <= 1; i++)
-	for (int j = -1; j <= 1; j++)
-	  if (c[i,j] > 0. && c[i,j] < 1.) {
-	    k += kappa[i,j];
-	    s++;
-	  }
-      kappa[] = s ? k/s : nodata;
-    }
   boundary ({kappa});
 }

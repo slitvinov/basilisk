@@ -1,3 +1,4 @@
+#include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
 #include "vof.h"
 #include "tension.h"
@@ -18,7 +19,7 @@ int main() {
   TOLERANCE = 1e-6;
   const face vector muc[] = {0.0182571749236, 0.0182571749236};
   mu = muc;
-  for (N = 16; N <= 256; N *= 2) {
+  for (N = 16; N <= 128; N *= 2) {
     se = ne = 0;
     run();
   }

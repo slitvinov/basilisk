@@ -15,7 +15,8 @@ int LEVEL;
 int main() {
   L0 = 0.5;
   c.sigma = 1.;
-  system ("rm -f error laplace");
+  remove ("error");
+  remove ("laplace");
   for (LEVEL = 5; LEVEL <= 7; LEVEL++) {
     N = 1 << LEVEL;
     char name[80];
@@ -91,20 +92,21 @@ event fit (t = end) {
            "c = 2.*omega0\n"
            "fit k(x) 'k-%d' via a,b,c\n"
 	   "level = %d\n"
-           "print \"fit \", level, a, b, c, D\n"
+	   "res = D/%g*2.**level\n"
+           "print \"fit \", res, a, b, c, D\n"
 	   "\n"
 	   "set table 'fit-%d'\n"
 	   "plot [0:1] 2.*a*exp(-b*x)\n"
 	   "unset table\n"
 	   "\n"
 	   "set print 'error' append\n"
-	   "print D*2.**level, c/2./omega0-1., D\n"
+	   "print res, c/2./omega0-1., D\n"
 	   "\n"
 	   "set print 'laplace' append\n"
 	   "empirical_constant = 30.\n"
-	   "print D*2.**level, (1./(b**2.*D**3.))*empirical_constant**2, D\n"
+	   "print res, (1./(b**2.*D**3.))*empirical_constant**2, D\n"
 	   "\n",
-	   D, LEVEL, LEVEL, LEVEL);
+	   D, LEVEL, LEVEL, L0, LEVEL);
   pclose (fp);
 }
 
@@ -121,14 +123,14 @@ event adapt (i++) {
 #endif
 
 /**
-~~~gnuplot Evolution of the kinetic energy as a function of time for the spatial resolutions indicated in the legend. The black lines are fitted decreasing exponential functions.
+~~~gnuplot Evolution of the kinetic energy as a function of time for the spatial resolutions (number of grid points per diameter) indicated in the legend. The black lines are fitted decreasing exponential functions.
 set output 'k.png'
 set xlabel 'Time'
 set ylabel 'Kinetic energy'
 set logscale y
-plot [0:1][8e-5:]'k-8' t "256x256" w l, 'k-7' t "128x128" w l, \
-  'k-6' t "64x64" w l, 'k-5' t "32x32" w l,			\
-  'fit-8' t "fit" w l lt 7, 'fit-7' t "" w l lt 7, 'fit-6' t "" w l lt 7, \
+plot [0:1][8e-5:]'k-7' t "51.2" w l,				\
+  'k-6' t "25.6" w l, 'k-5' t "12.8" w l,			\
+  'fit-7' t "" w l lt 7, 'fit-6' t "" w l lt 7,			\
   'fit-5' t "" w l lt 7
 ~~~
 

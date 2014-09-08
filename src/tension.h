@@ -41,8 +41,11 @@ event acceleration (i++)
     for (scalar c in list)
       if (c[] != c[-1,0]) {
 	scalar kappa = c.kappa;
-	a.x[] = alpha.x[]*c.sigma*(kappa[] + kappa[-1,0])/2.*
-	  (c[] - c[-1,0])/Delta;
+	double kf = 
+	  (kappa[] != nodata && kappa[-1,0] != nodata) ? 
+	  (kappa[] + kappa[-1,0])/2. : 
+	  min(kappa[], kappa[-1,0]);
+	a.x[] = alpha.x[]*c.sigma*kf*(c[] - c[-1,0])/Delta;
       }
   }
 
