@@ -34,6 +34,12 @@ Note that only the documented test cases appear in the list below
 * [Computation of volume fractions on a variable-resolution grid](fractions1.c)
 * [Time-reversed VOF advection in a vortex](reversed.c)
 
+## Surface tension
+
+* [Circular droplet in equilibrium](spurious.c)
+* [Capillary wave](capwave.c)
+* [Shape oscillation of an inviscid droplet](oscillation.c)
+
 ## Electrohydrodynamics
 
 * [Gouy-Chapman Debye layer](debye.c)
