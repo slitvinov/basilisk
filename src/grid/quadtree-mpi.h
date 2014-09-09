@@ -85,8 +85,6 @@ void mpi_boundary_new()
   add_boundary (mpi_boundary);
 }
 
-#define DEBUG 1
-
 void mpi_partitioning()
 {
   MpiBoundary * m = (MpiBoundary *) mpi_boundary;

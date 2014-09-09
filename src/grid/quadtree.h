@@ -435,6 +435,7 @@ static void update_cache_f (void)
 	cache_level_append (&q->prolongation[level], point);
       continue;
     }
+@endif // _MPI
   }
 
   q->dirty = false;
