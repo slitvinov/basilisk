@@ -1,5 +1,3 @@
-// fixme: this does not work with dynamic quadtrees
-
 #define DEBUG 0
 
 typedef struct {
@@ -134,10 +132,12 @@ void mpi_partitioning()
 	// decrement_neighbors (&point);
 	for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
 	  for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
-	    if (!is_active(neighbor(k,l))) {
+	    if (allocated(k,l) && !is_active(neighbor(k,l))) {
 	      neighbor(k,l).neighbors--;
+#if 0 // fixme: we need to to something for dynamic quadtrees
 	      if (neighbor(k,l).neighbors == 0)
-		free_children((Quadtree *)grid,k,l);
+		free_children ((Quadtree *)grid, k, l);
+#endif
 	    }
       }
       int nactive = 0;
