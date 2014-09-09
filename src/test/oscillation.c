@@ -147,6 +147,7 @@ event logfile (i++; t <= 1) {
   foreach (reduction(+:ke))
     ke += sq(Delta)*(sq(u.x[]) + sq(u.y[]))*rho(cf[]);
   fprintf (fp, "%g %g %d\n", t, ke, mgp.i);
+  fflush (fp);
 }
 
 /**
