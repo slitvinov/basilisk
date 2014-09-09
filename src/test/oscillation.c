@@ -245,7 +245,7 @@ where $C$ is a constant, $\nu$ the viscosity and $D$ the droplet
 diameter. Using curve fitting the damping coefficient $b=C\nu/D^2$
 can be estimated (black curves on Figure \ref{kinetic}). An
 equivalent Laplace number can then be computed as:
-$$La={\sigma D\over \rho\nu^2}={\sigma C^2 \over \rho b^2 D^3}$$
+$$La=\frac{\sigma D}{\rho\nu^2}=\frac{\sigma C^2}{\rho b^2 D^3}$$
 The equivalent Laplace number depends on spatial resolution as
 illustrated below.
 

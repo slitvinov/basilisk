@@ -139,7 +139,7 @@ set ylabel 'Relative RMS error'
 set logscale y
 set logscale x 2
 set grid
-plot [5:200][1e-4:1]'clog' t "Basilisk" w lp, 2./x**2 t "Second order"
+plot [5:200][1e-4:1]'log' t "Basilisk" w lp, 2./x**2 t "Second order"
 ~~~
 
 ## See also

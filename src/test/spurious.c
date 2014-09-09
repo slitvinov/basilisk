@@ -178,7 +178,7 @@ The maximum velocity converges toward machine zero for a wide range of
 Laplace numbers on a timescale comparable to the viscous dissipation
 timescale, as expected.
 
-~~~gnuplot Evolution of the amplitude of the capillary currents $\max(|{\bf u}|)(D/\sigma)^{1/2}$ as a function of non-dimensional time $\tau=t\mu/D^2$ for the range of Laplace numbers indicated in the legend.
+~~~gnuplot Evolution of the amplitude of the capillary currents $\max(|\mathbf{u}|)(D/\sigma)^{1/2}$ as a function of non-dimensional time $\tau=t\mu/D^2$ for the range of Laplace numbers indicated in the legend.
 set xlabel 't{/Symbol m}/D^2'
 set ylabel 'U(D/{/Symbol s})^{1/2}'
 set logscale y
@@ -194,14 +194,14 @@ set xlabel 'D'
 set ylabel 'Shape error'
 set logscale x
 set xtics 2
-plot [5:120]'< sort -n -k1,2 clog' u (0.8*2**$1):5 w lp t "RMS" ps 2, \
-            '< sort -n -k1,2 clog' u (0.8*2**$1):6 w lp t "Max" ps 2, \
+plot [5:120]'< sort -n -k1,2 log' u (0.8*2**$1):5 w lp t "RMS" ps 2, \
+            '< sort -n -k1,2 log' u (0.8*2**$1):6 w lp t "Max" ps 2, \
              0.2/(x*x) t "Second order"
 ~~~
 
 ~~~gnuplot Convergence of the relative error on the equilibrium curvature value with resolution. The diameter is given in number of grid points.
 set ylabel 'Relative curvature error'
-plot [5:120]'< sort -n -k1,2 clog' u (0.8*2**$1):($7/2.5) w lp t "Max" ps 2, \
+plot [5:120]'< sort -n -k1,2 log' u (0.8*2**$1):($7/2.5) w lp t "Max" ps 2, \
              0.6/(x*x) t "Second order"
 ~~~
 
