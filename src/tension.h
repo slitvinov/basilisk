@@ -45,7 +45,7 @@ event stability (i++) {
   1/\rho$, as well as $\Delta_{min}$. */
   
   double amin = HUGE, amax = -HUGE, dmin = HUGE;
-  foreach_face() {
+  foreach_face (reduction(min:amin) reduction(max:amax) reduction(min:dmin)) {
     if (alpha.x[] > amax) amax = alpha.x[];
     if (alpha.x[] < amin) amin = alpha.x[];
     if (Delta < dmin) dmin = Delta;
@@ -128,7 +128,7 @@ event acceleration (i++)
 	  (kappa[] + kappa[-1,0])/2. : 
 	  min(kappa[], kappa[-1,0]);
 
-	a.x[] = alpha.x[]*c.sigma*kf*(c[] - c[-1,0])/Delta;
+	a.x[] += alpha.x[]*c.sigma*kf*(c[] - c[-1,0])/Delta;
       }
   }
 
