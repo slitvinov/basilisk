@@ -13,10 +13,9 @@ interface tracking and surface tension. */
 #include "tension.h"
 
 /**
-The interface is represented by the volume fraction field *c*. There
-are no diffusive tracers. */
+The interface is represented by the volume fraction field *c*. */
 
-scalar c[], * interfaces = {c}, * tracers = NULL;
+scalar c[], * interfaces = {c};
 
 /**
 We make sure that the boundary conditions for the face-centered

@@ -24,10 +24,9 @@ interface tracking and surface tension. */
 #include "tension.h"
 
 /**
-The interface is represented by the volume fraction field *c*. There
-are no diffusive tracers. */
+The interface is represented by the volume fraction field *c*. */
 
-scalar c[], * interfaces = {c}, * tracers = NULL;
+scalar c[], * interfaces = {c};
 
 /**
 The diameter of the droplet is 0.2. The density inside the droplet is
