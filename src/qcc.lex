@@ -56,6 +56,8 @@
   int boundaryindex[80];
 
   int infunction, infunctiondecl, functionscope, functionpara, inmain;
+  int infunction_line;
+  FILE * functionfp = NULL;
   char * return_type = NULL;
   FILE * dopen (const char * fname, const char * mode);
 
@@ -97,16 +99,17 @@
 
   char * automatic_list (int scope, int conditional) {
     char * list = NULL;
-    int i;
+    int i, size = 1;
     for (i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
       var_t var = _varstack[i];
       if (var.automatic && !var.constant && (conditional || !var.conditional)) {
+	size += strlen (var.v) + 2;
 	if (list == NULL) {
-	  list = malloc (strlen (var.v) + 3);
+	  list = malloc (size);
 	  strcpy (list, "{");
 	}
 	else {
-	  list = realloc (list, strlen (list) + strlen (var.v) + 3);
+	  list = realloc (list, size);
 	  strcat (list, ",");
 	}
 	strcat (list, var.v);
@@ -268,6 +271,24 @@
     return macro;
   }
 
+  void maybeconst_macro (var_t * var, const char * name,
+			 const char * id) {
+    int found = 0, i;
+    for (i = 0; i < nmaybeconst && !found; i++)
+      found = !strcmp (foreachconst[i]->v, var->v);
+    if (!found) {
+      foreachconst = realloc (foreachconst, 
+			      ++nmaybeconst*sizeof (var_t *));
+      foreachconst[nmaybeconst - 1] = var;
+      if (debug)
+	fprintf (stderr, "%s:%d: '%s' may be const\n", 
+		 fname, line, var->v);
+    }
+    char * macro = macro_from_var (id);
+    fprintf (yyout, "%s_%s(%s", name, macro, id);
+    free (macro);
+  }
+
   // combinations for each constant field
   void maybeconst_combinations (int line, void (* body)(void)) {
     if (nmaybeconst) {
@@ -291,14 +312,27 @@
 		       "const double _const_%s = _constant[%s-_NVARMAX];\n"
 		       "NOT_UNUSED(_const_%s);\n"
 		       "#undef val_%s\n"
-		       "#define val_%s(a,i,j) _const_%s\n",
+		       "#define val_%s(a,i,j) _const_%s\n"
+		       "#undef fine_%s\n"
+		       "#define fine_%s(a,i,j) _const_%s\n"
+		       "#undef coarse_%s\n"
+		       "#define coarse_%s(a,i,j) _const_%s\n",
+		       foreachconst[i]->v, foreachconst[i]->v, 
+		       foreachconst[i]->v, foreachconst[i]->v, 
+		       foreachconst[i]->v, foreachconst[i]->v,
 		       foreachconst[i]->v, foreachconst[i]->v, 
 		       foreachconst[i]->v, foreachconst[i]->v, 
 		       foreachconst[i]->v, foreachconst[i]->v);
 	    else
 	      fprintf (yyout, 
 		       "#undef val_%s\n"
-		       "#define val_%s(a,i,j) val(a,i,j)\n",
+		       "#define val_%s(a,i,j) val(a,i,j)\n"
+		       "#undef fine_%s\n"
+		       "#define fine_%s(a,i,j) fine(a,i,j)\n"
+		       "#undef coarse_%s\n"
+		       "#define coarse_%s(a,i,j) coarse(a,i,j)\n",
+		       foreachconst[i]->v, foreachconst[i]->v,
+		       foreachconst[i]->v, foreachconst[i]->v,
 		       foreachconst[i]->v, foreachconst[i]->v);
 	  }
 	  else if (foreachconst[i]->type == vector) {
@@ -314,13 +348,27 @@
 	      if (bits & (1 << i))
 		fprintf (yyout,
 			 "#undef val_%s_%c\n"
-			 "#define val_%s_%c(a,i,j) _const_%s.%c\n",
+			 "#define val_%s_%c(a,i,j) _const_%s.%c\n"
+			 "#undef fine_%s_%c\n"
+			 "#define fine_%s_%c(a,i,j) _const_%s.%c\n"
+			 "#undef coarse_%s_%c\n"
+			 "#define coarse_%s_%c(a,i,j) _const_%s.%c\n",
+			 foreachconst[i]->v, c,
+			 foreachconst[i]->v, c, foreachconst[i]->v, c,
+			 foreachconst[i]->v, c,
+			 foreachconst[i]->v, c, foreachconst[i]->v, c,
 			 foreachconst[i]->v, c,
 			 foreachconst[i]->v, c, foreachconst[i]->v, c);
 	      else
 		fprintf (yyout, 
 			 "#undef val_%s_%c\n"
-			 "#define val_%s_%c(a,i,j) val(a,i,j)\n",
+			 "#define val_%s_%c(a,i,j) val(a,i,j)\n"
+			 "#undef fine_%s_%c\n"
+			 "#define fine_%s_%c(a,i,j) fine(a,i,j)\n"
+			 "#undef coarse_%s_%c\n"
+			 "#define coarse_%s_%c(a,i,j) coarse(a,i,j)\n",
+			 foreachconst[i]->v, c, foreachconst[i]->v, c,
+			 foreachconst[i]->v, c, foreachconst[i]->v, c,
 			 foreachconst[i]->v, c, foreachconst[i]->v, c);
 	  }
 	fprintf (yyout, "#line %d\n", line);
@@ -378,7 +426,35 @@
       fputs (" int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
 	     " POINT_VARIABLES; ", yyout);
       infunctiondecl = 1;
+      assert (functionfp == NULL);
+      functionfp = yyout;
+      infunction_line = line - 1;
+      nmaybeconst = 0;
+      yyout = dopen ("_infunction.h", "w");
     }
+  }
+
+  void function_body() {
+    FILE * fp = dopen ("_infunction.h", "r");
+    int c;
+    assert (fp);
+    while ((c = fgetc (fp)) != EOF)
+      fputc (c, yyout);
+    fclose (fp);
+  }
+
+  int endfunction() {
+    infunction = 0;
+    if (debug)
+      fprintf (stderr, "%s:%d: outfunction %p\n", fname, line, functionfp);
+    if (functionfp) {
+      fclose (yyout);
+      yyout = functionfp;
+      functionfp = NULL;
+      maybeconst_combinations (infunction_line, function_body);
+      return 1;
+    }
+    return 0;
   }
 
   char * boundaryrep (char * name) {
@@ -800,6 +876,8 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     inmain = 0;
   }    
   varpop();
+  if (infunction && scope <= functionscope)
+    endfunction();
   if (foreachdim && scope == foreachdim - 1) {
     if (scope != 0 || infunctionproto)
       ECHO;
@@ -810,11 +888,6 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   if (foreach_child && foreach_child_scope == scope) {
     fputs (" end_foreach_child(); }", yyout);
     foreach_child = 0;
-  }
-  if (infunction && scope <= functionscope) {
-    infunction = 0;
-    if (debug)
-      fprintf (stderr, "%s:%d: outfunction\n", fname, line);
   }
   if (inforeach && scope == foreachscope)
     endforeach ();
@@ -882,11 +955,8 @@ attribute{WS}+"{" {
       fputs ("; ", yyout); insthg = 1;
       infunction_declarations();
     }
-    else if (!infunctiondecl) {
-      infunction = 0;
-      if (debug)
-	fprintf (stderr, "%s:%d: outfunction\n", fname, line);
-    }
+    else if (!infunctiondecl)
+      endfunction();
   }
   if (inboundary) {
     ECHO;
@@ -1158,22 +1228,8 @@ val{WS}*[(]    {
       *s = '\0';
       if (var->constant)
 	fprintf (yyout, "_val_constant(%s", boundaryrep(yytext));
-      else if (var->maybeconst) {
-	int found = 0, i;
-	for (i = 0; i < nmaybeconst && !found; i++)
-	  found = !strcmp (foreachconst[i]->v, var->v);
-	if (!found) {
-	  foreachconst = realloc (foreachconst, 
-				  ++nmaybeconst*sizeof (var_t *));
-	  foreachconst[nmaybeconst - 1] = var;
-	  if (debug)
-	    fprintf (stderr, "%s:%d: '%s' may be const\n", 
-		     fname, line, var->v);
-	}
-	char * macro = macro_from_var (yytext);
-	fprintf (yyout, "val_%s(%s", macro, yytext);
-	free (macro);
-      }
+      else if (var->maybeconst)
+	maybeconst_macro (var, "val", yytext);
       else
 	fprintf (yyout, "val(%s", boundaryrep(yytext));
       if (yytext[yyleng-1] == ']')
@@ -1272,6 +1328,33 @@ val{WS}*[(]    {
     fputs ("return ", yyout);
   }
   else
+    REJECT;
+}
+
+(fine|coarse){WS}*\({WS}*{SCALAR}{WS}*, {
+  /* fine(v,... */
+  var_t * var = NULL;
+  if ((inforeach || infunction) && !inval) {
+    char * s = strchr (yytext, '('); s++;
+    while (strchr(" \t\v\n\f", *s)) s++;
+    char * id = s;
+    while (!strchr(" \t\v\n\f,.", *s)) s++;
+    if ((var = varlookup (id, s - id))) {
+      para++;
+      s = id;
+      while (!strchr(" \t\v\n\f,", *s)) s++;
+      *s = '\0';
+      char * op = yytext[0] == 'f' ? "fine" : "coarse";
+      if (debug)
+	fprintf (stderr, "%s:%d: %s: %s\n", fname, line, op, id);
+      if (var->maybeconst)
+	maybeconst_macro (var, op, id);
+      else
+	fprintf (yyout, "%s(%s", op, boundaryrep(id));
+      fputc (',', yyout);
+    }
+  }
+  if (!var)
     REJECT;
 }
 

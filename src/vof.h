@@ -78,13 +78,13 @@ static void sweep_x (scalar c, scalar cc)
     component normal to the face and compute the index `i` of the
     corresponding *upwind* cell (either 0 or -1). */
 
-    double un = uf.x[]*dt/Delta, s = sign(un);
+    double un = uf.x[]*dt/(Delta*fm.x[]), s = sign(un);
     int i = -(s + 1.)/2.;
 
     /**
     We also check that we are not violating the CFL condition. */
 
-    if (un*s > cfl) cfl = un*s;
+    if (un*fm.x[]*s/cm[] > cfl) cfl = un*fm.x[]*s/cm[];
 
     /**
     If we assume that `un` is negative i.e. `s` is -1 and `i` is 0, the
@@ -104,7 +104,7 @@ static void sweep_x (scalar c, scalar cc)
     Once we have the upwind volume fraction, the volume fraction flux
     through the face is simply: */
 
-    flux[] = uf.x[]*cf;
+    flux[] = cf*uf.x[];
   }
 
   /**
@@ -144,7 +144,7 @@ static void sweep_x (scalar c, scalar cc)
   a centered volume fraction field `cc` which will be defined below. */
 
   foreach()
-    c[] += dt*(flux[] - flux[1,0] + cc[]*(uf.x[1,0] - uf.x[]))/Delta;
+    c[] += dt*(flux[] - flux[1,0] + cc[]*(uf.x[1,0] - uf.x[]))/(cm[]*Delta);
   boundary ({c});
 }
 

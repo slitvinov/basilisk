@@ -26,6 +26,7 @@ int main()
 
   vertex scalar phi[];
   scalar c[];
+  c.refine = c.prolongation = fraction_refine;
   face vector s[];
   foreach_vertex()
     phi[] = sq(0.3) - sq(x) - sq(y);

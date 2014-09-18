@@ -23,8 +23,10 @@ refining cells. */
 
 #if QUADTREE
 event defaults (i = 0) {
-  for (scalar s in tracers)
-    s.refine = refine_linear;
+  for (scalar s in tracers) {
+    s.refine  = refine_linear;
+    s.coarsen = coarsen_volume_average;
+  }
 }
 #endif
 

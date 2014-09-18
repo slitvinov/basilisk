@@ -113,7 +113,7 @@ astats adapt_wavelet (struct Adapt p)
   astats st = {0, 0};
   scalar * listc = NULL;
   for (scalar s in p.list)
-    if (s.coarsen != none)
+    if (!is_constant(s) && s.coarsen != none)
       listc = list_add (listc, s);
 
   // refinement
@@ -121,7 +121,7 @@ astats adapt_wavelet (struct Adapt p)
     if (is_leaf (cell)) {
       if (cell.flags & too_coarse) {
 	cell.flags &= ~too_coarse;
-	point = refine_cell (point, p.list);
+	point = refine_cell (point, listc);
 	st.nf++;
       }
       continue;

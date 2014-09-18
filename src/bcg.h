@@ -3,12 +3,13 @@
 
 The function below implements the 2nd-order, unsplit, upwind scheme of
 [Bell-Collela-Glaz, 1989](references.bib#bell89). Given a centered
-scalar field *f*, a face vector field *u*, a timestep *dt* and a
-source term field *src*, it fills the face vector field *flux* with
-the components of the advection fluxes of *f*. */
+scalar field *f*, a face vector field *uf* (possibly weighted by a
+face metric), a timestep *dt* and a source term field *src*, it fills
+the face vector field *flux* with the components of the advection
+fluxes of *f*. */
 
 void tracer_fluxes (const scalar f, 
-		    const face vector u,
+		    const face vector uf,
 		    face vector flux,
 		    double dt,
 		    (const) scalar src)
@@ -29,18 +30,17 @@ void tracer_fluxes (const scalar f,
     /**
     A normal component... */
 
-    double un = dt*u.x[]/Delta, s = sign(un);
+    double un = dt*uf.x[]/(fm.x[]*Delta), s = sign(un);
     int i = -(s + 1.)/2.;
-    double f2 = f[i,0] + src[i,0]*dt/2. +
-      s*min(1., 1. - s*un)*g.x[i,0]*Delta/2.;
+    double f2 = f[i,0] + src[i,0]*dt/2. + s*min(1., 1. - s*un)*g.x[i,0]*Delta/2.;
 
     /**
     and a tangential component... */
 
-    double vn = u.y[i,0] + u.y[i,1];
+    double vn = uf.y[i,0]/fm.y[i,0] + uf.y[i,1]/fm.y[i,1];
     double fyy = vn < 0. ? f[i,1] - f[i,0] : f[i,0] - f[i,-1];
     f2 -= dt*vn*fyy/(4.*Delta);
-    flux.x[] = f2*u.x[];
+    flux.x[] = f2*uf.x[];
   }
 
   /**
@@ -81,7 +81,8 @@ void advection (struct Advection p)
     vector flux[];
     tracer_fluxes (f, p.u, flux, p.dt, src);
     foreach()
-      f[] += p.dt*(flux.x[] - flux.x[1,0] + flux.y[] - flux.y[0,1])/Delta;
+      foreach_dimension()
+        f[] += p.dt*(flux.x[] - flux.x[1,0])/(Delta*cm[]);
     boundary ({f});
   }
 

@@ -26,6 +26,15 @@ void coarsen_average (Point point, scalar s)
   s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
 }
 
+void coarsen_volume_average (Point point, scalar s)
+{
+  s[] = 0.;
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 2; j++)
+      s[] += fine(cm,i,j)*fine(s,i,j);
+  s[] /= 4.*cm[];
+}
+
 void restriction (scalar * list)
 {
   scalar * listc = NULL;
@@ -100,11 +109,17 @@ void refine_linear (Point point, scalar s)
     foreach_dimension()
       g.x = (s[1,0] - s[-1,0])/2.;
 
+  assert (fabs(4.*cm[] 
+	       - fine(cm,0,0) - fine(cm,1,0) 
+	       - fine(cm,0,1) - fine(cm,1,1)) < 1e-10);
+
   /* for each child */
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++)
       /* linear interpolation from coarser level (conservative) */
-      fine(s,k,l) = s[] + (g.x*(2*k-1) + g.y*(2*l-1))/4.;
+      fine(s,k,l) = s[] + 
+	((2*k-1)*g.x*(fine(cm,!k,0) + fine(cm,!k,1)) +
+	 (2*l-1)*g.y*(fine(cm,0,!l) + fine(cm,1,!l)))/(8.*cm[]);
 }
 
 void refine_reset (Point point, scalar v)

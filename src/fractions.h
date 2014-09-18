@@ -20,7 +20,7 @@ for a basic explanation of how interfaces are defined). */
 
 #if QUADTREE
 
-static void fraction_refine (Point point, scalar c)
+void fraction_refine (Point point, scalar c)
 {
   
   /**
@@ -218,16 +218,7 @@ void fractions (struct Fractions p)
   }
 
   /**
-  On a quadtree grid, we set the refinement functions we defined
-  above. */
-
-#if QUADTREE
-  c.refine = c.prolongation = fraction_refine;
-#endif
-
-  /**
-  Finally we apply the boundary conditions and deallocate the local
-  frace fraction field if necessary. */
+  Finally we apply the boundary conditions. */
 
   boundary ({c});
 }

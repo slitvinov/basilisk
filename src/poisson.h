@@ -299,11 +299,7 @@ mgstats poisson (struct Poisson p)
   unity vector (resp. zero scalar) fields. Note that the user is free to
   provide $\alpha$ and $\beta$ as constant fields. */
 
-  if (p.alpha.x) {
-    face vector alpha = p.alpha;
-    restriction ((scalar *){alpha});
-  }
-  else {
+  if (!p.alpha.x) {
     const vector alpha[] = {1.,1.};
     p.alpha = alpha;
   }
@@ -315,6 +311,24 @@ mgstats poisson (struct Poisson p)
     const scalar lambda[] = 0.;
     p.lambda = lambda;
   }
+
+  /**
+  If the [metric](/Basilisk C#metric) is not purely Cartesian, we
+  allocate and define a temporary field for the face coefficients. */
+
+  if (constant(fm.x) != 1. || constant(fm.y) != 1.) {
+    (const) face vector alpha = p.alpha;
+    face vector alpha_m = new face vector;
+    foreach_face()
+      alpha_m.x[] = alpha.x[]*fm.x[];
+    p.alpha = alpha_m;
+  }
+  
+  /**
+  We need $\alpha$ on all levels of the grid. */
+
+  face vector alpha = p.alpha;
+  restriction ((scalar *){alpha});
 
   /**
   If *tolerance* is set it supersedes the default of the multigrid
@@ -332,6 +346,12 @@ mgstats poisson (struct Poisson p)
 
   if (p.tolerance)
     TOLERANCE = defaultol;
+
+  /**
+  We free the temporary face coefficients if necessary. */
+
+  if (constant(fm.x) != 1. || constant(fm.y) != 1.)
+    delete ((scalar *){alpha});
 
   return s;
 }
@@ -358,12 +378,17 @@ mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
 
   /**
   We allocate a local scalar field and compute the divergence of
-  $\mathbf{u}_*$. The divergence is scaled by *dt* so that the pressure
-  has the correct dimension. */
+  $\mathbf{u}_*$. The divergence is scaled by *dt* so that the
+  pressure has the correct dimension. *fm* is the face vector defining
+  the [metric](metric.h). */
 
   scalar div[];
-  foreach()
-    div[] = (u.x[1,0] - u.x[] + u.y[0,1] - u.y[])/(dt*Delta);
+  foreach() {
+    div[] = 0.;
+    foreach_dimension()
+      div[] += u.x[1,0] - u.x[];
+    div[] /= dt*Delta;
+  }
 
   /**
   We solve the Poisson problem. The tolerance (set with *TOLERANCE*) is
@@ -382,10 +407,10 @@ mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
 
   if (alpha.x)
     foreach_face()
-      u.x[] -= dt*alpha.x[]*(p[] - p[-1,0])/Delta;
+      u.x[] -= dt*fm.x[]*alpha.x[]*(p[] - p[-1,0])/Delta;
   else
     foreach_face()
-      u.x[] -= dt*(p[] - p[-1,0])/Delta;
+      u.x[] -= dt*fm.x[]*(p[] - p[-1,0])/Delta;
   boundary ((scalar *){u});
 
   return mgp;

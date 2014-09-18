@@ -19,11 +19,12 @@ int main()
   init_grid (16);
   X0 = -0.5 - 0.125;
   Y0 = -0.5 - 0.125;
+  scalar c[];
 #if QUADTREE
   refine_function (band1, NULL, all);
   refine_function (band, NULL, all);
+  c.refine = c.prolongation = fraction_refine;
 #endif
-  scalar c[];
   vertex scalar phi[];
   foreach_vertex()
     phi[] = - (0.2 - sqrt(sq(x+0.2) + sq(y+0.2)));

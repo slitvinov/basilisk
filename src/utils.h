@@ -95,7 +95,7 @@ norm normf (scalar f)
 	  reduction(+:rms) reduction(+:area)) {
     double v = fabs(f[]);
     if (v > max) max = v;
-    double a = sq(Delta);
+    double a = cm[]*sq(Delta);
     avg  += a*v;
     rms  += a*v*v;
     area += a;
@@ -117,7 +117,7 @@ stats statsf (scalar f)
   double min = 1e100, max = -1e100, sum = 0., sum2 = 0., area = 0.;
   foreach(reduction(+:sum) reduction(+:sum2) reduction(+:area)
 	  reduction(max:max) reduction(min:min)) {
-    double a = sq(Delta);
+    double a = cm[]*sq(Delta);
     sum += f[]*a;
     sum2 += f[]*f[]*a;
     area += a;

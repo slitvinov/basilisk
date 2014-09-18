@@ -64,8 +64,10 @@ event defaults (i = 0)
   also use slope limiting. */
 
   #if QUADTREE
-  for (scalar s in evolving)
+  for (scalar s in evolving) {
     s.refine = s.prolongation = refine_linear;
+    s.coarsen = coarsen_volume_average;
+  }
   #endif
 }
 

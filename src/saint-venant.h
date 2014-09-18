@@ -118,6 +118,50 @@ static void coarsen_eta (Point point, scalar eta)
 #endif
 
 /**
+We use the main time loop (in the predictor-corrector scheme) to setup
+the initial defaults. */
+
+event defaults (i = 0)
+{
+
+  /**
+  We overload the default 'advance' function of the predictor-corrector
+  scheme and setup the refinement and coarsening methods on quadtrees. */
+
+  advance = advance_saint_venant;  
+#if QUADTREE
+  for (scalar s in {h,zb,u,eta})
+    s.refine = s.prolongation = refine_linear;
+  eta.refine  = refine_eta;
+  eta.coarsen = coarsen_eta;
+#endif
+}
+
+/**
+The event below will happen after all the other initial events to take
+into account user-defined field initialisations. */
+
+event init (i = 0)
+{
+  foreach()
+    eta[] = zb[] + h[];
+  boundary (all);
+}
+
+/**
+Optional source terms can be added by overloading the *sources* function
+pointer. */
+
+static void no_sources (scalar * current, scalar * updates)
+{
+  foreach()
+    for (scalar s in updates)
+      s[] = 0.;
+}
+
+void (* sources) (scalar * current, scalar * updates) = no_sources;
+
+/**
 ### Computing fluxes
 
 Various approximate Riemann solvers are defined in [riemann.h](). */

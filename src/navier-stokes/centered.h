@@ -60,10 +60,6 @@ $\nabla\cdot(\mathbf{u}\otimes\mathbf{u})$ is omitted. This is a
 reference to [Stokes flows](http://en.wikipedia.org/wiki/Stokes_flow)
 for which inertia is negligible compared to viscosity. */
 
-const face vector zerof[] = {0.,0.};
-const face vector unityf[] = {1.,1.};
-const scalar unity[] = 1.;
-
 (const) face vector mu = zerof, a = zerof;
 (const) face vector alpha = unityf;
 (const) scalar alphac = unity;
@@ -86,10 +82,10 @@ $$
 Taking care of boundary orientation and staggering of *uf*, this
 can be written */
 
-p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]));
-p[left]   = neumann(-uf.x[]/(dt*alpha.x[]));
-p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]));
-p[bottom] = neumann(-uf.y[]/(dt*alpha.y[]));
+p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]*fm.x[ghost]));
+p[left]   = neumann(-uf.x[]/(dt*alpha.x[]*fm.x[]));
+p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]*fm.y[ghost]));
+p[bottom] = neumann(-uf.y[]/(dt*alpha.y[]*fm.y[]));
 
 /**
 ## Initial conditions
@@ -122,7 +118,7 @@ event init (i = 0)
   boundary ((scalar *){u});
   trash ({uf});
   foreach_face()
-    uf.x[] = (u.x[] + u.x[-1,0])/2.;
+    uf.x[] = fm.x[]*(u.x[] + u.x[-1,0])/2.;
   boundary ((scalar *){uf});
 }
 
@@ -189,6 +185,7 @@ void prediction()
       s*min(1., 1. - s*un)*du.x[i,0]*Delta/2.;
     double fyy = u.y[i,0] < 0. ? u.x[i,1] - u.x[i,0] : u.x[i,0] - u.x[i,-1];
     uf.x[] -= dt*u.y[i,0]*fyy/(2.*Delta);
+    uf.x[] *= fm.x[];
   }
   boundary ((scalar *){uf});
 }
@@ -246,7 +243,7 @@ event viscous_term (i++,last)
 
   trash ({uf});
   foreach_face()
-    uf.x[] = (u.x[] + u.x[-1,0])/2.;
+    uf.x[] = fm.x[]*(u.x[] + u.x[-1,0])/2.;
 }
 
 /**
@@ -266,7 +263,7 @@ event acceleration (i++,last)
 {
   boundary_flux ({a});
   foreach_face()
-    uf.x[] += dt*a.x[];
+    uf.x[] += dt*fm.x[]*a.x[];
 
   /**
   We apply boundary conditions but only in the tangential direction so

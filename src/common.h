@@ -16,6 +16,7 @@
 @define nodata DBL_MAX
 @define _NVARMAX 65536
 @define is_constant(v) ((v) >= _NVARMAX)
+@define constant(v) (is_constant(v) ? _constant[(v) - _NVARMAX] : nodata)
 
 @define max(a,b) ((a) > (b) ? (a) : (b))
 @define min(a,b) ((a) < (b) ? (a) : (b))
@@ -375,3 +376,14 @@ double timer_elapsed (timer t)
   return ((tvend.tv_sec - t.tv.tv_sec) + 
 	  (tvend.tv_usec - t.tv.tv_usec)/1e6);
 }
+	  
+// Constant fields
+
+const face vector zerof[] = {0.,0.};
+const face vector unityf[] = {1.,1.};
+const scalar unity[] = 1.;
+
+// Metric
+
+(const) face vector fm = unityf;
+(const) scalar cm = unity;
