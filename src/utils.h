@@ -92,14 +92,15 @@ norm normf (scalar f)
 {
   double avg = 0., rms = 0., max = 0., area = 0.;
   foreach(reduction(max:max) reduction(+:avg) 
-	  reduction(+:rms) reduction(+:area)) {
-    double v = fabs(f[]);
-    if (v > max) max = v;
-    double a = cm[]*sq(Delta);
-    avg  += a*v;
-    rms  += a*v*v;
-    area += a;
-  }
+	  reduction(+:rms) reduction(+:area)) 
+    if (f[] != nodata) {
+      double v = fabs(f[]);
+      if (v > max) max = v;
+      double a = cm[]*sq(Delta);
+      avg  += a*v;
+      rms  += a*v*v;
+      area += a;
+    }
   norm n;
   n.avg = avg/area;
   n.rms = sqrt(rms/area);
@@ -116,14 +117,15 @@ stats statsf (scalar f)
 {
   double min = 1e100, max = -1e100, sum = 0., sum2 = 0., area = 0.;
   foreach(reduction(+:sum) reduction(+:sum2) reduction(+:area)
-	  reduction(max:max) reduction(min:min)) {
-    double a = cm[]*sq(Delta);
-    sum += f[]*a;
-    sum2 += f[]*f[]*a;
-    area += a;
-    if (f[] > max) max = f[];
-    if (f[] < min) min = f[];
-  }
+	  reduction(max:max) reduction(min:min)) 
+    if (f[] != nodata) {
+      double a = cm[]*sq(Delta);
+      sum += f[]*a;
+      sum2 += sq(f[])*a;
+      area += a;
+      if (f[] > max) max = f[];
+      if (f[] < min) min = f[];
+    }
   stats s;
   s.min = min, s.max = max, s.sum = sum, s.area = area;
   sum2 -= sum*sum/area;

@@ -1,3 +1,5 @@
+#define AXI 1
+
 event init (i = 0) {
   cm = new scalar;
   foreach()

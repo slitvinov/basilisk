@@ -102,11 +102,30 @@ void curvature (scalar c, scalar kappa)
   vector h[];
   heights (c, h);
   foreach() {
-    if (c[] > 0. && c[] < 1.) {
+    if ((c[] > 0. && c[] < 1.) ||
+	(c[] <= 0. && (c[1,0] >= 1. || c[0,1] >= 1. || 
+		       c[-1,0] >= 1. || c[0,-1] >= 1.))) {
       coord n = {c[1,0] - c[-1,0], c[0,1] - c[0,-1]};
       kappa[] = (fabs(n.x) > fabs(n.y) ? 
 		 sign(n.x)*kappa_y (point, h) : 
 		 sign(n.y)*kappa_x (point, h));
+      if (fabs(kappa[]) > 1./Delta)
+	kappa[] = sign(kappa[])/Delta;
+#if AXI
+      double nr, r = y, hx;
+      if (fabs(n.x) > fabs(n.y)) {
+	hx = (h.x[0,1] - h.x[0,-1])/(2.*Delta);
+	nr = sign(n.x)*hx;
+      }
+      else {
+	r += h.y[];
+	hx = (h.y[1,0] - h.y[-1,0])/(2.*Delta);
+	nr = - sign(n.y);
+      }
+      /* limit the minimum radius to half the grid size */
+      double kaxi = nr/max (sqrt(1. + sq(hx))*r, Delta/2.);
+      kappa[] += kaxi;
+#endif
     }
     else
       kappa[] = nodata;
