@@ -118,57 +118,13 @@ static void coarsen_eta (Point point, scalar eta)
 #endif
 
 /**
-We use the main time loop (in the predictor-corrector scheme) to setup
-the initial defaults. */
-
-event defaults (i = 0)
-{
-
-  /**
-  We overload the default 'advance' function of the predictor-corrector
-  scheme and setup the refinement and coarsening methods on quadtrees. */
-
-  advance = advance_saint_venant;  
-#if QUADTREE
-  for (scalar s in {h,zb,u,eta})
-    s.refine = s.prolongation = refine_linear;
-  eta.refine  = refine_eta;
-  eta.coarsen = coarsen_eta;
-#endif
-}
-
-/**
-The event below will happen after all the other initial events to take
-into account user-defined field initialisations. */
-
-event init (i = 0)
-{
-  foreach()
-    eta[] = zb[] + h[];
-  boundary (all);
-}
-
-/**
-Optional source terms can be added by overloading the *sources* function
-pointer. */
-
-static void no_sources (scalar * current, scalar * updates)
-{
-  foreach()
-    for (scalar s in updates)
-      s[] = 0.;
-}
-
-void (* sources) (scalar * current, scalar * updates) = no_sources;
-
-/**
 ### Computing fluxes
 
 Various approximate Riemann solvers are defined in [riemann.h](). */
 
 #include "riemann.h"
 
-double update (scalar * evolving, scalar * updates, double dtmax)
+double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
 {
 
   /**
@@ -189,8 +145,6 @@ double update (scalar * evolving, scalar * updates, double dtmax)
   /**
   The gradients are stored in locally-allocated fields. First-order
   reconstruction is used for the gradient fields. */
-
-  {
 
   vector gh[], geta[];
   tensor gu[];
@@ -274,8 +228,6 @@ double update (scalar * evolving, scalar * updates, double dtmax)
     else // dry
       Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
   }
-  
-  }
 
   boundary_flux ({Fh, S, Fq});
 
@@ -288,14 +240,48 @@ double update (scalar * evolving, scalar * updates, double dtmax)
   scalar dh = updates[0];
   vector dhu = { updates[1], updates[2] };
 
-  sources (evolving, updates);
   foreach() {
-    dh[] += (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/Delta;
+    dh[] = (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/Delta;
     foreach_dimension()
-      dhu.x[] += (Fq.x.x[] + Fq.x.y[] - S.x[1,0] - Fq.x.y[0,1])/Delta;
+      dhu.x[] = (Fq.x.x[] + Fq.x.y[] - S.x[1,0] - Fq.x.y[0,1])/Delta;
   }
 
   return dtmax;
+}
+
+/**
+## Initialisation
+
+We use the main time loop (in the predictor-corrector scheme) to setup
+the initial defaults. */
+
+event defaults (i = 0)
+{
+
+  /**
+  We overload the default 'advance' and 'update' functions of the
+  predictor-corrector scheme and setup the refinement and coarsening
+  methods on quadtrees. */
+
+  advance = advance_saint_venant;
+  update = update_saint_venant;
+#if QUADTREE
+  for (scalar s in {h,zb,u,eta})
+    s.refine = s.prolongation = refine_linear;
+  eta.refine  = refine_eta;
+  eta.coarsen = coarsen_eta;
+#endif
+}
+
+/**
+The event below will happen after all the other initial events to take
+into account user-defined field initialisations. */
+
+event init (i = 0)
+{
+  foreach()
+    eta[] = zb[] + h[];
+  boundary (all);
 }
 
 /**

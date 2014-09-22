@@ -35,19 +35,6 @@ problem. */
 void flux (const double * state, double * flux, double * eigenvalue);
 
 /**
-Optional source terms can be added by overloading the *sources* function
-pointer. */
-
-static void no_sources (scalar * current, scalar * updates)
-{
-  foreach()
-    for (scalar s in updates)
-      s[] = 0.;
-}
-
-void (* sources) (scalar * current, scalar * updates) = no_sources;
-
-/**
 ## Time-integration
 
 ### Setup
@@ -60,13 +47,16 @@ Time integration will be done with a generic
 /**
 The generic time-integration scheme in `predictor-corrector.h` needs
 to know which fields are updated i.e. all the scalars + the components
-of all the vector fields. */
+of all the vector fields. It also needs a function to compute the
+time-derivatives of the evolving variables. */
 
 scalar * evolving;
+double update_conservation (scalar * conserved, scalar * updates, double dtmax);
 
 event defaults (i = 0)
 {
   evolving = list_concat (scalars, (scalar *) vectors);
+  update = update_conservation;
 
   /**
   On quadtrees we need to replace the default bilinear
@@ -120,7 +110,7 @@ static double riemann (const double * right, const double * left,
   return dtmax;
 }
 
-double update (scalar * conserved, scalar * updates, double dtmax)
+double update_conservation (scalar * conserved, scalar * updates, double dtmax)
 {
 
   /**
@@ -235,12 +225,11 @@ double update (scalar * conserved, scalar * updates, double dtmax)
   
   The update for each scalar quantity is the divergence of the fluxes. */
   
-  sources (conserved, updates);
   foreach() {
     scalar ds;
     vector f;
     for (ds,f in updates,lflux)
-      ds[] += (f.x[] - f.x[1,0] + f.y[] - f.y[0,1])/Delta;
+      ds[] = (f.x[] - f.x[1,0] + f.y[] - f.y[0,1])/Delta;
   }
 
   /**

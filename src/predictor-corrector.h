@@ -6,7 +6,7 @@
 // fields updated by time-integration
 extern scalar * evolving;
 // how to compute updates
-double update (scalar * evolving, scalar * updates, double dtmax);
+double (* update) (scalar * evolving, scalar * updates, double dtmax) = NULL;
 
 // User-provided functions
 // gradient
@@ -17,6 +17,7 @@ double t = 0., dt = 0.;
 static void advance_generic (scalar * output, scalar * input, scalar * updates,
 			     double dt)
 {
+  trash (output);
   foreach() {
     scalar o, i, u;
     for (o,i,u in output,input,updates)
@@ -55,10 +56,13 @@ void run()
     dt = dtnext (t, update (evolving, updates, DT));
     if (gradient != none) {
       /* 2nd-order time-integration */
+      scalar * predictor = list_clone (evolving);
       /* predictor */
-      advance (updates, evolving, updates, dt/2.);
+      advance (predictor, evolving, updates, dt/2.);
       /* corrector */
-      update (updates, updates, dt);
+      update (predictor, updates, dt);
+      delete (predictor);
+      free (predictor);
     }
     advance (evolving, evolving, updates, dt);
     delete (updates);

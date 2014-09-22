@@ -16,10 +16,18 @@ linear wall relation, $p = K A$ with $K$ a constant, we can write the
 flux as $F = (Q,Q^2/A + 2 e_1 A)$ and the source term as $S = (0,-e_2
 Q/A)$ using two parameters $e_1$ and $e_2$.
 
-We will use a 1D Cartesian grid and the generic solver for systems of
-conservation laws. */
+Before including the conservation solver, we need to overload the
+default *update* function of the predictor-corrector scheme in order
+to add our source term. */
 
 #include "grid/cartesian1D.h"
+#include "predictor-corrector.h"
+
+static double momentum_source (scalar * current, scalar * updates, double dtmax);
+
+event defaults (i = 0)
+  update = momentum_source;
+
 #include "conservation.h"
 
 /**
@@ -56,35 +64,29 @@ void flux (const double * s, double * f, double e[2])
 }
 
 /**
-We need to add the source term of the momentum equation. We first
-define a function which, given the current states, fills the *updates*
-with the source terms for each conserved quantity. */
+We need to add the source term of the momentum equation. We define a
+function which, given the current states, fills the *updates* with the
+source terms for each conserved quantity. */
 
-static void momentum_source (scalar * current, scalar * updates)
+static double momentum_source (scalar * current, scalar * updates, double dtmax)
 {
+  /**
+  We first compute the updates from the system of conservation laws. */
+  double dt = update_conservation (current, updates, dtmax);
 
   /**
   We recover the current fields and their variations from the lists... */
 
-  scalar a = current[0], q = current[1], da = updates[0], dq = updates[1];
+  scalar a = current[0], q = current[1], dq = updates[1];
 
   /**
-  We initialise the source terms for each conserved variable. Note that
-  *a* and *da*, *q* and *dq* may be the same fields, so that care needs
-  to be taken with the order of operations. */
+  We add the source term for *q*. */
 
-  foreach() {
-    dq[] = - e2*q[]/a[];
-    da[] = 0.;
-  }
+  foreach()
+    dq[] += - e2*q[]/a[];
+
+  return dt;
 }
-
-/**
-We then overload the default *sources* function pointer of the generic
-solver. */
-
-event defaults (i = 0)
-  sources = momentum_source;
 
 /**
 ## Boundary conditions

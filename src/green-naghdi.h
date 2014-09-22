@@ -32,7 +32,22 @@ $$
 With $\mathcal{T}$ a linear operator to be defined below, as well as
 $\mathcal{Q}_1 \left( u \right)$.
 
-This linear system can be inverted with the multigrid Poisson
+Before including the Saint-Venant solver, we need to overload the
+default *update* function of the predictor-corrector scheme in order
+to add our source term. */
+
+#include "predictor-corrector.h"
+
+static double update_green_naghdi (scalar * current, scalar * updates,
+				   double dtmax);
+
+event defaults (i = 0)
+  update = update_green_naghdi;
+
+#include "saint-venant.h"
+
+/**
+The linear system can be inverted with the multigrid Poisson
 solver. We declare *D* as a global variable so that it can be re-used
 as initial guess for the Poisson solution. The solver statistics will
 be stored in *mgD*. The *breaking* parameter defines the slope above
@@ -40,7 +55,6 @@ which dispersive terms are turned off. The $\alpha_d$ parameter
 controls the optimisation of the dispersion relation (see [Bonneton et
 al, 2011](/src/references.bib#bonneton2011)). */
 
-#include "saint-venant.h"
 #include "poisson.h"
 
 vector D[];
@@ -200,12 +214,14 @@ static void relax_GN (scalar * a, scalar * r, int l, void * data)
 ## Source term computation
 
 To add the source term to the Saint-Venant system we overload the
-default *sources* function with this one. The function takes
+default *update* function with this one. The function takes
 a list of the current evolving scalar fields and fills the
 corresponding *updates* with the source terms. */
 
-static void green_naghdi (scalar * current, scalar * updates)
+static double update_green_naghdi (scalar * current, scalar * updates,
+				   double dtmax)
 {
+  double dt = update_saint_venant (current, updates, dtmax);
   scalar h = current[0];
   vector u = { current[1], current[2] };
 
@@ -276,11 +292,8 @@ static void green_naghdi (scalar * current, scalar * updates)
   mgD = mg_solve ((scalar *){D}, (scalar *){b}, residual_GN, relax_GN, list);
 
   /**
-  We can then compute the updates for $h$ (zero) and $hu$. Note that we
-  need to be careful here as *current* and *updates* can be identical
-  i.e. *h* and *dh*, *u* and *dhu* can be identical. */
+  We can then compute the updates for $hu$. */
 
-  scalar dh = updates[0];
   vector dhu = { updates[1], updates[2] };
 
   foreach() {
@@ -293,29 +306,18 @@ static void green_naghdi (scalar * current, scalar * updates)
     so that lake-at-rest balance is maintained. */
 
     if (fabs(dx(eta)) < breaking && fabs(dy(eta)) < breaking)
-      foreach_dimension() {
-	if (wet[-1,0] == 1 && wet[] == 1 && wet[1,0] == 1)
-	  dhu.x[] = h[]*(G/alpha_d*dx(eta) - D.x[]);
-	else
-	  dhu.x[] = 0.;
-      }
-    else
       foreach_dimension()
-	dhu.x[] = 0.;
-    dh[] = 0.;
+	if (wet[-1,0] == 1 && wet[] == 1 && wet[1,0] == 1)
+	  dhu.x[] += h[]*(G/alpha_d*dx(eta) - D.x[]);
   }
+
+  return dt;
 }
 
 /**
-In the default setup, we replace the default source terms with our
-function. */
+We need an initial guess for the dispersive term. */
 
 event defaults (i = 0) {
-  sources = green_naghdi;
-
-  /**
-  We need an initial guess for the dispersive term. */
-
   foreach()
     foreach_dimension()
       D.x[] = 0.;
