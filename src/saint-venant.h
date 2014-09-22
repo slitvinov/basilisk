@@ -45,8 +45,8 @@ scalar zb[], h[], eta[];
 vector u[];
 
 /**
-The only physical parameter is the acceleration of gravity `G`. Cells are 
-considered "dry" when the water depth is less than the `dry` parameter (this 
+The only physical parameter is the acceleration of gravity *G*. Cells are 
+considered "dry" when the water depth is less than the *dry* parameter (this 
 should not require tweaking). */
 
 double G = 1.;
@@ -118,50 +118,6 @@ static void coarsen_eta (Point point, scalar eta)
 #endif
 
 /**
-We use the main time loop (in the predictor-corrector scheme) to setup
-the initial defaults. */
-
-event defaults (i = 0)
-{
-
-  /**
-  We overload the default 'advance' function of the predictor-corrector
-  scheme and setup the refinement and coarsening methods on quadtrees. */
-
-  advance = advance_saint_venant;  
-#if QUADTREE
-  for (scalar s in {h,zb,u,eta})
-    s.refine = s.prolongation = refine_linear;
-  eta.refine  = refine_eta;
-  eta.coarsen = coarsen_eta;
-#endif
-}
-
-/**
-The event below will happen after all the other initial events to take
-into account user-defined field initialisations. */
-
-event init (i = 0)
-{
-  foreach()
-    eta[] = zb[] + h[];
-  boundary (all);
-}
-
-/**
-Optional source terms can be added by overloading the *sources* function
-pointer. */
-
-static void no_sources (scalar * current, scalar * updates)
-{
-  foreach()
-    for (scalar s in updates)
-      s[] = 0.;
-}
-
-void (* sources) (scalar * current, scalar * updates) = no_sources;
-
-/**
 ### Computing fluxes
 
 Various approximate Riemann solvers are defined in [riemann.h](). */
@@ -179,8 +135,8 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   vector u = { evolving[1], evolving[2] };
 
   /**
-  `Fh` and `Fq` will contain the fluxes for $h$ and $h\mathbf{u}$
-  respectively and `S` is necessary to store the asymmetric topographic
+  *Fh* and *Fq* will contain the fluxes for $h$ and $h\mathbf{u}$
+  respectively and *S* is necessary to store the asymmetric topographic
   source term. */
 
   vector Fh[], S[];
@@ -264,10 +220,10 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
       /**
       #### Flux update */
       
-      Fh.x[]   = fh;
-      Fq.x.x[] = fu - sl;
-      S.x[]    = fu - sr;
-      Fq.y.x[] = fv;
+      Fh.x[]   = fm.x[]*fh;
+      Fq.x.x[] = fm.x[]*(fu - sl);
+      S.x[]    = fm.x[]*(fu - sr);
+      Fq.y.x[] = fm.x[]*fv;
     }
     else // dry
       Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
@@ -285,9 +241,30 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   vector dhu = { updates[1], updates[2] };
 
   foreach() {
-    dh[] = (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/Delta;
+    dh[] = (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/(cm[]*Delta);
     foreach_dimension()
-      dhu.x[] = (Fq.x.x[] + Fq.x.y[] - S.x[1,0] - Fq.x.y[0,1])/Delta;
+      dhu.x[] = (Fq.x.x[] + Fq.x.y[] - S.x[1,0] - Fq.x.y[0,1])/(cm[]*Delta);
+
+    /**
+    We also need to add the metric terms. They can be written (see
+    eq. (8) of [Popinet, 2011](references.bib#popinet2011)) 
+    $$
+    S_g = h \left(\begin{array}{c}
+    0\								\
+    \frac{g}{2} h \partial_{\lambda} m_{\theta} + f_G u_y\	\
+    \frac{g}{2} h \partial_{\theta} m_{\lambda} - f_G u_x
+    \end{array}\right)
+    $$
+    with
+    $$
+    f_G = u_y \partial_{\lambda} m_{\theta} - u_x \partial_{\theta} m_{\lambda}
+    $$
+    */
+
+    double dmdl = fm.x[1,0] - fm.x[], dmdt = fm.y[0,1] - fm.y[];
+    double fG = u.y[]*dmdl - u.x[]*dmdt;
+    dhu.x[] += h[]*(G*h[]/2.*dmdl + fG*u.y[])/(cm[]*Delta);
+    dhu.y[] += h[]*(G*h[]/2.*dmdt - fG*u.x[])/(cm[]*Delta);
   }
 
   return dtmax;
@@ -335,8 +312,8 @@ When using the default adaptive reconstruction of variables, the
 Saint-Venant solver will conserve the water depth when cells are
 refined or coarsened. However, this will not necessarily ensure that
 the "lake-at-rest" condition (i.e. a constant water surface elevation)
-is also preserved. In what follows, we redefine the `refine()` and
-`coarsen()` methods of the water depth $h$ so that the water surface
+is also preserved. In what follows, we redefine the *refine()* and
+*coarsen()* methods of the water depth $h$ so that the water surface
 elevation $\eta$ is conserved. 
 
 We start with the reconstruction of fine "wet" cells: */
@@ -439,18 +416,18 @@ void conserve_elevation (void) {}
 This can be used to implement open boundary conditions at low
 [Froude numbers](http://en.wikipedia.org/wiki/Froude_number). The idea
 is to set the velocity normal to the boundary so that the water level
-relaxes towards its desired value (`ref`). */
+relaxes towards its desired value (*ref*). */
 
 #define radiation(ref) (sqrt (G*max(h[],0.)) - sqrt(G*max((ref) - zb[], 0.)))
 
 /**
 ## Tide gauges
 
-An array of `Gauge` structures passed to `output_gauges()` will create
-a file (called `name`) for each gauge. Each time `output_gauges()` is
+An array of *Gauge* structures passed to *output_gauges()* will create
+a file (called *name*) for each gauge. Each time *output_gauges()* is
 called a line will be appended to the file. The line contains the time
-and the value of each scalar in `list` in the (wet) cell containing
-`(x,y)`. The `desc` field can be filled with a longer description of
+and the value of each scalar in *list* in the (wet) cell containing
+*(x,y)*. The *desc* field can be filled with a longer description of
 the gauge. */
 
 typedef struct {
