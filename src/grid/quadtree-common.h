@@ -280,50 +280,30 @@ static scalar quadtree_init_scalar (scalar s, const char * name)
   return s;
 }
 
-static void prolongation_face (Point point, scalar s)
+foreach_dimension()
+static void refine_face_x (Point point, scalar s)
+{
+  vector v = s.v;
+  for (int i = 0; i <= 1; i++)
+    if (is_leaf(neighbor(2*i-1,0)) || !is_active(neighbor(2*i-1,0))) {
+      double g = (v.x[i,+1] - v.x[i,-1])/8.;
+      fine(v.x,2*i,0) = v.x[i,0] - g;
+      fine(v.x,2*i,1) = v.x[i,0] + g;
+    }
+  for (int i = 0; i <= 1; i++)
+    fine(v.x,1,i) = (fine(v.x,0,i) + fine(v.x,2,i))/2.;
+}
+
+void refine_face (Point point, scalar s)
 {
   vector v = s.v;
   foreach_dimension()
-    if ((!is_leaf(neighbor(0,-1)) && is_active(neighbor(0,-1))) || 
-	(!is_leaf(neighbor(0,+1)) && is_active(neighbor(0,+1)))) {
-      if (is_leaf(neighbor(-1,0)) || !is_active(neighbor(-1,0))) {
-	double g = (v.x[0,+1] - v.x[0,-1])/8.;
-	fine(v.x,0,0) = v.x[] - g;
-	fine(v.x,0,1) = v.x[] + g;
-      }
-      if (is_leaf(neighbor(+1,0)) || !is_active(neighbor(+1,0))) {
-	double g = (v.x[1,+1] - v.x[1,-1])/8.;
-	fine(v.x,2,0) = v.x[1,0] - g;
-	fine(v.x,2,1) = v.x[1,0] + g;
-      }
-      fine(v.x,1,0) = (fine(v.x,0,0) + fine(v.x,2,0))/2.;
-      fine(v.x,1,1) = (fine(v.x,0,1) + fine(v.x,2,1))/2.;
-    }
-}
-
-static void refine_face (Point point, scalar s)
-{
-  vector v = s.v;
-  foreach_dimension() {
-    if (is_leaf(neighbor(-1,0)) || !is_active(neighbor(-1,0))) {
-      double g = (v.x[0,+1] - v.x[0,-1])/8.;
-      fine(v.x,0,0) = v.x[] - g;
-      fine(v.x,0,1) = v.x[] + g;
-    }
-    if (is_leaf(neighbor(+1,0)) || !is_active(neighbor(+1,0))) {
-      double g = (v.x[1,+1] - v.x[1,-1])/8.;
-      fine(v.x,2,0) = v.x[1,0] - g;
-      fine(v.x,2,1) = v.x[1,0] + g;
-    }
-    fine(v.x,1,0) = (fine(v.x,0,0) + fine(v.x,2,0))/2.;
-    fine(v.x,1,1) = (fine(v.x,0,1) + fine(v.x,2,1))/2.;
-  }
+    v.x.prolongation (point, v.x);
 }
 
 void refine_face_solenoidal (Point point, scalar s)
 {
   refine_face (point, s);
-
   vector v = s.v;
   // local projection, see section 3.3 of Popinet, JCP, 2009
   double d[4], p[4];
@@ -347,9 +327,10 @@ vector quadtree_init_face_vector (vector v, const char * name)
   v = cartesian_init_face_vector (v, name);
   v.x.coarsen = coarsen_face;
   v.y.coarsen = none;
-  v.x.prolongation = prolongation_face;
-  v.x.refine = refine_face;
-  v.y.refine = none;
+  v.x.refine  = refine_face;
+  v.y.refine  = none;
+  v.x.prolongation = refine_face_x;
+  v.y.prolongation = refine_face_y;  
   return v;
 }
 
@@ -374,19 +355,31 @@ static void quadtree_boundary_level (scalar * list, int l)
   }
 
   scalar * listr = NULL;
+  vector * listf = NULL;
   for (scalar s in list)
-    if (!is_constant (s) && s.refine != none)
-      listr = list_add (listr, s);
+    if (!is_constant (s) && s.refine != none) {
+      if (s.face)
+	listf = vectors_add (listf, s.v);
+      else
+	listr = list_add (listr, s);
+    }
 
-  if (listr) {
+  if (listr || listf) {
     boundary_iterate (halo_prolongation, list, 0, l);
     for (int i = 0; i < l; i++) {
-      foreach_halo (prolongation, i)
+      foreach_halo (prolongation, i) {
 	for (scalar s in listr)
-	  s.prolongation (point, s);
+          s.prolongation (point, s);
+	for (vector v in listf)
+	  foreach_dimension()
+	    if ((!is_leaf(neighbor(0,-1)) && is_active(neighbor(0,-1))) || 
+		(!is_leaf(neighbor(0,+1)) && is_active(neighbor(0,+1))))
+	      v.x.prolongation (point, v.x);
+      }
       boundary_iterate (halo_prolongation, list, i + 1, l);
     }
     free (listr);
+    free (listf);
   }
 }
 
