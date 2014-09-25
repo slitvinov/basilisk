@@ -139,6 +139,13 @@ event properties (i++)
   density();
 
 /**
+By default tracers are defined at $t-\Delta t/2$. We use the *first*
+keyword to move VOF advection before the *logfile* output i.e. at
+$t+\Delta/2$. This improves the results. */
+
+event vof (i++, first);
+
+/**
 At each timestep we output the kinetic energy. */
 
 event logfile (i++; t <= 1) {

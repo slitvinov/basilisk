@@ -20,11 +20,12 @@ attribute {
 /**
 Surface tension is a source term in the right-hand-side of the
 evolution equation for the velocity of the [centered Navier--Stokes
-solver](navier-stokes/centered.h) i.e. it is an acceleration. We
-initialise a new vector field to store it. */
+solver](navier-stokes/centered.h) i.e. it is an acceleration. If
+necessary, we allocate a new vector field to store it. */
 
 event init (i = 0) {
-  a = new face vector;
+  if (is_constant(a.x))
+    a = new face vector;
 }
 
 /**

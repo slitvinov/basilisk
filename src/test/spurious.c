@@ -114,7 +114,7 @@ event logfile (i++; t <= TMAX)
   converged. */
   
   double dc = change (c, cn);
-  if (i > 0 && dc < DC)
+  if (i > 1 && dc < DC)
     return 1; /* stop */
 
   /**

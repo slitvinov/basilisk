@@ -62,9 +62,16 @@ unity. */
 event init (t = 0) {
   vertex scalar phi[];
   foreach_vertex()
-    phi[] = (y - 0.01*cos (2.*pi*x));
+    phi[] = y - 0.01*cos (2.*pi*x);
   fractions (phi, c);
 }
+
+/**
+By default tracers are defined at $t-\Delta t/2$. We use the *first*
+keyword to move VOF advection before the *amplitude* output i.e. at
+$t+\Delta/2$. This improves the results. */
+
+event vof (i++, first);
 
 /**
 We output the amplitude at times matching exactly those in the

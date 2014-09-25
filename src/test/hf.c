@@ -21,8 +21,8 @@ int main()
   Y0 = -0.5 - 0.125;
   scalar c[];
 #if QUADTREE
-  refine_function (band1, NULL, all);
-  refine_function (band, NULL, all);
+  refine_function (band1, NULL, NULL);
+  refine_function (band, NULL, NULL);
   c.refine = c.prolongation = fraction_refine;
 #endif
   vertex scalar phi[];

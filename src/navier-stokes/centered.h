@@ -139,8 +139,8 @@ time $t+\Delta t/2$) here. Note that this assumes that tracer fields
 are defined at time $t-\Delta t/2$ i.e. are lagging the
 velocity/pressure fields by half a timestep. */
 
-event vof (i++);
-event tracer_advection (i++);
+event vof (i++,last);
+event tracer_advection (i++,last);
 
 /**
 The fluid properties such as specific volume (fields $\alpha$ and
