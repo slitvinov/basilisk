@@ -17,15 +17,16 @@ static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
 
   foreach_level_or_leaf (l)
     foreach_dimension()
-      u.x[] = (dt*alpha[]*(mu.x[1,0]*u.x[1,0] + mu.x[]*u.x[-1,0] +
-			   mu.y[0,1]*u.x[0,1] + mu.y[]*u.x[0,-1]
-#if IMPLICIT
-			   + ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
-			      (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/2.
-#endif
+      u.x[] = (dt*alpha[]*(2.*mu.x[1,0]*u.x[1,0] + 2.*mu.x[]*u.x[-1,0]
+			   + mu.y[0,1]*(u.x[0,1] +
+					(u.y[1,0] + u.y[1,1])/4. -
+					(u.y[-1,0] + u.y[-1,1])/4.)
+			   - mu.y[]*(- u.x[0,-1] +
+				     (u.y[1,-1] + u.y[1,0])/4. -
+				     (u.y[-1,-1] + u.y[-1,0])/4.)
 			   ) + r.x[]*sq(Delta))/
-    (sq(Delta) + dt*alpha[]*(mu.x[1,0] + mu.x[] + mu.y[0,1] + mu.y[]));
-
+    (sq(Delta) + dt*alpha[]*(2.*mu.x[1,0] + 2.*mu.x[] + mu.y[0,1] + mu.y[]));
+  
 #if TRASH
   vector u1[];
   foreach_level_or_leaf (l)
@@ -50,19 +51,17 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
 #if QUADTREE
   /* conservative coarse/fine discretisation (2nd order) */
   foreach_dimension() {
-    face vector g[];
-    scalar a = u.x;
-    foreach_face()
-      g.x[] = mu.x[]*(a[] - a[-1,0])/Delta;
-    boundary_flux ({g});
+    face vector Dx[];
+    foreach_face(x)
+      Dx.x[] = 2.*mu.x[]*(u.x[] - u.x[-1,0])/Delta;
+    foreach_face(y)
+      Dx.y[] = mu.y[]*(u.x[] - u.x[0,-1] + 
+		       (u.y[1,-1] + u.y[1,0])/4. -
+		       (u.y[-1,-1] + u.y[-1,0])/4.)/Delta;
+    boundary_flux ({Dx});
     foreach (reduction(max:maxres)) {
       res.x[] = r.x[] - u.x[] + dt*alpha[]/Delta*
-        (g.x[1,0] - g.x[] + g.y[0,1] - g.y[]
-#if IMPLICIT
-	 + ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
-	    (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/(2.*Delta)
-#endif
-	 );
+        (Dx.x[1,0] - Dx.x[] + Dx.y[0,1] - Dx.y[]);
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
     }
@@ -72,14 +71,15 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
   foreach (reduction(max:maxres))
     foreach_dimension() {
       res.x[] = r.x[] - u.x[] +
-        dt*alpha[]*(mu.x[1,0]*u.x[1,0] + mu.x[]*u.x[-1,0] +
-		    mu.y[0,1]*u.x[0,1] + mu.y[]*u.x[0,-1] -
-		    (mu.x[1,0] + mu.x[] + mu.y[0,1] + mu.y[])*u.x[]
-#if IMPLICIT
-		    + ((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
-		       (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/2.
-#endif
-		    )/sq(Delta);
+        dt*alpha[]*(2.*mu.x[1,0]*(u.x[1,0] - u.x[]) 
+		    - 2.*mu.x[]*(u.x[] - u.x[-1,0]) 
+		    + mu.y[0,1]*(u.x[0,1] - u.x[] +
+				 (u.y[1,0] + u.y[1,1])/4. -
+				 (u.y[-1,0] + u.y[-1,1])/4.)
+		    - mu.y[]*(u.x[] - u.x[0,-1] +
+			      (u.y[1,-1] + u.y[1,0])/4. -
+			      (u.y[-1,-1] + u.y[-1,0])/4.)
+		  )/sq(Delta);
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
     }
@@ -92,17 +92,10 @@ mgstats viscosity (struct Viscosity p)
   vector u = p.u;
   (const) face vector mu = p.mu;
   (const) scalar alpha = p.alpha;
-  double dt = p.dt;
   vector r[];
-  foreach() {
+  foreach()
     foreach_dimension()
-      r.x[] = u.x[]
-#if !IMPLICIT
-      + dt*alpha[]*((mu.x[1,0] - mu.x[])*(u.x[1,0] - u.x[-1,0]) + 
-		    (mu.y[0,1] - mu.y[])*(u.y[1,0] - u.y[-1,0]))/(2.*sq(Delta))
-#endif
-      ;
-  }
+      r.x[] = u.x[];
   restriction ({mu,alpha});
   return mg_solve ((scalar *){u}, (scalar *){r},
 		   residual_viscosity, relax_viscosity, &p);
