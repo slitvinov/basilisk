@@ -1559,6 +1559,18 @@ event{WS}+{ID}+{WS}*[(] {
     ECHO;
 }
 
+,{WS}*first {
+  if (inevent == 1) {
+    int i = nevents;
+    while (i >= 0) {
+      eventlast[i] = 0;
+      i = eventchild[i];
+    }
+  }
+  else
+    ECHO;
+}
+
 end {
   if (inevent == 1)
     fputs ("1234567890", yyout);
