@@ -10,11 +10,12 @@ discussed in [Popinet, 2011](/src/references.bib#popinet2011).
 
 ## Solver setup
 
-The following headers specify that we use the [Saint-Venant
-solver](/src/saint-venant.h) together with [(dynamic) terrain
-reconstruction](/src/terrain.h) and the [Okada fault
-model](/src/okada.h). */
+The following headers specify that we use spherical coordinates and
+the [Saint-Venant solver](/src/saint-venant.h) together with
+[(dynamic) terrain reconstruction](/src/terrain.h) and the [Okada
+fault model](/src/okada.h). */
 
+#include "spherical.h"
 #include "saint-venant.h"
 #include "terrain.h"
 #include "okada.h"
@@ -27,16 +28,35 @@ We then define a few useful macros and constants. */
 #define ETAE     1e-2 // error on free surface elevation (1 cm)
 #define HMAXE    5e-2 // error on maximum free surface elevation (5 cm)
 
-// metres to degrees
-double mtd = 360./40075e3;
-
-/**
-When using a quadtree (i.e. adaptive) discretisation, we want to start
-with the coarsest grid, otherwise we directly refine to the maximum
-level. Note that *1 << n* is C for $2^n$. */
-
 int main()
 {
+  /**
+  Here we setup the domain geometry. We choose to use metre as length
+  unit, so we specify the radius of the Earth (required for the
+  [spherical coordinates](/src/spherical.h) in metres. The *x* and *y*
+  coordinates are longitude and latitude in degrees, so we set the size
+  of the box *L0* and the coordinates of the lower-left corner
+  *(X0,Y0)* in degrees. */
+
+  Radius = 6371220.;
+  // the domain is 54 degrees squared
+  size (54.);
+  // centered on 94,8 longitude,latitude
+  origin (94. - L0/2., 8. - L0/2.);
+
+  /**
+  *G* is the acceleration of gravity required by the Saint-Venant
+  solver. This is the only dimensional parameter. We rescale it so that
+  time is in minutes. */
+
+  // acceleration of gravity in m/min^2
+  G = 9.81*sq(60.);
+
+  /**
+  When using a quadtree (i.e. adaptive) discretisation, we want to start
+  with the coarsest grid, otherwise we directly refine to the maximum
+  level. Note that *1 << n* is C for $2^n$. */
+
 #if QUADTREE
   // 32^2 grid points to start with
   init_grid (1 << MINLEVEL);
@@ -44,29 +64,6 @@ int main()
   // 1024^2 grid points
   init_grid (1 << MAXLEVEL);
 #endif
-
-  /**
-  Here we setup the domain geometry. For the moment Basilisk only
-  supports square domains. For this example we have to use degrees as
-  horizontal units because that is what the topographic database uses
-  (eventually coordinate mappings will give more flexibility). We set
-  the size of the box *L0* and the coordinates of the lower-left corner
-  *(X0,Y0)*. */
-
-  // the domain is 54 degrees squared
-  size (54.);
-  // centered on 94,8 longitude,latitude
-  origin (94 - L0/2., 8. - L0/2.);
-
-  /**
-  *G* is the acceleration of gravity required by the Saint-Venant
-  solver. This is the only dimensional parameter. We rescale it so that
-  time is in minutes, horizontal distances in degrees and vertical
-  distances in metres. This is a trick to circumvent the current lack of
-  coordinate mapping. */
-
-  // acceleration of gravity in degrees^2/min^2/m
-  G = 9.81*sq(mtd)*sq(60.);
 
   /**
   We then call the *run()* method of the Saint-Venant solver to
@@ -247,7 +244,7 @@ event logfile (i++) {
   with $C_f=10^{-4}$. */
   
   foreach() {
-    double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(u)/(h[]*mtd);
+    double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(u)/h[];
     foreach_dimension()
       u.x[] /= a;
 
