@@ -43,6 +43,9 @@
   int inattr, attrscope, attrline;
   FILE * attrfp;
 
+  int inmap, mapscope, mapline;
+  FILE * mapfp;
+
   #define REDUCTMAX 10
   char foreachs[80], * fname;
   FILE * foreachfp;
@@ -228,19 +231,19 @@
       if (foreach_face_xy == face_xy) {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
 	writefile (fp, 'y', 'x', foreach_line, "is_face_y()");
-	fputs (" } { int ig = -1; VARIABLES; ", yyout);
+	fputs (" }} { int ig = -1; VARIABLES; ", yyout);
 	writefile (fp, 'x', 'y', foreach_line, "is_face_x()");
-	fputs (" } ", yyout);
+	fputs (" }} ", yyout);
       }
       else if (foreach_face_xy == face_x) {
 	fputs (" { int ig = -1; VARIABLES; ", yyout);
 	writefile (fp, 'x', 'y', foreach_line, "is_face_x()");
-	fputs (" } ", yyout);
+	fputs (" }} ", yyout);
       }
       else {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
 	writefile (fp, 'x', 'y', foreach_line, "is_face_y()");
-	fputs (" } ", yyout);
+	fputs (" }} ", yyout);
       }
       fputs (" end_foreach_face_generic()\n", yyout);
       fprintf (yyout, "#line %d\n", line);
@@ -256,6 +259,7 @@
       fp = dopen ("_foreach_body.h", "r");
       while ((c = fgetc (fp)) != EOF)
 	fputc (c, yyout);
+      fputs (" }", yyout);
       fclose (fp);
     }
     fprintf (yyout, " end_%s();", foreachs);
@@ -419,12 +423,39 @@
     fclose (out);
   }
 
+  void endmap() {
+    inmap = 0;
+    fclose (yyout); yyout = mapfp;
+    FILE * fp = dopen ("_map.h", "r");
+    FILE * out = dopen ("_maps.h", "a");
+    fprintf (out, "\n#line %d \"%s\"\n", mapline, fname);
+    int c;
+    while ((c = fgetc (fp)) != EOF) {
+      if (c == '\n')
+	fputc (c, yyout);
+      fputc (c, out);
+    }
+    fclose (fp);
+    fclose (out);
+  }
+
+  void maps (int line) {
+    fputc ('\n', yyout);
+    FILE * fp = dopen ("_maps.h", "r");
+    int c;
+    while ((c = fgetc (fp)) != EOF)
+      fputc (c, yyout);
+    fclose (fp);
+    fprintf (yyout, "#line %d \"%s\"\n", line, fname);
+  }
+
   void infunction_declarations() {
     if (!infunctiondecl) {
       if (debug)
 	fprintf (stderr, "%s:%d: function declarations\n", fname, line);
       fputs (" int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
 	     " POINT_VARIABLES; ", yyout);
+      maps (line - 1);
       infunctiondecl = 1;
       assert (functionfp == NULL);
       functionfp = yyout;
@@ -818,6 +849,8 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
       fprintf (yyout, "\n#line %d\n", foreach_line);
     }
     yyout = dopen ("_foreach_body.h", "w");
+    fputs ("{\n", yyout);
+    maps (line);
     if (inforeach_face) {
       foreach_face_xy = face_xy;
       if (nreduct == 0) { // foreach_face (x)
@@ -883,7 +916,8 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
       ECHO;
     endforeachdim ();
   }
-  else if (!inattr || scope != attrscope)
+  else if ((!inattr || scope != attrscope) &&
+	   (!inmap || scope != mapscope))
     ECHO;
   if (foreach_child && foreach_child_scope == scope) {
     fputs (" end_foreach_child(); }", yyout);
@@ -895,6 +929,8 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     endevent();
   if (inattr && scope == attrscope)
     endattr ();
+  if (inmap && scope == mapscope)
+    endmap ();
   if (scope == 0)
     infunctionproto = 0;
 }
@@ -938,6 +974,12 @@ attribute{WS}+"{" {
   yyout = dopen ("_attribute.h", "w");
 }
 
+map{WS}+"{" {
+  inmap = 1; mapscope = scope++; mapline = line;
+  mapfp = yyout;
+  yyout = dopen ("_map.h", "w");
+}
+
 ; {
   int insthg = 0;
   if (scope == 0)
@@ -970,6 +1012,7 @@ attribute{WS}+"{" {
 	     nboundary);
     boundary_staggering (boundarydir, boundarycomponent, yyout);
     fputs (" POINT_VARIABLES; ", yyout);
+    maps (line - 1);
     maybeconst_combinations (line, boundary_homogeneous_body);
     fputs (" return 0.; }\n", yyout);
 
@@ -1319,6 +1362,7 @@ val{WS}*[(]    {
 	     line, fname, nboundary);
     boundary_staggering (boundarydir, boundarycomponent, yyout);
     fputs (" POINT_VARIABLES; ", yyout);
+    maps (line - 1);
     nmaybeconst = 0;
     inboundary = inforeach_boundary = 1;
     strcpy (boundaryvar, yytext);
@@ -1864,7 +1908,7 @@ int endfor (FILE * fin, FILE * fout)
   invardecl = 0;
   inval = invalpara = 0;
   brack = inarray = 0;
-  inevent = inreturn = inattr = 0;
+  inevent = inreturn = inattr = inmap = 0;
   foreachdim = 0;
   foreach_child = 0;
   inboundary = nboundary = nsetboundary = 0;
@@ -2198,6 +2242,8 @@ int main (int argc, char ** argv)
       }
       FILE * fp = dopen ("_attributes.h", "w");
       fputs ("typedef struct {\n", fp);
+      fclose (fp);
+      fp = dopen ("_maps.h", "w");
       fclose (fp);
       FILE * fout = dopen (cpp, "w");
       if (swig)

@@ -51,22 +51,6 @@ double change (scalar v, scalar vn)
   return max;
 }
 
-double interpolate (scalar v, double xp, double yp)
-{
-  Point point = locate (xp, yp);
-  if (point.level < 0)
-    return nodata;
-  x = (xp - x)/Delta - v.d.x/2.;
-  y = (yp - y)/Delta - v.d.y/2.;
-  int i = sign(x), j = sign(y);
-  x = fabs(x); y = fabs(y);
-  /* bilinear interpolation */
-  return (v[]*(1. - x)*(1. - y) + 
-	  v[i,0]*x*(1. - y) + 
-	  v[0,j]*(1. - x)*y + 
-	  v[i,j]*x*y);
-}
-
 void timer_print (timer t, int i, long tnc)
 {
   clock_t end = clock ();

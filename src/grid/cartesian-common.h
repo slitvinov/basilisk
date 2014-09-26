@@ -7,11 +7,13 @@ void (* debug)    (Point);
 @undef VARIABLES
 @def VARIABLES
   double Delta = L0*DELTA; /* cell size */
+  double Delta_x = Delta, Delta_y = Delta; /* cell size (with mapping) */
   /* cell/face center coordinates */
-  double x  = (ig/2. + I + 0.5)*Delta + X0;
-  double y  = (jg/2. + J + 0.5)*Delta + Y0;
+  double x = (ig/2. + I + 0.5)*Delta + X0;
+  double y = (jg/2. + J + 0.5)*Delta + Y0;
   /* we need this to avoid compiler warnings */
-  NOT_UNUSED(Delta); NOT_UNUSED(x); NOT_UNUSED(y);
+  NOT_UNUSED(Delta); NOT_UNUSED(Delta_x); NOT_UNUSED(Delta_y);
+  NOT_UNUSED(x); NOT_UNUSED(y);
   /* and this when catching FPEs */
   _CATCH;
 @
@@ -392,4 +394,22 @@ void cartesian_methods()
   boundary_level   = cartesian_boundary_level;
   boundary_flux    = cartesian_boundary_flux;
   debug            = cartesian_debug;
+}
+
+Point locate (double xp, double yp);
+
+double interpolate (scalar v, double xp, double yp)
+{
+  Point point = locate (xp, yp);
+  if (point.level < 0)
+    return nodata;
+  x = (xp - x)/Delta - v.d.x/2.;
+  y = (yp - y)/Delta - v.d.y/2.;
+  int i = sign(x), j = sign(y);
+  x = fabs(x); y = fabs(y);
+  /* bilinear interpolation */
+  return (v[]*(1. - x)*(1. - y) + 
+	  v[i,0]*x*(1. - y) + 
+	  v[0,j]*(1. - x)*y + 
+	  v[i,j]*x*y);
 }

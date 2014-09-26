@@ -92,6 +92,32 @@ $$
 \partial_tc_i = \nabla \cdot( K_i c_i \nabla \phi)
 $$
 
+# General orthogonal coordinates
+
+When not written in vector form, some of the equations above will
+change depending on the choice of coordinate system (e.g. polar rather
+than Cartesian coordinates). In addition, extra terms can appear due
+to the geometric curvature of space (e.g. equations on the sphere). An
+important simplification is to consider only [orthogonal
+coordinates](http://en.wikipedia.org/wiki/Orthogonal_coordinates). In
+this case, consistent finite-volume discretisations of standard
+operators (divergence etc...) can be obtained, for any orthogonal
+curvilinear coordinate system, using only a few additional geometric
+parameters.
+
+![Metric scale factors](/src/figures/metric.svg)
+
+The [face vector](/Basilisk C#face-and-vertex-fields) *fm* is the
+*scale factor* for the length of a face i.e. the physical length is
+$fm\Delta$ and the scalar field *cm* is the scale factor for the area
+of the cell i.e. the physical area is $cm\Delta^2$. By default, these
+fields are constant and unity (i.e. the Cartesian metric).
+
+Several metric spaces/coordinate systems are predefined:
+
+* [Axisymmetric](axi.h)
+* [Spherical](spherical.h)
+
 # Output functions
 
 * [Multiple fields interpolated on a regular grid (text format)](output.h#output_field-multiple-fields-interpolated-on-a-regular-grid-text-format)

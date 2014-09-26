@@ -194,7 +194,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
       the fluxes. */
 
       double fh, fu, fv;
-      kurganov (hm, hp, um, up, Delta, &fh, &fu, &dtmax);
+      kurganov (hm, hp, um, up, Delta*cm[]/fm.x[], &fh, &fu, &dtmax);
       fv = (fh > 0. ? u.y[-1,0] + dx*gu.y.x[-1,0] : u.y[] - dx*gu.y.x[])*fh;
       
       /**
@@ -261,10 +261,11 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
     $$
     */
 
-    double dmdl = fm.x[1,0] - fm.x[], dmdt = fm.y[0,1] - fm.y[];
+    double dmdl = (fm.x[1,0] - fm.x[])/(cm[]*Delta);
+    double dmdt = (fm.y[0,1] - fm.y[])/(cm[]*Delta);
     double fG = u.y[]*dmdl - u.x[]*dmdt;
-    dhu.x[] += h[]*(G*h[]/2.*dmdl + fG*u.y[])/(cm[]*Delta);
-    dhu.y[] += h[]*(G*h[]/2.*dmdt - fG*u.x[])/(cm[]*Delta);
+    dhu.x[] += h[]*(G*h[]/2.*dmdl + fG*u.y[]);
+    dhu.y[] += h[]*(G*h[]/2.*dmdt - fG*u.x[]);
   }
 
   return dtmax;
@@ -287,8 +288,10 @@ event defaults (i = 0)
   advance = advance_saint_venant;
   update = update_saint_venant;
 #if QUADTREE
-  for (scalar s in {h,zb,u,eta})
+  for (scalar s in {h,zb,u,eta}) {
     s.refine = s.prolongation = refine_linear;
+    s.coarsen = coarsen_volume_average;
+  }
   eta.refine  = refine_eta;
   eta.coarsen = coarsen_eta;
 #endif
@@ -445,12 +448,15 @@ void output_gauges (Gauge * gauges, scalar * list)
       if (g->desc)
 	fprintf (g->fp, "%s\n", g->desc);
     }
-    Point point = locate (g->x, g->y);
+    double xp = g->x, yp = g->y;
+    unmap (&xp, &yp);
+    Point point = locate (xp, yp);
     if (point.level >= 0 && h[] > dry) {
       fprintf (g->fp, "%g", t);
       for (scalar s in list)
 	fprintf (g->fp, " %g", s[]);
+      fputc ('\n', g->fp);
+      fflush (g->fp);
     }
-    fputc ('\n', g->fp);
   }
 }

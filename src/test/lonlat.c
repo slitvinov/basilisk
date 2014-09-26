@@ -120,3 +120,9 @@ event adapt (i++) {
   double sa = statsf(h).sum;
   assert (fabs(sa - sb) < 1e-12);
 }
+
+/**
+## See also
+
+* [Same test with Gerris](http://gerris.dalembert.upmc.fr/gerris/tests/tests/lonlat.html)
+*/

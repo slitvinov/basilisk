@@ -1,3 +1,4 @@
+// note: u is weighted by fm
 double timestep (const face vector u)
 {
   static double previous = 0.;

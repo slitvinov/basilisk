@@ -14,26 +14,26 @@ attribute {
 static int includes (KdtRect rect, Point * p)
 {
   Point point = *p;
-  Delta /= 2.;
-  return (rect[0].l >= x - Delta && rect[0].h <= x + Delta &&
-	  rect[1].l >= y - Delta && rect[1].h <= y + Delta);
+  Delta_x /= 2.; Delta_y /= 2.;
+  return (rect[0].l >= x - Delta_x && rect[0].h <= x + Delta_x &&
+	  rect[1].l >= y - Delta_y && rect[1].h <= y + Delta_y);
 }
 
 static int intersects (KdtRect rect, Point * p)
 {
   Point point = *p;
-  Delta /= 2.;
-  return (rect[0].l <= x + Delta && rect[0].h >= x - Delta &&
-	  rect[1].l <= y + Delta && rect[1].h >= y - Delta);
+  Delta_x /= 2.; Delta_y /= 2.;
+  return (rect[0].l <= x + Delta_x && rect[0].h >= x - Delta_x &&
+	  rect[1].l <= y + Delta_y && rect[1].h >= y - Delta_y);
 }
 
 static void reconstruct_terrain (Point point, scalar zb)
 {
   KdtSum s;
   kdt_sum_init (&s);
-  Delta /= 2.;
-  KdtRect rect = {{x - Delta, x + Delta},
-		  {y - Delta, y + Delta}};
+  Delta_x /= 2.; Delta_y /= 2.;
+  KdtRect rect = {{x - Delta_x, x + Delta_x},
+		  {y - Delta_y, y + Delta_y}};
   for (Kdt ** kdt = zb.kdt[pid()]; *kdt; kdt++)
     kdt_query_sum (*kdt,
 		   (KdtCheck) includes,

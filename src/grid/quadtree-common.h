@@ -105,10 +105,24 @@ struct Adapt {
 
 astats adapt_wavelet (struct Adapt p)
 {
-  if (p.list == NULL)
-    p.list = all;
+  scalar * listcm = NULL;
 
-  restriction (p.slist);
+  if (is_constant(cm)) {
+    if (p.list == NULL)
+      p.list = all;
+    restriction (p.slist);
+  }
+  else {
+    if (p.list == NULL) {
+      listcm = list_concat (NULL, {cm,fm});
+      for (scalar s in all)
+	listcm = list_add (listcm, s);
+      p.list = listcm;
+    }
+    scalar * listr = list_concat (p.slist, {cm});
+    restriction (listr);
+    free (listr);
+  }
 
   astats st = {0, 0};
   scalar * listc = NULL;
@@ -183,6 +197,7 @@ astats adapt_wavelet (struct Adapt p)
 
   if (st.nc || st.nf)
     boundary (p.listb ? p.listb : p.list);
+  free (listcm);
 
   return st;
 }
