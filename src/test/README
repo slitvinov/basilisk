@@ -43,6 +43,7 @@ Note that only the documented test cases appear in the list below
 ## General orthogonal coordinates
 
 * [Circular dam break on a sphere](lonlat.c)
+* [Axisymmetric mass conservation](axiadvection.c)
 
 ## Electrohydrodynamics
 

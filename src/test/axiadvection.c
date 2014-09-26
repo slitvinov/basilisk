@@ -1,5 +1,22 @@
-#include "navier-stokes/centered.h"
+/**
+# Axisymmetric mass conservation
+
+A standard and a VOF tracer are advected by an axisymmetric flow. The
+initial interface is a torus which is then advected by the flow
+illustrated in the figure below. As the torus is flattened against the
+right-hand-side wall, its cross-sectional surface area decreases but
+the volume should remain constant. 
+
+~~~gnuplot Evolution of the VOF interface and velocity field
+set size ratio -1
+set xlabel 'z'
+set ylabel 'r'
+plot [-0.5:0.5][0:1]'out' w l t '', 'velo' u 1:2:($3/17.):($4/17.) w vect t ''
+~~~
+*/
+
 #include "axi.h"
+#include "navier-stokes/centered.h"
 #include "vof.h"
 #include "tracer.h"
 
@@ -45,13 +62,16 @@ event logfile (i++; t <= 0.8) {
   if (s1 > sfmax1) sfmax1 = s1;
   double e = 2.*(sfmax - sfmin)/(sfmax + sfmin);
   double e1 = 2.*(sfmax1 - sfmin1)/(sfmax1 + sfmin1);
-  fprintf (stderr, "%g %.12f %.12f %g %g\n", t, s, s1, e, e1);
+  fprintf (stderr, "%g %.12f %.12f %.10f %.10f\n", t, s, s1, e, e1);
   assert (e < 2e-6);
   assert (e1 < 5e-5);
 }
 
 event output (t += 0.2; t <= 1.2)
   output_facets (f);
+
+event velo (t = end)
+  output_field ((scalar *){u}, fopen ("velo", "w"), n = 16, linear = true);
 
 #if QUADTREE
 
@@ -83,8 +103,7 @@ event adapt (i++) {
 #endif
 
 /**
-~~~gnuplot Evolution of the VOF interface
-set size ratio -1
-plot [-0.5:0.5][0:1]'out' w l t ''
-~~~
+## See also
+
+* [Same test with Gerris](http://gerris.dalembert.upmc.fr/gerris/tests/tests/axiadvection.html)
 */
