@@ -849,7 +849,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   free (tangent);
 }
 
-Point refine_cell (Point point, scalar * list);
+ Point refine_cell (Point point, scalar * list, int flag);
 
 static void free_cache (CacheLevel * c)
 {
@@ -927,7 +927,7 @@ void init_grid (int n)
   N = 1 << depth;
   while (depth--)
     foreach_leaf()
-      point = refine_cell (point, NULL);
+      point = refine_cell (point, NULL, 0);
   update_cache();
   trash (all);
 @if _MPI

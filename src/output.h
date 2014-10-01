@@ -521,12 +521,12 @@ struct OutputGfs {
   double t;
 };
 
-static char * replace_dot (const char * input)
+static char * replace (const char * input, int target, int with)
 {
   char * name = strdup (input), * i = name;
   while (*i != '\0') {
-    if (*i == '.')
-      *i = '_';
+    if (*i == target)
+      *i = with;
     i++;
   }
   return name;
@@ -543,13 +543,13 @@ void output_gfs (struct OutputGfs p)
 	   0.5 + X0/L0, 0.5 + Y0/L0);
   if (p.list != NULL && p.list[0] != -1) {
     scalar s = p.list[0];
-    char * name = replace_dot (s.name);
+    char * name = replace (s.name, '.', '_');
     fprintf (p.fp, "variables = %s", name);
     free (name);
     for (int i = 1; i < list_len(p.list); i++) {
       scalar s = p.list[i];
       if (s.name) {
-	char * name = replace_dot (s.name);
+	char * name = replace (s.name, '.', '_');
 	fprintf (p.fp, ",%s", name);
 	free (name);
       }
@@ -589,5 +589,4 @@ void output_gfs (struct OutputGfs p)
   }
   fputs ("}\n", p.fp);
 }
-
 #endif // QUADTREE

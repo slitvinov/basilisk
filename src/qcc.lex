@@ -1860,6 +1860,7 @@ static{WS}+FILE{WS}*[*]{WS}*{ID}+{WS}*= {
 "/*"                                    { ECHO; if (comment()) return 1; }
 "//".*                                  { ECHO; /* consume //-comment */ }
 ({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+	{ ECHO; /* STRING_LITERAL */ }
+'.'                                     { ECHO; /* character literal */ }
 
 %%
 

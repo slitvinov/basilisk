@@ -10,7 +10,7 @@ attribute {
 
 // Quadtree methods
 
-Point refine_cell (Point point, scalar * list)
+Point refine_cell (Point point, scalar * list, int flag)
 {
 #if TWO_ONE
   /* refine neighborhood if required */
@@ -28,9 +28,9 @@ Point refine_cell (Point point, scalar * list)
 	  p.level = point.level - 1;
 	  p.i = (point.i + GHOSTS)/2 + k;
 	  p.j = (point.j + GHOSTS)/2 + l;
-	  p = refine_cell (p, list);
+	  p = refine_cell (p, list, flag);
 	  assert (p.m == point.m);
-	  aparent(k,l).flags |= refined;
+	  aparent(k,l).flags |= flag;
 	}
     }
 #endif
@@ -135,7 +135,7 @@ astats adapt_wavelet (struct Adapt p)
     if (is_leaf (cell)) {
       if (cell.flags & too_coarse) {
 	cell.flags &= ~too_coarse;
-	point = refine_cell (point, listc);
+	point = refine_cell (point, listc, refined);
 	st.nf++;
       }
       continue;
@@ -225,7 +225,7 @@ int refine_function (int (* func) (Point point, void * data),
   int nf = 0;
   foreach_leaf()
     if ((*func) (point, data)) {
-      point = refine_cell (point, list);
+      point = refine_cell (point, list, 0);
       nf++;
     }
   return nf;
