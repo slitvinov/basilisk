@@ -2268,24 +2268,6 @@ int main (int argc, char ** argv)
       /* catch */
       if (catch)
 	fputs ("void catch_fpe (void);\n", fout);
-      /* undefined value */
-      /* Initialises unused memory with "signaling NaNs".  
-       * This is probably not very portable, tested with
-       * gcc (Debian 4.4.5-8) 4.4.5 on Linux 2.6.32-5-amd64.
-       * This blog was useful:
-       *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
-       */
-      fputs ("@if _GNU_SOURCE\n"
-	     "double undefined;\n"
-	     "static void set_fpe (void) {\n"
-	     "  int64_t lnan = 0x7ff0000000000001;\n"
-	     "  assert (sizeof (int64_t) == sizeof (double));\n"
-	     "  memcpy (&undefined, &lnan, sizeof (double));\n"
-	     "  feenableexcept (FE_DIVBYZERO|FE_INVALID);\n"
-	     "}\n"
-	     "@else\n"
-	     "@  define undefined DBL_MAX\n"
-	     "@endif\n", fout);
       /* grid */
       if (default_grid)
 	fprintf (fout, "#include \"grid/%s.h\"\n", grid);

@@ -96,6 +96,25 @@ void mpi_init()
 @define VARIABLES      _CATCH;
 @define val(a,k,l)     data(k,l)[a]
 
+/* undefined value */
+/* Initialises unused memory with "signaling NaNs".  
+ * This is probably not very portable, tested with
+ * gcc (Debian 4.4.5-8) 4.4.5 on Linux 2.6.32-5-amd64.
+ * This blog was useful:
+ *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
+ */
+@if _GNU_SOURCE
+double undefined;
+static void set_fpe (void) {
+  int64_t lnan = 0x7ff0000000000001;
+  assert (sizeof (int64_t) == sizeof (double));
+  memcpy (&undefined, &lnan, sizeof (double));
+  feenableexcept (FE_DIVBYZERO|FE_INVALID);
+}
+@else
+@  define undefined DBL_MAX
+@endif
+
 // the grid
 void * grid = NULL;
 // coordinates of the lower-left corner of the box
