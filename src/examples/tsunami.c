@@ -13,12 +13,14 @@ discussed in [Popinet, 2011](/src/references.bib#popinet2011).
 The following headers specify that we use spherical coordinates and
 the [Saint-Venant solver](/src/saint-venant.h) together with
 [(dynamic) terrain reconstruction](/src/terrain.h) and the [Okada
-fault model](/src/okada.h). */
+fault model](/src/okada.h). We will use [inputs](/src/input.h) only
+when restarting a simulation from a snapshot. */
 
 #include "spherical.h"
 #include "saint-venant.h"
 #include "terrain.h"
 #include "okada.h"
+#include "input.h"
 
 /**
 We then define a few useful macros and constants. */
@@ -32,10 +34,10 @@ int main()
 {
   /**
   Here we setup the domain geometry. We choose to use metre as length
-  unit, so we specify the radius of the Earth (required for the
-  [spherical coordinates](/src/spherical.h) in metres. The *x* and *y*
-  coordinates are longitude and latitude in degrees, so we set the size
-  of the box *L0* and the coordinates of the lower-left corner
+  unit, so we set the radius of the Earth (required for the [spherical
+  coordinates](/src/spherical.h)) in metres. The *x* and *y*
+  coordinates are longitude and latitude in degrees, so we set the
+  size of the box *L0* and the coordinates of the lower-left corner
   *(X0,Y0)* in degrees. */
 
   Radius = 6371220.;
@@ -144,6 +146,13 @@ topography $z_b$. This KDT database needs to be built beforehand. See the
 [*xyz2kdt* manual](http://gfs.sourceforge.net/wiki/index.php/Xyz2kdt)
 for explanations on how to do this.
 
+We then consider two cases, either we restart from an existing
+snapshot or we start from scratch. To restart, we could use for example
+
+~~~bash
+CFLAGS=-DRESTART make tsunami.tst
+~~~
+
 The next line tells the Saint-Venant solver to conserve water surface
 elevation rather than volume when adapting the mesh. This is important
 for tsunamis since most of the domain will be close to "lake-at-rest"
@@ -152,6 +161,10 @@ balance. */
 event init (i = 0)
 {
   terrain (zb, "/home/popinet/terrain/etopo2", NULL);
+#ifdef RESTART
+  input_gfs (file = "snapshot.gfs");
+  conserve_elevation();
+#else // not RESTART
   conserve_elevation();
 
   /**
@@ -174,6 +187,7 @@ event init (i = 0)
 	 length = 220e3, width = 130e3,
 	 U = 18,
 	 iterate = adapt);
+#endif // not RESTART
 }
 
 /**
@@ -267,6 +281,11 @@ output. */
 event snapshots (t += 60; t <= 600) {
   printf ("file: t-%g\n", t);
   output_field ({h, zb, hmax}, stdout, n = 1 << MAXLEVEL, linear = true);
+
+  /**
+  We also save a snapshot file we can restart from. */
+
+  output_gfs (file = "snapshot.gfs", t = t);
 }
 
 /**
