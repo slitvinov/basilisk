@@ -20,7 +20,7 @@ int main (int argc, char * argv[])
 {
   double t = 0.;
   int i = 0;
-  while (events (i, t)) {
+  while (events (i, t, true)) {
     t = tnext; i++;
   }
 }

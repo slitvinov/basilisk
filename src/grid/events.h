@@ -123,19 +123,21 @@ static int event_cond (Event * ev, int i, double t)
   return (* COND) (&i, &t, ev);
 }
 
-static int event_do (Event * ev, int i, double t)
+static int event_do (Event * ev, int i, double t, bool action)
 {
   if ((i > ev->i && t > ev->t) || !event_cond (ev, i, t))
     return event_finished (ev);
   if (i == ev->i || fabs (t - ev->t) <= 1e-9) {
 #if DEBUG_EVENTS
-    char * root = strstr (ev->file, BASILISK);
-    fprintf (stderr, "  %-25s %s%s:%d\n", ev->name, 
-	     root ? "src" : "",
-	     root ? &ev->file[strlen(BASILISK)] : ev->file, 
-	     ev->line);
+    if (action) {
+      char * root = strstr (ev->file, BASILISK);
+      fprintf (stderr, "  %-25s %s%s:%d\n", ev->name, 
+	       root ? "src" : "",
+	       root ? &ev->file[strlen(BASILISK)] : ev->file, 
+	       ev->line);
+    }
 #endif
-    if ((* ev->action) (i, t, ev)) {
+    if (action && (* ev->action) (i, t, ev)) {
       event_finished (ev);
       return event_stop;
     }
@@ -162,17 +164,18 @@ static int event_do (Event * ev, int i, double t)
   return event_alive;
 }
 
-static void end_event_do (int i, double t)
+static void end_event_do (int i, double t, bool action)
 {
   for (Event * ev = Events; !ev->last; ev++)
-    if (ev->i == END_EVENT)
+    if (ev->i == END_EVENT && action)
       ev->action (i, t, ev);
 }
 
-int events (int i, double t)
+int events (int i, double t, bool action)
 {
 #if DEBUG_EVENTS
-  fprintf (stderr, "\nevents (i = %d, t = %g)\n", i, t);
+  if (1/*action*/)
+    fprintf (stderr, "\nevents (i = %d, t = %g)\n", i, t);
 #endif
   int inext = 0, cond = 0, cond1 = 0;
   tnext = HUGE;
@@ -181,9 +184,9 @@ int events (int i, double t)
 	(COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt))
       cond = 1;
   for (Event * ev = Events; !ev->last; ev++) {
-    int status = event_do (ev, i, t);
+    int status = event_do (ev, i, t, action);
     if (status == event_stop) {
-      end_event_do (i, t);
+      end_event_do (i, t, action);
       return 0;
     }
     if (status == event_alive && ev->i != END_EVENT &&
@@ -196,13 +199,13 @@ int events (int i, double t)
   }
   if ((!cond || cond1) && (tnext != HUGE || inext))
     return 1;
-  end_event_do (i, t);
+  end_event_do (i, t, action);
   return 0;
 }
 
 double dtnext (double t, double dt)
 {
-  if (tnext != HUGE) {
+  if (tnext != HUGE && tnext > t) {
     unsigned int n = (tnext - t)/dt;
     assert (n < INT_MAX); // check that dt is not too small
     if (n == 0)

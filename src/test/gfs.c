@@ -1,4 +1,5 @@
 #include "utils.h"
+double t = 0;
 #include "input.h"
 
 int main()

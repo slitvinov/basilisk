@@ -507,18 +507,23 @@ with GfsView.
 The arguments and their default values are:
 
 *fp*
-: a file pointer. Default is stdout.
+: a file pointer. Default is *name* or stdout.
 
 *list*
 : a list of scalar fields to write. Default is *all*. 
 
 *t*
-: the physical time. Default is zero. */
+: the physical time. Default is zero. 
+
+*file*
+: the name of the file to write to (mutually exclusive with *fp*).
+*/
 
 struct OutputGfs {
   FILE * fp;
   scalar * list;
   double t;
+  char * file;
 };
 
 static char * replace (const char * input, int target, int with)
@@ -534,7 +539,17 @@ static char * replace (const char * input, int target, int with)
 
 void output_gfs (struct OutputGfs p)
 {
-  if (p.fp == NULL) p.fp = stdout;
+  bool opened = false;
+  if (p.fp == NULL) {
+    if (p.file == NULL)
+      p.fp = stdout;
+    else if (!(p.fp = fopen (p.file, "w"))) {
+      perror (p.file);
+      exit (1);
+    }
+    else
+      opened = true;
+  }
   if (p.list == NULL) p.list = all;
 
   fprintf (p.fp, 
@@ -588,5 +603,8 @@ void output_gfs (struct OutputGfs p)
       continue;
   }
   fputs ("}\n", p.fp);
+
+  if (opened)
+    fclose (p.fp);
 }
 #endif // QUADTREE

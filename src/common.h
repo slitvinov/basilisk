@@ -368,7 +368,7 @@ struct _Event {
 
 static Event * Events = NULL; // all events
 
-double tnext = HUGE; // time of next event
+double tnext = 0; // time of next event
 void init_events (void);
 void event_register (Event event);
 

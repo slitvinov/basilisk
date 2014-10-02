@@ -18,7 +18,7 @@ void run (void)
 
   timer start = timer_start();
   int i = 0; long tnc = 0;
-  while (events (i, t)) {
+  while (events (i, t, true)) {
 
     /**
     We store the total number of cells advanced in time for computing

@@ -50,7 +50,7 @@ void run()
   // main loop
   timer start = timer_start();
   int i = 0; long tnc = 0;
-  while (events (i, t)) {
+  while (events (i, t, true)) {
     // list of updates
     scalar * updates = list_clone (evolving);
     dt = dtnext (t, update (evolving, updates, DT));

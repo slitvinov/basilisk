@@ -108,13 +108,44 @@ void input_pgm (struct InputPGM p)
 
 static void next_char (FILE * fp, int target)
 {
-  int c = fgetc(fp);
-  while (c != EOF && c != target)
+  int c = fgetc(fp), para = 0;
+  while (c != EOF && (c != target || para > 0)) {
+    if (c == '{') para++;
+    if (c == '}') para--;
     c = fgetc(fp);
+  }
   if (c != target) {
     fprintf (stderr, "input_gfs(): error: expecting '%c'\n", target);
     exit (1);
   }
+}
+
+static int next_string (FILE * fp, const char * target)
+{
+  int slen = strlen (target), para = 0;
+  char * s = malloc (slen + 1);
+  s[slen] = '\0';
+  int len = 0, c = fgetc (fp);
+  while (c != EOF && len < slen) {
+    if (c == '{') para++;
+    if (c == '}') para--;
+    s[len++] = c;
+    c = fgetc (fp);
+  }
+  while (c != EOF && para >= 0) {
+    if (!strcmp (s, target) && para == 0)
+      break;
+    if (c == '{') para++;
+    if (c == '}') para--;
+    for (int i = 0; i < slen - 1; i++)
+      s[i] = s[i+1];
+    s[slen - 1] = c;
+    c = fgetc (fp);
+  }
+  if (strcmp (s, target))
+    c = -1;
+  free (s);
+  return c;
 }
 
 /**
@@ -122,19 +153,32 @@ static void next_char (FILE * fp, int target)
 
 The function reads simulation data in the format used in
 [Gerris](http://gfs.sf.net) simulation files. This is the reciprocal
-function of [*output_gfs()*](output.h#).
+function of [*output_gfs()*](output.h#...).
 
 The arguments and their default values are:
 
 *fp*
-: a file pointer. Default is stdin.
+: a file pointer. Default is *name* or stdin.
 
 *list*
-: a list of scalar fields to read. Default is *all*. */
+: a list of scalar fields to read. Default is *all*.
+
+*file*
+: the name of the file to read from (mutually exclusive with *fp*). */
 
 void input_gfs (struct OutputGfs p)
 {
-  if (p.fp == NULL) p.fp = stdin;
+  bool opened = false;
+  if (p.fp == NULL) {
+    if (p.file == NULL)
+      p.fp = stdin;
+    else if (!(p.fp = fopen (p.file, "r"))) {
+      perror (p.file);
+      exit (1);
+    }
+    else
+      opened = true;
+  }
   if (p.list == NULL) p.list = all;
 
   next_char (p.fp, '{');
@@ -185,27 +229,25 @@ void input_gfs (struct OutputGfs p)
     free (name);
     s1 = strtok (NULL, ", \t");
   }
+  free (s);
 
-  s = realloc (s, 7);
-  s[6] = '\0';
-  len = 0;
-  while (c != EOF && len < 6) {
-    s[len++] = c;
-    c = fgetc (p.fp);
+  next_char (p.fp, '{');
+  if (next_string (p.fp, "Time") >= 0) {
+    next_char (p.fp, '{');
+    next_char (p.fp, 't');
+    next_char (p.fp, '=');
+    if (fscanf (p.fp, "%lf", &t) != 1) {
+      fprintf (stderr, "input_gfs(): error: expecting 't'\n");
+      exit (1);
+    }
+    next_char (p.fp, '}');
+    next_char (p.fp, '}');
   }
-  while (c != EOF) {
-    for (int i = 0; i < 5; i++)
-      s[i] = s[i+1];
-    s[5] = c;
-    if (!strcmp (s, "GfsBox"))
-      break;
-    c = fgetc (p.fp);
-  }
-  if (strcmp (s, "GfsBox")) {
+
+  if (next_string (p.fp, "Box") < 0) {
     fprintf (stderr, "input_gfs(): error: expecting 'GfsBox'\n");
     exit (1);
   }
-  free (s);
 
   next_char (p.fp, '{');
   next_char (p.fp, '{');
@@ -243,5 +285,12 @@ void input_gfs (struct OutputGfs p)
   boundary (input);
 
   free (input);
+  if (opened)
+    fclose (p.fp);
+
+  // the events are advanced to catch up with the time
+  double t1 = 0.;
+  while (t1 <= t && events (0, t1, false))
+    t1 = tnext;
 }
 #endif

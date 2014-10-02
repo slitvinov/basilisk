@@ -118,7 +118,7 @@ void run (void)
   timer start = timer_start();
   double t = 0;
   int i = 0;
-  while (events (i, t)) {
+  while (events (i, t, true)) {
     double dt = dtnext (t, timestep ());
 #if 1
     advection_centered (h, u, hn);
