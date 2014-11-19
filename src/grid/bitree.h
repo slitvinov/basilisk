@@ -3,27 +3,28 @@
 
 #define DYNAMIC 1 // use dynamic data allocation
 #define TWO_ONE 1 // enforce 2:1 refinement ratio
+#define GHOSTS  2
 
 #define I     (point.i - GHOSTS)
 #define J     -0.5
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  int flags, neighbors; // number of neighboring leaves
+  int flags, neighbors; // number of refined neighbors
 } Cell;
 
 enum {
   active  = 1 << 0,
   leaf    = 1 << 1,
-  fghost  = 1 << 2,
-  refined = 1 << 3
+  refined = 1 << 2,
+  halo    = 1 << 3,
+  user    = 4
 };
 
 #define is_active(cell)  ((cell).flags & active)
 #define is_leaf(cell)    ((cell).flags & leaf)
-#define is_ghost(cell)   ((cell).flags & fghost)
 #define is_refined(cell) (is_active(cell) && !is_leaf(cell))
-// #define is_corner(cell)  (stage == _CORNER)
+#define is_corner(cell)  false
 #define is_coarse()      (!is_leaf(cell))
 
 // Caches
@@ -44,7 +45,8 @@ static void cache_level_init (CacheLevel * c)
 }
 
 typedef struct {
-  int i, level;
+  int i;
+  short level, flags;
 } Index;
 
 typedef struct {
@@ -73,8 +75,10 @@ struct _Point {
   int i, j, level;  /* the current cell index and level */
 
   Cache        leaves;  /* leaf indices */
-  CacheLevel * halo;    /* halo indices for each level */
+  Cache        faces;   /* face indices */
   CacheLevel * active;  /* active cells indices for each level */
+  CacheLevel * prolongation; /* halo prolongation indices for each level */
+  CacheLevel * restriction;  /* halo restriction indices for each level */
 
   bool dirty;       /* whether caches should be updated */
 };
@@ -89,14 +93,15 @@ static void cache_level_append (CacheLevel * c, Point p)
   c->n++;
 }
 
-static void cache_append (Cache * c, Point p)
+static void cache_append (Cache * c, Point p, int k, short flags)
 {
   if (c->n >= c->nm) {
     c->nm += 100;
     c->p = realloc (c->p, sizeof (Index)*c->nm);
   }
-  c->p[c->n].i = p.i;
+  c->p[c->n].i = p.i + k;
   c->p[c->n].level = p.level;
+  c->p[c->n].flags = flags;
   c->n++;
 }
 
@@ -287,100 +292,6 @@ void recursive (Point point)
   }
 @
 
-@def foreach_boundary_cell_post(dir,condition)
-  if (dir <= left) {
-    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Bitree point = *((Bitree *)grid); point.back = grid;
-    int _d = dir;
-    struct { int l, i, stage; } stack[STACKSIZE]; int _s = -1;
-    _push (0, GHOSTS, 0); /* the root cell */
-    while (_s >= 0) {
-      int stage;
-      _pop (point.level, point.i, stage);
-      if (!allocated (0,0))
-	continue;
-      switch (stage) {
-      case 0: {
-	POINT_VARIABLES;
-	if (condition) {
-	  _push (point.level, point.i, 4);
-	  if (point.level < point.depth) {
-	    _push (point.level + 1, _d == left ? _LEFT : _RIGHT, 0);
-	  }
-	}
-	break;
-      }
-      case 4: {
-        POINT_VARIABLES;
-	/* do something */	
-@
-@def end_foreach_boundary_cell_post()
-      }
-      }
-    }
-  }
-@
-
-@define foreach_boundary_face(dir) foreach_boundary_cell(dir,true)
-@define end_foreach_boundary_face() end_foreach_boundary_cell()
-
-#define update_cache() { if (((Bitree *)grid)->dirty) update_cache_f(); }
-
-@def foreach(clause)     {
-  update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  OMP_PARALLEL()
-  Bitree point = *((Bitree *)grid); point.back = grid;
-  int _k;
-  OMP(omp for schedule(static) clause)
-  for (_k = 0; _k < point.leaves.n; _k++) {
-    point.i = point.leaves.p[_k].i;
-    point.level = point.leaves.p[_k].level;
-    POINT_VARIABLES;
-@
-@define end_foreach() } OMP_END_PARALLEL() }
-
-@def foreach_fine_to_coarse(clause)     {
-  update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  for (int _l = depth() - 1; _l >= 0; _l--) {
-    OMP_PARALLEL()
-    Bitree point = *((Bitree *)grid); point.back = grid;
-    point.level = _l;
-    int _k;
-    OMP(omp for schedule(static) clause)
-    for (_k = 0; _k < point.active[_l].n; _k++) {
-      point.i = point.active[_l].p[_k].i;
-      POINT_VARIABLES;
-      if (!is_leaf (cell)) {
-@
-@define end_foreach_fine_to_coarse() } } OMP_END_PARALLEL() } }
-
-@def foreach_level(l) {
-  update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  int _l = l;
-  OMP_PARALLEL()
-  Bitree point = *((Bitree *)grid); point.back = grid;
-  point.level = _l;
-  int _k;
-  OMP(omp for schedule(static))
-  for (_k = 0; _k < point.active[_l].n; _k++) {
-    point.i = point.active[_l].p[_k].i;
-    POINT_VARIABLES;
-@
-@define end_foreach_level() } OMP_END_PARALLEL() }
-
-@def foreach_level_or_leaf(l) {
-  for (int _l1 = l; _l1 >= 0; _l1--)
-    foreach_level(_l1)
-      if (_l1 == l || is_leaf (cell)) {
-@
-@define end_foreach_level_or_leaf() } end_foreach_level(); }
-
-@define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
-@define end_foreach_leaf()        continue; } end_foreach_cell()
-
 @def foreach_child() {
   int _i = 2*point.i - GHOSTS;
   point.level++;
@@ -394,6 +305,143 @@ void recursive (Point point)
   point.level--;
 }
 @
+
+@def foreach_child_direction(d) {
+  int _i = 2*point.i - GHOSTS;
+  point.level++;
+  {
+    point.i = _i + (d == right);
+    POINT_VARIABLES;
+@
+@define end_foreach_child_direction() end_foreach_child()
+
+#define update_cache() { if (((Bitree *)grid)->dirty) update_cache_f(); }
+
+static void update_cache_f (void)
+{
+  Bitree * q = grid;
+
+  /* empty caches */
+  q->leaves.n = q->faces.n = 0;
+  for (int l = 0; l <= depth(); l++)
+    q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
+
+  foreach_cell() {
+    if (is_active(cell)) { // always true in serial
+      // active cells
+      cache_level_append (&q->active[level], point);
+      if (is_leaf (cell)) {
+	cache_append (&q->leaves, point, 0, 0);
+	// faces
+	cache_append (&q->faces, point, 0, 0);
+	if (!is_active(neighbor(1,0)))
+	  cache_append (&q->faces, point, 1, 0);
+	// halo prolongation
+        if (cell.neighbors > 0)
+	  cache_level_append (&q->prolongation[level], point);
+	cell.flags &= ~halo;
+	continue;
+      }
+      else { // not a leaf
+	bool restriction = level > 0 ? (aparent(0,0).flags & halo) : false;
+	for (int k = -GHOSTS; k <= GHOSTS && !restriction; k++)
+	  if (allocated(k,0) && is_leaf(neighbor(k,0)))
+	    restriction = true;
+	if (restriction) {
+	  // halo restriction
+	  cell.flags |= halo;
+	  cache_level_append (&q->restriction[level], point);
+	}
+	else
+	  cell.flags &= ~halo;
+      }
+    }
+@if _MPI
+    // !is_active(cell)
+    else if (is_leaf(cell)) {
+      // non-local halo prolongation
+      if (cell.neighbors > 0)
+	cache_level_append (&q->prolongation[level], point);
+      continue;
+    }
+@endif // _MPI
+  }
+
+  q->dirty = false;
+}
+
+@def foreach_cache(_cache,clause) {
+  update_cache();
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  OMP_PARALLEL()
+  Bitree point = *((Bitree *)grid); point.back = grid;
+  int _k; short _flags; NOT_UNUSED(_flags);
+  OMP(omp for schedule(static) clause)
+  for (_k = 0; _k < _cache.n; _k++) {
+    point.i = _cache.p[_k].i;
+    point.level = _cache.p[_k].level;
+    _flags = _cache.p[_k].flags;
+    POINT_VARIABLES;
+@
+@define end_foreach_cache() } OMP_END_PARALLEL() }
+
+@def foreach_cache_level(_cache,_l,clause) {
+  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  OMP_PARALLEL()
+  Bitree point = *((Bitree *)grid); point.back = grid;
+  point.level = _l;
+  int _k;
+  OMP(omp for schedule(static) clause)
+  for (_k = 0; _k < _cache.n; _k++) {
+    point.i = _cache.p[_k].i;
+    POINT_VARIABLES;
+@
+@define end_foreach_cache_level() } OMP_END_PARALLEL() }
+
+@define foreach(clause) foreach_cache(((Bitree *)grid)->leaves, clause)
+@define end_foreach()   end_foreach_cache()
+
+@def foreach_face_generic(clause) 
+  foreach_cache(((Bitree *)grid)->faces, clause) @
+@define end_foreach_face_generic() end_foreach_cache()
+
+@define is_face_x() (true)
+@define is_face_y() (false)
+
+@def foreach_vertex(clause)
+  foreach_cache(((Bitree *)grid)->faces, clause) {
+    x -= Delta/2.;
+@
+@define end_foreach_vertex() } end_foreach_cache()
+
+@def foreach_fine_to_coarse(clause)     {
+  update_cache();
+  for (int _l = depth() - 1; _l >= 0; _l--) {
+    CacheLevel _active = ((Bitree *)grid)->active[_l];
+    foreach_cache_level (_active,_l,clause)
+      if (!is_leaf (cell)) {
+@
+@define end_foreach_fine_to_coarse() } end_foreach_cache_level(); } }
+
+@def foreach_level(l) {
+  update_cache();
+  CacheLevel _active = ((Bitree *)grid)->active[l];
+  foreach_cache_level (_active,l,)
+@
+@define end_foreach_level() end_foreach_cache_level(); }
+
+@define foreach_coarse_level(l) foreach_level(l) if (!is_leaf(cell)) {
+@define end_foreach_coarse_level() } end_foreach_level()
+
+@def foreach_level_or_leaf(l) {
+  for (int _l1 = l; _l1 >= 0; _l1--)
+    foreach_level(_l1)
+      if (_l1 == l || is_leaf (cell)) {
+@
+@define end_foreach_level_or_leaf() } end_foreach_level(); }
+
+@define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
+@define end_foreach_leaf()        continue; } end_foreach_cell()
 
 #if TRASH
 # undef trash
@@ -426,16 +474,14 @@ char * alloc_cells (int l)
 {
   int len = _size(l), cellsize = sizeof(Cell) + datasize;
   char * m = calloc (len, cellsize);
-  /* trash the data just to make sure it's either explicitly
-     initialised or never touched */
-  char * data = m + sizeof(Cell);
-  int nv = datasize/sizeof(double);
-  for (int i = 0; i < len; i++, data += cellsize)
-    for (int j = 0; j < nv; j++)
-      ((double *)data)[j] = undefined;
   return m;
 }
 #endif // !DYNAMIC
+
+@def cache_level_resize(name)
+q->name = realloc (q->name, (q->depth + 1)*sizeof (CacheLevel));
+cache_level_init (&q->name[q->depth]);
+@
 
 void alloc_layer (Bitree * p)
 {
@@ -451,46 +497,70 @@ void alloc_layer (Bitree * p)
   q->m = &(q->m[1]); p->m = q->m;
   q->m[q->depth] = alloc_cells (q->depth);
 #endif
-  q->active = realloc (q->active, (q->depth + 1)*sizeof (CacheLevel));
-  cache_level_init (&q->active[q->depth]);
-  q->halo = realloc (q->halo, (q->depth + 1)*sizeof (CacheLevel));
-  cache_level_init (&q->halo[q->depth]);
+  cache_level_resize (active);
+  cache_level_resize (prolongation);
+  cache_level_resize (restriction);
 }
 
-void alloc_children (Bitree * p)
+void alloc_children (Bitree * q, int k, int l)
 {
-  p->back->dirty = true;
-  if (p->level == p->depth) alloc_layer(p);
+  if (q->level == q->depth) alloc_layer(q);
+  Point point = *((Point *)q);
+  point.i += k;
+  l = 0;
+
 #if DYNAMIC
-  char ** m = ((char ***)p->m)[p->level+1];
-  Point point = *((Point *)p);
-  int l = 0;
-  for (int k = - GHOSTS; k < 2 + GHOSTS; k++)
-    if (!m[_childindex(k,l)]) {
+  char ** m = ((char ***)q->m)[q->level+1];
+  for (int k = 0; k < 2; k++)
+    if (!m[_childindex(k,l)])
       m[_childindex(k,l)] = calloc (1, sizeof(Cell) + datasize);
-#if TRASH
-      char * data = m[_childindex(k,l)] + sizeof(Cell);
-      int nv = datasize/sizeof(double);
-      for (int j = 0; j < nv; j++)
-	((double *)data)[j] = undefined;
-#endif
-    }
+#endif // !DYNAMIC
+
+@if TRASH
+  // foreach child
+  for (int k = 0; k < 2; k++)
+    for (scalar s in all)
+      fine(s,k,l) = undefined;
+@endif
+}
+
+void increment_neighbors (Bitree * p)
+{
+  p->back->dirty = true;
+  Point point = *((Point *)p);
+  int l = 0;
+  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++) {
+    if (neighbor(k,l).neighbors == 0)
+      alloc_children (&point, k, l);
+    neighbor(k,l).neighbors++;
+  }
+  *((Point *)p) = point;
+}
+
+static void free_children (Bitree * q, int k, int l)
+{
+#if DYNAMIC
+  Point point = *((Point *)q);
+  point.i += k;
+  char ** m = ((char ***)q->m)[q->level+1];
+  l = 0;
+  for (int k = 0; k < 2; k++) {
+    free (m[_childindex(k,l)]);
+    m[_childindex(k,l)] = NULL;
+  }
 #endif
 }
 
-void free_children (Bitree * p)
+void decrement_neighbors (Bitree * p)
 {
   p->back->dirty = true;
-#if DYNAMIC
-  char ** m = ((char ***)p->m)[p->level+1];
   Point point = *((Point *)p);
   int l = 0;
-  for (int k = - GHOSTS; k < 2 + GHOSTS; k++)
-    if (!((Cell *) m[_childindex(k,l)])->neighbors) {
-      free (m[_childindex(k,l)]);
-      m[_childindex(k,l)] = NULL;
-    }
-#endif
+  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++) {
+    neighbor(k,l).neighbors--;
+    if (neighbor(k,l).neighbors == 0)
+      free_children(p,k,l);
+  }
 }
 
 void realloc_scalar (void)
@@ -515,105 +585,236 @@ void realloc_scalar (void)
 #endif
 }
 
-static void update_cache_f (void)
+@def foreach_halo(name,_l) {
+  update_cache();
+  CacheLevel _cache = ((Bitree *)grid)->name[_l];
+  foreach_cache_level (_cache, _l,)
+@
+@define end_foreach_halo() end_foreach_cache_level(); }
+
+static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
-  Bitree * q = grid;
+  int d = ((BoxBoundary *)b)->d;
+  if (d > left)
+    return;
+  scalar * lleft, * lright;
+  list_split (list, d, &lleft, &lright);
 
-  /* empty caches */
-  q->leaves.n = 0;
-  for (int l = 0; l <= depth(); l++)
-    q->halo[l].n = q->active[l].n = 0;
-
-  foreach_cell() {
-    if (!is_active (cell)) {
-      assert (cell.neighbors > 0);
-      /* update halo cache (prolongation) */
-      cache_level_append (&q->halo[level], point);
-    }
-    else {
-      if (is_leaf (cell))
-	cache_append (&q->leaves, point);
-      else if (cell.neighbors > 0)
-	/* update halo cache (restriction) */
-	cache_level_append (&q->halo[level], point);
-      /* update active cache */
-      cache_level_append (&q->active[level], point);
-    }
+  if (l < 0) {
+    foreach_boundary_cell (d, true)
+      if (is_leaf (cell)) {
+	for (scalar s in lright) {
+	  s[ghost] = s.boundary[d] (point, s);
+	  point.i -= ig;
+	  double vb = s.boundary[d] (point, s);
+	  point.i += ig;
+	  s[2*ig,2*jg] = vb;
+	}
+	for (scalar s in lleft)
+	  s[] = s.boundary[d] (point, s);
+	corners(); /* we need this otherwise we'd skip corners */
+	continue;
+      }
   }
-
-  /* update ghost cell flags */
-  for (int d = 0; d < nboundary; d++)
+  else
     foreach_boundary_cell (d, true) {
-      neighbor(ghost).flags = fghost;
-      if (!is_active (cell))
+      if (level == l) {
+	for (scalar s in lright) {
+	  s[ghost] = s.boundary[d] (point, s);
+	  point.i -= ig;
+	  double vb = s.boundary[d] (point, s);
+	  point.i += ig;
+	  s[2*ig,2*jg] = vb;
+	}
+	for (scalar s in lleft)
+	  s[] = s.boundary[d] (point, s);
+	corners(); /* we need this otherwise we'd skip corners */
+	continue;
+      }
+      else if (is_leaf (cell))
 	continue;
     }
 
-  q->dirty = false;
+  free (lleft);
+  free (lright);
 }
 
-@def foreach_halo_level(_l) {
-  update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  OMP_PARALLEL()
-  Bitree point = *((Bitree *)grid); point.back = grid;
-  int _k;
-  OMP(omp for schedule(static))
-  for (_k = 0; _k < point.halo[_l].n; _k++) {
-    point.i = point.halo[_l].p[_k].i;
-    point.level = _l;
-    POINT_VARIABLES;
-@
-@define end_foreach_halo_level() } OMP_END_PARALLEL() }
+static void box_boundary_halo_prolongation_normal (const Boundary * b,
+						   scalar * list, 
+						   int l, int depth)
+{
+  // see test/boundary_halo.c
+  int d = ((BoxBoundary *)b)->d, in, jn;
+  if (d > left)
+    return;
+  if (d % 2)
+    in = jn = 0;
+  else {
+    in = _ig[d]; jn = _jg[d];
+  }
 
-@def foreach_halo_levels(start,cond,inc) {
-  for (int _l = start; _l cond; _l inc)
-    foreach_halo_level(_l)
-@
-@define end_foreach_halo_levels() end_foreach_halo_level() }
+  foreach_boundary_cell (d, false) {
+    if (level == l) {
+      if (l == depth ||          // target level
+	  is_leaf(cell) ||       // leaves
+	  (cell.flags & halo) || // restriction halo
+	  is_corner(cell)) {     // corners
+	// leaf or halo restriction
+	for (scalar s in list)
+	  s[in,jn] = s.boundary[d] (point, s);
+	corners();
+      }
+      continue;
+    }
+    else if (is_leaf(cell)) {
+      if (level == l - 1 && cell.neighbors > 0)
+	// halo prolongation
+	foreach_child_direction(d) {
+	  if (allocated(in,jn))
+	    for (scalar s in list)
+	      s[in,jn] = s.boundary[d] (point, s);
+	}
+      continue;
+    }
+  }
+}
 
-/* breadth-first traversal of halos from coarse to fine */
-@def foreach_halo_coarse_to_fine(depth1) {
-  foreach_halo_levels (0, <= depth1, ++)
-    if (!is_active(cell)) {
-@
-@define end_foreach_halo_coarse_to_fine() } end_foreach_halo_levels() }
+static void box_boundary_halo_prolongation_tangent (const Boundary * b,
+						    scalar * list, 
+						    int l, int depth)
+{
+  // see test/boundary_halo.c
+  int d = ((BoxBoundary *)b)->d;
+  if (d > left)
+    return;
 
-/* breadth-first traversal of halos from fine to coarse */
-@def foreach_halo_fine_to_coarse()
-  foreach_halo_levels (depth() - 1, >= 0, --)
-    if (is_active(cell)) {
-@
-@define end_foreach_halo_fine_to_coarse() } end_foreach_halo_levels()
+  foreach_boundary_cell (d, true) {
+    if (level == l) {
+      if (l == depth ||          // target level
+	  is_leaf(cell) ||       // leaves
+	  (cell.flags & halo) || // restriction halo
+	  is_corner(cell)) {     // corners
+	// leaf or halo restriction
+	for (scalar s in list)
+	  s[ghost] = s.boundary[d] (point, s);
+	corners();
+      }
+      continue;
+    }
+    else if (is_leaf(cell)) {
+      if (level == l - 1 && cell.neighbors > 0)
+	// halo prolongation
+	foreach_child_direction(d) {
+	  if (allocated(ig,jg))
+	    for (scalar s in list)
+	      s[ghost] = s.boundary[d] (point, s);
+	}
+      continue;
+    }
+  }  
+}
 
-@def foreach_halo_vertex()
-  foreach_halo_levels(0, <= depth(), ++)
-  if (allocated(-1,0) && is_leaf(neighbor(-1,0))) {
-@
-@define end_foreach_halo_vertex() } end_foreach_halo_levels()
+static void box_boundary_halo_prolongation (const Boundary * b,
+					    scalar * list, 
+					    int l, int depth)
+{
+  // see test/boundary_halo.c
+  int d = ((BoxBoundary *)b)->d;
+  if (d > left)
+    return;
+  scalar * centered = NULL, * normal = NULL, * tangent = NULL;
 
-Point refine_cell (Point point, scalar * list);
+  int component = d/2;
+  for (scalar s in list)
+    if (!is_constant(s) && s.boundary[d]) {
+      if (s.face) {
+	if ((&s.d.x)[component]) {
+	  if (s.normal)
+	    normal = list_add (normal, s);
+	}
+	else
+	  tangent = list_add (tangent, s);
+      }	
+      else
+	centered = list_add (centered, s);
+    }
+
+  foreach_boundary_cell (d, d > left) {
+    if (level == l) {
+      if (l == depth ||          // target level
+	  is_leaf(cell) ||       // leaves
+	  (cell.flags & halo) || // restriction halo
+	  is_corner(cell)) {     // corners
+	// leaf or halo restriction
+	for (scalar s in centered) {
+	  s[ghost] = s.boundary[d] (point, s);
+	  point.i -= ig; point.j -= jg;
+	  double vb = s.boundary[d] (point, s);
+	  point.i += ig; point.j += jg;
+	  s[2*ig,2*jg] = vb;
+	}
+	corners();
+      }
+      continue;
+    }
+    else if (is_leaf(cell)) {
+      if (level == l - 1 && cell.neighbors > 0)
+	// halo prolongation
+	foreach_child_direction(d) {
+	  if (allocated(ig,jg))
+	    for (scalar s in centered)
+	      s[ghost] = s.boundary[d] (point, s);
+	  if (allocated(2*ig,2*jg))
+	    for (scalar s in centered) {
+	      point.i -= ig; point.j -= jg;
+	      double vb = s.boundary[d] (point, s);
+	      point.i += ig; point.j += jg;
+	      s[2*ig,2*jg] = vb;
+	    }
+	}
+      continue;
+    }
+  }  
+  free (centered);
+
+  box_boundary_halo_prolongation_normal (b, normal, l, depth);
+  free (normal);
+  box_boundary_halo_prolongation_tangent (b, tangent, l, depth);
+  free (tangent);
+}
+
+Point refine_cell (Point point, scalar * list, int flag);
+
+static void free_cache (CacheLevel * c)
+{
+  Bitree * q = grid;
+  for (int l = 0; l <= q->depth; l++)
+    if (c[l].n > 0)
+      free (c[l].p);
+  free (c);
+}
 
 void free_grid (void)
 {
   if (!grid)
     return;
+  free_boundaries();
   Bitree * q = grid;
   free (q->leaves.p);
+  free (q->faces.p);
   for (int l = 0; l <= q->depth; l++) {
 #if DYNAMIC
     for (int i = 0; i < _size(l); i++)
       free (q->m[l][i]);
 #endif
     free (q->m[l]);
-    free (q->halo[l].p);
-    free (q->active[l].p);
   }
   q->m = &(q->m[-1]);
-  free (q->m);
-  free (q->halo);
-  free (q->active);
-  free (q);
+  free(q->m);
+  free_cache (q->active);
+  free_cache (q->prolongation);
+  free_cache (q->restriction);
+  free(q);
   grid = NULL;
 }
 
@@ -623,6 +824,7 @@ void init_grid (int n)
   if (q && n == 1 << q->depth)
     return;
   free_grid();
+
   int depth = 0;
   while (n > 1) {
     if (n % 2) {
@@ -632,7 +834,7 @@ void init_grid (int n)
     n /= 2;
     depth++;
   }
-  q = malloc (sizeof (Bitree));
+  q = calloc (1, sizeof (Bitree));
   q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
   q->m = malloc(sizeof (char *)*2);
   /* make sure we don't try to access level -1 */
@@ -646,23 +848,35 @@ void init_grid (int n)
 #else
   q->m[0] = alloc_cells (0);
 #endif
-  CELL(q->m, 0, GHOSTS).flags |= (leaf | active);
-  CELL(q->m, 0, GHOSTS).neighbors = 1; // only itself as neighbor
+  CELL(q->m, 0, GHOSTS).flags |= (leaf|active);
   cache_init (&q->leaves);
+  cache_init (&q->faces);
   q->active = calloc (1, sizeof (CacheLevel));
-  q->halo = calloc (1, sizeof (CacheLevel));
+  q->prolongation = calloc (1, sizeof (CacheLevel));
+  q->restriction = calloc (1, sizeof (CacheLevel));
   q->dirty = true;
   grid = q;
   N = 1 << depth;
   while (depth--)
     foreach_leaf()
-      point = refine_cell (point, NULL);
+      point = refine_cell (point, NULL, 0);
   update_cache();
   trash (all);
+@if _MPI
+  void mpi_boundary_new();
+  mpi_boundary_new();
+@endif
+  for (int d = 0; d < nboundary; d++) {
+    BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
+    box->d = d;
+    Boundary * b = (Boundary *) box;
+    b->level = b->restriction = box_boundary_level;
+    b->halo_restriction  = none;
+    b->halo_prolongation = box_boundary_halo_prolongation;
+    add_boundary (b);
+  }
   init_events();
 }
-
-void output_cells (FILE * fp);
 
 #include "quadtree-common.h"
 
