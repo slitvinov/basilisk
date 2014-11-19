@@ -19,7 +19,7 @@ equations](/src/green-naghdi.h) in one dimension. */
 
 /**
 The domain is 15 metres long. The acceleration of gravity is set to
-$9.81 \mbox{ m/s}^{-2}$. The problem is discretised with 2048 grid
+9.81 m/s^2^. The problem is discretised with 2048 grid
 points. */
 
 int main()

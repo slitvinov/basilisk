@@ -161,7 +161,7 @@ mgstats mg_solve (scalar * a, scalar * b,
   s.resb = s.resa = residual (a, b, res, data);
 
   /**
-  We then iterates until convergence or until *NITERMAX* is reached. Note
+  We then iterate until convergence or until *NITERMAX* is reached. Note
   also that we force the solver to apply at least one cycle, even if the
   initial residual is lower than *TOLERANCE*. */
 
