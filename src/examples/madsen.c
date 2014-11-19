@@ -85,7 +85,8 @@ very inaccurate.
 
 The agreement between Madsen et al and the GN solution is quite good
 given that the model of Madsen et al is a higher-order Boussinesq
-expansion than the GN model.
+expansion than the GN model ([Madsen et al, 
+2006](/src/references.bib#madsen2006)).
 
 ~~~gnuplot Evolution of surface elevation
 set term @PNG enhanced size 640,480 font ",8"

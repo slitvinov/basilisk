@@ -10,6 +10,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [Decaying two-dimensional turbulence](turbulence.c)
 * [Conway’s game of life](life.c)
 * [Periodic wave propagation over an ellipsoidal shoal](shoal.c)
+* [Breakup of a rectangular perturbation into a train of solitons](madsen.c)
 
 ## Python interface
 
