@@ -163,7 +163,7 @@ typedef struct _Point Point;
 static Point last_point;
 
 double  * _constant = NULL;
-extern int datasize;
+extern size_t datasize;
 
 #include "grid/boundaries.h"
 

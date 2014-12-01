@@ -2005,7 +2005,7 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   fout = dopen ("_grid.h", "w");
   /* new variables */
   fprintf (fout,
-	   "int datasize = %d*sizeof (double);\n",
+	   "size_t datasize = %d*sizeof (double);\n",
 	   nvar);
   /* attributes */
   FILE * fp = dopen ("_attributes.h", "a");
