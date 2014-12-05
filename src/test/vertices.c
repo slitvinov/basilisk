@@ -1,13 +1,8 @@
-static int refine_func (Point point, void * data)
-{
-  return x*x + y*y < 0.25*0.25;
-}
-
 int main()
 {
   origin (-0.5, -0.5);
   init_grid(8);
-  refine_function (refine_func, NULL, NULL);
+  refine (level == 3 && x*x + y*y < sq(0.25), NULL);
   output_cells (stdout);
   foreach_vertex()
     fprintf (stderr, "%g %g %d\n", x, y, level);

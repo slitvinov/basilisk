@@ -9,17 +9,12 @@ in the middle. */
 /**
 The refinement band is defined by this function. */
 
-static int band (Point point, void * data)
-{
-  return fabs (x) < 0.25;
-}
-
 int main()
 {
   origin (-0.5, -0.5);
   init_grid (16);
 
-  refine_function (band, NULL, all);
+  refine (level == 4 && fabs (x) < 0.25, all);
 
   /**
   We use a circle of radius 0.3 and initialise the fractions. */

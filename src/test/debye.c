@@ -33,7 +33,6 @@ $$
 */
 
 #include "grid/multigrid.h"
-#include "poisson.h"
 #include "diffusion.h"
 #include "run.h"
 #include "pnp.h"

@@ -2,18 +2,6 @@
 #include "heights.h"
 #include "utils.h"
 
-#if QUADTREE
-static int band (Point point, void * data)
-{
-  return fabs (x) < 0.31 && fabs (y) < 0.31;
-}
-
-static int band1 (Point point, void * data)
-{
-  return fabs (x) < 0.375 && fabs (y) < 0.375;
-}
-#endif
-
 int main()
 {
   init_grid (16);
@@ -21,8 +9,8 @@ int main()
   Y0 = -0.5 - 0.125;
   scalar c[];
 #if QUADTREE
-  refine_function (band1, NULL, NULL);
-  refine_function (band, NULL, NULL);
+  refine (level == 4 && fabs (x) < 0.375 && fabs (y) < 0.375, NULL);
+  refine (level <= 5 && fabs (x) < 0.31 && fabs (y) < 0.31, NULL);
   c.refine = c.prolongation = fraction_refine;
 #endif
   vertex scalar phi[];

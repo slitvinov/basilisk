@@ -8,14 +8,9 @@ int main()
   run();
 }
 
-int refine (Point point, void * data)
-{
-  return x < -0.1 && y < -0.1;
-}
-
 event init (i = 0)
 {
-  refine_function (refine, NULL, all);
+  refine (level == 4 && x < -0.1 && y < -0.1, all);
 
   foreach() {
     zb[] = 0.2*exp(-100*(x*x + y*y));

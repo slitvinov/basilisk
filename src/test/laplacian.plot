@@ -159,6 +159,7 @@ plot '< paste out cout | grep lap' u 2:($3/$6) w lp t '5-points Laplacian', \
 
 set output 'speed.png'
 set ylabel 'nanoseconds per grid point'
+set yrange [0:]
 plot '< grep lap out' u 2:3 w lp t 'Quadtree', \
      '< grep lap cout' u 2:3 w lp t 'Cartesian'
 #    EOF

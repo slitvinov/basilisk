@@ -54,8 +54,6 @@ double change (scalar v, scalar vn)
 void timer_print (timer t, int i, long tnc)
 {
   clock_t end = clock ();
-  struct timeval tvend;
-  gettimeofday (&tvend, NULL);
   double cpu = ((double) (end - t.c))/CLOCKS_PER_SEC;
   double real = timer_elapsed (t);
   if (tnc < 0) {
@@ -65,7 +63,8 @@ void timer_print (timer t, int i, long tnc)
   }
   printf ("# " GRIDNAME 
 	  ", %d steps, %g CPU, %.4g real, %.3g points.step/s, %d var\n",
-	  i, cpu, real, tnc/real, (int) (datasize/sizeof(double)));
+	  i, cpu, real, real > 0. ? tnc/real : -1,
+	  (int) (datasize/sizeof(double)));
 }
 
 typedef struct {

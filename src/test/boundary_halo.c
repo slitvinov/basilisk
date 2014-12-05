@@ -4,12 +4,6 @@
 
 scalar v[];
 
-double radius;
-
-int refine_func (Point point, void * data) {
-  return sq(x) + sq(y) > sq(radius);
-}
-
 void boundary_halo (int d, int l, int depth) {
   foreach_boundary_cell (d, true) {
     if (level == l) {
@@ -38,10 +32,8 @@ int main (int argc, char ** argv)
   origin (-0.5, -0.5);
   init_grid (8);
 
-  radius = 0.49;
-  refine_function (refine_func, NULL, NULL);
-  radius = 0.55;
-  refine_function (refine_func, NULL, NULL);
+  refine (level == 3 && sq(x) + sq(y) > sq(0.49), NULL);
+  refine (level <= 4 && sq(x) + sq(y) > sq(0.55), NULL);
 
   output_cells (stdout);
 

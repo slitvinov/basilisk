@@ -10,7 +10,7 @@
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  int flags, neighbors; // number of refined neighbors
+  int flags, neighbors; // number of refined neighbors in a 3x3 neighborhood
 } Cell;
 
 enum {
@@ -219,6 +219,7 @@ void recursive (Point point)
     Quadtree point = *((Quadtree *)grid); point.back = grid;
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
+    if (is_active(cell))
     while (_s >= 0) {
       int stage;
       _pop (point.level, point.i, point.j, stage);
@@ -377,6 +378,11 @@ static void update_cache_f (void)
 {
   Quadtree * q = grid;
 
+@if _MPI
+  void mpi_boundary_update (void * m);
+  mpi_boundary_update (NULL);
+@endif // _MPI
+
   /* empty caches */
   q->leaves.n = q->faces.n = q->vertices.n = 0;
   for (int l = 0; l <= depth(); l++)
@@ -514,8 +520,11 @@ static void update_cache_f (void)
 @
 @define end_foreach_level_or_leaf() } end_foreach_level(); }
 
-@define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
-@define end_foreach_leaf()        continue; } end_foreach_cell()
+@def foreach_leaf() foreach_cell()
+  if (is_leaf (cell)) {
+    if (is_active(cell)) {
+@
+@define end_foreach_leaf() } continue; } end_foreach_cell()
 
 @if TRASH
 @ undef trash
@@ -612,10 +621,10 @@ void increment_neighbors (Quadtree * p)
   *((Point *)p) = point;
 }
 
-static void free_children (Quadtree * q, int k, int l)
+static void free_children (Point point, int k, int l)
 {
 #if DYNAMIC
-  Point point = *((Point *)q);
+  Quadtree * q = &point;
   point.i += k; point.j += l;
   char ** m = ((char ***)q->m)[q->level+1];
   for (int k = 0; k < 2; k++)
@@ -626,15 +635,14 @@ static void free_children (Quadtree * q, int k, int l)
 #endif
 }
 
-void decrement_neighbors (Quadtree * p)
+void decrement_neighbors (Point point)
 {
-  p->back->dirty = true;
-  Point point = *((Point *)p);
+  ((Quadtree *)&point)->back->dirty = true;
   for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
     for (int l = -GHOSTS/2; l <= GHOSTS/2; l++) {
       neighbor(k,l).neighbors--;
       if (neighbor(k,l).neighbors == 0)
-	free_children(p,k,l);
+	free_children (point,k,l);
     }
 }
 
@@ -673,7 +681,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   scalar * lleft, * lright;
   list_split (list, d, &lleft, &lright);
 
-  if (l < 0) {
+  if (l < 0)
     foreach_boundary_cell (d, true)
       if (is_leaf (cell)) {
 	for (scalar s in lright) {
@@ -688,17 +696,17 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 	corners(); /* we need this otherwise we'd skip corners */
 	continue;
       }
-  }
   else
     foreach_boundary_cell (d, true) {
       if (level == l) {
-	for (scalar s in lright) {
-	  s[ghost] = s.boundary[d] (point, s);
-	  point.i -= ig; point.j -= jg;
-	  double vb = s.boundary[d] (point, s);
-	  point.i += ig; point.j += jg;
-	  s[2*ig,2*jg] = vb;
-	}
+	if (allocated(ig,jg))
+	  for (scalar s in lright) {
+	    s[ghost] = s.boundary[d] (point, s);
+	    point.i -= ig; point.j -= jg;
+	    double vb = s.boundary[d] (point, s);
+	    point.i += ig; point.j += jg;
+	    s[2*ig,2*jg] = vb;
+	  }
 	for (scalar s in lleft)
 	  s[] = s.boundary[d] (point, s);
 	corners(); /* we need this otherwise we'd skip corners */
@@ -808,10 +816,11 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 
   foreach_boundary_cell (d, d > left) {
     if (level == l) {
-      if (l == depth ||          // target level
-	  is_leaf(cell) ||       // leaves
-	  (cell.flags & halo) || // restriction halo
-	  is_corner(cell)) {     // corners
+      if ((l == depth ||          // target level
+	   is_leaf(cell) ||       // leaves
+	   (cell.flags & halo) || // restriction halo
+	   is_corner(cell)) &&   // corners
+	  allocated(ig,jg)) {
 	// leaf or halo restriction
 	for (scalar s in centered) {
 	  s[ghost] = s.boundary[d] (point, s);
@@ -850,7 +859,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   free (tangent);
 }
 
- Point refine_cell (Point point, scalar * list, int flag);
+Point refine_cell (Point point, scalar * list, int flag);
 
 static void free_cache (CacheLevel * c)
 {
@@ -929,12 +938,12 @@ void init_grid (int n)
   while (depth--)
     foreach_leaf()
       point = refine_cell (point, NULL, 0);
-  update_cache();
-  trash (all);
 @if _MPI
   void mpi_boundary_new();
   mpi_boundary_new();
 @endif
+  update_cache();
+  trash (all);
   for (int d = 0; d < nboundary; d++) {
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
     box->d = d;

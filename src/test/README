@@ -54,6 +54,7 @@ Note that only the documented test cases appear in the list below
 
 * [Reduction operations](mpi-reduce.c)
 * [Boundary conditions and restriction](mpi-restriction.c)
+* [Interpolation on halos](mpi-interp.c)
 * [Z-order indexing](indexing.c)
 
 ## Speed benchmarks

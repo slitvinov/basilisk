@@ -43,11 +43,12 @@ Point refine_cell (Point point, scalar * list, int flag)
 
   /* for each child: (note that using foreach_child() would be nicer
      but it seems to be significanly slower) */
+  int pactive = (cell.flags & active) ? active : 0;
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
       if (dimension == 2)
 	assert(!(child(k,l).flags & active));
-      child(k,l).flags |= (active|leaf);
+      child(k,l).flags |= (pactive|leaf);
     }
 
   /* initialise scalars */
@@ -80,7 +81,7 @@ bool coarsen_cell (Point point, scalar * list)
       child(k,l).flags &= ~(leaf|active);
 
   /* update neighborhood */
-  decrement_neighbors (&point);
+  decrement_neighbors (point);
 
   return true;
 }
@@ -218,17 +219,18 @@ int coarsen_function (int (* func) (Point p), scalar * list)
   return nc;
 }
 
-int refine_function (int (* func) (Point point, void * data), 
-		     void * data,
-		     scalar * list)
-{
-  int nf = 0;
-  foreach_leaf()
-    if ((*func) (point, data)) {
-      point = refine_cell (point, list, 0);
-      nf++;
-    }
-  return nf;
+#define refine(cond, list) {			\
+  int nf;					\
+  do {						\
+    nf = 0;					\
+    foreach_leaf ()				\
+      if (cond) {			        \
+        point = refine_cell (point, list, 0);   \
+	nf++;                                   \
+      }                                         \
+    mpi_all_reduce (nf, MPI_INT, MPI_SUM);      \
+    update_cache();                             \
+  } while (nf);                                 \
 }
 
 static void halo_restriction (scalar * def, scalar * listc, int l)

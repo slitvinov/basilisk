@@ -4,22 +4,14 @@
 
 scalar v[];
 
-double radius;
-
-int refine_func (Point point, void * data) {
-  return sq(x) + sq(y) > sq(radius);
-}
-
 int main (int argc, char ** argv)
 {
   origin (-0.5, -0.5);
   for (int n = 8; n <= 64; n *= 2) {
     init_grid (n);
 
-    radius = 0.49;
-    refine_function (refine_func, NULL, NULL);
-    radius = 0.55;
-    refine_function (refine_func, NULL, NULL);
+    refine (level == log2(n) && sq(x) + sq(y) > sq(0.49), NULL);
+    refine (level <= log2(n) + 1 && sq(x) + sq(y) > sq(0.55), NULL);
 
     foreach()
       v[] = cos(2.*pi*x)*cos(2.*pi*y);

@@ -17,19 +17,14 @@ a[left]   = dirichlet (solution(x, y));
 a[top]    = dirichlet (solution(x, y));
 a[bottom] = dirichlet (solution(x, y));
 
-int refine_circle (Point point, void * data)
-{
-  int depth = *((int *)data);
-  return (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)));
-}
-
 void solve (int depth)
 {
   origin (-0.5, -0.5);
   int nrelax = 4;
   init_grid(1);
 
-  while (refine_function (refine_circle, &depth, NULL));
+  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)), NULL);
+
   foreach() {
     b[] =  -18.*sq(pi)*sin(3.*pi*x)*sin(3.*pi*y)*(x + y + 2.) +
       3.*pi*cos(3.*pi*x)*sin(3.*pi*y) +

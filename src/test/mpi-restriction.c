@@ -1,18 +1,13 @@
-int refine_circle (Point point, void * data)
-{
-  int depth = *((int *)data);
-  x -= 0.1; y -= 0.1;
-  return (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)));
-}
-
 int main (int argc, char * argv[])
 {
-  int depth = argc > 1 ? atoi(argv[1]) : 4;
   X0 = Y0 = -0.5;
   init_grid (1);
-  while (refine_function (refine_circle, &depth, NULL));
+  int depth = argc > 1 ? atoi(argv[1]) : 4;
+  refine (level < depth - 2 ||
+	  level <= depth*(1. - sqrt(sq(x - 0.1) + sq(y - 0.1))),
+	  NULL);
   mpi_partitioning();
-
+  
   scalar s[];
   foreach()
     s[] = 1;

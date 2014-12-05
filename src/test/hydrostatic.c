@@ -9,12 +9,8 @@ int main() {
   run();
 }
 
-int refine_func (Point point, void * data) {
-  return (sq(x) + sq(y) < sq(0.25));
-}
-
 event init (i = 0) {
-  refine_function (refine_func, NULL, {p,pf,u});
+  refine (level == 3 && sq(x) + sq(y) < sq(0.25), ({p,pf,u}));
   const face vector g[] = {0,-1.};
   a = g;
 }
