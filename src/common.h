@@ -405,3 +405,49 @@ const scalar unity[] = 1.;
 
 (const) face vector fm = unityf;
 (const) scalar cm = unity;
+
+// Arrays
+
+typedef struct {
+  void * p;
+  size_t size, max, len;
+} Array;
+
+Array * array_new (size_t size)
+{
+  Array * a = malloc (sizeof(Array));
+  a->p = NULL;
+  a->size = size;
+  a->max = a->len = 0;
+  return a;
+}
+
+void array_free (Array * a)
+{
+  if (a->max > 0)
+    free (a->p);
+  free (a);
+}
+
+void array_append (Array * a, void * elem)
+{
+  if (a->len == a->max) {
+    a->max += 128;
+    a->p = realloc (a->p, a->max*a->size);
+  }
+  memcpy (a->p + a->len++*a->size, elem, a->size);
+}
+
+void array_swap (Array * a, int i, int j)
+{
+  char buf[a->size];
+  memcpy (buf, a->p + i*a->size, a->size);
+  memcpy (a->p + i*a->size, a->p + j*a->size, a->size);
+  memcpy (a->p + j*a->size, buf, a->size);
+}
+
+void array_reverse (Array * a)
+{
+  for (int i = 0; i < a->len/2; i++)
+    array_swap (a, i, a->len - 1 - i);
+}
