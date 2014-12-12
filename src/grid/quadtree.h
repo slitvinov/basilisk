@@ -10,7 +10,11 @@
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  int flags, neighbors; // number of refined neighbors in a 3x3 neighborhood
+  unsigned flags;
+  unsigned neighbors; // number of refined neighbors in a 3x3 neighborhood
+@if _MPI
+  int pid; // fixme: alignment ?
+@endif
 } Cell;
 
 enum {
@@ -18,8 +22,7 @@ enum {
   leaf    = 1 << 1,
   refined = 1 << 2,
   halo    = 1 << 3,
-  local   = 1 << 4,
-  user    = 5,
+  user    = 4,
 
   face_x = 1 << 0,
   face_y = 1 << 1
@@ -378,17 +381,12 @@ static void update_cache_f (void)
 {
   Quadtree * q = grid;
 
-@if _MPI
-  void mpi_boundary_update (void * m);
-  mpi_boundary_update (NULL);
-@endif // _MPI
-
   /* empty caches */
   q->leaves.n = q->faces.n = q->vertices.n = 0;
   for (int l = 0; l <= depth(); l++)
     q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
 
-  foreach_cell() {
+  foreach_cell()
     if (is_active(cell)) { // always true in serial
       // active cells
       cache_level_append (&q->active[level], point);
@@ -434,16 +432,6 @@ static void update_cache_f (void)
 	  cell.flags &= ~halo;
       }
     }
-@if _MPI
-    // !is_active(cell)
-    else if (is_leaf(cell)) {
-      // non-local halo prolongation
-      if (cell.neighbors > 0)
-	cache_level_append (&q->prolongation[level], point);
-      continue;
-    }
-@endif // _MPI
-  }
 
   q->dirty = false;
 }
@@ -599,6 +587,13 @@ static void alloc_children (Quadtree * q, int k, int l)
 	m[_childindex(k,l)] = calloc (1, sizeof(Cell) + datasize);
 #endif // !DYNAMIC
 
+@if _MPI
+  // foreach child
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++)
+      child(k,l).pid = cell.pid;
+@endif
+  
 @if TRASH
   // foreach child
   for (int k = 0; k < 2; k++)
@@ -639,11 +634,12 @@ void decrement_neighbors (Point point)
 {
   ((Quadtree *)&point)->back->dirty = true;
   for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
-    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++) {
-      neighbor(k,l).neighbors--;
-      if (neighbor(k,l).neighbors == 0)
-	free_children (point,k,l);
-    }
+    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
+      if (allocated(k,l)) {
+	neighbor(k,l).neighbors--;
+	if (neighbor(k,l).neighbors == 0)
+	  free_children (point,k,l);
+      }
 }
 
 void realloc_scalar (void)
@@ -859,7 +855,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   free (tangent);
 }
 
-Point refine_cell (Point point, scalar * list, int flag);
+ Point refine_cell (Point point, scalar * list, int flag, int * nactive);
 
 static void free_cache (CacheLevel * c)
 {
@@ -926,6 +922,12 @@ void init_grid (int n)
   q->m[0] = alloc_cells (0);
 #endif
   CELL(q->m, 0, 2*GHOSTS*(GHOSTS + 1)).flags |= (leaf|active);
+@if _MPI
+  for (int k = -GHOSTS; k <= GHOSTS; k++)
+    for (int l = -GHOSTS; l <= GHOSTS; l++)
+      CELL(q->m, 0, ((GHOSTS + k)*(1 + 2*GHOSTS) + GHOSTS + l)).pid = -1;
+  CELL(q->m, 0, 2*GHOSTS*(GHOSTS + 1)).pid = pid();
+@endif
   cache_init (&q->leaves);
   cache_init (&q->faces);
   cache_init (&q->vertices);
@@ -937,7 +939,7 @@ void init_grid (int n)
   N = 1 << depth;
   while (depth--)
     foreach_leaf()
-      point = refine_cell (point, NULL, 0);
+      point = refine_cell (point, NULL, 0, NULL);
 @if _MPI
   void mpi_boundary_new();
   mpi_boundary_new();

@@ -10,7 +10,12 @@ attribute {
 
 // Quadtree methods
 
-Point refine_cell (Point point, scalar * list, int flag)
+/*
+  If nactive is different from NULL, it is incremented when an active
+  cell is refined.
+ */
+Point refine_cell (Point point, scalar * list, int flag,
+		   int * nactive)
 {
 #if TWO_ONE
   /* refine neighborhood if required */
@@ -28,7 +33,7 @@ Point refine_cell (Point point, scalar * list, int flag)
 	  p.level = point.level - 1;
 	  p.i = (point.i + GHOSTS)/2 + k;
 	  p.j = (point.j + GHOSTS)/2 + l;
-	  p = refine_cell (p, list, flag);
+	  p = refine_cell (p, list, flag, nactive);
 	  assert (p.m == point.m);
 	  aparent(k,l).flags |= flag;
 	}
@@ -51,10 +56,14 @@ Point refine_cell (Point point, scalar * list, int flag)
       child(k,l).flags |= (pactive|leaf);
     }
 
-  /* initialise scalars */
-  for (scalar s in list)
-    s.refine (point, s);
-
+  if (pactive) {
+    /* initialise scalars */
+    for (scalar s in list)
+      s.refine (point, s);
+    if (nactive)
+      (*nactive)++;
+  }
+    
   return point;
 }
 
@@ -136,7 +145,7 @@ astats adapt_wavelet (struct Adapt p)
     if (is_leaf (cell)) {
       if (cell.flags & too_coarse) {
 	cell.flags &= ~too_coarse;
-	point = refine_cell (point, listc, refined);
+	point = refine_cell (point, listc, refined, NULL);
 	st.nf++;
       }
       continue;
@@ -208,29 +217,33 @@ int coarsen_function (int (* func) (Point p), scalar * list)
   int nc = 0;
   for (int l = depth() - 1; l >= 0; l--)
     foreach_cell() {
-      if (is_leaf (cell))
-	continue;
-      else if (level == l) {
-	if ((*func) (point) && coarsen_cell (point, list))
-	  nc++;
-	continue;
+      if (is_active (cell)) { // always true in serial
+	if (is_leaf (cell))
+	  continue;
+	else if (level == l) {
+	  if ((*func) (point) && coarsen_cell (point, list))
+	    nc1++;
+	  continue;
+	}
       }
     }
   return nc;
 }
 
-#define refine(cond, list) {			\
-  int nf;					\
-  do {						\
-    nf = 0;					\
-    foreach_leaf ()				\
-      if (cond) {			        \
-        point = refine_cell (point, list, 0);   \
-	nf++;                                   \
-      }                                         \
-    mpi_all_reduce (nf, MPI_INT, MPI_SUM);      \
-    update_cache();                             \
-  } while (nf);                                 \
+#define refine(cond, list) {				\
+  int nf = 0, refined;				        \
+  do {							\
+    refined = 0;					\
+    foreach_leaf ()					\
+      if (cond)						\
+        point = refine_cell (point, list, 0, &refined);	\
+    nf += refined;					\
+  } while (refined);					\
+  mpi_all_reduce (nf, MPI_INT, MPI_SUM);		\
+  if (nf) {						\
+    void mpi_boundary_refine (void *, scalar *);	\
+    mpi_boundary_refine (NULL, list);			\
+  }							\
 }
 
 static void halo_restriction (scalar * def, scalar * listc, int l)

@@ -59,17 +59,7 @@ terrain.tst: terrain.s
 
 # MPI tests
 
-indexing.tst:		CC = mpicc -D_MPI=1
-mpi-restriction.tst:	CC = mpicc -D_MPI=1
-mpi-reduce.tst:		CC = mpicc -D_MPI=1
-mpi-interp.tst:		CC = mpicc -D_MPI=1
-
-mpi-restriction.tst: mpi-restriction.s
-	@EXEC="mpirun -np 3" $(BASILISK)/runtest mpi-restriction.tst
-
-mpi-reduce.tst: mpi-reduce.s
-	@EXEC="mpirun -np 3" $(BASILISK)/runtest mpi-reduce.tst
-
-indexing.tst: indexing.s
-	@EXEC="mpirun -np 3" $(BASILISK)/runtest indexing.tst
-
+indexing.tst:		CC = mpicc -D_MPI=3
+mpi-restriction.tst:	CC = mpicc -D_MPI=3
+mpi-reduce.tst:		CC = mpicc -D_MPI=3
+mpi-refine.tst:		CC = mpicc -D_MPI=4
