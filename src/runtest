@@ -11,9 +11,13 @@ dir=`echo $PWD | sed "s:$BASILISK_WIKI/::"`
 
 for opt in $CFLAGS; do
     case $opt in
-	-catch) test -z "$EXEC" && EXEC=" "; # turn off gdb
+	-catch) test -z "$EXEC" && EXEC=""; # turn off gdb
     esac
 done
+
+case $CC in
+    *-D_MPI=*) test -z "$EXEC" && EXEC="mpirun -np "`echo $CC | sed 's/.*-D_MPI=\([0-9]*\).*/\1/'`;
+esac
 
 script()
 {

@@ -11,6 +11,7 @@ export GENSUM
 export CHECKSUM
 export CC99
 export CFLAGS
+export CC
 
 QCC = $(BASILISK)/qcc
 BASILISK_ROOT=$(subst /src,,$(BASILISK))
