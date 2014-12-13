@@ -10,6 +10,8 @@ struct _Point {
   int i, j, n;
   int level; // only to return level in locate()
 };
+static Point last_point;
+
 #define NN point.n // for output_stencil()
 
 @def data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) +

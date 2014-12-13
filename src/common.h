@@ -159,11 +159,9 @@ int _ig[nboundary] = {1,-1,0,0},
 @define neumann(x)              (Delta*(x) + val(_s,0,0))
 @define neumann_homogeneous()   (val(_s,0,0))
 
-typedef struct _Point Point;
-static Point last_point;
-
 double  * _constant = NULL;
 extern size_t datasize;
+typedef struct _Point Point;
 
 #include "grid/boundaries.h"
 
