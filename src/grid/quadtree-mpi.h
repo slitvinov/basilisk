@@ -24,8 +24,6 @@ typedef struct {
 
   int * adjacency; // adjacency[x] is different from zero if we need to send
                    // data to proc x
-  int npe;         // the total number of PEs
-
 } MpiBoundary;
 
 static void rcv_append (Point point, Rcv * rcv)
@@ -71,9 +69,11 @@ static void snd_rcv_append (SndRcv * m, Point point, int pid)
   }
   rcv_append (point, &m->rcv[i]);
 }
-	
+
 static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
 {
+  prof_start();
+  
   // fixme: 4 should be 2**dimension
   int len = list_len (list)*(m->children ? 4 : 1); 
 
@@ -128,6 +128,8 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
       MPI_Wait (&r[i], &s);
       free (buf[i]);
     }
+
+  prof_stop();
 }
 
 void snd_rcv_print (SndRcv * m, FILE * fp)
@@ -196,8 +198,7 @@ void mpi_boundary_new()
   mpi_boundary->halo_prolongation =
     mpi_boundary_halo_prolongation;
   MpiBoundary * b = (MpiBoundary *) mpi_boundary;
-  MPI_Comm_size (MPI_COMM_WORLD, &b->npe);
-  b->adjacency = calloc (b->npe, sizeof (int));
+  b->adjacency = calloc (npe(), sizeof (int));
   b->prolongation.children = true;
   add_boundary (mpi_boundary);
 }
@@ -221,58 +222,8 @@ static void cache_level_receive (CacheLevel * halo, int src, int tag)
   }
 }
 	
-static void mpi_boundary_sync (MpiBoundary * mpi)
+void debug_mpi()
 {
-  SndRcv * restriction = &mpi->restriction;
-  SndRcv * prolongation = &mpi->prolongation;
-
-  /* we send the ghost cell indices to their respective PEs */
-  for (int i = 0; i < restriction->nrcv; i++) {
-    Rcv res = restriction->rcv[i], * pro = NULL;
-    /* pro is the prolongation received from the same pid */
-    for (int j = 0; j < prolongation->nrcv && !pro; j++)
-      if (prolongation->rcv[j].pid == res.pid)
-	pro = &prolongation->rcv[j];
-
-    MPI_Request r;
-    MPI_Isend (&res.depth, 1, MPI_INT, res.pid, 0, MPI_COMM_WORLD, &r);
-    for (int j = 0; j <= res.depth; j++) {
-      // restriction buffer
-      cache_level_send (&res.halo[j], res.pid, j);
-      // prolongation buffer
-      if (pro && j <= pro->depth)
-	cache_level_send (&pro->halo[j], res.pid, j);
-      else
-	cache_level_send (NULL, res.pid, j);
-    }
-  }
-
-  /* we free the old buffers */
-  snd_free (restriction);
-  snd_free (prolongation);
-
-  /* we receive the ghost cell indices from their respective PEs */
-  for (int i = 0; i < mpi->npe; i++)
-    if (mpi->adjacency[i]) {
-      restriction->snd = realloc (restriction->snd,
-				  ++restriction->nsnd*sizeof (Rcv));
-      prolongation->snd = realloc (prolongation->snd,
-				  ++prolongation->nsnd*sizeof (Rcv));
-      Rcv * res = &restriction->snd[restriction->nsnd-1];
-      Rcv * pro = &prolongation->snd[prolongation->nsnd-1];
-      res->pid = pro->pid = i;
-      MPI_Status s;
-      MPI_Recv (&res->depth, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &s);
-      pro->depth = res->depth;
-      res->halo = malloc ((res->depth + 1)*sizeof (CacheLevel));
-      pro->halo = malloc ((pro->depth + 1)*sizeof (CacheLevel));
-      for (int j = 0; j <= res->depth; j++) {
-	cache_level_receive (&res->halo[j], res->pid, j);
-	cache_level_receive (&pro->halo[j], res->pid, j);
-      }
-    }
-
-#if DEBUG
   void output_cells (FILE * fp);
 
   char name[80];
@@ -305,6 +256,8 @@ static void mpi_boundary_sync (MpiBoundary * mpi)
       fprintf (fp, "%g %g %d %d\n", x, y, level, cell.neighbors);
   fclose (fp);
 
+  MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
+  
   sprintf (name, "mpi-restriction-%d", pid());
   fp = fopen (name, "w");
   snd_rcv_print (&mpi->restriction, fp);
@@ -314,11 +267,72 @@ static void mpi_boundary_sync (MpiBoundary * mpi)
   fp = fopen (name, "w");
   snd_rcv_print (&mpi->prolongation, fp);
   fclose (fp);
-#endif
+}
+
+static void mpi_boundary_sync (MpiBoundary * mpi)
+{
+  prof_start();
+
+  SndRcv * restriction = &mpi->restriction;
+  SndRcv * prolongation = &mpi->prolongation;
+
+  /* we send the ghost cell indices to their respective PEs */
+  for (int i = 0; i < restriction->nrcv; i++) {
+    Rcv res = restriction->rcv[i], * pro = NULL;
+    /* pro is the prolongation received from the same pid */
+    for (int j = 0; j < prolongation->nrcv && !pro; j++)
+      if (prolongation->rcv[j].pid == res.pid)
+	pro = &prolongation->rcv[j];
+
+    MPI_Request r;
+    MPI_Isend (&res.depth, 1, MPI_INT, res.pid, 0, MPI_COMM_WORLD, &r);
+    for (int j = 0; j <= res.depth; j++) {
+      // restriction buffer
+      cache_level_send (&res.halo[j], res.pid, j);
+      // prolongation buffer
+      if (pro && j <= pro->depth)
+	cache_level_send (&pro->halo[j], res.pid, j);
+      else
+	cache_level_send (NULL, res.pid, j);
+    }
+  }
+
+  /* we free the old buffers */
+  snd_free (restriction);
+  snd_free (prolongation);
+
+  /* we receive the ghost cell indices from their respective PEs */
+  for (int i = 0; i < npe(); i++)
+    if (mpi->adjacency[i]) {
+      restriction->snd = realloc (restriction->snd,
+				  ++restriction->nsnd*sizeof (Rcv));
+      prolongation->snd = realloc (prolongation->snd,
+				  ++prolongation->nsnd*sizeof (Rcv));
+      Rcv * res = &restriction->snd[restriction->nsnd-1];
+      Rcv * pro = &prolongation->snd[prolongation->nsnd-1];
+      res->pid = pro->pid = i;
+      MPI_Status s;
+      MPI_Recv (&res->depth, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &s);
+      pro->depth = res->depth;
+      res->halo = malloc ((res->depth + 1)*sizeof (CacheLevel));
+      pro->halo = malloc ((pro->depth + 1)*sizeof (CacheLevel));
+      for (int j = 0; j <= res->depth; j++) {
+	cache_level_receive (&res->halo[j], res->pid, j);
+	cache_level_receive (&pro->halo[j], res->pid, j);
+      }
+    }
+  
+  prof_stop();
+  
+#if DEBUG
+  debug_mpi();
+#endif  
 }
 
 void mpi_boundary_update (MpiBoundary * m)
 {
+  prof_start();
+
   rcv_free (&m->restriction);
   rcv_free (&m->prolongation);
 
@@ -351,11 +365,13 @@ void mpi_boundary_update (MpiBoundary * m)
     if (is_leaf(cell))
       continue;
   }
+
+  prof_stop();
 }
   
 /*
-  Returns a linear quadtree containing the leaves belonging to the
-  (remote) process 'pid'.
+  Returns a linear quadtree containing the leaves which are in the
+  (5x5) neighborhood of cells belonging to the (remote) process 'pid'.
  */
 Array * remote_leaves (unsigned pid)
 {
@@ -411,6 +427,8 @@ int match_refine (unsigned * a, scalar * list)
 
 void mpi_boundary_match (MpiBoundary * mpi)
 {
+  prof_start();
+  
   /* Send halo mesh for each neighboring process. */
   SndRcv * m = &mpi->restriction;
   Array * a[m->nsnd];
@@ -442,7 +460,9 @@ void mpi_boundary_match (MpiBoundary * mpi)
     MPI_Wait (&r[i], &s);
     array_free (a[i]);
   }
-
+  
+  prof_stop();
+  
   /* If an active cell has been refined (due to the 2:1 refinement
      constraint), we need to repeat the process. */
   mpi_all_reduce (refined, MPI_INT, MPI_SUM);
@@ -460,18 +480,20 @@ void mpi_boundary_refine (void * p, scalar * list)
 
 void mpi_partitioning()
 {
+  prof_start();
+
   MpiBoundary * m = (MpiBoundary *) mpi_boundary;
   int nf = 0;
   foreach()
     nf++;
-  nf = max(1, nf/m->npe);
+  nf = max(1, nf/npe());
 
   // set the pid of each cell
   int i = 0;
   foreach_cell_post (is_active (cell) || cell.neighbors > 0)
     if (is_active (cell)) {
       if (is_leaf (cell)) {
-	cell.pid = min(m->npe - 1, i/nf); i++;
+	cell.pid = min(npe() - 1, i/nf); i++;
 	if (cell.neighbors > 0)
 	  for (int i = 0; i <= 1; i++)
 	    for (int j = 0; j <= 1; j++)
@@ -492,8 +514,8 @@ void mpi_partitioning()
 
   /* adjacency[i] is different from zero if we need to receive data
      from proc i */
-  int adjacency[m->npe];
-  for (int i = 0; i < m->npe; i++)
+  int adjacency[npe()];
+  for (int i = 0; i < npe(); i++)
     adjacency[i] = 0;
 
   /* we build arrays of ghost cell indices for restriction and prolongation */
@@ -547,7 +569,9 @@ void mpi_partitioning()
      data to proc x */
   MPI_Alltoall (adjacency, 1, MPI_INT, m->adjacency, 1, MPI_INT,
 		MPI_COMM_WORLD);
-
+  
+  prof_stop();
+  
   mpi_boundary_sync (m);  
 }
 

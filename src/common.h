@@ -36,6 +36,7 @@
 @include <omp.h>
 @define OMP(x) Pragma(#x)
 @define pid() omp_get_thread_num()
+@define npe() omp_get_num_threads()
 @define mpi_all_reduce(v,type,op)
 
 @elif _MPI
@@ -43,19 +44,32 @@
 @include <mpi.h>
 @define OMP(x)
 
+static bool in_prof = false;
+@def prof_start()
+  assert (!in_prof); in_prof = true;
+  double prof_start = MPI_Wtime()
+@
+@def prof_stop()
+  assert (in_prof); in_prof = false;
+  mpi_time += MPI_Wtime() - prof_start
+@
+
 @if FAKE_MPI
 @define mpi_all_reduce(v,type,op)
 @else
 @def mpi_all_reduce(v,type,op) {
+  prof_start();
   union { int a; float b; double c;} global;
   MPI_Allreduce (&(v), &global, 1, type, op, MPI_COMM_WORLD);
   memcpy (&(v), &global, sizeof (v));
+  prof_stop();
 }
 @
 @endif
 
-static int mpi_rank;
+static int mpi_rank, mpi_npe;
 @define pid() mpi_rank
+@define npe() mpi_npe
 
 void mpi_init()
 {
@@ -66,6 +80,7 @@ void mpi_init()
     MPI_Errhandler_set (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
     atexit ((void (*)(void)) MPI_Finalize);
     MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
+    MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
     if (mpi_rank > 0) {
       char name[80];
       sprintf (name, "out-%d", mpi_rank);
@@ -80,6 +95,7 @@ void mpi_init()
 
 @define OMP(x)
 @define pid() 0
+@define npe() 1
 @define mpi_all_reduce(v,type,op)
 
 @endif
@@ -374,9 +390,14 @@ void init_solver (void);
 
 // timers
 
+@if _MPI
+static double mpi_time = 0.;
+@endif
+
 typedef struct {
   clock_t c;
   struct timeval tv;
+  double tm;
 } timer;
 
 timer timer_start (void)
@@ -384,6 +405,9 @@ timer timer_start (void)
   timer t;
   t.c = clock();
   gettimeofday (&t.tv, NULL);
+@if _MPI
+  t.tm = mpi_time;
+@endif
   return t;
 }
 
