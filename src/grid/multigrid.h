@@ -225,7 +225,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
   int _start = GHOSTS, _end = point.n + GHOSTS, _k;
   /* traverse corners only for top and bottom */
-  if (d > left) { _start -= GHOSTS; _end += GHOSTS; }
+  if (d > left) { _start--; _end++; }
   OMP(omp for schedule(static))
   for (_k = _start; _k < _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
