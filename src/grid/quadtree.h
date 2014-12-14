@@ -264,23 +264,31 @@ void recursive (Point point)
       switch (stage) {
       case 0: {
         POINT_VARIABLES;
-	if (condition) {
-	  if (point.level == point.depth) {
-	    _push (point.level, point.i, point.j, 4);
-	  }
-	  else {
-	    _push (point.level, point.i, point.j, 1);
+	if (point.level == point.depth) {
+	  _push (point.level, point.i, point.j, 4);
+	}
+	else {
+	  _push (point.level, point.i, point.j, 1);
+	  if (condition)
 	    _push (point.level + 1, _LEFT, _TOP, 0);
-	  }
 	}
 	break;
       }
-      case 1: _push (point.level, point.i, point.j, 2);
-              _push (point.level + 1, _RIGHT, _TOP,    0); break;
-      case 2: _push (point.level, point.i, point.j, 3);
-	      _push (point.level + 1, _LEFT,  _BOTTOM, 0); break;
-      case 3: _push (point.level, point.i, point.j, 4);
-	      _push (point.level + 1, _RIGHT, _BOTTOM, 0); break;
+      case 1:
+	_push (point.level, point.i, point.j, 2);
+	if (condition)
+	  _push (point.level + 1, _RIGHT, _TOP,    0);
+	break;
+      case 2:
+	_push (point.level, point.i, point.j, 3);
+	if (condition)
+	  _push (point.level + 1, _LEFT,  _BOTTOM, 0);
+	break;
+      case 3:
+	_push (point.level, point.i, point.j, 4);
+	if (condition)
+	  _push (point.level + 1, _RIGHT, _BOTTOM, 0);
+	break;
       case 4: {
         POINT_VARIABLES;
 	/* do something */

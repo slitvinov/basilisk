@@ -240,18 +240,21 @@ void recursive (Point point)
       switch (stage) {
       case 0: {
         POINT_VARIABLES;
-	if (condition) {
-	  if (point.level == point.depth) {
-	    _push (point.level, point.i, 4);
-	  }
-	  else {
-	    _push (point.level, point.i, 1);
+	if (point.level == point.depth) {
+	  _push (point.level, point.i, 4);
+	}
+	else {
+	  _push (point.level, point.i, 1);
+	  if (condition)
 	    _push (point.level + 1, _LEFT, 0);
-	  }
 	}
 	break;
       }
-      case 1: _push (point.level + 1, _RIGHT, 0); break;
+      case 1:
+	_push (point.level, point.i, 4);
+	if (condition)
+	  _push (point.level + 1, _RIGHT, 0);
+	break;
       case 4: {
         POINT_VARIABLES;
 	/* do something */
@@ -783,7 +786,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   free (tangent);
 }
 
-Point refine_cell (Point point, scalar * list, int flag);
+Point refine_cell (Point point, scalar * list, int flag, int * nactive);
 
 static void free_cache (CacheLevel * c)
 {

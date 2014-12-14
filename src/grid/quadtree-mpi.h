@@ -67,6 +67,8 @@ static void snd_rcv_append (SndRcv * m, Point point, int pid)
     rcv->halo = malloc (sizeof (CacheLevel));
     cache_level_init (&rcv->halo[0]);
   }
+  if (level > 0)
+    aparent(0,0).pid = pid;
   rcv_append (point, &m->rcv[i]);
 }
 
@@ -137,7 +139,22 @@ void snd_rcv_print (SndRcv * m, FILE * fp)
   for (int i = 0; i < m->nrcv; i++)
     for (int j = 0; j <= m->rcv[i].depth; j++)
       foreach_cache_level (m->rcv[i].halo[j], j,)
-	fprintf (fp, "%g %g %d %d\n", x, y, m->rcv[i].pid, cell.neighbors);
+	fprintf (fp, "%g %g %d %d %d\n",
+		 x, y, m->rcv[i].pid, cell.neighbors, level);
+}
+
+void rcv_graph (SndRcv * m, FILE * fp)
+{
+  for (int i = 0; i < m->nrcv; i++) {
+    fprintf (fp, "%d -> %d [label=\"", m->rcv[i].pid, pid());
+    for (int j = 0; j <= m->rcv[i].depth; j++) {
+      int n = 0;
+      foreach_cache_level (m->rcv[i].halo[j], j,)
+	n++;
+      fprintf (fp, "%d ", n);
+    }
+    fprintf (fp, "\"];\n");
+  }
 }
 
 static void snd_free (SndRcv * m)
@@ -376,20 +393,21 @@ void mpi_boundary_update (MpiBoundary * m)
 Array * remote_leaves (unsigned pid)
 {
   static const int remote = 1 << user;
-  foreach_cell_post (is_active (cell)) {
-    if (is_leaf(cell)) {
-      bool neighbors = false;
-      if (is_leaf(cell))
-	for (int k = -GHOSTS; k <= GHOSTS && !neighbors; k++)
-	  for (int l = -GHOSTS; l <= GHOSTS && !neighbors; l++)
-	    if (neighbor(k,l).pid == pid) {
-	      cell.flags |= remote;
-	      neighbors = true;
-	    }
+  foreach_cell_post (is_active (cell))
+    if (is_active(cell)) {
+      if (is_leaf(cell)) {
+	bool neighbors = false;
+	if (is_leaf(cell))
+	  for (int k = -GHOSTS; k <= GHOSTS && !neighbors; k++)
+	    for (int l = -GHOSTS; l <= GHOSTS && !neighbors; l++)
+	      if (neighbor(k,l).pid == pid) {
+		cell.flags |= remote;
+		neighbors = true;
+	      }
+      }
+      if ((cell.flags & remote) && level > 0)
+	aparent(0,0).flags |= remote;
     }
-    if ((cell.flags & remote) && level > 0)
-      aparent(0,0).flags |= remote;
-  }
 
   Array * a = array_new (sizeof(unsigned));
   foreach_cell() {
@@ -436,6 +454,7 @@ void mpi_boundary_match (MpiBoundary * mpi)
   for (int i = 0; i < m->nsnd; i++) {
     Rcv snd = m->snd[i];
     a[i] = remote_leaves (snd.pid);
+    //    fprintf (stderr, "  remote %d %ld\n", i, a[i]->len);
     assert (a[i]->len > 0);
     MPI_Isend (&a[i]->len, 1, MPI_INT, snd.pid, 0, MPI_COMM_WORLD, &r[i]);
     MPI_Isend (a[i]->p, a[i]->len, MPI_INT, snd.pid, 0, MPI_COMM_WORLD, &r[i]);
@@ -488,7 +507,7 @@ void mpi_partitioning()
     nf++;
   nf = max(1, nf/npe());
 
-  // set the pid of each cell
+  /* set the pid of each cell */
   int i = 0;
   foreach_cell_post (is_active (cell) || cell.neighbors > 0)
     if (is_active (cell)) {
@@ -517,10 +536,10 @@ void mpi_partitioning()
   int adjacency[npe()];
   for (int i = 0; i < npe(); i++)
     adjacency[i] = 0;
-
+  
   /* we build arrays of ghost cell indices for restriction and prolongation */
   ((Quadtree *)grid)->dirty = true;
-  foreach_cell() {
+  foreach_cell_post (!is_leaf(cell))
     if (!is_active(cell)) {
       int neighbors = 0;
       for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
@@ -560,13 +579,10 @@ void mpi_partitioning()
 	adjacency[cell.pid]++;
       }
     }
-    if (is_leaf(cell))
-      continue;
-  }
 
   /* we do a global transpose of the adjacency vector
-     i.e. m->adjacency[x] is different from zero if we need to send
-     data to proc x */
+     i.e. m->adjacency[i] is different from zero if we need to send
+     data to proc i */
   MPI_Alltoall (adjacency, 1, MPI_INT, m->adjacency, 1, MPI_INT,
 		MPI_COMM_WORLD);
   
