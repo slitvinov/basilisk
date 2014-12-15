@@ -4,6 +4,8 @@ typedef struct {
   CacheLevel * halo; // ghost cell indices for each level
   int depth;         // the maximum number of levels
   int pid;           // the rank of the PE  
+  double * buf;      // MPI buffer
+  MPI_Request r;     // MPI request 
 } Rcv;
 
 typedef struct {
@@ -45,8 +47,18 @@ void rcv_print (Rcv * rcv)
 	fprintf (stderr, "%g %g %d %d\n", x, y, level, rcv->pid);
 }
 
+static void rcv_free_buf (Rcv * rcv)
+{
+  if (rcv->buf) {
+    MPI_Wait (&rcv->r, MPI_STATUS_IGNORE);
+    free (rcv->buf);
+    rcv->buf = NULL;
+  }
+}
+
 static void rcv_destroy (Rcv * rcv)
 {
+  rcv_free_buf (rcv);
   for (int i = 0; i <= rcv->depth; i++)
     if (rcv->halo[i].n > 0)
       free (rcv->halo[i].p);
@@ -65,6 +77,7 @@ static void snd_rcv_append (SndRcv * m, Point point, int pid)
     rcv->pid = pid;
     rcv->depth = 0;
     rcv->halo = malloc (sizeof (CacheLevel));
+    rcv->buf = NULL;
     cache_level_init (&rcv->halo[0]);
   }
   if (level > 0)
@@ -80,26 +93,25 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
   int len = list_len (list)*(m->children ? 4 : 1); 
 
   /* send ghost values */
-  double * buf[m->nsnd];
-  MPI_Request r[m->nsnd];
   for (int i = 0; i < m->nsnd; i++) {
-    Rcv snd = m->snd[i];
-    if (l <= snd.depth && snd.halo[l].n > 0) {
-      buf[i] = malloc (sizeof (double)*snd.halo[l].n*len);
-      double * b = buf[i];
+    Rcv * snd = &m->snd[i];
+    if (l <= snd->depth && snd->halo[l].n > 0) {
+      rcv_free_buf (snd);
+      snd->buf = malloc (sizeof (double)*snd->halo[l].n*len);
+      double * b = snd->buf;
       if (m->children)
-	foreach_cache_level(snd.halo[l], l,)
+	foreach_cache_level(snd->halo[l], l,)
 	  foreach_child() {
 	    assert (allocated(0,0));
 	    for (scalar s in list)
 	      *b++ = s[];
 	  }
       else
-	foreach_cache_level(snd.halo[l], l,)
+	foreach_cache_level(snd->halo[l], l,)
 	  for (scalar s in list)
 	    *b++ = s[];
-      MPI_Isend (buf[i], snd.halo[l].n*len, MPI_DOUBLE, snd.pid, l, 
-		 MPI_COMM_WORLD, &r[i]);
+      MPI_Isend (snd->buf, snd->halo[l].n*len, MPI_DOUBLE, snd->pid, l, 
+		 MPI_COMM_WORLD, &snd->r);
     }
   }
     
@@ -123,14 +135,6 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
     }
   }
     
-  /* check that ghost values were received OK and free send buffers */
-  for (int i = 0; i < m->nsnd; i++)
-    if (l <= m->snd[i].depth && m->snd[i].halo[l].n > 0) {
-      MPI_Status s;
-      MPI_Wait (&r[i], &s);
-      free (buf[i]);
-    }
-
   prof_stop();
 }
 
@@ -331,6 +335,7 @@ static void mpi_boundary_sync (MpiBoundary * mpi)
       MPI_Status s;
       MPI_Recv (&res->depth, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &s);
       pro->depth = res->depth;
+      pro->buf = res->buf = NULL;
       res->halo = malloc ((res->depth + 1)*sizeof (CacheLevel));
       pro->halo = malloc ((pro->depth + 1)*sizeof (CacheLevel));
       for (int j = 0; j <= res->depth; j++) {
