@@ -117,21 +117,29 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
     
   /* receive ghost values */
   for (int i = 0; i < m->nrcv; i++) {
-    Rcv rcv = m->rcv[i];
-    if (l <= rcv.depth && rcv.halo[l].n > 0) {
-      double buf[rcv.halo[l].n*len], * b = buf;
-      MPI_Status s;
-      MPI_Recv (buf, rcv.halo[l].n*len, MPI_DOUBLE, rcv.pid, l, 
-		MPI_COMM_WORLD, &s);
+    Rcv * rcv = &m->rcv[i];
+    if (l <= rcv->depth && rcv->halo[l].n > 0) {
+      rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
+      MPI_Irecv (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l, 
+		 MPI_COMM_WORLD, &rcv->r);
+    }
+  }
+  for (int i = 0; i < m->nrcv; i++) {
+    Rcv * rcv = &m->rcv[i];
+    if (l <= rcv->depth && rcv->halo[l].n > 0) {
+      MPI_Wait (&rcv->r, MPI_STATUS_IGNORE);
+      double * b = rcv->buf;
       if (m->children)
-	foreach_cache_level(rcv.halo[l], l,)
+	foreach_cache_level(rcv->halo[l], l,)
 	  foreach_child()
 	    for (scalar s in list)
 	      s[] = *b++;
       else
-	foreach_cache_level(rcv.halo[l], l,)
+	foreach_cache_level(rcv->halo[l], l,)
 	  for (scalar s in list)
 	    s[] = *b++;
+      free (rcv->buf);
+      rcv->buf = NULL;
     }
   }
     
