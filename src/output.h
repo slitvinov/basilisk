@@ -607,4 +607,82 @@ void output_gfs (struct OutputGfs p)
   if (opened)
     fclose (p.fp);
 }
+
+struct Dump {
+  FILE * fp;
+  scalar * list;
+  char * file;
+};
+
+void dump (struct Dump p)
+{
+  FILE * fp = p.fp;
+  scalar * list = p.list;
+  char * file = p.file;
+  if (file && (fp = fopen (file, "w")) == NULL) {
+    perror (file);
+    exit (1);
+  }
+  assert (fp);
+
+  int len = list_len (list);
+  fwrite (&len, sizeof(int), 1, fp);
+
+  foreach_cell() {
+    fwrite (&cell.flags, sizeof(unsigned), 1, fp);
+    for (scalar s in list)
+      fwrite (&s[], sizeof(double), 1, fp);
+    if (is_leaf(cell))
+      continue;
+  }
+  
+  if (file)
+    fclose (fp);
+}
+
+void restore (struct Dump p)
+{
+  FILE * fp = p.fp;
+  scalar * list = p.list;
+  char * file = p.file;
+  if (file && (fp = fopen (file, "r")) == NULL) {
+    perror (file);
+    exit (1);
+  }
+  assert (fp);
+  
+  int len;
+  if (fread (&len, sizeof(int), 1, fp) != 1) {
+    fprintf (stderr, "restore(): error: expecting 'len'\n");
+    exit (1);
+  }
+  if (len != list_len (list)) {
+    fprintf (stderr,
+	     "restore(): error: the list lengths don't match: %d != %d\n",
+	     len, list_len (list));
+    exit (1);
+  }
+  
+  init_grid (1);
+  foreach_cell() {
+    unsigned flags;
+    if (fread (&flags, sizeof(unsigned), 1, fp) != 1) {
+      fprintf (stderr, "restore(): error: expecting 'flags'\n");
+      exit (1);
+    }
+    for (scalar s in list)
+      if (fread (&s[], sizeof(double), 1, fp) != 1) {
+	fprintf (stderr, "restore(): error: expecting '%s'\n", s.name);
+	exit (1);
+      }
+    if (!(flags & leaf) && is_leaf(cell))
+      point = refine_cell (point, NULL, 0, NULL);
+    cell.flags = flags;
+    if (is_leaf(cell))
+      continue;
+  }
+  boundary (list);
+  if (file)
+    fclose (fp);
+}
 #endif // QUADTREE
