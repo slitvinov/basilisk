@@ -863,7 +863,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   free (tangent);
 }
 
- Point refine_cell (Point point, scalar * list, int flag, int * nactive);
+Point refine_cell (Point point, scalar * list, int flag, int * nactive);
 
 static void free_cache (CacheLevel * c)
 {

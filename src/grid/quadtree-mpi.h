@@ -15,7 +15,7 @@ typedef struct {
   int nsnd;   // the number of PEs to send ghost values to
   Rcv * snd;  // ghost cells to send
 
-  bool children;   // whether to send children or only parent
+  bool children; // whether to send children or only parent
 } SndRcv;
 
 typedef struct {
@@ -110,16 +110,25 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
 	foreach_cache_level(snd->halo[l], l,)
 	  for (scalar s in list)
 	    *b++ = s[];
+#if DEBUG
+      fprintf (stderr, "sending %d doubles to %d level %d\n",
+	       snd->halo[l].n*len, snd->pid, l);
+      fflush (stderr);
+#endif
       MPI_Isend (snd->buf, snd->halo[l].n*len, MPI_DOUBLE, snd->pid, l, 
 		 MPI_COMM_WORLD, &snd->r);
     }
   }
-    
+
+#if 0
   /* receive ghost values */
   for (int i = 0; i < m->nrcv; i++) {
     Rcv * rcv = &m->rcv[i];
     if (l <= rcv->depth && rcv->halo[l].n > 0) {
       rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
+      fprintf (stderr, "receiving %d doubles from %d\n",
+	       rcv->halo[l].n*len, rcv->pid);
+      fflush (stderr);
       MPI_Irecv (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l, 
 		 MPI_COMM_WORLD, &rcv->r);
     }
@@ -142,17 +151,66 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
       rcv->buf = NULL;
     }
   }
-    
+#else
+  /* receive ghost values */
+  for (int i = 0; i < m->nrcv; i++) {
+    Rcv * rcv = &m->rcv[i];
+    if (l <= rcv->depth && rcv->halo[l].n > 0) {
+      double buf[rcv->halo[l].n*len];
+#if DEBUG
+      fprintf (stderr, "receiving %d doubles from %d level %d\n",
+	       rcv->halo[l].n*len, rcv->pid, l);
+      fflush (stderr);
+#endif
+      MPI_Recv (buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l, 
+		MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      double * b = buf;
+      if (m->children)
+	foreach_cache_level(rcv->halo[l], l,)
+	  foreach_child()
+	    for (scalar s in list)
+	      s[] = *b++;
+      else
+	foreach_cache_level(rcv->halo[l], l,)
+	  for (scalar s in list)
+	    s[] = *b++;
+    }
+  }
+#endif
+
+  /* wait for completion of send requests */
+  for (int i = 0; i < m->nsnd; i++) {
+    Rcv * snd = &m->snd[i];
+    if (l <= snd->depth && snd->halo[l].n > 0)
+      rcv_free_buf (snd);
+  }
+
+#if DEBUG
+  fprintf (stderr, "done for level %d\n", l);
+  fflush (stderr);
+#endif
+  
   prof_stop();
 }
 
 void snd_rcv_print (SndRcv * m, FILE * fp)
 {
-  for (int i = 0; i < m->nrcv; i++)
-    for (int j = 0; j <= m->rcv[i].depth; j++)
-      foreach_cache_level (m->rcv[i].halo[j], j,)
+  for (int i = 0; i < m->nsnd; i++)
+    for (int j = 0; j <= m->snd[i].depth; j++)
+      foreach_cache_level (m->snd[i].halo[j], j,)
 	fprintf (fp, "%g %g %d %d %d\n",
-		 x, y, m->rcv[i].pid, cell.neighbors, level);
+		 x, y, m->snd[i].pid, cell.neighbors, level);
+}
+
+void snd_rcv_stats (SndRcv * m, FILE * fp)
+{
+  size_t n = 0, nm = 0;
+  for (int i = 0; i < m->nrcv; i++)
+    for (int j = depth(); j <= m->rcv[i].depth; j++)
+      if (m->rcv[i].halo[j].n > 0) {
+	n += m->rcv[i].halo[j].n; nm++;
+      }
+  fprintf (stderr, "%ld %ld ", nm, n);
 }
 
 void rcv_graph (SndRcv * m, FILE * fp)
@@ -200,7 +258,7 @@ static void mpi_boundary_destroy (Boundary * b)
   free (m);
 }
 
-static void mpi_boundary_halo_restriction (const Boundary * b,
+static void mpi_boundary_restriction (const Boundary * b,
 					   scalar * list, int l)
 {
   MpiBoundary * m = (MpiBoundary *) b;
@@ -223,7 +281,7 @@ void mpi_boundary_new()
   mpi_boundary = calloc (1, sizeof (MpiBoundary));
   mpi_boundary->destroy = mpi_boundary_destroy;
   mpi_boundary->restriction = mpi_boundary->halo_restriction = 
-    mpi_boundary_halo_restriction;
+    mpi_boundary_restriction;
   mpi_boundary->halo_prolongation =
     mpi_boundary_halo_prolongation;
   MpiBoundary * b = (MpiBoundary *) mpi_boundary;
@@ -232,20 +290,26 @@ void mpi_boundary_new()
   add_boundary (mpi_boundary);
 }
 
-static void cache_level_send (CacheLevel * halo, int dest, int tag)
+static void cache_level_send (CacheLevel * halo, int dest, int tag,
+			      MPI_Request * r)
 {
-  MPI_Request r;
-  int n = halo ? halo->n : 0;
-  MPI_Isend (&n, 1, MPI_INT, dest, tag + 1, MPI_COMM_WORLD, &r);
-  if (n > 0)
-    MPI_Isend (halo->p, 2*halo->n, MPI_INT, dest, tag, MPI_COMM_WORLD, &r);
+  if (halo && halo->n > 0)
+    MPI_Isend (halo->p, 2*halo->n, MPI_INT, dest, tag, MPI_COMM_WORLD, r);
+  else {
+    static int zero = 0;
+    MPI_Isend (&zero, 1, MPI_INT, dest, tag, MPI_COMM_WORLD, r);
+  }
 }
 
 static void cache_level_receive (CacheLevel * halo, int src, int tag)
 {
   MPI_Status s;
-  MPI_Recv (&halo->n, 1, MPI_INT, src, tag + 1, MPI_COMM_WORLD, &s);
-  if (halo->n > 0) {
+  MPI_Probe (src, tag, MPI_COMM_WORLD, &s);
+  MPI_Get_count (&s, MPI_INT, &halo->n);
+  halo->n /= 2;
+  if (halo->n == 0)
+    MPI_Recv (&halo->n, 1, MPI_INT, src, tag, MPI_COMM_WORLD, &s);
+  else {
     halo->p = malloc (halo->n*sizeof(IndexLevel));
     MPI_Recv (halo->p, 2*halo->n, MPI_INT, src, tag, MPI_COMM_WORLD, &s);
   }
@@ -306,26 +370,28 @@ static void mpi_boundary_sync (MpiBoundary * mpi)
   SndRcv * prolongation = &mpi->prolongation;
 
   /* we send the ghost cell indices to their respective PEs */
+  MPI_Request r[restriction->nrcv*(2*depth() + 3) + 1];
+  int nr = 0;
   for (int i = 0; i < restriction->nrcv; i++) {
-    Rcv res = restriction->rcv[i], * pro = NULL;
+    Rcv * res = &restriction->rcv[i], * pro = NULL;
     /* pro is the prolongation received from the same pid */
     for (int j = 0; j < prolongation->nrcv && !pro; j++)
-      if (prolongation->rcv[j].pid == res.pid)
+      if (prolongation->rcv[j].pid == res->pid)
 	pro = &prolongation->rcv[j];
 
-    MPI_Request r;
-    MPI_Isend (&res.depth, 1, MPI_INT, res.pid, 0, MPI_COMM_WORLD, &r);
-    for (int j = 0; j <= res.depth; j++) {
+    MPI_Isend (&res->depth, 1, MPI_INT, res->pid, 0, MPI_COMM_WORLD, &r[nr++]);
+    for (int j = 0; j <= res->depth; j++) {
       // restriction buffer
-      cache_level_send (&res.halo[j], res.pid, j);
+      cache_level_send (&res->halo[j], res->pid, j + 1, &r[nr++]);
       // prolongation buffer
       if (pro && j <= pro->depth)
-	cache_level_send (&pro->halo[j], res.pid, j);
+	cache_level_send (&pro->halo[j], res->pid, j + 1, &r[nr++]);
       else
-	cache_level_send (NULL, res.pid, j);
+	cache_level_send (NULL, res->pid, j + 1, &r[nr++]);
     }
   }
-
+  assert (nr < restriction->nrcv*(2*depth() + 3) + 1);
+  
   /* we free the old buffers */
   snd_free (restriction);
   snd_free (prolongation);
@@ -341,16 +407,20 @@ static void mpi_boundary_sync (MpiBoundary * mpi)
       Rcv * pro = &prolongation->snd[prolongation->nsnd-1];
       res->pid = pro->pid = i;
       MPI_Status s;
-      MPI_Recv (&res->depth, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &s);
+      MPI_Recv (&res->depth, 1, MPI_INT, res->pid, 0, MPI_COMM_WORLD, &s);
       pro->depth = res->depth;
       pro->buf = res->buf = NULL;
       res->halo = malloc ((res->depth + 1)*sizeof (CacheLevel));
       pro->halo = malloc ((pro->depth + 1)*sizeof (CacheLevel));
       for (int j = 0; j <= res->depth; j++) {
-	cache_level_receive (&res->halo[j], res->pid, j);
-	cache_level_receive (&pro->halo[j], res->pid, j);
+	cache_level_receive (&res->halo[j], res->pid, j + 1);
+	cache_level_receive (&pro->halo[j], res->pid, j + 1);
       }
     }
+
+  /* we wait for the send requests to complete */
+  MPI_Status s[nr];
+  MPI_Waitall (nr, r, s);
   
   prof_stop();
   
@@ -379,8 +449,8 @@ void mpi_boundary_update (MpiBoundary * m)
 	      snd_rcv_append (&m->prolongation, point, cell.pid);
 	      neighbors = true;
 	    }
-      /* If a cell is in the neighborhood of an active cell, we add it
-	 to the restriction buffer. */
+      /* If a cell is in the neighborhood of an active leaf cell, we add it
+	 to the halo restriction buffer. */
       for (int k = -GHOSTS; k <= GHOSTS && !neighbors; k++)
 	for (int l = -GHOSTS; l <= GHOSTS && !neighbors; l++)
 	  if (allocated(k,l) && is_active(neighbor(k,l)))
@@ -467,9 +537,7 @@ void mpi_boundary_match (MpiBoundary * mpi)
   for (int i = 0; i < m->nsnd; i++) {
     Rcv snd = m->snd[i];
     a[i] = remote_leaves (snd.pid);
-    //    fprintf (stderr, "  remote %d %ld\n", i, a[i]->len);
     assert (a[i]->len > 0);
-    MPI_Isend (&a[i]->len, 1, MPI_INT, snd.pid, 0, MPI_COMM_WORLD, &r[i]);
     MPI_Isend (a[i]->p, a[i]->len, MPI_INT, snd.pid, 0, MPI_COMM_WORLD, &r[i]);
   }
     
@@ -479,17 +547,16 @@ void mpi_boundary_match (MpiBoundary * mpi)
     Rcv rcv = m->rcv[i];
     MPI_Status s;
     int len;
-    MPI_Recv (&len, 1, MPI_INT, rcv.pid, 0, MPI_COMM_WORLD, &s);
-    unsigned * a = malloc (len*sizeof(unsigned));
+    MPI_Probe (rcv.pid, 0, MPI_COMM_WORLD, &s);
+    MPI_Get_count (&s, MPI_INT, &len);
+    unsigned a[len];
     MPI_Recv (a, len, MPI_INT, rcv.pid, 0, MPI_COMM_WORLD, &s);
     refined += match_refine (a, NULL);
-    free (a);
   }
   
   /* check that ghost values were received OK and free send buffers */
   for (int i = 0; i < m->nsnd; i++) {
-    MPI_Status s;
-    MPI_Wait (&r[i], &s);
+    MPI_Wait (&r[i], MPI_STATUS_IGNORE);
     array_free (a[i]);
   }
   
@@ -639,7 +706,7 @@ void z_indexing (scalar index)
 
   boundary_iterate (restriction, {size}, depth());
   for (int l = depth() - 1; l >= 0; l--) {
-    foreach_coarse_level(l)
+    foreach_coarse_level(l) // fixme: we could use restriction()
       size[] = (fine(size,0,0) + fine(size,1,0) + 
 		fine(size,0,1) + fine(size,1,1));
     boundary_iterate (restriction, {size}, l);

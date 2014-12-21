@@ -77,7 +77,7 @@ void mpi_init()
   MPI_Initialized (&initialized);
   if (!initialized) {
     MPI_Init (NULL, NULL);
-    MPI_Errhandler_set (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+    MPI_Comm_set_errhandler (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
     atexit ((void (*)(void)) MPI_Finalize);
     MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);

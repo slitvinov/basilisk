@@ -862,7 +862,7 @@ void init_grid (int n)
   N = 1 << depth;
   while (depth--)
     foreach_leaf()
-      point = refine_cell (point, NULL, 0);
+      point = refine_cell (point, NULL, 0, NULL);
   update_cache();
   trash (all);
 @if _MPI

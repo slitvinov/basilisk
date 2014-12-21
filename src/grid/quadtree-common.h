@@ -230,6 +230,12 @@ int coarsen_function (int (* func) (Point p), scalar * list)
   return nc;
 }
 
+@if _MPI
+void mpi_boundary_refine (void *, scalar *);
+@else
+@define mpi_boundary_refine(a,b)
+@endif
+
 #define refine(cond, list) {				\
   int nf = 0, refined;				        \
   do {							\
@@ -240,10 +246,8 @@ int coarsen_function (int (* func) (Point p), scalar * list)
     nf += refined;					\
   } while (refined);					\
   mpi_all_reduce (nf, MPI_INT, MPI_SUM);		\
-  if (nf) {						\
-    void mpi_boundary_refine (void *, scalar *);	\
+  if (nf)						\
     mpi_boundary_refine (NULL, list);			\
-  }							\
 }
 
 static void halo_restriction (scalar * def, scalar * listc, int l)
