@@ -38,6 +38,7 @@
 @define pid() omp_get_thread_num()
 @define npe() omp_get_num_threads()
 @define mpi_all_reduce(v,type,op)
+@define mpi_all_reduce_double(v,op)
 
 @elif _MPI
 
@@ -56,6 +57,7 @@ static bool in_prof = false;
 
 @if FAKE_MPI
 @define mpi_all_reduce(v,type,op)
+@define mpi_all_reduce_double(v,op)
 @else
 @def mpi_all_reduce(v,type,op) {
   prof_start();
@@ -65,6 +67,15 @@ static bool in_prof = false;
   prof_stop();
 }
 @
+@def mpi_all_reduce_double(v,op) {
+  prof_start();
+  double global, tmp = v;
+  MPI_Allreduce (&tmp, &global, 1, MPI_DOUBLE, op, MPI_COMM_WORLD);
+  v = global;
+  prof_stop();
+}
+@
+
 @endif
 
 static int mpi_rank, mpi_npe;
@@ -97,6 +108,7 @@ void mpi_init()
 @define pid() 0
 @define npe() 1
 @define mpi_all_reduce(v,type,op)
+@define mpi_all_reduce_double(v,op)
 
 @endif
 

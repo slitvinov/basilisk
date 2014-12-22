@@ -840,7 +840,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 		   reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
 		   reductvar[i], reductvar[i], reductvar[i]);
 	fprintf (yyout,
-		 "mpi_all_reduce (%s, MPI_DOUBLE, %s); ",
+		 "mpi_all_reduce_double (%s, %s); ",
 		 reductvar[i], 
 		 !strcmp(reduction[i], "min") ? "MPI_MIN" : 
 		 !strcmp(reduction[i], "max") ? "MPI_MAX" : 
