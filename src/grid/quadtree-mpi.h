@@ -85,73 +85,48 @@ static void snd_rcv_append (SndRcv * m, Point point, int pid)
   rcv_append (point, &m->rcv[i]);
 }
 
-static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
+@def foreach_send(list, l) {
+  prof_start();
+  SndRcv * _m = &((MpiBoundary *)mpi_boundary)->restriction;
+  assert (!_m->children);
+  
+  // fixme: 4 should be 2**dimension
+  int _len = list_len (list)*(_m->children ? 4 : 1), _l = l;
+  scalar * _list = list;
+  
+  /* send ghost values */
+  for (int _i = 0; _i < _m->nsnd; _i++) {
+    Rcv * _snd = &_m->snd[_i];
+    if (_l <= _snd->depth && _snd->halo[_l].n > 0) {
+      assert (!_snd->buf);
+      _snd->buf = malloc (sizeof (double)*_snd->halo[_l].n*_len);
+      double * _b = _snd->buf;
+      foreach_cache_level(_snd->halo[_l], _l,) {
+@
+@def end_foreach_send()
+        for (scalar s = *_list, *_i = _list; *((scalar *)&s) >= 0; s = *++_i)
+	  *_b++ = val(s,0,0);
+      } end_foreach_cache_level();
+      MPI_Isend (_snd->buf, _snd->halo[_l].n*_len, MPI_DOUBLE, _snd->pid, _l, 
+		 MPI_COMM_WORLD, &_snd->r);
+    }
+  }
+  prof_stop();
+}
+@
+
+static Boundary * mpi_boundary = NULL;
+
+static void snd_rcv_receive (SndRcv * m, scalar * list, int l)
 {
   prof_start();
+
+  if (!m)
+    m = &((MpiBoundary *)mpi_boundary)->restriction;
   
   // fixme: 4 should be 2**dimension
   int len = list_len (list)*(m->children ? 4 : 1); 
-
-  /* send ghost values */
-  for (int i = 0; i < m->nsnd; i++) {
-    Rcv * snd = &m->snd[i];
-    if (l <= snd->depth && snd->halo[l].n > 0) {
-      rcv_free_buf (snd);
-      snd->buf = malloc (sizeof (double)*snd->halo[l].n*len);
-      double * b = snd->buf;
-      if (m->children)
-	foreach_cache_level(snd->halo[l], l,)
-	  foreach_child() {
-	    assert (allocated(0,0));
-	    for (scalar s in list)
-	      *b++ = s[];
-	  }
-      else
-	foreach_cache_level(snd->halo[l], l,)
-	  for (scalar s in list)
-	    *b++ = s[];
-#if DEBUG
-      fprintf (stderr, "sending %d doubles to %d level %d\n",
-	       snd->halo[l].n*len, snd->pid, l);
-      fflush (stderr);
-#endif
-      MPI_Isend (snd->buf, snd->halo[l].n*len, MPI_DOUBLE, snd->pid, l, 
-		 MPI_COMM_WORLD, &snd->r);
-    }
-  }
-
-#if 0
-  /* receive ghost values */
-  for (int i = 0; i < m->nrcv; i++) {
-    Rcv * rcv = &m->rcv[i];
-    if (l <= rcv->depth && rcv->halo[l].n > 0) {
-      rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
-      fprintf (stderr, "receiving %d doubles from %d\n",
-	       rcv->halo[l].n*len, rcv->pid);
-      fflush (stderr);
-      MPI_Irecv (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l, 
-		 MPI_COMM_WORLD, &rcv->r);
-    }
-  }
-  for (int i = 0; i < m->nrcv; i++) {
-    Rcv * rcv = &m->rcv[i];
-    if (l <= rcv->depth && rcv->halo[l].n > 0) {
-      MPI_Wait (&rcv->r, MPI_STATUS_IGNORE);
-      double * b = rcv->buf;
-      if (m->children)
-	foreach_cache_level(rcv->halo[l], l,)
-	  foreach_child()
-	    for (scalar s in list)
-	      s[] = *b++;
-      else
-	foreach_cache_level(rcv->halo[l], l,)
-	  for (scalar s in list)
-	    s[] = *b++;
-      free (rcv->buf);
-      rcv->buf = NULL;
-    }
-  }
-#else
+    
   /* receive ghost values */
   for (int i = 0; i < m->nrcv; i++) {
     Rcv * rcv = &m->rcv[i];
@@ -176,7 +151,6 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
 	    s[] = *b++;
     }
   }
-#endif
 
   /* wait for completion of send requests */
   for (int i = 0; i < m->nsnd; i++) {
@@ -185,12 +159,47 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
       rcv_free_buf (snd);
   }
 
+  prof_stop();
+}
+
+static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
+{
+  prof_start();
+  
+  // fixme: 4 should be 2**dimension
+  int len = list_len (list)*(m->children ? 4 : 1); 
+
+  /* send ghost values */
+  for (int i = 0; i < m->nsnd; i++) {
+    Rcv * snd = &m->snd[i];
+    if (l <= snd->depth && snd->halo[l].n > 0) {
+      assert (!snd->buf);
+      snd->buf = malloc (sizeof (double)*snd->halo[l].n*len);
+      double * b = snd->buf;
+      if (m->children)
+	foreach_cache_level(snd->halo[l], l,)
+	  foreach_child() {
+	    assert (allocated(0,0));
+	    for (scalar s in list)
+	      *b++ = s[];
+	  }
+      else
+	foreach_cache_level(snd->halo[l], l,)
+	  for (scalar s in list)
+	    *b++ = s[];
 #if DEBUG
-  fprintf (stderr, "done for level %d\n", l);
-  fflush (stderr);
+      fprintf (stderr, "sending %d doubles to %d level %d\n",
+	       snd->halo[l].n*len, snd->pid, l);
+      fflush (stderr);
 #endif
+      MPI_Isend (snd->buf, snd->halo[l].n*len, MPI_DOUBLE, snd->pid, l, 
+		 MPI_COMM_WORLD, &snd->r);
+    }
+  }
   
   prof_stop();
+
+  snd_rcv_receive (m, list, l);
 }
 
 void snd_rcv_print (SndRcv * m, FILE * fp)
@@ -273,8 +282,6 @@ static void mpi_boundary_halo_prolongation (const Boundary * b,
     snd_rcv_sync (&m->prolongation, list, l - 1);
   }
 }
-
-static Boundary * mpi_boundary = NULL;
 
 void mpi_boundary_new()
 {
