@@ -1,3 +1,5 @@
+#include <sys/resource.h>
+
 // Default parameters
 // maximum timestep
 double DT = 1e10;
@@ -59,9 +61,10 @@ typedef struct {
   double avg;   // Average MPI time (sec)
   double max;   // Maximum MPI time (sec)
   size_t tnc;   // Number of grid points
+  long   mem;   // Maximum resident memory (kB)
 } timing;
 
-timing timer_timing (timer t, int i, size_t tnc)
+timing timer_timing (timer t, int i, size_t tnc, double * mpi)
 {
   timing s;
 @if _MPI
@@ -70,18 +73,26 @@ timing timer_timing (timer t, int i, size_t tnc)
   clock_t end = clock();
   s.cpu = ((double) (end - t.c))/CLOCKS_PER_SEC;
   s.real = timer_elapsed (t);
-  if (tnc == 0)
+  if (tnc == 0) {
     foreach(reduction(+:tnc)) tnc++;
-  s.tnc = tnc;
-  tnc *= i;
+    s.tnc = tnc;
+    tnc *= i;
+  }
+  struct rusage usage;
+  getrusage (RUSAGE_SELF, &usage);
+  s.mem = usage.ru_maxrss;
 @if _MPI
+  if (mpi)
+    MPI_Allgather (&s.avg, 1, MPI_DOUBLE, mpi, 1, MPI_DOUBLE, MPI_COMM_WORLD);
   s.max = s.min = s.avg;
   mpi_all_reduce (s.max, MPI_DOUBLE, MPI_MAX);
   mpi_all_reduce (s.min, MPI_DOUBLE, MPI_MIN);
   mpi_all_reduce (s.avg, MPI_DOUBLE, MPI_SUM);
   mpi_all_reduce (s.real, MPI_DOUBLE, MPI_SUM);
+  mpi_all_reduce (s.mem, MPI_LONG, MPI_SUM);
   s.real /= npe();
   s.avg /= npe();
+  s.mem /= npe();
 @else
   s.min = s.max = s.avg = 0.;
 @endif
@@ -91,13 +102,17 @@ timing timer_timing (timer t, int i, size_t tnc)
 
 void timer_print (timer t, int i, size_t tnc)
 {
-  timing s = timer_timing (t, i, tnc);
+  timing s = timer_timing (t, i, tnc, NULL);
   printf ("# " GRIDNAME 
 	  ", %d steps, %g CPU, %.4g real, %.3g points.step/s, %d var\n",
 	  i, s.cpu, s.real, s.speed, (int) (datasize/sizeof(double)));
 @if _MPI
-  printf ("# %d procs, MPI: min %.2g avg %.2g max %.2g %.2g%%\n",
-	  npe(), s.min, s.avg, s.max, 100.*s.avg/s.real);
+  printf ("# %d procs, MPI: min %.2g (%.2g%%) "
+	  "avg %.2g (%.2g%%) max %.2g (%.2g%%)\n",
+	  npe(),
+	  s.min, 100.*s.min/s.real,
+	  s.avg, 100.*s.avg/s.real,
+	  s.max, 100.*s.max/s.real);
 @endif
 }
 
