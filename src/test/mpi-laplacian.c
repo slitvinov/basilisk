@@ -23,6 +23,7 @@ static void mpi_print (timer t, int i, size_t tnc,
   for (int j = 0; j < npe(); j++)
     printf (" %g", mpi[j]/i);
   printf ("\n");
+  trace_event (name);
 }
 
 int main (int argc, char * argv[])
@@ -58,7 +59,7 @@ int main (int argc, char * argv[])
 #if 0
     boundary ({a});
 #else
-    prof_start();
+    prof_start ("barrier");
     MPI_Barrier (MPI_COMM_WORLD);
     prof_stop();
 #endif

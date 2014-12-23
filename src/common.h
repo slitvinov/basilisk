@@ -2,6 +2,7 @@
 @include <stdio.h>
 @include <stddef.h>
 @include <stdbool.h>
+@include <stdarg.h>
 @include <string.h>
 @include <float.h>
 @include <limits.h>
@@ -45,14 +46,35 @@
 @include <mpi.h>
 @define OMP(x)
 
+@if TRACE
+   FILE * tracefp = NULL;
+   static double tracestart = 0.;
+   static void trace (const char * format, ...) {
+     va_list ap;
+     va_start (ap, format);
+     vfprintf (tracefp, format, ap);
+     va_end (ap);
+   }
+@else
+@  define trace(...)
+@endif
+
 static bool in_prof = false;
-@def prof_start()
+@def prof_start(name)
   assert (!in_prof); in_prof = true;
-  double prof_start = MPI_Wtime()
+  double prof_start = MPI_Wtime();
+  trace ("10 %.6f State Thread%d \"%s\"\n",
+	 prof_start - tracestart, pid(), name)
 @
 @def prof_stop()
   assert (in_prof); in_prof = false;
-  mpi_time += MPI_Wtime() - prof_start
+  double _prof = MPI_Wtime();
+  mpi_time += _prof - prof_start;
+  trace ("10 %.6f State Thread%d compute\n", _prof - tracestart, pid())
+@
+@def trace_event(name)
+  trace ("11 %.6f Event Thread%d \"%s\"\n",
+	 MPI_Wtime() - tracestart, pid(), name)
 @
 
 @if FAKE_MPI
@@ -60,7 +82,7 @@ static bool in_prof = false;
 @define mpi_all_reduce_double(v,op)
 @else
 @def mpi_all_reduce(v,type,op) {
-  prof_start();
+  prof_start ("mpi_all_reduce");
   union { int a; float b; double c;} global;
   MPI_Allreduce (&(v), &global, 1, type, op, MPI_COMM_WORLD);
   memcpy (&(v), &global, sizeof (v));
@@ -68,7 +90,7 @@ static bool in_prof = false;
 }
 @
 @def mpi_all_reduce_double(v,op) {
-  prof_start();
+  prof_start ("mpi_all_reduce");
   double global, tmp = v;
   MPI_Allreduce (&tmp, &global, 1, MPI_DOUBLE, op, MPI_COMM_WORLD);
   v = global;
@@ -82,6 +104,18 @@ static int mpi_rank, mpi_npe;
 @define pid() mpi_rank
 @define npe() mpi_npe
 
+static void finalize (void)
+{
+@if TRACE
+  double t = MPI_Wtime() - tracestart;
+  fprintf (tracefp, "8 %.8f Thread%d Thread\n", t, pid());
+  if (pid() == 0)
+    fprintf (tracefp, "8 %.8f C_Prog Prog\n", t);
+  fclose (tracefp);
+@endif
+  MPI_Finalize();
+}
+
 void mpi_init()
 {
   int initialized;
@@ -89,16 +123,32 @@ void mpi_init()
   if (!initialized) {
     MPI_Init (NULL, NULL);
     MPI_Comm_set_errhandler (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
-    atexit ((void (*)(void)) MPI_Finalize);
+    atexit (finalize);
     MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
+    char name[80];
     if (mpi_rank > 0) {
-      char name[80];
       sprintf (name, "out-%d", mpi_rank);
       stdout = freopen (name, "w", stdout);
       sprintf (name, "log-%d", mpi_rank);
       stderr = freopen (name, "w", stderr);
     }
+@if TRACE
+    sprintf (name, "trace-%d", mpi_rank);
+    tracefp = fopen (name, "w");
+    if (pid() == 0) {
+      #include "paje.h"
+    }
+    fprintf (tracefp, "7 0 Thread%d Thread C_Prog \"Thread %d\"\n",
+	     mpi_rank, mpi_rank);
+    fprintf (tracefp, "10 0 State Thread%d compute\n", mpi_rank);
+    MPI_Barrier (MPI_COMM_WORLD);
+    tracestart = MPI_Wtime();
+    double global;
+    MPI_Allreduce (&tracestart, &global, 1,
+		   MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    tracestart = global;
+@endif
   }
 }
 

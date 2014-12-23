@@ -86,7 +86,7 @@ static void snd_rcv_append (SndRcv * m, Point point, int pid)
 }
 
 @def foreach_send(list, l) {
-  prof_start();
+  prof_start ("foreach_send");
   SndRcv * _m = &((MpiBoundary *)mpi_boundary)->restriction;
   assert (!_m->children);
   
@@ -119,7 +119,7 @@ static Boundary * mpi_boundary = NULL;
 
 static void snd_rcv_receive (SndRcv * m, scalar * list, int l)
 {
-  prof_start();
+  prof_start ("snd_rcv_receive");
 
   if (!m)
     m = &((MpiBoundary *)mpi_boundary)->restriction;
@@ -164,7 +164,7 @@ static void snd_rcv_receive (SndRcv * m, scalar * list, int l)
 
 static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
 {
-  prof_start();
+  prof_start ("snd_rcv_sync");
   
   // fixme: 4 should be 2**dimension
   int len = list_len (list)*(m->children ? 4 : 1); 
@@ -371,7 +371,7 @@ void debug_mpi()
 
 static void mpi_boundary_sync (MpiBoundary * mpi)
 {
-  prof_start();
+  prof_start ("mpi_boundary_sync");
 
   SndRcv * restriction = &mpi->restriction;
   SndRcv * prolongation = &mpi->prolongation;
@@ -438,7 +438,7 @@ static void mpi_boundary_sync (MpiBoundary * mpi)
 
 void mpi_boundary_update (MpiBoundary * m)
 {
-  prof_start();
+  prof_start ("mpi_boundary_update");
 
   rcv_free (&m->restriction);
   rcv_free (&m->prolongation);
@@ -535,7 +535,7 @@ int match_refine (unsigned * a, scalar * list)
 
 void mpi_boundary_match (MpiBoundary * mpi)
 {
-  prof_start();
+  prof_start ("mpi_boundary_match");
   
   /* Send halo mesh for each neighboring process. */
   SndRcv * m = &mpi->restriction;
@@ -586,7 +586,7 @@ void mpi_boundary_refine (void * p, scalar * list)
 
 void mpi_partitioning()
 {
-  prof_start();
+  prof_start ("mpi_partitioning");
 
   MpiBoundary * m = (MpiBoundary *) mpi_boundary;
   int nf = 0;
