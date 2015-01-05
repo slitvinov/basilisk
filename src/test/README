@@ -27,6 +27,7 @@ Note that only the documented test cases appear in the list below
 * [Solitary wave overtopping a seawall](seawall.c)
 * [Sinusoidal wave propagation over a bar](bar.c)
 * [Runup of a solitary wave on a conical island](conical.c)
+* [Impose an inflow at boundaries](multiriverinflow.c)
 
 ## Volume-Of-Fluid
 
