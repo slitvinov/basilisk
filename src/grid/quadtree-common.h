@@ -222,7 +222,7 @@ int coarsen_function (int (* func) (Point p), scalar * list)
 	  continue;
 	else if (level == l) {
 	  if ((*func) (point) && coarsen_cell (point, list))
-	    nc1++;
+	    nc++;
 	  continue;
 	}
       }
@@ -248,22 +248,6 @@ void mpi_boundary_refine (void *, scalar *);
   mpi_all_reduce (nf, MPI_INT, MPI_SUM);		\
   if (nf)						\
     mpi_boundary_refine (NULL, list);			\
-}
-
-static void halo_restriction (scalar * def, scalar * listc, int l)
-{
-  scalar * list = list_concat (def, listc);
-  boundary_iterate (halo_restriction, list, l);
-  for (l--; l >= 0; l--) {
-    foreach_halo (restriction, l) {
-      for (scalar s in def)
-	s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
-      for (scalar s in listc)
-	s.coarsen (point, s);
-    }
-    boundary_iterate (halo_restriction, list, l);
-  }
-  free (list);
 }
 
 static void halo_restriction_flux (vector * list)
@@ -383,7 +367,18 @@ static void quadtree_boundary_level (scalar * list, int l)
     }
 
   if (listdef || listc) {
-    halo_restriction (listdef, listc, l);
+    scalar * list = list_concat (listdef, listc);
+    boundary_iterate (halo_restriction, list, l);
+    for (int i = l - 1; i >= 0; i--) {
+      foreach_halo (restriction, i) {
+	for (scalar s in listdef)
+	  s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+	for (scalar s in listc)
+	  s.coarsen (point, s);
+      }
+      boundary_iterate (halo_restriction, list, i);
+    }
+    free (list);
     free (listdef);
     free (listc);
   }

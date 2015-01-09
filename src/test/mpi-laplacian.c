@@ -15,6 +15,7 @@ scalar a[], b[];
 static void mpi_print (timer t, int i, size_t tnc,
 		       const char * name)
 {
+  trace_event (name);
   double mpi[npe()];
   timing s = timer_timing (t, i, tnc, mpi);
   printf ("%d %g %g %g %s %g %g %g %.2g%% %ld %ld ",
@@ -23,6 +24,7 @@ static void mpi_print (timer t, int i, size_t tnc,
   for (int j = 0; j < npe(); j++)
     printf (" %g", mpi[j]/i);
   printf ("\n");
+  MPI_Barrier (MPI_COMM_WORLD);
   trace_event (name);
 }
 
@@ -43,7 +45,10 @@ int main (int argc, char * argv[])
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
   refine (level < maxlevel, NULL);
-  mpi_print (t, 1, 0, "refine");
+  size_t tnc = 0;
+  foreach(reduction(+:tnc))
+    tnc++;
+  mpi_print (t, 1, tnc, "refine");
 
   int nloops, i;
 
@@ -52,10 +57,10 @@ int main (int argc, char * argv[])
 
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
-  i = nloops = npe();
+  i = nloops = 1; // npe();
   while (i--) {
     foreach()
-      a[] = sin(pi*x)*sin(pi*y);
+      a[] = cos(pi*x)*cos(pi*y);
 #if 0
     boundary ({a});
 #else
@@ -64,7 +69,7 @@ int main (int argc, char * argv[])
     prof_stop();
 #endif
   }
-  mpi_print (t, nloops, 0, "cos");
+  mpi_print (t, nloops, tnc, "cos");
   boundary ({a});
 
   /**
@@ -80,37 +85,37 @@ int main (int argc, char * argv[])
 
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
-  i = nloops = npe();
+  i = nloops = 1; // npe();
   while (i--) {
     foreach()
       b[] = (a[0,1] + a[1,0] + a[0,-1] + a[-1,0] - 4.*a[])/sq(Delta);
     boundary ({b});
   }
-  mpi_print (t, nloops, 0, "laplacian");
-    
+  mpi_print (t, nloops, tnc, "laplacian");
+  
   /**
      Something simpler: the sum of `a` over the entire mesh. */
 
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
-  i = nloops = npe();
+  i = nloops = 1; // npe();
   double sum = 0.;
   while (i--) {
     sum = 0.;
     foreach(reduction(+:sum))
       sum += b[];
   }
-  mpi_print (t, nloops, 0, "sum");
+  mpi_print (t, nloops, tnc, "sum");
   fprintf (stderr, "sum: %g\n", sum);
 
   /**
      The restriction operator. */
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
-  i = nloops = npe();
+  i = nloops = 1; // npe();
   while (i--)
     restriction ({b});
-  mpi_print (t, nloops, 0, "restriction");
+  mpi_print (t, nloops, tnc, "restriction");
 
   /**
      And finally the Poisson solver. */
@@ -121,8 +126,15 @@ int main (int argc, char * argv[])
   TOLERANCE = HUGE;
   while (i--)
     poisson (a, b);
-  mpi_print (t, nloops, 0, "poisson");
+  mpi_print (t, nloops, tnc, "poisson");
 
+  scalar e[];
+  foreach()
+    e[] = a[] - cos(pi*x)*cos(pi*y);
+  fprintf (stderr, "error: %g\n", normf(e).max);
+  assert (normf(e).max < 1e-10);
+  //  output_ppm (e, file = "error.png");
+  
   int n = 0;
   foreach()
     n++;
@@ -130,8 +142,6 @@ int main (int argc, char * argv[])
   mpi_all_reduce (nmin, MPI_INT, MPI_MIN);
   mpi_all_reduce (nmax, MPI_INT, MPI_MAX);
   fprintf (stderr, "balance %d %d\n", nmin, nmax);
-  
-  free_grid();
 }
 
 /**

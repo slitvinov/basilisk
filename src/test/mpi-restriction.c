@@ -34,7 +34,7 @@ int main (int argc, char * argv[])
 	for (int j = -1; j <= 1; j++)
 	  assert (s1[i,j] == 2.);
   }
-    
+  
   // check restriction 
   foreach_fine_to_coarse() {
     fprintf (stderr, "res %g %g %g %d\n", x, y, s[], level);
