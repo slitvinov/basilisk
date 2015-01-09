@@ -1,199 +1,160 @@
 /**
-# Using discharge function
+# Flow rates for multiple rivers
 
 In this example, we use the discharge() function in order to impose
-different inflows on different rivers situated on the same border. We
-include the Saint venant solver and the file discharge.h . We also
-define River1[] and River2[] to define the two differents river beds.  */
+different flow rates on different rivers situated on the same boundary of
+a Saint-Venant simulation. */
 
-/**  
-# Declarations ... 
-*/
+#include "grid/cartesian.h"
 #include "saint-venant.h"
 #include "discharge.h"
 
+/**
+The domain is 10 metres squared, centered on the origin. Time is in
+seconds. */
+
 #define LEVEL 7
 
-double pause,a1,a2; 
-scalar River1[],River2[];
-int imax;
-
-/**
-# Parameters
-
-Definition of parameters and calling of the saint venant subroutine run().
-*/
 int main()
-{  
+{
   L0 = 10.;
-  X0 = -L0/2.;
-  Y0 = -L0/2.;
+  X0 = - L0/2.;
+  Y0 = - L0/2.;
   G = 9.81;
-  N = 1 << LEVEL; 
-  pause = 0.0;
-  imax=800;
+  N = 1 << LEVEL;
   run();
 }
 
 /**
-# Initial conditions
+## Initial conditions
 
-We define a topography with two different river beds.  We also define the
-scalars River1 and River2 which are equal to 1 on their own bed and to
-zero otherwise. We must add a little volume of water near the boundary
-in order to impose a time scale to the solver */
+We chose a reasonably complicated river bed with two "valleys" (see
+Figure below).
+
+We allocate a new field *river* which is set to different values (1
+and 2) for each of the rivers. */
+
+scalar river[];
+
 event init (i = 0)
 {
-  double dx=L0/((double)N);
-  foreach(){
-    zb[] = 0.05*x*x*x*x-x*x+2+0.2*(y+Y0);
-    u.x[]=0;
-    u.y[]=0;
-    h[]= ( y>=Y0+L0-dx ) ? max(-1-zb[],0) : 0;
 
-    // The river n°1 is on the left of our domain (x<0)
-    River1[]= x<0 ? 1:0;
-    // And the river 2 on the right (x>0)
-    River2[]= x>0 ? 1:0;
+  /**
+  We start with a dry riverbed, so that the problem does not have a
+  natural timescale the Saint-Venant solver can use. We set a maximum
+  timestep to set this timescale. */
+  
+  DT = 1e-2;
+
+  foreach() {
+    zb[] = 0.05*pow(x,4) - x*x + 2. + 0.2*(y + Y0);
+    river[] = x < 0 ? 1 : 2;
   }
-  boundary(all);
+  boundary ({zb, river});
 }
 
 
 /**
-# Boundary conditions :
+## Boundary conditions
 
-We impose no condition on the bottom boundary (free outflow
-condition). At the top boundary, we impose a Neumann's condition equal
-to zero on the y component of the velocity and we fix the x component
-of the velocity to zero. The condition on the water height will be
-fixed just after by the discharge() function.  */
+We impose inflow/outflow on both the top and bottom boundary. In
+addition, the tangential velocity on the top boundary *u.x* is set
+to zero. */
 
-h[bottom]=h[];
-u.x[bottom]=u.x[];
-u.y[bottom]=u.y[];
+u.y[top] = neumann(0);
+u.x[top] = dirichlet(0);
 
-u.y[top]= neumann(0);
-u.x[top]= dirichlet(0);
+u.y[bottom] = neumann(0);
 
 /**
-# Inflow
+To impose a given flow rate for the two rivers on the top boundary, we
+compute the elevation $\eta$ of the water surface necessary to match
+this flow rate. This gives two elevation values *eta1* and *eta2*, one
+for each river. The flow rates are set to 4 and 2 m^3^/sec for river 1
+and 2 respectively. */
 
-This event calculates the imposed height on each river to have the
-good inflow. The inflow of the river n°1 starts to zero and linearly
-increases to reach a value of 4 cumsec (m³/s) at 0.2 seconds. The
-inflow of the river n°2 starts to zero and linearly increases to reach
-a value of 2 cumsec at 0.2 seconds */
+double eta1, eta2;
 
-event Discharge (i++){
-  double Q1 = min ( 4 * t / 0.2, 4 );
-  double Q2 = min ( 2 * t / 0.2, 2 );
+event inflow (i++) {
+  eta1 = discharge (4, top, river, 1);
+  eta2 = discharge (2, top, river, 2);
 
-  a1 = discharge ( Q1, top, River1 );
-  a2 = discharge ( Q2, top, River2 );
-
-  h[top] = dirichlet ( max ( a1*River1[] + a2*River2[] - zb[], 0 ) );
+  /**
+  Once we have the required values for the water surface elevations at
+  the top boundary of both riverbeds, we impose them on both $h$
+  and $\eta=h+z_b$. */
+  
+  h[top] = max ((river[] == 1 ? eta1 : eta2) - zb[], 0);
+  eta[top] = max ((river[] == 1 ? eta1 : eta2) - zb[], 0) + zb[];
 }
 
 /**
-# Volume output  
+## Outputs
 
-We write the total volume of fluids, the volume of the first river and
-the one in the second in the error file (log) */
+We compute the evolution of the water volumes in both riverbeds. */
 
-event Volume (i++){
-  double volumetot = 0, volume1 = 0 , volume2 = 0;
-  double dx = L0/((double)N);  
-  foreach(){
-    if(x<0) volume1 += h[]*dx*dx;
-    else volume2 += h[]*dx*dx;
-    volumetot += h[]*dx*dx;
+event volume (i += 10) {
+  double volume1 = 0, volume2 = 0;
+  foreach() {
+    double dv = h[]*sq(Delta);
+    if (x < 0) volume1 += dv;
+    else volume2 += dv;
   }
-  fprintf(stderr,"%g  %g  %g  %g \n",t,volumetot,volume1,volume2);
+  fprintf (stderr, "%g %g %g %g %g\n",
+	   t, volume1, volume2, eta1, eta2);
 }
 
 /**
-# Gnuplot output
-*/
-event initplot(i = 0) {
-  printf("set view 80,05\n"
-	 "set xlabel 'X'\n"
-	 "set ylabel 'Y'\n"
-	 "set zlabel 'Hauteur'\n"
-	 "set hidden3d; unset ytics ; unset xtics\n");
-}
-event plot (i<=imax;i+=10 ) {
-  double dx=2.*L0/pow(2.,LEVEL),dy=dx;
-  printf("set title ' --- t= %.3g '\n"
-	 "sp[%g:%g][%g:%g][-5:5]  '-' u 1:2:($3+$4-.05) t'free surface' w l lt 3,'' u 1:2:4 t'topo' w l lt 2\n",t,X0,-X0,Y0,-Y0);
-  for(double x=X0;  x<=X0+L0;x+=dx)
-    {for(double y=Y0;y<=Y0+L0;y+=dy)
-	{ 
-	  printf (" %g %g %g  %g \n", x, y, interpolate (h, x, y),  interpolate (zb, x, y) );}
-      printf ("\n");
-    } 
-  printf("e\n"
-	 "pause %.5lf \n\n",pause);
+We use gnuplot to produce an animation of the water surface. */
+
+event init_animation (i = 0) {
+  printf ("set view 80,05\n"
+	  "set xlabel 'x'\n"
+	  "set ylabel 'y'\n"
+	  "set zlabel 'z'\n"
+	  "set hidden3d; unset ytics ; unset xtics\n");
 }
 
+event animation (t <= 1; i += 10) {
+  double dx = 2.*L0/N, dy = dx;
+  printf ("set title 't = %.3f'\n"
+	  "sp [%g:%g][%g:%g][-5:5] '-'"
+	  " u 1:2:($3+$4-.05) t 'free surface' w l lt 3,"
+	  " '' u 1:2:4 t 'topography' w l lt 2\n",
+	  t, X0, -X0, Y0, -Y0);
+  for (double x = X0;  x <= X0 + L0; x += dx) {
+    for (double y = Y0; y <= Y0 + L0; y += dy)
+      printf ("%g %g %g %g\n",
+	      x, y, interpolate (h, x, y),  interpolate (zb, x, y));
+    putchar ('\n');
+  }
+  printf ("e\n"
+	  "pause %.5lf \n\n", 0.);
+}
 
 /**
-# Results 
-~~~gnuplot Movie
+## Results
+
+~~~gnuplot Evolution of water volumes in both rivers
+set key top left
+set xlabel 'Time'
+set ylabel 'Volume'
+f(x)=a*x+b
+fit [0.2:] f(x) './log' u 1:2 via a,b
+g(x)=c*x+d
+fit [0.2:] g(x) './log' u 1:3 via c,d
+title1=sprintf("f(x) = %1.3f*t + %1.3f", a, b)
+title2=sprintf("g(x) = %1.3f*t + %1.3f", c, d)
+plot './log' u 1:2 t 'river 1', \
+     f(x) t title1, \
+     './log' u 1:3 t 'river 2', \
+     g(x) t title2
+~~~
+
+~~~gnuplot Animation of the free surface.
+reset
 set term gif animate
-set output 'Movie.gif'
-load './out';
-
+set output 'movie.gif'
+load './out'
 ~~~
-
-~~~gnuplot Total volume of fluid
-set title 'Total'
-set xlabel 'T' 
-set ylabel 'Volume' 
-set xtics; set ytics
-set terminal png
-set output 'total.png'
- 
-f(x)=a*x+b 
-fit [0.2:] f(x) './log' u 1:2 via a,b 
-tit=sprintf("best fit with a = %1.3f",a) 
-plot './log' u 1:2 w p pt 7 ps 0.2 t 'tot vol', \
-     f(x) t tit;
-
-~~~
-
-~~~gnuplot River n°1
-set title 'River 1'
-set xlabel 'T'
-set ylabel 'Volume'
-set xtics; set ytics
-set terminal png
-set output 'river1.png'
-
-f(x)=a*x+b 
-fit [0.2:] f(x) './log' u 1:3 via a,b
-tit=sprintf("best fit with a = %1.3f",a)
-plot './log' u 1:3 w p pt 7 ps 0.2 t 'river1 vol', \
-    f(x) t tit;
-
-~~~
-
-
-
-~~~gnuplot River n°2
-set title 'River 2'
-set xlabel 'T'
-set ylabel 'Volume'
-set xtics; set ytics;
-set terminal png
-set output 'river2.png'
-
-f(x)=a*x+b 
-fit [0.2:] f(x) './log' u 1:4 via a,b
-tit=sprintf("best fit with a = %1.3f",a)
-plot './log' u 1:4 w p pt 7 ps 0.2 t 'river2 vol', \
-     f(x) t tit;
-
-~~~
-
 */
