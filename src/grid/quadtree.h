@@ -22,7 +22,8 @@ enum {
   leaf    = 1 << 1,
   refined = 1 << 2,
   halo    = 1 << 3,
-  user    = 4,
+  border  = 1 << 4,
+  user    = 5,
 
   face_x = 1 << 0,
   face_y = 1 << 1
@@ -34,6 +35,7 @@ enum {
 #define is_refined(cell) (is_active(cell) && !is_leaf(cell))
 #define is_corner(cell)  (stage == _CORNER)
 #define is_coarse()      (!is_leaf(cell))
+#define is_border(cell)  ((cell).flags & border)
 
 // Caches
 
@@ -600,6 +602,16 @@ static void alloc_children (Quadtree * q, int k, int l)
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++)
       child(k,l).pid = cell.pid;
+  if (is_border(cell)) {
+    bool neighbors = false;
+    for (int k = -GHOSTS/2; k <= GHOSTS/2 && !neighbors; k++)
+      for (int l = -GHOSTS/2; l <= GHOSTS/2 && !neighbors; l++)
+	neighbors = (neighbor(k,l).pid != cell.pid);
+    if (neighbors)
+      for (int k = 0; k < 2; k++)
+	for (int l = 0; l < 2; l++)
+	  child(k,l).flags |= border;
+  }
 @endif
   
 @if TRASH

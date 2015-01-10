@@ -4,7 +4,7 @@ typedef struct {
   CacheLevel * halo; // ghost cell indices for each level
   int depth;         // the maximum number of levels
   int pid;           // the rank of the PE  
-  double * buf;      // MPI buffer
+  void * buf;        // MPI buffer
   MPI_Request r;     // MPI request 
 } Rcv;
 
@@ -375,6 +375,18 @@ void debug_mpi()
   fp = fopen (name, "w");
   snd_rcv_print (&mpi->prolongation, fp);
   fclose (fp);
+
+  sprintf (name, "border-%d", pid());
+  fp = fopen (name, "w");
+  foreach_cell() {
+    if (is_border(cell))
+      fprintf (fp, "%g %g %d\n", x, y, level);
+    else
+      continue;
+    if (is_leaf(cell))
+      continue;
+  }
+  fclose (fp);
 }
 
 static void snd_rcv_sync_buffers (SndRcv * snd)
@@ -487,8 +499,8 @@ void mpi_boundary_update (MpiBoundary * m)
 Array * remote_leaves (unsigned pid)
 {
   static const int remote = 1 << user;
-  foreach_cell_post (is_active (cell))
-    if (is_active(cell)) {
+  foreach_cell_post (is_border (cell))
+    if (is_border(cell)) {
       if (is_leaf(cell)) {
 	bool neighbors = false;
 	if (is_leaf(cell))
@@ -542,7 +554,7 @@ static void mpi_boundary_match (MpiBoundary * mpi)
   prof_start ("mpi_boundary_match");
   
   /* Send halo mesh for each neighboring process. */
-  SndRcv * m = &mpi->restriction;
+  SndRcv * m = &mpi->prolongation;
   Array * a[m->nsnd];
   MPI_Request r[m->nsnd];
   for (int i = 0; i < m->nsnd; i++) {
@@ -622,20 +634,27 @@ void mpi_partitioning()
 	cell.flags &= ~active;
     }
   
-  /* We update the number of neighbors only for non-active 
-     (i.e. remote) cells. */
   ((Quadtree *)grid)->dirty = true;
   foreach_cell() {
+    if (!is_active(cell)) {
+      if (!is_leaf(cell))
+	/* We update the number of neighbors only for non-active 
+	   (i.e. remote) cells. */
+	for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
+	  for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
+	    if (allocated(k,l) && !is_active(neighbor(k,l))) {
+	      neighbor(k,l).neighbors--;
+	      if (neighbor(k,l).neighbors == 0)
+		free_children (point,k,l);
+	    }
+    }
+    else // active cell
+      for (int k = -GHOSTS; k <= GHOSTS && !is_border(cell); k++)
+	for (int l = -GHOSTS; l <= GHOSTS && !is_border(cell); l++)
+	  if (allocated(k,l) && neighbor(k,l).pid != pid())
+	    cell.flags |= border;
     if (is_leaf(cell))
-      continue;
-    else if (!is_active(cell))
-      for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
-	for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
-	  if (allocated(k,l) && !is_active(neighbor(k,l))) {
-	    neighbor(k,l).neighbors--;
-	    if (neighbor(k,l).neighbors == 0)
-	      free_children (point,k,l);
-	  }
+      continue;      
   }
   
   prof_stop();

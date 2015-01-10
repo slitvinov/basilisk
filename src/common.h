@@ -60,15 +60,16 @@
 @endif
 
 static bool in_prof = false;
+static double prof_start, _prof;
 @def prof_start(name)
   assert (!in_prof); in_prof = true;
-  double prof_start = MPI_Wtime();
+  prof_start = MPI_Wtime();
   trace ("10 %.6f State Thread%d \"%s\"\n",
 	 prof_start - tracestart, pid(), name)
 @
 @def prof_stop()
   assert (in_prof); in_prof = false;
-  double _prof = MPI_Wtime();
+  _prof = MPI_Wtime();
   mpi_time += _prof - prof_start;
   trace ("10 %.6f State Thread%d compute\n", _prof - tracestart, pid())
 @
