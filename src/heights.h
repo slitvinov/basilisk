@@ -84,7 +84,7 @@ void heights (scalar c, vector h)
   // boundary conditions for h
   foreach_dimension() {
     h.x.prolongation = h_refine_x;
-    h.x.coarsen = none;
+    h.x.coarsen = no_coarsen;
   }
   boundary ((scalar *){h});
 }

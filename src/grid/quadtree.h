@@ -971,7 +971,7 @@ void init_grid (int n)
     box->d = d;
     Boundary * b = (Boundary *) box;
     b->level = b->restriction = box_boundary_level;
-    b->halo_restriction  = none;
+    b->halo_restriction  = no_halo_restriction;
     b->halo_prolongation = box_boundary_halo_prolongation;
     add_boundary (b);
   }

@@ -129,7 +129,7 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
   for (scalar s in conserved) {
     vector slope = new vector;
     foreach_dimension() {
-      slope.x.gradient = none;
+      slope.x.gradient = zero;
 #if QUADTREE
       slope.x.prolongation = refine_linear;
 #endif

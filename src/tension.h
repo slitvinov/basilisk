@@ -15,7 +15,7 @@ following [field attributes](/Basilisk C#field-attributes). */
 attribute {
   double sigma;
   scalar kappa;
-};
+}
 
 /**
 Surface tension is a source term in the right-hand-side of the

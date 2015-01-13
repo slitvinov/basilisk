@@ -1793,16 +1793,16 @@ reduction{WS}*[(](min|max|\+):{ID}+[)] {
     REJECT;
 }
 
-#{SP}+[0-9]+{SP}+\"[^\"]+\" {
-  // line numbers
-  ECHO;
-  char * ln = yytext;
+#{SP}+[0-9]+{SP}+\"[^\"]+\".*$ {
+  /* line numbers */
+  char * ln = yytext, * name, * quote;
   space (ln); nonspace(ln);
-  char * name = ln; space (name); *name++ = '\0'; nonspace(name);
-  line = atoi(ln) - 1;
+  name = ln; space (name); *name++ = '\0'; nonspace(name);
+  line = atoi(ln);
   free (fname);
-  name[strlen(name)-1] = '\0'; name++;
+  name++; quote = strchr (name, '"'); *quote = '\0';
   fname = strdup (name);
+  fprintf (yyout, "#line %d \"%s\"", line, fname);
 }
 
 ^{SP}*@{SP}*def{SP}+ {

@@ -54,7 +54,7 @@ void run()
     // list of updates
     scalar * updates = list_clone (evolving);
     dt = dtnext (t, update (evolving, updates, DT));
-    if (gradient != none) {
+    if (gradient != zero) {
       /* 2nd-order time-integration */
       scalar * predictor = list_clone (evolving);
       /* predictor */

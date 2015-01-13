@@ -9,7 +9,7 @@
 attribute {
   void ** kdt;
   scalar n, dmin, dmax;
-};
+}
 
 static int includes (KdtRect rect, Point * p)
 {
@@ -98,12 +98,12 @@ void terrain (scalar zb, ...)
 
 #if QUADTREE
   zb.refine = refine_terrain;
-  n.refine = none;
-  n.coarsen = none;
-  dmin.refine = none;
-  dmin.coarsen = none;
-  dmax.refine = none;
-  dmax.coarsen = none;
+  n.refine = no_coarsen;
+  n.coarsen = no_coarsen;
+  dmin.refine = no_coarsen;
+  dmin.coarsen = no_coarsen;
+  dmax.refine = no_coarsen;
+  dmax.coarsen = no_coarsen;
 #endif
 
   trash ({zb});

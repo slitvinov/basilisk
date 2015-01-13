@@ -261,7 +261,7 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   // keep name
   char * pname = name ? strdup (name) : s.name;
   // reset all attributes
-  _attribute[s] = (const _Attributes){};
+  _attribute[s] = (const _Attributes){{0}};
   s.name = pname;
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++)

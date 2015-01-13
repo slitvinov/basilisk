@@ -149,7 +149,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   vector gh[], geta[];
   tensor gu[];
   for (scalar s in {gh, geta, gu}) {
-    s.gradient = none;
+    s.gradient = zero;
     #if QUADTREE
       s.prolongation = refine_linear;
     #endif

@@ -223,8 +223,7 @@ void size (double L) {
   L0 = L;
 }
 
-static double nothing() { return 0.; }
-void * none = nothing;
+double zero() { return 0.; }
 
 // boundary conditions for each direction/variable
 
@@ -256,7 +255,7 @@ attribute {
   struct { int x, y; } d; // staggering
   vector v;
   bool   face, normal;
-};
+}
 
 // lists
 
@@ -496,7 +495,7 @@ const scalar unity[] = 1.;
 // Arrays
 
 typedef struct {
-  void * p;
+  char * p;
   size_t size, max, len;
 } Array;
 

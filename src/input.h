@@ -232,6 +232,7 @@ void input_gfs (struct OutputGfs p)
   free (s);
 
   next_char (p.fp, '{');
+  double t = 0.;
   if (next_string (p.fp, "Time") >= 0) {
     next_char (p.fp, '{');
     next_char (p.fp, 't');

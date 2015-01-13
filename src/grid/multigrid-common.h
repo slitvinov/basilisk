@@ -17,7 +17,7 @@
 attribute {
   void (* prolongation) (Point, scalar);
   void (* coarsen)      (Point, scalar);
-};
+}
 
 // Multigrid methods
 
@@ -146,11 +146,13 @@ void coarsen_face (Point point, scalar s)
   }
 }
 
+void no_coarsen (Point point, scalar s) {}
+
 vector multigrid_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_face_vector (v, name);
   v.x.coarsen = coarsen_face;
-  v.y.coarsen = none;
+  v.y.coarsen = no_coarsen;
   return v;
 }
 

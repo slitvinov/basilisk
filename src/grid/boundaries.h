@@ -14,6 +14,8 @@ struct _Boundary {
 				  int l, int depth);
 };
 
+void no_halo_restriction (const Boundary * b, scalar * list, int l) {}
+
 static Boundary ** boundaries = NULL; // list of all boundaries
 
 void add_boundary (Boundary * b) {

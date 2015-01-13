@@ -5,8 +5,8 @@
 // scalar attributes
 
 attribute {
-  void   (* refine)       (Point, scalar);
-};
+  void (* refine) (Point, scalar);
+}
 
 // Quadtree methods
 
@@ -137,7 +137,7 @@ astats adapt_wavelet (struct Adapt p)
   astats st = {0, 0};
   scalar * listc = NULL;
   for (scalar s in p.list)
-    if (!is_constant(s) && s.coarsen != none)
+    if (!is_constant(s) && s.coarsen != no_coarsen)
       listc = list_add (listc, s);
 
   // refinement
@@ -344,9 +344,9 @@ vector quadtree_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_face_vector (v, name);
   v.x.coarsen = coarsen_face;
-  v.y.coarsen = none;
+  v.y.coarsen = no_coarsen;
   v.x.refine  = refine_face;
-  v.y.refine  = none;
+  v.y.refine  = no_coarsen;
   v.x.prolongation = refine_face_x;
   v.y.prolongation = refine_face_y;  
   return v;
@@ -362,7 +362,7 @@ static void quadtree_boundary_level (scalar * list, int l)
     if (!is_constant (s)) {
       if (s.coarsen == coarsen_average)
 	listdef = list_add (listdef, s);
-      else if (s.coarsen != none)
+      else if (s.coarsen != no_coarsen)
 	listc = list_add (listc, s);
     }
 
@@ -386,7 +386,7 @@ static void quadtree_boundary_level (scalar * list, int l)
   scalar * listr = NULL;
   vector * listf = NULL;
   for (scalar s in list)
-    if (!is_constant (s) && s.refine != none) {
+    if (!is_constant (s) && s.refine != no_coarsen) {
       if (s.face)
 	listf = vectors_add (listf, s.v);
       else

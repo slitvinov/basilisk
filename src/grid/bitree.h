@@ -82,6 +82,7 @@ struct _Point {
 
   bool dirty;       /* whether caches should be updated */
 };
+Point last_point;
 
 static void cache_level_append (CacheLevel * c, Point p)
 {
