@@ -187,9 +187,16 @@ void snd_rcv_print (SndRcv * m, FILE * fp)
 {
   for (int i = 0; i < m->nsnd; i++)
     for (int j = 0; j <= m->snd[i].depth; j++)
-      foreach_cache_level (m->snd[i].halo[j], j,)
-	fprintf (fp, "%g %g %d %d %d\n",
-		 x, y, m->snd[i].pid, cell.neighbors, level);
+      foreach_cache_level (m->snd[i].halo[j], j,) {
+	if (allocated(0,0))
+	  fprintf (fp, "%g %g %d %d %d\n",
+		   x, y, m->snd[i].pid, cell.neighbors, level);
+	else {
+	  fprintf (fp, "%g %g %d N/A %d\n",
+		   x, y, m->snd[i].pid, level);
+	  fprintf (stderr, "ERROR: %g %g %d unallocated!\n", x, y, level);
+	}
+      }
 }
 
 void snd_rcv_stats (SndRcv * m, FILE * fp)
@@ -379,9 +386,9 @@ void debug_mpi()
   sprintf (name, "border-%d", pid());
   fp = fopen (name, "w");
   foreach_cell() {
-    if (is_border(cell))
-      fprintf (fp, "%g %g %d\n", x, y, level);
-    else
+    if (!is_active(cell))
+      fprintf (fp, "%g %g %d %d\n", x, y, level, cell.neighbors);
+    else if (!is_border(cell))
       continue;
     if (is_leaf(cell))
       continue;
@@ -476,7 +483,11 @@ void mpi_boundary_update (MpiBoundary * m)
 	  snd_rcv_append (&m->prolongation, point, cell.pid);
 	  snd_rcv_append (&m->restriction, point, cell.pid);
 	}
+      else if (!neighbors && !is_leaf(cell))
+	coarsen_cell (point, NULL);
     }
+    else if (!is_border(cell))
+      continue;
     if (is_leaf(cell))
       continue;
   }
@@ -499,21 +510,16 @@ void mpi_boundary_update (MpiBoundary * m)
 Array * remote_leaves (unsigned pid)
 {
   static const int remote = 1 << user;
-  foreach_cell_post (is_border (cell))
-    if (is_border(cell)) {
-      if (is_leaf(cell)) {
-	bool neighbors = false;
-	if (is_leaf(cell))
-	  for (int k = -GHOSTS; k <= GHOSTS && !neighbors; k++)
-	    for (int l = -GHOSTS; l <= GHOSTS && !neighbors; l++)
-	      if (neighbor(k,l).pid == pid) {
-		cell.flags |= remote;
-		neighbors = true;
-	      }
-      }
-      if ((cell.flags & remote) && level > 0)
-	aparent(0,0).flags |= remote;
-    }
+  foreach_cell_post (is_border (cell) && !is_leaf(cell))
+    if (is_border(cell) && !is_leaf(cell))
+      for (int k = -GHOSTS; k <= GHOSTS; k++)
+	for (int l = -GHOSTS; l <= GHOSTS; l++)
+	  if (neighbor(k,l).pid == pid) {
+	    cell.flags |= remote;
+	    if (level > 0)
+	      aparent(0,0).flags |= remote;
+	    k = l = GHOSTS + 1; // break
+	  }
 
   Array * a = array_new (sizeof(unsigned));
   foreach_cell() {
@@ -612,7 +618,8 @@ void mpi_partitioning()
 
   /* set the pid of each cell */
   int i = 0;
-  foreach_cell_post (is_active (cell) || cell.neighbors > 0)
+  ((Quadtree *)grid)->dirty = true;
+  foreach_cell_post (is_active (cell))
     if (is_active (cell)) {
       if (is_leaf (cell)) {
 	cell.pid = min(npe() - 1, i/nf); i++;
@@ -633,26 +640,19 @@ void mpi_partitioning()
       if (cell.pid != pid())
 	cell.flags &= ~active;
     }
-  
-  ((Quadtree *)grid)->dirty = true;
+
+  // flag border cells
   foreach_cell() {
-    if (!is_active(cell)) {
-      if (!is_leaf(cell))
-	/* We update the number of neighbors only for non-active 
-	   (i.e. remote) cells. */
-	for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
-	  for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
-	    if (allocated(k,l) && !is_active(neighbor(k,l))) {
-	      neighbor(k,l).neighbors--;
-	      if (neighbor(k,l).neighbors == 0)
-		free_children (point,k,l);
-	    }
-    }
-    else // active cell
-      for (int k = -GHOSTS; k <= GHOSTS && !is_border(cell); k++)
-	for (int l = -GHOSTS; l <= GHOSTS && !is_border(cell); l++)
-	  if (allocated(k,l) && neighbor(k,l).pid != pid())
+    if (is_active(cell)) {
+      for (int k = -GHOSTS; k <= GHOSTS; k++)
+	for (int l = -GHOSTS; l <= GHOSTS; l++)
+	  if (allocated(k,l) && neighbor(k,l).pid != pid()) {
 	    cell.flags |= border;
+	    k = l = GHOSTS + 1;
+	  }
+    }
+    else
+      continue;
     if (is_leaf(cell))
       continue;      
   }
