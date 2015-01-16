@@ -84,14 +84,15 @@ bool coarsen_cell (Point point, scalar * list)
   /* coarsen */
   cell.flags |= leaf;
 
-  /* for each child */
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      child(k,l).flags &= ~(leaf|active);
-
   /* update neighborhood */
   decrement_neighbors (point);
-
+  
+  /* for each child */
+  if (cell.neighbors)
+    for (int k = 0; k < 2; k++)
+      for (int l = 0; l < 2; l++)
+	child(k,l).flags &= ~(leaf|active);
+  
   return true;
 }
 
