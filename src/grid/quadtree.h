@@ -881,8 +881,7 @@ static void free_cache (CacheLevel * c)
 {
   Quadtree * q = grid;
   for (int l = 0; l <= q->depth; l++)
-    if (c[l].n > 0)
-      free (c[l].p);
+    free (c[l].p);
   free (c);
 }
 
