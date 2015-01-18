@@ -45,12 +45,6 @@ typedef struct {
   int n, nm;
 } CacheLevel;
 
-static void cache_level_init (CacheLevel * c)
-{
-  c->p = NULL;
-  c->n = c->nm = 0;
-}
-
 typedef struct {
   int i, j;
   short level, flags;
@@ -67,16 +61,59 @@ static void cache_init (Cache * c)
   c->n = c->nm = 0;
 }
 
+// Layer
+
+typedef struct {
+  char *** m; // the 2D array of data
+  int * nr;   // the number of allocated rows for each column
+  int nc;     // the number of allocated columns
+  int len;    // the (1D) size of the array
+} Layer;
+
+static size_t _size (size_t l)
+{
+  return (1 << l) + 2*GHOSTS;
+}
+
+static Layer * new_layer (int depth)
+{
+  Layer * l = malloc (sizeof (Layer));
+  l->len = _size (depth);
+  l->m = calloc (l->len, sizeof (char *));
+  l->nr = calloc (l->len, sizeof (int));
+  l->nc = 0;
+  return l;
+}
+
+static void layer_add_row (Layer * l, int i)
+{
+  if (!l->m[i]) {
+    l->m[i] = calloc (l->len, sizeof (char *));
+    l->nc++;
+  }
+  l->nr[i]++;
+}
+
+static bool layer_remove_row (Layer * l, int i)
+{
+  if (--l->nr[i] == 0) {
+    free (l->m[i]);
+    l->m[i] = NULL;
+    if (--l->nc == 0) {
+      free (l->m);
+      free (l->nr);
+      free (l);
+      return true; // layer has been destroyed
+    }
+  }
+  return false;
+}
+
 // Quadtree
 
-typedef struct _Point Quadtree;
-struct _Point {
-  int i, j, level;  /* the current cell index and level */
-
-  Quadtree * back;  /* back pointer to the "parent" quadtree */
-  int depth;        /* the maximum depth of the tree */
-
-  char **** m;      /* the grids at each level */
+typedef struct {
+  Layer ** L; /* the grids at each level */
+  int depth;  /* the maximum depth of the tree */
 
   Cache        leaves;   /* leaf indices */
   Cache        faces;    /* face indices */
@@ -86,6 +123,12 @@ struct _Point {
   CacheLevel * restriction;  /* halo restriction indices for each level */
 
   bool dirty;       /* whether caches should be updated */
+} Quadtree;
+
+#define quadtree ((Quadtree *)grid)
+
+struct _Point {
+  int i, j, level;  /* the current cell index and level */
 };
 static Point last_point;
 
@@ -113,16 +156,11 @@ static void cache_append (Cache * c, Point p, int k, int l, short flags)
   c->n++;
 }
 
-static size_t _size (size_t l)
-{
-  return (1 << l) + 2*GHOSTS;
-}
-
 /* low-level memory management */
-@define allocated(k,l) (point.m[point.level][point.i+k] && point.m[point.level][point.i+k][point.j+l])
-@define NEIGHBOR(k,l)	(point.m[point.level][point.i+k][point.j+l])
-@define PARENT(k,l) (point.m[point.level-1][(point.i+GHOSTS)/2+k][(point.j+GHOSTS)/2+l])
-@define CHILD(k,l)  (point.m[point.level+1][2*point.i-GHOSTS+k][2*point.j-GHOSTS+l])
+@define allocated(k,l) (quadtree->L[point.level]->m[point.i+k] && quadtree->L[point.level]->m[point.i+k][point.j+l])
+@define NEIGHBOR(k,l)	(quadtree->L[point.level]->m[point.i+k][point.j+l])
+@define PARENT(k,l) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k][(point.j+GHOSTS)/2+l])
+@define CHILD(k,l)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k][2*point.j-GHOSTS+l])
 @define CELL(m) (*((Cell *)(m)))
 
 /***** Multigrid macros *****/
@@ -170,7 +208,7 @@ static size_t _size (size_t l)
 
 void recursive (Point point)
 {
-  if (point.level == point.depth) {
+  if (point.level == quadtree->depth) {
     /* do something */
   }
   else {
@@ -193,7 +231,7 @@ void recursive (Point point)
 @def foreach_cell()
   {
     int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    Point point = {GHOSTS,GHOSTS,0};
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
     if (is_active(cell))
@@ -208,7 +246,7 @@ void recursive (Point point)
 	/* do something */
 @
 @def end_foreach_cell()
-        if (point.level < point.depth) {
+        if (point.level < quadtree->depth) {
 	  _push (point.level, point.i, point.j, 1);
           _push (point.level + 1, _LEFT, _TOP, 0);
         }
@@ -227,7 +265,7 @@ void recursive (Point point)
 @def foreach_cell_post(condition)
   {
     int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    Point point = {GHOSTS,GHOSTS,0};
     struct { int l, i, j, stage; } stack[STACKSIZE]; int _s = -1;
     _push (0, GHOSTS, GHOSTS, 0); /* the root cell */
     while (_s >= 0) {
@@ -238,7 +276,7 @@ void recursive (Point point)
       switch (stage) {
       case 0: {
         POINT_VARIABLES;
-	if (point.level == point.depth) {
+	if (point.level == quadtree->depth) {
 	  _push (point.level, point.i, point.j, 4);
 	}
 	else {
@@ -292,7 +330,7 @@ void recursive (Point point)
 @def foreach_boundary_cell(dir,corners)
   { _OMPSTART /* for face reduction */
     int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Quadtree point = *((Quadtree *)grid); point.back = grid;
+    Point point = {GHOSTS,GHOSTS,0};
     int _d = dir; NOT_UNUSED(_d);
     /* traverse corners only for top and bottom */
     bool _corners = (corners);
@@ -312,7 +350,7 @@ void recursive (Point point)
         }
 	if (is_corner (cell)) continue;
         /* children */
-        if (point.level < point.depth) {
+        if (point.level < quadtree->depth) {
 	  _push (point.level, point.i, point.j, 1);
 	  int k = _d > left ? _LEFT : _RIGHT - _d;
 	  int l = _d < top  ? _TOP  : _TOP + 2 - _d;
@@ -422,7 +460,7 @@ static void update_cache_f (void)
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   OMP_PARALLEL()
-  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  Point point = {GHOSTS,GHOSTS,0};
   int _k; short _flags; NOT_UNUSED(_flags);
   OMP(omp for schedule(static) clause)
   for (_k = 0; _k < _cache.n; _k++) {
@@ -437,7 +475,7 @@ static void update_cache_f (void)
 @def foreach_cache_level(_cache,_l,clause) {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   OMP_PARALLEL()
-  Quadtree point = *((Quadtree *)grid); point.back = grid;
+  Point point = {GHOSTS,GHOSTS,0};
   point.level = _l;
   int _k;
   OMP(omp for schedule(static) clause)
@@ -507,50 +545,51 @@ void quadtree_trash (void * alist)
   Quadtree * q = grid;
   /* low-level memory management */
   for (int l = 0; l <= q->depth; l++) {
-    int len = _size(l);
-    for (int i = 0; i < len; i++)
-      if (q->m[l][i])
-	for (int j = 0; j < len; j++)
-	  if (q->m[l][i][j])
+    Layer * L = q->L[l];
+    for (int i = 0; i < L->len; i++)
+      if (L->m[i])
+	for (int j = 0; j < L->len; j++)
+	  if (L->m[i][j])
 	    for (scalar s in list)
-	      ((double *)(q->m[l][i][j] + sizeof(Cell)))[s] = undefined;
+	      ((double *)(L->m[i][j] + sizeof(Cell)))[s] = undefined;
   }
 }
 
-@def cache_level_resize(name)
-q->name = realloc (q->name, (q->depth + 1)*sizeof (CacheLevel));
-cache_level_init (&q->name[q->depth]);
+@def cache_level_resize(name, a)
+{
+  for (int i = 0; i <= q->depth - a; i++)
+    free (q->name[i].p);
+  free (q->name);
+  q->name = calloc (q->depth + 1, sizeof (CacheLevel));
+}
 @
 
-void alloc_layer (Quadtree * p)
+static void alloc_layer (void)
 {
-  Quadtree * q = p->back;
-  q->depth++; p->depth++;
+  Quadtree * q = quadtree;
+  q->depth++;
   /* low-level memory management */
-  q->m = &(q->m[-1]);
-  q->m = realloc(q->m, sizeof (char *)*(q->depth + 2));
-  q->m = &(q->m[1]); p->m = q->m;
-  int len = _size(q->depth);
-  q->m[q->depth] = calloc (len, sizeof (char *));
-  cache_level_resize (active);
-  cache_level_resize (prolongation);
-  cache_level_resize (restriction);
+  q->L = &(q->L[-1]);
+  q->L = realloc(q->L, sizeof (Layer *)*(q->depth + 2));
+  q->L = &(q->L[1]);
+  q->L[q->depth] = new_layer (q->depth);
+  cache_level_resize (active, +1);
+  cache_level_resize (prolongation, +1);
+  cache_level_resize (restriction, +1);
 }
 
-static void alloc_children (Quadtree * q, int i, int j)
+static void alloc_children (Point point, int i, int j)
 {
-  if (q->level == q->depth) alloc_layer(q);
-  Point point = *((Point *)q);
+  if (point.level == quadtree->depth)
+    alloc_layer();
   point.i += i; point.j += j;
 
   /* low-level memory management */
+  Layer * L = quadtree->L[point.level + 1];
   size_t len = sizeof(Cell) + datasize;
   char * b = calloc (4, len);
   for (int k = 0; k < 2; k++) {
-    // allocate column if necessary
-    if (!point.m[point.level+1][2*point.i-GHOSTS+k])
-      point.m[point.level+1][2*point.i-GHOSTS+k] =
-	calloc (_size(point.level+1), sizeof (char *));
+    layer_add_row (L, 2*point.i - GHOSTS + k);
     for (int l = 0; l < 2; l++) {
       assert (!CHILD(k,l));
       CHILD(k,l) = b;
@@ -584,35 +623,50 @@ static void alloc_children (Quadtree * q, int i, int j)
 @endif
 }
 
-void increment_neighbors (Quadtree * p)
+void increment_neighbors (Point point)
 {
-  p->back->dirty = true;
-  Point point = *((Point *)p);
+  quadtree->dirty = true;
   for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
     for (int l = -GHOSTS/2; l <= GHOSTS/2; l++) {
       if (neighbor(k,l).neighbors == 0)
-	alloc_children (&point, k, l);
+	alloc_children (point, k, l);
       neighbor(k,l).neighbors++;
     }
-  *((Point *)p) = point;
+}
+
+static void free_layer (void)
+{
+  Quadtree * q = quadtree;
+  q->depth--;
+  /* low-level memory management */
+  q->L = &(q->L[-1]);
+  q->L = realloc(q->L, sizeof (Layer *)*(q->depth + 2));
+  q->L = &(q->L[1]);
+  cache_level_resize (active, -1);
+  cache_level_resize (prolongation, -1);
+  cache_level_resize (restriction, -1);
 }
 
 static void free_children (Point point, int i, int j)
 {
   point.i += i; point.j += j;
   /* low-level memory management */
+  Layer * L = quadtree->L[point.level + 1];
   assert (CHILD(0,0));
   free (CHILD(0,0));
   for (int k = 0; k < 2; k++) {
-    // fixme: free column
     for (int l = 0; l < 2; l++)
       CHILD(k,l) = NULL;
+    if (layer_remove_row (L, 2*point.i - GHOSTS + k)) {
+      assert (point.level + 1 == quadtree->depth);
+      free_layer();
+    }
   }
 }
 
 void decrement_neighbors (Point point)
 {
-  ((Quadtree *)&point)->back->dirty = true;
+  quadtree->dirty = true;
   for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
     for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
       if (allocated(k,l)) {
@@ -632,11 +686,11 @@ void realloc_scalar (void)
   size_t len = _size(0);
   for (int i = 0; i < len; i++)
     for (int j = 0; j < len; j++)
-      q->m[0][i][j] = realloc (q->m[0][i][j], newlen);
+      q->L[0]->m[i][j] = realloc (q->L[0]->m[i][j], newlen);
   /* all other levels */
   for (int l = 1; l <= q->depth; l++) {
-    char *** m = q->m[l];
-    size_t len = _size(l);
+    char *** m = q->L[l]->m;
+    size_t len = q->L[l]->len;
     for (int i = 0; i < len; i += 2)
       if (m[i])
 	for (int j = 0; j < len; j += 2)
@@ -865,27 +919,31 @@ void free_grid (void)
   free (q->vertices.p);
   /* low-level memory management */
   /* the root level is allocated differently */
-  int len = _size(0);
-  for (int i = 0; i < len; i++) {
-    for (int j = 0; j < len; j++)
-      free (q->m[0][i][j]);
-    free (q->m[0][i]);
+  Layer * L = q->L[0];
+  for (int i = 0; i < L->len; i++) {
+    for (int j = 0; j < L->len; j++)
+      free (L->m[i][j]);
+    free (L->m[i]);
   }
-  free (q->m[0]);
+  free (L->m);
+  free (L->nr);
+  free (L);
   /* all other levels */
   for (int l = 1; l <= q->depth; l++) {
-    int len = _size(l);
-    for (int i = 0; i < len; i++)
-      if (q->m[l][i]) {
+    Layer * L = q->L[l];
+    for (int i = 0; i < L->len; i++)
+      if (L->m[i]) {
 	if (i%2 == 0)
-	  for (int j = 0; j < len; j += 2)
-	    free (q->m[l][i][j]);
-	free (q->m[l][i]);
+	  for (int j = 0; j < L->len; j += 2)
+	    free (L->m[i][j]);
+	free (L->m[i]);
       }
-    free (q->m[l]);
+    free (L->m);
+    free (L->nr);
+    free (L);
   }
-  q->m = &(q->m[-1]);
-  free (q->m);
+  q->L = &(q->L[-1]);
+  free (q->L);
   free_cache (q->active);
   free_cache (q->prolongation);
   free_cache (q->restriction);
@@ -913,25 +971,26 @@ void init_grid (int n)
     depth++;
   }
   q = calloc (1, sizeof (Quadtree));
-  q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
-  q->m = malloc(sizeof (char *)*2);
-  /* make sure we don't try to access level -1 */
-  q->m[0] = NULL; q->m = &(q->m[1]);
-  /* initialise the root cell */
+  q->depth = 0;
+
   /* low-level memory management */
-  int len = _size(0);
-  q->m[0] = calloc (len, sizeof (char *));
-  for (int i = 0; i < len; i++) {
-    q->m[0][i] = calloc (len, sizeof(char *));
-    for (int j = 0; j < len; j++)
-      q->m[0][i][j] = calloc (1, sizeof(Cell) + datasize);
+  q->L = malloc(sizeof (Layer *)*2);
+  /* make sure we don't try to access level -1 */
+  q->L[0] = NULL; q->L = &(q->L[1]);
+  /* initialise the root cell */
+  Layer * L = new_layer (0);
+  q->L[0] = L;
+  for (int i = 0; i < L->len; i++) {
+    layer_add_row (L, i);
+    for (int j = 0; j < L->len; j++)
+      L->m[i][j] = calloc (1, sizeof(Cell) + datasize);
   }
-  CELL(q->m[0][GHOSTS][GHOSTS]).flags |= (leaf|active);
+  CELL(L->m[GHOSTS][GHOSTS]).flags |= (leaf|active);
 @if _MPI
   for (int k = -GHOSTS; k <= GHOSTS; k++)
     for (int l = -GHOSTS; l <= GHOSTS; l++)
-      CELL(q->m[0][GHOSTS+k][GHOSTS+l]).pid = -1;
-  CELL(q->m[0][GHOSTS][GHOSTS]).pid = pid();
+      CELL(L->m[GHOSTS+k][GHOSTS+l]).pid = -1;
+  CELL(L->m[GHOSTS][GHOSTS]).pid = pid();
 @endif
   cache_init (&q->leaves);
   cache_init (&q->faces);

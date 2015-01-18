@@ -34,7 +34,6 @@ Point refine_cell (Point point, scalar * list, int flag,
 	  p.i = (point.i + GHOSTS)/2 + k;
 	  p.j = (point.j + GHOSTS)/2 + l;
 	  p = refine_cell (p, list, flag, nactive);
-	  assert (p.m == point.m);
 	  aparent(k,l).flags |= flag;
 	}
     }
@@ -44,7 +43,7 @@ Point refine_cell (Point point, scalar * list, int flag,
   cell.flags &= ~leaf;
 
   /* update neighborhood */
-  increment_neighbors (&point);
+  increment_neighbors (point);
 
   /* for each child: (note that using foreach_child() would be nicer
      but it seems to be significanly slower) */
