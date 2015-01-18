@@ -9,11 +9,9 @@
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  unsigned flags;
-  unsigned neighbors; // number of refined neighbors in a 3x3 neighborhood
-@if _MPI
-  int pid; // fixme: alignment ?
-@endif
+  short flags;
+  short neighbors; // number of refined neighbors in a 3x3 neighborhood
+  int pid;         // process id
 } Cell;
 
 enum {
@@ -73,11 +71,12 @@ static void cache_init (Cache * c)
 
 typedef struct _Point Quadtree;
 struct _Point {
-  int depth;        /* the maximum depth of the tree */
+  int i, j, level;  /* the current cell index and level */
 
   Quadtree * back;  /* back pointer to the "parent" quadtree */
+  int depth;        /* the maximum depth of the tree */
+
   char **** m;      /* the grids at each level */
-  int i, j, level;  /* the current cell index and level */
 
   Cache        leaves;   /* leaf indices */
   Cache        faces;    /* face indices */
@@ -120,7 +119,7 @@ static size_t _size (size_t l)
 }
 
 /* low-level memory management */
-@define allocated(k,l) (point.m[point.level][point.i+k][point.j+l])
+@define allocated(k,l) (point.m[point.level][point.i+k] && point.m[point.level][point.i+k][point.j+l])
 @define NEIGHBOR(k,l)	(point.m[point.level][point.i+k][point.j+l])
 @define PARENT(k,l) (point.m[point.level-1][(point.i+GHOSTS)/2+k][(point.j+GHOSTS)/2+l])
 @define CHILD(k,l)  (point.m[point.level+1][2*point.i-GHOSTS+k][2*point.j-GHOSTS+l])
@@ -533,8 +532,6 @@ void alloc_layer (Quadtree * p)
   q->m = &(q->m[1]); p->m = q->m;
   int len = _size(q->depth);
   q->m[q->depth] = calloc (len, sizeof (char *));
-  for (int i = 0; i < len; i++)
-    q->m[q->depth][i] = calloc (len, sizeof (char *));
   cache_level_resize (active);
   cache_level_resize (prolongation);
   cache_level_resize (restriction);
@@ -547,11 +544,19 @@ static void alloc_children (Quadtree * q, int i, int j)
   point.i += i; point.j += j;
 
   /* low-level memory management */
-  for (int k = 0; k < 2; k++)
+  size_t len = sizeof(Cell) + datasize;
+  char * b = calloc (4, len);
+  for (int k = 0; k < 2; k++) {
+    // allocate column if necessary
+    if (!point.m[point.level+1][2*point.i-GHOSTS+k])
+      point.m[point.level+1][2*point.i-GHOSTS+k] =
+	calloc (_size(point.level+1), sizeof (char *));
     for (int l = 0; l < 2; l++) {
       assert (!CHILD(k,l));
-      CHILD(k,l) = calloc (1, sizeof(Cell) + datasize);
+      CHILD(k,l) = b;
+      b += len;
     }
+  }
 
 @if _MPI
   // foreach child
@@ -596,12 +601,13 @@ static void free_children (Point point, int i, int j)
 {
   point.i += i; point.j += j;
   /* low-level memory management */
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++) {
-      assert (CHILD(k,l));
-      free (CHILD(k,l));
+  assert (CHILD(0,0));
+  free (CHILD(0,0));
+  for (int k = 0; k < 2; k++) {
+    // fixme: free column
+    for (int l = 0; l < 2; l++)
       CHILD(k,l) = NULL;
-    }
+  }
 }
 
 void decrement_neighbors (Point point)
@@ -618,14 +624,32 @@ void decrement_neighbors (Point point)
 
 void realloc_scalar (void)
 {
+  /* low-level memory management */
   Quadtree * q = grid;
-  for (int l = 0; l <= q->depth; l++) {
+  size_t newlen = sizeof(Cell) + datasize;
+  size_t oldlen = newlen - sizeof(double);
+  /* the root level is allocated differently */
+  size_t len = _size(0);
+  for (int i = 0; i < len; i++)
+    for (int j = 0; j < len; j++)
+      q->m[0][i][j] = realloc (q->m[0][i][j], newlen);
+  /* all other levels */
+  for (int l = 1; l <= q->depth; l++) {
+    char *** m = q->m[l];
     size_t len = _size(l);
-    for (int i = 0; i < len; i++)
-      if (q->m[l][i])
-	for (int j = 0; j < len; j++)
-	  if (q->m[l][i][j])
-	    q->m[l][i][j] = realloc (q->m[l][i][j], sizeof(Cell) + datasize);
+    for (int i = 0; i < len; i += 2)
+      if (m[i])
+	for (int j = 0; j < len; j += 2)
+	  if (m[i][j]) {
+	    char * new = malloc (4*newlen), * old = m[i][j];
+	    for (int k = 0; k < 2; k++)
+	      for (int o = 0; o < 2; o++) {
+		memcpy (new, m[i+k][j+o], oldlen);
+		m[i+k][j+o] = new;
+		new += newlen;
+	      }
+	    free (old);
+	  }
   }
 }
 
@@ -840,12 +864,22 @@ void free_grid (void)
   free (q->faces.p);
   free (q->vertices.p);
   /* low-level memory management */
-  for (int l = 0; l <= q->depth; l++) {
+  /* the root level is allocated differently */
+  int len = _size(0);
+  for (int i = 0; i < len; i++) {
+    for (int j = 0; j < len; j++)
+      free (q->m[0][i][j]);
+    free (q->m[0][i]);
+  }
+  free (q->m[0]);
+  /* all other levels */
+  for (int l = 1; l <= q->depth; l++) {
     int len = _size(l);
     for (int i = 0; i < len; i++)
       if (q->m[l][i]) {
-	for (int j = 0; j < len; j++)
-	  free (q->m[l][i][j]);
+	if (i%2 == 0)
+	  for (int j = 0; j < len; j += 2)
+	    free (q->m[l][i][j]);
 	free (q->m[l][i]);
       }
     free (q->m[l]);
@@ -861,6 +895,9 @@ void free_grid (void)
 
 void init_grid (int n)
 {
+  // check 64 bits structure alignment
+  assert (sizeof(Cell)%8 == 0);
+  
   Quadtree * q = grid;
   if (q && n == 1 << q->depth)
     return;

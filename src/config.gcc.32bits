@@ -9,7 +9,8 @@ CC99 = $(CC) -std=c99
 CFLAGS += -Wall -msse2 -mfpmath=sse
 
 # if you have valgrind, otherwise comment this out
-VALGRIND = valgrind -q --tool=memcheck
+VALGRIND = valgrind -q --tool=memcheck --suppressions=$(BASILISK)/openmpi.supp \
+	--leak-check=full
 
 # if gnuplot supports pngcairo, otherwise comment this out
 PNG = pngcairo
