@@ -676,7 +676,7 @@ void restore (struct Dump p)
 	exit (1);
       }
     if (!(flags & leaf) && is_leaf(cell))
-      point = refine_cell (point, NULL, 0, NULL);
+      refine_cell (point, NULL, 0, NULL);
     cell.flags = flags;
     if (is_leaf(cell))
       continue;

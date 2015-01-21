@@ -40,6 +40,7 @@
 @define npe() omp_get_num_threads()
 @define mpi_all_reduce(v,type,op)
 @define mpi_all_reduce_double(v,op)
+@define trace_event(name)
 
 @elif _MPI
 
@@ -160,6 +161,7 @@ void mpi_init()
 @define npe() 1
 @define mpi_all_reduce(v,type,op)
 @define mpi_all_reduce_double(v,op)
+@define trace_event(name)
 
 @endif
 

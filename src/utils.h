@@ -78,6 +78,8 @@ timing timer_timing (timer t, int i, size_t tnc, double * mpi)
     s.tnc = tnc;
     tnc *= i;
   }
+  else
+    s.tnc = tnc;
   struct rusage usage;
   getrusage (RUSAGE_SELF, &usage);
   s.mem = usage.ru_maxrss;

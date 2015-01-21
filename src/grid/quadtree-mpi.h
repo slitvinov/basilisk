@@ -27,6 +27,12 @@ typedef struct {
   SndRcv restriction, halo_restriction, prolongation;
 } MpiBoundary;
 
+static void cache_level_init (CacheLevel * c)
+{
+  c->p = NULL;
+  c->n = c->nm = 0;
+}
+
 static void rcv_append (Point point, Rcv * rcv)
 {
   if (level > rcv->depth) {
@@ -550,7 +556,7 @@ static int match_refine (unsigned * a, scalar * list)
       if (flags & leaf)
 	continue;
       else if (is_leaf(cell))
-	point = refine_cell (point, list, 0, &nactive);	
+	refine_cell (point, list, 0, &nactive);	
     }
   return nactive;
 }

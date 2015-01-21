@@ -14,8 +14,7 @@ attribute {
   If nactive is different from NULL, it is incremented when an active
   cell is refined.
  */
-Point refine_cell (Point point, scalar * list, int flag,
-		   int * nactive)
+void refine_cell (Point point, scalar * list, int flag, int * nactive)
 {
 #if TWO_ONE
   /* refine neighborhood if required */
@@ -33,7 +32,7 @@ Point refine_cell (Point point, scalar * list, int flag,
 	  p.level = point.level - 1;
 	  p.i = (point.i + GHOSTS)/2 + k;
 	  p.j = (point.j + GHOSTS)/2 + l;
-	  p = refine_cell (p, list, flag, nactive);
+	  refine_cell (p, list, flag, nactive);
 	  aparent(k,l).flags |= flag;
 	}
     }
@@ -62,17 +61,15 @@ Point refine_cell (Point point, scalar * list, int flag,
     if (nactive)
       (*nactive)++;
   }
-    
-  return point;
 }
 
 bool coarsen_cell (Point point, scalar * list)
 {
 #if TWO_ONE
   /* check that neighboring cells are not too fine */
-  for (int k = -1; k < 3; k++)
-    for (int l = -1; l < 3; l++)
-      if (is_active (child(k,l)) && !is_leaf (child(k,l)))
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++)
+      if (child(k,l).neighbors)
 	return false; // cannot coarsen
 #endif
 
@@ -145,7 +142,7 @@ astats adapt_wavelet (struct Adapt p)
     if (is_leaf (cell)) {
       if (cell.flags & too_coarse) {
 	cell.flags &= ~too_coarse;
-	point = refine_cell (point, listc, refined, NULL);
+	refine_cell (point, listc, refined, NULL);
 	st.nf++;
       }
       continue;
@@ -242,7 +239,7 @@ void mpi_boundary_refine (void *, scalar *);
     refined = 0;					\
     foreach_leaf ()					\
       if (cond)						\
-        point = refine_cell (point, list, 0, &refined);	\
+        refine_cell (point, list, 0, &refined);		\
     nf += refined;					\
   } while (refined);					\
   mpi_all_reduce (nf, MPI_INT, MPI_SUM);		\
