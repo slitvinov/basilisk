@@ -5,7 +5,7 @@ typedef struct {
   int depth;         // the maximum number of levels
   int pid;           // the rank of the PE  
   void * buf;        // MPI buffer
-  MPI_Request r;     // MPI request 
+  MPI_Request r;     // MPI request
 } Rcv;
 
 typedef struct {
@@ -15,10 +15,10 @@ typedef struct {
   int nsnd;   // the number of PEs to send ghost values to
   Rcv * snd;  // ghost cells to send
 
-  char * Arcv; // Arcv[x] is different from zero if we need to receive
-               // data from proc x
-  char * Asnd; // Asnd[x] is different from zero if we need to send
-               // data to proc x
+  int * Arcv; // Arcv[x] is different from zero if we need to receive
+              // data from proc x
+  int * Asnd; // Asnd[x] is different from zero if we need to send
+              // data to proc x
 } SndRcv;
 
 typedef struct {
@@ -72,23 +72,23 @@ static void rcv_destroy (Rcv * rcv)
   free (rcv->halo);
 }
 
-static void snd_rcv_append (SndRcv * m, Point point, int pid)
+static void snd_rcv_append (SndRcv * m, Point point)
 {
   int i;
   for (i = 0; i < m->nrcv; i++)
-    if (pid == m->rcv[i].pid)
+    if (cell.pid == m->rcv[i].pid)
       break;
   if (i == m->nrcv) {
     m->rcv = realloc (m->rcv, ++m->nrcv*sizeof (Rcv));
     Rcv * rcv = &m->rcv[m->nrcv-1];
-    rcv->pid = pid;
+    rcv->pid = cell.pid;
     rcv->depth = 0;
     rcv->halo = malloc (sizeof (CacheLevel));
     rcv->buf = NULL;
     cache_level_init (&rcv->halo[0]);
   }
   rcv_append (point, &m->rcv[i]);
-  m->Asnd[pid] = true;
+  m->Asnd[cell.pid]++;
 }
 
 @def foreach_send(list, l) {
@@ -258,13 +258,33 @@ static void snd_rcv_destroy (SndRcv * m)
 
 static void snd_rcv_transpose_adjacency (SndRcv * m)
 {
-  MPI_Alltoall (m->Asnd, 1, MPI_CHAR, m->Arcv, 1, MPI_CHAR, MPI_COMM_WORLD);
+  MPI_Alltoall (m->Asnd, 1, MPI_INT, m->Arcv, 1, MPI_INT, MPI_COMM_WORLD);
+}
+
+void write_adjacency_matrix (SndRcv * m, const char * name)
+{
+  if (pid())
+    MPI_Gather (m->Arcv, npe(), MPI_INT, NULL, 0, MPI_INT, 0, MPI_COMM_WORLD);
+  else {
+    int a[npe()][npe()];
+    MPI_Gather (m->Arcv, npe(), MPI_INT, a, npe(), MPI_INT, 0, MPI_COMM_WORLD);
+    FILE * fp = fopen (name, "w");
+    for (int j = 0; j < npe(); j++) {
+      for (int i = 0; i < npe(); i++)
+	if (a[i][j])
+	  fprintf (fp, "%d ", a[i][j]);
+	else
+	  fputs ("NaN ", fp);
+      fputc ('\n', fp);
+    }
+    fclose (fp);
+  }
 }
 
 static void snd_rcv_init (SndRcv * m)
 {
-  m->Arcv = calloc (npe(), sizeof(char));
-  m->Asnd = calloc (npe(), sizeof(char));
+  m->Arcv = calloc (npe(), sizeof(int));
+  m->Asnd = calloc (npe(), sizeof(int));
 }
 
 static void mpi_boundary_destroy (Boundary * b)
@@ -355,7 +375,19 @@ void debug_mpi()
 
   sprintf (name, "cells-%d", pid());
   fp = fopen (name, "w");
-  output_cells (fp);
+  foreach_cell() {
+    if (is_active(cell)) {
+      Delta /= 2.;
+      fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
+	       x - Delta, y - Delta,
+	       x - Delta, y + Delta,
+	       x + Delta, y + Delta,
+	       x + Delta, y - Delta,
+	       x - Delta, y - Delta);
+    }
+    else
+      continue;
+  }
   fclose (fp);
 
   sprintf (name, "neighbors-%d", pid());
@@ -400,6 +432,10 @@ void debug_mpi()
       continue;
   }
   fclose (fp);
+
+  write_adjacency_matrix (&mpi->restriction, "mrestriction");
+  write_adjacency_matrix (&mpi->halo_restriction, "mhalo_restriction");
+  write_adjacency_matrix (&mpi->prolongation, "mprolongation");
 }
 
 static void snd_rcv_sync_buffers (SndRcv * snd)
@@ -477,17 +513,17 @@ void mpi_boundary_update (MpiBoundary * m)
 	      refined++;
 	  }
       if (leaves)
-	snd_rcv_append (&m->prolongation, point, cell.pid);
+	snd_rcv_append (&m->prolongation, point);
       if (neighbors) {
-	snd_rcv_append (&m->restriction, point, cell.pid);
+	snd_rcv_append (&m->restriction, point);
 	cell.flags |= halo;
       }
       else
 	cell.flags &= ~halo;
       if (refined && is_leaf(cell))
 	foreach_child() {
-	  snd_rcv_append (&m->prolongation, point, cell.pid);
-	  snd_rcv_append (&m->restriction, point, cell.pid);
+	  snd_rcv_append (&m->prolongation, point);
+	  snd_rcv_append (&m->restriction, point);
 	}
       else if (!neighbors && !is_leaf(cell))
 	coarsen_cell (point, NULL);
@@ -504,7 +540,7 @@ void mpi_boundary_update (MpiBoundary * m)
     foreach_halo (restriction, l)
       foreach_child()
         if (cell.pid != pid())
-	  snd_rcv_append (&m->halo_restriction, point, cell.pid);
+	  snd_rcv_append (&m->halo_restriction, point);
   
   prof_stop();
 }
@@ -624,7 +660,7 @@ void mpi_partitioning()
 
   /* set the pid of each cell */
   int i = 0;
-  ((Quadtree *)grid)->dirty = true;
+  quadtree->dirty = true;
   foreach_cell_post (is_active (cell))
     if (is_active (cell)) {
       if (is_leaf (cell)) {
