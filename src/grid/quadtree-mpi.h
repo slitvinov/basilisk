@@ -93,11 +93,9 @@ static void snd_rcv_append (SndRcv * m, Point point)
 
 @def foreach_send(list, l) {
   prof_start ("foreach_send");
-  SndRcv * _m = &((MpiBoundary *)mpi_boundary)->restriction;
-  assert (!_m->children);
+  SndRcv * _m = &((MpiBoundary *)mpi_boundary)->prolongation;
   
-  // fixme: 4 should be 2**dimension
-  int _len = list_len (list)*(_m->children ? 4 : 1), _l = l;
+  int _len = list_len (list), _l = l;
   scalar * _list = list;
   
   /* send ghost values */
@@ -159,16 +157,15 @@ static void snd_rcv_receive (SndRcv * m, scalar * list, int l)
   }
 }
 
-static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
+static void snd_rcv_send (SndRcv * m, scalar * list, int l)
 {
-  // fixme: 4 should be 2**dimension
   int len = list_len (list); 
 
   /* send ghost values */
   for (int i = 0; i < m->nsnd; i++) {
     Rcv * snd = &m->snd[i];
     if (l <= snd->depth && snd->halo[l].n > 0) {
-      prof_start ("snd_rcv_sync");
+      prof_start ("snd_rcv_send");
       assert (!snd->buf);
       snd->buf = malloc (sizeof (double)*snd->halo[l].n*len);
       double * b = snd->buf;
@@ -185,21 +182,25 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
       prof_stop();
     }
   }
+}
 
+static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
+{
+  snd_rcv_send (m, list, l);
   snd_rcv_receive (m, list, l);
 }
 
 void snd_rcv_print (SndRcv * m, FILE * fp)
 {
-  for (int i = 0; i < m->nsnd; i++)
-    for (int j = 0; j <= m->snd[i].depth; j++)
-      foreach_cache_level (m->snd[i].halo[j], j,) {
+  for (int i = 0; i < m->nrcv; i++)
+    for (int j = 0; j <= m->rcv[i].depth; j++)
+      foreach_cache_level (m->rcv[i].halo[j], j,) {
 	if (allocated(0,0))
-	  fprintf (fp, "%g %g %d %d %d\n",
-		   x, y, m->snd[i].pid, cell.neighbors, level);
+	  fprintf (fp, "%g %g %d %d\n",
+		   x, y, m->rcv[i].pid, level);
 	else {
-	  fprintf (fp, "%g %g %d N/A %d\n",
-		   x, y, m->snd[i].pid, level);
+	  fprintf (fp, "%g %g %d %d\n",
+		   x, y, m->rcv[i].pid, level);
 	  fprintf (stderr, "ERROR: %g %g %d unallocated!\n", x, y, level);
 	}
       }
@@ -375,19 +376,7 @@ void debug_mpi()
 
   sprintf (name, "cells-%d", pid());
   fp = fopen (name, "w");
-  foreach_cell() {
-    if (is_active(cell)) {
-      Delta /= 2.;
-      fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
-	       x - Delta, y - Delta,
-	       x - Delta, y + Delta,
-	       x + Delta, y + Delta,
-	       x + Delta, y - Delta,
-	       x - Delta, y - Delta);
-    }
-    else
-      continue;
-  }
+  output_cells (fp);
   fclose (fp);
 
   sprintf (name, "neighbors-%d", pid());
@@ -498,19 +487,32 @@ void mpi_boundary_update (MpiBoundary * m)
 
   /* we build arrays of ghost cell indices for restriction and prolongation */
   foreach_cell() {
-    if (!is_active(cell)) {
+    if (!is_local(cell)) {
       int refined = 0;   // number of active and refined nearest neighbors
       int leaves = 0;    // number of active and leaf neighbors
       int neighbors = 0; // number of active neighbors
       for (int k = -GHOSTS; k <= GHOSTS; k++)
 	for (int l = -GHOSTS; l <= GHOSTS; l++)
 	  if (allocated(k,l) && is_active(neighbor(k,l))) {
-	    neighbors++;
-	    if (is_leaf(neighbor(k,l)))
-	      leaves++;
-	    else if (k >= -GHOSTS/2 && k <= GHOSTS/2 &&
+	    if (is_local(neighbor(k,l))) {
+	      neighbors++;
+	      if (is_leaf(neighbor(k,l)))
+		leaves++;
+	      else if (k >= -GHOSTS/2 && k <= GHOSTS/2 &&
+		       l >= -GHOSTS/2 && l <= GHOSTS/2)
+		refined++;
+	    }
+	    /* If the neighbor is not local and not a leaf, we check
+	       whether any of its children is local. If this is the
+	       case, we need to communicate the value to ensure a
+	       well-defined coarse->fine hierarchy. */
+	    else if (!is_leaf(neighbor(k,l)) &&
+		     k >= -GHOSTS/2 && k <= GHOSTS/2 &&
 		     l >= -GHOSTS/2 && l <= GHOSTS/2)
-	      refined++;
+	      for (int i = 2*k; i <= 2*k + 1 && !neighbors; i++)
+		for (int j = 2*l; j <= 2*l + 1 && !neighbors; j++)
+		  if (is_local(child(i,j)))
+		    neighbors++;
 	  }
       if (leaves)
 	snd_rcv_append (&m->prolongation, point);
@@ -556,7 +558,7 @@ Array * remote_leaves (unsigned pid)
     if (is_border(cell) && !is_leaf(cell))
       for (int k = -GHOSTS; k <= GHOSTS; k++)
 	for (int l = -GHOSTS; l <= GHOSTS; l++)
-	  if (neighbor(k,l).pid == pid) {
+	  if (is_local(neighbor(k,l))) {
 	    cell.flags |= remote;
 	    if (level > 0)
 	      aparent(0,0).flags |= remote;
@@ -640,6 +642,7 @@ static void mpi_boundary_match (MpiBoundary * mpi)
     mpi_boundary_match (mpi);
 }
 
+
 void mpi_boundary_refine (void * p, scalar * list)
 {
   MpiBoundary * mpi = p ? p : (MpiBoundary *) mpi_boundary;
@@ -669,18 +672,27 @@ void mpi_partitioning()
 	  for (int i = 0; i <= 1; i++)
 	    for (int j = 0; j <= 1; j++)
 	      child(i,j).pid = cell.pid;
+	if (!is_local(cell))
+	  cell.flags &= ~active;
       }
       else {
-	cell.pid = -1;
+	bool inactive = true;
+	cell.pid = child(0,1).pid;
 	for (int i = 0; i <= 1; i++)
 	  for (int j = 0; j <= 1; j++)
-	    if (cell.pid == -1)
-	      cell.pid = child(i,j).pid;
-	    else if (child(i,j).pid == pid())
-	      cell.pid = pid();
+	    if (is_active(child(i,j))) {
+	      inactive = false;
+	      /* We check whether the cell has local, leaf children. If it
+		 does, we make it local. This is necessary to simplify
+		 prolongation. */
+	      if (is_leaf(child(i,j))) {
+		assert (is_local(child(i,j)));
+		cell.pid = pid();
+	      }
+	    }
+	if (inactive)
+	  cell.flags &= ~active;
       }
-      if (cell.pid != pid())
-	cell.flags &= ~active;
     }
 
   // flag border cells
@@ -688,7 +700,7 @@ void mpi_partitioning()
     if (is_active(cell)) {
       for (int k = -GHOSTS; k <= GHOSTS; k++)
 	for (int l = -GHOSTS; l <= GHOSTS; l++)
-	  if (allocated(k,l) && neighbor(k,l).pid != pid()) {
+	  if (allocated(k,l) && !is_local(neighbor(k,l))) {
 	    cell.flags |= border;
 	    k = l = GHOSTS + 1;
 	  }

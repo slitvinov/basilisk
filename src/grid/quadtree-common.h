@@ -237,7 +237,7 @@ void mpi_boundary_refine (void *, scalar *);
   int nf = 0, refined;				        \
   do {							\
     refined = 0;					\
-    foreach_leaf ()					\
+    foreach_leaf()					\
       if (cond)						\
         refine_cell (point, list, 0, &refined);		\
     nf += refined;					\

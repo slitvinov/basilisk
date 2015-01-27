@@ -34,6 +34,12 @@ enum {
 #define is_coarse()      (!is_leaf(cell))
 #define is_border(cell)  ((cell).flags & border)
 
+@if _MPI
+@ define is_local(cell)  ((cell).pid == pid())
+@else
+@ define is_local(cell)  true
+@endif
+
 // Caches
 
 typedef struct {
@@ -164,7 +170,7 @@ static void cache_append (Cache * c, Point p, int k, int l, short flags)
 @define CELL(m) (*((Cell *)(m)))
 
 /***** Multigrid macros *****/
-@define depth()      (((Quadtree *)grid)->depth)
+@define depth()      (quadtree->depth)
 @define aparent(k,l) CELL(PARENT(k,l))
 @define child(k,l)   CELL(CHILD(k,l))
 
@@ -395,7 +401,7 @@ void recursive (Point point)
 @
 @define end_foreach_child_direction() end_foreach_child()
 
-#define update_cache() { if (((Quadtree *)grid)->dirty) update_cache_f(); }
+#define update_cache() { if (quadtree->dirty) update_cache_f(); }
 
 static void update_cache_f (void)
 {
@@ -406,8 +412,8 @@ static void update_cache_f (void)
   for (int l = 0; l <= depth(); l++)
     q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
 
-  foreach_cell()
-    if (is_active(cell)) { // always true in serial
+  foreach_cell() {
+    if (is_active(cell) && is_local(cell)) { // always true in serial
       // active cells
       cache_level_append (&q->active[level], point);
       if (is_leaf (cell)) {
@@ -438,7 +444,10 @@ static void update_cache_f (void)
 	continue;
       }
       else { // not a leaf
-	bool restriction = level > 0 ? (aparent(0,0).flags & halo) : false;
+	bool restriction =
+	  level > 0 &&
+	  is_local(aparent(0,0)) &&
+	  (aparent(0,0).flags & halo);
 	for (int k = -GHOSTS; k <= GHOSTS && !restriction; k++)
 	  for (int l = -GHOSTS; l <= GHOSTS && !restriction; l++)
 	    if (allocated(k,l) && is_leaf(neighbor(k,l)))
@@ -452,7 +461,10 @@ static void update_cache_f (void)
 	  cell.flags &= ~halo;
       }
     }
-
+    else if (!is_active(cell))
+      continue;
+  }
+  
   q->dirty = false;
 }
 
@@ -486,18 +498,18 @@ static void update_cache_f (void)
 @
 @define end_foreach_cache_level() } OMP_END_PARALLEL() }
 
-@define foreach(clause) foreach_cache(((Quadtree *)grid)->leaves, clause)
+@define foreach(clause) foreach_cache(quadtree->leaves, clause)
 @define end_foreach()   end_foreach_cache()
 
 @def foreach_face_generic(clause) 
-  foreach_cache(((Quadtree *)grid)->faces, clause) @
+  foreach_cache(quadtree->faces, clause) @
 @define end_foreach_face_generic() end_foreach_cache()
 
 @define is_face_x() (_flags & face_x)
 @define is_face_y() (_flags & face_y)
 
 @def foreach_vertex(clause) 
-  foreach_cache(((Quadtree *)grid)->vertices, clause) {
+  foreach_cache(quadtree->vertices, clause) {
     x -= Delta/2.; y -= Delta/2.;
 @
 @define end_foreach_vertex() } end_foreach_cache()
@@ -505,7 +517,7 @@ static void update_cache_f (void)
 @def foreach_fine_to_coarse(clause)     {
   update_cache();
   for (int _l = depth() - 1; _l >= 0; _l--) {
-    CacheLevel _active = ((Quadtree *)grid)->active[_l];
+    CacheLevel _active = quadtree->active[_l];
     foreach_cache_level (_active,_l,clause)
       if (!is_leaf (cell)) {
 @
@@ -513,7 +525,7 @@ static void update_cache_f (void)
 
 @def foreach_level(l) {
   update_cache();
-  CacheLevel _active = ((Quadtree *)grid)->active[l];
+  CacheLevel _active = quadtree->active[l];
   foreach_cache_level (_active,l,)
 @
 @define end_foreach_level() end_foreach_cache_level(); }
@@ -709,7 +721,7 @@ void realloc_scalar (void)
 
 @def foreach_halo(name,_l) {
   update_cache();
-  CacheLevel _cache = ((Quadtree *)grid)->name[_l];
+  CacheLevel _cache = quadtree->name[_l];
   foreach_cache_level (_cache, _l,)
 @
 @define end_foreach_halo() end_foreach_cache_level(); }
