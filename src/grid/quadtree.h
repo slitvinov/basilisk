@@ -116,8 +116,6 @@ typedef struct {
   int depth;  /* the maximum depth of the tree */
 
   Cache        leaves;   /* leaf indices */
-  Cache        ileaves;  /* interior leaf indices */
-  Cache        bleaves;  /* border leaf indices */
   Cache        faces;    /* face indices */
   Cache        vertices; /* vertex indices */
   CacheLevel * active;   /* active cells indices for each level */
@@ -404,7 +402,7 @@ static void update_cache_f (void)
   Quadtree * q = grid;
 
   /* empty caches */
-  q->leaves.n = q->ileaves.n = q->bleaves.n = q->faces.n = q->vertices.n = 0;
+  q->leaves.n = q->faces.n = q->vertices.n = 0;
   for (int l = 0; l <= depth(); l++)
     q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
 
@@ -413,10 +411,6 @@ static void update_cache_f (void)
       // active cells
       cache_level_append (&q->active[level], point);
       if (is_leaf (cell)) {
-	if (is_border(cell))
-	  cache_append (&q->bleaves, point, 0, 0, 0);
-	else
-	  cache_append (&q->ileaves, point, 0, 0, 0);
 	cache_append (&q->leaves, point, 0, 0, 0);
 	// faces
 	unsigned flags = 0;
@@ -921,8 +915,6 @@ void free_grid (void)
   free_boundaries();
   Quadtree * q = grid;
   free (q->leaves.p);
-  free (q->ileaves.p);
-  free (q->bleaves.p);
   free (q->faces.p);
   free (q->vertices.p);
   /* low-level memory management */
@@ -1001,8 +993,6 @@ void init_grid (int n)
   CELL(L->m[GHOSTS][GHOSTS]).pid = pid();
 @endif
   cache_init (&q->leaves);
-  cache_init (&q->ileaves);
-  cache_init (&q->bleaves);
   cache_init (&q->faces);
   cache_init (&q->vertices);
   q->active = calloc (1, sizeof (CacheLevel));
