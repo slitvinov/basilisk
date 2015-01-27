@@ -1,49 +1,68 @@
-reset
-set multiplot layout 3,2
+# generate results for Curie
+cd '../curie'
 
-set ylabel 'Speed (points/sec/core)'
-set grid
+# generate weak scaling curves
+! bash weak.sh > weak
 
-set yrange [*:*]
+# change default color for line style 6 from "yellow" to "sea-green"
+set style line 6 lw 1 lc rgb "sea-green"
+set style increment user
+
 set logscale
-set title "refine"
-plot       '< grep refine res-8-8' u 1:($4/$1) w lp t '8 levels', \
-	   '< grep refine res-8-9' u 1:($4/$1) w lp t '9 levels', \
-	   '< grep refine res-8-13' u 1:($4/$1) w lp t '10 levels', \
-	   '< grep refine res-8-11' u 1:($4/$1) w lp t '11 levels'
+set grid
+set xrange [1:16384]
+set xtics 2
 
-unset logscale
-set logscale x
-set yrange [0:]
+# Model for memory usage
+cst(level)=2**(2*level)*12./1024**3
+data(level)=2**(2*level)*8*20./1024**3
+tot(level,np)=cst(level)/sqrt(np)+data(level)/np+np*7e-6+0.03
 
-do for [name in "cos laplacian sum restriction poisson"] {
-   set title name
-   plot '< grep '.name.' res-8-8' u 1:($4/$1) w lp t '8 levels', \
-   	   '< grep '.name.' res-8-9' u 1:($4/$1) w lp t '9 levels', \
-	   '< grep '.name.' res-8-13' u 1:($4/$1) w lp t '13 levels', \
-	   '< grep '.name.' res-8-11' u 1:($4/$1) w lp t '11 levels'
-}
-
-unset multiplot
-
-pause -1
-
-reset
-set multiplot layout 3,2
+set xlabel "# of cores"
+set ylabel "Memory/core (GB)"
+set output 'memory.png'
+plot [][0.01:]\
+     for [i=10:15] '< sh table.sh poisson '.i u 1:($2/$1) t ''.i.' levels', \
+     for [i=10:15] tot(i,x) t '' lt 1
 
 set ylabel 'Time (sec)'
-set grid
-set key top left
-set yrange [0:]
-set logscale x
 
-do for [name in "refine cos laplacian sum restriction poisson"] {
-   set title name
-   plot '< grep '.name.' res-8-13' u 1:($3*$1) w lp t 'real', \
-        '< grep '.name.' res-8-13' u 1:($6*$1) w lp t 'mpi (min)', \
-        '< grep '.name.' res-8-13' u 1:($7*$1) w lp t 'mpi (avg)', \
-        '< grep '.name.' res-8-13' u 1:($8*$1) w lp t 'mpi (max)', \
-        '< grep '.name.' res-8-13' u 1:(($3-$7)*$1) w lp t 'real - mpi
-}
+# model of computation time
+tc(level,np)=2**(2.*level)/(np*1.5e6)
+tcom(level,np)=2**(1.6*level)/(1e7*sqrt(np))+np**0.4/4e3
+tt(level,np)=tc(level,np)+tcom(level,np)
 
-unset multiplot
+set output 'poisson.png'
+plot [][:100] \
+     for [i=10:15] '< sh time.sh poisson '.i u 1:2 t ''.i.' levels', \
+     for [i=10:15] tt(i,x) t '' lt 1, \
+     'weak' u 1:2 w l t 'weak scaling'
+     
+set output 'poisson-mpi.png'
+plot [][1e-3:]\
+     for [i=10:15] '< sh time.sh poisson '.i u 1:3 t ''.i.' levels', \
+     for [i=10:15] tcom(i,x) t '' lt 1
+
+set output 'laplacian.png'
+tc(level,np)=2**(2.*level)/(np*25e6)
+tcom(level,np)=2**(1.6*level)/(1.5e8*sqrt(np))
+plot [][1e-4:]\
+     for [i=10:15] '< sh time.sh laplacian '.i u 1:2 t ''.i.' levels', \
+     for [i=10:15] tt(i,x) t '' lt 1
+
+set output 'laplacian-mpi.png'
+plot [][1e-5:]\
+     for [i=10:15] '< sh time.sh laplacian '.i u 1:3 t ''.i.' levels', \
+     for [i=10:15] tcom(i,x) t '' lt 1
+
+set output 'restriction.png'
+tc(level,np)=2**(2.*level)/(np*30e6)
+tcom(level,np)=2**(1.5*level)/(3.5e7*sqrt(np))+np**0.3/1.5e4
+plot [][:10]\
+     for [i=10:15] '< sh time.sh restriction '.i u 1:2 t ''.i.' levels', \
+     for [i=10:15] tt(i,x) t '' lt 1
+
+set output 'restriction-mpi.png'
+plot [][:0.1]\
+     for [i=10:15] '< sh time.sh restriction '.i u 1:3 t ''.i.' levels', \
+     for [i=10:15] tcom(i,x) t '' lt 1

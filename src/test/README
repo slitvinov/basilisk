@@ -56,6 +56,7 @@ Note that only the documented test cases appear in the list below
 * [Boundary conditions and restriction](mpi-restriction.c)
 * [Interpolation on halos](mpi-interp.c)
 * [Z-order indexing](indexing.c)
+* [Parallel scalability](mpi-laplacian.c)
 
 ## Speed benchmarks
 
