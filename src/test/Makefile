@@ -64,3 +64,5 @@ mpi-restriction.tst:	CC = mpicc -D_MPI=3
 mpi-reduce.tst:		CC = mpicc -D_MPI=3
 mpi-refine.tst:		CC = mpicc -D_MPI=4
 mpi-laplacian.tst:	CC = mpicc -D_MPI=3
+overlapping.tst:	CC = mpicc -D_MPI=3
+
