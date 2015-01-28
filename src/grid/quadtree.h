@@ -106,6 +106,9 @@ static bool layer_remove_row (Layer * l, int i)
     free (l->m[i]);
     l->m[i] = NULL;
     if (--l->nc == 0) {
+      // fixme: need global depth in parallel
+      return false;
+
       free (l->m);
       free (l->nr);
       free (l);

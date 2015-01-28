@@ -190,17 +190,17 @@ static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
   snd_rcv_receive (m, list, l);
 }
 
-void snd_rcv_print (SndRcv * m, FILE * fp)
+void snd_rcv_print (SndRcv * m, FILE * fp, const char * prefix)
 {
   for (int i = 0; i < m->nrcv; i++)
     for (int j = 0; j <= m->rcv[i].depth; j++)
       foreach_cache_level (m->rcv[i].halo[j], j,) {
 	if (allocated(0,0))
-	  fprintf (fp, "%g %g %d %d\n",
-		   x, y, m->rcv[i].pid, level);
+	  fprintf (fp, "%s%g %g %d %d\n",
+		   prefix, x, y, m->rcv[i].pid, level);
 	else {
-	  fprintf (fp, "%g %g %d %d\n",
-		   x, y, m->rcv[i].pid, level);
+	  fprintf (fp, "%s%g %g %d %d\n",
+		   prefix, x, y, m->rcv[i].pid, level);
 	  fprintf (stderr, "ERROR: %g %g %d unallocated!\n", x, y, level);
 	}
       }
@@ -246,7 +246,7 @@ static void rcv_free (SndRcv * m)
   free (m->rcv);
   m->rcv = NULL; m->nrcv = 0;
   for (int i = 0; i < npe(); i++)
-    m->Asnd[i] = false;
+    m->Asnd[i] = 0;
 }
 
 static void snd_rcv_destroy (SndRcv * m)
@@ -358,69 +358,99 @@ static void cache_level_receive (CacheLevel * halo, int src, int tag)
     MPI_Recv (halo->p, 2*halo->n, MPI_INT, src, tag, MPI_COMM_WORLD, &s);
   }
 }
-	
-void debug_mpi()
+
+static FILE * fopen_prefix (FILE * fp, const char * name, char * prefix)
+{
+  if (fp) {
+    sprintf (prefix, "%s-%d ", name, pid());
+    return fp;
+  }
+  else {
+    strcpy (prefix, "");
+    char fname[80];
+    sprintf (fname, "%s-%d", name, pid());
+    return fopen (fname, "w");
+  }
+}
+
+void debug_mpi (FILE * fp1)
 {
   void output_cells (FILE * fp);
 
-  char name[80];
-  sprintf (name, "halo-%d", pid());
-  FILE * fp = fopen (name, "w");
+  char prefix[80];
+  FILE * fp;
 
   // local halo
+  fp = fopen_prefix (fp1, "halo", prefix);
   for (int l = 0; l < depth(); l++)
     foreach_halo (prolongation, l)
       foreach_child()
-        fprintf (fp, "%g %g %d\n", x, y, level);
-  fclose (fp);
+        fprintf (fp, "%s%g %g %d\n", prefix, x, y, level);
+  if (!fp1)
+    fclose (fp);
 
-  sprintf (name, "cells-%d", pid());
-  fp = fopen (name, "w");
-  output_cells (fp);
-  fclose (fp);
-
-  sprintf (name, "neighbors-%d", pid());
-  fp = fopen (name, "w");
+  if (!fp1) {
+    fp = fopen_prefix (fp1, "cells", prefix);
+    output_cells (fp);
+    fclose (fp);
+  }
+  
+  fp = fopen_prefix (fp1, "neighbors", prefix);
   foreach()
-    fprintf (fp, "%g %g %d\n", x, y, cell.neighbors);
-  fclose (fp);
+    fprintf (fp, "%s%g %g %d\n", prefix, x, y, cell.neighbors);
+  if (!fp1)
+    fclose (fp);
 
   // local restriction
-  sprintf (name, "restriction-%d", pid());
-  fp = fopen (name, "w");
+  fp = fopen_prefix (fp1, "restriction", prefix);
   for (int l = 0; l < depth(); l++)
     foreach_halo (restriction, l)
-      fprintf (fp, "%g %g %d %d\n", x, y, level, cell.neighbors);
-  fclose (fp);
+      fprintf (fp, "%s%g %g %d %d\n", prefix, x, y, level, cell.neighbors);
+  if (!fp1)
+    fclose (fp);
 
   MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
   
-  sprintf (name, "mpi-restriction-%d", pid());
-  fp = fopen (name, "w");
-  snd_rcv_print (&mpi->restriction, fp);
-  fclose (fp);
+  fp = fopen_prefix (fp1, "mpi-restriction", prefix);
+  snd_rcv_print (&mpi->restriction, fp, prefix);
+  if (!fp1)
+    fclose (fp);
 
-  sprintf (name, "mpi-halo-restriction-%d", pid());
-  fp = fopen (name, "w");
-  snd_rcv_print (&mpi->halo_restriction, fp);
-  fclose (fp);
+  fp = fopen_prefix (fp1, "mpi-halo-restriction", prefix);
+  snd_rcv_print (&mpi->halo_restriction, fp, prefix);
+  if (!fp1)
+    fclose (fp);
 
-  sprintf (name, "mpi-prolongation-%d", pid());
-  fp = fopen (name, "w");
-  snd_rcv_print (&mpi->prolongation, fp);
-  fclose (fp);
+  fp = fopen_prefix (fp1, "mpi-prolongation", prefix);
+  snd_rcv_print (&mpi->prolongation, fp, prefix);
+  if (!fp1)
+    fclose (fp);
 
-  sprintf (name, "border-%d", pid());
-  fp = fopen (name, "w");
+  fp = fopen_prefix (fp1, "mpi-border", prefix);
+  foreach_cell() {
+    if (is_border(cell))
+      fprintf (fp, "%s%g %g %d %d %d\n",
+	       prefix, x, y, level, cell.neighbors, cell.pid);
+    else
+      continue;
+    if (is_leaf(cell))
+      continue;
+  }
+  if (!fp1)
+    fclose (fp);
+
+  fp = fopen_prefix (fp1, "exterior", prefix);
   foreach_cell() {
     if (!is_active(cell))
-      fprintf (fp, "%g %g %d %d\n", x, y, level, cell.neighbors);
+      fprintf (fp, "%s%g %g %d %d %d\n",
+	       prefix, x, y, level, cell.neighbors, cell.pid);
     else if (!is_border(cell))
       continue;
     if (is_leaf(cell))
       continue;
   }
-  fclose (fp);
+  if (!fp1)
+    fclose (fp);
 
   write_adjacency_matrix (&mpi->restriction, "mrestriction");
   write_adjacency_matrix (&mpi->halo_restriction, "mhalo_restriction");
@@ -473,7 +503,7 @@ static void mpi_boundary_sync (MpiBoundary * mpi)
   prof_stop();
   
 #if DEBUG
-  debug_mpi();
+  debug_mpi (NULL);
 #endif  
 }
 
