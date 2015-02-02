@@ -23,7 +23,6 @@ enum {
 
 #define is_active(cell)  ((cell).flags & active)
 #define is_leaf(cell)    ((cell).flags & leaf)
-#define is_refined(cell) (is_active(cell) && !is_leaf(cell))
 #define is_corner(cell)  false
 #define is_coarse()      (!is_leaf(cell))
 

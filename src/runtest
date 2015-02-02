@@ -29,6 +29,7 @@ script()
     test -s warn || rm -f warn
 
     pass=true
+    rm -f $log log-*
     if test -n "$EXEC" -o -z `which gdb`; then
 	if ! $EXEC ./$test 2> $log > $out; then
 	    pass=false
@@ -56,6 +57,11 @@ script()
 	rm -f gdb.log
     fi
 
+    if test -f log-1; then
+	mv -f $log log-0
+	cat log-* > $log
+    fi
+    
     if $pass; then
 	if test -f $test.$ref; then
 	    ref=$ref
@@ -131,6 +137,11 @@ if ! test -f fail; then
        ' < gdb.log >> $log
     fi
     rm -f gdb.log
+  fi
+
+  if test -f log-1; then
+      mv -f $log log-0
+      cat log-* > $log
   fi
 
   if \$pass; then

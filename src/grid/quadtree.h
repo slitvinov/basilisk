@@ -29,7 +29,6 @@ enum {
 #define _CORNER 4
 #define is_active(cell)  ((cell).flags & active)
 #define is_leaf(cell)    ((cell).flags & leaf)
-#define is_refined(cell) (is_active(cell) && !is_leaf(cell))
 #define is_corner(cell)  (stage == _CORNER)
 #define is_coarse()      (!is_leaf(cell))
 #define is_border(cell)  ((cell).flags & border)
@@ -416,15 +415,18 @@ static void update_cache_f (void)
     q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
 
   foreach_cell() {
-    if (is_active(cell) && is_local(cell)) { // always true in serial
+    if (is_local(cell)) { // always true in serial
       // active cells
+      assert (is_active(cell));
       cache_level_append (&q->active[level], point);
-      if (is_leaf (cell)) {
+    }
+    if (is_leaf (cell)) {
+      if (is_local(cell)) { // always true in serial
 	cache_append (&q->leaves, point, 0, 0, 0);
 	// faces
 	unsigned flags = 0;
 	foreach_dimension()
-	  if (!is_refined(neighbor(-1,0)))
+	  if (!is_active(neighbor(-1,0)) || is_leaf(neighbor(-1,0)))
 	    flags |= face_x;
 	if (flags)
 	  cache_append (&q->faces, point, 0, 0, flags);
@@ -444,28 +446,26 @@ static void update_cache_f (void)
         if (cell.neighbors > 0)
 	  cache_level_append (&q->prolongation[level], point);
 	cell.flags &= ~halo;
-	continue;
       }
-      else { // not a leaf
-	bool restriction =
-	  level > 0 &&
-	  is_local(aparent(0,0)) &&
-	  (aparent(0,0).flags & halo);
-	for (int k = -GHOSTS; k <= GHOSTS && !restriction; k++)
-	  for (int l = -GHOSTS; l <= GHOSTS && !restriction; l++)
-	    if (allocated(k,l) && is_leaf(neighbor(k,l)))
-	      restriction = true;
-	if (restriction) {
-	  // halo restriction
-	  cell.flags |= halo;
-	  cache_level_append (&q->restriction[level], point);
-	}
-	else
-	  cell.flags &= ~halo;
-      }
-    }
-    else if (!is_active(cell))
       continue;
+    }
+    else { // not a leaf
+      bool restriction =
+	level > 0 &&
+	(aparent(0,0).flags & halo);
+      for (int k = -GHOSTS; k <= GHOSTS && !restriction; k++)
+	for (int l = -GHOSTS; l <= GHOSTS && !restriction; l++)
+	  if (allocated(k,l) && is_leaf(neighbor(k,l)))
+	    restriction = true;
+      if (restriction) {
+	// halo restriction
+	cell.flags |= halo;
+	if (is_local(cell)) // always true in serial
+	  cache_level_append (&q->restriction[level], point);
+      }
+      else
+	cell.flags &= ~halo;
+    }
   }
   
   q->dirty = false;
@@ -581,6 +581,8 @@ void quadtree_trash (void * alist)
 
 static void alloc_layer (void)
 {
+  // fixme: need global depth in parallel
+
   Quadtree * q = quadtree;
   q->depth++;
   /* low-level memory management */
