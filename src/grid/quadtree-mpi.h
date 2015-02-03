@@ -10,23 +10,12 @@ typedef struct {
 
 typedef struct {
   Rcv * rcv;
-  int nrcv;
+  int npid;
   int pid[sq(2*GHOSTS+1)], n;
 } RcvPid;
 
 typedef struct {
-  int nrcv;   // the number of PEs to receive ghost values from
-  Rcv * rcv;  // ghost cells to receive
-
-  int nsnd;   // the number of PEs to send ghost values to
-  Rcv * snd;  // ghost cells to send
-
-  int * Arcv; // Arcv[x] is different from zero if we need to receive
-              // data from proc x
-  int * Asnd; // Asnd[x] is different from zero if we need to send
-              // data to proc x
-
-  RcvPid * prcv, * psnd;
+  RcvPid * rcv, * snd;
 } SndRcv;
 
 typedef struct {
@@ -95,13 +84,13 @@ static Rcv * rcv_pid_pointer (RcvPid * p, int pid)
   assert (p->n < sq(2*GHOSTS+1));
   p->pid[p->n++] = pid;
   int i;
-  for (i = 0; i < p->nrcv; i++)
+  for (i = 0; i < p->npid; i++)
     if (pid == p->rcv[i].pid)
       break;
 
-  if (i == p->nrcv) {
-    p->rcv = realloc (p->rcv, ++p->nrcv*sizeof (Rcv));
-    Rcv * rcv = &p->rcv[p->nrcv-1];
+  if (i == p->npid) {
+    p->rcv = realloc (p->rcv, ++p->npid*sizeof (Rcv));
+    Rcv * rcv = &p->rcv[p->npid-1];
     rcv->pid = pid;
     rcv->depth = 0;
     rcv->halo = malloc (sizeof (CacheLevel));
@@ -126,9 +115,9 @@ static void rcv_pid_append_children (RcvPid * p, int pid, Point point)
       rcv_append (point, rcv);
 }
 
-static void rcv_pid_write (RcvPid * p, const char * name)
+void rcv_pid_write (RcvPid * p, const char * name)
 {
-  for (int i = 0; i < p->nrcv; i++) {
+  for (int i = 0; i < p->npid; i++) {
     Rcv * rcv = &p->rcv[i];
     char fname[80];
     sprintf (fname, "%s-%d-%d", name, pid(), rcv->pid);
@@ -140,136 +129,26 @@ static void rcv_pid_write (RcvPid * p, const char * name)
 
 static void rcv_pid_print (RcvPid * p, FILE * fp, const char * prefix)
 {
-  for (int i = 0; i < p->nrcv; i++)
+  for (int i = 0; i < p->npid; i++)
     rcv_print (&p->rcv[i], fp, prefix);
 }
 
 static void rcv_pid_destroy (RcvPid * p)
 {
-  for (int i = 0; i < p->nrcv; i++)
+  for (int i = 0; i < p->npid; i++)
     rcv_destroy (&p->rcv[i]);
   free (p->rcv);
   free (p);
 }
 
-static void snd_rcv_append (SndRcv * m, Point point)
-{
-  int i;
-  for (i = 0; i < m->nrcv; i++)
-    if (cell.pid == m->rcv[i].pid)
-      break;
-  if (i == m->nrcv) {
-    m->rcv = realloc (m->rcv, ++m->nrcv*sizeof (Rcv));
-    Rcv * rcv = &m->rcv[m->nrcv-1];
-    rcv->pid = cell.pid;
-    rcv->depth = 0;
-    rcv->halo = malloc (sizeof (CacheLevel));
-    rcv->buf = NULL;
-    cache_level_init (&rcv->halo[0]);
-  }
-  rcv_append (point, &m->rcv[i]);
-  m->Asnd[cell.pid]++;
-}
-
-@def foreach_send(list, l) {
-  prof_start ("foreach_send");
-  SndRcv * _m = &((MpiBoundary *)mpi_boundary)->prolongation;
-  
-  int _len = list_len (list), _l = l;
-  scalar * _list = list;
-  
-  /* send ghost values */
-  for (int _i = 0; _i < _m->nsnd; _i++) {
-    Rcv * _snd = &_m->snd[_i];
-    if (_l <= _snd->depth && _snd->halo[_l].n > 0) {
-      assert (!_snd->buf);
-      _snd->buf = malloc (sizeof (double)*_snd->halo[_l].n*_len);
-      double * _b = _snd->buf;
-      foreach_cache_level(_snd->halo[_l], _l,) {
-@
-@def end_foreach_send()
-        for (scalar s = *_list, *_i = _list; *((scalar *)&s) >= 0; s = *++_i)
-	  *_b++ = val(s,0,0);
-      } end_foreach_cache_level();
-      MPI_Isend (_snd->buf, _snd->halo[_l].n*_len, MPI_DOUBLE, _snd->pid, _l, 
-		 MPI_COMM_WORLD, &_snd->r);
-    }
-  }
-  prof_stop();
-}
-@
-
 static Boundary * mpi_boundary = NULL;
-
-static void snd_rcv_receive (SndRcv * m, scalar * list, int l)
-{
-  if (!m)
-    m = &((MpiBoundary *)mpi_boundary)->restriction;
-  
-  int len = list_len (list);
-    
-  /* receive ghost values */
-  for (int i = 0; i < m->nrcv; i++) {
-    Rcv * rcv = &m->rcv[i];
-    if (l <= rcv->depth && rcv->halo[l].n > 0) {
-      prof_start ("snd_rcv_receive");
-      double buf[rcv->halo[l].n*len];
-#if 0
-      fprintf (stderr, "receiving %d doubles from %d level %d\n",
-	       rcv->halo[l].n*len, rcv->pid, l);
-      fflush (stderr);
-#endif
-      MPI_Recv (buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l, 
-		MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      double * b = buf;
-      foreach_cache_level(rcv->halo[l], l,)
-	for (scalar s in list)
-	  s[] = *b++;
-      prof_stop();
-    }
-  }
-
-  /* wait for completion of send requests */
-  for (int i = 0; i < m->nsnd; i++) {
-    Rcv * snd = &m->snd[i];
-    if (l <= snd->depth && snd->halo[l].n > 0)
-      rcv_free_buf (snd);
-  }
-}
-
-static void snd_rcv_send (SndRcv * m, scalar * list, int l)
-{
-  int len = list_len (list); 
-
-  /* send ghost values */
-  for (int i = 0; i < m->nsnd; i++) {
-    Rcv * snd = &m->snd[i];
-    if (l <= snd->depth && snd->halo[l].n > 0) {
-      prof_start ("snd_rcv_send");
-      assert (!snd->buf);
-      snd->buf = malloc (sizeof (double)*snd->halo[l].n*len);
-      double * b = snd->buf;
-      foreach_cache_level(snd->halo[l], l,)
-	for (scalar s in list)
-	  *b++ = s[];
-#if 0
-      fprintf (stderr, "  sending %d doubles to %d level %d\n",
-	       snd->halo[l].n*len, snd->pid, l);
-      fflush (stderr);
-#endif
-      MPI_Isend (snd->buf, snd->halo[l].n*len, MPI_DOUBLE, snd->pid, l, 
-		 MPI_COMM_WORLD, &snd->r);
-      prof_stop();
-    }
-  }
-}
 
 static void rcv_pid_receive (RcvPid * m, scalar * list, int l)
 {
   int len = list_len (list);
     
   /* receive ghost values */
-  for (int i = 0; i < m->nrcv; i++) {
+  for (int i = 0; i < m->npid; i++) {
     Rcv * rcv = &m->rcv[i];
     if (l <= rcv->depth && rcv->halo[l].n > 0) {
       prof_start ("rcv_pid_receive");
@@ -293,7 +172,7 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, int l)
 static void rcv_pid_wait (RcvPid * m, int l)
 {
   /* wait for completion of send requests */
-  for (int i = 0; i < m->nrcv; i++) {
+  for (int i = 0; i < m->npid; i++) {
     Rcv * rcv = &m->rcv[i];
     if (l <= rcv->depth && rcv->halo[l].n > 0)
       rcv_free_buf (rcv);
@@ -305,7 +184,7 @@ static void rcv_pid_send (RcvPid * m, scalar * list, int l)
   int len = list_len (list); 
 
   /* send ghost values */
-  for (int i = 0; i < m->nrcv; i++) {
+  for (int i = 0; i < m->npid; i++) {
     Rcv * rcv = &m->rcv[i];
     if (l <= rcv->depth && rcv->halo[l].n > 0) {
       prof_start ("rcv_pid_send");
@@ -329,117 +208,21 @@ static void rcv_pid_send (RcvPid * m, scalar * list, int l)
 
 static void rcv_pid_sync (SndRcv * m, scalar * list, int l)
 {
-  rcv_pid_send (m->psnd, list, l);
-  rcv_pid_receive (m->prcv, list, l);
-  rcv_pid_wait (m->psnd, l);
-}
-
-static void snd_rcv_sync (SndRcv * m, scalar * list, int l)
-{
-  snd_rcv_send (m, list, l);
-  snd_rcv_receive (m, list, l);
-}
-
-void snd_rcv_print (SndRcv * m, FILE * fp, const char * prefix)
-{
-  for (int i = 0; i < m->nrcv; i++)
-    for (int j = 0; j <= m->rcv[i].depth; j++)
-      foreach_cache_level (m->rcv[i].halo[j], j,) {
-	if (allocated(0,0))
-	  fprintf (fp, "%s%g %g %d %d\n",
-		   prefix, x, y, m->rcv[i].pid, level);
-	else {
-	  fprintf (fp, "%s%g %g %d %d\n",
-		   prefix, x, y, m->rcv[i].pid, level);
-	  fprintf (stderr, "ERROR: %g %g %d unallocated!\n", x, y, level);
-	}
-      }
-}
-
-void snd_rcv_stats (SndRcv * m, FILE * fp)
-{
-  size_t n = 0, nm = 0;
-  for (int i = 0; i < m->nrcv; i++)
-    for (int j = depth(); j <= m->rcv[i].depth; j++)
-      if (m->rcv[i].halo[j].n > 0) {
-	n += m->rcv[i].halo[j].n; nm++;
-      }
-  fprintf (stderr, "%ld %ld ", nm, n);
-}
-
-void rcv_graph (SndRcv * m, FILE * fp)
-{
-  for (int i = 0; i < m->nrcv; i++) {
-    fprintf (fp, "%d -> %d [label=\"", m->rcv[i].pid, pid());
-    for (int j = 0; j <= m->rcv[i].depth; j++) {
-      int n = 0;
-      foreach_cache_level (m->rcv[i].halo[j], j,)
-	n++;
-      fprintf (fp, "%d ", n);
-    }
-    fprintf (fp, "\"];\n");
-  }
-}
-
-static void snd_free (SndRcv * m)
-{
-  for (int i = 0; i < m->nsnd; i++)
-    rcv_destroy (&m->snd[i]);
-  free (m->snd);
-  m->snd = NULL; m->nsnd = 0;
-}
-
-static void rcv_free (SndRcv * m)
-{
-  for (int i = 0; i < m->nrcv; i++)
-    rcv_destroy (&m->rcv[i]);
-  free (m->rcv);
-  m->rcv = NULL; m->nrcv = 0;
-  for (int i = 0; i < npe(); i++)
-    m->Asnd[i] = 0;
+  rcv_pid_send (m->snd, list, l);
+  rcv_pid_receive (m->rcv, list, l);
+  rcv_pid_wait (m->snd, l);
 }
 
 static void snd_rcv_destroy (SndRcv * m)
 {
-  rcv_free (m);
-  snd_free (m);
-  free (m->Arcv);
-  free (m->Asnd);
-  rcv_pid_destroy (m->prcv);
-  rcv_pid_destroy (m->psnd);
-}
-
-static void snd_rcv_transpose_adjacency (SndRcv * m)
-{
-  MPI_Alltoall (m->Asnd, 1, MPI_INT, m->Arcv, 1, MPI_INT, MPI_COMM_WORLD);
-}
-
-void write_adjacency_matrix (SndRcv * m, const char * name)
-{
-  if (pid())
-    MPI_Gather (m->Arcv, npe(), MPI_INT, NULL, 0, MPI_INT, 0, MPI_COMM_WORLD);
-  else {
-    int a[npe()][npe()];
-    MPI_Gather (m->Arcv, npe(), MPI_INT, a, npe(), MPI_INT, 0, MPI_COMM_WORLD);
-    FILE * fp = fopen (name, "w");
-    for (int j = 0; j < npe(); j++) {
-      for (int i = 0; i < npe(); i++)
-	if (a[i][j])
-	  fprintf (fp, "%d ", a[i][j]);
-	else
-	  fputs ("NaN ", fp);
-      fputc ('\n', fp);
-    }
-    fclose (fp);
-  }
+  rcv_pid_destroy (m->rcv);
+  rcv_pid_destroy (m->snd);
 }
 
 static void snd_rcv_init (SndRcv * m)
 {
-  m->Arcv = calloc (npe(), sizeof(int));
-  m->Asnd = calloc (npe(), sizeof(int));
-  m->prcv = rcv_pid_new();
-  m->psnd = rcv_pid_new();
+  m->rcv = rcv_pid_new();
+  m->snd = rcv_pid_new();
 }
 
 static void mpi_boundary_destroy (Boundary * b)
@@ -454,39 +237,24 @@ static void mpi_boundary_destroy (Boundary * b)
 static void mpi_boundary_restriction (const Boundary * b, scalar * list, int l)
 {
   MpiBoundary * m = (MpiBoundary *) b;
-#if 0
-  snd_rcv_sync (&m->restriction, list, l);
-#else
   rcv_pid_sync (&m->restriction, list, l);
-#endif
 }
 
 static void mpi_boundary_halo_restriction (const Boundary * b,
 					   scalar * list, int l)
 {
   MpiBoundary * m = (MpiBoundary *) b;
-#if 0
-  snd_rcv_sync (&m->halo_restriction, list, l);
-#else
   rcv_pid_sync (&m->halo_restriction, list, l);
-#endif
 }
 
 static void mpi_boundary_halo_prolongation (const Boundary * b,
 					    scalar * list, int l, int depth)
 {
   MpiBoundary * m = (MpiBoundary *) b;
-#if 0
-  if (l == depth)
-    snd_rcv_sync (&m->restriction, list, l);
-  else
-    snd_rcv_sync (&m->prolongation, list, l);
-#else
   if (l == depth)
     rcv_pid_sync (&m->restriction, list, l);
   else
     rcv_pid_sync (&m->prolongation, list, l);
-#endif
 }
 
 static void mpi_boundary_halo_restriction_flux (const Boundary * b,
@@ -510,31 +278,6 @@ void mpi_boundary_new()
   add_boundary (mpi_boundary);
 }
 
-static void cache_level_send (CacheLevel * halo, int dest, int tag,
-			      MPI_Request * r)
-{
-  if (halo && halo->n > 0)
-    MPI_Isend (halo->p, 2*halo->n, MPI_INT, dest, tag, MPI_COMM_WORLD, r);
-  else {
-    static int zero = 0;
-    MPI_Isend (&zero, 1, MPI_INT, dest, tag, MPI_COMM_WORLD, r);
-  }
-}
-
-static void cache_level_receive (CacheLevel * halo, int src, int tag)
-{
-  MPI_Status s;
-  MPI_Probe (src, tag, MPI_COMM_WORLD, &s);
-  MPI_Get_count (&s, MPI_INT, &halo->n);
-  halo->n /= 2;
-  if (halo->n == 0)
-    MPI_Recv (&halo->n, 1, MPI_INT, src, tag, MPI_COMM_WORLD, &s);
-  else {
-    halo->p = malloc (halo->n*sizeof(IndexLevel));
-    MPI_Recv (halo->p, 2*halo->n, MPI_INT, src, tag, MPI_COMM_WORLD, &s);
-  }
-}
-
 static FILE * fopen_prefix (FILE * fp, const char * name, char * prefix)
 {
   if (fp) {
@@ -549,97 +292,6 @@ static FILE * fopen_prefix (FILE * fp, const char * name, char * prefix)
   }
 }
 
-#if 0
-void debug_mpi (FILE * fp1)
-{
-  void output_cells (FILE * fp);
-
-  char prefix[80];
-  FILE * fp;
-
-  // local halo
-  fp = fopen_prefix (fp1, "halo", prefix);
-  for (int l = 0; l < depth(); l++)
-    foreach_halo (prolongation, l)
-      foreach_child()
-        fprintf (fp, "%s%g %g %d\n", prefix, x, y, level);
-  if (!fp1)
-    fclose (fp);
-
-  if (!fp1) {
-    fp = fopen_prefix (fp1, "cells", prefix);
-    output_cells (fp);
-    fclose (fp);
-  }
-  
-  fp = fopen_prefix (fp1, "neighbors", prefix);
-  foreach()
-    fprintf (fp, "%s%g %g %d\n", prefix, x, y, cell.neighbors);
-  if (!fp1)
-    fclose (fp);
-
-  // local restriction
-  fp = fopen_prefix (fp1, "restriction", prefix);
-  for (int l = 0; l < depth(); l++)
-    foreach_halo (restriction, l)
-      fprintf (fp, "%s%g %g %d %d\n", prefix, x, y, level, cell.neighbors);
-  if (!fp1)
-    fclose (fp);
-
-  MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
-  
-  fp = fopen_prefix (fp1, "mpi-restriction", prefix);
-  snd_rcv_print (&mpi->restriction, fp, prefix);
-  if (!fp1)
-    fclose (fp);
-
-  rcv_pid_write (mpi->restriction.prcv, "mpi-restriction-rcv");
-  rcv_pid_write (mpi->restriction.psnd, "mpi-restriction-snd");
-  
-  fp = fopen_prefix (fp1, "mpi-halo-restriction", prefix);
-  snd_rcv_print (&mpi->halo_restriction, fp, prefix);
-  if (!fp1)
-    fclose (fp);
-
-  fp = fopen_prefix (fp1, "mpi-prolongation", prefix);
-  snd_rcv_print (&mpi->prolongation, fp, prefix);
-  if (!fp1)
-    fclose (fp);
-
-  rcv_pid_write (mpi->prolongation.prcv, "mpi-prolongation-rcv");
-  rcv_pid_write (mpi->prolongation.psnd, "mpi-prolongation-snd");
-  
-  fp = fopen_prefix (fp1, "mpi-border", prefix);
-  foreach_cell() {
-    if (is_border(cell))
-      fprintf (fp, "%s%g %g %d %d %d\n",
-	       prefix, x, y, level, cell.neighbors, cell.pid);
-    else
-      continue;
-    if (is_leaf(cell))
-      continue;
-  }
-  if (!fp1)
-    fclose (fp);
-
-  fp = fopen_prefix (fp1, "exterior", prefix);
-  foreach_cell() {
-    if (!is_active(cell))
-      fprintf (fp, "%s%g %g %d %d %d\n",
-	       prefix, x, y, level, cell.neighbors, cell.pid);
-    else if (!is_border(cell))
-      continue;
-    if (is_leaf(cell))
-      continue;
-  }
-  if (!fp1)
-    fclose (fp);
-
-  write_adjacency_matrix (&mpi->restriction, "mrestriction");
-  write_adjacency_matrix (&mpi->halo_restriction, "mhalo_restriction");
-  write_adjacency_matrix (&mpi->prolongation, "mprolongation");
-}
-#else
 void debug_mpi (FILE * fp1)
 {
   void output_cells (FILE * fp);
@@ -679,23 +331,17 @@ void debug_mpi (FILE * fp1)
   MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
   
   fp = fopen_prefix (fp1, "mpi-restriction", prefix);
-  rcv_pid_print (mpi->restriction.prcv, fp, prefix);
+  rcv_pid_print (mpi->restriction.rcv, fp, prefix);
   if (!fp1)
     fclose (fp);
   
   fp = fopen_prefix (fp1, "mpi-halo-restriction", prefix);
-  snd_rcv_print (&mpi->halo_restriction, fp, prefix);
+  rcv_pid_print (mpi->halo_restriction.rcv, fp, prefix);
   if (!fp1)
     fclose (fp);
-
-  char command[80];
-  sprintf (command, "rm -f *-rcv-%d-* *-snd-%d-*", pid(), pid());
-  system (command);
-  rcv_pid_write (mpi->halo_restriction.prcv, "halo-restriction-rcv");
-  rcv_pid_write (mpi->halo_restriction.psnd, "halo-restriction-snd");
   
   fp = fopen_prefix (fp1, "mpi-prolongation", prefix);
-  rcv_pid_print (mpi->prolongation.prcv, fp, prefix);
+  rcv_pid_print (mpi->prolongation.rcv, fp, prefix);
   if (!fp1)
     fclose (fp);
   
@@ -724,68 +370,17 @@ void debug_mpi (FILE * fp1)
   }
   if (!fp1)
     fclose (fp);
-}
-#endif
-
-static void snd_rcv_sync_buffers (SndRcv * snd)
-{
-  /* we send the ghost cell indices to their respective PEs */
-  MPI_Request r[snd->nrcv*(depth() + 2)];
-  int nr = 0;
-  for (int i = 0; i < snd->nrcv; i++) {
-    Rcv * res = &snd->rcv[i];
-    MPI_Isend (&res->depth, 1, MPI_INT, res->pid, 0, MPI_COMM_WORLD, &r[nr++]);
-    for (int j = 0; j <= res->depth; j++)
-      cache_level_send (&res->halo[j], res->pid, j + 1, &r[nr++]);
-  }
-  assert (nr <= snd->nrcv*(depth() + 2));
-  
-  /* we free the old buffers */
-  snd_free (snd);
-
-  /* we receive the ghost cell indices from their respective PEs */
-  for (int i = 0; i < npe(); i++)
-    if (snd->Arcv[i]) {
-      snd->snd = realloc (snd->snd, ++snd->nsnd*sizeof (Rcv));
-      Rcv * res = &snd->snd[snd->nsnd-1];
-      res->pid = i;
-      MPI_Status s;
-      MPI_Recv (&res->depth, 1, MPI_INT, res->pid, 0, MPI_COMM_WORLD, &s);
-      res->buf = NULL;
-      res->halo = malloc ((res->depth + 1)*sizeof (CacheLevel));
-      for (int j = 0; j <= res->depth; j++)
-	cache_level_receive (&res->halo[j], res->pid, j + 1);
-    }
-
-  /* we wait for the send requests to complete */
-  MPI_Status s[nr];
-  MPI_Waitall (nr, r, s);
-}
-
-static void mpi_boundary_sync (MpiBoundary * mpi)
-{
-  prof_start ("mpi_boundary_sync");
-
-  snd_rcv_sync_buffers (&mpi->restriction);
-  snd_rcv_sync_buffers (&mpi->halo_restriction);
-  snd_rcv_sync_buffers (&mpi->prolongation);
-  
-  prof_stop();
-  
-#if DEBUG
-  debug_mpi (NULL);
-#endif  
 }
 
 static void snd_rcv_free (SndRcv * p)
 {
-  rcv_pid_destroy (p->prcv);
-  p->prcv = rcv_pid_new();
-  rcv_pid_destroy (p->psnd);
-  p->psnd = rcv_pid_new();
+  rcv_pid_destroy (p->rcv);
+  p->rcv = rcv_pid_new();
+  rcv_pid_destroy (p->snd);
+  p->snd = rcv_pid_new();
 }
 
-void mpi_boundary_update1 (MpiBoundary * m)
+void mpi_boundary_update (MpiBoundary * m)
 {
   prof_start ("mpi_boundary_update");
 
@@ -808,8 +403,8 @@ void mpi_boundary_update1 (MpiBoundary * m)
     if (is_local(cell)) {
       // ==================================
       // local cell: do we need to send it?
-      RcvPid * pro = prolongation->psnd;
-      RcvPid * res = restriction->psnd;
+      RcvPid * pro = prolongation->snd;
+      RcvPid * res = restriction->snd;
       pro->n = res->n = 0;
       for (int k = -GHOSTS; k <= GHOSTS; k++)
 	for (int l = -GHOSTS; l <= GHOSTS; l++) {
@@ -846,39 +441,17 @@ void mpi_boundary_update1 (MpiBoundary * m)
 	      rcv_pid_append (res, pid, point);
 	  }
       // halo restriction
-#if 1
       if (level > 0 && !is_local(aparent(0,0))) {
-	RcvPid * halo_res = halo_restriction->psnd;
+	RcvPid * halo_res = halo_restriction->snd;
 	halo_res->n = 0;
-#if 0	
-	for (int k = -GHOSTS; k <= GHOSTS; k++)
-	  for (int l = -GHOSTS; l <= GHOSTS; l++)
-	    if (is_leaf(aparent(k,l))/* && aparent(k,l).pid == aparent(0,0).pid*/) {
-	      rcv_pid_append (halo_res, aparent(0,0).pid, point);
-	      k = l = GHOSTS + 1; // break
-	    }
-#else
 	rcv_pid_append (halo_res, aparent(0,0).pid, point);
-#endif
       }
-#else
-      if (!is_leaf(cell)) {
-	RcvPid * halo_res = halo_restriction->psnd;
-	halo_res->n = 0;
-	for (int k = -GHOSTS; k <= GHOSTS; k++)
-	  for (int l = -GHOSTS; l <= GHOSTS; l++)
-	    if (is_leaf(neighbor(k,l)) && !is_local(neighbor(k,l))) {
-	      rcv_pid_append (halo_res, neighbor(k,l).pid, point);
-	      k = l = GHOSTS + 1; // break
-	    }
-      }
-#endif
     }
     else {
       // =========================================
       // non-local cell: do we need to receive it?
-      RcvPid * pro = prolongation->prcv;
-      RcvPid * res = restriction->prcv;
+      RcvPid * pro = prolongation->rcv;
+      RcvPid * res = restriction->rcv;
       pro->n = res->n = 0;
       for (int k = -GHOSTS; k <= GHOSTS; k++)
 	for (int l = -GHOSTS; l <= GHOSTS; l++)
@@ -914,7 +487,7 @@ void mpi_boundary_update1 (MpiBoundary * m)
 	      rcv_pid_append (res, cell.pid, point);
       // halo restriction
       if (level > 0 && is_local(aparent(0,0))) {
-	RcvPid * halo_res = halo_restriction->prcv;
+	RcvPid * halo_res = halo_restriction->rcv;
 	halo_res->n = 0;
 	rcv_pid_append (halo_res, cell.pid, point);
       }
@@ -924,94 +497,13 @@ void mpi_boundary_update1 (MpiBoundary * m)
       continue;
   }
 
-  prof_stop();
-}
-
-void mpi_boundary_update (MpiBoundary * m)
-{
-  prof_start ("mpi_boundary_update");
-
-  rcv_free (&m->restriction);
-  rcv_free (&m->halo_restriction);
-  rcv_free (&m->prolongation);
-
-  /* we build arrays of ghost cell indices for restriction and prolongation */
-  foreach_cell() {
-    if (!is_local(cell)) {
-      int refined = 0;   // number of active and refined nearest neighbors
-      int leaves = 0;    // number of active and leaf neighbors
-      int nleaves = 0;   // number of active and leaf nearest neighbors
-      int neighbors = 0; // number of active neighbors
-      for (int k = -GHOSTS; k <= GHOSTS; k++)
-	for (int l = -GHOSTS; l <= GHOSTS; l++)
-	  if (allocated(k,l) && is_active(neighbor(k,l))) {
-	    if (is_local(neighbor(k,l))) {
-	      neighbors++;
-	      if (is_leaf(neighbor(k,l))) {
-		leaves++;
-		if ((k >= -GHOSTS/2 && k <= GHOSTS/2 && l == 0) ||
-		    (l >= -GHOSTS/2 && l <= GHOSTS/2 && k == 0))
-		  nleaves++;
-	      }
-	      else if (k >= -GHOSTS/2 && k <= GHOSTS/2 &&
-		       l >= -GHOSTS/2 && l <= GHOSTS/2)
-		refined++;
-	    }
-	    /* If the neighbor is not local and not a leaf, we check
-	       whether any of its children is local. If this is the
-	       case, we need to communicate the value to ensure a
-	       well-defined coarse->fine hierarchy. */
-	    else if (!is_leaf(neighbor(k,l)) &&
-		     k >= -GHOSTS/2 && k <= GHOSTS/2 &&
-		     l >= -GHOSTS/2 && l <= GHOSTS/2)
-	      for (int i = 2*k; i <= 2*k + 1 && !neighbors; i++)
-		for (int j = 2*l; j <= 2*l + 1 && !neighbors; j++)
-		  if (is_local(child(i,j)))
-		    neighbors++;
-	  }
-#if 0
-      if (!is_leaf(cell) && nleaves)
-      	fprintf (stderr, "halo_restriction_flux_rcv %g %g %d\n", x, y, cell.pid);
-#endif
-      if (leaves)
-	snd_rcv_append (&m->prolongation, point);
-      if (neighbors) {
-	snd_rcv_append (&m->restriction, point);
-	cell.flags |= halo; // for boundary conditions
-      }
-      else
-	cell.flags &= ~halo;
-      if (refined && is_leaf(cell))
-	foreach_child() {
-	  snd_rcv_append (&m->prolongation, point);
-	  snd_rcv_append (&m->restriction, point);
-	}
-#if 0
-      else if (!neighbors && !is_leaf(cell))
-	coarsen_cell (point, NULL);
-#endif
-    }
-    else if (!is_border(cell))
-      continue;
-    if (is_leaf(cell))
-      continue;
-  }
-  
-  /* Non-local cells required for halo restriction. */
-  update_cache();
-  for (int l = 0; l < depth(); l++)
-    foreach_halo (restriction, l)
-      foreach_child()
-        if (!is_local(cell))
-	  snd_rcv_append (&m->halo_restriction, point);
-  
-  snd_rcv_transpose_adjacency (&m->restriction);
-  snd_rcv_transpose_adjacency (&m->halo_restriction);
-  snd_rcv_transpose_adjacency (&m->prolongation);
+  // fixme: cleanup cells which do not have local neighbors
   
   prof_stop();
 
-  mpi_boundary_update1 (m);
+#if DEBUG
+  debug_mpi (NULL);
+#endif  
 }
 
 /*
@@ -1073,31 +565,33 @@ static void mpi_boundary_match (MpiBoundary * mpi)
   prof_start ("mpi_boundary_match");
   
   /* Send halo mesh for each neighboring process. */
-  SndRcv * m = &mpi->prolongation;
-  Array * a[m->nsnd];
-  MPI_Request r[m->nsnd];
-  for (int i = 0; i < m->nsnd; i++) {
-    Rcv snd = m->snd[i];
-    a[i] = remote_leaves (snd.pid);
+  RcvPid * snd = mpi->restriction.snd;
+  Array * a[snd->npid];
+  MPI_Request r[snd->npid];
+  for (int i = 0; i < snd->npid; i++) {
+    int pid = snd->rcv[i].pid;
+    a[i] = remote_leaves (pid);
     assert (a[i]->len > 0);
-    MPI_Isend (a[i]->p, a[i]->len, MPI_INT, snd.pid, 0, MPI_COMM_WORLD, &r[i]);
+    MPI_Isend (a[i]->p, a[i]->len, MPI_INT, pid, 0, MPI_COMM_WORLD, &r[i]);
   }
     
   /* Receive halo mesh from each neighboring process. */
+  
+  RcvPid * rcv = mpi->restriction.rcv;
   int refined = 0;
-  for (int i = 0; i < m->nrcv; i++) {
-    Rcv rcv = m->rcv[i];
+  for (int i = 0; i < rcv->npid; i++) {
+    int pid = rcv->rcv[i].pid;
     MPI_Status s;
     int len;
-    MPI_Probe (rcv.pid, 0, MPI_COMM_WORLD, &s);
+    MPI_Probe (pid, 0, MPI_COMM_WORLD, &s);
     MPI_Get_count (&s, MPI_INT, &len);
     unsigned a[len];
-    MPI_Recv (a, len, MPI_INT, rcv.pid, 0, MPI_COMM_WORLD, &s);
+    MPI_Recv (a, len, MPI_INT, pid, 0, MPI_COMM_WORLD, &s);
     refined += match_refine (a, NULL);
   }
   
   /* check that ghost values were received OK and free send buffers */
-  for (int i = 0; i < m->nsnd; i++) {
+  for (int i = 0; i < snd->npid; i++) {
     MPI_Wait (&r[i], MPI_STATUS_IGNORE);
     array_free (a[i]);
   }
@@ -1111,13 +605,11 @@ static void mpi_boundary_match (MpiBoundary * mpi)
     mpi_boundary_match (mpi);
 }
 
-
 void mpi_boundary_refine (void * p, scalar * list)
 {
   MpiBoundary * mpi = p ? p : (MpiBoundary *) mpi_boundary;
   mpi_boundary_match (mpi);
   mpi_boundary_update (mpi);
-  mpi_boundary_sync (mpi);
 }
 
 void mpi_partitioning()
@@ -1145,22 +637,12 @@ void mpi_partitioning()
 	  cell.flags &= ~active;
       }
       else {
-	bool inactive = true;
 	cell.pid = child(0,1).pid;
+	bool inactive = true;
 	for (int i = 0; i <= 1; i++)
 	  for (int j = 0; j <= 1; j++)
-	    if (is_active(child(i,j))) {
+	    if (is_active(child(i,j)))
 	      inactive = false;
-	      /* We check whether the cell has local, leaf children. If it
-		 does, we make it local. This is necessary to simplify
-		 prolongation. */
-#if 0
-	      if (is_leaf(child(i,j))) {
-		assert (is_local(child(i,j)));
-		cell.pid = pid();
-	      }
-#endif
-	    }
 	if (inactive)
 	  cell.flags &= ~active;
       }
@@ -1195,7 +677,6 @@ void mpi_partitioning()
   prof_stop();
   
   mpi_boundary_update (m);
-  mpi_boundary_sync (m);  
 }
 
 /**

@@ -464,7 +464,10 @@ mpi-restriction-0 0.59375 0.40625 4 4
 mpi-restriction-0 0.515625 0.484375 4 5
 mpi-restriction-0 0.546875 0.484375 4 5
 mpi-restriction-0 0.515625 0.453125 4 5
+mpi-halo-restriction-0 0.75 0.75 1 1
 mpi-halo-restriction-0 0.484375 0.515625 1 5
+mpi-halo-restriction-0 0.25 0.25 3 1
+mpi-halo-restriction-0 0.75 0.25 4 1
 mpi-prolongation-0 0.53125 0.96875 1 4
 mpi-prolongation-0 0.59375 0.96875 1 4
 mpi-prolongation-0 0.53125 0.90625 1 4
@@ -1591,6 +1594,11 @@ mpi-restriction-1 0.507812 0.492188 4 6
 mpi-restriction-1 0.523438 0.492188 4 6
 mpi-restriction-1 0.507812 0.476562 4 6
 mpi-restriction-1 0.523438 0.476562 4 6
+mpi-halo-restriction-1 0.6875 0.6875 2 3
+mpi-halo-restriction-1 0.5625 0.5625 2 3
+mpi-halo-restriction-1 0.6875 0.5625 2 3
+mpi-halo-restriction-1 0.59375 0.65625 2 4
+mpi-halo-restriction-1 0.875 0.625 3 2
 mpi-prolongation-1 0.40625 0.96875 0 4
 mpi-prolongation-1 0.46875 0.96875 0 4
 mpi-prolongation-1 0.40625 0.90625 0 4
@@ -2923,6 +2931,7 @@ mpi-restriction-2 0.726562 0.476562 4 6
 mpi-restriction-2 0.726562 0.492188 4 6
 mpi-restriction-2 0.742188 0.476562 4 6
 mpi-restriction-2 0.742188 0.492188 4 6
+mpi-halo-restriction-2 0.734375 0.515625 3 5
 mpi-prolongation-2 0.476562 0.648438 0 6
 mpi-prolongation-2 0.492188 0.648438 0 6
 mpi-prolongation-2 0.476562 0.632812 0 6
