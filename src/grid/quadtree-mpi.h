@@ -11,7 +11,7 @@ typedef struct {
 typedef struct {
   Rcv * rcv;
   int npid;
-  int pid[sq(2*GHOSTS+1)], n;
+  int pid[sq(2*GHOSTS+1)+36], n;
 } RcvPid;
 
 typedef struct {
@@ -81,7 +81,7 @@ static Rcv * rcv_pid_pointer (RcvPid * p, int pid)
     if (p->pid[i] == pid)
       return NULL;
 
-  assert (p->n < sq(2*GHOSTS+1));
+  assert (p->n < sq(2*GHOSTS + 1) + 36);
   p->pid[p->n++] = pid;
   int i;
   for (i = 0; i < p->npid; i++)
@@ -395,109 +395,124 @@ void mpi_boundary_update (MpiBoundary * m)
   #define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors)
 
   /* we build arrays of ghost cell indices for restriction and prolongation */
-  foreach_cell() {
-    if (is_active(cell) && !is_border(cell))
-      // we skip the interior of the local domain
-      continue;
+  // we do a breadth-first traversal from fine to coarse, so that
+  // coarsening of unused cells can proceed fully. See also
+  // quadtree-common.h:coarsen_function()
+  for (int l = depth(); l >= 0; l--)
+    foreach_cell() {
+      if (is_active(cell) && !is_border(cell))
+	// we skip the interior of the local domain
+	continue;
 
-    if (is_local(cell)) {
-      // ==================================
-      // local cell: do we need to send it?
-      RcvPid * pro = prolongation->snd;
-      RcvPid * res = restriction->snd;
-      pro->n = res->n = 0;
-      for (int k = -GHOSTS; k <= GHOSTS; k++)
-	for (int l = -GHOSTS; l <= GHOSTS; l++) {
-	  int pid = neighbor(k,l).pid;
-	  if (pid >= 0 && pid != cell.pid && !is_prolongation(neighbor(k,l))) {
-	    rcv_pid_append (res, pid, point);
-	    if (is_leaf(neighbor(k,l)))
-	      rcv_pid_append (pro, pid, point);
-	  }
-	}
-      // prolongation
-      if (is_leaf(cell)) {
-	if (cell.neighbors) {
+      if (level == l) {
+	if (is_local(cell)) {
+	  // ==================================
+	  // local cell: do we need to send it?
+	  RcvPid * pro = prolongation->snd;
+	  RcvPid * res = restriction->snd;
 	  pro->n = res->n = 0;
-	  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
-	    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
-	      if (neighbor(k,l).pid >= 0 &&
-		  !is_leaf(neighbor(k,l)) && neighbor(k,l).neighbors)
-		for (int i = 2*k; i <= 2*k + 1; i++)
-		  for (int j = 2*l; j <= 2*l + 1; j++)
-		    if (child(i,j).pid != cell.pid) {
-		      rcv_pid_append_children (res, child(i,j).pid, point);
-		      if (is_leaf(child(i,j)))
-			rcv_pid_append_children (pro, child(i,j).pid, point);
-		    }
-	}
-      }
-      else
-	// is it the parent of a non-local cell?
-	for (int k = -2; k <= 3; k++)
-	  for (int l = -2; l <= 3; l++) {
-	    int pid = child(k,l).pid;
-	    if (pid >= 0 && pid != cell.pid)
-	      rcv_pid_append (res, pid, point);
-	  }
-      // halo restriction
-      if (level > 0 && !is_local(aparent(0,0))) {
-	RcvPid * halo_res = halo_restriction->snd;
-	halo_res->n = 0;
-	rcv_pid_append (halo_res, aparent(0,0).pid, point);
-      }
-    }
-    else {
-      // =========================================
-      // non-local cell: do we need to receive it?
-      RcvPid * pro = prolongation->rcv;
-      RcvPid * res = restriction->rcv;
-      pro->n = res->n = 0;
-      for (int k = -GHOSTS; k <= GHOSTS; k++)
-	for (int l = -GHOSTS; l <= GHOSTS; l++)
-	  if (allocated(k,l) && is_active(neighbor(k,l)) &&
-	      is_local(neighbor(k,l))) {
-	    rcv_pid_append (res, cell.pid, point);
-	    if (is_leaf(neighbor(k,l)))
-	      rcv_pid_append (pro, cell.pid, point);
-	  }
-      if (is_leaf(cell)) {
-	if (cell.neighbors) {
-	  // prolongation
-	  pro->n = res->n = 0;
-	  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
-	    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
-	      if (allocated(k,l) && is_active(neighbor(k,l)) &&
-		  !is_leaf(neighbor(k,l))) {
-		for (int i = 2*k; i <= 2*k + 1; i++)
-		  for (int j = 2*l; j <= 2*l + 1; j++)
-		    if (is_local(child(i,j))) {
-		      rcv_pid_append_children (res, cell.pid, point);
-		      if (is_leaf(child(i,j)))
-			rcv_pid_append_children (pro, cell.pid, point);
-		    }
+	  for (int k = -GHOSTS; k <= GHOSTS; k++)
+	    for (int l = -GHOSTS; l <= GHOSTS; l++) {
+	      int pid = neighbor(k,l).pid;
+	      if (pid >= 0 && pid != cell.pid &&
+		  !is_prolongation(neighbor(k,l))) {
+		rcv_pid_append (res, pid, point);
+		if (is_leaf(neighbor(k,l)))
+		  rcv_pid_append (pro, pid, point);
 	      }
+	    }
+	  // prolongation
+	  if (is_leaf(cell)) {
+	    if (cell.neighbors) {
+	      pro->n = res->n = 0;
+	      for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
+		for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
+		  if (neighbor(k,l).pid >= 0 &&
+		      !is_leaf(neighbor(k,l)) && neighbor(k,l).neighbors)
+		    for (int i = 2*k; i <= 2*k + 1; i++)
+		      for (int j = 2*l; j <= 2*l + 1; j++)
+			if (child(i,j).pid != cell.pid) {
+			  rcv_pid_append_children (res, child(i,j).pid, point);
+			  if (is_leaf(child(i,j)))
+			    rcv_pid_append_children (pro, child(i,j).pid, point);
+			}
+	    }
+	  }
+	  else
+	    // is it the parent of a non-local cell?
+	    for (int k = -2; k <= 3; k++)
+	      for (int l = -2; l <= 3; l++) {
+		int pid = child(k,l).pid;
+		if (pid >= 0 && pid != cell.pid)
+		  rcv_pid_append (res, pid, point);
+	      }
+	  // halo restriction
+	  if (level > 0 && !is_local(aparent(0,0))) {
+	    RcvPid * halo_res = halo_restriction->snd;
+	    halo_res->n = 0;
+	    rcv_pid_append (halo_res, aparent(0,0).pid, point);
+	  }
 	}
+	else {
+	  // =========================================
+	  // non-local cell: do we need to receive it?
+	  RcvPid * pro = prolongation->rcv;
+	  RcvPid * res = restriction->rcv;
+	  bool neighbors = false;
+	  pro->n = res->n = 0;
+	  for (int k = -GHOSTS; k <= GHOSTS; k++)
+	    for (int l = -GHOSTS; l <= GHOSTS; l++)
+	      if (allocated(k,l) && is_active(neighbor(k,l)) &&
+		  is_local(neighbor(k,l))) {
+		neighbors = true;
+		rcv_pid_append (res, cell.pid, point);
+		if (is_leaf(neighbor(k,l)))
+		  rcv_pid_append (pro, cell.pid, point);
+	      }
+	  if (is_leaf(cell)) {
+	    if (cell.neighbors) {
+	      // prolongation
+	      pro->n = res->n = 0;
+	      for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
+		for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
+		  if (allocated(k,l) && is_active(neighbor(k,l)) &&
+		      !is_leaf(neighbor(k,l))) {
+		    for (int i = 2*k; i <= 2*k + 1; i++)
+		      for (int j = 2*l; j <= 2*l + 1; j++)
+			if (is_local(child(i,j))) {
+			  rcv_pid_append_children (res, cell.pid, point);
+			  if (is_leaf(child(i,j)))
+			    rcv_pid_append_children (pro, cell.pid, point);
+			}
+		  }
+	    }
+	  }
+	  else {
+	    // not a leaf
+	    // is it the parent of a local cell?
+	    for (int k = -2; k <= 3; k++)
+	      for (int l = -2; l <= 3; l++)
+		if (is_local(child(k,l))) {
+		  neighbors = true;
+		  rcv_pid_append (res, cell.pid, point);
+		}
+	    // coarse cell with no neighbors: destroy its children
+	    if (!neighbors)
+	      coarsen_cell (point, NULL);
+	  }
+	  // halo restriction
+	  if (level > 0 && is_local(aparent(0,0))) {
+	    RcvPid * halo_res = halo_restriction->rcv;
+	    halo_res->n = 0;
+	    rcv_pid_append (halo_res, cell.pid, point);
+	  }
+	}
+	continue; // level == l
       }
-      else
-	// is it the parent of a local cell?
-	for (int k = -2; k <= 3; k++)
-	  for (int l = -2; l <= 3; l++)
-	    if (is_local(child(k,l)))
-	      rcv_pid_append (res, cell.pid, point);
-      // halo restriction
-      if (level > 0 && is_local(aparent(0,0))) {
-	RcvPid * halo_res = halo_restriction->rcv;
-	halo_res->n = 0;
-	rcv_pid_append (halo_res, cell.pid, point);
-      }
+    
+      if (is_leaf(cell))
+	continue;
     }
-
-    if (is_leaf(cell))
-      continue;
-  }
-
-  // fixme: cleanup cells which do not have local neighbors
   
   prof_stop();
 
