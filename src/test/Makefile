@@ -72,5 +72,4 @@ mpi-circle1.c: mpi-circle.c
 	ln -s mpi-circle.c mpi-circle1.c
 
 mpi-circle1.tst: CC = mpicc -D_MPI=6
-
-mpi-flux.tst:		CC = mpicc -D_MPI=3
+mpi-flux.tst:    CC = mpicc -D_MPI=6

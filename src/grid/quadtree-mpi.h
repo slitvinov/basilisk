@@ -169,19 +169,16 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, int l)
   }
 }
 
-static void rcv_pid_wait (RcvPid * m, int l)
+static void rcv_pid_wait (RcvPid * m)
 {
   /* wait for completion of send requests */
-  for (int i = 0; i < m->npid; i++) {
-    Rcv * rcv = &m->rcv[i];
-    if (l <= rcv->depth && rcv->halo[l].n > 0)
-      rcv_free_buf (rcv);
-  }
+  for (int i = 0; i < m->npid; i++)
+    rcv_free_buf (&m->rcv[i]);
 }
 
 static void rcv_pid_send (RcvPid * m, scalar * list, int l)
 {
-  int len = list_len (list); 
+  int len = list_len (list);
 
   /* send ghost values */
   for (int i = 0; i < m->npid; i++) {
@@ -210,7 +207,7 @@ static void rcv_pid_sync (SndRcv * m, scalar * list, int l)
 {
   rcv_pid_send (m->snd, list, l);
   rcv_pid_receive (m->rcv, list, l);
-  rcv_pid_wait (m->snd, l);
+  rcv_pid_wait (m->snd);
 }
 
 static void snd_rcv_destroy (SndRcv * m)
@@ -414,10 +411,9 @@ void mpi_boundary_update (MpiBoundary * m)
 	  for (int k = -GHOSTS; k <= GHOSTS; k++)
 	    for (int l = -GHOSTS; l <= GHOSTS; l++) {
 	      int pid = neighbor(k,l).pid;
-	      if (pid >= 0 && pid != cell.pid &&
-		  !is_prolongation(neighbor(k,l))) {
+	      if (pid >= 0 && pid != cell.pid) {
 		rcv_pid_append (res, pid, point);
-		if (is_leaf(neighbor(k,l)))
+		if (is_leaf(neighbor(k,l)) || is_prolongation(neighbor(k,l)))
 		  rcv_pid_append (pro, pid, point);
 	      }
 	    }
@@ -461,14 +457,14 @@ void mpi_boundary_update (MpiBoundary * m)
 	  bool neighbors = false;
 	  pro->n = res->n = 0;
 	  for (int k = -GHOSTS; k <= GHOSTS; k++)
-	    for (int l = -GHOSTS; l <= GHOSTS; l++)
-	      if (allocated(k,l) && is_active(neighbor(k,l)) &&
-		  is_local(neighbor(k,l))) {
+	    for (int l = -GHOSTS; l <= GHOSTS; l++) {
+	      if (allocated(k,l) && is_local(neighbor(k,l))) {
 		neighbors = true;
 		rcv_pid_append (res, cell.pid, point);
-		if (is_leaf(neighbor(k,l)))
+		if (is_leaf(neighbor(k,l)) || !is_active(neighbor(k,l)))
 		  rcv_pid_append (pro, cell.pid, point);
 	      }
+	    }
 	  if (is_leaf(cell)) {
 	    if (cell.neighbors) {
 	      // prolongation

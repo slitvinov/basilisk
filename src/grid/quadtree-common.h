@@ -247,6 +247,9 @@ void mpi_boundary_refine (void *, scalar *);
     mpi_boundary_refine (NULL, list);			\
 }
 
+#define is_refined(cell) ((cell).neighbors && !is_leaf (cell) && \
+			  !is_boundary(cell))
+
 static void halo_restriction_flux (vector * list)
 {
   vector * listv = NULL;

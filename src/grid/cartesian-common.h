@@ -371,8 +371,7 @@ void cartesian_debug (Point point)
 	else
 	  fputs ("n/a ", fp);
       }
-      fprintf (fp, "%d %d %d\n",
-	       neighbor(k,l).flags, neighbor(k,l).neighbors, neighbor(k,l).pid);
+      fputc ('\n', fp);
     }
   fclose (fp);
 

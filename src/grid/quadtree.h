@@ -30,7 +30,7 @@ enum {
 #define is_active(cell)  ((cell).flags & active)
 #define is_leaf(cell)    ((cell).flags & leaf)
 #define is_corner(cell)  (stage == _CORNER)
-#define is_coarse()      (!is_leaf(cell))
+#define is_coarse()      (cell.neighbors > 0)
 #define is_border(cell)  ((cell).flags & border)
 
 @if _MPI
@@ -405,6 +405,9 @@ void recursive (Point point)
 
 #define update_cache() { if (quadtree->dirty) update_cache_f(); }
 
+#define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors)
+#define is_boundary(cell) (cell.pid < 0)
+  
 static void update_cache_f (void)
 {
   Quadtree * q = grid;
@@ -426,13 +429,16 @@ static void update_cache_f (void)
 	// faces
 	unsigned flags = 0;
 	foreach_dimension()
-	  if (!is_active(neighbor(-1,0)) || is_leaf(neighbor(-1,0)))
+	  if (is_boundary(neighbor(-1,0)) ||
+	      is_prolongation(neighbor(-1,0)) || is_leaf(neighbor(-1,0)))
 	    flags |= face_x;
 	if (flags)
 	  cache_append (&q->faces, point, 0, 0, flags);
-	if (!is_active(neighbor(1,0)))
+	if (is_boundary(neighbor(1,0)) || is_prolongation(neighbor(1,0)) ||
+	    (!is_local(neighbor(1,0)) && is_leaf(neighbor(1,0))))
 	  cache_append (&q->faces, point, 1, 0, face_x);
-	if (!is_active(neighbor(0,1)))
+	if (is_boundary(neighbor(0,1)) || is_prolongation(neighbor(0,1)) ||
+	    (!is_local(neighbor(0,1)) && is_leaf(neighbor(0,1))))
 	  cache_append (&q->faces, point, 0, 1, face_y);
 	// vertices
 	cache_append (&q->vertices, point, 0, 0, 0);
@@ -446,6 +452,19 @@ static void update_cache_f (void)
         if (cell.neighbors > 0)
 	  cache_level_append (&q->prolongation[level], point);
 	cell.flags &= ~halo;
+      }
+      else { // non-local
+	// faces
+	unsigned flags = 0;
+	foreach_dimension()
+	  if (is_local(neighbor(-1,0)) && is_prolongation(neighbor(-1,0)))
+	    flags |= face_x;
+	if (flags)
+	  cache_append (&q->faces, point, 0, 0, flags);
+	if (is_local(neighbor(1,0)) && is_prolongation(neighbor(1,0)))
+	  cache_append (&q->faces, point, 1, 0, face_x);
+	if (is_local(neighbor(0,1)) && is_prolongation(neighbor(0,1)))
+	  cache_append (&q->faces, point, 0, 1, face_y);
       }
       continue;
     }
@@ -614,11 +633,12 @@ static void alloc_children (Point point, int i, int j)
     }
   }
 
-@if _MPI
   // foreach child
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++)
       child(k,l).pid = cell.pid;
+
+@if _MPI
   if (is_border(cell)) {
     bool neighbors = false;
     for (int k = -GHOSTS/2; k <= GHOSTS/2 && !neighbors; k++)
@@ -1003,12 +1023,10 @@ void init_grid (int n)
       L->m[i][j] = calloc (1, sizeof(Cell) + datasize);
   }
   CELL(L->m[GHOSTS][GHOSTS]).flags |= (leaf|active);
-@if _MPI
   for (int k = -GHOSTS; k <= GHOSTS; k++)
     for (int l = -GHOSTS; l <= GHOSTS; l++)
       CELL(L->m[GHOSTS+k][GHOSTS+l]).pid = -1;
   CELL(L->m[GHOSTS][GHOSTS]).pid = pid();
-@endif
   cache_init (&q->leaves);
   cache_init (&q->faces);
   cache_init (&q->vertices);
