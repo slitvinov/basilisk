@@ -158,8 +158,12 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, int l)
 	       rcv->halo[l].n*len, rcv->pid, l);
       fflush (stderr);
 #endif
-      MPI_Recv (buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l, 
-		MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Status s;
+      MPI_Recv (buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l,
+		MPI_COMM_WORLD, &s);
+      int rlen;
+      MPI_Get_count (&s, MPI_DOUBLE, &rlen);
+      assert (rlen == rcv->halo[l].n*len);
       double * b = buf;
       foreach_cache_level(rcv->halo[l], l,)
 	for (scalar s in list)
@@ -254,12 +258,6 @@ static void mpi_boundary_halo_prolongation (const Boundary * b,
     rcv_pid_sync (&m->prolongation, list, l);
 }
 
-static void mpi_boundary_halo_restriction_flux (const Boundary * b,
-						vector * list)
-{
-  //  MpiBoundary * mpi = (MpiBoundary *) b;
-}
-
 void mpi_boundary_new()
 {
   mpi_boundary = calloc (1, sizeof (MpiBoundary));
@@ -267,7 +265,6 @@ void mpi_boundary_new()
   mpi_boundary->restriction = mpi_boundary_restriction;
   mpi_boundary->halo_restriction = mpi_boundary_halo_restriction;
   mpi_boundary->halo_prolongation = mpi_boundary_halo_prolongation;
-  mpi_boundary->halo_restriction_flux = mpi_boundary_halo_restriction_flux;
   MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
   snd_rcv_init (&mpi->restriction);
   snd_rcv_init (&mpi->halo_restriction);
@@ -327,18 +324,32 @@ void debug_mpi (FILE * fp1)
 
   MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
   
-  fp = fopen_prefix (fp1, "mpi-restriction", prefix);
+  fp = fopen_prefix (fp1, "mpi-restriction-rcv", prefix);
   rcv_pid_print (mpi->restriction.rcv, fp, prefix);
   if (!fp1)
     fclose (fp);
   
-  fp = fopen_prefix (fp1, "mpi-halo-restriction", prefix);
+  fp = fopen_prefix (fp1, "mpi-halo-restriction-rcv", prefix);
   rcv_pid_print (mpi->halo_restriction.rcv, fp, prefix);
   if (!fp1)
     fclose (fp);
   
-  fp = fopen_prefix (fp1, "mpi-prolongation", prefix);
+  fp = fopen_prefix (fp1, "mpi-prolongation-rcv", prefix);
   rcv_pid_print (mpi->prolongation.rcv, fp, prefix);
+  if (!fp1)
+    fclose (fp);
+  fp = fopen_prefix (fp1, "mpi-restriction-snd", prefix);
+  rcv_pid_print (mpi->restriction.snd, fp, prefix);
+  if (!fp1)
+    fclose (fp);
+  
+  fp = fopen_prefix (fp1, "mpi-halo-restriction-snd", prefix);
+  rcv_pid_print (mpi->halo_restriction.snd, fp, prefix);
+  if (!fp1)
+    fclose (fp);
+  
+  fp = fopen_prefix (fp1, "mpi-prolongation-snd", prefix);
+  rcv_pid_print (mpi->prolongation.snd, fp, prefix);
   if (!fp1)
     fclose (fp);
   
@@ -389,8 +400,6 @@ void mpi_boundary_update (MpiBoundary * m)
   snd_rcv_free (prolongation);
   snd_rcv_free (halo_restriction);
   
-  #define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors)
-
   /* we build arrays of ghost cell indices for restriction and prolongation */
   // we do a breadth-first traversal from fine to coarse, so that
   // coarsening of unused cells can proceed fully. See also
@@ -413,7 +422,10 @@ void mpi_boundary_update (MpiBoundary * m)
 	      int pid = neighbor(k,l).pid;
 	      if (pid >= 0 && pid != cell.pid) {
 		rcv_pid_append (res, pid, point);
-		if (is_leaf(neighbor(k,l)) || is_prolongation(neighbor(k,l)))
+		if ((is_leaf(neighbor(k,l)) || is_prolongation(neighbor(k,l))) ||
+		    (is_leaf(cell) &&
+		     k >= -GHOSTS/2 && k <= GHOSTS/2 &&
+		     l >= -GHOSTS/2 && l <= GHOSTS/2))
 		  rcv_pid_append (pro, pid, point);
 	      }
 	    }
@@ -461,7 +473,10 @@ void mpi_boundary_update (MpiBoundary * m)
 	      if (allocated(k,l) && is_local(neighbor(k,l))) {
 		neighbors = true;
 		rcv_pid_append (res, cell.pid, point);
-		if (is_leaf(neighbor(k,l)) || !is_active(neighbor(k,l)))
+		if ((is_leaf(neighbor(k,l)) || !is_active(neighbor(k,l))) ||
+		    (is_leaf(cell) &&
+		     k >= -GHOSTS/2 && k <= GHOSTS/2 &&
+		     l >= -GHOSTS/2 && l <= GHOSTS/2))
 		  rcv_pid_append (pro, cell.pid, point);
 	      }
 	    }

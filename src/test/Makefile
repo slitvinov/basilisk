@@ -64,8 +64,6 @@ mpi-restriction.tst:	CC = mpicc -D_MPI=3
 mpi-reduce.tst:		CC = mpicc -D_MPI=3
 mpi-refine.tst:		CC = mpicc -D_MPI=4
 mpi-laplacian.tst:	CC = mpicc -D_MPI=3
-
-# does not work with -D_MPI=4 (halo_restriction_flux)
 mpi-circle.tst:		CC = mpicc -D_MPI=5
 
 mpi-circle1.c: mpi-circle.c

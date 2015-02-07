@@ -52,6 +52,15 @@ void refine_cell (Point point, scalar * list, int flag, int * nactive)
       if (dimension == 2)
 	assert(!(child(k,l).flags & active));
       child(k,l).flags |= (pactive|leaf);
+@if _MPI
+      if (is_border(cell))
+	for (int m = -GHOSTS; m <= GHOSTS; m++)
+	  for (int n = -GHOSTS; n <= GHOSTS; n++)
+	    if (child(k+m,l+n).pid != cell.pid) {
+	      child(k,l).flags |= border;
+	      m = n = GHOSTS + 1; // break
+	    }
+@endif
     }
 
   if (pactive) {
@@ -259,12 +268,12 @@ static void halo_restriction_flux (vector * list)
 
   if (listv) {
     for (int l = depth() - 1; l >= 0; l--)
-      foreach_halo (restriction, l) {
+      foreach_halo (prolongation, l) {
 	foreach_dimension() {
-	  if (is_leaf (neighbor(-1,0)))
+	  if (is_refined (neighbor(-1,0)))
 	    for (vector f in listv)
 	      f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
-	  if (is_leaf (neighbor(1,0)))
+	  if (is_refined (neighbor(1,0)))
 	    for (vector f in listv)
 	      f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
         }

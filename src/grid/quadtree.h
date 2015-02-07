@@ -405,7 +405,8 @@ void recursive (Point point)
 
 #define update_cache() { if (quadtree->dirty) update_cache_f(); }
 
-#define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors)
+#define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors && \
+			       cell.pid >= 0)
 #define is_boundary(cell) (cell.pid < 0)
   
 static void update_cache_f (void)
@@ -638,19 +639,6 @@ static void alloc_children (Point point, int i, int j)
     for (int l = 0; l < 2; l++)
       child(k,l).pid = cell.pid;
 
-@if _MPI
-  if (is_border(cell)) {
-    bool neighbors = false;
-    for (int k = -GHOSTS/2; k <= GHOSTS/2 && !neighbors; k++)
-      for (int l = -GHOSTS/2; l <= GHOSTS/2 && !neighbors; l++)
-	neighbors = (neighbor(k,l).pid != cell.pid);
-    if (neighbors)
-      for (int k = 0; k < 2; k++)
-	for (int l = 0; l < 2; l++)
-	  child(k,l).flags |= border;
-  }
-@endif
-  
 @if TRASH
   // foreach child
   for (int k = 0; k < 2; k++)

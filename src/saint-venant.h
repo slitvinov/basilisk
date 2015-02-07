@@ -139,7 +139,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   respectively and *S* is necessary to store the asymmetric topographic
   source term. */
 
-  vector Fh[], S[];
+  face vector Fh[], S[];
   tensor Fq[];
 
   /**
@@ -202,18 +202,18 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
       
       In the case of adaptive refinement, care must be taken to ensure
       well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
-      
+
       #if QUADTREE
-      if (!is_active(cell) && is_active(aparent(0,0))) {
+      if (is_prolongation(cell)) {
 	hi = coarse(h,0,0);
 	zi = coarse(zb,0,0);
       }
-      if (!is_active(neighbor(-1,0)) && is_active(aparent(-1,0))) {
+      if (is_prolongation(neighbor(-1,0))) {
 	hn = coarse(h,-1,0);
 	zn = coarse(zb,-1,0);
       }
       #endif
-
+	
       double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
       double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
       

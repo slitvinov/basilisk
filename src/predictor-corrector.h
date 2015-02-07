@@ -67,8 +67,10 @@ void run()
     advance (evolving, evolving, updates, dt);
     delete (updates);
     free (updates);
-    foreach (reduction(+:tnc)) 
-      tnc++;
+    long nc = 0;
+    foreach (reduction(+:nc)) 
+      nc++;
+    tnc += nc;
     i++; t = tnext;
   }
   timer_print (start, i, tnc);
