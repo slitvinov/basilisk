@@ -2,8 +2,10 @@
 #include <kdt/kdt.h>
 @if _OPENMP
 @ define NPROC omp_get_max_threads()
+@ define PROC pid()
 @else
 @ define NPROC 1
+@ define PROC 0
 @endif
 
 attribute {
@@ -34,7 +36,7 @@ static void reconstruct_terrain (Point point, scalar zb)
   Delta_x /= 2.; Delta_y /= 2.;
   KdtRect rect = {{x - Delta_x, x + Delta_x},
 		  {y - Delta_y, y + Delta_y}};
-  for (Kdt ** kdt = zb.kdt[pid()]; *kdt; kdt++)
+  for (Kdt ** kdt = zb.kdt[PROC]; *kdt; kdt++)
     kdt_query_sum (*kdt,
 		   (KdtCheck) includes,
 		   (KdtCheck) intersects, &point,
