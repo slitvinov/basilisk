@@ -287,7 +287,7 @@ static void halo_restriction_flux (vector * list)
 
 Point locate (double xp, double yp)
 {
-  foreach_cell() 
+  foreach_cell() {
     if (is_active(cell)) {
       Delta /= 2.;
       if (xp < x - Delta || xp > x + Delta || yp < y - Delta || yp > y + Delta)
@@ -295,6 +295,9 @@ Point locate (double xp, double yp)
       if (is_leaf (cell))
 	return point;
     }
+    else
+      continue;
+  }
   Point point = { .level = -1 };
   return point;
 }

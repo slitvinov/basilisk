@@ -229,6 +229,27 @@ void * matrix_new (int n, int p, size_t size)
   return m;
 }
 
+void matrix_send (void * m, int n, int p, size_t size,
+		  int pid)
+{
+@if _MPI
+  MPI_Send (((void **) m)[0], n*p*size, MPI_BYTE, pid, pid(), MPI_COMM_WORLD);
+@endif
+}
+
+void matrix_receive (void * m, int n, int p, size_t size,
+		     int pid)
+{
+@if _MPI
+  MPI_Status s;
+  MPI_Recv (((void **) m)[0], n*p*size, MPI_BYTE, pid, pid,
+	    MPI_COMM_WORLD, &s);
+  int len;
+  MPI_Get_count (&s, MPI_BYTE, &len);
+  assert (len == n*p*size);
+@endif
+}
+
 void matrix_free (void * m)
 {
   free (((void **) m)[0]);

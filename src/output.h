@@ -373,24 +373,38 @@ void output_ppm (struct OutputPPM p)
     }
   }
   OMP_END_PARALLEL()
-
-  if (!p.fp) p.fp = stdout;
-  if (p.n == 0) p.n = N;
-  if (p.file) {
-    char * command = malloc (strlen ("convert ppm:- ") + strlen (p.file) + 1);
-    strcpy (command, "convert ppm:- ");
-    strcat (command, p.file);
-    p.fp = popen (command, "w");
-    free (command);
+  
+  if (pid() == 0) { // master
+@if _MPI
+    color ** rem = matrix_new (ny, p.n, sizeof(color));
+    for (int pid = 1; pid < npe(); pid++) {
+      matrix_receive (rem, ny, p.n, sizeof(color), pid);
+      for (int j = 0; j < ny; j++)
+	for (int i = 0; i < p.n; i++)
+	  if (!ppm[j][i].r && !ppm[j][i].g && !ppm[j][i].b)
+	    ppm[j][i] = rem[j][i];
+    }
+    matrix_free (rem);
+@endif
+    if (!p.fp) p.fp = stdout;
+    if (p.file) {
+      char * command = malloc (strlen ("convert ppm:- ") + strlen (p.file) + 1);
+      strcpy (command, "convert ppm:- ");
+      strcat (command, p.file);
+      p.fp = popen (command, "w");
+      free (command);
+    }
+    
+    fprintf (p.fp, "P6\n%u %u 255\n", p.n, ny);
+    fwrite (((void **) ppm)[0], sizeof(color), ny*p.n, p.fp);
+    
+    if (p.file)
+      pclose (p.fp);
+    else
+      fflush (p.fp);
   }
-
-  fprintf (p.fp, "P6\n%u %u 255\n", p.n, ny);
-  fwrite (((void **) ppm)[0], sizeof(color), ny*p.n, p.fp);
-
-  if (p.file)
-    pclose (p.fp);
-  else
-    fflush (p.fp);
+  else // slave
+    matrix_send (ppm, ny, p.n, sizeof(color), 0);
   
   matrix_free (ppm);
 }
