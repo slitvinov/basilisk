@@ -143,9 +143,9 @@ static void rcv_pid_destroy (RcvPid * p)
 
 static Boundary * mpi_boundary = NULL;
 
-static void rcv_pid_receive (RcvPid * m, scalar * list, int l)
+static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
 {
-  int len = list_len (list);
+  int len = list_len (list) + 2*dimension*vectors_len (listf);
     
   /* receive ghost values */
   for (int i = 0; i < m->npid; i++) {
@@ -161,13 +161,20 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, int l)
       MPI_Status s;
       MPI_Recv (buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l,
 		MPI_COMM_WORLD, &s);
-      int rlen;
-      MPI_Get_count (&s, MPI_DOUBLE, &rlen);
-      assert (rlen == rcv->halo[l].n*len);
       double * b = buf;
-      foreach_cache_level(rcv->halo[l], l,)
+      foreach_cache_level(rcv->halo[l], l,) {
 	for (scalar s in list)
 	  s[] = *b++;
+	for (vector v in listf)
+	  foreach_dimension() {
+	    v.x[] = *b++;
+	    if (allocated(1,0))
+	      v.x[1,0] = *b++;
+	  }
+      }
+      int rlen;
+      MPI_Get_count (&s, MPI_DOUBLE, &rlen);
+      assert (rlen == (b - buf));
       prof_stop();
     }
   }
@@ -180,9 +187,9 @@ static void rcv_pid_wait (RcvPid * m)
     rcv_free_buf (&m->rcv[i]);
 }
 
-static void rcv_pid_send (RcvPid * m, scalar * list, int l)
+static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
 {
-  int len = list_len (list);
+  int len = list_len (list) + 2*dimension*vectors_len (listf);
 
   /* send ghost values */
   for (int i = 0; i < m->npid; i++) {
@@ -192,16 +199,23 @@ static void rcv_pid_send (RcvPid * m, scalar * list, int l)
       assert (!rcv->buf);
       rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
       double * b = rcv->buf;
-      foreach_cache_level(rcv->halo[l], l,)
+      foreach_cache_level(rcv->halo[l], l,) {
 	for (scalar s in list)
 	  *b++ = s[];
+	for (vector v in listf)
+	  foreach_dimension() {
+	    *b++ = v.x[];
+	    if (allocated(1,0))
+	      *b++ = v.x[1,0];
+	  }
+      }
 #if 0
       fprintf (stderr, "sending %d doubles to %d level %d\n",
 	       rcv->halo[l].n*len, rcv->pid, l);
       fflush (stderr);
 #endif
-      MPI_Isend (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l, 
-		 MPI_COMM_WORLD, &rcv->r);
+      MPI_Isend (rcv->buf, (b - (double *) rcv->buf),
+		 MPI_DOUBLE, rcv->pid, l, MPI_COMM_WORLD, &rcv->r);
       prof_stop();
     }
   }
@@ -209,9 +223,18 @@ static void rcv_pid_send (RcvPid * m, scalar * list, int l)
 
 static void rcv_pid_sync (SndRcv * m, scalar * list, int l)
 {
-  rcv_pid_send (m->snd, list, l);
-  rcv_pid_receive (m->rcv, list, l);
+  scalar * listr = NULL;
+  vector * listf = NULL;
+  for (scalar s in list)
+    if (s.face)
+      listf = vectors_add (listf, s.v);
+    else
+      listr = list_add (listr, s);
+  rcv_pid_send (m->snd, listr, listf, l);
+  rcv_pid_receive (m->rcv, listr, listf, l);
   rcv_pid_wait (m->snd);
+  free (listr);
+  free (listf);
 }
 
 static void snd_rcv_destroy (SndRcv * m)
@@ -435,13 +458,12 @@ void mpi_boundary_update (MpiBoundary * m)
 	      pro->n = res->n = 0;
 	      for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
 		for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
-		  if (neighbor(k,l).pid >= 0 &&
-		      !is_leaf(neighbor(k,l)) && neighbor(k,l).neighbors)
+		  if (neighbor(k,l).pid >= 0 && neighbor(k,l).neighbors)
 		    for (int i = 2*k; i <= 2*k + 1; i++)
 		      for (int j = 2*l; j <= 2*l + 1; j++)
 			if (child(i,j).pid != cell.pid) {
 			  rcv_pid_append_children (res, child(i,j).pid, point);
-			  if (is_leaf(child(i,j)))
+			  if (!is_refined(child(i,j)))
 			    rcv_pid_append_children (pro, child(i,j).pid, point);
 			}
 	    }
@@ -487,15 +509,14 @@ void mpi_boundary_update (MpiBoundary * m)
 	      for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
 		for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
 		  if (allocated(k,l) && is_active(neighbor(k,l)) &&
-		      !is_leaf(neighbor(k,l))) {
+		      neighbor(k,l).neighbors)
 		    for (int i = 2*k; i <= 2*k + 1; i++)
 		      for (int j = 2*l; j <= 2*l + 1; j++)
 			if (is_local(child(i,j))) {
 			  rcv_pid_append_children (res, cell.pid, point);
-			  if (is_leaf(child(i,j)))
+			  if (!is_refined(child(i,j)))
 			    rcv_pid_append_children (pro, cell.pid, point);
 			}
-		  }
 	    }
 	  }
 	  else {

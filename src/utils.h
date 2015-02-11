@@ -105,7 +105,7 @@ timing timer_timing (timer t, int i, size_t tnc, double * mpi)
 void timer_print (timer t, int i, size_t tnc)
 {
   timing s = timer_timing (t, i, tnc, NULL);
-  printf ("# " GRIDNAME 
+  printf ("\n# " GRIDNAME 
 	  ", %d steps, %g CPU, %.4g real, %.3g points.step/s, %d var\n",
 	  i, s.cpu, s.real, s.speed, (int) (datasize/sizeof(double)));
 @if _MPI

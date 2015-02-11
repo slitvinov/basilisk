@@ -24,8 +24,10 @@ void run (void)
     We store the total number of cells advanced in time for computing
     speed statistics. */
 
-    foreach(reduction(+:tnc))
-      tnc++;
+    long nc = 0;
+    foreach(reduction(+:nc))
+      nc++;
+    tnc += nc;
     i++; t = tnext;
   }
 

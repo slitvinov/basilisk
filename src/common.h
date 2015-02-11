@@ -192,8 +192,12 @@ static void set_fpe (void) {
   memcpy (&undefined, &lnan, sizeof (double));
   feenableexcept (FE_DIVBYZERO|FE_INVALID);
 }
+@  define enable_fpe(flags)  feenableexcept (flags)
+@  define disable_fpe(flags) fedisableexcept (flags)
 @else
 @  define undefined DBL_MAX
+@  define enable_fpe(flags)
+@  define disable_fpe(flags)
 @endif
 
 // the grid
@@ -225,7 +229,7 @@ void size (double L) {
   L0 = L;
 }
 
-double zero() { return 0.; }
+double zero (double s0, double s1, double s2) { return 0.; }
 
 // boundary conditions for each direction/variable
 

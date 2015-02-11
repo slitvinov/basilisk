@@ -67,8 +67,9 @@ event init (t = 0)
 
   poisson (psi, omega);
   struct { double x, y; } f = {-1.,1.};
-  foreach_face()
-    u.x[] = f.x*(psi[0,1] - psi[0,-1])/(2.*Delta);
+  foreach()
+    foreach_dimension()
+      u.x[] = f.x*(psi[0,1] - psi[0,-1])/(2.*Delta);
   boundary ((scalar *){u});
 }
 

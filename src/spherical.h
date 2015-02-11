@@ -57,17 +57,19 @@ static void refine_cm_lonlat (Point point, scalar cm)
 
 static void refine_face_x_lonlat (Point point, scalar fm)
 {
-  for (int i = 0; i <= 1; i++)
-    if (is_leaf(neighbor(2*i-1,0)) || !is_active(neighbor(2*i-1,0)))
-      fine(fm,2*i,0) = fine(fm,2*i,1) = 1.;
+  if (!is_refined(neighbor(-1,0)))
+    fine(fm,0,0) = fine(fm,0,1) = 1.;
+  if (!is_refined(neighbor(1,0)) && neighbor(1,0).neighbors)
+    fine(fm,2,0) = fine(fm,2,1) = 1.;
   fine(fm,1,0) = fine(fm,1,1) = 1.;
 }
 
 static void refine_face_y_lonlat (Point point, scalar fm)
 {
-  for (int i = 0; i <= 1; i++)
-    if (is_leaf(neighbor(0,2*i-1)) || !is_active(neighbor(0,2*i-1)))
-      fine(fm,0,2*i) = fine(fm,1,2*i) = fm[0,i];
+  if (!is_refined(neighbor(0,-1)))
+    fine(fm,0,0) = fine(fm,1,0) = fm[];  
+  if (!is_refined(neighbor(0,1)) && neighbor(0,1).neighbors)
+    fine(fm,0,2) = fine(fm,1,2) = fm[0,1];
   fine(fm,0,1) = fine(fm,1,1) = cos(y*pi/180.);
 }
 #endif

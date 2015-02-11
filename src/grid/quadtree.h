@@ -852,7 +852,7 @@ static void box_boundary_halo_prolongation_tangent (const Boundary * b,
 	}
       continue;
     }
-  }  
+  }
 }
 
 static void box_boundary_halo_prolongation (const Boundary * b,
@@ -878,6 +878,9 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	centered = list_add (centered, s);
     }
 
+   /* we disable floating-point-exceptions to avoid having to deal with
+     undefined operations in non-trivial boundary conditions. */
+  disable_fpe (FE_DIVBYZERO|FE_INVALID);
   foreach_boundary_cell (d, d > left) {
     if (level == l) {
       if ((l == depth ||          // target level
@@ -914,7 +917,8 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	}
       continue;
     }
-  }  
+  }
+  enable_fpe (FE_DIVBYZERO|FE_INVALID);
   free (centered);
 
   box_boundary_halo_prolongation_normal (b, normal, l, depth);

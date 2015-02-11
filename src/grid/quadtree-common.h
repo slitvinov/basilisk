@@ -314,14 +314,25 @@ foreach_dimension()
 static void refine_face_x (Point point, scalar s)
 {
   vector v = s.v;
+  if (!is_refined(neighbor(-1,0))) {
+    double g = (v.x[0,+1] - v.x[0,-1])/8.;
+    fine(v.x,0,0) = v.x[] - g;
+    fine(v.x,0,1) = v.x[] + g;
+  }
+  double vx[2];
+  if (!is_refined(neighbor(1,0))) {
+    double g = (v.x[1,+1] - v.x[1,-1])/8.;
+    vx[0] = v.x[1,0] - g;
+    vx[1] = v.x[1,0] + g;
+    if (neighbor(1,0).neighbors)
+      for (int i = 0; i <= 1; i++)
+	fine(v.x,2,i) = vx[i];
+  }
+  else
+    for (int i = 0; i <= 1; i++)
+      vx[i] = fine(v.x,2,i);
   for (int i = 0; i <= 1; i++)
-    if (is_leaf(neighbor(2*i-1,0)) || !is_active(neighbor(2*i-1,0))) {
-      double g = (v.x[i,+1] - v.x[i,-1])/8.;
-      fine(v.x,2*i,0) = v.x[i,0] - g;
-      fine(v.x,2*i,1) = v.x[i,0] + g;
-    }
-  for (int i = 0; i <= 1; i++)
-    fine(v.x,1,i) = (fine(v.x,0,i) + fine(v.x,2,i))/2.;
+    fine(v.x,1,i) = (fine(v.x,0,i) + vx[i])/2.;
 }
 
 void refine_face (Point point, scalar s)
@@ -413,9 +424,7 @@ static void quadtree_boundary_level (scalar * list, int l)
           s.prolongation (point, s);
 	for (vector v in listf)
 	  foreach_dimension()
-	    if ((!is_leaf(neighbor(0,-1)) && is_active(neighbor(0,-1))) || 
-		(!is_leaf(neighbor(0,+1)) && is_active(neighbor(0,+1))))
-	      v.x.prolongation (point, v.x);
+	    v.x.prolongation (point, v.x);
       }
       boundary_iterate (halo_prolongation, list, i + 1, l);
     }
