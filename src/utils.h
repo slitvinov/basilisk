@@ -80,9 +80,13 @@ timing timer_timing (timer t, int i, size_t tnc, double * mpi)
   }
   else
     s.tnc = tnc;
+@if !_POSIX_C_SOURCE
   struct rusage usage;
   getrusage (RUSAGE_SELF, &usage);
   s.mem = usage.ru_maxrss;
+@else
+  s.mem = 0;
+@endif
 @if _MPI
   if (mpi)
     MPI_Allgather (&s.avg, 1, MPI_DOUBLE, mpi, 1, MPI_DOUBLE, MPI_COMM_WORLD);
