@@ -52,7 +52,7 @@ void rcv_print (Rcv * rcv, FILE * fp, const char * prefix)
 static void rcv_free_buf (Rcv * rcv)
 {
   if (rcv->buf) {
-    prof_start ("snd_rcv_receive");
+    prof_start ("rcv_pid_receive");
     MPI_Wait (&rcv->r, MPI_STATUS_IGNORE);
     free (rcv->buf);
     rcv->buf = NULL;
@@ -145,39 +145,56 @@ static Boundary * mpi_boundary = NULL;
 
 static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
 {
+  prof_start ("rcv_pid_receive");
+
   int len = list_len (list) + 2*dimension*vectors_len (listf);
-    
-  /* receive ghost values */
+
+  /* initiate non-blocking receives */
+  MPI_Request r[m->npid];
   for (int i = 0; i < m->npid; i++) {
     Rcv * rcv = &m->rcv[i];
+    r[i] = MPI_REQUEST_NULL;
     if (l <= rcv->depth && rcv->halo[l].n > 0) {
-      prof_start ("rcv_pid_receive");
-      double buf[rcv->halo[l].n*len];
+      assert (!rcv->buf);
+      rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
 #if 0
       fprintf (stderr, "receiving %d doubles from %d level %d\n",
 	       rcv->halo[l].n*len, rcv->pid, l);
       fflush (stderr);
 #endif
-      MPI_Status s;
-      MPI_Recv (buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l,
-		MPI_COMM_WORLD, &s);
-      double * b = buf;
-      foreach_cache_level(rcv->halo[l], l,) {
-	for (scalar s in list)
-	  s[] = *b++;
-	for (vector v in listf)
-	  foreach_dimension() {
-	    v.x[] = *b++;
-	    if (allocated(1,0))
-	      v.x[1,0] = *b++;
-	  }
-      }
-      int rlen;
-      MPI_Get_count (&s, MPI_DOUBLE, &rlen);
-      assert (rlen == (b - buf));
-      prof_stop();
+      MPI_Irecv (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l,
+		 MPI_COMM_WORLD, &r[i]);
     }
   }
+
+  /* receive ghost values */
+  int i;
+  MPI_Status s;
+  MPI_Waitany (m->npid, r, &i, &s);
+  while (i != MPI_UNDEFINED) {
+    Rcv * rcv = &m->rcv[i];
+    assert (l <= rcv->depth && rcv->halo[l].n > 0);
+    assert (rcv->buf);
+    double * b = rcv->buf;
+    foreach_cache_level(rcv->halo[l], l,) {
+      for (scalar s in list)
+	s[] = *b++;
+      for (vector v in listf)
+	foreach_dimension() {
+	  v.x[] = *b++;
+	  if (allocated(1,0))
+	    v.x[1,0] = *b++;
+	}
+    }
+    int rlen;
+    MPI_Get_count (&s, MPI_DOUBLE, &rlen);
+    assert (rlen == (b - (double *) rcv->buf));
+    free (rcv->buf);
+    rcv->buf = NULL;
+    MPI_Waitany (m->npid, r, &i, &s);
+  }
+
+  prof_stop();
 }
 
 static void rcv_pid_wait (RcvPid * m)
@@ -189,13 +206,14 @@ static void rcv_pid_wait (RcvPid * m)
 
 static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
 {
+  prof_start ("rcv_pid_send");
+
   int len = list_len (list) + 2*dimension*vectors_len (listf);
 
   /* send ghost values */
   for (int i = 0; i < m->npid; i++) {
     Rcv * rcv = &m->rcv[i];
     if (l <= rcv->depth && rcv->halo[l].n > 0) {
-      prof_start ("rcv_pid_send");
       assert (!rcv->buf);
       rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
       double * b = rcv->buf;
@@ -216,9 +234,10 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
 #endif
       MPI_Isend (rcv->buf, (b - (double *) rcv->buf),
 		 MPI_DOUBLE, rcv->pid, l, MPI_COMM_WORLD, &rcv->r);
-      prof_stop();
     }
   }
+
+  prof_stop();
 }
 
 static void rcv_pid_sync (SndRcv * m, scalar * list, int l)
