@@ -2306,7 +2306,20 @@ int main (int argc, char ** argv)
       if (!cppcommand && strcmp (CPP99, ""))
 	cppcommand = CPP99;
       if (!cppcommand) {
-	strcat (preproc, command);
+	if (source) {
+	  /* remove -D.. flags from $CC99 */
+	  char tmp[1000]; strcpy (tmp, command);
+	  char * s = strtok (tmp, " \t");
+	  while (s) {
+	    if (strncmp (s, "-D", 2)) {
+	      strcat (preproc, s);
+	      strcat (preproc, " ");
+	    }
+	    s = strtok (NULL, " \t");
+	  }
+	}
+	else
+	  strcat (preproc, command);
 	strcat (preproc, " -E");
       }
       else
