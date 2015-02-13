@@ -54,9 +54,12 @@ Note that only the documented test cases appear in the list below
 
 * [Reduction operations](mpi-reduce.c)
 * [Boundary conditions and restriction](mpi-restriction.c)
-* [Interpolation on halos](mpi-interp.c)
 * [Z-order indexing](indexing.c)
 * [Parallel scalability](mpi-laplacian.c)
+* [Parallel refinement](mpi-refine.c)
+* [Poisson solver on non-uniform mesh](mpi-circle.c)
+* [Boundary conditions for face fluxes](mpi-flux.c)
+* [Boundary conditions for face vector fields](mpi-interpu.c)
 
 ## Speed benchmarks
 

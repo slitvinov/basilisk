@@ -167,12 +167,12 @@ int main (int argc, char * argv[])
 ## How to run on Curie
 
 This test is run on
-[Curie](http://www-hpc.cea.fr/en/complexe/tgcc-curie.htm). The C99
-source code is generated on a system with *qcc* installed and then
+[Curie](http://www.prace-ri.eu/best-practice-guide-curie-html/#curie-configuration). The
+C99 source code is generated on a system with *qcc* installed and then
 copied to Curie using something like
 
 ~~~bash
-qcc -source mpi-laplacian.c
+CC99='cc -std=c99' qcc -source mpi-laplacian.c
 scp _mpi-laplacian.c popinets@curie-fr.ccc.cea.fr:
 ~~~
 
