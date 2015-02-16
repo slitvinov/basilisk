@@ -1,3 +1,5 @@
+#include "mempool.h"
+
 #define GRIDNAME "Quadtree"
 #define dimension 2
 
@@ -30,7 +32,7 @@ enum {
 #define is_active(cell)  ((cell).flags & active)
 #define is_leaf(cell)    ((cell).flags & leaf)
 #define is_corner(cell)  (stage == _CORNER)
-#define is_coarse()      (!is_leaf(cell))
+#define is_coarse()      ((cell).neighbors > 0)
 #define is_border(cell)  ((cell).flags & border)
 
 @if _MPI
@@ -69,21 +71,35 @@ static void cache_init (Cache * c)
 // Layer
 
 typedef struct {
-  char *** m; // the 2D array of data
+  char *** m;     // the 2D array of data
+  Mempool * pool; // the memory pool actually holding the data
   int * nr;   // the number of allocated rows for each column
   int nc;     // the number of allocated columns
   int len;    // the (1D) size of the array
 } Layer;
 
-static size_t _size (size_t l)
+static size_t _size (size_t depth)
 {
-  return (1 << l) + 2*GHOSTS;
+  return (1 << depth) + 2*GHOSTS;
+}
+
+static size_t poolsize (size_t depth, size_t size)
+{
+  // the maximum amount of data at a given level
+  return sq(_size(depth))*size;
 }
 
 static Layer * new_layer (int depth)
 {
   Layer * l = malloc (sizeof (Layer));
   l->len = _size (depth);
+  if (depth == 0)
+    l->pool = NULL; // the root layer does not use a pool
+  else {
+    size_t size = sizeof(Cell) + datasize;
+    // the block size is 4*size because we allocate 4 children at a time
+    l->pool = mempool_new (poolsize (depth, size), 4*size);
+  }
   l->m = calloc (l->len, sizeof (char *));
   l->nr = calloc (l->len, sizeof (int));
   l->nc = 0;
@@ -633,7 +649,7 @@ static void alloc_children (Point point, int i, int j)
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
   size_t len = sizeof(Cell) + datasize;
-  char * b = calloc (4, len);
+  char * b = mempool_alloc0 (L->pool);
   for (int k = 0; k < 2; k++) {
     layer_add_row (L, 2*point.i - GHOSTS + k);
     for (int l = 0; l < 2; l++) {
@@ -687,7 +703,7 @@ static void free_children (Point point, int i, int j)
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
   assert (CHILD(0,0));
-  free (CHILD(0,0));
+  mempool_free (L->pool, CHILD(0,0));
   for (int k = 0; k < 2; k++) {
     for (int l = 0; l < 2; l++)
       CHILD(k,l) = NULL;
@@ -723,21 +739,24 @@ void realloc_scalar (void)
       q->L[0]->m[i][j] = realloc (q->L[0]->m[i][j], newlen);
   /* all other levels */
   for (int l = 1; l <= q->depth; l++) {
-    char *** m = q->L[l]->m;
-    size_t len = q->L[l]->len;
+    Layer * L = q->L[l];
+    char *** m = L->m;
+    size_t len = L->len;
+    Mempool * oldpool = L->pool;
+    L->pool = mempool_new (poolsize (l, newlen), 4*newlen);
     for (int i = 0; i < len; i += 2)
       if (m[i])
 	for (int j = 0; j < len; j += 2)
 	  if (m[i][j]) {
-	    char * new = malloc (4*newlen), * old = m[i][j];
+	    char * new = mempool_alloc (L->pool);
 	    for (int k = 0; k < 2; k++)
 	      for (int o = 0; o < 2; o++) {
 		memcpy (new, m[i+k][j+o], oldlen);
 		m[i+k][j+o] = new;
 		new += newlen;
 	      }
-	    free (old);
 	  }
+    mempool_destroy (oldpool);
   }
 }
 
@@ -970,12 +989,9 @@ void free_grid (void)
   for (int l = 1; l <= q->depth; l++) {
     Layer * L = q->L[l];
     for (int i = 0; i < L->len; i++)
-      if (L->m[i]) {
-	if (i%2 == 0)
-	  for (int j = 0; j < L->len; j += 2)
-	    free (L->m[i][j]);
+      if (L->m[i])
 	free (L->m[i]);
-      }
+    mempool_destroy (L->pool);
     free (L->m);
     free (L->nr);
     free (L);
