@@ -185,13 +185,17 @@ void multigrid_debug (Point point)
       sprintf (name, "fine-%d", pid());
     FILE * fp = fopen (name, "w");
     double xf = x - Delta/4., yf = y - Delta/4.;
-    for (int k = 0; k <= 2; k++)
-      for (int l = 0; l <= 2; l++) {
-	for (scalar v in all)
-	  fprintf (fp, "%g %g %g ", 
+    for (int k = -2; k <= 3; k++)
+      for (int l = -2; l <= 3; l++) {
+	for (scalar v in all) {
+	  fprintf (fp, "%g %g ", 
 		   xf + k*Delta/2. + v.d.x*Delta/4., 
-		   yf + l*Delta/2. + v.d.y*Delta/4.,
-		   fine(v,k,l));
+		   yf + l*Delta/2. + v.d.y*Delta/4.);
+	  if (allocated_child(k,l))
+	    fprintf (fp, "%g ", fine(v,k,l));
+	  else
+	    fputs ("n/a ", fp);
+	}
 	fputc ('\n', fp);
       }
     fclose (fp);

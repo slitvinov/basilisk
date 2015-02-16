@@ -30,7 +30,7 @@ enum {
 #define is_active(cell)  ((cell).flags & active)
 #define is_leaf(cell)    ((cell).flags & leaf)
 #define is_corner(cell)  (stage == _CORNER)
-#define is_coarse()      (cell.neighbors > 0)
+#define is_coarse()      (!is_leaf(cell))
 #define is_border(cell)  ((cell).flags & border)
 
 @if _MPI
@@ -165,10 +165,19 @@ static void cache_append (Cache * c, Point p, int k, int l, short flags)
 }
 
 /* low-level memory management */
-@define allocated(k,l) (quadtree->L[point.level]->m[point.i+k] && quadtree->L[point.level]->m[point.i+k][point.j+l])
+@def allocated(k,l) (quadtree->L[point.level]->m[point.i+k] &&
+		     quadtree->L[point.level]->m[point.i+k][point.j+l])
+@
 @define NEIGHBOR(k,l)	(quadtree->L[point.level]->m[point.i+k][point.j+l])
-@define PARENT(k,l) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k][(point.j+GHOSTS)/2+l])
-@define CHILD(k,l)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k][2*point.j-GHOSTS+l])
+@def PARENT(k,l) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k]
+		  [(point.j+GHOSTS)/2+l])
+@
+@def allocated_child(k,l)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
+   && quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k][2*point.j-GHOSTS+l])
+@			   
+@def CHILD(k,l)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
+		 [2*point.j-GHOSTS+l])
+@
 @define CELL(m) (*((Cell *)(m)))
 
 /***** Multigrid macros *****/

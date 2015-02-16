@@ -24,7 +24,7 @@ enum {
 #define is_active(cell)  ((cell).flags & active)
 #define is_leaf(cell)    ((cell).flags & leaf)
 #define is_corner(cell)  false
-#define is_coarse()      (!is_leaf(cell))
+#define is_coarse()      ((cell).neighbors > 0)
 
 // Caches
 
@@ -114,9 +114,11 @@ static size_t _size (size_t l)
 #if DYNAMIC
   @define CELL(m,level,i) (*((Cell *)m[level][i]))
   @define allocated(i,j) (point.m[point.level][_index(i,j)])
+  @define allocated_child(i,j) (point.m[point.level+1][_childindex(i,j)])
 #else
   @define CELL(m,level,i) (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
   @define allocated(i,j) true
+  @define allocated_child(i,j) true
 #endif
 
 /***** Multigrid macros *****/

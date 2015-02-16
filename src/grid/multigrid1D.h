@@ -26,6 +26,7 @@ static size_t _size (size_t l)
 @def data(k,l)
 ((double *)&point.d[point.level][(point.i + k)*datasize + (l) - (l)]) @
 @define allocated(...) true
+@define allocated_child(...) true
 
 /***** Multigrid variables and macros *****/
 @define depth()       (((Point *)grid)->depth)
