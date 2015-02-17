@@ -22,7 +22,8 @@ enum {
   refined = 1 << 2,
   halo    = 1 << 3,
   border  = 1 << 4,
-  user    = 5,
+  remote_leaf = 1 << 5,
+  user    = 6,
 
   face_x = 1 << 0,
   face_y = 1 << 1
@@ -36,9 +37,11 @@ enum {
 #define is_border(cell)  ((cell).flags & border)
 
 @if _MPI
-@ define is_local(cell)  ((cell).pid == pid())
+@ define is_local(cell)       ((cell).pid == pid())
+@ define is_remote_leaf(cell) ((cell).flags & remote_leaf)
 @else
 @ define is_local(cell)  true
+@ define is_remote_leaf(cell) false
 @endif
 
 // Caches
@@ -444,13 +447,13 @@ static void update_cache_f (void)
     q->active[l].n = q->prolongation[l].n = q->restriction[l].n = 0;
 
   foreach_cell() {
-    if (is_local(cell)) { // always true in serial
+    if (is_local(cell)) {
       // active cells
       assert (is_active(cell));
       cache_level_append (&q->active[level], point);
     }
     if (is_leaf (cell)) {
-      if (is_local(cell)) { // always true in serial
+      if (is_local(cell)) {
 	cache_append (&q->leaves, point, 0, 0, 0);
 	// faces
 	unsigned flags = 0;
@@ -500,12 +503,14 @@ static void update_cache_f (void)
 	(aparent(0,0).flags & halo);
       for (int k = -GHOSTS; k <= GHOSTS && !restriction; k++)
 	for (int l = -GHOSTS; l <= GHOSTS && !restriction; l++)
-	  if (allocated(k,l) && is_leaf(neighbor(k,l)))
+	  if (allocated(k,l) &&
+	      ((is_local(neighbor(k,l)) && is_leaf(neighbor(k,l))) ||
+	       is_remote_leaf(neighbor(k,l))))
 	    restriction = true;
       if (restriction) {
 	// halo restriction
 	cell.flags |= halo;
-	if (is_local(cell)) // always true in serial
+	if (is_local(cell))
 	  cache_level_append (&q->restriction[level], point);
       }
       else

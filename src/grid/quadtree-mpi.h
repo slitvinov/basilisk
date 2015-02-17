@@ -411,8 +411,9 @@ void debug_mpi (FILE * fp1)
   fp = fopen_prefix (fp1, "exterior", prefix);
   foreach_cell() {
     if (!is_active(cell))
-      fprintf (fp, "%s%g %g %d %d %d\n",
-	       prefix, x, y, level, cell.neighbors, cell.pid);
+      fprintf (fp, "%s%g %g %d %d %d %d\n",
+	       prefix, x, y, level, cell.neighbors, cell.pid,
+	       is_remote_leaf(cell));
     else if (!is_border(cell))
       continue;
     if (is_leaf(cell))
@@ -573,10 +574,10 @@ void mpi_boundary_update (MpiBoundary * m)
 }
 
 /*
-  Returns a linear quadtree containing the leaves which are in the
+  Returns a linear quadtree containing the cells which are in the
   (5x5) neighborhood of cells belonging to the (remote) process 'rpid'.
  */
-Array * remote_leaves (unsigned rpid)
+Array * remote_cells (unsigned rpid)
 {
   static const int remote = 1 << user;
   foreach_cell_post (is_border(cell) && !is_leaf(cell))
@@ -601,6 +602,8 @@ Array * remote_leaves (unsigned rpid)
     }
     else
       flags |= leaf;
+    if (is_leaf(cell))
+      flags |= remote_leaf;
     array_append (a, &flags);
     if (flags & leaf)
       continue;
@@ -612,12 +615,18 @@ Array * remote_leaves (unsigned rpid)
    Match the refinement given by the linear quadtree 'a'. 
    Returns the number of active cells refined.
 */
-static int match_refine (unsigned * a, scalar * list)
+static int match_refine (unsigned * a, scalar * list, int pid)
 {
   int nactive = 0;
   if (a != NULL)
     foreach_cell() {
       unsigned flags = *a++;
+      if (cell.pid == pid) {
+	if (flags & remote_leaf)
+	  cell.flags |= remote_leaf;
+	else
+	  cell.flags &= ~remote_leaf;
+      }
       if (flags & leaf)
 	continue;
       else if (is_leaf(cell))
@@ -636,7 +645,7 @@ static void mpi_boundary_match (MpiBoundary * mpi)
   MPI_Request r[snd->npid];
   for (int i = 0; i < snd->npid; i++) {
     int pid = snd->rcv[i].pid;
-    a[i] = remote_leaves (pid);
+    a[i] = remote_cells (pid);
     assert (a[i]->len > 0);
     MPI_Isend (a[i]->p, a[i]->len, MPI_INT, pid, 0, MPI_COMM_WORLD, &r[i]);
   }
@@ -653,7 +662,7 @@ static void mpi_boundary_match (MpiBoundary * mpi)
     MPI_Get_count (&s, MPI_INT, &len);
     unsigned a[len];
     MPI_Recv (a, len, MPI_INT, pid, 0, MPI_COMM_WORLD, &s);
-    refined += match_refine (a, NULL);
+    refined += match_refine (a, NULL, pid);
   }
   
   /* check that ghost values were received OK and free send buffers */
@@ -699,8 +708,10 @@ void mpi_partitioning()
 	  for (int i = 0; i <= 1; i++)
 	    for (int j = 0; j <= 1; j++)
 	      child(i,j).pid = cell.pid;
-	if (!is_local(cell))
+	if (!is_local(cell)) {
 	  cell.flags &= ~active;
+	  cell.flags |= remote_leaf;
+	}
       }
       else {
 	cell.pid = child(0,1).pid;
@@ -710,7 +721,7 @@ void mpi_partitioning()
 	    if (is_active(child(i,j)))
 	      inactive = false;
 	if (inactive)
-	  cell.flags &= ~active;
+	  cell.flags &= ~(active|remote_leaf);
       }
     }
 
