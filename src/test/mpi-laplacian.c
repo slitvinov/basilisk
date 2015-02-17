@@ -29,6 +29,16 @@ cat trace-* > trace
   double mpi[npe()];
   timing s = timer_timing (t, i, tnc, mpi);
 
+#if 0
+  scalar wt[];
+  foreach()
+    wt[] = mpi[pid()];
+  char fname[80];
+  sprintf (fname, "%s-%d.ppm", name, npe());
+  FILE * fp = pid() ? NULL : fopen (fname, "w");
+  output_ppm (wt, fp, n = 512);
+#endif
+  
   if (pid() == 0) {
     /**
     *s.min/i*, *s.avg/i*, *s.max/i* are the minimum, average and maximum
@@ -40,12 +50,13 @@ cat trace-* > trace
 
     /**
     We also output the times spent in communication routines for each process. */
-
+#if 0
     for (int j = 0; j < npe(); j++)
       printf (" %g", mpi[j]/i);
+#endif
     printf ("\n");
   }
-    
+  
   MPI_Barrier (MPI_COMM_WORLD);
   trace_event (name);
 }
@@ -124,7 +135,8 @@ int main (int argc, char * argv[])
       sum += b[];
   }
   mpi_print (t, nloops, tnc*nloops, "sum");
-  fprintf (stderr, "sum: %g\n", sum);
+  if (pid() == 0)
+    fprintf (stderr, "sum: %g\n", sum);
 
   /**
   The restriction operator. */
@@ -150,17 +162,31 @@ int main (int argc, char * argv[])
   scalar e[];
   foreach()
     e[] = a[] - cos(pi*x)*cos(pi*y);
-  fprintf (stderr, "error: %g\n", normf(e).max);
+  double max = normf(e).max;
+  if (pid() == 0)
+    fprintf (stderr, "error: %g\n", max);
   assert (normf(e).max < 1e-10);
   //  output_ppm (e, file = "error.png");
-  
+
+  sum = 0.;
   int n = 0;
-  foreach()
+  foreach() {
+    e[] = (long) &(a[]);
+    sum += e[];
     n++;
+  }
+  foreach()
+    e[] -= sum/n;
+#if 0
+  FILE * fp = pid() ? NULL : fopen ("map.ppm", "w");
+  output_ppm (e, fp, n = 512);
+#endif
+  
   int nmin = n, nmax = n;
   mpi_all_reduce (nmin, MPI_INT, MPI_MIN);
   mpi_all_reduce (nmax, MPI_INT, MPI_MAX);
-  fprintf (stderr, "balance %d %d\n", nmin, nmax);
+  if (pid() == 0)
+    fprintf (stderr, "balance %d %d\n", nmin, nmax);
 }
 
 /**
@@ -228,7 +254,7 @@ etc...
 The wall-clock time for one iteration of the multigrid Poisson solver
 is given below. The red lines are a model of strong scaling. For a low
 enough number of cores, close to perfect scaling is obtained with a
-best fit computation speed close to 1.5 million grid points/core.
+best fit computation speed close to 2.1 million grid points/core.
 
 The pink lines connect points corresponding with weak (or
 *iso-granular*) scaling i.e. quadrupling both the computation size and
@@ -245,7 +271,7 @@ the total time in the previous figure).
 ![Communication time on Curie for the Poisson solver](curie/poisson-mpi.png)
 
 Similar results are obtained for a pure Laplacian with a best fit
-speed of order 25 million grid points/core. This speed is larger than
+speed of order 30 million grid points/core. This speed is larger than
 for the Poisson solver and hence does not scale as well.
 
 ![Wall-clock time on Curie for the Laplacian](curie/laplacian.png)
@@ -253,7 +279,7 @@ for the Poisson solver and hence does not scale as well.
 ![Communication time on Curie for the Laplacian](curie/laplacian-mpi.png)
 
 Similarly, the pure restriction operator scales quite well, with a
-best fit speed of around 30 million grid points/core.
+best fit speed of around 35 million grid points/core.
 
 ![Wall-clock time on Curie for the restriction operator](curie/restriction.png)
 
