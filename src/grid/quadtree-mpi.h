@@ -642,34 +642,35 @@ static void mpi_boundary_match (MpiBoundary * mpi)
   /* Send halo mesh for each neighboring process. */
   RcvPid * snd = mpi->restriction.snd;
   Array * a[snd->npid];
-  MPI_Request r[snd->npid];
+  MPI_Request r[2*snd->npid];
   for (int i = 0; i < snd->npid; i++) {
     int pid = snd->rcv[i].pid;
     a[i] = remote_cells (pid);
     assert (a[i]->len > 0);
-    MPI_Isend (a[i]->p, a[i]->len, MPI_INT, pid, 0, MPI_COMM_WORLD, &r[i]);
+    int len = a[i]->len;
+    MPI_Isend (&len, 1, MPI_INT, pid, 0,  MPI_COMM_WORLD, &r[2*i]);
+    MPI_Isend (a[i]->p, len, MPI_INT, pid, 0, MPI_COMM_WORLD, &r[2*i+1]);
   }
     
   /* Receive halo mesh from each neighboring process. */
-  
   RcvPid * rcv = mpi->restriction.rcv;
   int refined = 0;
   for (int i = 0; i < rcv->npid; i++) {
     int pid = rcv->rcv[i].pid;
-    MPI_Status s;
+    // we could use MPI_Probe, but apparently it's not a good idea,
+    // see http://cw.squyres.com/ and
+    // http://cw.squyres.com/columns/2004-07-CW-MPI-Mechanic.pdf
     int len;
-    MPI_Probe (pid, 0, MPI_COMM_WORLD, &s);
-    MPI_Get_count (&s, MPI_INT, &len);
+    MPI_Recv (&len, 1, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     unsigned a[len];
-    MPI_Recv (a, len, MPI_INT, pid, 0, MPI_COMM_WORLD, &s);
+    MPI_Recv (a, len, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     refined += match_refine (a, NULL, pid);
   }
   
   /* check that ghost values were received OK and free send buffers */
-  for (int i = 0; i < snd->npid; i++) {
-    MPI_Wait (&r[i], MPI_STATUS_IGNORE);
+  MPI_Waitall (2*snd->npid, r, MPI_STATUSES_IGNORE);
+  for (int i = 0; i < snd->npid; i++)
     array_free (a[i]);
-  }
   
   prof_stop();
   
