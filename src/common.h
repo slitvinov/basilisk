@@ -184,8 +184,12 @@ void mpi_init()
  * This blog was useful:
  *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
  */
-@if _GNU_SOURCE
+@if _GNU_SOURCE || __APPLE__
 double undefined;
+@if __APPLE__
+@include "stdint.h"
+@include "fp_osx.h"
+@endif
 static void set_fpe (void) {
   int64_t lnan = 0x7ff0000000000001;
   assert (sizeof (int64_t) == sizeof (double));
