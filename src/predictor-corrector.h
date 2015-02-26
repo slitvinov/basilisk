@@ -17,7 +17,8 @@ double t = 0., dt = 0.;
 static void advance_generic (scalar * output, scalar * input, scalar * updates,
 			     double dt)
 {
-  trash (output);
+  if (input != output)
+    trash (output);
   foreach() {
     scalar o, i, u;
     for (o,i,u in output,input,updates)

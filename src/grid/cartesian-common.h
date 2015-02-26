@@ -359,7 +359,7 @@ void cartesian_debug (Point point)
   fp = fopen (stencil, "w");
   for (scalar v in all)
     fprintf (fp, "x y %s ", v.name);
-  fprintf (fp, "flags neighbors pid\n");
+  fputc ('\n', fp);
   for (int k = -2; k <= 2; k++)
     for (int l = -2; l <= 2; l++) {
       for (scalar v in all) {
