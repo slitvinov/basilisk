@@ -376,15 +376,8 @@ void output_ppm (struct OutputPPM p)
   
   if (pid() == 0) { // master
 @if _MPI
-    color ** rem = matrix_new (ny, p.n, sizeof(color));
-    for (int pid = 1; pid < npe(); pid++) {
-      matrix_receive (rem, ny, p.n, sizeof(color), pid);
-      for (int j = 0; j < ny; j++)
-	for (int i = 0; i < p.n; i++)
-	  if (!ppm[j][i].r && !ppm[j][i].g && !ppm[j][i].b)
-	    ppm[j][i] = rem[j][i];
-    }
-    matrix_free (rem);
+    MPI_Reduce (MPI_IN_PLACE, ppm[0], 3*ny*p.n, MPI_UNSIGNED_CHAR, MPI_MAX, 0,
+		MPI_COMM_WORLD);
 @endif
     if (!p.fp) p.fp = stdout;
     if (p.file) {
@@ -403,9 +396,12 @@ void output_ppm (struct OutputPPM p)
     else
       fflush (p.fp);
   }
+@if _MPI
   else // slave
-    matrix_send (ppm, ny, p.n, sizeof(color), 0);
-  
+    MPI_Reduce (ppm[0], NULL, 3*ny*p.n, MPI_UNSIGNED_CHAR, MPI_MAX, 0,
+		MPI_COMM_WORLD);
+@endif
+    
   matrix_free (ppm);
 }
 
