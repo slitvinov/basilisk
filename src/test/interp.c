@@ -14,7 +14,7 @@ int main (int argc, char ** argv)
   
   /* initial coarsening (see halo.c) */
   double tolerance = 1e-4;
-  adapt_wavelet ({h}, &tolerance, 11);
+  while (adapt_wavelet ({h}, &tolerance, 11).nc);
 
 #if 0
   // we reinitialise h just to make sure that trash() does its job

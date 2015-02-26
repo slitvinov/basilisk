@@ -19,6 +19,7 @@ set logscale
 set xrange [16:256]
 set xtics 16,2,256
 set grid ytics
+set cbrange [1:1]
 plot 'log' u 1:4 t 'max (adaptive)', exp(f(log(x))) t ftitle(a,b), \
      'clog' u 1:4 t 'max (constant)', exp(fc(log(x))) t ftitle(ac,bc), \
      'log' u 1:2 t 'norm1 (adaptive)', exp(f2(log(x))) t ftitle(a2,b2), \

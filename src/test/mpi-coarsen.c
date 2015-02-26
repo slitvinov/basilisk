@@ -1,20 +1,27 @@
+static int coarsen_circle (Point point)
+{
+  return sq(x - 0.1) + sq(y - 0.1) > sq(0.1);
+}
+
+scalar s[];
+
 int main (int argc, char * argv[])
 {
   X0 = Y0 = -0.5;
-  init_grid (2);
+  init_grid (argc > 1 ? atoi(argv[1]) : 32);
+
   mpi_partitioning();
 
-  int depth = argc > 1 ? atoi(argv[1]) : 6;
-  refine((level <= depth && x <= -0.25 && y < 0 && y >= -0.25) ||
-	 (level <= depth - 1 && y < 0), NULL);
+  coarsen_function (coarsen_circle, NULL);
+  
   output_cells (stdout);
   
-  scalar s[];
   foreach()
     s[] = 1.;
   boundary ({s});
 
   // check boundary conditions on leaves
+  // fixme: should be = -GHOSTS; i <= GHOSTS
   foreach()
     for (int i = -1; i <= 1; i++)
       for (int j = -1; j <= 1; j++)

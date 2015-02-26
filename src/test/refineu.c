@@ -75,8 +75,11 @@ int main (int argc, char ** argv)
   boundary ((scalar *){u});
 
   astats s = adapt_wavelet ({h}, &tolerance, 10);
-  fprintf (stderr, "refined: %d coarsened: %d\n", s.nf, s.nc);
-
+  while (s.nc) {
+    fprintf (stderr, "refined: %d coarsened: %d\n", s.nf, s.nc);
+    s = adapt_wavelet ({h}, &tolerance, 10);
+  }
+  
 #if DEBUG
   FILE * fp = fopen ("cells", "w");
   output_cells (fp);

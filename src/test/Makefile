@@ -1,4 +1,4 @@
-all: check
+all: check mpi-tests
 
 include $(BASILISK)/Makefile.defs
 
@@ -59,6 +59,10 @@ terrain.tst: terrain.s
 
 # MPI tests
 
+mpi-tests: indexing.tst mpi-restriction.tst mpi-reduce.tst mpi-refine.tst \
+	mpi-laplacian.tst mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
+	mpi-interpu.tst mpi-coarsen.tst
+
 indexing.tst:		CC = mpicc -D_MPI=3
 mpi-restriction.tst:	CC = mpicc -D_MPI=3
 mpi-reduce.tst:		CC = mpicc -D_MPI=3
@@ -72,4 +76,4 @@ mpi-circle1.c: mpi-circle.c
 mpi-circle1.tst: CC = mpicc -D_MPI=6
 mpi-flux.tst:    CC = mpicc -D_MPI=6
 mpi-interpu.tst: CC = mpicc -D_MPI=5
-
+mpi-coarsen.tst: CC = mpicc -D_MPI=2

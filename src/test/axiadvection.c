@@ -63,7 +63,7 @@ event logfile (i++; t <= 0.8) {
   double e = 2.*(sfmax - sfmin)/(sfmax + sfmin);
   double e1 = 2.*(sfmax1 - sfmin1)/(sfmax1 + sfmin1);
   fprintf (stderr, "%g %.12f %.12f %.10f %.10f\n", t, s, s1, e, e1);
-  assert (e < 2e-6);
+  assert (e < 2.5e-6);
   assert (e1 < 5e-5);
 }
 
@@ -96,7 +96,7 @@ event adapt (i++) {
   double sa = statsf(f).sum;
   double sa1 = statsf(f1).sum;
   // the mass of VOF tracers is not conserved exactly
-  assert (fabs(sa - sb) < 1e-6);
+  assert (fabs(sa - sb) < 2e-6);
   // the mass of diffusive tracers must be conserved to within round-off
   assert (fabs(sa1 - sb1) < 1e-12);
 }

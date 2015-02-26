@@ -19,7 +19,7 @@ int main (int argc, char ** argv)
   
   /* initial coarsening (see halo.c) */
   double tolerance = 2e-4;
-  adapt_wavelet ({h}, &tolerance, 11, list = {h});
+  while (adapt_wavelet ({h}, &tolerance, 11, list = {h}).nc);
 
   foreach_face(x) u.x[] = exp(-(x*x + y*y)/(R0*R0));
   foreach_face(y) u.y[] = exp(-(x*x + y*y)/(R0*R0));

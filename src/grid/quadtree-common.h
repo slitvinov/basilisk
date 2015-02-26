@@ -11,10 +11,9 @@ attribute {
 // Quadtree methods
 
 /*
-  If nactive is different from NULL, it is incremented when an active
-  cell is refined.
- */
-void refine_cell (Point point, scalar * list, int flag, int * nactive)
+  A cache of refined cells is maintained (if not NULL).
+*/
+void refine_cell (Point point, scalar * list, int flag, Cache * refined)
 {
 #if TWO_ONE
   /* refine neighborhood if required */
@@ -32,26 +31,27 @@ void refine_cell (Point point, scalar * list, int flag, int * nactive)
 	  p.level = point.level - 1;
 	  p.i = (point.i + GHOSTS)/2 + k;
 	  p.j = (point.j + GHOSTS)/2 + l;
-	  refine_cell (p, list, flag, nactive);
+	  refine_cell (p, list, flag, refined);
 	  aparent(k,l).flags |= flag;
 	}
     }
 #endif
 
   /* refine */
-  cell.flags &= ~leaf;
+  int premote = is_remote_leaf(cell) ? remote_leaf : 0;
+  cell.flags &= ~(leaf|remote_leaf);
 
   /* update neighborhood */
   increment_neighbors (point);
 
   /* for each child: (note that using foreach_child() would be nicer
      but it seems to be significanly slower) */
-  int pactive = (cell.flags & active) ? active : 0;
+  int pactive = is_active(cell) ? active : 0;
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
       if (dimension == 2)
-	assert(!(child(k,l).flags & active));
-      child(k,l).flags |= (pactive|leaf);
+	assert(!is_active(child(k,l)));
+      child(k,l).flags |= (pactive|premote|leaf);
 @if _MPI
       if (is_border(cell))
 	for (int m = -GHOSTS; m <= GHOSTS; m++)
@@ -63,16 +63,18 @@ void refine_cell (Point point, scalar * list, int flag, int * nactive)
 @endif
     }
 
-  if (pactive) {
+  if (pactive)
     /* initialise scalars */
     for (scalar s in list)
       s.refine (point, s);
-    if (nactive)
-      (*nactive)++;
-  }
+
+@if _MPI
+  if (refined && is_border(cell))
+    cache_append (refined, point, 0, 0, cell.flags);
+@endif
 }
 
-bool coarsen_cell (Point point, scalar * list)
+bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
 {
 #if TWO_ONE
   /* check that neighboring cells are not too fine */
@@ -98,6 +100,11 @@ bool coarsen_cell (Point point, scalar * list)
       for (int l = 0; l < 2; l++)
 	child(k,l).flags &= ~(leaf|active);
   
+@if _MPI
+  if (coarsened && is_border(cell))
+    cache_level_append (coarsened, point);
+@endif
+
   return true;
 }
 
@@ -109,6 +116,16 @@ enum {
   too_coarse = 1 << user,
   too_fine   = 1 << (user + 1)
 };
+
+@if _MPI
+void mpi_boundary_refine  (void);
+void mpi_boundary_coarsen (int);
+void mpi_boundary_update  (void);
+@else
+@ define mpi_boundary_refine()
+@ define mpi_boundary_coarsen(a)
+@ define mpi_boundary_update()
+@endif
 
 struct Adapt {
   scalar * slist; // list of scalars
@@ -147,72 +164,97 @@ astats adapt_wavelet (struct Adapt p)
       listc = list_add (listc, s);
 
   // refinement
+  quadtree->refined.n = 0;
   foreach_cell() {
-    if (is_leaf (cell)) {
-      if (cell.flags & too_coarse) {
-	cell.flags &= ~too_coarse;
-	refine_cell (point, listc, refined, NULL);
-	st.nf++;
-      }
-      continue;
-    }
-    // !is_leaf (cell)
-    else {
-      if (cell.flags & refined)
-	// cell has already been refined, skip its children
-	continue;
-      foreach_child()
-	cell.flags &= ~(too_coarse|too_fine);
-      int i = 0;
-      for (scalar s in p.slist) {
-	double max = p.max[i++], sc[4];
-	int c = 0;
-	foreach_child()
-	  sc[c++] = s[];
-       	s.prolongation (point, s);
-	c = 0;
-	foreach_child() {
-	  double e = fabs(sc[c] - s[]);
-	  if (e > max) {
-	    cell.flags &= ~too_fine;
-	    cell.flags |= too_coarse;
-	  }
-	  else if (e <= max/1.5 && !(cell.flags & too_coarse))
-	    cell.flags |= too_fine;
-	  s[] = sc[c++];
+    if (is_active(cell)) {
+      if (is_leaf (cell)) {
+	if (cell.flags & too_coarse) {
+	  cell.flags &= ~too_coarse;
+	  refine_cell (point, listc, refined, &quadtree->refined);
+	  st.nf++;
 	}
-      }
-      // cell is too fine, its children cannot be refined
-      if (level == p.maxlevel - 1)
 	continue;
+      }
+      else { // !is_leaf (cell)
+	if (cell.flags & refined)
+	  // cell has already been refined, skip its children
+	  continue;
+	// check whether the cell or any of its children is local
+	bool local = is_local(cell);
+	for (int k = 0; k <= 1 && !local; k++)
+	  for (int l = 0; l <= 1 && !local; l++)
+	    if (is_local(child(k,l)))
+	      local = true;
+	if (local) {
+	  foreach_child()
+	    cell.flags &= ~(too_coarse|too_fine);
+	  int i = 0;
+	  for (scalar s in p.slist) {
+	    double max = p.max[i++], sc[4];
+	    int c = 0;
+	    foreach_child()
+	      sc[c++] = s[];
+	    s.prolongation (point, s);
+	    c = 0;
+	    foreach_child() {
+	      double e = fabs(sc[c] - s[]);
+	      if (e > max) {
+		cell.flags &= ~too_fine;
+		cell.flags |= too_coarse;
+	      }
+	      else if (e <= max/1.5 && !(cell.flags & too_coarse))
+		cell.flags |= too_fine;
+	      s[] = sc[c++];
+	    }
+	  }
+	}
+	// cell is too fine, its children cannot be refined
+	if (level == p.maxlevel - 1)
+	  continue;
+      }
     }
+    else // inactive cell
+      continue;
   }
-
+  mpi_boundary_refine();
+  
   // coarsening
   // the loop below is only necessary to ensure symmetry of 2:1 constraint
-  for (int l = depth() - 1; l >= max(p.minlevel, 1); l--)
+  for (int l = depth() - 1; l >= max(p.minlevel, 1); l--) {
+    quadtree->coarsened.n = 0;
     foreach_cell() {
-      if (is_leaf (cell))
-	continue;
-      else if (level == l) {
-	if (cell.flags & refined)
-	  // cell was refined previously, unset the flag
-	  cell.flags &= ~refined;
-	else if (cell.flags & too_fine) {
-	  bool coarsen = true;
-	  foreach_child()
-	    if (!(cell.flags & too_fine))
-	      coarsen = false;
-	  if (coarsen && coarsen_cell (point, listc))
-	    st.nc++;
+      if (is_local (cell)) {
+	if (is_leaf (cell))
+	  continue;
+	else if (level == l) {
+	  if (cell.flags & refined)
+	    // cell was refined previously, unset the flag
+	    cell.flags &= ~(refined|too_fine);
+	  else if (cell.flags & too_fine) {
+	    bool coarsen = true;
+	    foreach_child()
+	      if (!(cell.flags & too_fine))
+		coarsen = false;
+	    if (coarsen && coarsen_cell (point, listc, &quadtree->coarsened))
+	      st.nc++;
+	    cell.flags &= ~too_fine; // do not coarsen parent
+	  }
+	  continue;
 	}
+      } // non-local cell
+      else if (level == l || is_leaf(cell))
 	continue;
-      }
     }
+    mpi_boundary_coarsen (l);
+  }
   free (listc);
 
-  if (st.nc || st.nf)
+  mpi_all_reduce (st.nf, MPI_INT, MPI_SUM);
+  mpi_all_reduce (st.nc, MPI_INT, MPI_SUM);
+  if (st.nc || st.nf) {
+    mpi_boundary_update();
     boundary (p.listb ? p.listb : p.list);
+  }
   free (listcm);
 
   return st;
@@ -221,39 +263,41 @@ astats adapt_wavelet (struct Adapt p)
 int coarsen_function (int (* func) (Point p), scalar * list)
 {
   int nc = 0;
-  for (int l = depth() - 1; l >= 0; l--)
+  for (int l = depth() - 1; l >= 0; l--) {
+    quadtree->coarsened.n = 0;
     foreach_cell() {
-      if (is_active (cell)) { // always true in serial
+      if (is_local (cell)) { // always true in serial
 	if (is_leaf (cell))
 	  continue;
 	else if (level == l) {
-	  if ((*func) (point) && coarsen_cell (point, list))
+	  if ((*func) (point) && coarsen_cell (point, list,
+					       &quadtree->coarsened))
 	    nc++;
 	  continue;
 	}
-      }
+      } // non-local cell
+      else if (level == l || is_leaf(cell))
+	continue;
     }
+    mpi_boundary_coarsen (l);
+  }
+  mpi_boundary_update();
   return nc;
 }
 
-@if _MPI
-void mpi_boundary_refine (void *, scalar *);
-@else
-@define mpi_boundary_refine(a,b)
-@endif
-
-#define refine(cond, list) {				\
-  int nf = 0, refined;				        \
-  do {							\
-    refined = 0;					\
-    foreach_leaf()					\
-      if (cond)						\
-        refine_cell (point, list, 0, &refined);		\
-    nf += refined;					\
-  } while (refined);					\
-  mpi_all_reduce (nf, MPI_INT, MPI_SUM);		\
-  if (nf)						\
-    mpi_boundary_refine (NULL, list);			\
+#define refine(cond, list) {						\
+  quadtree->refined.n = 0;						\
+  int refined;								\
+  do {									\
+    refined = 0;							\
+    foreach_leaf()							\
+      if (cond)	{							\
+        refine_cell (point, list, 0, &quadtree->refined);		\
+	refined++;							\
+      }									\
+  } while (refined);							\
+  mpi_boundary_refine();						\
+  mpi_boundary_update();						\
 }
 
 #define is_refined(cell) ((cell).neighbors && !is_leaf (cell) && \
@@ -292,7 +336,7 @@ Point locate (double xp, double yp)
       Delta /= 2.;
       if (xp < x - Delta || xp > x + Delta || yp < y - Delta || yp > y + Delta)
 	continue;
-      if (is_leaf (cell))
+      if (is_leaf(cell) && is_local(cell))
 	return point;
     }
     else

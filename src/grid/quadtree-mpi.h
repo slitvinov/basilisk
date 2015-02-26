@@ -410,10 +410,14 @@ void debug_mpi (FILE * fp1)
 
   fp = fopen_prefix (fp1, "exterior", prefix);
   foreach_cell() {
-    if (!is_active(cell))
+    if (!is_active(cell)) {
       fprintf (fp, "%s%g %g %d %d %d %d\n",
 	       prefix, x, y, level, cell.neighbors, cell.pid,
 	       is_remote_leaf(cell));
+      fflush (fp);
+      if (is_remote_leaf(cell))
+	assert (is_leaf(cell));
+    }
     else if (!is_border(cell))
       continue;
     if (is_leaf(cell))
@@ -431,8 +435,10 @@ static void snd_rcv_free (SndRcv * p)
   p->snd = rcv_pid_new();
 }
 
-void mpi_boundary_update (MpiBoundary * m)
+void mpi_boundary_update()
 {
+  MpiBoundary * m = (MpiBoundary *) mpi_boundary;
+  
   prof_start ("mpi_boundary_update");
 
   SndRcv * restriction = &m->restriction;
@@ -443,10 +449,10 @@ void mpi_boundary_update (MpiBoundary * m)
   snd_rcv_free (prolongation);
   snd_rcv_free (halo_restriction);
   
-  /* we build arrays of ghost cell indices for restriction and prolongation */
-  // we do a breadth-first traversal from fine to coarse, so that
-  // coarsening of unused cells can proceed fully. See also
-  // quadtree-common.h:coarsen_function()
+  /* we build arrays of ghost cell indices for restriction and prolongation
+     we do a breadth-first traversal from fine to coarse, so that
+     coarsening of unused cells can proceed fully. See also
+     quadtree-common.h:coarsen_function() */
   for (int l = depth(); l >= 0; l--)
     foreach_cell() {
       if (is_active(cell) && !is_border(cell))
@@ -550,7 +556,7 @@ void mpi_boundary_update (MpiBoundary * m)
 		}
 	    // coarse cell with no neighbors: destroy its children
 	    if (!neighbors)
-	      coarsen_cell (point, NULL);
+	      coarsen_cell (point, NULL, NULL);
 	  }
 	  // halo restriction
 	  if (level > 0 && is_local(aparent(0,0))) {
@@ -573,126 +579,115 @@ void mpi_boundary_update (MpiBoundary * m)
 #endif  
 }
 
-/*
-  Returns a linear quadtree containing the cells which are in the
-  (5x5) neighborhood of cells belonging to the (remote) process 'rpid'.
- */
-Array * remote_cells (unsigned rpid)
+void mpi_boundary_refine()
 {
-  static const int remote = 1 << user;
-  foreach_cell_post (is_border(cell) && !is_leaf(cell))
-    if (is_border(cell)) {
-      if (!(cell.flags & remote))
-	for (int k = -GHOSTS; k <= GHOSTS; k++)
-	  for (int l = -GHOSTS; l <= GHOSTS; l++)
-	    if (neighbor(k,l).pid == rpid) {
-	      cell.flags |= remote;
-	      k = l = GHOSTS + 1; // break
-	    }
-      if (level > 0 && (cell.flags & remote))
-	aparent(0,0).flags |= remote;
-    }
-  
-  Array * a = array_new (sizeof(unsigned));
-  foreach_cell() {
-    unsigned flags = cell.flags;
-    if (flags & remote) {
-      flags &= ~remote;
-      cell.flags = flags;
-    }
-    else
-      flags |= leaf;
-    if (is_leaf(cell))
-      flags |= remote_leaf;
-    array_append (a, &flags);
-    if (flags & leaf)
-      continue;
-  }
-  return a;
-}
+  prof_start ("mpi_boundary_refine");
 
-/**
-   Match the refinement given by the linear quadtree 'a'. 
-   Returns the number of active cells refined.
-*/
-static int match_refine (unsigned * a, scalar * list, int pid)
-{
-  int nactive = 0;
-  if (a != NULL)
-    foreach_cell() {
-      unsigned flags = *a++;
-      if (cell.pid == pid) {
-	if (flags & remote_leaf)
-	  cell.flags |= remote_leaf;
-	else
-	  cell.flags &= ~remote_leaf;
-      }
-      if (flags & leaf)
-	continue;
-      else if (is_leaf(cell))
-	refine_cell (point, list, 0, &nactive);	
-    }
-  return nactive;
-}
+  MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
 
-static void mpi_boundary_match (MpiBoundary * mpi)
-{
-  prof_start ("mpi_boundary_match");
-  
-  /* Send halo mesh for each neighboring process. */
+  /* Send refinement cache to each neighboring process. */
   RcvPid * snd = mpi->restriction.snd;
-  Array * a[snd->npid];
   MPI_Request r[2*snd->npid];
+  int nr = 0, totlen = 0;
   for (int i = 0; i < snd->npid; i++) {
     int pid = snd->rcv[i].pid;
-    a[i] = remote_cells (pid);
-    assert (a[i]->len > 0);
-    int len = a[i]->len;
-    MPI_Isend (&len, 1, MPI_INT, pid, 0,  MPI_COMM_WORLD, &r[2*i]);
-    MPI_Isend (a[i]->p, len, MPI_INT, pid, 0, MPI_COMM_WORLD, &r[2*i+1]);
+    int len = quadtree->refined.n;
+    MPI_Isend (&len, 1, MPI_INT, pid, 0,  MPI_COMM_WORLD, &r[nr++]);
+    if (len > 0)
+      MPI_Isend (quadtree->refined.p, 4*len, MPI_INT, pid, 0,
+		 MPI_COMM_WORLD, &r[nr++]);
+    totlen += len;
   }
-    
-  /* Receive halo mesh from each neighboring process. */
+
+  /* Receive refinement cache from each neighboring process. 
+   fixme: use non-blocking receives */
   RcvPid * rcv = mpi->restriction.rcv;
-  int refined = 0;
+  Cache rerefined = {NULL, 0, 0};
   for (int i = 0; i < rcv->npid; i++) {
-    int pid = rcv->rcv[i].pid;
-    // we could use MPI_Probe, but apparently it's not a good idea,
-    // see http://cw.squyres.com/ and
-    // http://cw.squyres.com/columns/2004-07-CW-MPI-Mechanic.pdf
-    int len;
+    int pid = rcv->rcv[i].pid, len;
     MPI_Recv (&len, 1, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    unsigned a[len];
-    MPI_Recv (a, len, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    refined += match_refine (a, NULL, pid);
+    if (len > 0) {
+      Index p[len];
+      MPI_Recv (p, 4*len, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      Cache refined = {p, len, len};
+      foreach_cache (refined,)
+	if (allocated(0,0)) {
+	  if (is_leaf(cell))
+	    refine_cell (point, NULL, 0, &rerefined);
+	  if (is_remote_leaf(cell))
+	    cell.flags &= ~remote_leaf;
+	}
+      totlen += len;
+    }
   }
   
-  /* check that ghost values were received OK and free send buffers */
-  MPI_Waitall (2*snd->npid, r, MPI_STATUSES_IGNORE);
-  for (int i = 0; i < snd->npid; i++)
-    array_free (a[i]);
+  /* check that caches were received OK and free ressources */
+  MPI_Waitall (nr, r, MPI_STATUSES_IGNORE);
+
+  /* update the refinement cache with "re-refined" cells */
+  free (quadtree->refined.p);
+  quadtree->refined = rerefined;
   
   prof_stop();
-  
-  /* If an active cell has been refined (due to the 2:1 refinement
-     constraint), we need to repeat the process. */
-  mpi_all_reduce (refined, MPI_INT, MPI_SUM);
-  if (refined)
-    mpi_boundary_match (mpi);
+
+  /* if any cell has been refined, we repeat the process to take care
+     of recursive refinements induced by the 2:1 constraint */
+  if (totlen)
+    mpi_boundary_refine();
 }
 
-void mpi_boundary_refine (void * p, scalar * list)
+void mpi_boundary_coarsen (int l)
 {
-  MpiBoundary * mpi = p ? p : (MpiBoundary *) mpi_boundary;
-  mpi_boundary_match (mpi);
-  mpi_boundary_update (mpi);
+  prof_start ("mpi_boundary_coarsen");
+
+  MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
+  
+  /* Send coarsening cache to each neighboring process. */
+  RcvPid * snd = mpi->restriction.snd;
+  MPI_Request r[2*snd->npid];
+  int nr = 0;
+  for (int i = 0; i < snd->npid; i++) {
+    int pid = snd->rcv[i].pid;
+    int len = quadtree->coarsened.n;
+    MPI_Isend (&len, 1, MPI_INT, pid, l,  MPI_COMM_WORLD, &r[nr++]);
+    if (len > 0)
+      MPI_Isend (quadtree->coarsened.p, 2*len, MPI_INT, pid, l,
+		 MPI_COMM_WORLD, &r[nr++]);
+  }
+
+  /* Receive coarsening cache from each neighboring process. 
+   fixme: use non-blocking receives */
+  RcvPid * rcv = mpi->restriction.rcv;
+  for (int i = 0; i < rcv->npid; i++) {
+    int pid = rcv->rcv[i].pid, len;
+    MPI_Recv (&len, 1, MPI_INT, pid, l, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    if (len > 0) {
+      IndexLevel p[len];
+      MPI_Recv (p, 2*len, MPI_INT, pid, l, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      CacheLevel coarsened = {p, len, len};
+      foreach_cache_level (coarsened, l,) {
+	assert (point.i < (1 << l) + 2*GHOSTS);
+	assert (point.j < (1 << l) + 2*GHOSTS);
+	if (allocated(0,0)) {
+	  if (is_refined(cell))
+	    assert (coarsen_cell (point, NULL, NULL));
+	  if (cell.pid == pid && is_leaf(cell) && !is_remote_leaf(cell))
+	    cell.flags |= remote_leaf;
+	}
+      }
+    }
+  }
+  
+  /* check that caches were received OK and free ressources */
+  MPI_Waitall (nr, r, MPI_STATUSES_IGNORE);
+  
+  prof_stop();  
 }
 
 void mpi_partitioning()
 {
   prof_start ("mpi_partitioning");
 
-  MpiBoundary * m = (MpiBoundary *) mpi_boundary;
   int nf = 0;
   foreach()
     nf++;
@@ -754,7 +749,7 @@ void mpi_partitioning()
   
   prof_stop();
   
-  mpi_boundary_update (m);
+  mpi_boundary_update();
 }
 
 /**

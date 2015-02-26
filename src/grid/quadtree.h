@@ -57,19 +57,13 @@ typedef struct {
 
 typedef struct {
   int i, j;
-  short level, flags;
+  int level, flags;
 } Index;
 
 typedef struct {
   Index * p;
   int n, nm;
 } Cache;
-
-static void cache_init (Cache * c)
-{
-  c->p = NULL;
-  c->n = c->nm = 0;
-}
 
 // Layer
 
@@ -145,10 +139,12 @@ typedef struct {
   Cache        leaves;   /* leaf indices */
   Cache        faces;    /* face indices */
   Cache        vertices; /* vertex indices */
+  Cache        refined;  /* refined cells */
   CacheLevel * active;   /* active cells indices for each level */
   CacheLevel * prolongation; /* halo prolongation indices for each level */
   CacheLevel * restriction;  /* halo restriction indices for each level */
-
+  CacheLevel   coarsened; /* coarsened cells */
+  
   bool dirty;       /* whether caches should be updated */
 } Quadtree;
 
@@ -522,7 +518,6 @@ static void update_cache_f (void)
 }
 
 @def foreach_cache(_cache,clause) {
-  update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   OMP_PARALLEL()
   Point point = {GHOSTS,GHOSTS,0};
@@ -551,17 +546,19 @@ static void update_cache_f (void)
 @
 @define end_foreach_cache_level() } OMP_END_PARALLEL() }
 
-@define foreach(clause) foreach_cache(quadtree->leaves, clause)
+@define foreach(clause) update_cache(); foreach_cache(quadtree->leaves, clause)
 @define end_foreach()   end_foreach_cache()
 
-@def foreach_face_generic(clause) 
+@def foreach_face_generic(clause)
+  update_cache();
   foreach_cache(quadtree->faces, clause) @
 @define end_foreach_face_generic() end_foreach_cache()
 
 @define is_face_x() (_flags & face_x)
 @define is_face_y() (_flags & face_y)
 
-@def foreach_vertex(clause) 
+@def foreach_vertex(clause)
+  update_cache();
   foreach_cache(quadtree->vertices, clause) {
     x -= Delta/2.; y -= Delta/2.;
 @
@@ -960,7 +957,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   free (tangent);
 }
 
-void refine_cell (Point point, scalar * list, int flag, int * nactive);
+void refine_cell (Point point, scalar * list, int flag, Cache * refined);
 
 static void free_cache (CacheLevel * c)
 {
@@ -979,6 +976,8 @@ void free_grid (void)
   free (q->leaves.p);
   free (q->faces.p);
   free (q->vertices.p);
+  free (q->refined.p);
+  free (q->coarsened.p);
   /* low-level memory management */
   /* the root level is allocated differently */
   Layer * L = q->L[0];
@@ -1049,9 +1048,6 @@ void init_grid (int n)
     for (int l = -GHOSTS; l <= GHOSTS; l++)
       CELL(L->m[GHOSTS+k][GHOSTS+l]).pid = -1;
   CELL(L->m[GHOSTS][GHOSTS]).pid = pid();
-  cache_init (&q->leaves);
-  cache_init (&q->faces);
-  cache_init (&q->vertices);
   q->active = calloc (1, sizeof (CacheLevel));
   q->prolongation = calloc (1, sizeof (CacheLevel));
   q->restriction = calloc (1, sizeof (CacheLevel));
