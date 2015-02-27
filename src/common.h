@@ -186,22 +186,23 @@ void mpi_init()
  */
 @if _GNU_SOURCE || __APPLE__
 double undefined;
-@if __APPLE__
-@include "stdint.h"
-@include "fp_osx.h"
-@endif
+@ if __APPLE__
+@   include <stdint.h>
+@   include "fp_osx.h"
+@ endif
+@  define enable_fpe(flags)  feenableexcept (flags)
+@  define disable_fpe(flags) fedisableexcept (flags)
 static void set_fpe (void) {
   int64_t lnan = 0x7ff0000000000001;
   assert (sizeof (int64_t) == sizeof (double));
   memcpy (&undefined, &lnan, sizeof (double));
-  feenableexcept (FE_DIVBYZERO|FE_INVALID);
+  enable_fpe (FE_DIVBYZERO|FE_INVALID);
 }
-@  define enable_fpe(flags)  feenableexcept (flags)
-@  define disable_fpe(flags) fedisableexcept (flags)
 @else
 @  define undefined DBL_MAX
 @  define enable_fpe(flags)
 @  define disable_fpe(flags)
+static void set_fpe (void) {}
 @endif
 
 // the grid

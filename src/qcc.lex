@@ -2063,10 +2063,9 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	   "  all = malloc (sizeof (scalar)*%d);\n"
 	   "  for (int i = 0; i < %d; i++)\n"
 	   "    all[i] = i;\n"
-	   "  all[%d] = -1;\n", nvar + 1, nvar, nvar);
-  fputs ("#if _GNU_SOURCE || __APPLE__\n"
-	 "  set_fpe();\n"
-	 "#endif\n", fout);
+	   "  all[%d] = -1;\n"
+	   "  set_fpe();\n",
+	   nvar + 1, nvar, nvar);
   if (catch)
     fputs ("  catch_fpe();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);

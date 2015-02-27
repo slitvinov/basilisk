@@ -7,7 +7,8 @@
    Revised:  22-Sep-09
    Revised:  30-Sep-09 (comment typo)
    Revised:  18 Oct-12 (chnaged char* to const char * on line 228, by R. Booth)
-   Revised:  17 Feb-15 (changed asm to __asm for being both C99 and GNU99 compliant, by G. Kirstetter)
+   Revised: 17 Feb-15 (changed asm to __asm for being both C99 and
+   GNU99 compliant, by G. Kirstetter)
 
 
 This code is an example of alternate, nondefault handling of
