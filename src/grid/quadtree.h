@@ -1072,6 +1072,11 @@ void init_grid (int n)
     b->halo_prolongation = box_boundary_halo_prolongation;
     add_boundary (b);
   }
+@if _MPI
+  void mpi_partitioning();
+  if (N > 1)
+    mpi_partitioning();
+@endif
   init_events();
 }
 

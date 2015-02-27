@@ -3,7 +3,6 @@
 int main ()
 {
   init_grid (64);
-  mpi_partitioning();
 
   scalar s[];
   foreach()

@@ -10,8 +10,6 @@ int main (int argc, char * argv[])
   X0 = Y0 = -0.5;
   init_grid (argc > 1 ? atoi(argv[1]) : 32);
 
-  mpi_partitioning();
-
   coarsen_function (coarsen_circle, NULL);
   
   output_cells (stdout);

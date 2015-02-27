@@ -68,7 +68,6 @@ int main (int argc, char * argv[])
   timer t;
 
   init_grid (1 << minlevel);
-  mpi_partitioning();
 
   foreach()
     a[] = b[] = 0.;

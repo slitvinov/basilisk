@@ -105,6 +105,14 @@ bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
 @if _MPI
   if (coarsened && is_border(cell))
     cache_level_append (coarsened, point);
+  if (!is_local(cell)) {
+    cell.flags &= ~(active|border);
+    for (int k = -GHOSTS; k < 2 + GHOSTS; k++)
+      for (int l = -GHOSTS; l < 2 + GHOSTS; l++)
+	if (allocated_child(k,l) &&
+	    is_local(child(k,l)) && !is_border(child(k,l)))
+	  child(k,l).flags |= border;
+  }
 @endif
 
   return true;

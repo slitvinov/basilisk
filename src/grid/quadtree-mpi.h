@@ -415,14 +415,10 @@ void debug_mpi (FILE * fp1)
 
   fp = fopen_prefix (fp1, "exterior", prefix);
   foreach_cell() {
-    if (!is_active(cell)) {
+    if (!is_active(cell))
       fprintf (fp, "%s%g %g %d %d %d %d\n",
 	       prefix, x, y, level, cell.neighbors, cell.pid,
 	       is_remote_leaf(cell));
-      fflush (fp);
-      if (is_remote_leaf(cell))
-	assert (is_leaf(cell));
-    }
     else if (!is_border(cell))
       continue;
     if (is_leaf(cell))
