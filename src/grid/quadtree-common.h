@@ -63,7 +63,7 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
 @endif
     }
 
-  if (pactive)
+  if (is_local(cell))
     /* initialise scalars */
     for (scalar s in list)
       s.refine (point, s);
@@ -97,9 +97,11 @@ bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
   /* for each child */
   if (cell.neighbors)
     for (int k = 0; k < 2; k++)
-      for (int l = 0; l < 2; l++)
+      for (int l = 0; l < 2; l++) {
 	child(k,l).flags &= ~(leaf|active);
-  
+	child(k,l).pid = cell.pid;
+      }
+
 @if _MPI
   if (coarsened && is_border(cell))
     cache_level_append (coarsened, point);
@@ -270,8 +272,8 @@ int coarsen_function (int (* func) (Point p), scalar * list)
 	if (is_leaf (cell))
 	  continue;
 	else if (level == l) {
-	  if ((*func) (point) && coarsen_cell (point, list,
-					       &quadtree->coarsened))
+	  if ((*func) (point) &&
+	      coarsen_cell (point, list, &quadtree->coarsened))
 	    nc++;
 	  continue;
 	}

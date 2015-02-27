@@ -9,9 +9,12 @@ typedef struct {
 } Rcv;
 
 typedef struct {
+  int pid[sq(2*GHOSTS+1)+36], n;  
+} PidArray;
+
+typedef struct {
   Rcv * rcv;
   int npid;
-  int pid[sq(2*GHOSTS+1)+36], n;
 } RcvPid;
 
 typedef struct {
@@ -74,15 +77,15 @@ static RcvPid * rcv_pid_new (void)
   return calloc (sizeof (RcvPid), 1);
 }
 
-static Rcv * rcv_pid_pointer (RcvPid * p, int pid)
+static Rcv * rcv_pid_pointer (RcvPid * p, PidArray * a, int pid)
 {
   assert (pid >= 0 && pid < npe());
-  for (int i = 0; i < p->n; i++)
-    if (p->pid[i] == pid)
+  for (int i = 0; i < a->n; i++)
+    if (a->pid[i] == pid)
       return NULL;
 
-  assert (p->n < sq(2*GHOSTS + 1) + 36);
-  p->pid[p->n++] = pid;
+  assert (a->n < sq(2*GHOSTS + 1) + 36);
+  a->pid[a->n++] = pid;
   int i;
   for (i = 0; i < p->npid; i++)
     if (pid == p->rcv[i].pid)
@@ -100,16 +103,18 @@ static Rcv * rcv_pid_pointer (RcvPid * p, int pid)
   return &p->rcv[i];
 }
 
-static void rcv_pid_append (RcvPid * p, int pid, Point point)
+static void rcv_pid_append (RcvPid * p, PidArray * a,
+			    int pid, Point point)
 {
-  Rcv * rcv = rcv_pid_pointer (p, pid);
+  Rcv * rcv = rcv_pid_pointer (p, a, pid);
   if (rcv)
     rcv_append (point, rcv);
 }
 
-static void rcv_pid_append_children (RcvPid * p, int pid, Point point)
+static void rcv_pid_append_children (RcvPid * p, PidArray * a,
+				     int pid, Point point)
 {
-  Rcv * rcv = rcv_pid_pointer (p, pid);
+  Rcv * rcv = rcv_pid_pointer (p, a, pid);
   if (rcv)
     foreach_child()
       rcv_append (point, rcv);
@@ -465,32 +470,38 @@ void mpi_boundary_update()
 	  // local cell: do we need to send it?
 	  RcvPid * pro = prolongation->snd;
 	  RcvPid * res = restriction->snd;
-	  pro->n = res->n = 0;
+	  PidArray apro, ares;
+	  apro.n = ares.n = 0;
 	  for (int k = -GHOSTS; k <= GHOSTS; k++)
 	    for (int l = -GHOSTS; l <= GHOSTS; l++) {
 	      int pid = neighbor(k,l).pid;
 	      if (pid >= 0 && pid != cell.pid) {
-		rcv_pid_append (res, pid, point);
+		rcv_pid_append (res, &ares, pid, point);
 		if ((is_leaf(neighbor(k,l)) || is_prolongation(neighbor(k,l))) ||
 		    (is_leaf(cell) &&
 		     k >= -GHOSTS/2 && k <= GHOSTS/2 &&
 		     l >= -GHOSTS/2 && l <= GHOSTS/2))
-		  rcv_pid_append (pro, pid, point);
+		  rcv_pid_append (pro, &apro, pid, point);
 	      }
 	    }
 	  // prolongation
 	  if (is_leaf(cell)) {
 	    if (cell.neighbors) {
-	      pro->n = res->n = 0;
+	      PidArray cpro, cres;
+	      cpro.n = cres.n = 0;
 	      for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
 		for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
 		  if (neighbor(k,l).pid >= 0 && neighbor(k,l).neighbors)
 		    for (int i = 2*k; i <= 2*k + 1; i++)
 		      for (int j = 2*l; j <= 2*l + 1; j++)
 			if (child(i,j).pid != cell.pid) {
-			  rcv_pid_append_children (res, child(i,j).pid, point);
-			  if (!is_refined(child(i,j)))
-			    rcv_pid_append_children (pro, child(i,j).pid, point);
+			  rcv_pid_append_children (res, &cres,
+						   child(i,j).pid, point);
+			  if (!is_refined(child(i,j))) {
+			    rcv_pid_append (pro, &apro, child(i,j).pid, point);
+			    rcv_pid_append_children (pro, &cpro,
+						     child(i,j).pid, point);
+			  }
 			}
 	    }
 	  }
@@ -500,13 +511,13 @@ void mpi_boundary_update()
 	      for (int l = -2; l <= 3; l++) {
 		int pid = child(k,l).pid;
 		if (pid >= 0 && pid != cell.pid)
-		  rcv_pid_append (res, pid, point);
+		  rcv_pid_append (res, &ares, pid, point);
 	      }
 	  // halo restriction
 	  if (level > 0 && !is_local(aparent(0,0))) {
 	    RcvPid * halo_res = halo_restriction->snd;
-	    halo_res->n = 0;
-	    rcv_pid_append (halo_res, aparent(0,0).pid, point);
+	    apro.n = 0;
+	    rcv_pid_append (halo_res, &apro, aparent(0,0).pid, point);
 	  }
 	}
 	else {
@@ -515,23 +526,25 @@ void mpi_boundary_update()
 	  RcvPid * pro = prolongation->rcv;
 	  RcvPid * res = restriction->rcv;
 	  bool neighbors = false;
-	  pro->n = res->n = 0;
+	  PidArray apro, ares;
+	  apro.n = ares.n = 0;
 	  for (int k = -GHOSTS; k <= GHOSTS; k++)
 	    for (int l = -GHOSTS; l <= GHOSTS; l++) {
 	      if (allocated(k,l) && is_local(neighbor(k,l))) {
 		neighbors = true;
-		rcv_pid_append (res, cell.pid, point);
+		rcv_pid_append (res, &ares, cell.pid, point);
 		if ((is_leaf(neighbor(k,l)) || !is_active(neighbor(k,l))) ||
 		    (is_leaf(cell) &&
 		     k >= -GHOSTS/2 && k <= GHOSTS/2 &&
 		     l >= -GHOSTS/2 && l <= GHOSTS/2))
-		  rcv_pid_append (pro, cell.pid, point);
+		  rcv_pid_append (pro, &apro, cell.pid, point);
 	      }
 	    }
 	  if (is_leaf(cell)) {
 	    if (cell.neighbors) {
 	      // prolongation
-	      pro->n = res->n = 0;
+	      PidArray cpro, cres;
+	      cpro.n = cres.n = 0;
 	      for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
 		for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
 		  if (allocated(k,l) && is_active(neighbor(k,l)) &&
@@ -539,9 +552,12 @@ void mpi_boundary_update()
 		    for (int i = 2*k; i <= 2*k + 1; i++)
 		      for (int j = 2*l; j <= 2*l + 1; j++)
 			if (is_local(child(i,j))) {
-			  rcv_pid_append_children (res, cell.pid, point);
-			  if (!is_refined(child(i,j)))
-			    rcv_pid_append_children (pro, cell.pid, point);
+			  rcv_pid_append_children (res, &cres, cell.pid, point);
+			  if (!is_refined(child(i,j))) {
+			    rcv_pid_append (pro, &apro, cell.pid, point);
+			    rcv_pid_append_children (pro, &cpro,
+						     cell.pid, point);
+			  }
 			}
 	    }
 	  }
@@ -552,7 +568,7 @@ void mpi_boundary_update()
 	      for (int l = -2; l <= 3; l++)
 		if (is_local(child(k,l))) {
 		  neighbors = true;
-		  rcv_pid_append (res, cell.pid, point);
+		  rcv_pid_append (res, &ares, cell.pid, point);
 		}
 	    // coarse cell with no neighbors: destroy its children
 	    if (!neighbors)
@@ -561,8 +577,8 @@ void mpi_boundary_update()
 	  // halo restriction
 	  if (level > 0 && is_local(aparent(0,0))) {
 	    RcvPid * halo_res = halo_restriction->rcv;
-	    halo_res->n = 0;
-	    rcv_pid_append (halo_res, cell.pid, point);
+	    apro.n = 0;
+	    rcv_pid_append (halo_res, &apro, cell.pid, point);
 	  }
 	}
 	continue; // level == l
@@ -588,7 +604,7 @@ void mpi_boundary_refine()
   /* Send refinement cache to each neighboring process. */
   RcvPid * snd = mpi->restriction.snd;
   MPI_Request r[2*snd->npid];
-  int nr = 0, totlen = 0;
+  int nr = 0;
   for (int i = 0; i < snd->npid; i++) {
     int pid = snd->rcv[i].pid;
     int len = quadtree->refined.n;
@@ -596,7 +612,6 @@ void mpi_boundary_refine()
     if (len > 0)
       MPI_Isend (quadtree->refined.p, 4*len, MPI_INT, pid, 0,
 		 MPI_COMM_WORLD, &r[nr++]);
-    totlen += len;
   }
 
   /* Receive refinement cache from each neighboring process. 
@@ -617,7 +632,6 @@ void mpi_boundary_refine()
 	  if (is_remote_leaf(cell))
 	    cell.flags &= ~remote_leaf;
 	}
-      totlen += len;
     }
   }
   
@@ -630,9 +644,10 @@ void mpi_boundary_refine()
   
   prof_stop();
 
-  /* if any cell has been refined, we repeat the process to take care
+  /* if any cell has been re-refined, we repeat the process to take care
      of recursive refinements induced by the 2:1 constraint */
-  if (totlen)
+  mpi_all_reduce (rerefined.n, MPI_INT, MPI_SUM);
+  if (rerefined.n)
     mpi_boundary_refine();
 }
 
@@ -665,16 +680,13 @@ void mpi_boundary_coarsen (int l)
       IndexLevel p[len];
       MPI_Recv (p, 2*len, MPI_INT, pid, l, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       CacheLevel coarsened = {p, len, len};
-      foreach_cache_level (coarsened, l,) {
-	assert (point.i < (1 << l) + 2*GHOSTS);
-	assert (point.j < (1 << l) + 2*GHOSTS);
+      foreach_cache_level (coarsened, l,)
 	if (allocated(0,0)) {
 	  if (is_refined(cell))
 	    assert (coarsen_cell (point, NULL, NULL));
 	  if (cell.pid == pid && is_leaf(cell) && !is_remote_leaf(cell))
 	    cell.flags |= remote_leaf;
 	}
-      }
     }
   }
   
