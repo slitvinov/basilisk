@@ -282,12 +282,14 @@ static void mpi_boundary_destroy (Boundary * b)
   free (m);
 }
 
+trace
 static void mpi_boundary_restriction (const Boundary * b, scalar * list, int l)
 {
   MpiBoundary * m = (MpiBoundary *) b;
   rcv_pid_sync (&m->restriction, list, l);
 }
 
+trace
 static void mpi_boundary_halo_restriction (const Boundary * b,
 					   scalar * list, int l)
 {
@@ -295,6 +297,7 @@ static void mpi_boundary_halo_restriction (const Boundary * b,
   rcv_pid_sync (&m->halo_restriction, list, l);
 }
 
+trace
 static void mpi_boundary_halo_prolongation (const Boundary * b,
 					    scalar * list, int l, int depth)
 {
@@ -436,8 +439,12 @@ static void snd_rcv_free (SndRcv * p)
   p->snd = rcv_pid_new();
 }
 
+trace
 void mpi_boundary_update()
 {
+  if (npe() == 1)
+    return;
+
   MpiBoundary * m = (MpiBoundary *) mpi_boundary;
   
   prof_start ("mpi_boundary_update");
@@ -591,6 +598,7 @@ void mpi_boundary_update()
 #endif  
 }
 
+trace
 void mpi_boundary_refine()
 {
   prof_start ("mpi_boundary_refine");
@@ -647,6 +655,7 @@ void mpi_boundary_refine()
     mpi_boundary_refine();
 }
 
+trace
 void mpi_boundary_coarsen (int l)
 {
   prof_start ("mpi_boundary_coarsen");
@@ -692,6 +701,7 @@ void mpi_boundary_coarsen (int l)
   prof_stop();  
 }
 
+trace
 void mpi_partitioning()
 {
   prof_start ("mpi_partitioning");
@@ -773,6 +783,7 @@ foreach()
 
 In parallel, this is a bit more difficult. */
 
+trace
 void z_indexing (scalar index)
 {
   /**

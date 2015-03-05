@@ -32,6 +32,146 @@
 @define trash(x)  // data trashing is disabled by default. Turn it on with
                   // -DTRASH=1
 
+// Arrays
+
+typedef struct {
+  char * p;
+  size_t size, max, len;
+} Array;
+
+Array * array_new (size_t size)
+{
+  Array * a = malloc (sizeof(Array));
+  a->p = NULL;
+  a->size = size;
+  a->max = a->len = 0;
+  return a;
+}
+
+void array_free (Array * a)
+{
+  if (a->max > 0)
+    free (a->p);
+  free (a);
+}
+
+void array_append (Array * a, void * elem)
+{
+  if (a->len == a->max) {
+    a->max += 128;
+    a->p = realloc (a->p, a->max*a->size);
+  }
+  memcpy (a->p + a->len++*a->size, elem, a->size);
+}
+
+void array_swap (Array * a, int i, int j)
+{
+  char buf[a->size];
+  memcpy (buf, a->p + i*a->size, a->size);
+  memcpy (a->p + i*a->size, a->p + j*a->size, a->size);
+  memcpy (a->p + j*a->size, buf, a->size);
+}
+
+void array_reverse (Array * a)
+{
+  for (int i = 0; i < a->len/2; i++)
+    array_swap (a, i, a->len - 1 - i);
+}
+
+// Function tracing
+
+@if TRACE
+@include <extrae_user_events.h>
+
+typedef struct {
+  Array index, stack;
+  extrae_type_t type;
+} Trace;
+
+Trace trace_func     = {
+  {NULL, sizeof(char *), 0, 0}, {NULL, sizeof(int), 0, 0},
+  60000010,
+};
+
+Trace trace_mpi_func = {
+  {NULL, sizeof(char *), 0, 0}, {NULL, sizeof(int), 0, 0},
+  60000011,
+};
+
+static int lookup_func (Array * a, const char * func)
+{
+  for (int i = 0; i < a->len; i++) {
+    char * s = ((char **)a->p)[i];
+    if (!strcmp (func, s))
+      return i + 1;
+  }
+  char * s = strdup (func);
+  array_append (a, &s);
+  return a->len;
+}
+
+static void trace_push (Trace * t, const char * func)
+{
+  int value = lookup_func (&t->index, func);
+  Extrae_eventandcounters (t->type, value);
+  array_append (&t->stack, &value);
+}
+
+static void trace_pop (Trace * t, const char * func)
+{
+  assert (t->stack.len > 0);
+  t->stack.len--;
+  int value = t->stack.len > 0 ? ((int *)t->stack.p)[t->stack.len - 1] : 0;
+  Extrae_eventandcounters (t->type, value);
+}
+
+static void trace_define (Trace * t, char * description)
+{
+  if (t->index.len > 0) {
+    extrae_value_t values[t->index.len + 1];
+    char * names[t->index.len + 1], ** func = (char **) t->index.p;
+    names[0] = "OTHER";
+    values[0] = 0;
+    unsigned len = 1;
+    for (int i = 0; i < t->index.len; i++, func++) {
+      names[len] = *func;
+      values[len++] = i + 1;
+    }
+    Extrae_define_event_type (&t->type, description, &len, values, names);
+  }
+}
+
+static void trace_free (Trace * t)
+{
+  char ** func = (char **) t->index.p;
+  for (int i = 0; i < t->index.len; i++, func++)
+    free (*func);
+  free (t->index.p);
+  free (t->stack.p);
+}
+
+static void trace_off()
+{
+  trace_define (&trace_func, "Basilisk functions");
+  trace_define (&trace_mpi_func, "Basilisk functions (MPI-related)");
+  trace_free (&trace_func);
+  trace_free (&trace_mpi_func);
+}
+#if 0
+#define TRACE_TYPE(func) (strncmp (func, "mpi_", 4) ?		\
+			  &trace_func : &trace_func)
+#else
+#define TRACE_TYPE(func) &trace_func
+#endif
+@  define trace(func, file, line)     trace_push (TRACE_TYPE(func), func)
+@  define end_trace(func, file, line) trace_pop (TRACE_TYPE(func), func)
+@else // !TRACE
+@  define trace(...)
+@  define end_trace(...)
+@endif
+
+// OpenMP / MPI
+  
 @if _OPENMP
 
 @include <omp.h>
@@ -40,53 +180,38 @@
 @define npe() omp_get_num_threads()
 @define mpi_all_reduce(v,type,op)
 @define mpi_all_reduce_double(v,op)
-@define trace_event(name)
 
 @elif _MPI
 
 @include <mpi.h>
 @define OMP(x)
 
-@if TRACE
-   FILE * tracefp = NULL;
-   static double tracestart = 0.;
-   static void trace (const char * format, ...) {
-     va_list ap;
-     va_start (ap, format);
-     vfprintf (tracefp, format, ap);
-     va_end (ap);
-   }
-@else
-@  define trace(...)
-@endif
-
 static bool in_prof = false;
 static double prof_start, _prof;
 @def prof_start(name)
   assert (!in_prof); in_prof = true;
   prof_start = MPI_Wtime();
-  trace ("10 %.6f State Thread%d \"%s\"\n",
-	 prof_start - tracestart, pid(), name)
 @
 @def prof_stop()
   assert (in_prof); in_prof = false;
   _prof = MPI_Wtime();
   mpi_time += _prof - prof_start;
-  trace ("10 %.6f State Thread%d compute\n", _prof - tracestart, pid())
-@
-@def trace_event(name)
-  trace ("11 %.6f Event Thread%d \"%s\"\n",
-	 MPI_Wtime() - tracestart, pid(), name)
 @
 
 @if FAKE_MPI
 @define mpi_all_reduce(v,type,op)
 @define mpi_all_reduce_double(v,op)
 @else
+trace
+static int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
+			    MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
+{
+  return MPI_Allreduce (sendbuf, recvbuf, count, datatype, op, comm);
+}
 @def mpi_all_reduce(v,type,op) {
   prof_start ("mpi_all_reduce");
   union { int a; float b; double c;} global;
-  MPI_Allreduce (&(v), &global, 1, type, op, MPI_COMM_WORLD);
+  mpi_all_reduce0 (&(v), &global, 1, type, op, MPI_COMM_WORLD);
   memcpy (&(v), &global, sizeof (v));
   prof_stop();
 }
@@ -94,7 +219,7 @@ static double prof_start, _prof;
 @def mpi_all_reduce_double(v,op) {
   prof_start ("mpi_all_reduce");
   double global, tmp = v;
-  MPI_Allreduce (&tmp, &global, 1, MPI_DOUBLE, op, MPI_COMM_WORLD);
+  mpi_all_reduce0 (&tmp, &global, 1, MPI_DOUBLE, op, MPI_COMM_WORLD);
   v = global;
   prof_stop();
 }
@@ -108,13 +233,6 @@ static int mpi_rank, mpi_npe;
 
 static void finalize (void)
 {
-@if TRACE
-  double t = MPI_Wtime() - tracestart;
-  fprintf (tracefp, "8 %.8f Thread%d Thread\n", t, pid());
-  if (pid() == 0)
-    fprintf (tracefp, "8 %.8f C_Prog Prog\n", t);
-  fclose (tracefp);
-@endif
   MPI_Finalize();
 }
 
@@ -135,22 +253,6 @@ void mpi_init()
       sprintf (name, "log-%d", mpi_rank);
       stderr = freopen (name, "w", stderr);
     }
-@if TRACE
-    sprintf (name, "trace-%d", mpi_rank);
-    tracefp = fopen (name, "w");
-    if (pid() == 0) {
-      #include "paje.h"
-    }
-    fprintf (tracefp, "7 0 Thread%d Thread C_Prog \"Thread %d\"\n",
-	     mpi_rank, mpi_rank);
-    fprintf (tracefp, "10 0 State Thread%d compute\n", mpi_rank);
-    MPI_Barrier (MPI_COMM_WORLD);
-    tracestart = MPI_Wtime();
-    double global;
-    MPI_Allreduce (&tracestart, &global, 1,
-		   MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    tracestart = global;
-@endif
   }
 }
 
@@ -161,7 +263,6 @@ void mpi_init()
 @define npe() 1
 @define mpi_all_reduce(v,type,op)
 @define mpi_all_reduce_double(v,op)
-@define trace_event(name)
 
 @endif
 
@@ -503,48 +604,3 @@ const scalar unity[] = 1.;
 (const) face vector fm = unityf;
 (const) scalar cm = unity;
 
-// Arrays
-
-typedef struct {
-  char * p;
-  size_t size, max, len;
-} Array;
-
-Array * array_new (size_t size)
-{
-  Array * a = malloc (sizeof(Array));
-  a->p = NULL;
-  a->size = size;
-  a->max = a->len = 0;
-  return a;
-}
-
-void array_free (Array * a)
-{
-  if (a->max > 0)
-    free (a->p);
-  free (a);
-}
-
-void array_append (Array * a, void * elem)
-{
-  if (a->len == a->max) {
-    a->max += 128;
-    a->p = realloc (a->p, a->max*a->size);
-  }
-  memcpy (a->p + a->len++*a->size, elem, a->size);
-}
-
-void array_swap (Array * a, int i, int j)
-{
-  char buf[a->size];
-  memcpy (buf, a->p + i*a->size, a->size);
-  memcpy (a->p + i*a->size, a->p + j*a->size, a->size);
-  memcpy (a->p + j*a->size, buf, a->size);
-}
-
-void array_reverse (Array * a)
-{
-  for (int i = 0; i < a->len/2; i++)
-    array_swap (a, i, a->len - 1 - i);
-}

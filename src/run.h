@@ -11,6 +11,7 @@ The time `t` and timestep `dt` can be accessed as global variables. */
 
 double t = 0., dt = 1.;
 
+trace
 void run (void)
 {
   t = 0.; dt = 1.;

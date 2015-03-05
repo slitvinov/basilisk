@@ -373,6 +373,7 @@ $$
 \nabla\cdot(\alpha\nabla p) = \frac{\nabla\cdot\mathbf{u}_*}{\Delta t}
 $$ */
 
+trace
 mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
 {
 

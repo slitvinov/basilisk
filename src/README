@@ -275,3 +275,7 @@ The `v` value in the gnuplot script is important. It controls which
 field is displayed. `v=0` indicates the first field allocated by the
 program (i.e. `a[]` in this example), accordingly `ga.x[]` and
 `ga.y[]` have indices 1 and 2 respectively.
+
+# See also
+
+* [Performance profiling with Paraver](README.paraver)

@@ -66,6 +66,10 @@
 
   int infunctionproto;
 
+  FILE * tracefp = NULL;
+  int intrace, traceon;
+  char * tracefunc = NULL;
+  
   int foreach_line;
   enum { face_x, face_y, face_xy };
   int foreach_face_xy;
@@ -401,9 +405,16 @@
     inforeach = inforeach_boundary = inforeach_face = 0;
   }
 
+  void endtrace() {
+    fprintf (yyout, " end_trace(\"%s\", \"%s\", %d); ",
+	     tracefunc, fname, line);
+  }
+
   void endevent() {
-    fprintf (yyout, "  return 0; } ");
-    inevent = 0;
+    if (intrace)
+      endtrace();
+    fputs (" return 0; } ", yyout);
+    intrace = inevent = 0;
     nevents++;
   }
 
@@ -874,10 +885,17 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 	       "  return ret; "
 	       "} ");
     fprintf (yyout, 
-	     "static int %s (const int i, const double t, Event * _ev) { ",
-	     eventfunc[nevents]);
+	     "static int %s (const int i, const double t, Event * _ev) { "
+	     "trace (\"%s\", \"%s\", %d); ",
+	     eventfunc[nevents],
+	     eventfunc[nevents], fname, line);
+    free (tracefunc);
+    tracefunc = strdup (eventfunc[nevents]);
+    intrace = 2; traceon = 0;
     assert (nevents < EVMAX);
     nexpr[nevents] = inevent;
+    free (return_type);
+    return_type = strdup ("int");
     inevent = 4;
   }
   else if (inarg == para + 1) {
@@ -894,8 +912,13 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   if (infunction && functionpara == 1 && scope == functionscope)
     infunction_declarations();
   if (inmain == 1 && scope == 0) {
-    fputs (" init_solver(); ", yyout);
+    fputs (" init_solver();", yyout);
     inmain = 2;
+  }
+  if (intrace == 1 && scope == 0) {
+    fprintf (yyout, " trace (\"%s\", \"%s\", %d);",
+	     tracefunc, fname, line);
+    intrace = 2;
   }
   scope++;
 }
@@ -905,9 +928,9 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   if (scope < 0)
     return yyerror ("mismatched '}'");
   if (inmain == 2 && scope == 0) {
-    fputs (" free_solver(); ", yyout);
+    fputs (" free_solver(); ",  yyout);
     inmain = 0;
-  }    
+  }
   varpop();
   if (infunction && scope <= functionscope)
     endfunction();
@@ -917,8 +940,13 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     endforeachdim ();
   }
   else if ((!inattr || scope != attrscope) &&
-	   (!inmap || scope != mapscope))
+	   (!inmap || scope != mapscope)) {
+    if (intrace && scope == 0) {
+      endtrace ();
+      intrace = 0;
+    }
     ECHO;
+  }
   if (foreach_child && foreach_child_scope == scope) {
     fputs (" end_foreach_child(); }", yyout);
     foreach_child = 0;
@@ -1057,11 +1085,11 @@ map{WS}+"{" {
     endevent ();
   }
   else if (inreturn) {
-    fputs ("; ", yyout);
+    fputs (";", yyout);
     delete_automatic (0);
-    if (inmain == 2)
-      fputs (" free_solver(); ", yyout);
-    fputs (" return _ret; }", yyout);
+    if (intrace)
+      endtrace();
+    fputs (return_type ? " return _ret; }" : " return; }", yyout);
     inreturn = 0;
   }
   else if (!insthg)
@@ -1240,15 +1268,18 @@ const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}
     REJECT;
 }
 
-return{WS} {
+return {
   char * list = automatic_list (0, 1);
-  if (list) {
+  if (list || inevent || intrace) {
     // returning from a function: delete automatic fields before returning
     // note that this assumes that the function scope is always 1 
     // (i.e. no nested functions allowed).
     free (list);
     inreturn = 1;
-    fprintf (yyout, "{ %s _ret = ", return_type);
+    if (return_type)
+      fprintf (yyout, "{ %s _ret = ", return_type);
+    else
+      fputs ("{ ", yyout);
   }
   else
     ECHO;
@@ -1622,6 +1653,14 @@ end {
     ECHO;
 }
 
+trace {
+  // function tracing
+  if (scope == 0)
+    traceon = 1;
+  else
+    REJECT;
+}
+
 {ID}+{WS}+{ID}+{WS}*\( {
   if (scope == 0 && para == 0) {
     // function prototype
@@ -1636,8 +1675,20 @@ end {
     if (debug)
       fprintf (stderr, "%s:%d: function '%s' returns '%s'\n", 
 	       fname, line, s1, yytext);
+    if (!strcmp (return_type, "void")) {
+      free (return_type);
+      return_type = NULL;
+    }      
     if (!strcmp (s1, "main") && !strcmp (yytext, "int"))
       inmain = 1;
+    // function tracing
+    if (traceon) {
+      intrace = 1; traceon = 0;
+      free (tracefunc);
+      tracefunc = strdup (s1);
+    }
+    else
+      intrace = 0;
   }
   else
     REJECT;
@@ -1803,6 +1854,18 @@ reduction{WS}*[(](min|max|\+):{ID}+[)] {
   name++; quote = strchr (name, '"'); *quote = '\0';
   fname = strdup (name);
   fprintf (yyout, "#line %d \"%s\"", line, fname);
+  if (tracefp)
+    fclose (tracefp);
+  char * tracename = malloc (strlen(fname) + strlen(".trace") + 1);
+  strcpy (tracename, fname);
+  char * s = &tracename[strlen(tracename) - 1];
+  while (*s != '.' && s != tracename) s--;
+  if (s != tracename)
+    strcpy (s, ".trace");
+  else
+    strcat (s, ".trace");
+  tracefp = fopen ("tracename", "r");
+  free (tracename);
 }
 
 ^{SP}*@{SP}*def{SP}+ {
@@ -1914,7 +1977,10 @@ int endfor (FILE * fin, FILE * fout)
   foreach_child = 0;
   inboundary = nboundary = nsetboundary = 0;
   infunction = 0;
-  infunctionproto = inmain = 0;
+  infunctionproto = inmain = intrace = traceon = 0;
+  if (tracefp)
+    fclose (tracefp);
+  tracefp = NULL;
   inarg = 0;
   boundaryheader = dopen ("_boundary.h", "w");
   int ret = yylex();
@@ -2352,17 +2418,29 @@ int main (int argc, char ** argv)
 
       fin = dopen (file, "r");
       char line[1024];
-      int c;
+      int c, lineno = 1;
+      char * fname = NULL;
       // includes _attributes.h
-      while (fgets (line, 1024, fin))
+      while (fgets (line, 1024, fin)) {
 	if (!strcmp (line, "#include \"_attributes.h\"\n"))
 	  break;
-	else
+	else {
+	  if (!strncmp (line, "#line ", 6)) {
+	    lineno = atoi (&line[6]) - 1;
+	    char * s = &line[6]; space (s); nonspace(s);
+	    free (fname);
+	    fname = strdup (s);
+	  }
 	  fputs (line, fout);
+	}
+	lineno++;
+      }
       fp = dopen ("_attributes.h", "r");
       while ((c = fgetc (fp)) != EOF)
 	fputc (c, fout);
       fclose (fp);
+      fprintf (fout, "#line %d %s\n", lineno, fname);
+      free (fname);
       // includes _boundarydecl.h
       while (fgets (line, 1024, fin))
 	if (!strcmp (line, "#include \"_boundarydecl.h\"\n"))

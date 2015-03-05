@@ -218,6 +218,9 @@ void free_solver()
   free (Events); Events = NULL;
   free (_attribute); _attribute = NULL;
   free_grid();
+@if TRACE
+  trace_off();
+@endif
 }
 
 // Cartesian methods

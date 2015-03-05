@@ -14,6 +14,7 @@ double (* gradient)  (double, double, double) = minmod2;
 
 double t = 0., dt = 0.;
 
+trace
 static void advance_generic (scalar * output, scalar * input, scalar * updates,
 			     double dt)
 {
@@ -43,6 +44,7 @@ event defaults (i = 0)
   boundary (all);
 }
 
+trace
 void run()
 {
   t = 0.;

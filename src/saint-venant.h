@@ -74,6 +74,7 @@ predictor-corrector scheme, because the evolving variables ($h$ and
 $\mathbf{u}$) are not the conserved variables $h$ and
 $h\mathbf{u}$. */
 
+trace
 static void advance_saint_venant (scalar * output, scalar * input, 
 				  scalar * updates, double dt)
 {
@@ -124,6 +125,7 @@ Various approximate Riemann solvers are defined in [riemann.h](). */
 
 #include "riemann.h"
 
+trace
 double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
 {
 

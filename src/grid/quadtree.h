@@ -1009,6 +1009,7 @@ void free_grid (void)
   grid = NULL;
 }
 
+trace
 void init_grid (int n)
 {
   // check 64 bits structure alignment
