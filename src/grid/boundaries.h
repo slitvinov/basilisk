@@ -9,7 +9,6 @@ struct _Boundary {
   void (* restriction) (const Boundary * b, scalar * list, int l);
   // quadtree only
   void (* halo_restriction)      (const Boundary * b, scalar * list, int l);
-  void (* halo_restriction_flux) (const Boundary * b, vector * list);
   void (* halo_prolongation)     (const Boundary * b, scalar * list, 
 				  int l, int depth);
 };

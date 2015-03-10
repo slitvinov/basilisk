@@ -186,9 +186,14 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
 	s[] = *b++;
       for (vector v in listf)
 	foreach_dimension() {
-	  v.x[] = *b++;
-	  if (allocated(1,0))
-	    v.x[1,0] = *b++;
+	  if (allocated(-1,0) &&
+	      (!is_local(neighbor(-1,0)) || is_prolongation(neighbor(-1,0))))
+	    v.x[] = *b;
+	  b++;
+	  if (allocated(1,0) &&
+	      (!is_local(neighbor(1,0)) || is_prolongation(neighbor(1,0))))
+	    v.x[1,0] = *b;
+	  b++;
 	}
     }
     int rlen;
@@ -228,8 +233,7 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
 	for (vector v in listf)
 	  foreach_dimension() {
 	    *b++ = v.x[];
-	    if (allocated(1,0))
-	      *b++ = v.x[1,0];
+	    *b++ = allocated(1,0) ? v.x[1,0] : undefined;
 	  }
       }
 #if 0
@@ -599,7 +603,7 @@ void mpi_boundary_update()
 }
 
 trace
-void mpi_boundary_refine()
+void mpi_boundary_refine (scalar * list)
 {
   prof_start ("mpi_boundary_refine");
 
@@ -632,7 +636,7 @@ void mpi_boundary_refine()
       foreach_cache (refined,)
 	if (allocated(0,0)) {
 	  if (is_leaf(cell))
-	    refine_cell (point, NULL, 0, &rerefined);
+	    refine_cell (point, list, 0, &rerefined);
 	  if (is_remote_leaf(cell))
 	    cell.flags &= ~remote_leaf;
 	}
@@ -652,7 +656,7 @@ void mpi_boundary_refine()
      of recursive refinements induced by the 2:1 constraint */
   mpi_all_reduce (rerefined.n, MPI_INT, MPI_SUM);
   if (rerefined.n)
-    mpi_boundary_refine();
+    mpi_boundary_refine (list);
 }
 
 trace

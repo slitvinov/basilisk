@@ -128,11 +128,11 @@ enum {
 };
 
 @if _MPI
-void mpi_boundary_refine  (void);
+void mpi_boundary_refine  (scalar * list);
 void mpi_boundary_coarsen (int);
 void mpi_boundary_update  (void);
 @else
-@ define mpi_boundary_refine()
+@ define mpi_boundary_refine(list)
 @ define mpi_boundary_coarsen(a)
 @ define mpi_boundary_update()
 @endif
@@ -226,7 +226,7 @@ astats adapt_wavelet (struct Adapt p)
     else // inactive cell
       continue;
   }
-  mpi_boundary_refine();
+  mpi_boundary_refine (listc);
   
   // coarsening
   // the loop below is only necessary to ensure symmetry of 2:1 constraint
@@ -306,7 +306,7 @@ int coarsen_function (int (* func) (Point p), scalar * list)
 	refined++;							\
       }									\
   } while (refined);							\
-  mpi_boundary_refine();						\
+  mpi_boundary_refine (list);						\
   mpi_boundary_update();						\
 }
 
@@ -321,6 +321,11 @@ static void halo_restriction_flux (vector * list)
       listv = vectors_add (listv, v);
 
   if (listv) {
+    // we need to tolerate (unused) NaN values when applying boundary
+    // conditions for face vector fields in parallel, but this is messy...
+    @if _MPI
+      disable_fpe (FE_INVALID);
+    @endif
     for (int l = depth() - 1; l >= 0; l--)
       foreach_halo (prolongation, l) {
 	foreach_dimension() {
@@ -332,7 +337,9 @@ static void halo_restriction_flux (vector * list)
 	      f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
         }
       }
-    boundary_iterate (halo_restriction_flux, listv);
+    @if _MPI
+      enable_fpe (FE_INVALID);
+    @endif
     free (listv);
   }
 }
@@ -373,20 +380,14 @@ static void refine_face_x (Point point, scalar s)
     fine(v.x,0,0) = v.x[] - g;
     fine(v.x,0,1) = v.x[] + g;
   }
-  double vx[2];
-  if (!is_refined(neighbor(1,0))) {
+  if (!is_refined(neighbor(1,0)) && neighbor(1,0).neighbors) {
     double g = (v.x[1,+1] - v.x[1,-1])/8.;
-    vx[0] = v.x[1,0] - g;
-    vx[1] = v.x[1,0] + g;
-    if (neighbor(1,0).neighbors)
-      for (int i = 0; i <= 1; i++)
-	fine(v.x,2,i) = vx[i];
+    fine(v.x,2,0) = v.x[1,0] - g;
+    fine(v.x,2,1) = v.x[1,0] + g;
   }
-  else
-    for (int i = 0; i <= 1; i++)
-      vx[i] = fine(v.x,2,i);
-  for (int i = 0; i <= 1; i++)
-    fine(v.x,1,i) = (fine(v.x,0,i) + vx[i])/2.;
+  double g = (v.x[0,+1] + v.x[1,+1] - v.x[0,-1] - v.x[1,-1])/16.;
+  fine(v.x,1,0) = (v.x[] + v.x[1,0])/2. - g;
+  fine(v.x,1,1) = (v.x[] + v.x[1,0])/2. + g;
 }
 
 void refine_face (Point point, scalar s)
