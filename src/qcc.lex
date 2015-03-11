@@ -1921,6 +1921,8 @@ reduction{WS}*[(](min|max|\+):{ID}+[)] {
 }
 
 static{WS}+FILE{WS}*[*]{WS}*{ID}+{WS}*= {
+  if (scope == 0)
+    REJECT;
   // static FILE * fp = ...
   ECHO;
   char * s = yytext;
@@ -1930,7 +1932,9 @@ static{WS}+FILE{WS}*[*]{WS}*{ID}+{WS}*= {
   char * id = s;
   space (s);
   *s = '\0';
-  fprintf (yyout, "NULL; if (!%s || i == 0) %s = ", id, id);
+  fprintf (yyout,
+	   "NULL; if (!%s || i == 0) %s = pid() > 0 ? "
+	   "fopen(\"/dev/null\", \"w\") : ", id, id);
 }
   
 "/*"                                    { ECHO; if (comment()) return 1; }
