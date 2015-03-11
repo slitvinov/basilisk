@@ -32,6 +32,9 @@
 @define trash(x)  // data trashing is disabled by default. Turn it on with
                   // -DTRASH=1
 
+@define ferr stderr
+@define fout stdout
+
 // Arrays
 
 typedef struct {
@@ -236,6 +239,10 @@ static void finalize (void)
   MPI_Finalize();
 }
 
+@undef ferr
+@undef fout
+FILE * ferr, * fout;
+
 void mpi_init()
 {
   int initialized;
@@ -252,11 +259,17 @@ void mpi_init()
       stdout = freopen (name, "w", stdout);
       sprintf (name, "log-%d", mpi_rank);
       stderr = freopen (name, "w", stderr);
+      ferr = fopen ("/dev/null", "w");
+      fout = fopen ("/dev/null", "w");
     }
+    else {
+      ferr = stderr;
+      fout = stdout;
+    } 
   }
 }
 
-@else // not MPI, not OpemMP
+@else // not MPI, not OpenMP
 
 @define OMP(x)
 @define pid() 0
@@ -264,7 +277,7 @@ void mpi_init()
 @define mpi_all_reduce(v,type,op)
 @define mpi_all_reduce_double(v,op)
 
-@endif
+@endif // not MPI, not OpenMP
 
 // fixme: _OMPSTART and _OMPEND are only used for working around the
 // lack of min|max reduction operations in OpenMP < 3.1

@@ -17,20 +17,21 @@ event init (i = 0)
 
 event logfile (i++) {
   stats s = statsf (h);
-  fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
+  fprintf (ferr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
 }
 
 event outputfile (t <= 2.5; t += 2.5/8) {
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
-  output_field ({eta}, stdout, N, linear = true);
+  output_field ({eta}, linear = true);
 
   scalar l[];
   foreach()
     l[] = level;
   printf ("file: level-%d\n", nf++);
-  output_field ({l}, stdout, N);
+  output_field ({l});
 
+#if !_MPI
   /* check symmetry */
   foreach() {
     double h0 = h[];
@@ -42,9 +43,10 @@ event outputfile (t <= 2.5; t += 2.5/8) {
     point = locate (x, -y);
     assert (fabs(h0 - h[]) < 1e-12);
   }
+#endif
 }
 
 event adapt (i++) {
   astats s = adapt_wavelet ({h}, (double[]){1e-3}, LEVEL);
-  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
+  fprintf (ferr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }

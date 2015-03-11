@@ -42,31 +42,60 @@ void output_field (struct OutputField p)
   if (!p.list) p.list = all;
   if (p.n == 0) p.n = N;
   if (!p.fp) p.fp = stdout;
-  fprintf (p.fp, "# 1:x 2:y");
-  int i = 3;
-  for (scalar s in p.list)
-    fprintf (p.fp, " %d:%s", i++, s.name);
-  fputc('\n', p.fp);
+
+  int len = list_len(p.list);
+  double ** field = matrix_new (p.n, p.n, len*sizeof(double));
+  
   double Delta = L0/p.n;
   for (int i = 0; i < p.n; i++) {
     double xp = Delta*i + X0 + Delta/2.;
     for (int j = 0; j < p.n; j++) {
       double yp = Delta*j + Y0 + Delta/2.;
-      fprintf (p.fp, "%g %g", xp, yp);
       if (p.linear) {
+	int k = 0;
 	for (scalar s in p.list)
-	  fprintf (p.fp, " %g", interpolate (s, xp, yp));
+	  field[i][len*j + k++] = interpolate (s, xp, yp);
       }
       else {
 	Point point = locate (xp, yp);
+	int k = 0;
 	for (scalar s in p.list)
-	  fprintf (p.fp, " %g", point.level >= 0 ? s[] : nodata);
+	  field[i][len*j + k++] = point.level >= 0 ? s[] : nodata;
+      }
+    }
+  }
+
+  if (pid() == 0) { // master
+@if _MPI
+    MPI_Reduce (MPI_IN_PLACE, field[0], len*p.n*p.n, MPI_DOUBLE, MPI_MIN, 0,
+		MPI_COMM_WORLD);
+@endif
+    fprintf (p.fp, "# 1:x 2:y");
+    int i = 3;
+    for (scalar s in p.list)
+      fprintf (p.fp, " %d:%s", i++, s.name);
+    fputc('\n', p.fp);
+    for (int i = 0; i < p.n; i++) {
+      double xp = Delta*i + X0 + Delta/2.;
+      for (int j = 0; j < p.n; j++) {
+	double yp = Delta*j + Y0 + Delta/2.;
+	fprintf (p.fp, "%g %g", xp, yp);
+	int k = 0;
+	for (scalar s in p.list)
+	  fprintf (p.fp, " %g", field[i][len*j + k++]);
+	fputc ('\n', p.fp);
       }
       fputc ('\n', p.fp);
     }
-    fputc ('\n', p.fp);
+    fflush (p.fp);
   }
-  fflush (p.fp);
+@if _MPI
+  else // slave
+    MPI_Reduce (field[0], NULL, len*p.n*p.n, MPI_DOUBLE, MPI_MIN, 0,
+		MPI_COMM_WORLD);
+@endif
+
+  matrix_free (field);
 }
 
 /**
