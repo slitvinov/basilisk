@@ -82,6 +82,12 @@ We have the option of using some "smearing" of the density jump. */
 scalar cf[];
 #endif
 
+/**
+The density is variable. We allocate a new field to store its
+inverse. */
+
+face vector alphav[];
+
 void density();
 
 event init (i = 0) {
@@ -101,7 +107,7 @@ event init (i = 0) {
   /**
   The density is variable, and defined by a function given below. */
 
-  alpha = new face vector;
+  alpha = alphav;
   density();
 }
 
@@ -126,9 +132,9 @@ void density() {
 
   foreach_face() {
     double cm = (cf[] + cf[-1,0])/2.;
-    alpha.x[] = 1./rho(cm);
+    alphav.x[] = 1./rho(cm);
   }
-  boundary ((scalar *){alpha});
+  boundary ((scalar *){alphav});
 }
 
 /**

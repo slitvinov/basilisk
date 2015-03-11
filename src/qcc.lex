@@ -80,6 +80,7 @@
   typedef struct { 
     char * v, * constant;
     int type, args, scope, automatic, symmetric, face, vertex, maybeconst;
+    int wasmaybeconst;
     int i[4];
     char * conditional;
   } var_t;
@@ -95,7 +96,7 @@
 	*q++ = '\0'; na++;
       }
       _varstack[++varstack] = (var_t) { f, NULL, type, na, scope, 
-					0, 0, 0, 0, maybeconst, {-1} };
+					0, 0, 0, 0, maybeconst, 0, {-1} };
       v = &(_varstack[varstack]);
     }
     return v;
@@ -153,7 +154,7 @@
     }
   }
 
-  void varpop () {
+  void varpop() {
     delete_automatic (scope);
     while (varstack >= 0 && _varstack[varstack].scope > scope) {
       if (debug)
@@ -165,6 +166,16 @@
     }
   }
 
+  void varwasmaybeconst() {
+    int i;
+    var_t * var = _varstack;
+    for (i = 0; i <= varstack; i++, var++)
+      if (var->wasmaybeconst) {
+	var->maybeconst = 1;
+	var->wasmaybeconst = 0;
+      }
+  }
+  
   var_t * vartop() {
     return varstack >= 0 ? &_varstack[varstack] : NULL;
   }
@@ -720,9 +731,10 @@
     }
     if (!var->constant && var->maybeconst) {
       if (debug)
-	fprintf (stderr, "%s:%d: '%s' cannot be a constant anymore\n", 
+	fprintf (stderr, "%s:%d: '%s' cannot be a constant in this scope\n", 
 		 fname, line, var->v);
       var->maybeconst = 0;
+      var->wasmaybeconst = 1;
     }
   }
 
@@ -932,6 +944,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     inmain = 0;
   }
   varpop();
+  varwasmaybeconst();
   if (infunction && scope <= functionscope)
     endfunction();
   if (foreachdim && scope == foreachdim - 1) {

@@ -18,17 +18,6 @@ attribute {
 }
 
 /**
-Surface tension is a source term in the right-hand-side of the
-evolution equation for the velocity of the [centered Navier--Stokes
-solver](navier-stokes/centered.h) i.e. it is an acceleration. If
-necessary, we allocate a new vector field to store it. */
-
-event init (i = 0) {
-  if (is_constant(a.x))
-    a = new face vector;
-}
-
-/**
 ## Stability condition
 
 The surface tension scheme is time-explicit so the maximum timestep is
@@ -102,6 +91,15 @@ event acceleration (i++)
 	c.kappa = new scalar;
       curvature (c, c.kappa);
     }
+
+  /**
+  Surface tension is a source term in the right-hand-side of the
+  evolution equation for the velocity of the [centered Navier--Stokes
+  solver](navier-stokes/centered.h) i.e. it is an acceleration. If
+  necessary, we allocate a new vector field to store it. */
+
+  if (is_constant(a.x))
+    a = new face vector;
 
   /**
   Finally, for each interface for which $\sigma$ is non-zero, we

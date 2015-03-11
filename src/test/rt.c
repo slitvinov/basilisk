@@ -5,6 +5,8 @@
 
 scalar f[];
 scalar * interfaces = {f};
+face vector alphav[];
+scalar alphacv[];
 
 uf.x[left]   = dirichlet(0);
 uf.x[right]  = dirichlet(0);
@@ -26,8 +28,8 @@ int main() {
 event init (t = 0) {
   const face vector g[] = {0,-9.81};
   a = g;
-  alpha = new face vector;
-  alphac = new scalar;
+  alpha = alphav;
+  alphac = alphacv;
 
   vertex scalar phi[];
   foreach_vertex()
@@ -38,13 +40,13 @@ event init (t = 0) {
 #define rho(f) ((f)*1.225 + (1. - (f))*0.1694)
 
 event properties (i++) {
-  trash ({alpha,alphac});
+  trash ({alphav,alphacv});
   foreach_face() {
     double fm = (f[] + f[-1,0])/2.;
-    alpha.x[] = 1./rho(fm);
+    alphav.x[] = 1./rho(fm);
   }
   foreach()
-    alphac[] = 1./rho(f[]);
+    alphacv[] = 1./rho(f[]);
 }
 
 event logfile (i++) {
