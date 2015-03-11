@@ -80,3 +80,4 @@ mpi-flux.tst:    CC = mpicc -D_MPI=6
 mpi-interpu.tst: CC = mpicc -D_MPI=5
 mpi-coarsen.tst: CC = mpicc -D_MPI=2
 bump2Dp.tst:     CC = mpicc -D_MPI=9
+vortex.tst:	 CC = mpicc -D_MPI=7

@@ -775,6 +775,9 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   scalar * lleft, * lright;
   list_split (list, d, &lleft, &lright);
 
+  /* we disable floating-point-exceptions to avoid having to deal with
+     undefined operations in non-trivial boundary conditions. */
+  disable_fpe (FE_DIVBYZERO|FE_INVALID);
   if (l < 0)
     foreach_boundary_cell (d, true)
       if (is_leaf (cell)) {
@@ -809,6 +812,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
       else if (is_leaf (cell))
 	continue;
     }
+  enable_fpe (FE_DIVBYZERO|FE_INVALID);
 
   free (lleft);
   free (lright);

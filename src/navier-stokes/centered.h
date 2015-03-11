@@ -103,7 +103,7 @@ event defaults (i = 0)
       u.x[] = g.x[] = 0.;
     p[] = pf[] = 0.;
   }
-  boundary ({pf,u,g});
+  boundary ({p,pf,u,g});
 #if QUADTREE
   uf.x.refine = refine_face_solenoidal;
 #endif
@@ -165,16 +165,14 @@ void prediction()
   scalar dux[], duy[];
   vector du;
   du.x = dux; du.y = duy;
-  if (u.x.gradient) {
+  if (u.x.gradient)
     foreach()
       foreach_dimension()
         du.x[] = u.x.gradient (u.x[-1,0], u.x[], u.x[1,0])/Delta;
-  }
-  else {
+  else
     foreach()
       foreach_dimension()
-	du.x[] = (u.x[1,0] - u.x[-1,0])/(2.*Delta);
-  }
+        du.x[] = (u.x[1,0] - u.x[-1,0])/(2.*Delta);
   boundary ((scalar *){du});
 
   trash ({uf});

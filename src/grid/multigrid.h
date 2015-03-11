@@ -227,6 +227,9 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   ig = _ig[d]; jg = _jg[d];
   point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
   int _start = GHOSTS, _end = point.n + GHOSTS, _k;
+  /* we disable floating-point-exceptions to avoid having to deal with
+     undefined operations in non-trivial boundary conditions. */
+  disable_fpe (FE_DIVBYZERO|FE_INVALID);
   /* traverse corners only for top and bottom */
   if (d > left) { _start--; _end++; }
   OMP(omp for schedule(static))
@@ -244,6 +247,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
     }
   }
   OMP_END_PARALLEL();
+  enable_fpe (FE_DIVBYZERO|FE_INVALID);
   free (centered);
 
   box_boundary_level_normal (b, normal, l);

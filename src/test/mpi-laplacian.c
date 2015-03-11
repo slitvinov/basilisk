@@ -13,19 +13,6 @@ scalar a[], b[];
 static void mpi_print (timer t, int i, size_t tnc,
 		       const char * name)
 {
-  /**
-  Events can be traced by adding the "-DTRACE=1" compilation flags. A
-  [Pajé](http://paje.sourceforge.net/index.html) trace file is
-  generated for each process. After the run finishes, they can be
-  combined using e.g.
-  
-~~~bash
-cat trace-* > trace
-~~~
-  
-  and visualised using [ViTE](http://vite.gforge.inria.fr/). */
-
-  trace_event (name);
   double mpi[npe()];
   timing s = timer_timing (t, i, tnc, mpi);
 
@@ -58,7 +45,6 @@ cat trace-* > trace
   }
   
   MPI_Barrier (MPI_COMM_WORLD);
-  trace_event (name);
 }
 
 int main (int argc, char * argv[])

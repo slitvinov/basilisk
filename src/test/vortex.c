@@ -14,10 +14,17 @@ dimension. */
 
 #define MAXLEVEL 8
 
+// This is necessary for convergence when lowering the tolerance
+uf.x[left]   = 0.;
+uf.x[right]  = 0.;
+uf.y[top]    = 0.;
+uf.y[bottom] = 0.;
+
 int main()
 {
   origin (-0.5, -0.5);
   init_grid (1 << MAXLEVEL);
+  //  TOLERANCE = 1e-12;
   run();
 }
 
@@ -77,11 +84,11 @@ event init (t = 0)
 We output some statistics on the vorticity field and Poisson solver at
 the start and end of the simulation. */
 
-event logfile (t = {0,30}) {
+event logfile (t <= 30; t += 1) {
   scalar omega[];
   vorticity (u, omega);
   stats s = statsf (omega);
-  fprintf (stderr, "%g %d %g %g %d\n", t, i, dt, s.sum, mgp.i);
+  fprintf (ferr, "%g %d %g %g %g %d\n", t, i, dt, s.sum, s.max, mgp.i);
 }
 
 /**
