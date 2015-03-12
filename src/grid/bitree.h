@@ -883,6 +883,24 @@ void init_grid (int n)
   init_events();
 }
 
+Point locate (double xp, double yp)
+{
+  for (int l = depth(); l >= 0; l--) {
+    Point point = { .level = l };
+    int n = 1 << point.level;
+    double a = (xp - X0)/L0*n;
+    if (a >= 0.5 - GHOSTS && a < n + GHOSTS - 0.5) {
+      point.i = a + GHOSTS;
+      if (allocated(0,0) && is_local(cell) && is_leaf(cell))
+	return point;
+    }
+    else
+      break;
+  }
+  Point point = { .level = -1 };
+  return point;
+}
+
 #include "quadtree-common.h"
 
 void bitree_methods()

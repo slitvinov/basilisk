@@ -346,23 +346,6 @@ static void halo_restriction_flux (vector * list)
 
 // Cartesian methods
 
-Point locate (double xp, double yp)
-{
-  foreach_cell() {
-    if (is_active(cell)) {
-      Delta /= 2.;
-      if (xp < x - Delta || xp > x + Delta || yp < y - Delta || yp > y + Delta)
-	continue;
-      if (is_leaf(cell) && is_local(cell))
-	return point;
-    }
-    else
-      continue;
-  }
-  Point point = { .level = -1 };
-  return point;
-}
-
 static scalar quadtree_init_scalar (scalar s, const char * name)
 {
   s = cartesian_init_scalar (s, name);

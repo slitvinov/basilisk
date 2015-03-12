@@ -1117,6 +1117,24 @@ void check_two_one (void)
 	}
 }
 
+Point locate (double xp, double yp)
+{
+  for (int l = depth(); l >= 0; l--) {
+    Point point = { .level = l };
+    int n = 1 << point.level;
+    point.i = (xp - X0)/L0*n + GHOSTS;
+    point.j = (yp - Y0)/L0*n + GHOSTS;
+    if (point.i >= 0 && point.i < n + 2*GHOSTS) {
+      if (allocated(0,0) && is_local(cell) && is_leaf(cell))
+	return point;
+    }
+    else
+      break;
+  }
+  Point point = { .level = -1 };
+  return point;
+}
+
 #include "quadtree-common.h"
 
 @if _MPI

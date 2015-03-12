@@ -21,10 +21,10 @@ int main (int argc, char ** argv)
     double emax = 0.;
     int ni = 4*n + 7;
     double Delta = 1./ni;
-    for (int i = 0; i <= ni; i++) {
-      double x = Delta*i - 0.5;
-      for (int j = 0; j <= ni; j++) {
-	double y = Delta*j - 0.5;
+    for (int i = 0; i < ni; i++) {
+      double x = X0 + Delta*i;
+      for (int j = 0; j < ni; j++) {
+	double y = Y0 + Delta*j;
 	double e = fabs (cos(2.*pi*x)*cos(2.*pi*y) - interpolate (v, x, y));
 	//	fprintf (fp, "%g %g %g\n", x, y, e);
 	if (e > emax) emax = e;
