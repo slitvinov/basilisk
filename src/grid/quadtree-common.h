@@ -30,7 +30,9 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
 	     independent from the quadtree implementation */
 	  p.level = point.level - 1;
 	  p.i = (point.i + GHOSTS)/2 + k;
+#if dimension != 1
 	  p.j = (point.j + GHOSTS)/2 + l;
+#endif
 	  refine_cell (p, list, flag, refined);
 	  aparent(k,l).flags |= flag;
 	}

@@ -10,7 +10,9 @@
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  int flags, neighbors; // number of refined neighbors
+  short flags;
+  short neighbors; // number of refined neighbors in a 3x3 neighborhood
+  int pid;         // process id
 } Cell;
 
 enum {
@@ -18,13 +20,16 @@ enum {
   leaf    = 1 << 1,
   refined = 1 << 2,
   halo    = 1 << 3,
-  user    = 4
+  remote_leaf = 1 << 4,
+  user    = 5
 };
 
 #define is_active(cell)  ((cell).flags & active)
 #define is_leaf(cell)    ((cell).flags & leaf)
 #define is_corner(cell)  false
 #define is_coarse()      ((cell).neighbors > 0)
+#define is_local(cell)   true
+#define is_remote_leaf(cell) false
 
 // Caches
 
@@ -61,11 +66,9 @@ static void cache_init (Cache * c)
 
 // Bitree
 
-typedef struct _Point Bitree;
-struct _Point {
+typedef struct {
   int depth;        /* the maximum depth of the tree */
 
-  Bitree * back;  /* back pointer to the "parent" bitree */
 #if DYNAMIC
   char *** m;       /* the grids at each level */
 #else
@@ -75,13 +78,22 @@ struct _Point {
 
   Cache        leaves;  /* leaf indices */
   Cache        faces;   /* face indices */
+  Cache        refined;  /* refined cells */
   CacheLevel * active;  /* active cells indices for each level */
   CacheLevel * prolongation; /* halo prolongation indices for each level */
   CacheLevel * restriction;  /* halo restriction indices for each level */
-
+  CacheLevel   coarsened; /* coarsened cells */
+  
   bool dirty;       /* whether caches should be updated */
+} Bitree;
+
+#define bitree ((Bitree *)grid)
+#define quadtree bitree
+
+struct _Point {
+  int i, level;  /* the current cell index and level */
 };
-Point last_point;
+static Point last_point;
 
 static void cache_level_append (CacheLevel * c, Point p)
 {
@@ -113,8 +125,8 @@ static size_t _size (size_t l)
 
 #if DYNAMIC
   @define CELL(m,level,i) (*((Cell *)m[level][i]))
-  @define allocated(i,j) (point.m[point.level][_index(i,j)])
-  @define allocated_child(i,j) (point.m[point.level+1][_childindex(i,j)])
+  @define allocated(i,j) (bitree->m[point.level][_index(i,j)])
+  @define allocated_child(i,j) (bitree->m[point.level+1][_childindex(i,j)])
 #else
   @define CELL(m,level,i) (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
   @define allocated(i,j) true
@@ -126,31 +138,31 @@ static size_t _size (size_t l)
 @define _index(k,l)  (point.i + k + (l) - (l))
 @define _parentindex(k,l) ((point.i + GHOSTS)/2 + k + (l) - (l))
 @define _childindex(k,l) (2*point.i - GHOSTS + k + (l) - (l))
-@define aparent(k,l) CELL(point.m, point.level-1, _parentindex(k,l))
-@define child(k,l)   CELL(point.m, point.level+1, _childindex(k,l))
+@define aparent(k,l) CELL(bitree->m, point.level-1, _parentindex(k,l))
+@define child(k,l)   CELL(bitree->m, point.level+1, _childindex(k,l))
 
 /***** Bitree macros ****/
 @define NN (1 << point.level)
-@define cell		CELL(point.m, point.level, _index(0,0))
-@define neighbor(k,l)	CELL(point.m, point.level, _index(k,l))
+@define cell		CELL(bitree->m, point.level, _index(0,0))
+@define neighbor(k,l)	CELL(bitree->m, point.level, _index(k,l))
 
 /***** Data macros *****/
 #if DYNAMIC
   @def data(k,l)
-    ((double *) (point.m[point.level][_index(k,l)] + sizeof(Cell))) @
+    ((double *) (bitree->m[point.level][_index(k,l)] + sizeof(Cell))) @
   @def fine(a,k,l)
-    ((double *) (point.m[point.level+1][_childindex(k,l)] + sizeof(Cell)))[a] @
+    ((double *) (bitree->m[point.level+1][_childindex(k,l)] + sizeof(Cell)))[a] @
   @def coarse(a,k,l)
-    ((double *) (point.m[point.level-1][_parentindex(k,l)] + sizeof(Cell)))[a] @
+    ((double *) (bitree->m[point.level-1][_parentindex(k,l)] + sizeof(Cell)))[a] @
 #else // !DYNAMIC
   @def data(k,l)
-    ((double *) &point.m[point.level]
+    ((double *) &bitree->m[point.level]
      [_index(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)]) @
   @def fine(a,k,l)
-    ((double *) &point.m[point.level+1]
+    ((double *) &bitree->m[point.level+1]
      [_childindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
   @def coarse(a,k,l)
-    ((double *) &point.m[point.level-1]
+    ((double *) &bitree->m[point.level-1]
      [_parentindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
 #endif // !DYNAMIC
 
@@ -182,7 +194,7 @@ static size_t _size (size_t l)
 
 void recursive (Point point)
 {
-  if (point.level == point.depth) {
+  if (point.level == bitree->depth) {
     /* do something */
   }
   else {
@@ -203,7 +215,7 @@ void recursive (Point point)
 @def foreach_cell()
   {
     int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Bitree point = *((Bitree *)grid); point.back = grid;
+    Point point = {GHOSTS,0};
     struct { int l, i, stage; } stack[STACKSIZE]; int _s = -1;
     _push (0, GHOSTS, 0); /* the root cell */
     while (_s >= 0) {
@@ -217,7 +229,7 @@ void recursive (Point point)
 	/* do something */
 @
 @def end_foreach_cell()
-        if (point.level < point.depth) {
+        if (point.level < bitree->depth) {
 	  _push (point.level, point.i, 1);
           _push (point.level + 1, _LEFT, 0);
         }
@@ -272,7 +284,7 @@ void recursive (Point point)
 @def foreach_boundary_cell(dir,corners)
   if (dir <= left) { _OMPSTART /* for face reduction */
     int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Bitree point = *((Bitree *)grid); point.back = grid;
+    Point point = {GHOSTS,0};
     int _d = dir;
     struct { int l, i, stage; } stack[STACKSIZE]; int _s = -1;
     _push (0, GHOSTS, 0); /* the root cell */
@@ -289,7 +301,7 @@ void recursive (Point point)
 @def end_foreach_boundary_cell()
         }
         /* children */
-        if (point.level < point.depth)
+        if (point.level < bitree->depth)
 	  _push (point.level + 1, _d == left ? _LEFT : _RIGHT, 0);
 	break;
       }
@@ -322,6 +334,10 @@ void recursive (Point point)
 
 #define update_cache() { if (((Bitree *)grid)->dirty) update_cache_f(); }
 
+#define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors &&	\
+			       cell.pid >= 0)
+#define is_boundary(cell) (cell.pid < 0)
+  
 static void update_cache_f (void)
 {
   Bitree * q = grid;
@@ -379,7 +395,7 @@ static void update_cache_f (void)
   update_cache();
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   OMP_PARALLEL()
-  Bitree point = *((Bitree *)grid); point.back = grid;
+  Point point = {GHOSTS,0};
   int _k; short _flags; NOT_UNUSED(_flags);
   OMP(omp for schedule(static) clause)
   for (_k = 0; _k < _cache.n; _k++) {
@@ -393,7 +409,7 @@ static void update_cache_f (void)
 @def foreach_cache_level(_cache,_l,clause) {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   OMP_PARALLEL()
-  Bitree point = *((Bitree *)grid); point.back = grid;
+  Point point = {GHOSTS,0};
   point.level = _l;
   int _k;
   OMP(omp for schedule(static) clause)
@@ -488,14 +504,14 @@ q->name = realloc (q->name, (q->depth + 1)*sizeof (CacheLevel));
 cache_level_init (&q->name[q->depth]);
 @
 
-void alloc_layer (Bitree * p)
+void alloc_layer (void)
 {
-  Bitree * q = p->back;
-  q->depth++; p->depth++;
+  Bitree * q = bitree;
+  q->depth++;
   q->m = &(q->m[-1]);
 #if DYNAMIC
   q->m = realloc(q->m, sizeof (char **)*(q->depth + 2)); 
-  q->m = &(q->m[1]); p->m = q->m;
+  q->m = &(q->m[1]);
   q->m[q->depth] = calloc (_size(q->depth), sizeof (char *));
 #else // !DYNAMIC
   q->m = realloc(q->m, sizeof (char *)*(q->depth + 2)); 
@@ -507,20 +523,24 @@ void alloc_layer (Bitree * p)
   cache_level_resize (restriction);
 }
 
-void alloc_children (Bitree * q, int k, int l)
+void alloc_children (Point point, int k, int l)
 {
-  if (q->level == q->depth) alloc_layer(q);
-  Point point = *((Point *)q);
+  if (level == bitree->depth)
+    alloc_layer();
   point.i += k;
   l = 0;
 
 #if DYNAMIC
-  char ** m = ((char ***)q->m)[q->level+1];
+  char ** m = ((char ***)bitree->m)[level+1];
   for (int k = 0; k < 2; k++)
     if (!m[_childindex(k,l)])
       m[_childindex(k,l)] = calloc (1, sizeof(Cell) + datasize);
 #endif // !DYNAMIC
 
+  // foreach child
+  for (int k = 0; k < 2; k++)
+    child(k,l).pid = cell.pid;
+  
 @if TRASH
   // foreach child
   for (int k = 0; k < 2; k++)
@@ -529,25 +549,22 @@ void alloc_children (Bitree * q, int k, int l)
 @endif
 }
 
-void increment_neighbors (Bitree * p)
+void increment_neighbors (Point point)
 {
-  p->back->dirty = true;
-  Point point = *((Point *)p);
+  bitree->dirty = true;
   int l = 0;
   for (int k = -GHOSTS/2; k <= GHOSTS/2; k++) {
     if (neighbor(k,l).neighbors == 0)
-      alloc_children (&point, k, l);
+      alloc_children (point, k, l);
     neighbor(k,l).neighbors++;
   }
-  *((Point *)p) = point;
 }
 
-static void free_children (Bitree * q, int k, int l)
+static void free_children (Point point, int k, int l)
 {
 #if DYNAMIC
-  Point point = *((Point *)q);
   point.i += k;
-  char ** m = ((char ***)q->m)[q->level+1];
+  char ** m = ((char ***)bitree->m)[level+1];
   l = 0;
   for (int k = 0; k < 2; k++) {
     free (m[_childindex(k,l)]);
@@ -556,15 +573,14 @@ static void free_children (Bitree * q, int k, int l)
 #endif
 }
 
-void decrement_neighbors (Bitree * p)
+void decrement_neighbors (Point point)
 {
-  p->back->dirty = true;
-  Point point = *((Point *)p);
+  bitree->dirty = true;
   int l = 0;
   for (int k = -GHOSTS/2; k <= GHOSTS/2; k++) {
     neighbor(k,l).neighbors--;
     if (neighbor(k,l).neighbors == 0)
-      free_children(p,k,l);
+      free_children(point,k,l);
   }
 }
 
@@ -753,9 +769,9 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	// leaf or halo restriction
 	for (scalar s in centered) {
 	  s[ghost] = s.boundary[d] (point, s);
-	  point.i -= ig; point.j -= jg;
+	  point.i -= ig;
 	  double vb = s.boundary[d] (point, s);
-	  point.i += ig; point.j += jg;
+	  point.i += ig;
 	  s[2*ig,2*jg] = vb;
 	}
 	corners();
@@ -771,9 +787,9 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	      s[ghost] = s.boundary[d] (point, s);
 	  if (allocated(2*ig,2*jg))
 	    for (scalar s in centered) {
-	      point.i -= ig; point.j -= jg;
+	      point.i -= ig;
 	      double vb = s.boundary[d] (point, s);
-	      point.i += ig; point.j += jg;
+	      point.i += ig;
 	      s[2*ig,2*jg] = vb;
 	    }
 	}
@@ -788,7 +804,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   free (tangent);
 }
 
-Point refine_cell (Point point, scalar * list, int flag, int * nactive);
+void refine_cell (Point point, scalar * list, int flag, Cache * refined);
 
 static void free_cache (CacheLevel * c)
 {
@@ -854,6 +870,9 @@ void init_grid (int n)
   q->m[0] = alloc_cells (0);
 #endif
   CELL(q->m, 0, GHOSTS).flags |= (leaf|active);
+  for (int k = -GHOSTS; k <= GHOSTS; k++)
+    CELL(q->m, 0, GHOSTS+k).pid = -1;
+  CELL(q->m, 0, GHOSTS).pid = pid();
   cache_init (&q->leaves);
   cache_init (&q->faces);
   q->active = calloc (1, sizeof (CacheLevel));
@@ -864,7 +883,7 @@ void init_grid (int n)
   N = 1 << depth;
   while (depth--)
     foreach_leaf()
-      point = refine_cell (point, NULL, 0, NULL);
+      refine_cell (point, NULL, 0, NULL);
   update_cache();
   trash (all);
 @if _MPI

@@ -91,8 +91,12 @@ static vector alloc_vector (const char * name)
   char cname[strlen(name) + 3];
   sprintf (cname, "%s.x", name);
   v.x = new_scalar (cname);
+#if dimension != 1
   sprintf (cname, "%s.y", name);
   v.y = new_scalar (cname);
+#else // dimension == 1
+  v.y = v.x;
+#endif
   return v;
 }
 
