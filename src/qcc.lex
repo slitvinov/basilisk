@@ -2372,7 +2372,7 @@ int main (int argc, char ** argv)
 	fputs (s, fout);
       }
       if (swigfp)
-	fputs ("@include \"python.h\"\n", fout);
+	fputs ("#include \"python.h\"\n", fout);
       fclose (fout);
       fclose (fin);
       fout = dopen (file, "w");
