@@ -27,7 +27,7 @@ int main()
 {
   X0 = -0.5;
   N = 64;
-  TOLERANCE = 1e-6;
+  TOLERANCE = 1e-12;
   f1.gradient = minmod2;
   run();
 }
@@ -45,7 +45,7 @@ pf[top]  = dirichlet(0);
 event init (i = 0) {
   foreach()
     u.x[] = 1.;
-  scalar phi[];
+  vertex scalar phi[];
   foreach_vertex()
     phi[] = - ellipse (0, 0.3, 0.1, 0.1);
   fractions (phi, f);
@@ -62,8 +62,8 @@ event logfile (i++; t <= 0.8) {
   if (s1 > sfmax1) sfmax1 = s1;
   double e = 2.*(sfmax - sfmin)/(sfmax + sfmin);
   double e1 = 2.*(sfmax1 - sfmin1)/(sfmax1 + sfmin1);
-  fprintf (stderr, "%g %.12f %.12f %.10f %.10f\n", t, s, s1, e, e1);
-  assert (e < 2.5e-6);
+  fprintf (ferr, "%g %.12f %.12f %.10f %.10f\n", t, s, s1, e, e1);
+  assert (e < 4e-8);
   assert (e1 < 5e-5);
 }
 

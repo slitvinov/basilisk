@@ -186,12 +186,10 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
 	s[] = *b++;
       for (vector v in listf)
 	foreach_dimension() {
-	  if (allocated(-1,0) &&
-	      (!is_local(neighbor(-1,0)) || is_prolongation(neighbor(-1,0))))
+	  if (allocated(-1,0) && !is_local(neighbor(-1,0)))
 	    v.x[] = *b;
 	  b++;
-	  if (allocated(1,0) &&
-	      (!is_local(neighbor(1,0)) || is_prolongation(neighbor(1,0))))
+	  if (allocated(1,0) && !is_local(neighbor(1,0)))
 	    v.x[1,0] = *b;
 	  b++;
 	}

@@ -116,10 +116,10 @@ static void sweep_x (scalar c, scalar cc)
 
 #if QUADTREE
   for (int l = depth() - 1; l >= 0; l--)
-    foreach_halo (restriction, l) {
-      if (is_leaf (neighbor(-1,0)))
+    foreach_halo (prolongation, l) {
+      if (is_refined (neighbor(-1,0)))
 	flux[] = (fine(flux,0,0) + fine(flux,0,1))/2.;
-      if (is_leaf (neighbor(1,0)))
+      if (is_refined (neighbor(1,0)))
 	flux[1,0] = (fine(flux,2,0) + fine(flux,2,1))/2.;
     }
 #endif

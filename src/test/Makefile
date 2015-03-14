@@ -61,7 +61,8 @@ terrain.tst: terrain.s
 
 mpi-tests: indexing.tst mpi-restriction.tst mpi-reduce.tst mpi-refine.tst \
 	mpi-laplacian.tst mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
-	mpi-interpu.tst mpi-coarsen.tst bump2Dp.tst vortex.tst
+	mpi-interpu.tst mpi-coarsen.tst bump2Dp.tst vortex.tst \
+	axiadvection.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 mpi-restriction.tst:	CC = mpicc -D_MPI=3
@@ -81,3 +82,4 @@ mpi-interpu.tst: CC = mpicc -D_MPI=5
 mpi-coarsen.tst: CC = mpicc -D_MPI=2
 bump2Dp.tst:     CC = mpicc -D_MPI=9
 vortex.tst:	 CC = mpicc -D_MPI=7
+axiadvection.tst: CC = mpicc -D_MPI=7

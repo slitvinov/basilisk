@@ -65,9 +65,9 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
 @endif
     }
 
-  if (is_local(cell))
-    /* initialise scalars */
-    for (scalar s in list)
+  /* initialise scalars */
+  for (scalar s in list)
+    if (is_local(cell) || s.face)
       s.refine (point, s);
 
 @if _MPI
@@ -323,11 +323,6 @@ static void halo_restriction_flux (vector * list)
       listv = vectors_add (listv, v);
 
   if (listv) {
-    // we need to tolerate (unused) NaN values when applying boundary
-    // conditions for face vector fields in parallel, but this is messy...
-    @if _MPI
-      disable_fpe (FE_INVALID);
-    @endif
     for (int l = depth() - 1; l >= 0; l--)
       foreach_halo (prolongation, l) {
 	foreach_dimension() {
@@ -339,9 +334,6 @@ static void halo_restriction_flux (vector * list)
 	      f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
         }
       }
-    @if _MPI
-      enable_fpe (FE_INVALID);
-    @endif
     free (listv);
   }
 }
@@ -360,19 +352,23 @@ foreach_dimension()
 static void refine_face_x (Point point, scalar s)
 {
   vector v = s.v;
-  if (!is_refined(neighbor(-1,0))) {
+  if (!is_refined(neighbor(-1,0)) &&
+      (is_local(cell) || is_local(neighbor(-1,0)))) {
     double g = (v.x[0,+1] - v.x[0,-1])/8.;
     fine(v.x,0,0) = v.x[] - g;
     fine(v.x,0,1) = v.x[] + g;
   }
-  if (!is_refined(neighbor(1,0)) && neighbor(1,0).neighbors) {
+  if (!is_refined(neighbor(1,0)) && neighbor(1,0).neighbors &&
+      (is_local(cell) || is_local(neighbor(1,0)))) {
     double g = (v.x[1,+1] - v.x[1,-1])/8.;
     fine(v.x,2,0) = v.x[1,0] - g;
     fine(v.x,2,1) = v.x[1,0] + g;
   }
-  double g = (v.x[0,+1] + v.x[1,+1] - v.x[0,-1] - v.x[1,-1])/16.;
-  fine(v.x,1,0) = (v.x[] + v.x[1,0])/2. - g;
-  fine(v.x,1,1) = (v.x[] + v.x[1,0])/2. + g;
+  if (is_local(cell)) {
+    double g = (v.x[0,+1] + v.x[1,+1] - v.x[0,-1] - v.x[1,-1])/16.;
+    fine(v.x,1,0) = (v.x[] + v.x[1,0])/2. - g;
+    fine(v.x,1,1) = (v.x[] + v.x[1,0])/2. + g;
+  }
 }
 
 void refine_face (Point point, scalar s)
@@ -385,22 +381,24 @@ void refine_face (Point point, scalar s)
 void refine_face_solenoidal (Point point, scalar s)
 {
   refine_face (point, s);
-  vector v = s.v;
-  // local projection, see section 3.3 of Popinet, JCP, 2009
-  double d[4], p[4];
-  d[0] = fine(v.x,1,1) - fine(v.x,0,1) + fine(v.y,0,2) - fine(v.y,0,1);
-  d[1] = fine(v.x,2,1) - fine(v.x,1,1) + fine(v.y,1,2) - fine(v.y,1,1);
-  d[2] = fine(v.x,1,0) - fine(v.x,0,0) + fine(v.y,0,1) - fine(v.y,0,0);
-  d[3] = fine(v.x,2,0) - fine(v.x,1,0) + fine(v.y,1,1) - fine(v.y,1,0);
+  if (is_local(cell)) {
+    // local projection, see section 3.3 of Popinet, JCP, 2009
+    vector v = s.v;
+    double d[4], p[4];
+    d[0] = fine(v.x,1,1) - fine(v.x,0,1) + fine(v.y,0,2) - fine(v.y,0,1);
+    d[1] = fine(v.x,2,1) - fine(v.x,1,1) + fine(v.y,1,2) - fine(v.y,1,1);
+    d[2] = fine(v.x,1,0) - fine(v.x,0,0) + fine(v.y,0,1) - fine(v.y,0,0);
+    d[3] = fine(v.x,2,0) - fine(v.x,1,0) + fine(v.y,1,1) - fine(v.y,1,0);
 
-  p[0] = 0.;
-  p[1] = (3.*d[1] + d[2])/4. + d[3]/2.;
-  p[2] = (d[1] + 3.*d[2])/4. + d[3]/2.;
-  p[3] = (d[1] + d[2])/2. + d[3];
-  fine(v.x,1,1) += p[1] - p[0];
-  fine(v.x,1,0) += p[3] - p[2];
-  fine(v.y,0,1) += p[0] - p[2];
-  fine(v.y,1,1) += p[1] - p[3];
+    p[0] = 0.;
+    p[1] = (3.*d[1] + d[2])/4. + d[3]/2.;
+    p[2] = (d[1] + 3.*d[2])/4. + d[3]/2.;
+    p[3] = (d[1] + d[2])/2. + d[3];
+    fine(v.x,1,1) += p[1] - p[0];
+    fine(v.x,1,0) += p[3] - p[2];
+    fine(v.y,0,1) += p[0] - p[2];
+    fine(v.y,1,1) += p[1] - p[3];
+  }
 }
 
 vector quadtree_init_face_vector (vector v, const char * name)
