@@ -46,14 +46,14 @@ The default boundary conditions are symmetry (i.e. slip walls). We
 need no-slip on three boundaries and $u=1$ on the top
 boundary i.e. */
 
-u.x[top] = dirichlet(1);
+u.t[top] = dirichlet(1);
 
 /**
 For the other no-slip boundaries this gives */
 
-u.x[bottom] = dirichlet(0);
-u.y[left]   = dirichlet(0);
-u.y[right]  = dirichlet(0);
+u.t[bottom] = dirichlet(0);
+u.t[left]   = dirichlet(0);
+u.t[right]  = dirichlet(0);
 
 /**
 For the colocated solver, imposing boundary conditions for the normal
@@ -61,10 +61,10 @@ components of the (face-centered) advection velocity improves the
 results. Ideally, this should be done automatically by the solver. */
 
 #if !MAC
-uf.x[left]   = dirichlet(0);
-uf.x[right]  = dirichlet(0);
-uf.y[top]    = dirichlet(0);
-uf.y[bottom] = dirichlet(0);
+uf.n[left]   = 0;
+uf.n[right]  = 0;
+uf.n[top]    = 0;
+uf.n[bottom] = 0;
 #endif
 
 /**

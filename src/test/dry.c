@@ -10,7 +10,7 @@ int main()
 
 h[right]   = 0.;
 eta[right] = zb[];
-u.x[right] = u.x[];
+u.n[right] = u.x[];
 
 event init (i = 0)
 {

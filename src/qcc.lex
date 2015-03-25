@@ -8,7 +8,7 @@
   #include <sys/wait.h>
   #include <assert.h>
 
-  enum { scalar, vector, tensor, struct_type = -1 };
+  enum { scalar, vector, tensor, bid, struct_type = -1 };
 
   typedef struct { int i; char * name; } Scalar;
   typedef struct { int x, y, face; char * name; } Vector;
@@ -517,34 +517,13 @@
     return s;
   }
 
-  void boundary_staggering (const char * dir, int component, FILE * fp) {
-    if (!strcmp (dir, "left")) {
-      if (component == 'y')
-	fputs (" int ig = -1, jg = -1;", fp);
-      else
-	fputs (" int ig = -1, jg = 0;", fp);
-    }
-    else if (!strcmp (dir, "right")) {
-      if (component == 'y')
-	fputs (" int ig = 1, jg = -1;", fp);
-      else
-	fputs (" int ig = 1, jg = 0;", fp);
-    }
-    else if (!strcmp (dir, "top")) {
-      if (component == 'x')
-	fputs (" int ig = -1, jg = 1;", fp);
-      else
-	fputs (" int ig = 0, jg = 1;", fp);
-    }
-    else if (!strcmp (dir, "bottom")) {
-      if (component == 'x')
-	fputs (" int ig = -1, jg = -1;", fp);
-      else
-	fputs (" int ig = 0, jg = -1;", fp);      
-    }
-    else
-      assert (0);
-    fputs (" NOT_UNUSED(ig); NOT_UNUSED (jg);", fp);
+  void boundary_staggering (FILE * fp) {
+    fputs (" int ig = neighbor.i - point.i,"
+	   " jg = neighbor.j - point.j;"
+	   " if (ig == 0) ig = _attribute[_s].d.x;"
+	   " if (jg == 0) jg = _attribute[_s].d.y;"
+	   " NOT_UNUSED(ig); NOT_UNUSED (jg);",
+	   fp);
   }
 
   char * makelist (const char * input, int type) {
@@ -760,6 +739,9 @@
       v->face = varface;    
       v->vertex = varvertex;
       fputs (text, yyout);
+      if (scope == 0 && v->type == bid)
+	// global boundary id
+	v->i[0] = 1;
     }
     if (debug)
       fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
@@ -1049,9 +1031,10 @@ map{WS}+"{" {
     maybeconst_combinations (line, boundary_body);
     fputs (" return 0.; } ", yyout);
     fprintf (yyout, 
-	     "static double _boundary%d_homogeneous (Point point, scalar _s) {",
+	     "static double _boundary%d_homogeneous "
+	     "(Point point, Point neighbor, scalar _s) {",
 	     nboundary);
-    boundary_staggering (boundarydir, boundarycomponent, yyout);
+    boundary_staggering (yyout);
     fputs (" POINT_VARIABLES; ", yyout);
     maps (line - 1);
     maybeconst_combinations (line, boundary_homogeneous_body);
@@ -1199,7 +1182,8 @@ map{WS}+"{" {
 symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
 face{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
 vertex{WS}+scalar{WS}+[a-zA-Z0-9_\[\]]+ |
-(scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ {
+(scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ |
+bid{WS}+{ID}+ {
   varsymmetric = (strstr(yytext, "symmetric") != NULL);
   varface = (strstr(yytext, "face") != NULL);
   varvertex = (strstr(yytext, "vertex") != NULL);
@@ -1212,11 +1196,18 @@ vertex{WS}+scalar{WS}+[a-zA-Z0-9_\[\]]+ |
     if (!var) {
       var = strstr(yytext,"tensor");
       vartype = tensor;
+      if (!var) {
+	var = strstr(yytext,"bid");
+	vartype = bid;
+      }
     }
   }
   char * text = var;
-  var = &var[7];
-  nonspace (var);
+  if (vartype != bid)
+    var = &var[7];
+  else
+    var = &var[4];
+  nonspace (var);  
   if (*var == '[') {
     // scalar [..
     for (; *var != '\0'; var++)
@@ -1371,13 +1362,14 @@ val{WS}*[(]    {
     REJECT;
 }
 
-{SCALAR}{WS}*\[{WS}*(left|right|top|bottom){WS}*\]{WS}*= {
-  /* v[top] = */
+[a-zA-Z_0-9]+[.nt]*{WS}*\[{WS}*{ID}+{WS}*\]{WS}*= {
+  /* v[top] = ..., u.n[left] = ..., u.t[left] = ... */
   char * s = yytext;
   while (!strchr(" \t\v\n\f[.", *s)) s++;
   var_t * var;
   if ((var = varlookup (yytext, s - yytext))) {
-    s = yytext;
+    strcpy (boundaryvar, yytext);
+    s = boundaryvar;
     while (!strchr(" \t\v\n\f[", *s)) s++;
     *s++ = '\0';
     nonspace (s);
@@ -1385,11 +1377,23 @@ val{WS}*[(]    {
     s = boundarydir;
     while (!strchr(" \t\v\n\f]", *s)) s++;
     *s++ = '\0';
-    char * s1 = yytext;
+    var_t * dir = varlookup (boundarydir, strlen(boundarydir));
+    if ((!dir || dir->type != bid) &&
+	strcmp(boundarydir, "top") &&
+	strcmp(boundarydir, "right") &&
+	strcmp(boundarydir, "left") &&
+	strcmp(boundarydir, "bottom"))
+      REJECT;
+#if DEBUG
+    fprintf (stderr, "%s:%d: boundarydir: %s yytext: %s\n",
+	     fname, line, boundarydir, yytext);
+#endif
+    char * s1 = boundaryvar;
     boundarycomponent = 0;
     while (*s1 != '\0') {
       if (*s1 == '.') {
 	s1++;
+	*s1 = *s1 == 'n' ? 'x' : 'y'; // replace .n, .t with .x, .y
 	boundarycomponent = *s1;
       }
       else
@@ -1402,14 +1406,14 @@ val{WS}*[(]    {
     yyout = boundaryheader;
     fprintf (yyout,
 	     "#line %d \"%s\"\n"
-	     "static double _boundary%d (Point point, scalar _s) {",
+	     "static double _boundary%d"
+	     " (Point point, Point neighbor, scalar _s) {",
 	     line, fname, nboundary);
-    boundary_staggering (boundarydir, boundarycomponent, yyout);
+    boundary_staggering (yyout);
     fputs (" POINT_VARIABLES; ", yyout);
     maps (line - 1);
     nmaybeconst = 0;
     inboundary = inforeach_boundary = 1;
-    strcpy (boundaryvar, yytext);
     inforeach = 2;
 
     yyout = dopen ("_inboundary.h", "w");
@@ -1448,11 +1452,7 @@ val{WS}*[(]    {
 
 dirichlet{WS}*[(] {
   para++;
-  if (inboundary &&
-      ((boundarycomponent == 'x' && (!strcmp(boundarydir, "left") ||
-				     !strcmp(boundarydir, "right"))) ||
-       (boundarycomponent == 'y' && (!strcmp(boundarydir, "top") ||
-				     !strcmp(boundarydir, "bottom")))))
+  if (inboundary && boundarycomponent == 'x')
     fputs (&yytext[9], yyout);
   else
     ECHO;
@@ -2080,8 +2080,8 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   int i;
   for (i = 0; i < nboundary; i++)
     fprintf (fout, 
-       "static double _boundary%d (Point point, scalar _s);\n"
-       "static double _boundary%d_homogeneous (Point point, scalar _s);\n", 
+       "static double _boundary%d (Point point, Point neighbor, scalar _s);\n"
+       "static double _boundary%d_homogeneous (Point point, Point neighbor, scalar _s);\n", 
 	     i, i);
   fclose (fout);
 
@@ -2182,6 +2182,8 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
       else if (var.type == tensor)
 	fprintf (fout, "  init_tensor ((tensor){{%d,%d},{%d,%d}}, \"%s\");\n", 
 		 var.i[0], var.i[1], var.i[2], var.i[3], var.v);
+      else if (var.type == bid)
+	fprintf (fout, "  %s = new_bid();\n", var.v);
       else
 	assert (0);
     }

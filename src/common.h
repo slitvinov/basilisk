@@ -352,10 +352,8 @@ double zero (double s0, double s1, double s2) { return 0.; }
 
 // boundary conditions for each direction/variable
 
-enum { right, left, top, bottom, nboundary };
-// ghost cell coordinates for each direction
-int _ig[nboundary] = {1,-1,0,0}, 
-    _jg[nboundary] = {0,0,1,-1};
+enum { right, left, top, bottom };
+int nboundary = 4;
 
 @define dirichlet(x)            (2.*(x) - val(_s,0,0))
 @define dirichlet_homogeneous() (- val(_s,0,0))
@@ -373,9 +371,9 @@ typedef struct _Point Point;
 @include "_attributes.h"
 
 attribute {
-  double (* boundary[nboundary])             (Point, scalar);
-  double (* boundary_homogeneous[nboundary]) (Point, scalar);
-  double (* gradient)                        (double, double, double);
+  double (** boundary)             (Point, Point, scalar);
+  double (** boundary_homogeneous) (Point, Point, scalar);
+  double (* gradient)              (double, double, double);
   char * name;
   struct { int x, y; } d; // staggering
   vector v;

@@ -1,18 +1,26 @@
-#include "saint-venant.h"
+// same as bump2D.c but with "inner" boundaries
 
-int LEVEL = 7;
+#include "saint-venant.h"
+#include "inner.h"
+
+int LEVEL = 8;
 
 int main (int argc, char * argv[])
 {
   if (argc > 1)
     LEVEL = atoi (argv[1]);
-  origin (-0.5, -0.5);
+  size (2.);
+  origin (-L0/2., -L0/2.);
   init_grid (1 << LEVEL);
   run();
 }
 
 event init (i = 0)
 {
+  foreach_set_boundary()
+    if (fabs(x) > 0.5 || fabs(y) > 0.5)
+      cell.pid = -2;
+
   foreach()
     h[] = 0.1 + 1.*exp(-200.*(x*x + y*y));
 }
@@ -32,8 +40,7 @@ event outputfile (t <= 2.5; t += 2.5/8) {
     l[] = level;
   printf ("file: level-%d\n", nf++);
   output_field ({l});
-
-@if !_MPI
+  
   /* check symmetry */
   foreach() {
     double h0 = h[];
@@ -45,7 +52,6 @@ event outputfile (t <= 2.5; t += 2.5/8) {
     point = locate (x, -y);
     assert (fabs(h0 - h[]) < 1e-12);
   }
-@endif
 }
 
 event adapt (i++) {

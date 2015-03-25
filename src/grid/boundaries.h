@@ -48,7 +48,7 @@ void free_boundaries() {
 	_b->type (_b, __VA_ARGS__);	     \
 }
 
-// Box boundaries
+/* Box boundaries */
 
 typedef struct {
   Boundary parent;

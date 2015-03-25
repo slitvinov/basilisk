@@ -8,10 +8,10 @@ scalar * interfaces = {f};
 face vector alphav[];
 scalar alphacv[];
 
-uf.x[left]   = dirichlet(0);
-uf.x[right]  = dirichlet(0);
-uf.y[top]    = dirichlet(0);
-uf.y[bottom] = dirichlet(0);
+uf.n[left]   = 0;
+uf.n[right]  = 0;
+uf.n[top]    = 0;
+uf.n[bottom] = 0;
 
 int main() {
   size (4);

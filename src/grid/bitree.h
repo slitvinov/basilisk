@@ -280,6 +280,9 @@ void recursive (Point point)
   }
 @
 
+// ghost cell coordinates for each direction
+static int _ig[] = {1,-1,0,0}, _jg[] = {0,0,1,-1};
+
 @define corners()
 @def foreach_boundary_cell(dir,corners)
   if (dir <= left) { _OMPSTART /* for face reduction */

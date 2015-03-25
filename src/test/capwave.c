@@ -22,10 +22,10 @@ We make sure that the boundary conditions for the face-centered
 velocity field are consistent with the centered velocity field (this
 affects the advection term). */
 
-uf.x[left]   = dirichlet(0);
-uf.x[right]  = dirichlet(0);
-uf.y[top]    = dirichlet(0);
-uf.y[bottom] = dirichlet(0);
+uf.n[left]   = 0.;
+uf.n[right]  = 0.;
+uf.n[top]    = 0.;
+uf.n[bottom] = 0.;
 
 /**
 We will store the accumulated error in *se* and the number of samples

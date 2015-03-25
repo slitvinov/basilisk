@@ -35,16 +35,6 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
 	       void * data,
 	       int nrelax, int minlevel)
 {
-  /**
-  The boundary conditions for the correction fields are the
-  *homogeneous* equivalent of the boundary conditions applied to
-  *a*. */
-
-  for (int b = 0; b < nboundary; b++) {
-    scalar s, ds;
-    for (s, ds in a, da)
-      ds.boundary[b] = s.boundary_homogeneous[b];
-  }
 
   /**
   We first define the residual on all levels. */
@@ -138,13 +128,17 @@ mgstats mg_solve (scalar * a, scalar * b,
   We allocate a new correction and residual field for each of the scalars
   in *a*. */
 
-  scalar * da = NULL, * res = NULL;
-  for (scalar s in a) {
-    scalar ds = new scalar, r = new scalar;
-    da = list_append (da, ds);
-    res = list_append (res, r);
-  }
+  scalar * da = list_clone (a), * res = list_clone (a);
 
+  /**
+  The boundary conditions for the correction fields are the
+  *homogeneous* equivalent of the boundary conditions applied to
+  *a*. */
+
+  for (int b = 0; b < nboundary; b++)
+    for (scalar s in da)
+      s.boundary[b] = s.boundary_homogeneous[b];
+  
   /**
   We initialise the structure storing convergence statistics. */
 

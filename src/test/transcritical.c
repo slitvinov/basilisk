@@ -8,8 +8,8 @@ int main()
   run();
 }
 
-u.x[left] = neumann(0);
-u.x[right] = neumann(0);
+u.n[left] = neumann(0);
+u.n[right] = neumann(0);
 
 event init (t = 0)
 {

@@ -6,9 +6,10 @@
 #define DELTA (1./point.n)
 
 struct _Point {
-  char * data;
-  int i, j, n;
+  int i, j;
   int level; // only to return level in locate()
+  int n;
+  char * data;
 };
 static Point last_point;
 
@@ -69,6 +70,9 @@ void cartesian_trash (void * alist)
       ((double *)(&p->data[i*datasize]))[s] = undefined;
 }
 
+// ghost cell coordinates for each direction
+static int _ig[] = {1,-1,0,0}, _jg[] = {0,0,1,-1};
+
 static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
 {
   int d = ((BoxBoundary *)b)->d;
@@ -85,8 +89,11 @@ static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
   for (_k = _start; _k < _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-    for (scalar s in list)
-      val(s,ig,jg) = s.boundary[d] (point, s);
+    Point neighbor = {point.i + ig, point.j + jg};
+    for (scalar s in list) {
+      scalar b = s.v.x;
+      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+    }
   }
   OMP_END_PARALLEL();
 }
@@ -105,8 +112,11 @@ static void box_boundary_level_tangent (const Boundary * b,
   for (_k = _start; _k < _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-    for (scalar s in list)
-      val(s,ig,jg) = s.boundary[d] (point, s);
+    Point neighbor = {point.i + ig, point.j + jg};
+    for (scalar s in list) {
+      scalar b = s.v.y;
+      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+    }
   }
   OMP_END_PARALLEL();
 }
@@ -117,15 +127,21 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   scalar * centered = NULL, * normal = NULL, * tangent = NULL;
 
   int component = d/2;
-  for (scalar s in list) 
-    if (!is_constant(s) && s.boundary[d]) {
+  for (scalar s in list)
+    if (!is_constant(s)) {
       if (s.face) {
-	if ((&s.d.x)[component])
-	  normal = list_add (normal, s);
-	else
-	  tangent = list_add (tangent, s);
+	if ((&s.d.x)[component]) {
+	  scalar b = s.v.x;
+	  if (b.boundary[d])
+	    normal = list_add (normal, s);
+	}
+	else {
+	  scalar b = s.v.y;
+	  if (b.boundary[d])
+	    tangent = list_add (tangent, s);
+	}
       }	
-      else
+      else if (s.boundary[d])
 	centered = list_add (centered, s);
     }
 
@@ -139,8 +155,14 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   for (_k = _start; _k <= _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n : 1;
     point.j = d < top  ? _k : d == top   ? point.n : 1;
-    for (scalar s in centered)
-      val(s,ig,jg) = s.boundary[d] (point, s);
+    Point neighbor = {point.i + ig, point.j + jg};
+    for (scalar s in centered) {
+      scalar b = (s.v.x < 0 ? s :
+		  s == s.v.x && d < top ? s.v.x :
+		  s == s.v.y && d >= top ? s.v.x :
+		  s.v.y);
+      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+    }
   }
   OMP_END_PARALLEL();
   free (centered);

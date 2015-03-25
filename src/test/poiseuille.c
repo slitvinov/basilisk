@@ -1,4 +1,3 @@
-#include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
 
 int main() {
@@ -9,12 +8,12 @@ int main() {
     run(); 
 }
 
-u.x[top] = dirichlet(0);
-u.x[bottom] = dirichlet(0);
+u.t[top] = dirichlet(0);
+u.t[bottom] = dirichlet(0);
 
-u.x[left] = neumann(0);
+u.n[left] = neumann(0);
 p[left] = dirichlet(y + 0.5);
-u.x[right] = neumann(0);
+u.n[right] = neumann(0);
 p[right] = dirichlet(y + 0.5);
 
 scalar un[];

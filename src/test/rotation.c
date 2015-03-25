@@ -4,10 +4,10 @@
 scalar f[];
 scalar * tracers = {f};
 
-u.x[left]   = dirichlet(0.);
-u.x[right]  = dirichlet(0.);
-u.y[top]    = dirichlet(0.);
-u.y[bottom] = dirichlet(0.);
+u.n[left]   = 0.;
+u.n[right]  = 0.;
+u.n[top]    = 0.;
+u.n[bottom] = 0.;
 
 int main()
 {

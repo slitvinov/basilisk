@@ -8,10 +8,10 @@ We solve the Euler equations for a compressible gas. */
 /**
 We make boundary conditions free outflow. */
 
-w.y[top]    = neumann(0);
-w.y[bottom] = neumann(0);
-w.x[left]   = neumann(0);
-w.x[right]  = neumann(0);
+w.n[top]    = neumann(0);
+w.n[bottom] = neumann(0);
+w.n[left]   = neumann(0);
+w.n[right]  = neumann(0);
 
 /**
 The domain spans $[-1:1]\times[-1:1]$. */

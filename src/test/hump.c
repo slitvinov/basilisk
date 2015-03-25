@@ -12,10 +12,10 @@ int main()
   run();
 }
 
-u.x[left]   = u.x[];
-u.x[right]  = u.x[];
-u.y[top]    = u.y[];
-u.y[bottom] = u.y[];
+u.n[left]   = neumann(0);
+u.n[right]  = neumann(0);
+u.n[top]    = neumann(0);
+u.n[bottom] = neumann(0);
 
 event init (i = 0)
 {

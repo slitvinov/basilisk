@@ -16,6 +16,12 @@ a[left]   = dirichlet (solution(x, y));
 a[top]    = dirichlet (solution(x, y));
 a[bottom] = dirichlet (solution(x, y));
 
+/* homogeneous conditions for dp */
+dp[right]  = dirichlet(0);
+dp[left]   = dirichlet(0);
+dp[top]    = dirichlet(0);
+dp[bottom] = dirichlet(0);
+
 void solve (int depth)
 {
   origin (-0.5, -0.5);

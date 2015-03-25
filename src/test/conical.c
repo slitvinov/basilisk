@@ -63,8 +63,8 @@ We use the definition of the solitary wave to impose conditions on the
 left side (i.e. the "wave paddle"). */
 
 h[left] = H0 + eta0(t);
-u.x[left] = uleft (t);
-u.y[left] = 0.;
+u.n[left] = uleft (t);
+u.t[left] = 0.;
 
 /**
 This is the definition of the topography of the conical island. */

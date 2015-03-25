@@ -32,11 +32,11 @@ int main()
   run();
 }
 
-u.x[left] = dirichlet(1);
-u.y[left] = dirichlet(0);
+u.n[left] = dirichlet(1);
+u.t[left] = dirichlet(0);
 p[left]   = neumann(0);
 
-u.y[top] = neumann(0);
+u.n[top] = neumann(0);
 p[top]   = dirichlet(0);
 pf[top]  = dirichlet(0);
 

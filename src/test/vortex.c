@@ -15,10 +15,10 @@ dimension. */
 #define MAXLEVEL 8
 
 // This is necessary for convergence when lowering the tolerance
-uf.x[left]   = 0.;
-uf.x[right]  = 0.;
-uf.y[top]    = 0.;
-uf.y[bottom] = 0.;
+uf.n[left]   = 0.;
+uf.n[right]  = 0.;
+uf.n[top]    = 0.;
+uf.n[bottom] = 0.;
 
 int main()
 {

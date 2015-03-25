@@ -5,14 +5,18 @@
 #define J      (point.j - GHOSTS)
 #define DELTA  (1./point.n)
 
-struct _Point {
+typedef struct {
   char ** d;
-  int level, depth;
-  int i, j, n;
+  int depth;
+} Multigrid;
+
+struct _Point {
+  int i, j, level, n;
 };
 static Point last_point;
 
 #define NN point.n // for output_stencil()
+#define multigrid ((Multigrid *)grid)
 
 static size_t _size (size_t l)
 {
@@ -24,21 +28,21 @@ static size_t _size (size_t l)
 
 /***** Cartesian macros *****/
 @def data(k,l)
-  ((double *)&point.d[point.level][((point.i + k)*(point.n + 2*GHOSTS) +
+  ((double *)&multigrid->d[point.level][((point.i + k)*(point.n + 2*GHOSTS) +
 				    point.j + l)*datasize]) @
 @define allocated(...) true
 @define allocated_child(...) true
 
 /***** Multigrid variables and macros *****/
-@define depth()       (((Point *)grid)->depth)
+@define depth()       (((Multigrid *)grid)->depth)
 @def fine(a,k,l)
   ((double *)
-   &point.d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) +
+   &multigrid->d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) +
 			    (2*point.j-GHOSTS+l))*datasize])[a]
 @
 @def coarse(a,k,l)
   ((double *)
-   &point.d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) +
+   &multigrid->d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) +
 			    (point.j+GHOSTS)/2+l)*datasize])[a]
 @
 @def POINT_VARIABLES
@@ -70,7 +74,7 @@ static size_t _size (size_t l)
   OMP_PARALLEL()
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point = *((Point *)grid);
-  point.level = point.depth; point.n = 1 << point.level;
+  point.level = multigrid->depth; point.n = 1 << point.level;
   int _k;
   OMP(omp for schedule(static) clause)
   for (_k = GHOSTS; _k < point.n + GHOSTS; _k++) {
@@ -84,7 +88,7 @@ static size_t _size (size_t l)
   OMP_PARALLEL()
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point = *((Point *)grid);
-  point.level = point.depth; point.n = 1 << point.level;
+  point.level = multigrid->depth; point.n = 1 << point.level;
   int _k;
   OMP(omp for schedule(static) clause)
   for (_k = GHOSTS; _k <= point.n + GHOSTS; _k++) {
@@ -107,8 +111,8 @@ foreach_face_generic() {
 
 @def foreach_fine_to_coarse() {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point _p = *((Point *)grid);
-  _p.level = _p.depth - 1; _p.n = 1 << _p.level;
+  Point _p;
+  _p.level = multigrid->depth - 1; _p.n = 1 << _p.level;
   for (; _p.level >= 0; _p.n /= 2, _p.level--)
     OMP_PARALLEL()
     Point point = _p;
@@ -147,12 +151,15 @@ void multigrid_trash (void * alist)
 {
   scalar * list = alist;
   Point p = *((Point *)grid);
-  p.level = p.depth; p.n = 1 << p.level;
+  p.level = multigrid->depth; p.n = 1 << p.level;
   for (; p.level >= 0; p.n /= 2, p.level--)
     for (int i = 0; i < (p.n + 2*GHOSTS)*(p.n + 2*GHOSTS); i++)
       for (scalar s in list)
-	((double *)(&p.d[p.level][i*datasize]))[s] = undefined;
+	((double *)(&multigrid->d[p.level][i*datasize]))[s] = undefined;
 }
+
+// ghost cell coordinates for each direction
+static int _ig[] = {1,-1,0,0}, _jg[] = {0,0,1,-1};
 
 static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
 {
@@ -171,8 +178,11 @@ static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
   for (_k = _start; _k < _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-    for (scalar s in list)
-      val(s,ig,jg) = s.boundary[d] (point, s);
+    Point neighbor = {point.i + ig, point.j + jg, point.level};
+    for (scalar s in list) {
+      scalar b = s.v.x;
+      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+    }
   }
   OMP_END_PARALLEL();
 }
@@ -191,11 +201,14 @@ static void box_boundary_level_tangent (const Boundary * b,
   for (_k = _start; _k <= _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
+    Point neighbor = {point.i + ig, point.j + jg, point.level};
     for (scalar s in list) {
-      val(s,ig,jg) = s.boundary[d] (point, s);
+      scalar b = s.v.y;
+      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
 #if GHOSTS == 2
       point.i -= ig; point.j -= jg;
-      double vb = s.boundary[d] (point, s);
+      neighbor.i += ig; neighbor.j += jg;
+      double vb = b.boundary[d] (point, neighbor, s);
       point.i += ig; point.j += jg;
       val(s,2*ig,2*jg) = vb;
 #endif
@@ -211,14 +224,20 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 
   int component = d/2;
   for (scalar s in list)
-    if (!is_constant(s) && s.boundary[d]) {
+    if (!is_constant(s)) {
       if (s.face) {
-	if ((&s.d.x)[component])
-	  normal = list_add (normal, s);
-	else
-	  tangent = list_add (tangent, s);
+	if ((&s.d.x)[component]) {
+	  scalar b = s.v.x;
+	  if (b.boundary[d])
+	    normal = list_add (normal, s);
+	}
+	else {
+	  scalar b = s.v.y;
+	  if (b.boundary[d])
+	    tangent = list_add (tangent, s);
+	}
       }	
-      else
+      else if (s.boundary[d])
 	centered = list_add (centered, s);
     }
 
@@ -236,11 +255,17 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   for (_k = _start; _k < _end; _k++) {
     point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
     point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
+    Point neighbor = {point.i + ig, point.j + jg, point.level};
     for (scalar s in centered) {
-      val(s,ig,jg) = s.boundary[d] (point, s);
+      scalar b = (s.v.x < 0 ? s :
+		  s == s.v.x && d < top ? s.v.x :
+		  s == s.v.y && d >= top ? s.v.x :
+		  s.v.y);
+      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
 #if GHOSTS == 2
       point.i -= ig; point.j -= jg;
-      double vb = s.boundary[d] (point, s);
+      neighbor.i += ig; neighbor.j += jg;
+      double vb = b.boundary[d] (point, neighbor, s);
       point.i += ig; point.j += jg;
       val(s,2*ig,2*jg) = vb;
 #endif
@@ -261,7 +286,7 @@ void free_grid (void)
   if (!grid)
     return;
   free_boundaries();
-  Point * m = grid;
+  Multigrid * m = grid;
   for (int l = 0; l <= m->depth; l++)
     free (m->d[l]);
   free (m->d);
@@ -271,7 +296,7 @@ void free_grid (void)
 
 void init_grid (int n)
 {
-  Point * m = grid;
+  Multigrid * m = grid;
   if (m && n == 1 << m->depth)
     return;
   free_grid();
@@ -284,7 +309,7 @@ void init_grid (int n)
     n /= 2;
     r++;
   }
-  m = malloc(sizeof(Point));
+  m = malloc(sizeof(Multigrid));
   m->depth = r;
   N = 1 << r;
   m->d = malloc(sizeof(Point *)*(r + 1));
@@ -311,7 +336,7 @@ void init_grid (int n)
 
 void realloc_scalar (void)
 {
-  Point * p = grid;
+  Multigrid * p = grid;
   size_t oldatasize = datasize - sizeof(double);
   for (int l = 0; l <= p->depth; l++) {
     size_t len = _size(l);
@@ -325,14 +350,14 @@ void realloc_scalar (void)
 Point locate (double xp, double yp)
 {
   Point point = *((Point *)grid);
-  point.n = 1 << point.depth;
+  point.n = 1 << multigrid->depth;
   double a = (xp - X0)/L0*point.n;
   point.i = a + GHOSTS;
   double b = (yp - Y0)/L0*point.n;
   point.j = b + GHOSTS;
   point.level = 
     (a >= 0.5 - GHOSTS && a < point.n + GHOSTS - 0.5 &&
-     b >= 0.5 - GHOSTS && b < point.n + GHOSTS - 0.5) ? point.depth : - 1;
+     b >= 0.5 - GHOSTS && b < point.n + GHOSTS - 0.5) ? multigrid->depth : - 1;
   return point;
 }
 

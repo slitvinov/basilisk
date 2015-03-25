@@ -4,8 +4,8 @@ scalar h[];
 face vector u[];
 
 double R0 = 0.1;
-u.x[right] = dirichlet(exp(-(x*x + y*y)/(R0*R0)));
-u.y[top] = dirichlet(exp(-(x*x + y*y)/(R0*R0)));
+u.n[right] = dirichlet(exp(-(x*x + y*y)/(R0*R0)));
+u.n[top] = dirichlet(exp(-(x*x + y*y)/(R0*R0)));
 
 int main (int argc, char ** argv)
 {

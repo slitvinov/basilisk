@@ -6,9 +6,10 @@
 #define DELTA (1./point.n)
 
 struct _Point {
-  char * data;
-  int i, n;
+  int i, j;
   int level; // only to return level in locate()
+  int n;
+  char * data;
 };
 static Point last_point;
 
@@ -52,23 +53,54 @@ foreach_face_generic() {
 @define is_face_x() (true)
 @define is_face_y() (point.i <= point.n)
 
+// ghost cell coordinates for each direction
+static int _ig[] = {1,-1,0,0};
+
+static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
+{
+  int d = ((BoxBoundary *)b)->d;
+
+  Point point = *((Point *)grid);
+  ig = d % 2 ? 0 : _ig[d]; jg = 0;
+  assert (d <= left);
+  point.i = d == right ? point.n + GHOSTS : GHOSTS;
+  Point neighbor = {point.i + ig, point.j};
+  for (scalar s in list) {
+    scalar b = s.v.x;
+    val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+  }
+}
+
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
   int d = ((BoxBoundary *)b)->d;
-  scalar * lleft, * lright;
-  list_split (list, d, &lleft, &lright);
+  scalar * centered = NULL, * normal = NULL;
+
+  int component = d/2;
+  for (scalar s in list)
+    if (!is_constant(s)) {
+      if (s.face) {
+	if ((&s.d.x)[component]) {
+	  scalar b = s.v.x;
+	  if (b.boundary[d])
+	    normal = list_add (normal, s);
+	}
+      }	
+      else if (s.boundary[d])
+	centered = list_add (centered, s);
+    }
+
   Point point = *((Point *)grid);
-  ig = _ig[d]; jg = _jg[d];
-  point.i = d == right ? point.n : 1;
-  {
-    POINT_VARIABLES;
-    for (scalar s in lright)
-      val(s,ig,jg) = s.boundary[d] (point, s);
-    for (scalar s in lleft)
-      val(s,0,0) = s.boundary[d] (point, s);
-  }
-  free (lleft);
-  free (lright);
+  ig = _ig[d]; jg = 0;
+  assert (d <= left);
+  point.i = d == right ? point.n + GHOSTS - 1 : GHOSTS;
+  Point neighbor = {point.i + ig, point.j + jg};
+  for (scalar s in centered)
+    val(s,ig,jg) = s.boundary[d] (point, neighbor, s);
+  free (centered);
+
+  box_boundary_level_normal (b, normal, l);
+  free (normal);
 }
 
 void free_grid (void)
@@ -99,7 +131,7 @@ void init_grid (int n)
     v[i] = undefined;
   grid = p;
   trash (all);
-  for (int d = 0; d < nboundary; d++) {
+  for (int d = 0; d < top; d++) {
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
     box->d = d;
     Boundary * b = (Boundary *) box;

@@ -68,6 +68,7 @@ scalar new_scalar (const char * name)
   assert (nvar < _NVARMAX);
   datasize += sizeof(double); nvar++;
   _attribute = realloc (_attribute, nvar*sizeof (_Attributes));
+  memset (&_attribute[nvar-1], 0, sizeof (_Attributes));
   all = realloc (all, sizeof (scalar)*(nvar + 1));
   all[nvar - 1] = nvar - 1;
   all[nvar] = -1;
@@ -175,19 +176,36 @@ vector new_const_vector (const char * name, int i, double * val)
 
 void scalar_clone (scalar a, scalar b)
 {
-  free (a.name);
+  char * name = a.name;
+  double (** boundary) (Point, Point, scalar) = a.boundary;
+  double (** boundary_homogeneous) (Point, Point, scalar) =
+    a.boundary_homogeneous;
   _attribute[a] = _attribute[b];
-  a.name = NULL;
+  a.name = name;
+  a.boundary = boundary;
+  a.boundary_homogeneous = boundary_homogeneous;
+  for (int i = 0; i < nboundary; i++) {
+    a.boundary[i] = b.boundary[i];
+    a.boundary_homogeneous[i] = b.boundary_homogeneous[i];
+  }
 }
 
 scalar * list_clone (scalar * l)
 {
   scalar * list = NULL;
+  int nvar = datasize/sizeof(double), map[nvar];
+  for (int i = 0; i < nvar; i++)
+    map[i] = -1;
   for (scalar s in l) {
     scalar c = new scalar;
     scalar_clone (c, s);
+    map[s] = c;
     list = list_append (list, c);
   }
+  for (scalar s in list)
+    foreach_dimension()
+      if (s.v.x >= 0 && map[s.v.x] >= 0)
+	s.v.x = map[s.v.x];
   return list;
 }
 
@@ -198,6 +216,8 @@ void delete (scalar * list)
 
   for (scalar f in list) {
     free (f.name); f.name = NULL;
+    free (f.boundary); f.boundary = NULL;
+    free (f.boundary_homogeneous); f.boundary_homogeneous = NULL;
   }
 
   if (list == all) {
@@ -238,8 +258,10 @@ void boundary (scalar * list)
   for (scalar s in list)
     if (!is_constant(s) && s.face)
       listf = vectors_add (listf, s.v);
-  if (listf)
+  if (listf) {
     boundary_flux (listf);
+    free (listf);
+  }
   boundary_level (list, -1);
 }
 
@@ -253,12 +275,12 @@ void cartesian_boundary_flux (vector * list)
   // nothing to do
 }
 
-static double symmetry (Point point, scalar s)
+static double symmetry (Point point, Point neighbor, scalar s)
 {
   return s[];
 }
 
-static double antisymmetry (Point point, scalar s)
+static double antisymmetry (Point point, Point neighbor, scalar s)
 {
   return -s[];
 }
@@ -266,11 +288,21 @@ static double antisymmetry (Point point, scalar s)
 scalar cartesian_init_scalar (scalar s, const char * name)
 {
   // keep name
-  char * pname = name ? strdup (name) : s.name;
+  char * pname;
+  if (name) {
+    free (s.name);
+    pname = strdup (name);
+  }
+  else
+    pname = s.name;
+  free (s.boundary);
+  free (s.boundary_homogeneous);
   // reset all attributes
-  _attribute[s] = (const _Attributes){{0}};
+  _attribute[s] = (const _Attributes){0};
   s.name = pname;
   /* set default boundary conditions (symmetry) */
+  s.boundary = malloc (nboundary*sizeof (void (*)()));
+  s.boundary_homogeneous = malloc (nboundary*sizeof (void (*)()));
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
   s.gradient = NULL;
@@ -293,12 +325,11 @@ vector cartesian_init_vector (vector v, const char * name)
     }
     else
       init_scalar (v.x, NULL);
-    /* set default boundary conditions (symmetry) */
-    v.x.boundary[right] = v.x.boundary[left] = 
-      v.x.boundary_homogeneous[right] = v.x.boundary_homogeneous[left] = 
-      antisymmetry;
     v.x.v = v;
   }
+  /* set default boundary conditions (symmetry) */
+  for (int d = 0; d < nboundary; d++)
+    v.x.boundary[d] = v.x.boundary_homogeneous[d] = antisymmetry;
   return v;
 }
 
@@ -306,10 +337,11 @@ vector cartesian_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_vector (v, name);
   foreach_dimension() {
-    v.x.boundary[right] = v.x.boundary[left] = NULL;
     v.x.d.x = -1;
     v.x.face = v.x.normal = true;
   }
+  for (int d = 0; d < nboundary; d++)
+    v.x.boundary[d] = NULL;
   return v;
 }
 
@@ -327,10 +359,10 @@ tensor cartesian_init_tensor (tensor t, const char * name)
   }
   /* set default boundary conditions (symmetry) */
   for (int b = 0; b < nboundary; b++) {
-    t.x.x.boundary[b] = t.y.y.boundary[b] = 
+    t.x.x.boundary[b] = t.y.x.boundary[b] = 
       t.x.x.boundary_homogeneous[b] = t.y.y.boundary_homogeneous[b] = 
       symmetry;
-    t.x.y.boundary[b] = t.y.x.boundary[b] = 
+    t.x.y.boundary[b] = t.y.y.boundary[b] = 
       t.x.y.boundary_homogeneous[b] = t.y.x.boundary_homogeneous[b] = 
       antisymmetry;
   }
@@ -419,4 +451,29 @@ double interpolate (scalar v, double xp, double yp)
 	  v[i,0]*x*(1. - y) + 
 	  v[0,j]*(1. - x)*y + 
 	  v[i,j]*x*y);
+}
+
+// Boundaries
+
+typedef int bid;
+
+bid new_bid()
+{
+  int b = nboundary++;
+  for (scalar s in all) {
+    s.boundary = realloc (s.boundary, nboundary*sizeof (void (*)()));
+    s.boundary_homogeneous = realloc (s.boundary_homogeneous,
+				      nboundary*sizeof (void (*)()));
+  }
+  for (scalar s in all) {
+    if (s.v.x < 0) // scalar
+      s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
+    else if (s.v.x == s) { // vector
+      vector v = s.v;
+      v.y.boundary[b] = v.y.boundary_homogeneous[b] = symmetry;
+      v.x.boundary[b] = v.x.boundary_homogeneous[b] =
+	v.x.face ? NULL : antisymmetry;
+    }
+  }
+  return b;
 }

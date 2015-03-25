@@ -7,6 +7,7 @@ fit f(x) '< grep "max error" log' u (log(2**$3)):(log($4)) via a,b
 set xlabel 'Maximum resolution'
 set ylabel 'Maximum error'
 set logscale
+set cbrange [1:2]
 set xrange [64:2048]
 set xtics 64,2,2048
 set grid ytics
@@ -14,6 +15,7 @@ plot '< grep "max error" log' u (2**$3):4 t '', exp(f(log(x))) t ftitle(a,b)
 
 if (batch) set term @PNG; set output "res.png"; else pause -1;
 reset
+set cbrange [1:2]
 set title 'Poisson solution with a circular refined patch'
 set xlabel 'Multigrid iteration'
 set ylabel 'Residual'
@@ -26,6 +28,7 @@ plot '< grep "residual 7" log' u 3:4 w lp t 'level 7', \
 
 if (batch) set term @PNG; set output "speed.png"; else pause -1;
 reset
+set cbrange [1:2]
 set title 'Poisson solution with a circular refined patch'
 set xlabel 'CPU Time'
 set ylabel 'Residual'

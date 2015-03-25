@@ -9,10 +9,10 @@ int main()
   run();
 }
 
-u.x[right]  = u.x[];
-u.x[left]   = u.x[];
-u.y[top]    = u.y[];
-u.y[bottom] = u.y[];
+u.n[right]  = neumann(0);
+u.n[left]   = neumann(0);
+u.n[top]    = neumann(0);
+u.n[bottom] = neumann(0);
 
 double terrain (double x, double y)
 {

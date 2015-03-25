@@ -53,18 +53,17 @@ event init (i = 0)
   boundary ({zb, river});
 }
 
-
 /**
 ## Boundary conditions
 
 We impose inflow/outflow on both the top and bottom boundary. In
-addition, the tangential velocity on the top boundary *u.x* is set
+addition, the tangential velocity on the top boundary *u.t* is set
 to zero. */
 
-u.y[top] = neumann(0);
-u.x[top] = dirichlet(0);
+u.n[top] = neumann(0);
+u.t[top] = dirichlet(0);
 
-u.y[bottom] = neumann(0);
+u.n[bottom] = neumann(0);
 
 /**
 To impose a given flow rate for the two rivers on the top boundary, we

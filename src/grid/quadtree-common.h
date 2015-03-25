@@ -24,7 +24,7 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
 #else
       for (int l = 0; l != 2*child.y; l += child.y)
 #endif
-	if (aparent(k,l).flags & leaf) {
+	if (aparent(k,l).pid >= 0 && is_leaf(aparent(k,l))) {
 	  Point p = point;
 	  /* fixme: this should be made
 	     independent from the quadtree implementation */
@@ -187,7 +187,7 @@ astats adapt_wavelet (struct Adapt p)
 	}
 	continue;
       }
-      else { // !is_leaf (cell)
+      else if (cell.neighbors) { // !is_leaf (cell)
 	if (cell.flags & refined)
 	  // cell has already been refined, skip its children
 	  continue;

@@ -7,6 +7,7 @@ set xlabel 'Resolution'
 set ylabel 'Error'
 set logscale
 set xrange [4:128]
+set cbrange [1:2]
 set xtics 4,2,128
 set grid ytics
 set yrange [1e-5:]
