@@ -126,7 +126,8 @@ typedef struct {
 
 enum {
   too_coarse = 1 << user,
-  too_fine   = 1 << (user + 1)
+  too_fine   = 1 << (user + 1),
+  just_fine  = 1 << (user + 2)
 };
 
 @if _MPI
@@ -214,11 +215,17 @@ astats adapt_wavelet (struct Adapt p)
 		cell.flags &= ~too_fine;
 		cell.flags |= too_coarse;
 	      }
-	      else if (e <= max/1.5 && !(cell.flags & too_coarse))
+	      else if (e <= max/1.5 && !(cell.flags & (too_coarse|just_fine)))
 		cell.flags |= too_fine;
+	      else if (!(cell.flags & too_coarse)) {
+		cell.flags &= ~too_fine;
+		cell.flags |= just_fine;
+	      }
 	      s[] = sc[c++];
 	    }
 	  }
+	  foreach_child()
+	    cell.flags &= ~just_fine;
 	}
 	// cell is too fine, its children cannot be refined
 	if (level == p.maxlevel - 1)
