@@ -30,8 +30,8 @@ Periodic waves with period one second are generated on the
 left-hand-side. We tune the amplitude of the "radiation" condition to
 match that of the experiment as measured by wave gauges. */
 
-u.x[left]  = - radiation (0.042*sin(2.*pi*t/1.));
-u.x[right] = + radiation (0);
+u.n[left]  = - radiation (0.042*sin(2.*pi*t/1.));
+u.n[right] = + radiation (0);
 
 /**
 We declare a new field to store the maximum wave amplitude. */

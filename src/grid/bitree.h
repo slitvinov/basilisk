@@ -627,15 +627,16 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   if (l < 0) {
     foreach_boundary_cell (d, true)
       if (is_leaf (cell)) {
+	Point neighbor = {point.i + ig}, n2 = {point.i + 2*ig};
 	for (scalar s in lright) {
-	  s[ghost] = s.boundary[d] (point, s);
+	  s[ghost] = s.boundary[d] (point, neighbor, s);
 	  point.i -= ig;
-	  double vb = s.boundary[d] (point, s);
+	  double vb = s.boundary[d] (point, n2, s);
 	  point.i += ig;
 	  s[2*ig,2*jg] = vb;
 	}
 	for (scalar s in lleft)
-	  s[] = s.boundary[d] (point, s);
+	  s[] = s.boundary[d] (point, neighbor, s);
 	corners(); /* we need this otherwise we'd skip corners */
 	continue;
       }
@@ -643,15 +644,16 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   else
     foreach_boundary_cell (d, true) {
       if (level == l) {
+	Point neighbor = {point.i + ig}, n2 = {point.i + 2*ig};
 	for (scalar s in lright) {
-	  s[ghost] = s.boundary[d] (point, s);
+	  s[ghost] = s.boundary[d] (point, neighbor, s);
 	  point.i -= ig;
-	  double vb = s.boundary[d] (point, s);
+	  double vb = s.boundary[d] (point, n2, s);
 	  point.i += ig;
 	  s[2*ig,2*jg] = vb;
 	}
 	for (scalar s in lleft)
-	  s[] = s.boundary[d] (point, s);
+	  s[] = s.boundary[d] (point, neighbor, s);
 	corners(); /* we need this otherwise we'd skip corners */
 	continue;
       }
@@ -684,8 +686,9 @@ static void box_boundary_halo_prolongation_normal (const Boundary * b,
 	  (cell.flags & halo) || // restriction halo
 	  is_corner(cell)) {     // corners
 	// leaf or halo restriction
+	Point neighbor = {point.i + in, 0};
 	for (scalar s in list)
-	  s[in,jn] = s.boundary[d] (point, s);
+	  s[in,jn] = s.boundary[d] (point, neighbor, s);
 	corners();
       }
       continue;
@@ -693,11 +696,12 @@ static void box_boundary_halo_prolongation_normal (const Boundary * b,
     else if (is_leaf(cell)) {
       if (level == l - 1 && cell.neighbors > 0)
 	// halo prolongation
-	foreach_child_direction(d) {
-	  if (allocated(in,jn))
+	foreach_child_direction(d)
+	  if (allocated(in,jn)) {
+	    Point neighbor = {point.i + in, 0};
 	    for (scalar s in list)
-	      s[in,jn] = s.boundary[d] (point, s);
-	}
+	      s[in,jn] = s.boundary[d] (point, neighbor, s);
+	  }
       continue;
     }
   }
@@ -719,8 +723,9 @@ static void box_boundary_halo_prolongation_tangent (const Boundary * b,
 	  (cell.flags & halo) || // restriction halo
 	  is_corner(cell)) {     // corners
 	// leaf or halo restriction
+	Point neighbor = {point.i + ig};
 	for (scalar s in list)
-	  s[ghost] = s.boundary[d] (point, s);
+	  s[ghost] = s.boundary[d] (point, neighbor, s);
 	corners();
       }
       continue;
@@ -728,11 +733,12 @@ static void box_boundary_halo_prolongation_tangent (const Boundary * b,
     else if (is_leaf(cell)) {
       if (level == l - 1 && cell.neighbors > 0)
 	// halo prolongation
-	foreach_child_direction(d) {
-	  if (allocated(ig,jg))
+	foreach_child_direction(d)
+	  if (allocated(ig,jg)) {
+	    Point neighbor = {point.i + ig};
 	    for (scalar s in list)
-	      s[ghost] = s.boundary[d] (point, s);
-	}
+	      s[ghost] = s.boundary[d] (point, neighbor, s);
+	  }
       continue;
     }
   }  
@@ -770,10 +776,11 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	  (cell.flags & halo) || // restriction halo
 	  is_corner(cell)) {     // corners
 	// leaf or halo restriction
+	Point neighbor = {point.i + ig}, n2 = {point.i + 2*ig};
 	for (scalar s in centered) {
-	  s[ghost] = s.boundary[d] (point, s);
+	  s[ghost] = s.boundary[d] (point, neighbor, s);
 	  point.i -= ig;
-	  double vb = s.boundary[d] (point, s);
+	  double vb = s.boundary[d] (point, n2, s);
 	  point.i += ig;
 	  s[2*ig,2*jg] = vb;
 	}
@@ -785,13 +792,14 @@ static void box_boundary_halo_prolongation (const Boundary * b,
       if (level == l - 1 && cell.neighbors > 0)
 	// halo prolongation
 	foreach_child_direction(d) {
+	  Point neighbor = {point.i + ig}, n2 = {point.i + 2*ig};
 	  if (allocated(ig,jg))
 	    for (scalar s in centered)
-	      s[ghost] = s.boundary[d] (point, s);
+	      s[ghost] = s.boundary[d] (point, neighbor, s);
 	  if (allocated(2*ig,2*jg))
 	    for (scalar s in centered) {
 	      point.i -= ig;
-	      double vb = s.boundary[d] (point, s);
+	      double vb = s.boundary[d] (point, n2, s);
 	      point.i += ig;
 	      s[2*ig,2*jg] = vb;
 	    }

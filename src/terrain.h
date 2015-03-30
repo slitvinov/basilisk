@@ -2,7 +2,7 @@
 #include <kdt/kdt.h>
 @if _OPENMP
 @ define NPROC omp_get_max_threads()
-@ define PROC pid()
+@ define PROC tid()
 @else
 @ define NPROC 1
 @ define PROC 0

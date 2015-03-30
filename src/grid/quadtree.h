@@ -23,7 +23,8 @@ enum {
   halo    = 1 << 3,
   border  = 1 << 4,
   remote_leaf = 1 << 5,
-  user    = 6,
+  fboundary = 1 << 6,
+  user    = 7,
 
   face_x = 1 << 0,
   face_y = 1 << 1
@@ -176,6 +177,9 @@ static void cache_append (Cache * c, Point p, int k, int l, short flags)
   c->p[c->n].flags = flags;
   c->n++;
 }
+
+@define cache_append_x(c,p,k,l,flags) cache_append(c,p,k,l,flags)
+@define cache_append_y(c,p,k,l,flags) cache_append(c,p,l,k,flags)
 
 /* low-level memory management */
 @def allocated(k,l) (quadtree->L[point.level]->m[point.i+k] &&
@@ -410,6 +414,13 @@ void recursive (Point point)
 @
 @define end_foreach_boundary() end_foreach_cache_level(); }
 
+@def foreach_halo(name,_l) {
+  update_cache();
+  CacheLevel _cache = quadtree->name[_l];
+  foreach_cache_level (_cache, _l,)
+@
+@define end_foreach_halo() end_foreach_cache_level(); }
+
 static void update_cache_f (void)
 {
   Quadtree * q = grid;
@@ -420,7 +431,6 @@ static void update_cache_f (void)
     q->active[l].n = q->prolongation[l].n =
       q->restriction[l].n = q->boundary[l].n = 0;
 
-  int fboundary = 1 << user;
   foreach_cell() {
     if (is_local(cell)) {
       // active cells
@@ -448,28 +458,24 @@ static void update_cache_f (void)
 	    flags |= face_x;
 	if (flags)
 	  cache_append (&q->faces, point, 0, 0, flags);
-	if (is_boundary(neighbor(1,0)) || is_prolongation(neighbor(1,0)) ||
-	    (!is_local(neighbor(1,0)) && is_leaf(neighbor(1,0))))
-	  cache_append (&q->faces, point, 1, 0, face_x);
-	if (is_boundary(neighbor(0,1)) || is_prolongation(neighbor(0,1)) ||
-	    (!is_local(neighbor(0,1)) && is_leaf(neighbor(0,1))))
-	  cache_append (&q->faces, point, 0, 1, face_y);
+	foreach_dimension()
+	  if (is_boundary(neighbor(1,0)) || is_prolongation(neighbor(1,0)) ||
+	      (!is_local(neighbor(1,0)) && is_leaf(neighbor(1,0))))
+	    cache_append_x (&q->faces, point, 1, 0, face_x);
 	// vertices
 	cache_append (&q->vertices, point, 0, 0, 0);
 	if (!is_leaf(neighbor(1,1)) || !is_local(neighbor(1,1)))
 	  cache_append (&q->vertices, point, 1, 1, 0);
-	if ((!is_leaf(neighbor(0,-1)) || !is_local(neighbor(0,-1))) &&
-	    (!is_leaf(neighbor(1,0)) || !is_local(neighbor(1,0))))
-	  cache_append (&q->vertices, point, 1, 0, 0);
-	if ((!is_leaf(neighbor(-1,0)) || !is_local(neighbor(-1,0))) &&
-	    (!is_leaf(neighbor(0,1)) || !is_local(neighbor(0,1))))
-	  cache_append (&q->vertices, point, 0, 1, 0);
+	foreach_dimension()
+	  if ((!is_leaf(neighbor(0,-1)) || !is_local(neighbor(0,-1))) &&
+	      (!is_leaf(neighbor(1,0)) || !is_local(neighbor(1,0))))
+	    cache_append_x (&q->vertices, point, 1, 0, 0);
 	// halo prolongation
         if (cell.neighbors > 0)
 	  cache_level_append (&q->prolongation[level], point);
 	cell.flags &= ~halo;
       }
-      else { // non-local
+      else if (!is_boundary(cell) || is_local(aparent(0,0))) { // non-local
 	// faces
 	unsigned flags = 0;
 	foreach_dimension()
@@ -478,12 +484,18 @@ static void update_cache_f (void)
 	    flags |= face_x;
 	if (flags)
 	  cache_append (&q->faces, point, 0, 0, flags);
-	if (allocated(1,0) &&
-	    is_local(neighbor(1,0)) && is_prolongation(neighbor(1,0)))
-	  cache_append (&q->faces, point, 1, 0, face_x);
-	if (allocated(0,1) &&
-	    is_local(neighbor(0,1)) && is_prolongation(neighbor(0,1)))
-	  cache_append (&q->faces, point, 0, 1, face_y);
+	foreach_dimension()
+	  if (allocated(1,0) &&
+	      is_local(neighbor(1,0)) && is_prolongation(neighbor(1,0)))
+	    cache_append_x (&q->faces, point, 1, 0, face_x);
+	// vertices: fixme: this is too complicated
+	foreach_dimension()
+	  for (int i = -1; i <= 1; i += 2)
+	    if (allocated(i,0) &&
+		is_local(neighbor(i,0)) && is_prolongation(neighbor(i,0))) {
+	      cache_append_x (&q->vertices, point, (i + 1)/2, 0, 0);
+	      cache_append_x (&q->vertices, point, (i + 1)/2, 1, 0);
+	    }
       }
       continue;
     }
@@ -510,9 +522,16 @@ static void update_cache_f (void)
   
   q->dirty = false;
 
-  for (int l = 0; l <= depth(); l++)
+  for (int l = depth(); l >= 0; l--) {
     foreach_boundary (l)
-      cell.flags &= ~fboundary;
+      cell.flags &= ~(fboundary|halo);
+    // we mark boundary cells which are required for halo restriction
+    foreach_halo (restriction, l)
+      for (int k = 0; k <= 2; k++)
+	for (int l = 0; l <= 2; l++)
+	  if (is_boundary(child(k,l)))
+	    child(k,l).flags |= halo;
+  }
 }
 
 @define foreach(clause) update_cache(); foreach_cache(quadtree->leaves, clause)
@@ -733,13 +752,6 @@ void realloc_scalar (void)
   }
 }
 
-@def foreach_halo(name,_l) {
-  update_cache();
-  CacheLevel _cache = quadtree->name[_l];
-  foreach_cache_level (_cache, _l,)
-@
-@define end_foreach_halo() end_foreach_cache_level(); }
-
 /* Boundaries */
 
 @def foreach_normal_neighbor(cond)
@@ -880,7 +892,7 @@ static void boundary_normal_y (Point point, bool (*cond) (Point), scalar * list)
 	s[0,(i + 1)/2] = n.boundary[id] (neighbor, point, s);
     }
 }
- 
+
 foreach_dimension()
 static void boundary_tangential_x (Point point, bool (*cond)(Point),
 				   scalar * list)
@@ -904,10 +916,10 @@ static void boundary_tangential_x (Point point, bool (*cond)(Point),
     }
     else
       for (scalar s in list)
-	s[] = undefined;
+	s[] = 0.; // fixme: this should be undefined
   }
 }  
- 
+
 @undef VN
 @undef VT
 
@@ -935,58 +947,60 @@ static void boundary_diagonal (Point point, bool (*cond)(Point), scalar * list)
       s[] = undefined;
 }
  
-static void box_boundaries (int l, bool (*cond)(Point), scalar * list)
-{
-  scalar * lists = NULL, * list_x = NULL, * list_y = NULL;
-  scalar * listf_x = NULL, * listf_y = NULL;
-  for (scalar s in list)
-    if (!is_constant(s)) {
-      if (s.v.x < 0)
-	lists = list_add (lists, s);
-      else {
-	if (s.v.x == s) {
-	  if (s.face)
-	    listf_x = list_add (listf_x, s);
-	  else
-	    list_x = list_add (list_x, s);
-	}
-	else if (s.face)
-	  listf_y = list_add (listf_y, s);
-	else
-	  list_y = list_add (list_y, s);
-      }
-    }
-  // normal/tangential directions
-  int diagonal = 1 << user, diagonal_x = 2*diagonal, diagonal_y = 4*diagonal;
-  foreach_boundary(l) {
-    if (!boundary_scalar (point, cond, lists))
-      cell.flags |= diagonal;
-    foreach_dimension() {
-      if (!boundary_vector_x (point, cond, list_x))
-	cell.flags |= diagonal_x;
-      boundary_normal_x (point, cond, listf_x);
-    }
-  }
-  // diagonal and tangential (face) directions
-  foreach_boundary(l) {
-    if (cell.flags & diagonal) {
-      boundary_diagonal (point, cond, lists);
-      cell.flags &= ~diagonal;
-    }
-    foreach_dimension() {
-      if (cell.flags & diagonal_x) {
-	boundary_diagonal (point, cond, list_x);
-	cell.flags &= ~diagonal_x;
-      }
-      boundary_tangential_x (point, cond, listf_x);
-    }
-  }
-  free (lists);
-  foreach_dimension() {
-    free (list_x);
-    free (listf_x);
-  }
-}
+#define box_boundaries(l, cond1, cond, list)				\
+do {									\
+  scalar * lists = NULL, * list_x = NULL, * list_y = NULL;		\
+  scalar * listf_x = NULL, * listf_y = NULL;				\
+  for (scalar s in list)						\
+    if (!is_constant(s)) {						\
+      if (s.v.x < 0)							\
+	lists = list_add (lists, s);					\
+      else {								\
+	if (s.v.x == s) {						\
+	  if (s.face)							\
+	    listf_x = list_add (listf_x, s);				\
+	  else								\
+	    list_x = list_add (list_x, s);				\
+	}								\
+	else if (s.face)						\
+	  listf_y = list_add (listf_y, s);				\
+	else								\
+	  list_y = list_add (list_y, s);				\
+      }									\
+    }									\
+  /* normal/tangential directions */					\
+  int diagonal = 1 << user, diagonal_x = 2*diagonal, diagonal_y = 4*diagonal; \
+  foreach_boundary(l)							\
+    if (cond1) {							\
+      if (!boundary_scalar (point, cond, lists))			\
+	cell.flags |= diagonal;						\
+      foreach_dimension() {						\
+	if (!boundary_vector_x (point, cond, list_x))			\
+	  cell.flags |= diagonal_x;					\
+	boundary_normal_x (point, cond, listf_x);			\
+      }									\
+    }									\
+  /* diagonal and tangential (face) directions */			\
+  foreach_boundary(l)							\
+    if (cond1) {							\
+      if (cell.flags & diagonal) {					\
+	boundary_diagonal (point, cond, lists);				\
+	cell.flags &= ~diagonal;					\
+      }									\
+      foreach_dimension() {						\
+	if (cell.flags & diagonal_x) {					\
+	  boundary_diagonal (point, cond, list_x);			\
+	  cell.flags &= ~diagonal_x;					\
+	}								\
+	boundary_tangential_x (point, cond, listf_x);			\
+      }									\
+    }									\
+  free (lists);								\
+  foreach_dimension() {							\
+    free (list_x);							\
+    free (listf_x);							\
+  }									\
+ } while(0)
 
 static bool retrue (Point point) { return true; }
 
@@ -1004,9 +1018,21 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   disable_fpe (FE_DIVBYZERO|FE_INVALID);
   if (l < 0)
     for (l = 0; l <= depth(); l++)
-      box_boundaries (l, retleaf, list);
+      box_boundaries (l, true, retleaf, list);
   else
-    box_boundaries (l, retrue, list);
+    box_boundaries (l, true, retrue, list);
+  enable_fpe (FE_DIVBYZERO|FE_INVALID);
+}
+
+static void box_boundary_halo_restriction (const Boundary * b,
+					   scalar * list, int l)
+{
+  if (l == 0)
+    return;
+  /* we disable floating-point-exceptions to avoid having to deal with
+     undefined operations in non-trivial boundary conditions. */
+  disable_fpe (FE_DIVBYZERO|FE_INVALID);
+  box_boundaries (l, cell.flags & halo, retrue, list);
   enable_fpe (FE_DIVBYZERO|FE_INVALID);
 }
 
@@ -1018,12 +1044,42 @@ static void box_boundary_halo_prolongation (const Boundary * b,
      undefined operations in non-trivial boundary conditions. */
   disable_fpe (FE_DIVBYZERO|FE_INVALID);
   if (l == depth)
-    box_boundaries (l, retrue, list);
+    box_boundaries (l, true, retrue, list);
   else
-    box_boundaries (l, retleafhalo, list);
+    box_boundaries (l, true, retleafhalo, list);
   enable_fpe (FE_DIVBYZERO|FE_INVALID);
 }
  
+#define mask(func) {					\
+  foreach_cell_post(!is_leaf(cell)) {			\
+    if (is_leaf(cell)) {				\
+      int bid = (func);					\
+      if (bid >= 0)					\
+	cell.pid = - bid - 1;				\
+    }							\
+    else { /* not a leaf */				\
+      int pid = -1;					\
+      foreach_child() {					\
+	if (cell.pid >= 0 || pid < 0)			\
+	  pid = cell.pid;				\
+      }							\
+      cell.pid = pid;					\
+      if (pid < 0) {					\
+	/* fixme: call coarsen_cell()? */		\
+	cell.flags |= leaf;				\
+	decrement_neighbors (point);			\
+	if (cell.neighbors)				\
+	  for (int k = 0; k < 2; k++)			\
+	    for (int l = 0; l < 2; l++) {		\
+	      child(k,l).flags &= ~(leaf|active);	\
+	      child(k,l).pid = cell.pid;		\
+	    }						\
+      }							\
+    }							\
+  }							\
+  quadtree->dirty = true;				\
+}
+
 void refine_cell (Point point, scalar * list, int flag, Cache * refined);
 
 static void free_cache (CacheLevel * c)
@@ -1139,7 +1195,7 @@ void init_grid (int n)
   trash (all);
   Boundary * b = calloc (1, sizeof (Boundary));
   b->level = b->restriction = box_boundary_level;
-  b->halo_restriction  = no_halo_restriction;
+  b->halo_restriction  = box_boundary_halo_restriction;
   b->halo_prolongation = box_boundary_halo_prolongation;
   add_boundary (b);
 @if _MPI

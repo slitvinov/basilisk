@@ -635,7 +635,7 @@ void output_gfs (struct OutputGfs p)
     fwrite (&a, sizeof (double), 1, p.fp);
     for (scalar s in p.list)
       if (s.name) {
-	a = s[];
+	a = is_local(cell) ? s[] : DBL_MAX;
 	fwrite (&a, sizeof (double), 1, p.fp);
       }
     if (is_leaf(cell))

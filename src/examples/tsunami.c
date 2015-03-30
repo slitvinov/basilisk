@@ -89,9 +89,9 @@ zero. The top boundary is always "dry" in this example so can be left
 alone. Note that the sign is important and needs to reflect the
 orientation of the boundary. */
 
-u.x[left]   = - radiation(0);
-u.x[right]  = + radiation(0);
-u.y[bottom] = - radiation(0);
+u.n[left]   = - radiation(0);
+u.n[right]  = + radiation(0);
+u.n[bottom] = - radiation(0);
 
 /**
 ## Adaptation
@@ -356,7 +356,7 @@ event movies (t++) {
 #if _OPENMP
   static FILE * fp3 = popen ("ppm2mpeg > pid.mpg", "w");
   foreach()
-    etam[] = pid();
+    etam[] = tid();
   double tmax = omp_get_max_threads() - 1;
   output_ppm (etam, fp3, max = tmax, n = 512);
 #endif // _OPENMP

@@ -179,7 +179,8 @@ static void trace_off()
 
 @include <omp.h>
 @define OMP(x) Pragma(#x)
-@define pid() omp_get_thread_num()
+@define tid() omp_get_thread_num()
+@define pid() 0
 @define npe() omp_get_num_threads()
 @define mpi_all_reduce(v,type,op)
 @define mpi_all_reduce_double(v,op)
@@ -231,6 +232,7 @@ static int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
 @endif
 
 static int mpi_rank, mpi_npe;
+@define tid() mpi_rank
 @define pid() mpi_rank
 @define npe() mpi_npe
 
@@ -272,6 +274,7 @@ void mpi_init()
 @else // not MPI, not OpenMP
 
 @define OMP(x)
+@define tid() 0
 @define pid() 0
 @define npe() 1
 @define mpi_all_reduce(v,type,op)

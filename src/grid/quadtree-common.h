@@ -425,18 +425,23 @@ static void quadtree_boundary_level (scalar * list, int l)
   if (l < 0)
     l = depth();
 
-  scalar * listdef = NULL, * listc = NULL;
+  scalar * listdef = NULL, * listc = NULL, * list2 = NULL;
   for (scalar s in list) 
     if (!is_constant (s)) {
-      if (s.coarsen == coarsen_average)
+      if (s.coarsen == coarsen_average) {
 	listdef = list_add (listdef, s);
-      else if (s.coarsen != no_coarsen)
+	list2 = list_add (list2, s);
+      }
+      else if (s.coarsen != no_coarsen) {
 	listc = list_add (listc, s);
+	list2 = list_add (list2, s);
+	if (s.face)
+	  list2 = list_add (list2, s.v.y);
+      }
     }
 
   if (listdef || listc) {
-    scalar * list = list_concat (listdef, listc);
-    boundary_iterate (halo_restriction, list, l);
+    boundary_iterate (halo_restriction, list2, l);
     for (int i = l - 1; i >= 0; i--) {
       foreach_halo (restriction, i) {
 	for (scalar s in listdef)
@@ -444,11 +449,11 @@ static void quadtree_boundary_level (scalar * list, int l)
 	for (scalar s in listc)
 	  s.coarsen (point, s);
       }
-      boundary_iterate (halo_restriction, list, i);
+      boundary_iterate (halo_restriction, list2, i);
     }
-    free (list);
     free (listdef);
     free (listc);
+    free (list2);
   }
 
   scalar * listr = NULL;

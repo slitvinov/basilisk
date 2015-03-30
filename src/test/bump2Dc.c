@@ -1,7 +1,6 @@
 // same as bump2D.c but with "inner" boundaries
 
 #include "saint-venant.h"
-#include "inner.h"
 
 int LEVEL = 8;
 
@@ -15,12 +14,11 @@ int main (int argc, char * argv[])
   run();
 }
 
+bid inner;
+
 event init (i = 0)
 {
-  foreach_set_boundary()
-    if (fabs(x) > 0.5 || fabs(y) > 0.5)
-      cell.pid = -2;
-
+  mask (fabs(x) > 0.5 || fabs(y) > 0.5 ? inner : -1);
   foreach()
     h[] = 0.1 + 1.*exp(-200.*(x*x + y*y));
 }

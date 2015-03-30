@@ -11,6 +11,8 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [Conway’s game of life](life.c)
 * [Periodic wave propagation over an ellipsoidal shoal](shoal.c)
 * [Breakup of a rectangular perturbation into a train of solitons](madsen.c)
+* [Bénard–von Kármán Vortex Street for flow around a cylinder at
+  Re=160](karman.c)
 
 ## Python interface
 
