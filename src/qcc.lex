@@ -56,7 +56,7 @@
   char boundaryvar[80], boundarydir[80];
   FILE * boundaryfp = NULL, * boundaryheader = NULL;
   int boundarycomponent, nboundary = 0, nsetboundary = 0;
-  int boundaryindex[80];
+  int boundaryindex[80], periodic[80];
 
   int infunction, infunctiondecl, functionscope, functionpara, inmain;
   int infunction_line;
@@ -517,6 +517,29 @@
     return s;
   }
 
+  int boundary_component (char * boundaryvar) {
+    char * s1 = boundaryvar;
+    int component = 0;
+    while (*s1 != '\0') {
+      if (*s1 == '.') {
+	s1++;
+	*s1 = *s1 == 'n' ? 'x' : 'y'; // replace .n, .t with .x, .y
+	component = *s1;
+      }
+      else
+	s1++;
+    }
+    return component;
+  }
+
+  char * opposite (const char * dir) {
+    return (!strcmp(dir, "right") ? "left" :
+	    !strcmp(dir, "left") ?  "right" :
+	    !strcmp(dir, "top") ?   "bottom" :
+	    !strcmp(dir, "bottom") ? "top" :
+	    "error");
+  }
+  
   void boundary_staggering (FILE * fp) {
     fputs (" int ig = neighbor.i - point.i,"
 	   " jg = neighbor.j - point.j;"
@@ -1058,7 +1081,7 @@ map{WS}+"{" {
     if (scope == 0)
       /* file scope */
       fputs (" } ", yyout);
-    nboundary++;
+    periodic[nboundary++] = 0;
     inboundary = inforeach_boundary = inforeach = 0;
   }
   else if (inforeach && scope == foreachscope && para == foreachpara) {
@@ -1388,17 +1411,7 @@ val{WS}*[(]    {
     fprintf (stderr, "%s:%d: boundarydir: %s yytext: %s\n",
 	     fname, line, boundarydir, yytext);
 #endif
-    char * s1 = boundaryvar;
-    boundarycomponent = 0;
-    while (*s1 != '\0') {
-      if (*s1 == '.') {
-	s1++;
-	*s1 = *s1 == 'n' ? 'x' : 'y'; // replace .n, .t with .x, .y
-	boundarycomponent = *s1;
-      }
-      else
-	s1++;
-    }
+    boundarycomponent = boundary_component (boundaryvar);
     if (!var->face)
       boundarycomponent = 0;
     boundaryfp = yyout;
@@ -1418,6 +1431,62 @@ val{WS}*[(]    {
 
     yyout = dopen ("_inboundary.h", "w");
     fputs ("return ", yyout);
+  }
+  else
+    REJECT;
+}
+
+[a-zA-Z_0-9]+[.nt]*{WS}*\[{WS}*(right|left|top|bottom){WS}*\]{WS}*={WS}*periodic{WS}*\({WS}*\){WS}*; {
+  /* v[top] = periodic(); */
+  char * s = yytext;
+  while (!strchr(" \t\v\n\f[.", *s)) s++;
+  var_t * var;
+  if ((var = varlookup (yytext, s - yytext))) {
+    strcpy (boundaryvar, yytext);
+    s = boundaryvar;
+    while (!strchr(" \t\v\n\f[", *s)) s++;
+    *s++ = '\0';
+    nonspace (s);
+    strcpy (boundarydir, s);
+    s = boundarydir;
+    while (!strchr(" \t\v\n\f]", *s)) s++;
+    *s++ = '\0';
+#if DEBUG
+    fprintf (stderr, "%s:%d: boundarydir: %s yytext: %s\n",
+	     fname, line, boundarydir, yytext);
+#endif
+    boundarycomponent = boundary_component (boundaryvar);
+    if (!var->face)
+      boundarycomponent = 0;
+
+    if (scope == 0) {
+      /* file scope */
+      fprintf (yyout, 
+	       "static void _set_boundary%d (void) { ",
+	       nboundary);
+      boundaryindex[nsetboundary++] = nboundary;
+    }
+    /* function/file scope */
+    fprintf (yyout,
+	     "_attribute[%s].boundary[%s] = "
+	     "_attribute[%s].boundary_homogeneous[%s] = "
+	     "_attribute[%s].boundary[%s] = "
+	     "_attribute[%s].boundary_homogeneous[%s] = "
+	     "periodic_bc;",
+	     boundaryvar, boundarydir,
+	     boundaryvar, boundarydir,
+	     boundaryvar, opposite (boundarydir),
+	     boundaryvar, opposite (boundarydir));
+    if (scope == 0)
+      /* file scope */
+      fputs (" } ", yyout);
+    periodic[nboundary++] = 1;
+
+    /* keep newlines */
+    s = yytext;
+    while (*s != '\0')
+      if (*s++ == '\n')
+	fputc ('\n', yyout);
   }
   else
     REJECT;
@@ -2079,9 +2148,12 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   fout = dopen ("_boundarydecl.h", "w");
   int i;
   for (i = 0; i < nboundary; i++)
-    fprintf (fout, 
-       "static double _boundary%d (Point point, Point neighbor, scalar _s);\n"
-       "static double _boundary%d_homogeneous (Point point, Point neighbor, scalar _s);\n", 
+    if (!periodic[i])
+      fprintf (fout, 
+	       "static double _boundary%d (Point point, Point neighbor,"
+	       " scalar _s);\n"
+	       "static double _boundary%d_homogeneous (Point point,"
+	       " Point neighbor, scalar _s);\n", 
 	     i, i);
   fclose (fout);
 

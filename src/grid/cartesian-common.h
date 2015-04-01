@@ -285,6 +285,10 @@ static double antisymmetry (Point point, Point neighbor, scalar s)
   return -s[];
 }
 
+double (* default_scalar_bc[bottom + 1]) (Point, Point, scalar) = {
+  symmetry, symmetry, symmetry, symmetry
+};
+
 scalar cartesian_init_scalar (scalar s, const char * name)
 {
   // keep name
@@ -300,11 +304,12 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   // reset all attributes
   _attribute[s] = (const _Attributes){0};
   s.name = pname;
-  /* set default boundary conditions (symmetry) */
+  /* set default boundary conditions */
   s.boundary = malloc (nboundary*sizeof (void (*)()));
   s.boundary_homogeneous = malloc (nboundary*sizeof (void (*)()));
   for (int b = 0; b < nboundary; b++)
-    s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
+    s.boundary[b] = s.boundary_homogeneous[b] =
+      b <= bottom ? default_scalar_bc[b] : symmetry;
   s.gradient = NULL;
   foreach_dimension() {
     s.d.x = 0;  // not face
@@ -313,6 +318,10 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   s.face = false;
   return s;
 }
+
+double (* default_vector_bc[bottom + 1]) (Point, Point, scalar) = {
+  antisymmetry, antisymmetry, antisymmetry, antisymmetry
+};
 
 vector cartesian_init_vector (vector v, const char * name)
 {
@@ -327,9 +336,10 @@ vector cartesian_init_vector (vector v, const char * name)
       init_scalar (v.x, NULL);
     v.x.v = v;
   }
-  /* set default boundary conditions (symmetry) */
+  /* set default boundary conditions */
   for (int d = 0; d < nboundary; d++)
-    v.x.boundary[d] = v.x.boundary_homogeneous[d] = antisymmetry;
+    v.x.boundary[d] = v.x.boundary_homogeneous[d] =
+      d <= bottom ? default_vector_bc[d] : antisymmetry;
   return v;
 }
 
@@ -341,7 +351,7 @@ vector cartesian_init_face_vector (vector v, const char * name)
     v.x.face = v.x.normal = true;
   }
   for (int d = 0; d < nboundary; d++)
-    v.x.boundary[d] = NULL;
+    v.x.boundary[d] = v.x.boundary_homogeneous[d] = NULL;
   return v;
 }
 
@@ -357,14 +367,14 @@ tensor cartesian_init_tensor (tensor t, const char * name)
     else
       init_vector (t.x, NULL);
   }
-  /* set default boundary conditions (symmetry) */
+  /* set default boundary conditions */
   for (int b = 0; b < nboundary; b++) {
     t.x.x.boundary[b] = t.y.x.boundary[b] = 
       t.x.x.boundary_homogeneous[b] = t.y.y.boundary_homogeneous[b] = 
-      symmetry;
+      b <= bottom ? default_scalar_bc[b] : symmetry;
     t.x.y.boundary[b] = t.y.y.boundary[b] = 
       t.x.y.boundary_homogeneous[b] = t.y.x.boundary_homogeneous[b] = 
-      antisymmetry;
+      b <= bottom ? default_vector_bc[b] : antisymmetry;
   }
   return t;
 }
@@ -435,8 +445,6 @@ void cartesian_methods()
   debug            = cartesian_debug;
 }
 
-Point locate (double xp, double yp);
-
 double interpolate (scalar v, double xp, double yp)
 {
   Point point = locate (xp, yp);
@@ -476,4 +484,33 @@ bid new_bid()
     }
   }
   return b;
+}
+
+// Periodic boundary conditions
+
+static double periodic_bc (Point point, Point neighbor, scalar s)
+{
+  return undefined;
+}
+
+void periodic (int dir)
+{
+  assert (dir <= bottom);
+  // This is the component in the given direction i.e. 0 for x and 1 for y
+  int c = dir/2;
+  /* We change the conditions for existing scalars. */
+  for (scalar s in all)
+    s.boundary[2*c] = s.boundary[2*c + 1] =
+      s.boundary_homogeneous[2*c] = s.boundary_homogeneous[2*c + 1] =
+      periodic_bc;
+  /* Normal components of face vector fields should remain NULL. */
+  for (scalar s in all)
+    if (s.face) {
+      vector v = s.v;
+      v.x.boundary[2*c] = v.x.boundary[2*c + 1] =
+	v.x.boundary_homogeneous[2*c] = v.x.boundary_homogeneous[2*c + 1] = NULL;
+    }
+  /* We also change the default boundary conditions (for new fields). */
+  default_scalar_bc[2*c] = default_scalar_bc[2*c + 1] = periodic_bc;
+  default_vector_bc[2*c] = default_vector_bc[2*c + 1] = periodic_bc;
 }

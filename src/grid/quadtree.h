@@ -920,9 +920,6 @@ static void boundary_tangential_x (Point point, bool (*cond)(Point),
   }
 }  
 
-@undef VN
-@undef VT
-
 static void boundary_diagonal (Point point, bool (*cond)(Point), scalar * list)
 {
   if (!list)
@@ -1080,6 +1077,59 @@ static void box_boundary_halo_prolongation (const Boundary * b,
   quadtree->dirty = true;				\
 }
 
+/* Periodic boundaries */
+
+static double periodic_bc (Point point, Point neighbor, scalar s);
+  
+foreach_dimension()
+static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
+{
+  scalar * list1 = NULL;
+  for (scalar s in list)
+    if (!is_constant(s)) {
+      if (s.face) {
+	scalar vt = VT;
+	if (vt.boundary[right] == periodic_bc)
+	  list1 = list_add (list1, s);
+      }
+      else if (s.boundary[right] == periodic_bc)
+	list1 = list_add (list1, s);
+    }
+  if (!list1)
+    return;
+
+  OMP_PARALLEL();
+  Point point = {0,0};
+  point.level = l < 0 ? depth() : l;
+  int n = 1 << point.level;
+  int j;
+  OMP(omp for schedule(static))
+  for (j = 0; j < n + 2*GHOSTS; j++) {
+    for (int i = 0; i < GHOSTS; i++)
+      if (allocated(i + n,j))
+	for (scalar s in list1)
+	  s[i,j] = s[i + n,j];
+    for (int i = n + GHOSTS; i < n + 2*GHOSTS; i++)
+      if (allocated(i - n,j))
+	for (scalar s in list1)
+	  s[i,j] = s[i - n,j];
+  }
+  OMP_END_PARALLEL();
+  
+  free (list1);
+}
+
+@undef VN
+@undef VT
+
+foreach_dimension()
+static void periodic_boundary_halo_prolongation_x (const Boundary * b,
+						   scalar * list, 
+						   int l, int depth)
+{
+  periodic_boundary_level_x (b, list, l);
+}
+
 void refine_cell (Point point, scalar * list, int flag, Cache * refined);
 
 static void free_cache (CacheLevel * c)
@@ -1193,11 +1243,19 @@ void init_grid (int n)
 @endif
   update_cache();
   trash (all);
+  // boundaries
   Boundary * b = calloc (1, sizeof (Boundary));
   b->level = b->restriction = box_boundary_level;
   b->halo_restriction  = box_boundary_halo_restriction;
   b->halo_prolongation = box_boundary_halo_prolongation;
   add_boundary (b);
+  // periodic boundaries
+  foreach_dimension() {
+    Boundary * b = calloc (1, sizeof (Boundary));
+    b->level = b->restriction = periodic_boundary_level_x;
+    b->halo_prolongation = periodic_boundary_halo_prolongation_x;
+    add_boundary (b);
+  }
 @if _MPI
   void mpi_partitioning();
   if (N > 1)
