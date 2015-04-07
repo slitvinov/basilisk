@@ -25,7 +25,7 @@ u.n[left] = U0;
 
 event init (i = 0)
 {
-  mask (sq(x + 0.5) + sq(y) < sq(0.5) ? cylinder : -1);
+  mask (sq(x + 0.5) + sq(y) < sq(0.5) ? cylinder : none);
   foreach() {
     h[] = (x <= -1 ? H0 : 1.);
     u.x[] = (x <= -1 ? U0 : 0.);

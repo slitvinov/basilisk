@@ -56,7 +56,7 @@ event init (t = 0) {
   mask (y >  0.5 ? top :
 	y < -0.5 ? bottom :
 	sq(x) + sq(y) < sq(0.0625) ? cylinder :
-	-1);
+	none);
 
   /**
   We set a constant viscosity corresponding to a Reynolds number of

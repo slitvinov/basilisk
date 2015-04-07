@@ -18,7 +18,7 @@ bid inner;
 
 event init (i = 0)
 {
-  mask (fabs(x) > 0.5 || fabs(y) > 0.5 ? inner : -1);
+  mask (fabs(x) > 0.5 || fabs(y) > 0.5 ? inner : none);
   foreach()
     h[] = 0.1 + 1.*exp(-200.*(x*x + y*y));
 }

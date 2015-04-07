@@ -357,6 +357,7 @@ double zero (double s0, double s1, double s2) { return 0.; }
 
 enum { right, left, top, bottom };
 int nboundary = 4;
+#define none -1
 
 @define dirichlet(x)            (2.*(x) - val(_s,0,0))
 @define dirichlet_homogeneous() (- val(_s,0,0))
