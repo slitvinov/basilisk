@@ -7,12 +7,15 @@ void (* debug)    (Point);
 @undef VARIABLES
 @def VARIABLES
   double Delta = L0*DELTA; /* cell size */
-  double Delta_x = Delta, Delta_y = Delta; /* cell size (with mapping) */
+  foreach_dimension()
+    double Delta_x = Delta; /* cell size (with mapping) */
   /* cell/face center coordinates */
   double x = (ig/2. + I + 0.5)*Delta + X0;
   double y = (jg/2. + J + 0.5)*Delta + Y0;
   /* we need this to avoid compiler warnings */
-  NOT_UNUSED(Delta); NOT_UNUSED(Delta_x); NOT_UNUSED(Delta_y);
+  NOT_UNUSED(Delta);
+  foreach_dimension()
+    NOT_UNUSED(Delta_x);
   NOT_UNUSED(x); NOT_UNUSED(y);
   /* and this when catching FPEs */
   _CATCH;

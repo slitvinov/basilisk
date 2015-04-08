@@ -23,7 +23,7 @@
     inforeach_boundary, inforeach_face, nmaybeconst = 0;
   int invardecl, vartype, varsymmetric, varface, varvertex, varmaybeconst;
   char * varconst;
-  int inval, invalpara;
+  int inval, invalpara, indef;
   int brack, inarray;
   int inreturn;
 
@@ -218,7 +218,8 @@
 		  const char * condition) {
     if (condition)
       fprintf (yyout, " if (%s) {", condition);
-    fprintf (yyout, "\n#line %d\n", line1);
+    if (line1 >= 0)
+      fprintf (yyout, "\n#line %d\n", line1);
     rotate (fp, yyout, x == 'y');
     if (condition)
       fputs (" } ", yyout);
@@ -983,12 +984,16 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 
 
 (foreach_child|foreach_child_direction) {
+  if (indef)
+    REJECT;
   fputs (" { ", yyout);
   ECHO;
   foreach_child = 1; foreach_child_scope = scope; foreach_child_para = para;
 }
 
 foreach{ID}* {
+  if (indef)
+    REJECT;
   fputs (" { ", yyout);
   strcpy (foreachs, yytext);
   inforeach = 1; foreachscope = scope; foreachpara = para;
@@ -1536,6 +1541,8 @@ ghost {
 
 Point{WS}+point[^{ID}] {
   /* Point point */
+  if (indef)
+    REJECT;
   if (debug)
     fprintf (stderr, "%s:%d: infunction\n", fname, line);
   infunction = 1; infunctiondecl = 0;
@@ -1639,7 +1646,12 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
   index += nid;
 }
 
-[\n]       ECHO;
+[\n] {
+  if (indef)
+    fputc ('\\', yyout);
+  ECHO;
+}
+
 "["        ECHO; brack++;
 "]"        {
   if (inarray == brack) {
@@ -1743,6 +1755,15 @@ trace {
     REJECT;
 }
 
+foreach_dimension{WS}*[(]{WS}*[)] {
+  if (debug)
+    fprintf (stderr, "%s:%d: foreach_dimension\n", fname, line);
+  foreachdim = scope + 1; foreachdimpara = para;
+  foreachdimfp = yyout;
+  yyout = dopen ("_dimension.h", "w");
+  foreachdimline = indef ? -1 : line;
+}
+
 {ID}+{WS}+{ID}+{WS}*\( {
   if (scope == 0 && para == 0) {
     // function prototype
@@ -1774,13 +1795,6 @@ trace {
   }
   else
     REJECT;
-}
-
-foreach_dimension{WS}*[(]{WS}*[)] {
-  foreachdim = scope + 1; foreachdimpara = para;
-  foreachdimfp = yyout;
-  yyout = dopen ("_dimension.h", "w");
-  foreachdimline = line;
 }
 
 reduction{WS}*[(](min|max|\+):{ID}+[)] {
@@ -1950,26 +1964,45 @@ reduction{WS}*[(](min|max|\+):{ID}+[)] {
   free (tracename);
 }
 
+^{SP}*@{SP}*def{SP}+(foreach|end_foreach|trace) |
 ^{SP}*@{SP}*def{SP}+ {
-  // @def ... @
-  fputs ("#define ", yyout);
-  register int c;
-  while ((c = input()) != EOF && c != '@') {
-    if (c == '\n')
-      fputc (' ', yyout);
-    else
-      fputc (c, yyout);
-  }
-  fprintf (yyout, "\n#line %d\n", line);
+  // @def ...
+  char * s = strstr (yytext, "def");
+  space (s);
+  fputs ("#define", yyout);
+  fputs (s, yyout);
+  indef = 1;
 }
 
+@ {
+  if (indef) {
+    fprintf (yyout, "\n#line %d\n", line - 1);
+    indef = 0;
+  }
+  else
+    ECHO;
+}
+
+^{SP}*@{SP}*{ID}+{SP}+(foreach|end_foreach|trace) |
 ^{SP}*@{SP}*{ID}+ {
+  // @... foreach...
+  // @... end_foreach...
+  // @...
   yytext = strchr(yytext, '@'); yytext++;
   fprintf (yyout, "#%s", yytext);
   register int oldc = 0, c;
   for (;;) {
-    while ((c = getput()) != '\n' && c != EOF)
+    while ((c = getput()) != '\n' && c != EOF) {
+      if (c == '(') para++;
+      if (c == ')') para--;
+      if (para < 0)
+	return yyerror ("mismatched ')'");
+      if (c == '{') scope++;
+      if (c == '}') scope--;
+      if (scope < 0)
+	return yyerror ("mismatched '}'");
       oldc = c;    /* eat up text of preproc */
+    }
     if (c == EOF || oldc != '\\')
       break;
   }
@@ -2056,7 +2089,7 @@ int endfor (FILE * fin, FILE * fout)
   inforeach = foreachscope = foreachpara = 
     inforeach_boundary = inforeach_face = 0;
   invardecl = 0;
-  inval = invalpara = 0;
+  inval = invalpara = indef = 0;
   brack = inarray = 0;
   inevent = inreturn = inattr = inmap = 0;
   foreachdim = 0;

@@ -370,7 +370,12 @@ void recursive (Point point)
     point.i = _i + _ii[d][_k]; point.j = _j + _jj[d][_k];
     POINT_VARIABLES;
 @
-@define end_foreach_child_direction() end_foreach_child()
+@def end_foreach_child_direction()
+  }
+  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2;
+  point.level--;
+}
+@
 
 #define update_cache() { if (quadtree->dirty) update_cache_f(); }
 
@@ -1079,7 +1084,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 
 /* Periodic boundaries */
 
-static double periodic_bc (Point point, Point neighbor, scalar s);
+static double periodic_bc (Point, Point, scalar);
   
 foreach_dimension()
 static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)

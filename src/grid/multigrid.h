@@ -221,7 +221,7 @@ static void box_boundary_level_tangent (const Boundary * b,
   OMP_END_PARALLEL();
 }
 
-static double periodic_bc (Point point, Point neighbor, scalar s);
+static double periodic_bc (Point, Point, scalar);
 
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
