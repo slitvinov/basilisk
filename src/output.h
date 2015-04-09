@@ -152,7 +152,7 @@ void output_matrix (struct OutputMatrix p)
       else {
 	Point point = locate (xp, yp);
 	assert (point.level >= 0);
-	v = val(p.f,0,0);
+	v = val(p.f);
       }
       fwrite (&v, sizeof(float), 1, p.fp);
     }
@@ -386,17 +386,17 @@ void output_ppm (struct OutputPPM p)
 	}
 	else {
 	  Point point = locate (xp, yp);
-	  if (point.level < 0 || val(p.mask,0,0) < 0.)
+	  if (point.level < 0 || val(p.mask) < 0.)
 	    v = nodata;
 	  else
-	    v = val(p.f,0,0);
+	    v = val(p.f);
 	}
       }
       else if (p.linear)
 	v = interpolate (p.f, xp, yp);
       else {
 	Point point = locate (xp, yp);
-	v = point.level >= 0 ? val(p.f,0,0) : nodata;
+	v = point.level >= 0 ? val(p.f) : nodata;
       }
       ppm[ny - 1 - j][i] = colormap_color (cmap, v, p.min, p.max);
     }
@@ -511,17 +511,17 @@ void output_grd (struct OutputGRD p)
 	}
 	else {
 	  Point point = locate (xp, yp);
-	  if (point.level < 0 || val(p.mask,0,0) < 0.)
+	  if (point.level < 0 || val(p.mask) < 0.)
 	    v = nodata;
 	  else
-	    v = val(p.f,0,0);
+	    v = val(p.f);
 	}
       }
       else if (p.linear)
 	v = interpolate (p.f, xp, yp);
       else {
 	Point point = locate (xp, yp);
-	v = point.level >= 0 ? val(p.f,0,0) : nodata;
+	v = point.level >= 0 ? val(p.f) : nodata;
       }
       if (v == nodata)
 	fprintf (p.fp, "-9999 ");

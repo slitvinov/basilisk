@@ -292,7 +292,7 @@ void mpi_init()
 @define NOT_UNUSED(x) (void)(x)
 
 @define VARIABLES      _CATCH;
-@define val(a,k,l)     data(k,l)[a]
+@define val(a,i,j,k)   data(i,j,k)[a]
 
 /* undefined value */
 /* Initialises unused memory with "signaling NaNs".  
@@ -359,10 +359,10 @@ enum { right, left, top, bottom };
 int nboundary = 4;
 #define none -1
 
-@define dirichlet(x)            (2.*(x) - val(_s,0,0))
-@define dirichlet_homogeneous() (- val(_s,0,0))
-@define neumann(x)              (Delta*(x) + val(_s,0,0))
-@define neumann_homogeneous()   (val(_s,0,0))
+@define dirichlet(x)            (2.*(x) - val(_s,0,0,0))
+@define dirichlet_homogeneous() (- val(_s,0,0,0))
+@define neumann(x)              (Delta*(x) + val(_s,0,0,0))
+@define neumann_homogeneous()   (val(_s,0,0,0))
 
 double  * _constant = NULL;
 extern size_t datasize;

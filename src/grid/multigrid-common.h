@@ -101,7 +101,7 @@ void refine_bilinear (Point point, scalar s)
 
 void refine_linear (Point point, scalar s)
 {
-  struct { double x, y; } g;
+  struct { double x, y, z; } g;
   if (s.gradient)
     foreach_dimension()
       g.x = s.gradient (s[-1,0], s[], s[1,0]);

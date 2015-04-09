@@ -15,7 +15,6 @@ struct _Point {
 };
 static Point last_point;
 
-#define NN point.n // for output_stencil()
 #define multigrid ((Multigrid *)grid)
 
 static size_t _size (size_t l)
@@ -27,18 +26,18 @@ static size_t _size (size_t l)
 #define CELL(m,level,i)  (*((Cell *) &m[level][(i)*datasize]))
 
 /***** Cartesian macros *****/
-@def data(k,l)
+@def data(k,l,m)
 ((double *)&multigrid->d[point.level][(point.i + k)*datasize + (l) - (l)]) @
 @define allocated(...) true
 @define allocated_child(...) true
 
 /***** Multigrid variables and macros *****/
 @define depth()       (((Multigrid *)grid)->depth)
-@def fine(a,k,l)
+@def fine(a,k,l,m)
   ((double *)
    &multigrid->d[point.level+1][(2*point.i-GHOSTS+k)*datasize + (l) - (l)])[a]
 @
-@def coarse(a,k,l)
+  @def coarse(a,k,l,m)
   ((double *)
    &multigrid->d[point.level-1][((point.i+GHOSTS)/2+k)*datasize + (l) - (l)])[a]
 @

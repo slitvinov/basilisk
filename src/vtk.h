@@ -30,7 +30,7 @@ void output_vtk (scalar * list, int n, FILE * fp, bool linear)
 	  v = interpolate (s, x, y);
 	else {
 	  Point point = locate (x, y);
-	  v = point.level >= 0 ? val(s,0,0) : nodata;
+	  v = point.level >= 0 ? val(s) : nodata;
 	}
 	fprintf (fp, "%g\n", v);
       }

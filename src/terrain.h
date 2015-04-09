@@ -41,11 +41,12 @@ static void reconstruct_terrain (Point point, scalar zb)
 		   (KdtCheck) includes,
 		   (KdtCheck) intersects, &point,
 		   rect, &s);
-  val(zb.n,0,0) = s.n;
+  scalar n = zb.n, dmin = zb.dmin, dmax = zb.dmax;
+  n[] = s.n;
   if (s.w > 0.) {
     zb[] = s.H0/s.w;
-    val(zb.dmin,0,0) = s.Hmin;
-    val(zb.dmax,0,0) = s.Hmax;
+    dmin[] = s.Hmin;
+    dmax[] = s.Hmax;
   }
   else {
     /* not enough points in database, use bilinear interpolation
@@ -56,8 +57,8 @@ static void reconstruct_terrain (Point point, scalar zb)
 	      coarse(zb,child.x,child.y))/16.;
     else
       zb[] = 0.; // no points at level 0!
-    val(zb.dmin,0,0) = nodata;
-    val(zb.dmax,0,0) = nodata;
+    dmin[] = nodata;
+    dmax[] = nodata;
   }
 }
 

@@ -2,7 +2,7 @@
 
 void (* debug)    (Point);
 
-@define _val_constant(a,k,l) ((const double) _constant[a -_NVARMAX])
+@define _val_constant(a,k,l,m) ((const double) _constant[a -_NVARMAX])
 
 @undef VARIABLES
 @def VARIABLES
@@ -24,37 +24,6 @@ void (* debug)    (Point);
 #include "fpe.h"
 
 @define end_foreach_face()
-
-#define output_stencil(v,fp) _output_stencil(point,v,#v,fp)
-void _output_stencil (Point point, scalar s, const char * name, FILE * fp)
-{
-  int width = 25, len = (width - strlen(name))/2. - 1;
-  for (int i = 0; i < len; i++) fputc ('-', fp);
-  fputc (' ', fp); fputs (name, fp); fputc (' ', fp);
-  for (int i = 0; i < len; i++) fputc ('-', fp);
-  fputc ('\n', fp);
-  for (int j = GHOSTS; j >= -GHOSTS; j--) {
-    if (J + j >= - GHOSTS && J + j < NN + GHOSTS) {
-      for (int i = - GHOSTS; i <= GHOSTS; i++)
-	if (I + i >= - GHOSTS && I + i < NN + GHOSTS) {
-	  fprintf (fp, "%5.g", s[i,j]);
-	  if ((I + i < 0 || I + i >= NN) &&
-	      (J + j < 0 || J + j >= NN))
-	    fputs (":C ", fp);
-	  else if (I + i < 0 || I + i >= NN ||
-		   J + j < 0 || J + j >= NN)
-	    fputs (":B ", fp);
-	  else
-	    fputs ("   ", fp);
-	}
-	else
-	  fputs ("   ?    ", fp);
-    }
-    else
-      fputs ("???????????????????????", fp);
-    fputc ('\n', fp);
-  }
-}
 
 scalar new_scalar (const char * name)
 {
@@ -93,14 +62,11 @@ static vector alloc_vector (const char * name)
 {
   vector v;
   char cname[strlen(name) + 3];
-  sprintf (cname, "%s.x", name);
-  v.x = new_scalar (cname);
-#if dimension != 1
-  sprintf (cname, "%s.y", name);
-  v.y = new_scalar (cname);
-#else // dimension == 1
-  v.y = v.x;
-#endif
+  struct { char * x, * y, * z; } ext = {"%s.x", "%s.y", "%s.z"};
+  foreach_dimension() {
+    sprintf (cname, ext.x, name);
+    v.x = new_scalar (cname);
+  }
   return v;
 }
 
@@ -121,12 +87,12 @@ vector new_face_vector (const char * name)
 tensor new_tensor (const char * name)
 {
   char cname[strlen(name) + 3];
-  sprintf (cname, "%s.x", name);
-  vector tx = new_vector (cname);
-  sprintf (cname, "%s.y", name);
-  vector ty = new_vector (cname);
+  struct { char * x, * y, * z; } ext = {"%s.x", "%s.y", "%s.z"};
   tensor t;
-  t.x = tx; t.y = ty;
+  foreach_dimension() {
+    sprintf (cname, ext.x, name);
+    t.x = new_vector (cname);
+  }
   init_tensor (t, NULL);
   return t;
 }
@@ -134,13 +100,15 @@ tensor new_tensor (const char * name)
 tensor new_symmetric_tensor (const char * name)
 {
   char cname[strlen(name) + 5];
+  struct { char * x, * y, * z; } ext = {"%s.x.x", "%s.y.y", "%s.z.z"};
   tensor t;
-  sprintf (cname, "%s.x.x", name);
-  t.x.x = new_scalar(cname);
+  foreach_dimension() {
+    sprintf (cname, ext.x, name);
+    t.x.x = new_scalar(cname);
+  }
+  // fixme: does not work in 3D
   sprintf (cname, "%s.x.y", name);
   t.x.y = new_scalar(cname);
-  sprintf (cname, "%s.y.y", name);
-  t.y.y = new_scalar(cname);
   t.y.x = t.x.y;
   init_tensor (t, NULL);
   return t;
@@ -166,13 +134,16 @@ scalar new_const_scalar (const char * name, int i, double val)
 
 void init_const_vector (vector v, const char * name, double * val)
 {
-  init_const_scalar (v.x, name, val[0]);
-  init_const_scalar (v.y, name, val[1]);
+  struct { double x, y, z; } dval = {val[0], val[1], val[2]};
+  foreach_dimension()
+    init_const_scalar (v.x, name, dval.x);
 }
 
 vector new_const_vector (const char * name, int i, double * val)
 {
-  vector v = {i + _NVARMAX, i + 1 + _NVARMAX};
+  vector v;
+  foreach_dimension()
+    v.x = _NVARMAX + i++;
   init_const_vector (v, name, val);
   return v;
 }
@@ -371,6 +342,7 @@ tensor cartesian_init_tensor (tensor t, const char * name)
       init_vector (t.x, NULL);
   }
   /* set default boundary conditions */
+  // fixme: not 3D
   for (int b = 0; b < nboundary; b++) {
     t.x.x.boundary[b] = t.y.x.boundary[b] = 
       t.x.x.boundary_homogeneous[b] = t.y.y.boundary_homogeneous[b] = 
@@ -448,6 +420,7 @@ void cartesian_methods()
   debug            = cartesian_debug;
 }
 
+// fixme: not 3D
 double interpolate (scalar v, double xp, double yp)
 {
   Point point = locate (xp, yp);
@@ -464,7 +437,7 @@ double interpolate (scalar v, double xp, double yp)
 	  v[i,j]*x*y);
 }
 
-// Boundaries
+// Boundaries: fixme: not 3D
 
 typedef int bid;
 

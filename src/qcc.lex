@@ -14,6 +14,8 @@
   typedef struct { int x, y, face; char * name; } Vector;
   typedef struct { Vector x, y; char * name; } Tensor;
 
+  int dimension = 2;
+  
   int debug = 0, catch = 0, nolineno = 0, events = 0;
   char dir[] = ".qccXXXXXX";
 
@@ -24,7 +26,8 @@
   int invardecl, vartype, varsymmetric, varface, varvertex, varmaybeconst;
   char * varconst;
   int inval, invalpara, indef;
-  int brack, inarray;
+  int brack, inarray, inarraypara, inarrayargs;
+  int infine;
   int inreturn;
 
   #define EVMAX 100
@@ -81,7 +84,7 @@
     char * v, * constant;
     int type, args, scope, automatic, symmetric, face, vertex, maybeconst;
     int wasmaybeconst;
-    int i[4];
+    int i[9];
     char * conditional;
   } var_t;
   var_t _varstack[100]; int varstack = -1;
@@ -212,15 +215,14 @@
     return -100;
   }
 
-  int rotate (FILE * fin, FILE * fout, int n);
+  int rotate (FILE * fin, FILE * fout, int n, int dimension);
 
-  void writefile (FILE * fp, char x, char y, int line1,
-		  const char * condition) {
+  void writefile (FILE * fp, int nrotate, int line1, const char * condition) {
     if (condition)
       fprintf (yyout, " if (%s) {", condition);
     if (line1 >= 0)
       fprintf (yyout, "\n#line %d\n", line1);
-    rotate (fp, yyout, x == 'y');
+    rotate (fp, yyout, nrotate, dimension);
     if (condition)
       fputs (" } ", yyout);
   }
@@ -231,8 +233,9 @@
     if (foreachdim > 1)
       fputc ('{', yyout);
     FILE * fp = dopen ("_dimension.h", "r");
-    writefile (fp, 'y', 'x', foreachdimline, NULL);
-    writefile (fp, 'x', 'y', foreachdimline, NULL);
+    int i;
+    for (i = 0; i < dimension; i++)
+      writefile (fp, i, foreachdimline, NULL);
     fclose (fp);
     if (foreachdim > 1)
       fputc ('}', yyout);
@@ -246,19 +249,19 @@
       FILE * fp = dopen ("_foreach_body.h", "r");
       if (foreach_face_xy == face_xy) {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
-	writefile (fp, 'y', 'x', foreach_line, "is_face_y()");
+	writefile (fp, 1, foreach_line, "is_face_y()");
 	fputs (" }} { int ig = -1; VARIABLES; ", yyout);
-	writefile (fp, 'x', 'y', foreach_line, "is_face_x()");
+	writefile (fp, 0, foreach_line, "is_face_x()");
 	fputs (" }} ", yyout);
       }
       else if (foreach_face_xy == face_x) {
 	fputs (" { int ig = -1; VARIABLES; ", yyout);
-	writefile (fp, 'x', 'y', foreach_line, "is_face_x()");
+	writefile (fp, 0, foreach_line, "is_face_x()");
 	fputs (" }} ", yyout);
       }
       else {
 	fputs (" { int jg = -1; VARIABLES; ", yyout);
-	writefile (fp, 'x', 'y', foreach_line, "is_face_y()");
+	writefile (fp, 0, foreach_line, "is_face_y()");
 	fputs (" }} ", yyout);
       }
       fputs (" end_foreach_face_generic()\n", yyout);
@@ -332,11 +335,11 @@
 		       "const double _const_%s = _constant[%s-_NVARMAX];\n"
 		       "NOT_UNUSED(_const_%s);\n"
 		       "#undef val_%s\n"
-		       "#define val_%s(a,i,j) _const_%s\n"
+		       "#define val_%s(a,i,j,k) _const_%s\n"
 		       "#undef fine_%s\n"
-		       "#define fine_%s(a,i,j) _const_%s\n"
+		       "#define fine_%s(a,i,j,k) _const_%s\n"
 		       "#undef coarse_%s\n"
-		       "#define coarse_%s(a,i,j) _const_%s\n",
+		       "#define coarse_%s(a,i,j,k) _const_%s\n",
 		       foreachconst[i]->v, foreachconst[i]->v, 
 		       foreachconst[i]->v, foreachconst[i]->v, 
 		       foreachconst[i]->v, foreachconst[i]->v,
@@ -346,33 +349,39 @@
 	    else
 	      fprintf (yyout, 
 		       "#undef val_%s\n"
-		       "#define val_%s(a,i,j) val(a,i,j)\n"
+		       "#define val_%s(a,i,j,k) val(a,i,j,k)\n"
 		       "#undef fine_%s\n"
-		       "#define fine_%s(a,i,j) fine(a,i,j)\n"
+		       "#define fine_%s(a,i,j,k) fine(a,i,j,k)\n"
 		       "#undef coarse_%s\n"
-		       "#define coarse_%s(a,i,j) coarse(a,i,j)\n",
+		       "#define coarse_%s(a,i,j,k) coarse(a,i,j,k)\n",
 		       foreachconst[i]->v, foreachconst[i]->v,
 		       foreachconst[i]->v, foreachconst[i]->v,
 		       foreachconst[i]->v, foreachconst[i]->v);
 	  }
 	  else if (foreachconst[i]->type == vector) {
-	    if (bits & (1 << i))
-	      fprintf (yyout, "const struct { double x, y; } _const_%s = "
-		       "{_constant[%s.x -_NVARMAX],"
-		       " _constant[%s.y -_NVARMAX]};\n"
-		       "NOT_UNUSED(_const_%s);\n",
-		       foreachconst[i]->v, foreachconst[i]->v, 
+	    int c, j;
+	    if (bits & (1 << i)) {
+	      fputs ("const struct { double x", yyout);
+	      for (c = 'y', j = 1; j < dimension; c++, j++)
+		fprintf (yyout, ", %c", c);
+	      fprintf (yyout, "; } _const_%s = {_constant[%s.x -_NVARMAX]",
 		       foreachconst[i]->v, foreachconst[i]->v);
-	    int c;
-	    for (c = 'x'; c <= 'y'; c++)
+	      for (c = 'y', j = 1; j < dimension; c++, j++)
+		fprintf (yyout, ", _constant[%s.%c -_NVARMAX]",
+			 foreachconst[i]->v, c);
+	      fprintf (yyout, "};\n"
+		       "NOT_UNUSED(_const_%s);\n",
+		       foreachconst[i]->v);
+	    }
+	    for (c = 'x', j = 0; j < dimension; c++, j++)
 	      if (bits & (1 << i))
 		fprintf (yyout,
 			 "#undef val_%s_%c\n"
-			 "#define val_%s_%c(a,i,j) _const_%s.%c\n"
+			 "#define val_%s_%c(a,i,j,k) _const_%s.%c\n"
 			 "#undef fine_%s_%c\n"
-			 "#define fine_%s_%c(a,i,j) _const_%s.%c\n"
+			 "#define fine_%s_%c(a,i,j,k) _const_%s.%c\n"
 			 "#undef coarse_%s_%c\n"
-			 "#define coarse_%s_%c(a,i,j) _const_%s.%c\n",
+			 "#define coarse_%s_%c(a,i,j,k) _const_%s.%c\n",
 			 foreachconst[i]->v, c,
 			 foreachconst[i]->v, c, foreachconst[i]->v, c,
 			 foreachconst[i]->v, c,
@@ -382,11 +391,11 @@
 	      else
 		fprintf (yyout, 
 			 "#undef val_%s_%c\n"
-			 "#define val_%s_%c(a,i,j) val(a,i,j)\n"
+			 "#define val_%s_%c(a,i,j,k) val(a,i,j,k)\n"
 			 "#undef fine_%s_%c\n"
-			 "#define fine_%s_%c(a,i,j) fine(a,i,j)\n"
+			 "#define fine_%s_%c(a,i,j,k) fine(a,i,j,k)\n"
 			 "#undef coarse_%s_%c\n"
-			 "#define coarse_%s_%c(a,i,j) coarse(a,i,j)\n",
+			 "#define coarse_%s_%c(a,i,j,k) coarse(a,i,j,k)\n",
 			 foreachconst[i]->v, c, foreachconst[i]->v, c,
 			 foreachconst[i]->v, c, foreachconst[i]->v, c,
 			 foreachconst[i]->v, c, foreachconst[i]->v, c);
@@ -472,17 +481,20 @@
     fprintf (yyout, "#line %d \"%s\"\n", line, fname);
   }
 
-  void infunction_declarations() {
+  void infunction_declarations (int line1) {
     if (!infunctiondecl) {
       if (debug)
-	fprintf (stderr, "%s:%d: function declarations\n", fname, line);
-      fputs (" int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED (jg);"
-	     " POINT_VARIABLES; ", yyout);
-      maps (line - 1);
+	fprintf (stderr, "%s:%d: function declarations\n", fname, line1);
+      char * name[3] = {"ig", "jg", "kg"};
+      int i;
+      for (i = 0; i < dimension; i++)
+	fprintf (yyout, " int %s = 0; NOT_UNUSED(%s);", name[i], name[i]);
+      fputs (" POINT_VARIABLES; ", yyout);
+      maps (line1);
       infunctiondecl = 1;
       assert (functionfp == NULL);
       functionfp = yyout;
-      infunction_line = line - 1;
+      infunction_line = line1;
       nmaybeconst = 0;
       yyout = dopen ("_infunction.h", "w");
     }
@@ -538,16 +550,23 @@
 	    !strcmp(dir, "left") ?  "right" :
 	    !strcmp(dir, "top") ?   "bottom" :
 	    !strcmp(dir, "bottom") ? "top" :
+	    !strcmp(dir, "front") ?  "back" :
+	    !strcmp(dir, "back") ? "front" :
 	    "error");
   }
   
   void boundary_staggering (FILE * fp) {
-    fputs (" int ig = neighbor.i - point.i,"
-	   " jg = neighbor.j - point.j;"
-	   " if (ig == 0) ig = _attribute[_s].d.x;"
-	   " if (jg == 0) jg = _attribute[_s].d.y;"
-	   " NOT_UNUSED(ig); NOT_UNUSED (jg);",
-	   fp);
+    char index[3] = {'i','j','k'};
+    char dir[3] = {'x','y','z'};
+    int i;
+    for (i = 0; i < dimension; i++)
+      fprintf (fp,
+	       " int %cg = neighbor.%c - point.%c; "
+	       " if (%cg == 0) %cg = _attribute[_s].d.%c; "
+	       " NOT_UNUSED(%cg);",
+	       index[i], index[i], index[i],
+	       index[i], index[i], dir[i],
+	       index[i]);
   }
 
   char * makelist (const char * input, int type) {
@@ -602,26 +621,86 @@
 	case scalar: {
 	  switch (vtype) {
 	  case 0: sprintf (member, "%s,", s); break;
-	  case 1: sprintf (member, "%s.x,%s.y,", s, s); break;
-	  case 2: sprintf (member, "%s.x.x,%s.x.y,%s.y.x,%s.y.y,",
-			   s, s, s, s); break;
+	  case 1: {
+	    int i, c;
+	    for (i = 0, c = 'x'; i < dimension; i++, c++) {
+	      char m[30];
+	      sprintf (m, "%s.%c,", s, c);
+	      strcat (member, m);
+	    }
+	    break;
+	  }
+	  case 2: {
+	    int i, c;
+	    for (i = 0, c = 'x'; i < dimension; i++, c++) {
+	      int j, d;
+	      for (j = 0, d = 'x'; j < dimension; j++, d++) {
+		char m[30];
+		sprintf (m, "%s.%c.%c,", s, c, d);
+		strcat (member, m);
+	      }
+	    }
+	    break;
+	  }
 	  default: assert (0);
 	  }
 	  break;
 	}
 	case vector: {
 	  switch (vtype) {
-	  case 1: sprintf (member, "{%s.x,%s.y},", s, s); break;
-	  case 2: sprintf (member, "{%s.x.x,%s.x.y},{%s.y.x,%s.y.y},",
-			   s, s, s, s); break;
+	  case 1: {
+	    sprintf (member, "{%s.x", s);
+	    int i, c;
+	    for (i = 1, c = 'y'; i < dimension; i++, c++) {
+	      char m[30];
+	      sprintf (m, ",%s.%c", s, c);
+	      strcat (member, m);
+	    }
+	    strcat (member, "},");
+	    break;
+	  }
+	  case 2: {
+	    int i, c;
+	    for (i = 0, c = 'x'; i < dimension; i++, c++) {
+	      strcat (member, "{");
+	      int j, d;
+	      for (j = 0, d = 'x'; j < dimension; j++, d++) {
+		char m[30];
+		sprintf (m, "%s.%c.%c", s, c, d);
+		strcat (member, m);
+		if (j < dimension - 1)
+		  strcat(member, ",");
+	      }
+	      strcat (member, "},");
+	    }
+	    break;
+	  }
 	  default: assert (0);
 	  }
 	  break;	  
 	}
 	case tensor: {
 	  switch (vtype) {
-	  case 2: sprintf (member, "{{%s.x.x,%s.x.y},{%s.y.x,%s.y.y}},",
-			   s, s, s, s); break;
+	  case 2: {
+	    int i, c;
+	    strcat (member, "{");
+	    for (i = 0, c = 'x'; i < dimension; i++, c++) {
+	      strcat (member, "{");
+	      int j, d;
+	      for (j = 0, d = 'x'; j < dimension; j++, d++) {
+		char m[30];
+		sprintf (m, "%s.%c.%c", s, c, d);
+		strcat (member, m);
+		if (j < dimension - 1)
+		  strcat(member, ",");
+	      }
+	      strcat (member, "}");
+	      if (i < dimension - 1)
+		strcat(member, ",");
+	    }
+	    strcat (member, "},");
+	    break;
+	  }
 	  default: assert (0);
 	  }
 	  break;	  
@@ -632,19 +711,41 @@
       else { // static allocation
 	int n = vtype - listtype, i;
 	char * constant = var->constant ? "_NVARMAX + " : "";
-	char coord[80];
+	char coord[80] = "";
 	for (i = 0; i < (1 << n); i++) {
 	  switch (listtype) {
 	  case scalar:
 	    sprintf (coord, "%s%d,", constant, var->i[i]); break;
-	  case vector:
-	    sprintf (coord, "{%s%d,%s%d},", 
-		     constant, var->i[2*i], constant, var->i[2*i+1]); break;
-	  case tensor:
-	    sprintf (coord, "{{%s%d,%s%d},{%s%d,%s%d}},",
-		     constant, var->i[4*i], constant, var->i[4*i+1], 
-		     constant, var->i[4*i+2], constant, var->i[4*i+3]);
+	  case vector: {
+	    sprintf (coord, "{%s%d", constant, var->i[dimension*i]);
+	    int j;
+	    for (j = 1; j < dimension; j++) {
+	      char s[80];
+	      sprintf (s, ",%s%d", constant, var->i[dimension*i+j]);
+	      strcat (coord, s);
+	    }
+	    strcat (coord, "},");
 	    break;
+	  }
+	  case tensor: {
+	    strcat (coord, "{");
+	    int j, k, l = dimension*dimension*i;
+	    for (j = 0; j < dimension; j++) {
+	      strcat (coord, "{");
+	      for (k = 0; k < dimension; k++) {
+		char m[30];
+		sprintf (m, "%s%d", constant, var->i[l++]);
+		strcat (coord, m);
+		if (k < dimension - 1)
+		  strcat (coord, ",");
+	      }
+	      strcat (coord, "}");
+	      if (j < dimension - 1)
+		strcat (coord, ",");
+	    }
+	    strcat (coord, "},");
+	    break;
+	  }
 	  default: assert (0);
 	  }
 	  strcat (member, coord);
@@ -658,8 +759,28 @@
     char end[20];
     switch (listtype) {
     case scalar: strcpy (end, "-1})"); break;
-    case vector: strcpy (end, "{-1,-1}})"); break;
-    case tensor: strcpy (end, "{{-1,-1},{-1,-1}}})"); break;
+    case vector: {
+      strcpy (end, "{-1");
+      int i;
+      for (i = 1; i < dimension; i++)
+	strcat (end, ",-1");
+      strcat (end, "}})");
+      break;
+    }
+    case tensor: {
+      strcpy (end, "{");
+      int i, j;
+      for (i = 0; i < dimension; i++) {
+	strcat (end, "{-1");
+	for (j = 1; j < dimension; j++)
+	  strcat (end, ",-1");
+	strcat (end, "}");
+	if (i < dimension - 1)
+	  strcat (end, ",");
+      }
+      strcat (end, "}})");
+      break;
+    }
     default: assert (0);
     }
     list = realloc (list, (strlen(list) + strlen(end) + 1)*sizeof(char));
@@ -686,48 +807,51 @@
 	  fprintf (yyout, ", %d, %s", nconst, var->constant);
 	  nconst++;
 	}
-	else {
+	else if (var->type == vector) {
 	  fprintf (yyout, ", %d, (double [])%s", 
 		   nconst, var->constant);
-	  nconst += 2;
-	}
-      }
-      fputc (')', yyout);
-    }
-    else {
-      // global constants
-      if (var->constant) {
-	if (var->type == scalar) {
-	  fprintf (yyout, " _NVARMAX + %d", nconst);
-	  var->i[0] = nconst++;
-	}
-	else if (var->type == vector) {
-	  fprintf (yyout, " {_NVARMAX + %d,_NVARMAX + %d}", 
-		   nconst, nconst + 1);
-	  int i;
-	  for (i = 0; i < 2; i++)
-	    var->i[i] = nconst++;
+	  nconst += dimension;
 	}
 	else
 	  assert (0);
       }
-      // global variables
-      else if (var->type == scalar) {
-	fprintf (yyout, " %d", nvar);
-	var->i[0] = nvar++;
+      fputc (')', yyout);
+    }
+    else {
+      // global constants and variables
+      int * n = var->constant ? &nconst : &nvar;
+      char * constant = var->constant ? "_NVARMAX + " : "";
+      if (var->type == scalar) {
+	fprintf (yyout, " %s%d", constant, (*n));
+	var->i[0] = (*n)++;
       }
       else if (var->type == vector) {
-	fprintf (yyout, " {%d,%d}", nvar, nvar + 1);    
+	fputs (" {", yyout);
 	int i;
-	for (i = 0; i < 2; i++)
-	  var->i[i] = nvar++;
+	for (i = 0; i < dimension; i++) {
+	  var->i[i] = (*n)++;
+	  fprintf (yyout, "%s%d", constant, var->i[i]);
+	  if (i < dimension - 1)
+	    fputc (',', yyout);
+	}
+	fputc ('}', yyout);
       }
       else if (var->type == tensor) {
-	fprintf (yyout, " {{%d,%d},{%d,%d}}",
-		 nvar, nvar + 1, nvar + 2, nvar + 3);
-	int i;
-	for (i = 0; i < 4; i++)
-	  var->i[i] = nvar++;
+	fputs (" {", yyout);
+	int i, j, k = 0;
+	for (i = 0; i < dimension; i++) {
+	  fputc ('{', yyout);
+	  for (j = 0; j < dimension; j++) {
+	    fprintf (yyout, "%s%d", constant, (*n));
+	    if (j < dimension - 1)
+	      fputc (',', yyout);
+	    var->i[k++] = (*n)++;
+	  }
+	  fputc ('}', yyout);
+	  if (i < dimension - 1)
+	    fputc (',', yyout);
+	}
+	fputc ('}', yyout);
       }
       else
 	assert (0);
@@ -920,6 +1044,13 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     fputs ("})", yyout);
     inarg = 0;
   }
+  else if (infine == para + 1) {
+    int i;
+    for (i = inarrayargs; i < 3; i++)
+      fputs (",0", yyout);
+    ECHO;
+    infine = 0;
+  }
   else
     ECHO;
 }
@@ -928,14 +1059,14 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   if (foreachdim != 1 || scope != 0 || infunctionproto)
     ECHO;
   if (infunction && functionpara == 1 && scope == functionscope)
-    infunction_declarations();
+    infunction_declarations (line - 1);
   if (inmain == 1 && scope == 0) {
     fputs (" init_solver();", yyout);
     inmain = 2;
   }
   if (intrace == 1 && scope == 0) {
     fprintf (yyout, " trace (\"%s\", \"%s\", %d);",
-	     tracefunc, fname, line);
+	     tracefunc, fname, line - 1);
     intrace = 2;
   }
   scope++;
@@ -1031,6 +1162,14 @@ map{WS}+"{" {
   yyout = dopen ("_map.h", "w");
 }
 
+, {
+  if (inarray == brack && inarraypara == para)
+    inarrayargs++;
+  else if (infine == para)
+    inarrayargs++;
+  REJECT;
+}
+
 ; {
   int insthg = 0;
   if (scope == 0)
@@ -1046,7 +1185,7 @@ map{WS}+"{" {
   if (infunction && scope == functionscope) {
     if (scope > 0 && !infunctiondecl) {
       fputs ("; ", yyout); insthg = 1;
-      infunction_declarations();
+      infunction_declarations (line);
     }
     else if (!infunctiondecl)
       endfunction();
@@ -1319,6 +1458,9 @@ return {
 
 val{WS}*[(]    {
   inval = 1; invalpara = para++;
+  assert (!infine && !inarray);
+  infine = para;
+  inarrayargs = 0;
   ECHO;
 }
 
@@ -1340,13 +1482,13 @@ val{WS}*[(]    {
 	fprintf (yyout, "val(%s", boundaryrep(yytext));
       if (yytext[yyleng-1] == ']')
 	/* v[] */
-	fputs (",0,0)", yyout);
+	fputs (",0,0,0)", yyout);
       else {
 	if (var->args > 0) {
 	  /* v[...][... */
 	  fputc ('[', yyout);
 	  fputc (yytext[yyleng-1], yyout);
-	  inarray = brack++;
+	  inarray = brack++; 
 	  int j = var->args;
 	  while (j) {
 	    int c = getput();
@@ -1371,7 +1513,7 @@ val{WS}*[(]    {
 	  c = input();
 	  if (c == ']')
 	    /* v[...][] */
-	    fputs ("0,0)", yyout);
+	    fputs ("0,0,0)", yyout);
 	  else {
 	    fputc (c, yyout);
 	    inarray = ++brack;
@@ -1383,6 +1525,8 @@ val{WS}*[(]    {
 	  unput (yytext[yyleng-1]);
 	  inarray = ++brack;
 	}
+	inarraypara = para;
+	inarrayargs = 1;
       }
     }
   }
@@ -1518,12 +1662,21 @@ val{WS}*[(]    {
       else
 	fprintf (yyout, "%s(%s", op, boundaryrep(id));
       fputc (',', yyout);
+      infine = para;
+      inarrayargs = 1;
     }
   }
   if (!var)
     REJECT;
 }
 
+(allocated|allocated_child|neighbor|aparent|child){WS}*\( {
+  assert (!infine);
+  infine = ++para;
+  inarrayargs = 1;
+  ECHO;
+}
+  
 dirichlet{WS}*[(] {
   para++;
   if (inboundary && boundarycomponent == 'x')
@@ -1533,8 +1686,12 @@ dirichlet{WS}*[(] {
 }
 
 ghost {
-  if (inforeach_boundary)
-    fputs ("ig,jg", yyout);
+  if (inforeach_boundary) {
+    char * name[3] = {"ig","ig,jg","ig,jg,kg"};
+    fputs (name[dimension - 1], yyout);
+    if (infine || inarray)
+      inarrayargs++;
+  }
   else
     ECHO;
 }
@@ -1655,6 +1812,9 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
 "["        ECHO; brack++;
 "]"        {
   if (inarray == brack) {
+    int i;
+    for (i = inarrayargs; i < 3; i++)
+      fputs (",0", yyout);
     fputc (')', yyout);
     inarray = 0;
   }
@@ -1757,7 +1917,7 @@ trace {
 
 foreach_dimension{WS}*[(]{WS}*[)] {
   if (debug)
-    fprintf (stderr, "%s:%d: foreach_dimension\n", fname, line);
+    fprintf (stderr, "%s:%d: foreach_dimension (%d)\n", fname, line, dimension);
   foreachdim = scope + 1; foreachdimpara = para;
   foreachdimfp = yyout;
   yyout = dopen ("_dimension.h", "w");
@@ -1838,8 +1998,13 @@ reduction{WS}*[(](min|max|\+):{ID}+[)] {
     // replace global scalar/vector constants
     if (var->type == scalar)
       fprintf (yyout, "(_NVARMAX + %d)", var->i[0]);
-    else if (var->type == vector)
-      fprintf (yyout, "{_NVARMAX + %d,_NVARMAX + %d}", var->i[0], var->i[1]);
+    else if (var->type == vector) {      
+      fprintf (yyout, "{_NVARMAX + %d", var->i[0]);
+      int i;
+      for (i = 1; i < dimension; i++)
+	fprintf (yyout, ",_NVARMAX + %d", var->i[i]);
+      fputc ('}', yyout);
+    }
     else
       assert (0);
   }
@@ -2078,7 +2243,7 @@ int getput(void)
 void stripname (char * path);
 char * stripslash (char * path);
 int includes (int argc, char ** argv, char ** out, 
-	      char ** grid, int * default_grid,
+	      char ** grid, int * default_grid, int * dimension,
 	      const char * dir);
 
 int endfor (FILE * fin, FILE * fout)
@@ -2090,7 +2255,7 @@ int endfor (FILE * fin, FILE * fout)
     inforeach_boundary = inforeach_face = 0;
   invardecl = 0;
   inval = invalpara = indef = 0;
-  brack = inarray = 0;
+  brack = inarray = infine = 0;
   inevent = inreturn = inattr = inmap = 0;
   foreachdim = 0;
   foreach_child = 0;
@@ -2266,11 +2431,13 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	  fprintf (fout, 
 		   "  init_const_scalar (_NVARMAX+%d, \"%s\", %s);\n",
 		   var.i[0], var.v, var.constant);
-	else if (var.type == vector)
-	  fprintf (fout, 
-		   "  init_const_vector ((vector){_NVARMAX+%d,_NVARMAX+%d},"
-		   " \"%s\", (double [])%s);\n",
-		   var.i[0], var.i[1], var.v, var.constant);
+	else if (var.type == vector) {
+	  int i;
+	  fprintf (fout, "  init_const_vector ((vector){_NVARMAX+%d", var.i[0]);
+	  for (i = 1; i < dimension; i++)
+	    fprintf (fout, ",_NVARMAX+%d", var.i[i]);
+	  fprintf (fout, "}, \"%s\", (double [])%s);\n", var.v, var.constant);
+	}
 	else
 	  assert (0);
       }
@@ -2278,15 +2445,30 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
       else if (var.type == scalar)
 	fprintf (fout, "  init_scalar (%d, \"%s\");\n",
 		 var.i[0], var.v);
-      else if (var.type == vector)
-	fprintf (fout, "  init_%svector ((vector){%d,%d}, \"%s\");\n",
+      else if (var.type == vector) {
+	fprintf (fout, "  init_%svector ((vector){%d",
 		 var.face ? "face_" : 
 		 var.vertex ? "vertex_" : 
 		 "",
-		 var.i[0], var.i[1], var.v);
-      else if (var.type == tensor)
-	fprintf (fout, "  init_tensor ((tensor){{%d,%d},{%d,%d}}, \"%s\");\n", 
-		 var.i[0], var.i[1], var.i[2], var.i[3], var.v);
+		 var.i[0]);
+	int i;
+	for (i = 1; i < dimension; i++)
+	  fprintf (fout, ",%d", var.i[i]);
+	fprintf (fout, "}, \"%s\");\n", var.v);
+      }
+      else if (var.type == tensor) {
+	fprintf (fout, "  init_tensor ((tensor){");
+	int i, j, k = 0;
+	for (i = 0; i < dimension; i++) {
+	  fprintf (fout, "{%d", var.i[k++]);
+	  for (j = 1; j < dimension; j++)
+	    fprintf (fout, ",%d", var.i[k++]);
+	  fprintf (fout, "}");
+	  if (i < dimension - 1)
+	    fputc (',', fout);
+	}
+	fprintf (fout, "}, \"%s\");\n", var.v);
+      }
       else if (var.type == bid)
 	fprintf (fout, "  %s = new_bid();\n", var.v);
       else
@@ -2396,7 +2578,8 @@ int main (int argc, char ** argv)
   if (file) {
     char * out[100], * grid = NULL;
     int default_grid;
-    includes (argc, argv, out, &grid, &default_grid, dep || tags ? NULL : dir);
+    includes (argc, argv, out, &grid, &default_grid, &dimension,
+	      dep || tags ? NULL : dir);
     FILE * swigfp = NULL;
     char swigname[80] = "";
     if (swig) {
@@ -2454,6 +2637,7 @@ int main (int argc, char ** argv)
 	       fout);
       else
 	fputs ("#define _CATCH\n", fout);
+      fprintf (fout, "#define dimension %d\n", dimension);
       fputs ("#include \"common.h\"\n", fout);
       /* catch */
       if (catch)

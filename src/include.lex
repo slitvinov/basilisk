@@ -39,7 +39,7 @@
   static char * fname;
   
   static char * paths[100] = { LIBDIR }, grid[80] = "quadtree";
-  static int npath = 1, hasgrid = 0, debug = 0;
+  static int npath = 1, hasgrid = 0, debug = 0, dimension = 2;
   static int incode;   // are we in a code block?
   static int somecode; // any code blocks in this file?
 
@@ -235,6 +235,12 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
     while (strchr (s, '/')) s = strchr (s, '/') + 1;
     strcpy (grid, s);
     if ((s = strchr (grid, '.'))) *s = '\0';
+}
+
+^{SP}*#{SP}*define{SP}+dimension{WS}+[123]{SP}*$ {
+  char * s = strstr (yytext, "dimension");
+  space(s); nonspace(s);
+  dimension = atoi(s);
 }
 
 ^{ID}+{SP}+{ID}+{SP}*\( {
@@ -473,7 +479,7 @@ static int compdir (char * file, char ** out, int nout, const char * dir)
 }
 
 int includes (int argc, char ** argv, char ** out, 
-	      char ** grid1, int * default_grid,
+	      char ** grid1, int * default_grid, int * dim,
 	      const char * dir)
 {
   int depend = 0, nout = 0, tags = 0, swig = 0;
@@ -616,5 +622,6 @@ int includes (int argc, char ** argv, char ** out,
     fclose (swigfp);
   *grid1 = grid;
   *default_grid = !hasgrid;
+  *dim = dimension;
   return nout;
 }

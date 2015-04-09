@@ -13,10 +13,8 @@ struct _Point {
 };
 static Point last_point;
 
-#define NN point.n // for output_stencil()
-
-@def data(k,l) ((double *)&point.data[((point.i + k)*(point.n + 2) +
-				       (point.j + l))*datasize]) @
+@def data(k,l,m) ((double *)&point.data[((point.i + k)*(point.n + 2) +
+					 (point.j + l))*datasize]) @
 @define allocated(...) true
 
 @define POINT_VARIABLES VARIABLES

@@ -1,4 +1,5 @@
 #define GRIDNAME "Multigrid"
+#define dimension 2
 #define GHOSTS 2
 
 #define I      (point.i - GHOSTS)
@@ -15,7 +16,6 @@ struct _Point {
 };
 static Point last_point;
 
-#define NN point.n // for output_stencil()
 #define multigrid ((Multigrid *)grid)
 
 static size_t _size (size_t l)
@@ -27,20 +27,20 @@ static size_t _size (size_t l)
 #define CELL(m,level,i)  (*((Cell *) &m[level][(i)*datasize]))
 
 /***** Cartesian macros *****/
-@def data(k,l)
+@def data(k,l,m)
   ((double *)&multigrid->d[point.level][((point.i + k)*(point.n + 2*GHOSTS) +
-				    point.j + l)*datasize]) @
+					 (point.j + l))*datasize]) @
 @define allocated(...) true
 @define allocated_child(...) true
 
 /***** Multigrid variables and macros *****/
 @define depth()       (((Multigrid *)grid)->depth)
-@def fine(a,k,l)
+@def fine(a,k,l,m)
   ((double *)
    &multigrid->d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) +
 			    (2*point.j-GHOSTS+l))*datasize])[a]
 @
-@def coarse(a,k,l)
+@def coarse(a,k,l,m)
   ((double *)
    &multigrid->d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) +
 			    (point.j+GHOSTS)/2+l)*datasize])[a]
@@ -59,7 +59,7 @@ static size_t _size (size_t l)
 @def foreach_level(l)
   OMP_PARALLEL()
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point point = *((Point *)grid);
+  Point point;
   point.level = l; point.n = 1 << point.level;
   int _k;
   OMP(omp for schedule(static))
@@ -73,7 +73,7 @@ static size_t _size (size_t l)
 @def foreach(clause)
   OMP_PARALLEL()
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point point = *((Point *)grid);
+  Point point;
   point.level = multigrid->depth; point.n = 1 << point.level;
   int _k;
   OMP(omp for schedule(static) clause)
@@ -87,7 +87,7 @@ static size_t _size (size_t l)
 @def foreach_face_generic(clause)
   OMP_PARALLEL()
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point point = *((Point *)grid);
+  Point point;
   point.level = multigrid->depth; point.n = 1 << point.level;
   int _k;
   OMP(omp for schedule(static) clause)
@@ -150,7 +150,7 @@ foreach_face_generic() {
 void multigrid_trash (void * alist)
 {
   scalar * list = alist;
-  Point p = *((Point *)grid);
+  Point p;
   p.level = multigrid->depth; p.n = 1 << p.level;
   for (; p.level >= 0; p.n /= 2, p.level--)
     for (int i = 0; i < (p.n + 2*GHOSTS)*(p.n + 2*GHOSTS); i++)
@@ -168,13 +168,13 @@ static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
   int d = ((BoxBoundary *)b)->d;
 
   OMP_PARALLEL();
-  Point point = *((Point *)grid);
+  Point point;
+  point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
   if (d % 2)
     ig = jg = 0;
   else {
     ig = _ig[d]; jg = _jg[d];
   }
-  point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
   int _start = GHOSTS, _end = point.n + GHOSTS, _k;  
   OMP(omp for schedule(static))
   for (_k = _start; _k < _end; _k++) {
@@ -197,9 +197,9 @@ static void box_boundary_level_tangent (const Boundary * b,
   int d = ((BoxBoundary *)b)->d;
 
   OMP_PARALLEL();
-  Point point = *((Point *)grid);
-  ig = _ig[d]; jg = _jg[d];
+  Point point;
   point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
+  ig = _ig[d]; jg = _jg[d];
   int _start = GHOSTS, _end = point.n + GHOSTS, _k;  
   OMP(omp for schedule(static))
   for (_k = _start; _k <= _end; _k++) {
@@ -248,14 +248,14 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
     }
 
   if (centered) {
-    OMP_PARALLEL();
-    Point point = *((Point *)grid);
-    ig = _ig[d]; jg = _jg[d];
-    point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
-    int _start = GHOSTS, _end = point.n + GHOSTS, _k;
     /* we disable floating-point-exceptions to avoid having to deal with
        undefined operations in non-trivial boundary conditions. */
     disable_fpe (FE_DIVBYZERO|FE_INVALID);
+    OMP_PARALLEL();
+    Point point;
+    point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
+    ig = _ig[d]; jg = _jg[d];
+    int _start = GHOSTS, _end = point.n + GHOSTS, _k;
     /* traverse corners only for top and bottom */
     if (d > left) { _start--; _end++; }
     OMP(omp for schedule(static))
@@ -311,7 +311,7 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
     return;
 
   OMP_PARALLEL();
-  Point point = *((Point *)grid);
+  Point point;
   point.i = point.j = 0;
   point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
   int j;
@@ -406,7 +406,7 @@ void realloc_scalar (void)
 
 Point locate (double xp, double yp)
 {
-  Point point = *((Point *)grid);
+  Point point;
   point.n = 1 << multigrid->depth;
   double a = (xp - X0)/L0*point.n;
   point.i = a + GHOSTS;

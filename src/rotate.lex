@@ -1,7 +1,7 @@
 %option noyywrap
 %option yylineno
 %{
-  static int n = 0;
+  static int n = 0, dimension = 2;
 
   static int identifier (int c) {
     return ((c >= 'a' && c <= 'z') || 
@@ -18,9 +18,9 @@
       }
       else {
 	if ((s[0] == '.' || s[0] == '_') && 
-	    s[1] >= 'x' && s[1] <= 'y' &&
+	    s[1] >= 'x' && s[1] <= 'z' &&
 	    !identifier(s[2]))
-	  s[1] = 'x' + (s[1] + n - 'x') % 2;
+	  s[1] = 'x' + (s[1] + n - 'x') % dimension;
 	fputc (s[0], yyout);
 	s[0] = s[1]; s[1] = s[2]; 
 	s[2] = s[1] != '\0' ? *j : '\0';
@@ -51,8 +51,8 @@ ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
   free (id1);
 }
 
-{ID}*_[xy] |
-[.][xy]  rotate_string (yytext);
+{ID}*_[xyz] |
+[.][xyz]  rotate_string (yytext);
 
 left   fputs (n % 2 ? "bottom" : "left",   yyout);
 right  fputs (n % 2 ? "top"    : "right",  yyout);
@@ -63,7 +63,7 @@ bottom fputs (n % 2 ? "left"   : "bottom", yyout);
 
 val_{ID}*{WS}*\( |
 (val|fine|coarse|allocated|neighbor|aparent){WS}*\( {
-  int para = 1, dimension = 2;
+  int para = 1;
   char * index[5];
   int len[5], i = 0, c = input(), j;
   for (j = 0; j < 5; j++) {
@@ -87,7 +87,7 @@ val_{ID}*{WS}*\( |
   if (!strncmp (yytext, "val", 3) || 
       !strncmp (yytext, "fine", 4) || 
       !strncmp (yytext, "coarse", 6)) {
-    if (i == dimension) {
+    if (i == 3) {
       rotate_string (yytext);
       rotate_string (index[0]);
     }
@@ -105,14 +105,19 @@ val_{ID}*{WS}*\( |
     if (strlen(index[j]) == 2 && 
 	strchr ("ijk", index[j][0]) && index[j][1] == 'g')
       ghost = 1;
-  if (!ghost && i == dimension - 1 + start)
+  if (!ghost && i == 2 + start) {
     for (j = 0; j < dimension; j++) {
       int k = (j + n) % dimension;
       rotate_string (index[k + start]);
-      fputc (j < dimension - 1 ? ',' : ')', yyout);
+      fputc (j < 2 ? ',' : ')', yyout);
     }
+    for (j = dimension + 1; j <= 3; j++) {
+      rotate_string (index[j]);
+      fputc (j < 3 ? ',' : ')', yyout);
+    }
+  }
   else
-    //  more than dimension indices or ghost indices: do not rotate
+    //  more than 3 indices or ghost indices: do not rotate
     for (j = start; j <= i; j++) {
       fputs (index[j], yyout);
       fputc (j < i ? ',' : ')', yyout);
@@ -129,7 +134,7 @@ val_{ID}*{WS}*\( |
 %%
 
 // rotate dimensions n times
-int rotate (FILE * fin, FILE * fout, int nrotate)
+int rotate (FILE * fin, FILE * fout, int nrotate, int dim)
 {
   if (0) yyunput (0, NULL); // just prevents 'yyunput unused' compiler warning
   rewind (fin);
@@ -137,12 +142,14 @@ int rotate (FILE * fin, FILE * fout, int nrotate)
   yyout = fout;
   yylineno = 1;
   n = nrotate;
+  dimension = dim;
   return yylex();
 }
 
 #if TEST
 int main (int argc, char * argv[])
 {
-  rotate (stdin, stdout, atoi (argv[1]));
+  rotate (stdin, stdout, atoi (argv[1]), atoi (argv[2]));
+  return 0;
 }
 #endif

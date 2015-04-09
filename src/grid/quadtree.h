@@ -182,14 +182,14 @@ static void cache_append (Cache * c, Point p, int k, int l, short flags)
 @define cache_append_y(c,p,k,l,flags) cache_append(c,p,l,k,flags)
 
 /* low-level memory management */
-@def allocated(k,l) (quadtree->L[point.level]->m[point.i+k] &&
-		     quadtree->L[point.level]->m[point.i+k][point.j+l])
+@def allocated(k,l,n) (quadtree->L[point.level]->m[point.i+k] &&
+		       quadtree->L[point.level]->m[point.i+k][point.j+l])
 @
 @define NEIGHBOR(k,l)	(quadtree->L[point.level]->m[point.i+k][point.j+l])
 @def PARENT(k,l) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k]
 		  [(point.j+GHOSTS)/2+l])
 @
-@def allocated_child(k,l)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
+@def allocated_child(k,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
    && quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k][2*point.j-GHOSTS+l])
 @			   
 @def CHILD(k,l)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
@@ -198,19 +198,19 @@ static void cache_append (Cache * c, Point p, int k, int l, short flags)
 @define CELL(m) (*((Cell *)(m)))
 
 /***** Multigrid macros *****/
-@define depth()      (quadtree->depth)
-@define aparent(k,l) CELL(PARENT(k,l))
-@define child(k,l)   CELL(CHILD(k,l))
+@define depth()        (quadtree->depth)
+@define aparent(k,l,n) CELL(PARENT(k,l))
+@define child(k,l,n)   CELL(CHILD(k,l))
 
 /***** Quadtree macros ****/
 @define NN              (1 << point.level)
 @define cell		CELL(NEIGHBOR(0,0))
-@define neighbor(k,l)	CELL(NEIGHBOR(k,l))
+@define neighbor(k,l,n)	CELL(NEIGHBOR(k,l))
 
 /***** Data macros *****/
-@define data(k,l)     ((double *) (NEIGHBOR(k,l) + sizeof(Cell)))
-@define fine(a,k,l)   ((double *) (CHILD(k,l) + sizeof(Cell)))[a]
-@define coarse(a,k,l) ((double *) (PARENT(k,l) + sizeof(Cell)))[a]
+@define data(k,l,n)     ((double *) (NEIGHBOR(k,l) + sizeof(Cell)))
+@define fine(a,k,l,n)   ((double *) (CHILD(k,l) + sizeof(Cell)))[a]
+@define coarse(a,k,l,n) ((double *) (PARENT(k,l) + sizeof(Cell)))[a]
 
 @def POINT_VARIABLES
   VARIABLES
