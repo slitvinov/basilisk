@@ -81,12 +81,13 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
 
 bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
 {
+  int pid = cell.pid;
 #if TWO_ONE
-  /* check that neighboring cells are not too fine */
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      if (child(k,l).neighbors)
-	return false; // cannot coarsen
+  /* check that neighboring cells are not too fine.
+     check that children are not different boundaries */
+  foreach_child()
+    if (cell.neighbors || (cell.pid < 0 && cell.pid != pid))
+      return false; // cannot coarsen
 #endif
 
   /* restriction */
@@ -99,13 +100,11 @@ bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
   /* update neighborhood */
   decrement_neighbors (point);
   
-  /* for each child */
   if (cell.neighbors)
-    for (int k = 0; k < 2; k++)
-      for (int l = 0; l < 2; l++) {
-	child(k,l).flags &= ~(leaf|active);
-	child(k,l).pid = cell.pid;
-      }
+    foreach_child() {
+      cell.flags &= ~(leaf|active);
+      cell.pid = pid;
+    }
 
 @if _MPI
   if (coarsened && is_border(cell))
