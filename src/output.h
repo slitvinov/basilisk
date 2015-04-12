@@ -619,6 +619,7 @@ void output_gfs (struct OutputGfs p)
 
   // see gerris/ftt.c:ftt_cell_write()
   //     gerris/domain.c:gfs_cell_write()
+  #if dimension == 2
   bool root = true;
   foreach_cell() {
     unsigned flags = 
@@ -641,6 +642,9 @@ void output_gfs (struct OutputGfs p)
     if (is_leaf(cell))
       continue;
   }
+  #else
+  assert(false);
+  #endif
   fputs ("}\n", p.fp);
 
   if (opened)

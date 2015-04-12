@@ -21,19 +21,46 @@ attribute {
 
 // Multigrid methods
 
-void coarsen_average (Point point, scalar s)
+static inline void coarsen_average (Point point, scalar s)
 {
-  s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+  double sum = 0.;
+  foreach_child()
+    sum += s[];
+  s[] = sum/(1 << dimension);
 }
 
-void coarsen_volume_average (Point point, scalar s)
+static inline void coarsen_volume_average (Point point, scalar s)
 {
-  s[] = 0.;
-  for (int i = 0; i < 2; i++)
-    for (int j = 0; j < 2; j++)
-      s[] += fine(cm,i,j)*fine(s,i,j);
-  s[] /= 4.*cm[];
+  double sum = 0.;
+  foreach_child()
+    sum += cm[]*s[];
+  s[] = sum/(1 << dimension)/cm[];
 }
+
+inline void face_average (Point point, vector v)
+{
+  foreach_dimension() {
+    #if dimension == 1
+      v.x[] = fine(v.x,0);
+      v.x[1,0] = fine(v.x,2);
+    #elif dimension == 2
+      v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
+      v.x[1,0] = (fine(v.x,2,0) + fine(v.x,2,1))/2.;
+    #else // dimension == 3
+      v.x[] = (fine(v.x,0,0,0) + fine(v.x,0,1,0) +
+	       fine(v.x,0,0,1) + fine(v.x,0,1,1))/4.;
+      v.x[1,0] = (fine(v.x,2,0,0) + fine(v.x,2,1,0) +
+		  fine(v.x,2,0,1) + fine(v.x,2,1,1))/4.;
+    #endif
+  }
+}
+  
+static inline void coarsen_face (Point point, scalar s)
+{
+  face_average (point, s.v);
+}
+
+static inline void no_coarsen (Point point, scalar s) {}
 
 void restriction (scalar * list)
 {
@@ -54,12 +81,9 @@ void restriction (scalar * list)
       foreach_coarse_level(l) {
 	// fixme: this ignores the s.coarsen() method...
 	for (scalar s in listc)
-	  s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+	  coarsen_average (point, s);
 	for (vector v in listf)
-	  foreach_dimension() {
-	    v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-	    v.x[1,0] = (fine(v.x,2,0) + fine(v.x,2,1))/2.;
-	  }
+	  face_average (point, v);
       }
       boundary_iterate (restriction, list, l);
     }
@@ -88,71 +112,69 @@ void wavelet (scalar s, scalar w)
   foreach_level(0) w[] = 0.;
 }
 
-void refine_bilinear (Point point, scalar s)
+inline double bilinear (Point point, scalar s)
 {
-  /* for each child */
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      /* bilinear interpolation from coarser level */
-      fine(s,k,l) = (9.*s[] + 
-		     3.*(s[2*k-1,0] + s[0,2*l-1]) + 
-		     s[2*k-1,2*l-1])/16.;
+  #if dimension == 1
+    return (3.*coarse(s,0) + coarse(s,child.x))/4.;
+  #elif dimension == 2
+    return (9.*coarse(s,0) + 
+	    3.*(coarse(s,child.x) + coarse(s,0,child.y)) + 
+	    coarse(s,child.x,child.y))/16.;
+  #else // dimension == 3
+    return (27.*coarse(s,0) + 
+	    9.*(coarse(s,child.x) + coarse(s,0,child.y) +
+		coarse(s,0,0,child.z)) + 
+	    3.*(coarse(s,child.x,child.y) + coarse(s,child.x,0,child.z) +
+		coarse(s,0,child.y,child.z)) + 
+	    coarse(s,child.x,child.y,child.z))/64.;
+  #endif
 }
 
-void refine_linear (Point point, scalar s)
+static inline void refine_bilinear (Point point, scalar s)
 {
-  struct { double x, y, z; } g;
+  foreach_child()
+    s[] = bilinear (point, s);
+}
+
+static inline void refine_linear (Point point, scalar s)
+{
+  coord g;
   if (s.gradient)
     foreach_dimension()
-      g.x = s.gradient (s[-1,0], s[], s[1,0]);
+      g.x = s.gradient (s[-1], s[], s[1]);
   else
     foreach_dimension()
-      g.x = (s[1,0] - s[-1,0])/2.;
+      g.x = (s[1] - s[-1])/2.;
 
-  assert (fabs(4.*cm[] 
-	       - fine(cm,0,0) - fine(cm,1,0) 
-	       - fine(cm,0,1) - fine(cm,1,1)) < 1e-10);
-
-  /* for each child */
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      /* linear interpolation from coarser level (conservative) */
-      fine(s,k,l) = s[] + 
-	((2*k-1)*g.x*(fine(cm,!k,0) + fine(cm,!k,1)) +
-	 (2*l-1)*g.y*(fine(cm,0,!l) + fine(cm,1,!l)))/(8.*cm[]);
-}
-
-void refine_reset (Point point, scalar v)
-{
-  /* foreach_child() */
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      fine(v,k,l) = 0.;
-}
-
-void refine_injection (Point point, scalar v)
-{
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      fine(v,k,l) = v[];
-}
-
-void coarsen_face (Point point, scalar s)
-{
-  vector v = s.v;
-  foreach_dimension() {
-    v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-    v.x[1,0] = (fine(v.x,2,0) + fine(v.x,2,1))/2.;
+  double sc = s[], cmc = 4.*cm[], sum = cm[]*(1 << dimension);
+  foreach_child() {
+    s[] = sc;
+    foreach_dimension()
+      s[] += child.x*g.x*cm[-child.x]/cmc;
+    sum -= cm[];
   }
+  assert (fabs(sum) < 1e-10);
 }
 
-void no_coarsen (Point point, scalar s) {}
+static inline void refine_reset (Point point, scalar v)
+{
+  foreach_child()
+    v[] = 0.;
+}
+
+static inline void refine_injection (Point point, scalar v)
+{
+  double val = v[];
+  foreach_child()
+    v[] = val;
+}
 
 vector multigrid_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_face_vector (v, name);
+  foreach_dimension()
+    v.y.coarsen = no_coarsen;
   v.x.coarsen = coarsen_face;
-  v.y.coarsen = no_coarsen;
   return v;
 }
 
@@ -165,16 +187,26 @@ void multigrid_debug (Point point)
     if (pid() > 0)
       sprintf (name, "coarse-%d", pid());
     FILE * fp = fopen (name, "w");
-    double xc = x - child.x*Delta/2., yc = y - child.y*Delta/2.;
-    for (int k = 0; k <= 1; k++)
-      for (int l = 0; l <= 1; l++) {
+    #if dimension == 1
+      double xc = x - child.x*Delta/2.;
+      for (int k = 0; k <= 1; k++)
 	for (scalar v in all)
-	  fprintf (fp, "%g %g %g ", 
+	  fprintf (fp, "%g %g ", 
 		   xc + k*child.x*Delta*2. + v.d.x*Delta, 
-		   yc + l*child.y*Delta*2. + v.d.y*Delta,
-		   coarse(v,k*child.x,l*child.y));
-	fputc ('\n', fp);
-      }
+		   coarse(v,k*child.x));
+      fputc ('\n', fp);
+    #else
+      double xc = x - child.x*Delta/2., yc = y - child.y*Delta/2.;
+      for (int k = 0; k <= 1; k++)
+	for (int l = 0; l <= 1; l++) {
+	  for (scalar v in all)
+	    fprintf (fp, "%g %g %g ", 
+		     xc + k*child.x*Delta*2. + v.d.x*Delta, 
+		     yc + l*child.y*Delta*2. + v.d.y*Delta,
+		     coarse(v,k*child.x,l*child.y));
+	  fputc ('\n', fp);
+	}
+    #endif
     fclose (fp);
     fprintf (stderr, ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 3 t ''", name);
   }
@@ -184,20 +216,33 @@ void multigrid_debug (Point point)
     if (pid() > 0)
       sprintf (name, "fine-%d", pid());
     FILE * fp = fopen (name, "w");
-    double xf = x - Delta/4., yf = y - Delta/4.;
-    for (int k = -2; k <= 3; k++)
-      for (int l = -2; l <= 3; l++) {
+    #if dimension == 1
+      double xf = x - Delta/4.;
+      for (int k = -2; k <= 3; k++)
 	for (scalar v in all) {
-	  fprintf (fp, "%g %g ", 
-		   xf + k*Delta/2. + v.d.x*Delta/4., 
-		   yf + l*Delta/2. + v.d.y*Delta/4.);
-	  if (allocated_child(k,l))
-	    fprintf (fp, "%g ", fine(v,k,l));
+	  fprintf (fp, "%g ", xf + k*Delta/2. + v.d.x*Delta/4.);
+	  if (allocated_child(k))
+	    fprintf (fp, "%g ", fine(v,k));
 	  else
 	    fputs ("n/a ", fp);
 	}
-	fputc ('\n', fp);
-      }
+      fputc ('\n', fp);
+    #else
+      double xf = x - Delta/4., yf = y - Delta/4.;
+      for (int k = -2; k <= 3; k++)
+	for (int l = -2; l <= 3; l++) {
+	  for (scalar v in all) {
+	    fprintf (fp, "%g %g ", 
+		     xf + k*Delta/2. + v.d.x*Delta/4., 
+		     yf + l*Delta/2. + v.d.y*Delta/4.);
+	    if (allocated_child(k,l))
+	      fprintf (fp, "%g ", fine(v,k,l));
+	    else
+	      fputs ("n/a ", fp);
+	  }
+	  fputc ('\n', fp);
+	}
+    #endif
     fclose (fp);
     fprintf (stderr, ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 2 t ''", name);
   }

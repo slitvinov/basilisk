@@ -6,7 +6,6 @@
 #define GHOSTS  2
 
 #define I     (point.i - GHOSTS)
-#define J     -0.5
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
@@ -24,12 +23,12 @@ enum {
   user    = 5
 };
 
-#define is_active(cell)  ((cell).flags & active)
-#define is_leaf(cell)    ((cell).flags & leaf)
-#define is_corner(cell)  false
-#define is_coarse()      ((cell).neighbors > 0)
-#define is_local(cell)   true
-#define is_remote_leaf(cell) false
+@define is_active(cell)  ((cell).flags & active)
+@define is_leaf(cell)    ((cell).flags & leaf)
+@define is_corner(cell)  false
+@define is_coarse()      ((cell).neighbors > 0)
+@define is_local(cell)   true
+@define is_remote_leaf(cell) false
 
 // Caches
 
@@ -74,7 +73,6 @@ typedef struct {
 #else
   char ** m;        /* the grids at each level */
 #endif
-  int i, j, level;  /* the current cell index and level */
 
   Cache        leaves;  /* leaf indices */
   Cache        faces;   /* face indices */
@@ -124,54 +122,51 @@ static size_t _size (size_t l)
 }
 
 #if DYNAMIC
-  @define CELL(m,level,i) (*((Cell *)m[level][i]))
-  @define allocated(i,j) (bitree->m[point.level][_index(i,j)])
-  @define allocated_child(i,j) (bitree->m[point.level+1][_childindex(i,j)])
+@define CELL(m,level,i) (*((Cell *)m[level][i]))
+  @define allocated(i,j,k) (bitree->m[point.level][_index(i)])
+  @define allocated_child(i,j,k) (bitree->m[point.level+1][_childindex(i)])
 #else
   @define CELL(m,level,i) (*((Cell *) &m[level][(i)*(sizeof(Cell) + datasize)]))
-  @define allocated(i,j) true
-  @define allocated_child(i,j) true
+  @define allocated(i,j,k) true
+  @define allocated_child(i,j,k) true
 #endif
 
 /***** Multigrid macros *****/
 @define depth()      (((Bitree *)grid)->depth)
-@define _index(k,l)  (point.i + k + (l) - (l))
-@define _parentindex(k,l) ((point.i + GHOSTS)/2 + k + (l) - (l))
-@define _childindex(k,l) (2*point.i - GHOSTS + k + (l) - (l))
-@define aparent(k,l) CELL(bitree->m, point.level-1, _parentindex(k,l))
-@define child(k,l)   CELL(bitree->m, point.level+1, _childindex(k,l))
+@define _index(k)    (point.i + k)
+@define _parentindex(k) ((point.i + GHOSTS)/2 + k)
+@define _childindex(k) (2*point.i - GHOSTS + k)
+@define aparent(k,l,d) CELL(bitree->m, point.level-1, _parentindex(k))
+@define child(k,l,d)   CELL(bitree->m, point.level+1, _childindex(k))
 
 /***** Bitree macros ****/
-@define NN (1 << point.level)
-@define cell		CELL(bitree->m, point.level, _index(0,0))
-@define neighbor(k,l)	CELL(bitree->m, point.level, _index(k,l))
+@define cell		CELL(bitree->m, point.level, _index(0))
+@define neighbor(k,l,d)	CELL(bitree->m, point.level, _index(k))
 
 /***** Data macros *****/
 #if DYNAMIC
-  @def data(k,l)
-    ((double *) (bitree->m[point.level][_index(k,l)] + sizeof(Cell))) @
-  @def fine(a,k,l)
-    ((double *) (bitree->m[point.level+1][_childindex(k,l)] + sizeof(Cell)))[a] @
-  @def coarse(a,k,l)
-    ((double *) (bitree->m[point.level-1][_parentindex(k,l)] + sizeof(Cell)))[a] @
+  @def data(k,l,d)
+    ((double *) (bitree->m[point.level][_index(k)] + sizeof(Cell))) @
+  @def fine(a,k,l,d)
+    ((double *) (bitree->m[point.level+1][_childindex(k)] + sizeof(Cell)))[a] @
+  @def coarse(a,k,l,d)
+    ((double *) (bitree->m[point.level-1][_parentindex(k)] + sizeof(Cell)))[a] @
 #else // !DYNAMIC
-  @def data(k,l)
+  @def data(k,l,d)
     ((double *) &bitree->m[point.level]
-     [_index(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)]) @
-  @def fine(a,k,l)
+     [_index(k)*(sizeof(Cell) + datasize) + sizeof(Cell)]) @
+  @def fine(a,k,l,d)
     ((double *) &bitree->m[point.level+1]
-     [_childindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
-  @def coarse(a,k,l)
+     [_childindex(k)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
+  @def coarse(a,k,l,d)
     ((double *) &bitree->m[point.level-1]
-     [_parentindex(k,l)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
+     [_parentindex(k)*(sizeof(Cell) + datasize) + sizeof(Cell)])[a] @
 #endif // !DYNAMIC
 
 @def POINT_VARIABLES
   VARIABLES
   int level = point.level; NOT_UNUSED(level);
-  struct { int x, y; } child = {
-    2*((point.i+GHOSTS)%2)-1, 0
-  }; NOT_UNUSED(child);
+  struct { int x; } child = { 2*((point.i+GHOSTS)%2)-1 }; NOT_UNUSED(child);
   Point parent = point;	NOT_UNUSED(parent);
   parent.level--;
   parent.i = (point.i + GHOSTS)/2;
@@ -281,12 +276,12 @@ void recursive (Point point)
 @
 
 // ghost cell coordinates for each direction
-static int _ig[] = {1,-1,0,0}, _jg[] = {0,0,1,-1};
+static int _ig[] = {1,-1};
 
 @define corners()
 @def foreach_boundary_cell(dir,corners)
   if (dir <= left) { _OMPSTART /* for face reduction */
-    int ig = _ig[dir], jg = _jg[dir];	NOT_UNUSED(ig); NOT_UNUSED(jg);
+    int ig = _ig[dir]; NOT_UNUSED(ig);
     Point point = {GHOSTS,0};
     int _d = dir;
     struct { int l, i, stage; } stack[STACKSIZE]; int _s = -1;
@@ -333,14 +328,19 @@ static int _ig[] = {1,-1,0,0}, _jg[] = {0,0,1,-1};
     point.i = _i + (d == right);
     POINT_VARIABLES;
 @
-@define end_foreach_child_direction() end_foreach_child()
+@def end_foreach_child_direction()
+  }
+  point.i = (_i + GHOSTS)/2;
+  point.level--;
+}
+@
 
 #define update_cache() { if (((Bitree *)grid)->dirty) update_cache_f(); }
 
-#define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors &&	\
+#define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors && \
 			       cell.pid >= 0)
 #define is_boundary(cell) (cell.pid < 0)
-  
+
 static void update_cache_f (void)
 {
   Bitree * q = grid;
@@ -396,7 +396,7 @@ static void update_cache_f (void)
 
 @def foreach_cache(_cache,clause) {
   update_cache();
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  int ig = 0; NOT_UNUSED(ig);
   OMP_PARALLEL()
   Point point = {GHOSTS,0};
   int _k; short _flags; NOT_UNUSED(_flags);
@@ -410,7 +410,7 @@ static void update_cache_f (void)
 @define end_foreach_cache() } OMP_END_PARALLEL() }
 
 @def foreach_cache_level(_cache,_l,clause) {
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  int ig = 0; NOT_UNUSED(ig);
   OMP_PARALLEL()
   Point point = {GHOSTS,0};
   point.level = _l;
@@ -430,7 +430,6 @@ static void update_cache_f (void)
 @define end_foreach_face_generic() end_foreach_cache()
 
 @define is_face_x() (true)
-@define is_face_y() (false)
 
 @def foreach_vertex(clause)
   foreach_cache(((Bitree *)grid)->faces, clause) {
@@ -531,18 +530,17 @@ void alloc_children (Point point, int k, int l)
   if (level == bitree->depth)
     alloc_layer();
   point.i += k;
-  l = 0;
 
 #if DYNAMIC
   char ** m = ((char ***)bitree->m)[level+1];
   for (int k = 0; k < 2; k++)
-    if (!m[_childindex(k,l)])
-      m[_childindex(k,l)] = calloc (1, sizeof(Cell) + datasize);
+    if (!m[_childindex(k)])
+      m[_childindex(k)] = calloc (1, sizeof(Cell) + datasize);
 #endif // !DYNAMIC
 
   // foreach child
   for (int k = 0; k < 2; k++)
-    child(k,l).pid = cell.pid;
+    child(k).pid = cell.pid;
   
 @if TRASH
   // foreach child
@@ -568,10 +566,9 @@ static void free_children (Point point, int k, int l)
 #if DYNAMIC
   point.i += k;
   char ** m = ((char ***)bitree->m)[level+1];
-  l = 0;
   for (int k = 0; k < 2; k++) {
-    free (m[_childindex(k,l)]);
-    m[_childindex(k,l)] = NULL;
+    free (m[_childindex(k)]);
+    m[_childindex(k)] = NULL;
   }
 #endif
 }
@@ -629,11 +626,11 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
       if (is_leaf (cell)) {
 	Point neighbor = {point.i + ig}, n2 = {point.i + 2*ig};
 	for (scalar s in lright) {
-	  s[ghost] = s.boundary[d] (point, neighbor, s);
+	  s[ig] = s.boundary[d] (point, neighbor, s);
 	  point.i -= ig;
 	  double vb = s.boundary[d] (point, n2, s);
 	  point.i += ig;
-	  s[2*ig,2*jg] = vb;
+	  s[2*ig] = vb;
 	}
 	for (scalar s in lleft)
 	  s[] = s.boundary[d] (point, neighbor, s);
@@ -646,11 +643,11 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
       if (level == l) {
 	Point neighbor = {point.i + ig}, n2 = {point.i + 2*ig};
 	for (scalar s in lright) {
-	  s[ghost] = s.boundary[d] (point, neighbor, s);
+	  s[ig] = s.boundary[d] (point, neighbor, s);
 	  point.i -= ig;
 	  double vb = s.boundary[d] (point, n2, s);
 	  point.i += ig;
-	  s[2*ig,2*jg] = vb;
+	  s[2*ig] = vb;
 	}
 	for (scalar s in lleft)
 	  s[] = s.boundary[d] (point, neighbor, s);
@@ -670,13 +667,13 @@ static void box_boundary_halo_prolongation_normal (const Boundary * b,
 						   int l, int depth)
 {
   // see test/boundary_halo.c
-  int d = ((BoxBoundary *)b)->d, in, jn;
+  int d = ((BoxBoundary *)b)->d, in;
   if (d > left)
     return;
   if (d % 2)
-    in = jn = 0;
+    in = 0;
   else {
-    in = _ig[d]; jn = _jg[d];
+    in = _ig[d];
   }
 
   foreach_boundary_cell (d, false) {
@@ -725,7 +722,7 @@ static void box_boundary_halo_prolongation_tangent (const Boundary * b,
 	// leaf or halo restriction
 	Point neighbor = {point.i + ig};
 	for (scalar s in list)
-	  s[ghost] = s.boundary[d] (point, neighbor, s);
+	  s[ig] = s.boundary[d] (point, neighbor, s);
 	corners();
       }
       continue;
@@ -737,7 +734,7 @@ static void box_boundary_halo_prolongation_tangent (const Boundary * b,
 	  if (allocated(ig,jg)) {
 	    Point neighbor = {point.i + ig};
 	    for (scalar s in list)
-	      s[ghost] = s.boundary[d] (point, neighbor, s);
+	      s[ig] = s.boundary[d] (point, neighbor, s);
 	  }
       continue;
     }
@@ -778,11 +775,11 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	// leaf or halo restriction
 	Point neighbor = {point.i + ig}, n2 = {point.i + 2*ig};
 	for (scalar s in centered) {
-	  s[ghost] = s.boundary[d] (point, neighbor, s);
+	  s[ig] = s.boundary[d] (point, neighbor, s);
 	  point.i -= ig;
 	  double vb = s.boundary[d] (point, n2, s);
 	  point.i += ig;
-	  s[2*ig,2*jg] = vb;
+	  s[2*ig] = vb;
 	}
 	corners();
       }
@@ -795,13 +792,13 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	  Point neighbor = {point.i + ig}, n2 = {point.i + 2*ig};
 	  if (allocated(ig,jg))
 	    for (scalar s in centered)
-	      s[ghost] = s.boundary[d] (point, neighbor, s);
+	      s[ig] = s.boundary[d] (point, neighbor, s);
 	  if (allocated(2*ig,2*jg))
 	    for (scalar s in centered) {
 	      point.i -= ig;
 	      double vb = s.boundary[d] (point, n2, s);
 	      point.i += ig;
-	      s[2*ig,2*jg] = vb;
+	      s[2*ig] = vb;
 	    }
 	}
       continue;
@@ -816,23 +813,14 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 }
 /* Periodic boundaries */
 
-@define VT _attribute[s].v.y
-  
-static double periodic_bc (Point point, Point neighbor, scalar s);
+static double periodic_bc (Point, Point, scalar);
   
 static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 {
   scalar * list1 = NULL;
   for (scalar s in list)
-    if (!is_constant(s)) {
-      if (s.face) {
-	scalar vt = VT;
-	if (vt.boundary[right] == periodic_bc)
-	  list1 = list_add (list1, s);
-      }
-      else if (s.boundary[right] == periodic_bc)
-	list1 = list_add (list1, s);
-    }
+    if (!is_constant(s) && s.boundary[right] == periodic_bc)
+      list1 = list_add (list1, s);
   if (!list1)
     return;
 
@@ -850,8 +838,6 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   
   free (list1);
 }
-
-@undef VT
 
 static void periodic_boundary_halo_prolongation_x (const Boundary * b,
 						   scalar * list, 
@@ -912,7 +898,7 @@ void init_grid (int n)
     depth++;
   }
   q = calloc (1, sizeof (Bitree));
-  q->depth = 0; q->i = q->j = GHOSTS; q->level = 0.;
+  q->depth = 0;
   q->m = malloc(sizeof (char *)*2);
   /* make sure we don't try to access level -1 */
   q->m[0] = NULL; q->m = &(q->m[1]);
@@ -964,12 +950,14 @@ void init_grid (int n)
   init_events();
 }
 
-Point locate (double xp, double yp)
+struct _locate { double x, y, z; };
+
+Point locate (struct _locate p)
 {
   for (int l = depth(); l >= 0; l--) {
     Point point = { .level = l };
     int n = 1 << point.level;
-    double a = (xp - X0)/L0*n;
+    double a = (p.x - X0)/L0*n;
     if (a >= 0.5 - GHOSTS && a < n + GHOSTS - 0.5) {
       point.i = a + GHOSTS;
       if (allocated(0,0) && is_local(cell) && is_leaf(cell))

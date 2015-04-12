@@ -1,8 +1,8 @@
 #define GRIDNAME "Multigrid 1D"
+#define dimension 1
 #define GHOSTS 1
 
 #define I      (point.i - GHOSTS)
-#define J      -0.5
 #define DELTA  (1./point.n)
 
 typedef struct {
@@ -11,7 +11,7 @@ typedef struct {
 } Multigrid;
 
 struct _Point {
-  int i, j, level, n;
+  int i, level, n;
 };
 static Point last_point;
 
@@ -35,25 +35,23 @@ static size_t _size (size_t l)
 @define depth()       (((Multigrid *)grid)->depth)
 @def fine(a,k,l,m)
   ((double *)
-   &multigrid->d[point.level+1][(2*point.i-GHOSTS+k)*datasize + (l) - (l)])[a]
+   &multigrid->d[point.level+1][(2*point.i-GHOSTS+k)*datasize])[a]
 @
   @def coarse(a,k,l,m)
   ((double *)
-   &multigrid->d[point.level-1][((point.i+GHOSTS)/2+k)*datasize + (l) - (l)])[a]
+   &multigrid->d[point.level-1][((point.i+GHOSTS)/2+k)*datasize])[a]
 @
 @def POINT_VARIABLES
   VARIABLES
   int level = point.level; NOT_UNUSED(level);
-  struct { int x, y; } child = {
-    2*((point.i+GHOSTS)%2)-1, 0
-  }; NOT_UNUSED(child);
+  struct { int x; } child = { 2*((point.i+GHOSTS)%2)-1 }; NOT_UNUSED(child);
   Point parent = point;	NOT_UNUSED(parent);
   parent.level--;
   parent.i = (point.i + GHOSTS)/2;
 @
 @def foreach_level(l)
   OMP_PARALLEL()
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  int ig = 0; NOT_UNUSED(ig);
   Point point = *((Point *)grid);
   point.level = l; point.n = 1 << point.level;
   int _k;
@@ -66,7 +64,7 @@ static size_t _size (size_t l)
 
 @def foreach(clause)
   OMP_PARALLEL()
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  int ig = 0; NOT_UNUSED(ig);
   Point point = *((Point *)grid);
   point.level = multigrid->depth; point.n = 1 << point.level;
   int _k;
@@ -79,7 +77,7 @@ static size_t _size (size_t l)
 
 @def foreach_face_generic(clause)
   OMP_PARALLEL()
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
+  int ig = 0; NOT_UNUSED(ig);
   Point point = *((Point *)grid);
   point.level = multigrid->depth; point.n = 1 << point.level;
   int _k;
@@ -91,7 +89,6 @@ static size_t _size (size_t l)
 @define end_foreach_face_generic() } OMP_END_PARALLEL()
 
 @define is_face_x() true
-@define is_face_y() (point.i <= point.n + GHOSTS - 1)
 
 @def foreach_vertex()
 foreach_face_generic() {
@@ -102,8 +99,8 @@ foreach_face_generic() {
 @define is_coarse() (point.level < depth())
 
 @def foreach_fine_to_coarse() {
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point _p = {0,0};
+  int ig = 0; NOT_UNUSED(ig);
+  Point _p;
   _p.level = multigrid->depth - 1; _p.n = 1 << _p.level;
   for (; _p.level >= 0; _p.n /= 2, _p.level--)
     OMP_PARALLEL()
@@ -149,21 +146,21 @@ void multigrid_trash (void * alist)
 }
 
 // ghost cell coordinates for each direction
-static int _ig[] = {1,-1,0,0};
+static int _ig[] = {1,-1};
 
 static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
 {
   int d = ((BoxBoundary *)b)->d;
 
   Point point = *((Point *)grid);
-  ig = d % 2 ? 0 : _ig[d]; jg = 0;
+  ig = d % 2 ? 0 : _ig[d];
   point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
   assert (d <= left);
   point.i = d == right ? point.n + GHOSTS : GHOSTS;
-  Point neighbor = {point.i + ig, point.j, point.level};
+  Point neighbor = {point.i + ig, point.level};
   for (scalar s in list) {
     scalar b = s.v.x;
-    val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+    val(s,ig) = b.boundary[d] (point, neighbor, s);
   }
 }
 
@@ -190,13 +187,13 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 
   if (centered) {
     Point point = *((Point *)grid);
-    ig = _ig[d]; jg = 0;
+    ig = _ig[d];
     point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
     assert (d <= left);
     point.i = d == right ? point.n + GHOSTS - 1 : GHOSTS;
-    Point neighbor = {point.i + ig, point.j + jg, point.level};
+    Point neighbor = {point.i + ig, point.level};
     for (scalar s in centered)
-      val(s,ig,jg) = s.boundary[d] (point, neighbor, s);
+      val(s,ig) = s.boundary[d] (point, neighbor, s);
     free (centered);
   }
   
@@ -206,21 +203,12 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 
 // periodic boundaries
 
-@define VT _attribute[s].v.y
-
 static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 {
   scalar * list1 = NULL;
   for (scalar s in list)
-    if (!is_constant(s)) {
-      if (s.face) {
-	scalar vt = VT;
-	if (vt.boundary[right] == periodic_bc)
-	  list1 = list_add (list1, s);
-      }
-      else if (s.boundary[right] == periodic_bc)
-	list1 = list_add (list1, s);
-    }
+    if (!is_constant(s) && s.boundary[right] == periodic_bc)
+      list1 = list_add (list1, s);
   if (!list1)
     return;
 
@@ -228,15 +216,13 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
   for (int i = 0; i < GHOSTS; i++)
     for (scalar s in list1)
-      s[i,0] = s[i + point.n,0];
+      s[i] = s[i + point.n];
   for (int i = point.n + GHOSTS; i < point.n + 2*GHOSTS; i++)
     for (scalar s in list1)
-      s[i,0] = s[i - point.n,0];
+      s[i] = s[i - point.n];
 
   free (list1);
 }
-
-@undef VT
 
 void free_grid (void)
 {
@@ -282,7 +268,7 @@ void init_grid (int n)
   grid = m;
   trash (all);
   // box boundaries
-  for (int d = 0; d < top; d++) {
+  for (int d = 0; d <= left; d++) {
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
     box->d = d;
     Boundary * b = (Boundary *) box;
@@ -309,11 +295,13 @@ void realloc_scalar (void)
   }
 }
 
-Point locate (double xp, double yp)
+struct _locate { double x, y, z; };
+
+Point locate (struct _locate p)
 {
   Point point = *((Point *)grid);
   point.n = 1 << multigrid->depth;
-  double a = (xp - X0)/L0*point.n;
+  double a = (p.x - X0)/L0*point.n;
   point.i = a + GHOSTS;
   point.level = 
     (a >= 0.5 - GHOSTS && a < point.n + GHOSTS - 0.5) ? multigrid->depth : - 1;

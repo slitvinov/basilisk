@@ -104,8 +104,8 @@ foreach_face_generic() {
 @
 @define end_foreach_vertex() } end_foreach_face_generic()
 
-@define is_face_x() (point.j <= point.n + GHOSTS - 1)
-@define is_face_y() (point.i <= point.n + GHOSTS - 1)
+@define is_face_x() (point.j < point.n + GHOSTS)
+@define is_face_y() (point.i < point.n + GHOSTS)
 
 @define is_coarse() (point.level < depth())
 
@@ -248,10 +248,10 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
     }
 
   if (centered) {
+    OMP_PARALLEL();
     /* we disable floating-point-exceptions to avoid having to deal with
        undefined operations in non-trivial boundary conditions. */
     disable_fpe (FE_DIVBYZERO|FE_INVALID);
-    OMP_PARALLEL();
     Point point;
     point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
     ig = _ig[d]; jg = _jg[d];
@@ -278,8 +278,8 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 #endif
 	}
       }
-    OMP_END_PARALLEL();
     enable_fpe (FE_DIVBYZERO|FE_INVALID);
+    OMP_END_PARALLEL();
     free (centered);
   }
 
@@ -404,13 +404,15 @@ void realloc_scalar (void)
   }
 }
 
-Point locate (double xp, double yp)
+struct _locate { double x, y, z; };
+
+Point locate (struct _locate p)
 {
   Point point;
   point.n = 1 << multigrid->depth;
-  double a = (xp - X0)/L0*point.n;
+  double a = (p.x - X0)/L0*point.n;
   point.i = a + GHOSTS;
-  double b = (yp - Y0)/L0*point.n;
+  double b = (p.y - Y0)/L0*point.n;
   point.j = b + GHOSTS;
   point.level = 
     (a >= 0.5 - GHOSTS && a < point.n + GHOSTS - 0.5 &&

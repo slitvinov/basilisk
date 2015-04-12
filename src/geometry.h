@@ -98,15 +98,7 @@ double line_area (double nx, double ny, double alpha)
 VOF algorithms require the computation of volume fractions on
 (rectangular) parts of the initial square cell.
 
-We first define a new type used to store the coordinates of the
-vertices of the rectangle. */
-
-typedef struct {
-  double x, y;
-} coord;
-
-/**
-We then define a function which takes an interface definition
+We first define a function which takes an interface definition
 ($\mathbf{n}$, $\alpha$), the coordinates of the lower-left `(x1,y1)`
 and upper-right `(x2,y2)` corners of a rectangle and returns the
 fraction of this rectangle which lies inside the interface. */

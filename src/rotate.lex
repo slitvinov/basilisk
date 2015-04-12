@@ -38,13 +38,22 @@ ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 
 %%
 
-({ID}+\.)+x{WS}*,{WS}*({ID}+\.)+y {
+({ID}+\.)+x{WS}*,{WS}*({ID}+\.)+y |
+({ID}+\.)+x{WS}*,{WS}*({ID}+\.)+y,{WS}*({ID}+\.)+z {
   // do not rotate lists of vector components
   char * id1 = strdup (yytext);
   char * s = strchr (id1, ','), * id2 = s + 1; 
   do *s-- = '\0'; while (strchr(" \t\v\n\f",*s));
   while (strchr(" \t\v\n\f",*id2)) id2++;
-  if (strlen(id1) != strlen(id2) || strncmp (id1, id2, strlen(id1) - 2))
+  s = strchr (id2, ',');
+  char * id3 = s ? s + 1 : NULL;
+  if (id3) {
+    do *s-- = '\0'; while (strchr(" \t\v\n\f",*s));
+    while (strchr(" \t\v\n\f",*id3)) id3++;
+  }
+  if (strlen(id1) != strlen(id2) || strncmp (id1, id2, strlen(id1) - 2) ||
+      (id3 && (strlen(id1) != strlen(id3) ||
+	       strncmp (id1, id3, strlen(id1) - 2))))
     rotate_string(yytext);
   else
     ECHO;
@@ -54,10 +63,30 @@ ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 {ID}*_[xyz] |
 [.][xyz]  rotate_string (yytext);
 
-left   fputs (n % 2 ? "bottom" : "left",   yyout);
-right  fputs (n % 2 ? "top"    : "right",  yyout);
-top    fputs (n % 2 ? "right"  : "top",    yyout);
-bottom fputs (n % 2 ? "left"   : "bottom", yyout);
+left {
+  char * s[3] = {"left", "bottom", "back"};
+  fputs (s[n % dimension], yyout);
+}
+right {
+  char * s[3] = {"right", "top", "front"};
+  fputs (s[n % dimension], yyout);
+}
+top {
+  char * s[3] = {"top", "front", "right"};
+  fputs (s[n % dimension], yyout);
+}
+bottom {
+  char * s[3] = {"bottom", "back", "left"};
+  fputs (s[n % dimension], yyout);
+}
+front {
+  char * s[3] = {"front", "right", "top"};
+  fputs (s[n % dimension], yyout);
+}
+back {
+  char * s[3] = {"back", "left", "bottom"};
+  fputs (s[n % dimension], yyout);
+}
 
 {ID}+   ECHO;
 
@@ -107,7 +136,7 @@ val_{ID}*{WS}*\( |
       ghost = 1;
   if (!ghost && i == 2 + start) {
     for (j = 0; j < dimension; j++) {
-      int k = (j + n) % dimension;
+      int k = (j + dimension - n) % dimension;
       rotate_string (index[k + start]);
       fputc (j < 2 ? ',' : ')', yyout);
     }

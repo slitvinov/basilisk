@@ -80,10 +80,7 @@ static void advance_saint_venant (scalar * output, scalar * input,
 {
   // recover scalar and vector fields from lists
   scalar hi = input[0], ho = output[0], dh = updates[0];
-  vector
-    ui = { input[1], input[2] },
-    uo = { output[1], output[2] },
-    dhu = { updates[1], updates[2] };
+  vector ui = vector(input[1]), uo = vector(output[1]), dhu = vector(updates[1]);
 
   // new fields in ho[], uo[]
   foreach() {
@@ -134,7 +131,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   predictor-corrector scheme). */
 
   scalar h = evolving[0];
-  vector u = { evolving[1], evolving[2] };
+  vector u = vector(evolving[1]);
 
   /**
   *Fh* and *Fq* will contain the fluxes for $h$ and $h\mathbf{u}$
@@ -240,7 +237,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   these are updates for $h$ and $h\mathbf{u}$ (not $\mathbf{u}$). */
   
   scalar dh = updates[0];
-  vector dhu = { updates[1], updates[2] };
+  vector dhu = vector(updates[1]);
 
   foreach() {
     dh[] = (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/(cm[]*Delta);
@@ -330,7 +327,7 @@ static void refine_elevation (Point point, scalar h)
   // (default refinement conserves mass but not lake-at-rest)
   if (h[] >= dry) {
     double eta = zb[] + h[];   // water surface elevation  
-    struct { double x, y; } g; // gradient of eta
+    coord g; // gradient of eta
     if (gradient)
       foreach_dimension()
 	g.x = gradient (zb[-1,0] + h[-1,0], eta, zb[1,0] + h[1,0])/4.;
@@ -338,8 +335,12 @@ static void refine_elevation (Point point, scalar h)
       foreach_dimension()
 	g.x = (zb[1,0] - zb[-1,0])/(2.*Delta);
     // reconstruct water depth h from eta and zb
-    foreach_child()
-      h[] = max(0, eta + g.x*child.x + g.y*child.y - zb[]);
+    foreach_child() {
+      double etac = eta;
+      foreach_dimension()
+	etac += g.x*child.x;
+      h[] = max(0, etac - zb[]);
+    }
   }
   else {
 

@@ -74,8 +74,8 @@
   char * tracefunc = NULL;
   
   int foreach_line;
-  enum { face_x, face_y, face_xy };
-  int foreach_face_xy;
+  enum { face_x, face_y, face_z, face_xyz };
+  int foreach_face_xyz;
 
   char ** args = NULL, ** argss = NULL;
   int nargs = 0, inarg;
@@ -242,28 +242,30 @@
     foreachdim = 0;
   }
 
+  void write_face (FILE * fp, int i, int n) {
+    fprintf (yyout, " { int %cg = -1; VARIABLES; ", 'i' + i);
+    char s[30];
+    sprintf (s, "is_face_%c()", 'x' + i);
+    writefile (fp, n, foreach_line, s);
+    fputs (" }} ", yyout);
+  }
+  
   void foreachbody() {
     if (inforeach_face) {
       // foreach_face()
       fputs ("foreach_face_generic()", yyout);
       FILE * fp = dopen ("_foreach_body.h", "r");
-      if (foreach_face_xy == face_xy) {
-	fputs (" { int jg = -1; VARIABLES; ", yyout);
-	writefile (fp, 1, foreach_line, "is_face_y()");
-	fputs (" }} { int ig = -1; VARIABLES; ", yyout);
-	writefile (fp, 0, foreach_line, "is_face_x()");
-	fputs (" }} ", yyout);
+      if (foreach_face_xyz == face_xyz) {
+	int i;
+	for (i = 0; i < dimension; i++)
+	  write_face (fp, i, i);
       }
-      else if (foreach_face_xy == face_x) {
-	fputs (" { int ig = -1; VARIABLES; ", yyout);
-	writefile (fp, 0, foreach_line, "is_face_x()");
-	fputs (" }} ", yyout);
-      }
-      else {
-	fputs (" { int jg = -1; VARIABLES; ", yyout);
-	writefile (fp, 0, foreach_line, "is_face_y()");
-	fputs (" }} ", yyout);
-      }
+      else if (foreach_face_xyz == face_x)
+	write_face (fp, 0, 0);
+      else if (foreach_face_xyz == face_y)
+	write_face (fp, 1, 0);
+      else
+	write_face (fp, 2, 0);
       fputs (" end_foreach_face_generic()\n", yyout);
       fprintf (yyout, "#line %d\n", line);
       fclose (fp);
@@ -1005,16 +1007,22 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     fputs ("{\n", yyout);
     maps (line);
     if (inforeach_face) {
-      foreach_face_xy = face_xy;
+      foreach_face_xyz = face_xyz;
       if (nreduct == 0) { // foreach_face (x)
 	FILE * fp = dopen ("_foreach.h", "r");
 	int c;
 	while ((c = fgetc (fp)) != EOF)
 	  if (c == 'x')
-	    foreach_face_xy = face_x;
+	    foreach_face_xyz = face_x;
 	  else if (c == 'y')
-	    foreach_face_xy = face_y;
+	    foreach_face_xyz = face_y;
+	  else if (c == 'z')
+	    foreach_face_xyz = face_z;
 	fclose (fp);
+	if (foreach_face_xyz != face_xyz &&
+	    ((dimension < 2 && foreach_face_xyz > face_x) ||
+	     (dimension < 3 && foreach_face_xyz > face_y)))
+	  return yyerror ("face dimension is too high");
       }
     }
     inforeach = 2;
@@ -1474,7 +1482,14 @@ val{WS}*[(]    {
       s = yytext;
       while (!strchr(" \t\v\n\f[", *s)) s++;
       *s = '\0';
-      if (var->constant)
+      if ((dimension < 2 && strstr(yytext, ".y")) ||
+	  (dimension < 3 && strstr(yytext, ".z"))) {
+	if (debug)
+	  fprintf (stderr, "%s:%d: the dimension of '%s' is too high\n",
+		   fname, line, yytext);
+	fprintf (yyout, "_val_higher_dimension(%s", yytext);
+      }
+      else if (var->constant)
 	fprintf (yyout, "_val_constant(%s", boundaryrep(yytext));
       else if (var->maybeconst)
 	maybeconst_macro (var, "val", yytext);
@@ -1551,10 +1566,11 @@ val{WS}*[(]    {
     *s++ = '\0';
     var_t * dir = varlookup (boundarydir, strlen(boundarydir));
     if ((!dir || dir->type != bid) &&
-	strcmp(boundarydir, "top") &&
-	strcmp(boundarydir, "right") &&
-	strcmp(boundarydir, "left") &&
-	strcmp(boundarydir, "bottom"))
+	strcmp(boundarydir, "right") && strcmp(boundarydir, "left") &&
+	(dimension < 2 || (strcmp(boundarydir, "top") &&
+			   strcmp(boundarydir, "bottom"))) &&
+	(dimension < 3 || (strcmp(boundarydir, "front") &&
+			   strcmp(boundarydir, "back"))))
       REJECT;
 #if DEBUG
     fprintf (stderr, "%s:%d: boundarydir: %s yytext: %s\n",
@@ -1585,7 +1601,7 @@ val{WS}*[(]    {
     REJECT;
 }
 
-[a-zA-Z_0-9]+[.nt]*{WS}*\[{WS}*(right|left|top|bottom){WS}*\]{WS}*={WS}*periodic{WS}*\({WS}*\){WS}*; {
+[a-zA-Z_0-9]+[.nt]*{WS}*\[{WS}*(right|left|top|bottom|front|back){WS}*\]{WS}*={WS}*periodic{WS}*\({WS}*\){WS}*; {
   /* v[top] = periodic(); */
   char * s = yytext;
   while (!strchr(" \t\v\n\f[.", *s)) s++;
@@ -1600,6 +1616,11 @@ val{WS}*[(]    {
     s = boundarydir;
     while (!strchr(" \t\v\n\f]", *s)) s++;
     *s++ = '\0';
+    if ((dimension < 2 && (!strcmp(boundarydir, "top") ||
+			   !strcmp(boundarydir, "bottom"))) ||
+	(dimension < 3 && (!strcmp(boundarydir, "front") ||
+			   !strcmp(boundarydir, "back"))))
+      REJECT;
 #if DEBUG
     fprintf (stderr, "%s:%d: boundarydir: %s yytext: %s\n",
 	     fname, line, boundarydir, yytext);

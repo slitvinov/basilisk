@@ -71,7 +71,7 @@ void momentum (vector u, scalar h, vector du)
   foreach_vertex()
     psi[] = (u.y[] - u.y[-1,0] + u.x[0,-1] - u.x[])/Delta;  
 
-  struct { double x, y; } f = {1.,-1.};
+  coord f = {1.,-1.};
   foreach_face()
     du.x[] = 
       - (G*(h[] + b[]) + ke[] - G*(h[-1,0] + b[-1,0]) - ke[-1,0])/Delta

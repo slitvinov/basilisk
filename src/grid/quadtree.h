@@ -30,11 +30,11 @@ enum {
   face_y = 1 << 1
 };
 
-#define is_active(cell)  ((cell).flags & active)
-#define is_leaf(cell)    ((cell).flags & leaf)
-#define is_coarse()      ((cell).neighbors > 0)
-#define is_border(cell)  ((cell).flags & border)
-#define is_local(cell)   ((cell).pid == pid())
+@define is_active(cell)  ((cell).flags & active)
+@define is_leaf(cell)    ((cell).flags & leaf)
+@define is_coarse()      ((cell).neighbors > 0)
+@define is_border(cell)  ((cell).flags & border)
+@define is_local(cell)   ((cell).pid == pid())
 
 @if _MPI
 @ define is_remote_leaf(cell) ((cell).flags & remote_leaf)
@@ -1301,13 +1301,15 @@ void check_two_one (void)
 	}
 }
 
-Point locate (double xp, double yp)
+struct _locate { double x, y, z; };
+
+Point locate (struct _locate p)
 {
   for (int l = depth(); l >= 0; l--) {
     Point point = { .level = l };
     int n = 1 << point.level;
-    point.i = (xp - X0)/L0*n + GHOSTS;
-    point.j = (yp - Y0)/L0*n + GHOSTS;
+    point.i = (p.x - X0)/L0*n + GHOSTS;
+    point.j = (p.y - Y0)/L0*n + GHOSTS;
     if (point.i >= 0 && point.i < n + 2*GHOSTS) {
       if (allocated(0,0) && is_local(cell) && is_leaf(cell))
 	return point;

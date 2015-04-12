@@ -18,25 +18,28 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
 #if TWO_ONE
   /* refine neighborhood if required */
   if (level > 0)
-    for (int k = 0; k != 2*child.x; k += child.x) {
-#if dimension == 1
-      int l = 0;
-#else
+    for (int k = 0; k != 2*child.x; k += child.x)
+    #if dimension > 1
       for (int l = 0; l != 2*child.y; l += child.y)
-#endif
-	if (aparent(k,l).pid >= 0 && is_leaf(aparent(k,l))) {
-	  Point p = point;
-	  /* fixme: this should be made
-	     independent from the quadtree implementation */
-	  p.level = point.level - 1;
-	  p.i = (point.i + GHOSTS)/2 + k;
-#if dimension != 1
-	  p.j = (point.j + GHOSTS)/2 + l;
-#endif
-	  refine_cell (p, list, flag, refined);
-	  aparent(k,l).flags |= flag;
-	}
-    }
+    #endif
+      #if dimension > 2
+	for (int m = 0; m != 2*child.z; m += child.z)
+      #endif
+	  if (aparent(k,l,m).pid >= 0 && is_leaf(aparent(k,l,m))) {
+	    Point p = point;
+	    /* fixme: this should be made
+	       independent from the quadtree implementation */
+	    p.level = point.level - 1;
+	    p.i = (point.i + GHOSTS)/2 + k;
+            #if dimension > 1
+	      p.j = (point.j + GHOSTS)/2 + l;
+            #endif
+            #if dimension > 2
+	      p.k = (point.k + GHOSTS)/2 + m;
+            #endif
+	    refine_cell (p, list, flag, refined);
+	    aparent(k,l,m).flags |= flag;
+	  }
 #endif
 
   /* refine */
@@ -389,6 +392,7 @@ void refine_face_solenoidal (Point point, scalar s)
 {
   refine_face (point, s);
   if (is_local(cell)) {
+    #if dimension == 2
     // local projection, see section 3.3 of Popinet, JCP, 2009
     vector v = s.v;
     double d[4], p[4];
@@ -405,18 +409,21 @@ void refine_face_solenoidal (Point point, scalar s)
     fine(v.x,1,0) += p[3] - p[2];
     fine(v.y,0,1) += p[0] - p[2];
     fine(v.y,1,1) += p[1] - p[3];
+    #else
+    assert (false);
+    #endif
   }
 }
 
 vector quadtree_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_face_vector (v, name);
+  foreach_dimension()
+    v.x.coarsen = v.x.refine = no_coarsen;
   v.x.coarsen = coarsen_face;
-  v.y.coarsen = no_coarsen;
   v.x.refine  = refine_face;
-  v.y.refine  = no_coarsen;
-  v.x.prolongation = refine_face_x;
-  v.y.prolongation = refine_face_y;  
+  foreach_dimension()
+    v.x.prolongation = refine_face_x;
   return v;
 }
 
@@ -434,9 +441,11 @@ static void quadtree_boundary_level (scalar * list, int l)
       }
       else if (s.coarsen != no_coarsen) {
 	listc = list_add (listc, s);
-	list2 = list_add (list2, s);
 	if (s.face)
-	  list2 = list_add (list2, s.v.y);
+	  foreach_dimension()
+	    list2 = list_add (list2, s.v.x);
+	else
+	  list2 = list_add (list2, s);
       }
     }
 

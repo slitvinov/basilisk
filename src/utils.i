@@ -1,5 +1,9 @@
 %{
-  extern double interpolate (scalar v, double xp, double yp);
+  struct _interpolate {
+    scalar v;
+    double x, y, z;
+  };
+  extern double interpolate (struct _interpolate p);
 %}
 
 %inline %{
@@ -16,15 +20,15 @@
   extern void vorticity (const vector u, scalar omega);
 %}
 
-extern double interpolate (scalar v, double xp, double yp = 0.);
-
 %apply (double * IN_ARRAY1, int DIM1) {(double * x, int len1)};
 %apply (double * ARGOUT_ARRAY1, int DIM1) {(double * val, int len)};
 %inline %{
   void _interpolate1D (scalar v, double * x, int len1, double * val, int len) {
     int i;
-    for (i = 0; i < len; i++)
-      val[i] = interpolate (v, x[i], 0.);
+    for (i = 0; i < len; i++) {
+      struct _interpolate p = {v, x[i]};
+      val[i] = interpolate (p);
+    }
   }
 %}
 
@@ -41,7 +45,9 @@ extern double interpolate (scalar v, double xp, double yp = 0.);
                        double * y, int len5, int len6,
                        double * val, int len1, int len2) {
     int i;
-    for (i = 0; i < len1*len2; i++)
-      val[i] = interpolate (v, x[i], y[i]);
+    for (i = 0; i < len1*len2; i++) {
+      struct _interpolate p = {v, x[i], y[i]};
+      val[i] = interpolate (p);
+    }
   }
 %}

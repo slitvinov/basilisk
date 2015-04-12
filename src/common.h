@@ -294,6 +294,9 @@ void mpi_init()
 @define VARIABLES      _CATCH;
 @define val(a,i,j,k)   data(i,j,k)[a]
 
+double _val_higher_dimension = 0.;
+@define _val_higher_dimension(x,a,b,c) _val_higher_dimension
+
 /* undefined value */
 /* Initialises unused memory with "signaling NaNs".  
  * This is probably not very portable, tested with
@@ -325,26 +328,50 @@ static void set_fpe (void) {}
 // the grid
 void * grid = NULL;
 // coordinates of the lower-left corner of the box
-static double X0 = 0., Y0 = 0.;
+double X0 = 0., Y0 = 0., Z0 = 0.;
 // size of the box
-static double L0 = 1.;
+double L0 = 1.;
 // number of grid points
-static int N = 64;
+int N = 64;
 
 typedef int scalar;
 
 typedef struct {
-  scalar x, y;
+  scalar x;
+#if dimension > 1
+  scalar y;
+#endif
+#if dimension > 2
+  scalar z;
+#endif
 } vector;
 
 typedef struct {
-  vector x, y;
+  vector x;
+#if dimension > 1
+  vector y;
+#endif
+#if dimension > 2
+  vector z;
+#endif
 } tensor;
+
+typedef struct {
+  double x;
+#if dimension > 1
+  double y;
+#endif
+#if dimension > 2
+  double z;
+#endif
+} coord;
 
 #define norm(v) (sqrt(sq(v.x[]) + sq(v.y[])))
 
-void origin (double x, double y) {
-  X0 = x; Y0 = y;
+struct _origin { double x, y, z; };
+
+void origin (struct _origin p) {
+  X0 = p.x; Y0 = p.y; Z0 = p.z;
 }
 
 void size (double L) {
@@ -355,8 +382,15 @@ double zero (double s0, double s1, double s2) { return 0.; }
 
 // boundary conditions for each direction/variable
 
-enum { right, left, top, bottom };
-int nboundary = 4;
+#if dimension == 1
+  enum { right, left };
+#elif dimension == 2
+  enum { right, left, top, bottom };
+#else
+  enum { right, left, top, bottom, front, back };
+#endif
+int nboundary = 2*dimension;
+
 #define none -1
 
 @define dirichlet(x)            (2.*(x) - val(_s,0,0,0))
@@ -379,7 +413,15 @@ attribute {
   double (** boundary_homogeneous) (Point, Point, scalar);
   double (* gradient)              (double, double, double);
   char * name;
-  struct { int x, y; } d; // staggering
+  struct {
+    int x;
+#if dimension > 1
+    int y;
+#endif
+#if dimension > 2
+    int z;
+#endif
+  } d; // staggering
   vector v;
   bool   face, normal;
 }
@@ -477,15 +519,20 @@ vector * vectors_append (vector * list, vector v)
   int len = vectors_len (list);
   list = realloc (list, sizeof (vector)*(len + 2));
   list[len] = v;
-  list[len + 1] = (vector){-1,-1};
+  list[len + 1] = (vector){-1};
   return list;
 }
 
 vector * vectors_add (vector * list, vector v)
 {
-  for (vector w in list)
-    if (w.x == v.x && w.y == v.y)
+  for (vector w in list) {
+    bool id = true;
+    foreach_dimension()
+      if (w.x != v.x)
+	id = false;
+    if (id)
       return list;
+  }
   return vectors_append (list, v);
 }
 
@@ -503,9 +550,10 @@ vector * vectors_from_scalars (scalar * s)
   vector * list = NULL;
   while (*s >= 0) {
     vector v;
-    v.x = *s++;
-    assert (*s >= 0);
-    v.y = *s++;
+    foreach_dimension() {
+      assert (*s >= 0);
+      v.x = *s++;
+    }
     list = vectors_append (list, v);
   }
   return list;
@@ -524,7 +572,7 @@ tensor * tensors_append (tensor * list, tensor t)
   int len = tensors_len (list);
   list = realloc (list, sizeof (tensor)*(len + 2));
   list[len] = t;
-  list[len + 1] = (tensor){{-1,-1},{-1,-1}};
+  list[len + 1] = (tensor){{-1}};
   return list;
 }
 
@@ -533,9 +581,10 @@ tensor * tensors_from_vectors (vector * v)
   tensor * list = NULL;
   while (v->x >= 0) {
     tensor t;
-    t.x = *v++;
-    assert (v->x >= 0);
-    t.y = *v++;
+    foreach_dimension() {
+      assert (v->x >= 0);
+      t.x = *v++;
+    }
     list = tensors_append (list, t);
   }
   return list;
@@ -549,6 +598,8 @@ scalar (* init_scalar)      (scalar, const char *);
 vector (* init_vector)      (vector, const char *);
 tensor (* init_tensor)      (tensor, const char *);
 vector (* init_face_vector) (vector, const char *);
+
+#define vector(x) (*((vector *)&(x)))
 
 // events 
 
@@ -610,8 +661,8 @@ double timer_elapsed (timer t)
 	  
 // Constant fields
 
-const face vector zerof[] = {0.,0.};
-const face vector unityf[] = {1.,1.};
+const face vector zerof[] = {0.,0.,0.};
+const face vector unityf[] = {1.,1.,1.};
 const scalar unity[] = 1.;
 
 // Metric

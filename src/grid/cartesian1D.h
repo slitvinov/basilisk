@@ -1,12 +1,12 @@
 #define GRIDNAME "Cartesian 1D"
+#define dimension 1
 #define GHOSTS 1
 
 #define I     (point.i - 1)
-#define J     -0.5
 #define DELTA (1./point.n)
 
 struct _Point {
-  int i, j;
+  int i;
   int level; // only to return level in locate()
   int n;
   char * data;
@@ -52,7 +52,7 @@ foreach_face_generic() {
 @define is_face_y() (point.i <= point.n)
 
 // ghost cell coordinates for each direction
-static int _ig[] = {1,-1,0,0};
+static int _ig[] = {1,-1};
 
 // Box boundaries
 
@@ -64,13 +64,13 @@ static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
   int d = ((BoxBoundary *)b)->d;
 
   Point point = *((Point *)grid);
-  ig = d % 2 ? 0 : _ig[d]; jg = 0;
+  ig = _ig[d];
   assert (d <= left);
   point.i = d == right ? point.n + GHOSTS : GHOSTS;
-  Point neighbor = {point.i + ig, point.j};
+  Point neighbor = {point.i + ig};
   for (scalar s in list) {
     scalar b = s.v.x;
-    val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+    val(s,ig) = b.boundary[d] (point, neighbor, s);
   }
 }
 
@@ -97,12 +97,11 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 
   if (centered) {
     Point point = *((Point *)grid);
-    ig = _ig[d]; jg = 0;
-    assert (d <= left);
+    ig = _ig[d];
     point.i = d == right ? point.n + GHOSTS - 1 : GHOSTS;
-    Point neighbor = {point.i + ig, point.j + jg};
+    Point neighbor = {point.i + ig};
     for (scalar s in centered)
-      val(s,ig,jg) = s.boundary[d] (point, neighbor, s);
+      val(s,ig) = s.boundary[d] (point, neighbor, s);
     free (centered);
   }
     
@@ -112,21 +111,12 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 
 // periodic boundaries
 
-@define VT _attribute[s].v.y
-
 static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 {
   scalar * list1 = NULL;
   for (scalar s in list)
-    if (!is_constant(s)) {
-      if (s.face) {
-	scalar vt = VT;
-	if (vt.boundary[right] == periodic_bc)
-	  list1 = list_add (list1, s);
-      }
-      else if (s.boundary[right] == periodic_bc)
-	list1 = list_add (list1, s);
-    }
+    if (!is_constant(s) && s.boundary[right] == periodic_bc)
+      list1 = list_add (list1, s);
   if (!list1)
     return;
 
@@ -134,10 +124,10 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   point.i = 0;
   for (int i = 0; i < GHOSTS; i++)
     for (scalar s in list1)
-      s[i,0] = s[i + point.n,0];
+      s[i] = s[i + point.n];
   for (int i = point.n + GHOSTS; i < point.n + 2*GHOSTS; i++)
     for (scalar s in list1)
-      s[i,0] = s[i - point.n,0];
+      s[i] = s[i - point.n];
 
   free (list1);
 }
@@ -171,7 +161,7 @@ void init_grid (int n)
   grid = p;
   trash (all);
   // box boundaries
-  for (int d = 0; d < top; d++) {
+  for (int d = 0; d < 2; d++) {
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
     box->d = d;
     Boundary * b = (Boundary *) box;
@@ -213,10 +203,12 @@ void cartesian1D_trash (void * alist)
   }
 }
 
-Point locate (double xp, double yp)
+struct _locate { double x, y, z; };
+
+Point locate (struct _locate p)
 {
   Point point = *((Point *)grid);
-  double a = (xp - X0)/L0*point.n;
+  double a = (p.x - X0)/L0*point.n;
   point.i = a + 1;
   point.level = (a > -0.5 && a < point.n + 0.5) ? 0 : - 1;
   return point;

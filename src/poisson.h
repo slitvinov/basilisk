@@ -62,9 +62,7 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
     else
       foreach_level (l)
 	for (scalar s in da)
-	  s[] = (9.*coarse(s,0,0) + 
-		 3.*(coarse(s,child.x,0) + coarse(s,0,child.y)) + 
-		 coarse(s,child.x,child.y))/16.;
+	  s[] = bilinear (point, s);
 
     /**
     We then apply homogeneous boundary conditions and do several
@@ -221,12 +219,15 @@ static void relax (scalar * al, scalar * bl, int l, void * data)
   We use the face values of $\alpha$ to weight the gradients of the
   5-points Laplacian operator. We get the relaxation function. */
 
-  foreach_level_or_leaf (l)
-    a[] = (alpha.x[1,0]*a[1,0] + alpha.x[]*a[-1,0] + 
-	   alpha.y[0,1]*a[0,1] + alpha.y[]*a[0,-1] 
-	   - sq(Delta)*b[])
-    /(alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[] - lambda[]*sq(Delta));
-
+  foreach_level_or_leaf (l) {
+    double n = - sq(Delta)*b[], d = - lambda[]*sq(Delta);
+    foreach_dimension() {
+      n += alpha.x[1]*a[1] + alpha.x[]*a[-1];
+      d += alpha.x[1] + alpha.x[];
+    }
+    a[] = n/d;
+  }
+  
 #if TRASH
   scalar a1[];
   foreach_level_or_leaf (l)
@@ -253,22 +254,22 @@ static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
   /* conservative coarse/fine discretisation (2nd order) */
   face vector g[];
   foreach_face()
-    g.x[] = alpha.x[]*(a[] - a[-1,0])/Delta;
+    g.x[] = alpha.x[]*(a[] - a[-1])/Delta;
   boundary_flux ({g});
   foreach (reduction(max:maxres)) {
-    res[] = b[] + (g.x[] - g.x[1,0] + g.y[] - g.y[0,1])/Delta
-      - lambda[]*a[];
+    res[] = b[] - lambda[]*a[];
+    foreach_dimension()
+      res[] += (g.x[] - g.x[1])/Delta;
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
 #else
   /* "naive" discretisation (only 1st order on quadtrees) */
   foreach (reduction(max:maxres)) {
-    res[] = b[] + 
-      ((alpha.x[1,0] + alpha.x[] + alpha.y[0,1] + alpha.y[])*a[]
-       - alpha.x[1,0]*a[1,0] - alpha.x[]*a[-1,0] 
-       - alpha.y[0,1]*a[0,1] - alpha.y[]*a[0,-1])/sq(Delta)
-      - lambda[]*a[];
+    res[] = b[] - lambda[]*a[];
+    foreach_dimension()
+      res[] += ((alpha.x[1] + alpha.x[])*a[]
+		- alpha.x[1]*a[1] - alpha.x[]*a[-1])/sq(Delta);
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
@@ -294,7 +295,7 @@ mgstats poisson (struct Poisson p)
   provide $\alpha$ and $\beta$ as constant fields. */
 
   if (!p.alpha.x) {
-    const vector alpha[] = {1.,1.};
+    const vector alpha[] = {1.,1.,1.};
     p.alpha = alpha;
   }
   if (p.lambda) {
@@ -310,7 +311,12 @@ mgstats poisson (struct Poisson p)
   If the [metric](/Basilisk C#metric) is not purely Cartesian, we
   allocate and define a temporary field for the face coefficients. */
 
-  if (constant(fm.x) != 1. || constant(fm.y) != 1.) {
+  bool metric = false;
+  foreach_dimension()
+    if (constant(fm.x) != 1.)
+      metric = true;
+
+  if (metric) {
     (const) face vector alpha = p.alpha;
     face vector alpha_m = new face vector;
     foreach_face()
@@ -344,7 +350,7 @@ mgstats poisson (struct Poisson p)
   /**
   We free the temporary face coefficients if necessary. */
 
-  if (constant(fm.x) != 1. || constant(fm.y) != 1.)
+  if (metric)
     delete ((scalar *){alpha});
 
   return s;
@@ -381,7 +387,7 @@ mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
   foreach() {
     div[] = 0.;
     foreach_dimension()
-      div[] += u.x[1,0] - u.x[];
+      div[] += u.x[1] - u.x[];
     div[] /= dt*Delta;
   }
 
@@ -402,10 +408,10 @@ mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
 
   if (alpha.x)
     foreach_face()
-      u.x[] -= dt*fm.x[]*alpha.x[]*(p[] - p[-1,0])/Delta;
+      u.x[] -= dt*fm.x[]*alpha.x[]*(p[] - p[-1])/Delta;
   else
     foreach_face()
-      u.x[] -= dt*fm.x[]*(p[] - p[-1,0])/Delta;
+      u.x[] -= dt*fm.x[]*(p[] - p[-1])/Delta;
   boundary ((scalar *){u});
 
   return mgp;

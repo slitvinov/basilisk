@@ -108,7 +108,7 @@ static double residual_GN (scalar * a, scalar * r, scalar * resl, void * data)
   
   scalar * list = data;
   scalar h = list[0], zb = list[1], wet = list[2];
-  vector D = {a[0], a[1]}, b = {r[0], r[1]}, res = {resl[0], resl[1]};
+  vector D = vector(a[0]), b = vector(r[0]), res = vector(resl[0]);
 
   /**
   The general form for $\mathcal{T}$ is
@@ -190,7 +190,7 @@ static void relax_GN (scalar * a, scalar * r, int l, void * data)
 {
   scalar * list = data;
   scalar h = list[0], zb = list[1], wet = list[2];
-  vector D = {a[0], a[1]}, b = {r[0], r[1]};
+  vector D = vector(a[0]), b = vector(r[0]);
   foreach_level_or_leaf (l)
     foreach_dimension() {
       if (wet[-1,0] == 1 && wet[] == 1 && wet[1,0] == 1) {
@@ -223,7 +223,7 @@ static double update_green_naghdi (scalar * current, scalar * updates,
 {
   double dt = update_saint_venant (current, updates, dtmax);
   scalar h = current[0];
-  vector u = { current[1], current[2] };
+  vector u = vector(current[1]);
 
   /**
   We first compute the right-hand-side $b$. The general form for the
@@ -294,7 +294,7 @@ static double update_green_naghdi (scalar * current, scalar * updates,
   /**
   We can then compute the updates for $hu$. */
 
-  vector dhu = { updates[1], updates[2] };
+  vector dhu = vector(updates[1]);
 
   foreach() {
 

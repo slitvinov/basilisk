@@ -251,9 +251,13 @@ $$ */
 
 void vorticity (const vector u, scalar omega)
 {
-  foreach()
-    omega[] = (u.y[1,0] - u.y[-1,0] + u.x[0,-1] - u.x[0,1])/(2.*Delta);
-  boundary ({omega});
+  #if dimension == 2
+    foreach()
+      omega[] = (u.y[1,0] - u.y[-1,0] + u.x[0,-1] - u.x[0,1])/(2.*Delta);
+    boundary ({omega});
+  #else
+    assert (false);
+  #endif
 }
 
 #include "output.h"

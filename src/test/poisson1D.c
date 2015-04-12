@@ -26,6 +26,7 @@ int main (int argc, char ** argv)
     }
     boundary ({a});
 
+    TOLERANCE = 1e-4;
     poisson (a, b);
 
     double max = 0;

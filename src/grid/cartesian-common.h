@@ -10,13 +10,17 @@ void (* debug)    (Point);
   foreach_dimension()
     double Delta_x = Delta; /* cell size (with mapping) */
   /* cell/face center coordinates */
-  double x = (ig/2. + I + 0.5)*Delta + X0;
-  double y = (jg/2. + J + 0.5)*Delta + Y0;
+  double x = (ig/2. + I + 0.5)*Delta + X0; NOT_UNUSED(x);
+#if dimension > 1
+  double y = (jg/2. + J + 0.5)*Delta + Y0; NOT_UNUSED(y);
+#endif
+#if dimension > 2
+  double z = (kg/2. + K + 0.5)*Delta + Z0; NOT_UNUSED(z);
+#endif
   /* we need this to avoid compiler warnings */
   NOT_UNUSED(Delta);
   foreach_dimension()
     NOT_UNUSED(Delta_x);
-  NOT_UNUSED(x); NOT_UNUSED(y);
   /* and this when catching FPEs */
   _CATCH;
 @
@@ -106,10 +110,19 @@ tensor new_symmetric_tensor (const char * name)
     sprintf (cname, ext.x, name);
     t.x.x = new_scalar(cname);
   }
-  // fixme: does not work in 3D
-  sprintf (cname, "%s.x.y", name);
-  t.x.y = new_scalar(cname);
-  t.y.x = t.x.y;
+  #if dimension > 1
+    sprintf (cname, "%s.x.y", name);
+    t.x.y = new_scalar(cname);
+    t.y.x = t.x.y;
+  #endif
+  #if dimension > 2
+    sprintf (cname, "%s.x.z", name);
+    t.x.z = new_scalar(cname);
+    t.z.x = t.x.z;
+    sprintf (cname, "%s.y.z", name);
+    t.y.z = new_scalar(cname);
+    t.z.y = t.y.z;
+  #endif
   init_tensor (t, NULL);
   return t;
 }
@@ -134,9 +147,8 @@ scalar new_const_scalar (const char * name, int i, double val)
 
 void init_const_vector (vector v, const char * name, double * val)
 {
-  struct { double x, y, z; } dval = {val[0], val[1], val[2]};
   foreach_dimension()
-    init_const_scalar (v.x, name, dval.x);
+    init_const_scalar (v.x, name, *val++);
 }
 
 vector new_const_vector (const char * name, int i, double * val)
@@ -259,8 +271,8 @@ static double antisymmetry (Point point, Point neighbor, scalar s)
   return -s[];
 }
 
-double (* default_scalar_bc[bottom + 1]) (Point, Point, scalar) = {
-  symmetry, symmetry, symmetry, symmetry
+double (* default_scalar_bc[]) (Point, Point, scalar) = {
+  symmetry, symmetry, symmetry, symmetry, symmetry, symmetry
 };
 
 scalar cartesian_init_scalar (scalar s, const char * name)
@@ -283,7 +295,7 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   s.boundary_homogeneous = malloc (nboundary*sizeof (void (*)()));
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] =
-      b <= bottom ? default_scalar_bc[b] : symmetry;
+      b < 2*dimension ? default_scalar_bc[b] : symmetry;
   s.gradient = NULL;
   foreach_dimension() {
     s.d.x = 0;  // not face
@@ -293,8 +305,10 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   return s;
 }
 
-double (* default_vector_bc[bottom + 1]) (Point, Point, scalar) = {
-  antisymmetry, antisymmetry, antisymmetry, antisymmetry
+double (* default_vector_bc[]) (Point, Point, scalar) = {
+  antisymmetry, antisymmetry,
+  antisymmetry, antisymmetry,
+  antisymmetry, antisymmetry
 };
 
 vector cartesian_init_vector (vector v, const char * name)
@@ -313,7 +327,7 @@ vector cartesian_init_vector (vector v, const char * name)
   /* set default boundary conditions */
   for (int d = 0; d < nboundary; d++)
     v.x.boundary[d] = v.x.boundary_homogeneous[d] =
-      d <= bottom ? default_vector_bc[d] : antisymmetry;
+      d < 2*dimension ? default_vector_bc[d] : antisymmetry;
   return v;
 }
 
@@ -342,15 +356,22 @@ tensor cartesian_init_tensor (tensor t, const char * name)
       init_vector (t.x, NULL);
   }
   /* set default boundary conditions */
-  // fixme: not 3D
-  for (int b = 0; b < nboundary; b++) {
-    t.x.x.boundary[b] = t.y.x.boundary[b] = 
-      t.x.x.boundary_homogeneous[b] = t.y.y.boundary_homogeneous[b] = 
-      b <= bottom ? default_scalar_bc[b] : symmetry;
-    t.x.y.boundary[b] = t.y.y.boundary[b] = 
-      t.x.y.boundary_homogeneous[b] = t.y.x.boundary_homogeneous[b] = 
-      b <= bottom ? default_vector_bc[b] : antisymmetry;
-  }
+  #if dimension == 1
+    for (int b = 0; b < nboundary; b++)
+      t.x.x.boundary[b] = t.x.x.boundary_homogeneous[b] =
+	b < 2*dimension ? default_scalar_bc[b] : symmetry;
+  #elif dimension == 2
+    for (int b = 0; b < nboundary; b++) {
+      t.x.x.boundary[b] = t.y.x.boundary[b] = 
+	t.x.x.boundary_homogeneous[b] = t.y.y.boundary_homogeneous[b] = 
+	b < 2*dimension ? default_scalar_bc[b] : symmetry;
+      t.x.y.boundary[b] = t.y.y.boundary[b] = 
+	t.x.y.boundary_homogeneous[b] = t.y.x.boundary_homogeneous[b] = 
+	b < 2*dimension ? default_vector_bc[b] : antisymmetry;
+    }
+  #else
+    assert (false); // not implemented yet
+  #endif
   return t;
 }
 
@@ -358,12 +379,16 @@ void output_cells (FILE * fp)
 {
   foreach() {
     Delta /= 2.;
-    fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
-	     x - Delta, y - Delta,
-	     x - Delta, y + Delta,
-	     x + Delta, y + Delta,
-	     x + Delta, y - Delta,
-	     x - Delta, y - Delta);
+    #if dimension == 1
+      fprintf (fp, "%g 0\n%g 0\n\n", x - Delta, x + Delta);
+    #else
+      fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
+	       x - Delta, y - Delta,
+	       x - Delta, y + Delta,
+	       x + Delta, y + Delta,
+	       x + Delta, y - Delta,
+	       x - Delta, y - Delta);
+    #endif
   }
   fflush (fp);
 }
@@ -384,19 +409,32 @@ void cartesian_debug (Point point)
   for (scalar v in all)
     fprintf (fp, "x y %s ", v.name);
   fputc ('\n', fp);
-  for (int k = -2; k <= 2; k++)
-    for (int l = -2; l <= 2; l++) {
+  #if dimension == 1
+    for (int k = -2; k <= 2; k++) {
       for (scalar v in all) {
-	fprintf (fp, "%g %g ", 
-		 x + k*Delta + v.d.x*Delta/2., 
-		 y + l*Delta + v.d.y*Delta/2.);
-	if (allocated(k,l))
-	  fprintf (fp, "%g ", v[k,l]);
+	fprintf (fp, "%g ", x + k*Delta + v.d.x*Delta/2.);
+	if (allocated(k))
+	  fprintf (fp, "%g ", v[k]);
 	else
 	  fputs ("n/a ", fp);
       }
       fputc ('\n', fp);
     }
+  #else
+    for (int k = -2; k <= 2; k++)
+      for (int l = -2; l <= 2; l++) {
+	for (scalar v in all) {
+	  fprintf (fp, "%g %g ",
+		   x + k*Delta + v.d.x*Delta/2., 
+		   y + l*Delta + v.d.y*Delta/2.);
+	  if (allocated(k,l))
+	    fprintf (fp, "%g ", v[k,l]);
+	  else
+	    fputs ("n/a ", fp);
+	}
+	fputc ('\n', fp);
+      }
+  #endif
   fclose (fp);
 
   fprintf (stderr, 
@@ -420,24 +458,46 @@ void cartesian_methods()
   debug            = cartesian_debug;
 }
 
-// fixme: not 3D
-double interpolate (scalar v, double xp, double yp)
+struct _interpolate {
+  scalar v;
+  double x, y, z;
+};
+
+double interpolate (struct _interpolate p)
 {
-  Point point = locate (xp, yp);
+  Point point = locate (p.x, p.y, p.z);
   if (point.level < 0)
     return nodata;
-  x = (xp - x)/Delta - v.d.x/2.;
-  y = (yp - y)/Delta - v.d.y/2.;
-  int i = sign(x), j = sign(y);
-  x = fabs(x); y = fabs(y);
-  /* bilinear interpolation */
-  return (v[]*(1. - x)*(1. - y) + 
-	  v[i,0]*x*(1. - y) + 
-	  v[0,j]*(1. - x)*y + 
-	  v[i,j]*x*y);
+  scalar v = p.v;
+  #if dimension == 1
+    x = (p.x - x)/Delta - v.d.x/2.;
+    int i = sign(x);
+    x = fabs(x);
+    /* linear interpolation */
+    return v[]*(1. - x) + v[i]*x;
+  #elif dimension == 2
+    x = (p.x - x)/Delta - v.d.x/2.;
+    y = (p.y - y)/Delta - v.d.y/2.;
+    int i = sign(x), j = sign(y);
+    x = fabs(x); y = fabs(y);
+    /* bilinear interpolation */
+    return ((v[]*(1. - x) + v[i]*x)*(1. - y) + 
+	    (v[0,j]*(1. - x) + v[i,j]*x)*y);
+  #else // dimension == 3
+    x = (p.x - x)/Delta - v.d.x/2.;
+    y = (p.y - y)/Delta - v.d.y/2.;
+    z = (p.z - z)/Delta - v.d.z/2.;
+    int i = sign(x), j = sign(y), k = sign(z);
+    x = fabs(x); y = fabs(y); z = fabs(z);
+    /* trilinear interpolation */
+    return (((v[]*(1. - x) + v[i]*x)*(1. - y) + 
+	     (v[0,j]*(1. - x) + v[i,j]*x)*y)*(1. - z) +
+	    ((v[0,0,k]*(1. - x) + v[i,0,k]*x)*(1. - y) + 
+	     (v[0,j,k]*(1. - x) + v[i,j,k]*x)*y)*z);
+  #endif
 }
 
-// Boundaries: fixme: not 3D
+// Boundaries
 
 typedef int bid;
 
@@ -454,7 +514,8 @@ bid new_bid()
       s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
     else if (s.v.x == s) { // vector
       vector v = s.v;
-      v.y.boundary[b] = v.y.boundary_homogeneous[b] = symmetry;
+      foreach_dimension()
+	v.y.boundary[b] = v.y.boundary_homogeneous[b] = symmetry;
       v.x.boundary[b] = v.x.boundary_homogeneous[b] =
 	v.x.face ? NULL : antisymmetry;
     }
@@ -471,7 +532,13 @@ static double periodic_bc (Point point, Point neighbor, scalar s)
 
 void periodic (int dir)
 {
-  assert (dir <= bottom);
+  #if dimension < 2
+    assert (dir <= left);
+  #elif dimension < 3
+    assert (dir <= bottom);
+  #else
+    assert (dir <= back);
+  #endif
   // This is the component in the given direction i.e. 0 for x and 1 for y
   int c = dir/2;
   /* We change the conditions for existing scalars. */

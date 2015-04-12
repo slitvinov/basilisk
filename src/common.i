@@ -66,7 +66,8 @@ typedef struct {
 %inline %{
   extern void init_grid (int n);
   extern void free_grid (void);
-  extern void origin (double x, double y);
+  struct _origin { double x, y, z; };
+  extern void origin (struct _origin p);
   extern void size (double L);
 
   extern int py_scalar_init (scalar s, PyObject * f);

@@ -43,13 +43,8 @@ int main (int argc, char ** argv)
   residual ({a}, {b}, lres, &p);
   for (int i = 0; i < NITER; i++) {
     mg_cycle ({a}, lres, {dp}, relax, &p, nrelax, 0);
-    residual ({a}, {b}, lres, &p);
-    double max = 0.;
-    foreach()
-      if (fabs(res[]) > max)
-	max = fabs(res[]);
+    maxres[i] = residual ({a}, {b}, lres, &p);
     iter[i] = clock();
-    maxres[i] = max;
   }
   for (int i = 0; i < NITER; i++) {
     fprintf (stderr, "%d %.2g\n", i, maxres[i]);

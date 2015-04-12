@@ -1,4 +1,5 @@
 #define GRIDNAME "Cartesian"
+#define dimension 2
 #define GHOSTS 1
 
 #define I     (point.i - 1)
@@ -63,7 +64,7 @@ void cartesian_trash (void * alist)
 {
   scalar * list = alist;
   Point * p = grid;
-  for (int i = 0; i < (p->n + 2)*(p->n + 2); i++)
+  for (int i = 0; i < sq(p->n + 2); i++)
     for (scalar s in list)
       ((double *)(&p->data[i*datasize]))[s] = undefined;
 }
@@ -220,11 +221,13 @@ void realloc_scalar (void)
     memmove (data + i*sizeof(double), data, oldatasize);  
 }
 
-Point locate (double xp, double yp)
+struct _locate { double x, y, z; };
+
+Point locate (struct _locate p)
 {
   Point point = *((Point *)grid);
-  point.i = (xp - X0)/L0*point.n + 1;
-  point.j = (yp - Y0)/L0*point.n + 1;
+  point.i = (p.x - X0)/L0*point.n + 1;
+  point.j = (p.y - Y0)/L0*point.n + 1;
   point.level = (point.i >= 1 && point.i <= point.n &&
 		 point.j >= 1 && point.j <= point.n) ? 0 : - 1;
   return point;
