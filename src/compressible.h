@@ -66,14 +66,16 @@ void flux (const double * s, double * f, double e[2])
   compute the corresponding fluxes (`f[0]`, `f[1]`, `f[2]` and
   `f[3]`). */
 
-  double rho = s[0], E = s[1], wn = s[2], wt = s[3];
-  double un = wn/rho, p = (gammao - 1.)*(E - 0.5*(sq(wn) + sq(wt))/rho);
+  double rho = s[0], E = s[1], wn = s[2], w2 = 0.;
+  for (int i = 2; i < 2 + dimension; i++)
+    w2 += sq(s[i]);
+  double un = wn/rho, p = (gammao - 1.)*(E - 0.5*w2/rho);
 
   f[0] = wn;
   f[1] = un*(E + p);
-
   f[2] = un*wn + p;
-  f[3] = un*wt;
+  for (int i = 3; i < 2 + dimension; i++)
+    f[i] = un*s[i];
 
   /**
   The minimum and maximum eigenvalues for the Euler system are the

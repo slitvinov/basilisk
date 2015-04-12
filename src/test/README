@@ -11,6 +11,7 @@ Note that only the documented test cases appear in the list below
 * [Bouncing Saint-Venant bump](bump2D1.c)
 * [1D arterial flow](artery1D.c)
 * [Two-dimensional explosion](explosion.c)
+* [Three-dimensional explosion](explosion3D.c)
 
 ## Incompressible Euler/Navier--Stokes
 
