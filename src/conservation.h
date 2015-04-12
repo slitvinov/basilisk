@@ -59,6 +59,13 @@ event defaults (i = 0)
   update = update_conservation;
 
   /**
+  With the MUSCL scheme we use the CFL depends on the dimension of the
+  problem. */
+
+  if (CFL > 1./dimension)
+    CFL = 1./dimension;
+  
+  /**
   On quadtrees we need to replace the default bilinear
   refinement/prolongation with linear so that reconstructed values
   also use slope limiting. */
@@ -130,9 +137,9 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
     vector slope = new vector;
     foreach_dimension() {
       slope.x.gradient = zero;
-#if QUADTREE
+      #if QUADTREE
       slope.x.prolongation = refine_linear;
-#endif
+      #endif
     }
     slopes = vectors_append (slopes, slope);
   }
@@ -164,14 +171,14 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
   into a list of vectors and a list of tensors. */
 
   vector * scalar_slopes = vectors_copy (slopes);
-  if (scalar_slopes) scalar_slopes[scalars_len] = (vector){-1,-1};
+  if (scalar_slopes) scalar_slopes[scalars_len] = (vector){-1};
   tensor * vector_slopes = tensors_from_vectors (&slopes[scalars_len]);
 
   /**
   And again for the fluxes. */
   
   vector * scalar_fluxes = vectors_copy (lflux);
-  if (scalar_fluxes) scalar_fluxes[scalars_len] = (vector){-1,-1};
+  if (scalar_fluxes) scalar_fluxes[scalars_len] = (vector){-1};
   tensor * vector_fluxes = tensors_from_vectors (&lflux[scalars_len]);
 
   /**
@@ -193,15 +200,21 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
     vector g;
     for (s,g in scalars,scalar_slopes) {
       r[i] = s[] - dx*g.x[];
-      l[i++] = s[-1,0] + dx*g.x[-1,0];
+      l[i++] = s[-1] + dx*g.x[-1];
     }
     vector v;
     tensor t;
-    for (v,t in vectors,vector_slopes) {
+    for (v,t in vectors,vector_slopes) {      
       r[i] = v.x[] - dx*t.x.x[];
-      l[i++] = v.x[-1,0] + dx*t.x.x[-1,0];
-      r[i] = v.y[] - dx*t.y.x[];
-      l[i++] = v.y[-1,0] + dx*t.y.x[-1,0];
+      l[i++] = v.x[-1] + dx*t.x.x[-1];
+      #if dimension > 1
+        r[i] = v.y[] - dx*t.y.x[];
+	l[i++] = v.y[-1] + dx*t.y.x[-1];
+      #endif
+      #if dimension > 2
+        r[i] = v.z[] - dx*t.z.x[];
+	l[i++] = v.z[-1] + dx*t.z.x[-1];
+      #endif
     }
 
     /**
@@ -210,13 +223,18 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
     We then call the generic Riemann solver and store the resulting fluxes
     in the pre-allocated fields. */
     
-    dtmax = riemann (r, l, Delta, f, len, dtmax);
+    dtmax = riemann (r, l, Delta*cm[]/fm.x[], f, len, dtmax);
     i = 0;
     for (vector fs in scalar_fluxes)
-      fs.x[] = f[i++];
+      fs.x[] = fm.x[]*f[i++];
     for (tensor fv in vector_fluxes) {
-      fv.x.x[] = f[i++];
-      fv.y.x[] = f[i++];
+      fv.x.x[] = fm.x[]*f[i++];
+      #if dimension > 1
+        fv.y.x[] = fm.x[]*f[i++];
+      #endif
+      #if dimension > 2
+        fv.z.x[] = fm.x[]*f[i++];
+      #endif
     }
   }
 
@@ -230,8 +248,11 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
   foreach() {
     scalar ds;
     vector f;
-    for (ds,f in updates,lflux)
-      ds[] = (f.x[] - f.x[1,0] + f.y[] - f.y[0,1])/Delta;
+    for (ds,f in updates,lflux) {
+      ds[] = 0.;
+      foreach_dimension()
+	ds[] += (f.x[] - f.x[1])/(cm[]*Delta);
+    }
   }
 
   /**
