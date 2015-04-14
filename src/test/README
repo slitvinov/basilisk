@@ -18,6 +18,7 @@ Note that only the documented test cases appear in the list below
 * [Lid-driven cavity at Re=1000](lid.c)
 * [Merging of two vertices](stream.c)
 * [Merging of two vortices (centered Euler solver)](vortex.c)
+* [Taylor--Green vortices](taylor-green.c)
 
 ## Shallow-water flows
 
