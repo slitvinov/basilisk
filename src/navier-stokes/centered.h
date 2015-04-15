@@ -118,7 +118,7 @@ event init (i = 0)
   boundary ((scalar *){u});
   trash ({uf});
   foreach_face()
-    uf.x[] = fm.x[]*(u.x[] + u.x[-1,0])/2.;
+    uf.x[] = fm.x[]*(u.x[] + u.x[-1])/2.;
   boundary ((scalar *){uf});
 }
 
@@ -168,19 +168,19 @@ void prediction()
   if (u.x.gradient)
     foreach()
       foreach_dimension()
-        du.x[] = u.x.gradient (u.x[-1,0], u.x[], u.x[1,0])/Delta;
+        du.x[] = u.x.gradient (u.x[-1], u.x[], u.x[1])/Delta;
   else
     foreach()
       foreach_dimension()
-        du.x[] = (u.x[1,0] - u.x[-1,0])/(2.*Delta);
+        du.x[] = (u.x[1] - u.x[-1])/(2.*Delta);
   boundary ((scalar *){du});
 
   trash ({uf});
   foreach_face() {
-    double un = dt*(u.x[] + u.x[-1,0])/(2.*Delta), s = sign(un);
+    double un = dt*(u.x[] + u.x[-1])/(2.*Delta), s = sign(un);
     int i = -(s + 1.)/2.;
-    uf.x[] = u.x[i,0] + g.x[i,0]*dt/2. +
-      s*min(1., 1. - s*un)*du.x[i,0]*Delta/2.;
+    uf.x[] = u.x[i] + (g.x[] + g.x[-1])*dt/4. +
+      s*min(1., 1. - s*un)*du.x[i]*Delta/2.;
     double fyy = u.y[i,0] < 0. ? u.x[i,1] - u.x[i,0] : u.x[i,0] - u.x[i,-1];
     uf.x[] -= dt*u.y[i,0]*fyy/(2.*Delta);
     uf.x[] *= fm.x[];
@@ -201,7 +201,7 @@ event advection_term (i++,last)
 {
   if (!stokes) {
     prediction();
-    mgpf = project (uf, pf, alpha, dt);
+    mgpf = project (uf, pf, alpha, dt/2.);
     advection ((scalar *){u}, uf, dt, (scalar *){g});
   }
 }
@@ -241,7 +241,7 @@ event viscous_term (i++,last)
 
   trash ({uf});
   foreach_face()
-    uf.x[] = fm.x[]*(u.x[] + u.x[-1,0])/2.;
+    uf.x[] = fm.x[]*(u.x[] + u.x[-1])/2.;
 }
 
 /**
@@ -290,7 +290,7 @@ event projection (i++,last)
 
   face vector gf[];
   foreach_face()
-    gf.x[] = a.x[] - alpha.x[]*(p[] - p[-1,0])/Delta;
+    gf.x[] = a.x[] - alpha.x[]*(p[] - p[-1])/Delta;
   boundary_flux ({gf});
 
   /**
@@ -300,7 +300,7 @@ event projection (i++,last)
   trash ({g});
   foreach()
     foreach_dimension()
-      g.x[] = (gf.x[] + gf.x[1,0])/2.;
+      g.x[] = (gf.x[] + gf.x[1])/2.;
   boundary ((scalar *){g});
 
   /**

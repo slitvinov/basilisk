@@ -37,7 +37,7 @@ static inline void coarsen_volume_average (Point point, scalar s)
   s[] = sum/(1 << dimension)/cm[];
 }
 
-inline void face_average (Point point, vector v)
+static inline void face_average (Point point, vector v)
 {
   foreach_dimension() {
     #if dimension == 1
@@ -112,7 +112,7 @@ void wavelet (scalar s, scalar w)
   foreach_level(0) w[] = 0.;
 }
 
-inline double bilinear (Point point, scalar s)
+static inline double bilinear (Point point, scalar s)
 {
   #if dimension == 1
     return (3.*coarse(s,0) + coarse(s,child.x))/4.;

@@ -8,8 +8,8 @@ face metric), a timestep *dt* and a source term field *src*, it fills
 the face vector field *flux* with the components of the advection
 fluxes of *f*. */
 
-void tracer_fluxes (const scalar f, 
-		    const face vector uf,
+void tracer_fluxes (scalar f,
+		    face vector uf,
 		    face vector flux,
 		    double dt,
 		    (const) scalar src)
@@ -28,11 +28,15 @@ void tracer_fluxes (const scalar f,
   foreach_face() {
 
     /**
-    A normal component... */
+    A normal component... (Note that we cheat a bit here, `un` should
+    strictly be `dt*(uf.x[i] + uf.x[i+1])/((fm.x[] +
+    fm.x[i+1])*Delta)` but this causes trouble with boundary
+    conditions (when using narrow '1 ghost cell' stencils)). */
 
     double un = dt*uf.x[]/(fm.x[]*Delta), s = sign(un);
     int i = -(s + 1.)/2.;
-    double f2 = f[i,0] + src[i,0]*dt/2. + s*min(1., 1. - s*un)*g.x[i,0]*Delta/2.;
+    double f2 = f[i] + (src[] + src[-1])*dt/4. +
+      s*min(1., 1. - s*un)*g.x[i]*Delta/2.;
 
     /**
     and a tangential component... */
@@ -82,7 +86,7 @@ void advection (struct Advection p)
     tracer_fluxes (f, p.u, flux, p.dt, src);
     foreach()
       foreach_dimension()
-        f[] += p.dt*(flux.x[] - flux.x[1,0])/(Delta*cm[]);
+        f[] += p.dt*(flux.x[] - flux.x[1])/(Delta*cm[]);
     boundary ({f});
   }
 
