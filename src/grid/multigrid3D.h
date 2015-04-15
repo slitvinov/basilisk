@@ -292,7 +292,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 	}
 	else {
 	  scalar b = s.v.y;
-	  if (b.boundary[d])
+	  if (b.boundary[d] && b.boundary[d] != periodic_bc)
 	    tangent = list_add (tangent, s);
 	}
       }	

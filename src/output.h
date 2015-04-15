@@ -339,7 +339,7 @@ struct OutputPPM {
   FILE * fp;
   int n;
   char * file;
-  double min, max, spread;
+  double min, max, spread, z;
   bool linear;
   double box[2][2];
   scalar mask;
@@ -378,14 +378,14 @@ void output_ppm (struct OutputPPM p)
       double xp = Delta*i + p.box[0][0] + Delta/2., v;
       if (p.mask) { // masking
 	if (p.linear) {
-	  double m = interpolate (p.mask, xp, yp);
+	  double m = interpolate (p.mask, xp, yp, p.z);
 	  if (m < 0.)
 	    v = nodata;
 	  else
-	    v = interpolate (p.f, xp, yp);
+	    v = interpolate (p.f, xp, yp, p.z);
 	}
 	else {
-	  Point point = locate (xp, yp);
+	  Point point = locate (xp, yp, p.z);
 	  if (point.level < 0 || val(p.mask) < 0.)
 	    v = nodata;
 	  else
@@ -393,9 +393,9 @@ void output_ppm (struct OutputPPM p)
 	}
       }
       else if (p.linear)
-	v = interpolate (p.f, xp, yp);
+	v = interpolate (p.f, xp, yp, p.z);
       else {
-	Point point = locate (xp, yp);
+	Point point = locate (xp, yp, p.z);
 	v = point.level >= 0 ? val(p.f) : nodata;
       }
       ppm[ny - 1 - j][i] = colormap_color (cmap, v, p.min, p.max);

@@ -39,11 +39,19 @@ void tracer_fluxes (scalar f,
       s*min(1., 1. - s*un)*g.x[i]*Delta/2.;
 
     /**
-    and a tangential component... */
+    and tangential components... */
 
-    double vn = uf.y[i,0]/fm.y[i,0] + uf.y[i,1]/fm.y[i,1];
-    double fyy = vn < 0. ? f[i,1] - f[i,0] : f[i,0] - f[i,-1];
-    f2 -= dt*vn*fyy/(4.*Delta);
+    #if dimension > 1
+      double vn = uf.y[i,0]/fm.y[i,0] + uf.y[i,1]/fm.y[i,1];
+      double fyy = vn < 0. ? f[i,1] - f[i,0] : f[i,0] - f[i,-1];
+      f2 -= dt*vn*fyy/(4.*Delta);
+    #endif
+    #if dimension > 2
+      double wn = uf.z[i,0,0]/fm.z[i,0,0] + uf.z[i,0,1]/fm.z[i,0,1];
+      double fzz = wn < 0. ? f[i,0,1] - f[i,0,0] : f[i,0,0] - f[i,0,-1];
+      f2 -= dt*wn*fzz/(4.*Delta);
+    #endif
+
     flux.x[] = f2*uf.x[];
   }
 
