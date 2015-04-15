@@ -57,27 +57,9 @@ event movie (i += 5; i < 1000)
   scalar m[];
   foreach()
     m[] = age[] ? 1 : -1;
-  output_ppm (age, n = 512, mask = m, linear = false );
-}
 
-/**
-Finally, after completion of the simulation, we create a compressed
-GIF animation. */
-
-event gif (t = end) {
-
-  /**
-  We first convert each PPM image into GIF (this is the most
-  time-consuming operation!)... */
-
-  system ("convert out age-%04d.gif && rm -f out;"
-
-	  /**
-	  ... then use `gifsicle` to create the final compressed
-	  animated GIF. */
-	  
-	  "gifsicle --colors 256 --optimize --delay 1"
-	  " --loopcount=0 age-*.gif > age.gif && rm -f age-*.gif");
+  static FILE * fp = popen ("ppm2gif --delay 1", "w");
+  output_ppm (age, fp, n = 512, mask = m, linear = false );
 }
 
 /**

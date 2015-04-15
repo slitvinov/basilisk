@@ -670,3 +670,46 @@ const scalar unity[] = 1.;
 (const) face vector fm = unityf;
 (const) scalar cm = unity;
 
+// Pipes
+
+static FILE ** qpopen_pipes = NULL;
+
+FILE * qpopen (const char * command, const char * type)
+{
+  FILE * fp = popen (command, type);
+  if (fp) {
+    FILE ** i = qpopen_pipes;
+    int n = 0;
+    while (i && *i) { n++; i++; }
+    qpopen_pipes = realloc (qpopen_pipes, sizeof(FILE *)*(n + 2));
+    qpopen_pipes[n] = fp;
+    qpopen_pipes[n+1] = NULL;
+  }
+  return fp;
+}
+
+int qpclose (FILE * fp)
+{
+  FILE ** i = qpopen_pipes;
+  while (i && *i) {
+    if (*i == fp)
+      *i = (FILE *) 1;
+    i++;
+  }
+  return pclose (fp);
+}
+
+static void qpclose_all()
+{
+  FILE ** i = qpopen_pipes;
+  while (i && *i) {
+    if (*i != (FILE *) 1)
+      pclose (*i);
+    i++;
+  }
+  free (qpopen_pipes);
+  qpopen_pipes = NULL;
+}
+
+#define popen  qpopen
+#define pclose qpclose

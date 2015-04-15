@@ -81,40 +81,23 @@ event logfile (i++)
   fprintf (stderr, "%d %g %d %d\n", i, t, mgp.i, mgu.i);
 
 /**
-We produce animations of the vorticity and tracer fields... */
+We produce animations of the vorticity and tracer fields... 
 
-event movies (i += 2; t <= 15.) {
-  static FILE * fp = popen ("ppm2mpeg > vort.mpg", "w");
+![Animation of the vorticity field.](karman/vort.gif)
+
+![Animation of the tracer field.](karman/f.gif) 
+*/
+
+event movies (i += 4; t <= 15.) {
+  static FILE * fp = popen ("ppm2gif > vort.gif", "w");
   scalar vorticity[];
   foreach()
     vorticity[] = (u.x[0,1] - u.x[0,-1] - u.y[1,0] + u.y[-1,0])/(2.*Delta);
   boundary ({vorticity});
   output_ppm (vorticity, fp, box = {{-0.5,-0.5},{7.5,0.5}},
 	      min = -10, max = 10, linear = true);
-  static FILE * fp1 = popen ("ppm2mpeg > f.mpg", "w");
+  static FILE * fp1 = popen ("ppm2gif > f.gif", "w");
   output_ppm (f, fp1, box = {{-0.5,-0.5},{7.5,0.5}},
-	      linear = true, min = 0, max = 1);
-}
-
-/**
-... and the corresponding snapshots at the end of the simulation. This
-gives the following figures and animations.
-
-![[Animation](karman/vort.mpg) of the vorticity field.](karman/vort.png)
-
-![[Animation](karman/f.mpg) of the tracer field.](karman/f.png) 
-*/
-
-event snapshots (t = end)
-{
-  scalar vorticity[];
-  foreach()
-    vorticity[] = (u.x[0,1] - u.x[0,-1] - u.y[1,0] + u.y[-1,0])/(2.*Delta);
-  boundary ({vorticity});
-  output_ppm (vorticity, file = "vort.png",
-	      box = {{-0.5,-0.5},{7.5,0.5}},
-	      min = -10, max = 10, linear = true);
-  output_ppm (f, file = "f.png", box = {{-0.5,-0.5},{7.5,0.5}},
 	      linear = true, min = 0, max = 1);
 }
 

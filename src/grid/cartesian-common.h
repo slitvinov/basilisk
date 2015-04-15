@@ -231,6 +231,7 @@ void free_solver()
 @if TRACE
   trace_off();
 @endif
+  qpclose_all();
 }
 
 // Cartesian methods

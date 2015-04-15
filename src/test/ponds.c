@@ -43,7 +43,7 @@ event init (i = 0)
   for (double x = 0.; x <= 1000; x += 1.)
     for (double y = 0.; y <= 1000.; y += 1.)
       fprintf (fp, "%g %g %g\n", x, y, zb(x,y));
-  fclose (fp);
+  pclose (fp);
   terrain (zb, "ponds", NULL);
   foreach()
     h[] = 0.1;

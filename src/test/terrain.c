@@ -7,7 +7,7 @@ int main ()
   for (double x = 0.; x <= 1.1; x += 0.005)
     for (double y = 0.; y <= 1.1; y += 0.005)
       fprintf (fp, "%g %g %g\n", x, y, sin(3.*pi*x)*cos(2.*pi*y));
-  fclose (fp);
+  pclose (fp);
 
   for (int l = 4; l <= 7; l++) {
     init_grid (1 << l);

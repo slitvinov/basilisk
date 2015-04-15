@@ -80,7 +80,6 @@ event gnuplot (t = end) {
            "set term pngcairo enhanced size 640,200 font \",8\"\n"
            "set output 'snapshot.png'\n");
   plot_profile (t, fp);
-  pclose (fp);
 }
 
 /**
