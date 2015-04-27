@@ -1300,7 +1300,7 @@ map{WS}+"{" {
     char * s = yytext; space (s); *s = '\0';
     var = varlookup (yytext, strlen(yytext));
     if (!var) {
-      fprintf (stderr, "%s:%d: undeclared %s '%s'", fname, line, type, yytext);
+      fprintf (stderr, "%s:%d: undeclared %s '%s'\n", fname, line, type, yytext);
       return 1;
     }
     if (var->type != newvartype)
@@ -1711,7 +1711,7 @@ ghost {
     char * name[3] = {"ig","ig,jg","ig,jg,kg"};
     fputs (name[dimension - 1], yyout);
     if (infine || inarray)
-      inarrayargs++;
+      inarrayargs += dimension - 1;
   }
   else
     ECHO;

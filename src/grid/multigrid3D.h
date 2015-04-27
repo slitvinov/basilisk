@@ -304,7 +304,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
     OMP_PARALLEL();
     /* we disable floating-point-exceptions to avoid having to deal with
        undefined operations in non-trivial boundary conditions. */
-    //    disable_fpe (FE_DIVBYZERO|FE_INVALID);
+    disable_fpe (FE_DIVBYZERO|FE_INVALID);
     Point point;
     point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
     int _startk = GHOSTS, _endk = point.n + GHOSTS;
@@ -339,7 +339,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 #endif
 	  }
 	}
-    //    enable_fpe (FE_DIVBYZERO|FE_INVALID);
+    enable_fpe (FE_DIVBYZERO|FE_INVALID);
     OMP_END_PARALLEL();
     free (centered);
   }

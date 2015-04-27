@@ -352,7 +352,7 @@ void output_ppm (struct OutputPPM p)
   if (p.n == 0) p.n = N;
   if (p.min == 0 && p.max == 0) {
     stats s = statsf (p.f);
-    double avg = s.sum/s.area, spread = (p.spread ? p.spread : 5.)*s.stddev;
+    double avg = s.sum/s.volume, spread = (p.spread ? p.spread : 5.)*s.stddev;
     p.min = avg - spread; p.max = avg + spread;
   }
   if (p.box[0][0] == 0. && p.box[0][1] == 0. && 

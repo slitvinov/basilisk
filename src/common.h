@@ -366,7 +366,16 @@ typedef struct {
 #endif
 } coord;
 
-#define norm(v) (sqrt(sq(v.x[]) + sq(v.y[])))
+#if dimension == 1
+# define norm(v) fabs(v.x[])
+# define dv() Delta
+#elif dimension == 2
+# define norm(v) (sqrt(sq(v.x[]) + sq(v.y[])))
+# define dv() sq(Delta)
+#else // dimension == 3
+# define norm(v) (sqrt(sq(v.x[]) + sq(v.y[]) + sq(v.z[])))
+# define dv() cube(Delta)
+#endif
 
 struct _origin { double x, y, z; };
 
@@ -664,6 +673,7 @@ double timer_elapsed (timer t)
 const face vector zerof[] = {0.,0.,0.};
 const face vector unityf[] = {1.,1.,1.};
 const scalar unity[] = 1.;
+const scalar zeroc[] = 0.;
 
 // Metric
 

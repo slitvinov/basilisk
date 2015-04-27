@@ -123,51 +123,51 @@ void timer_print (timer t, int i, size_t tnc)
 }
 
 typedef struct {
-  double avg, rms, max, area;
+  double avg, rms, max, volume;
 } norm;
 
 norm normf (scalar f)
 {
-  double avg = 0., rms = 0., max = 0., area = 0.;
+  double avg = 0., rms = 0., max = 0., volume = 0.;
   foreach(reduction(max:max) reduction(+:avg) 
-	  reduction(+:rms) reduction(+:area)) 
+	  reduction(+:rms) reduction(+:volume)) 
     if (f[] != nodata) {
       double v = fabs(f[]);
       if (v > max) max = v;
-      double a = cm[]*sq(Delta);
+      double a = cm[]*dv();
       avg  += a*v;
       rms  += a*v*v;
-      area += a;
+      volume += a;
     }
   norm n;
-  n.avg = avg/area;
-  n.rms = sqrt(rms/area);
+  n.avg = avg/volume;
+  n.rms = sqrt(rms/volume);
   n.max = max;
-  n.area = area;
+  n.volume = volume;
   return n;
 }
 
 typedef struct {
-  double min, max, sum, stddev, area;
+  double min, max, sum, stddev, volume;
 } stats;
 
 stats statsf (scalar f)
 {
-  double min = 1e100, max = -1e100, sum = 0., sum2 = 0., area = 0.;
-  foreach(reduction(+:sum) reduction(+:sum2) reduction(+:area)
+  double min = 1e100, max = -1e100, sum = 0., sum2 = 0., volume = 0.;
+  foreach(reduction(+:sum) reduction(+:sum2) reduction(+:volume)
 	  reduction(max:max) reduction(min:min)) 
     if (f[] != nodata) {
-      double a = cm[]*sq(Delta);
+      double a = cm[]*dv();
       sum += f[]*a;
       sum2 += sq(f[])*a;
-      area += a;
+      volume += a;
       if (f[] > max) max = f[];
       if (f[] < min) min = f[];
     }
   stats s;
-  s.min = min, s.max = max, s.sum = sum, s.area = area;
-  sum2 -= sum*sum/area;
-  s.stddev = sum2 > 0. ? sqrt(sum2/area) : 0.;
+  s.min = min, s.max = max, s.sum = sum, s.volume = volume;
+  sum2 -= sum*sum/volume;
+  s.stddev = sum2 > 0. ? sqrt(sum2/volume) : 0.;
   return s;
 }
 
@@ -251,12 +251,10 @@ $$ */
 
 void vorticity (const vector u, scalar omega)
 {
-  #if dimension == 2
+  #if dimension > 1
     foreach()
       omega[] = (u.y[1,0] - u.y[-1,0] + u.x[0,-1] - u.x[0,1])/(2.*Delta);
     boundary ({omega});
-  #else
-    assert (false);
   #endif
 }
 

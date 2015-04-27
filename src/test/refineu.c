@@ -54,7 +54,7 @@ static int error()
   fprintf (ferr, "maximum error: %g %g\n", max, maxv);
   stats s = statsf (eu);
   fprintf (ferr, "eu: avg: %g stddev: %g max: %g\n", 
-	   s.sum/s.area, s.stddev, s.max);
+	   s.sum/s.volume, s.stddev, s.max);
 
   return (max != maxv);
 }

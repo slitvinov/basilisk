@@ -21,7 +21,7 @@ int main()
       e[] = a[] + sin(2.*pi*x)*cos(2.*pi*y);
     stats s = statsf(e);
     foreach()
-      e[] -= s.sum/s.area;
+      e[] -= s.sum/s.volume;
     fprintf (stderr, "%d %g\n", n, statsf(e).max);
   }
   foreach()

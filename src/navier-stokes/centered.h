@@ -82,10 +82,17 @@ $$
 Taking care of boundary orientation and staggering of *uf*, this
 can be written */
 
+// fixme: use foreach_dimension()
 p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]*fm.x[ghost]));
 p[left]   = neumann(-uf.x[]/(dt*alpha.x[]*fm.x[]));
+#if dimension > 1
 p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]*fm.y[ghost]));
 p[bottom] = neumann(-uf.y[]/(dt*alpha.y[]*fm.y[]));
+#endif
+#if dimension > 2
+p[front]  = neumann(uf.z[ghost]/(dt*alpha.z[ghost]*fm.z[ghost]));
+p[back]   = neumann(-uf.z[]/(dt*alpha.z[]*fm.z[]));
+#endif
 
 /**
 ## Initial conditions
@@ -157,14 +164,18 @@ event properties (i++,last) {
 For second-order in time integration of the velocity advection term
 $\nabla\cdot(\mathbf{u}\otimes\mathbf{u})$, we need to define the face
 velocity field $\mathbf{u}_f$ at time $t+\Delta t/2$. We use a version
-of the Bell-Collela-Glaz advection scheme and the pressure gradient
-and acceleration terms at time $t$ (stored in vector $\mathbf{g}$). */
+of the Bell-Collela-Glaz [advection scheme](/src/bcg.h) and the
+pressure gradient and acceleration terms at time $t$ (stored in vector
+$\mathbf{g}$). */
 
 void prediction()
 {
-  scalar dux[], duy[];
   vector du;
-  du.x = dux; du.y = duy;
+  foreach_dimension() {
+    scalar s = new scalar;
+    du.x = s;
+  }
+
   if (u.x.gradient)
     foreach()
       foreach_dimension()
@@ -181,11 +192,19 @@ void prediction()
     int i = -(s + 1.)/2.;
     uf.x[] = u.x[i] + (g.x[] + g.x[-1])*dt/4. +
       s*min(1., 1. - s*un)*du.x[i]*Delta/2.;
-    double fyy = u.y[i,0] < 0. ? u.x[i,1] - u.x[i,0] : u.x[i,0] - u.x[i,-1];
-    uf.x[] -= dt*u.y[i,0]*fyy/(2.*Delta);
+    #if dimension > 1
+      double fyy = u.y[i] < 0. ? u.x[i,1] - u.x[i] : u.x[i] - u.x[i,-1];
+      uf.x[] -= dt*u.y[i]*fyy/(2.*Delta);
+    #endif
+    #if dimension > 2
+      double fzz = u.z[i] < 0. ? u.z[i,0,1] - u.z[i] : u.z[i] - u.z[i,0,-1];
+      uf.x[] -= dt*u.z[i]*fzz/(2.*Delta);
+    #endif
     uf.x[] *= fm.x[];
   }
   boundary ((scalar *){uf});
+
+  delete ((scalar *){du});
 }
 
 /**
@@ -224,8 +243,8 @@ static void correction (double dt)
 The viscous term is computed implicitly. We first add the pressure
 gradient and acceleration terms, as computed at time $t$, then call
 the implicit viscosity solver. We then remove the acceleration and
-pressure gradient terms as they will replaced by their values at time
-$t+\Delta t$. */
+pressure gradient terms as they will be replaced by their values at
+time $t+\Delta t$. */
 
 event viscous_term (i++,last)
 {
@@ -267,9 +286,11 @@ event acceleration (i++,last)
   We apply boundary conditions but only in the tangential direction so
   that the acceleration term is preserved on the boundary. */
 
-  uf.x.normal = uf.y.normal = false;
+  foreach_dimension()
+    uf.x.normal = false;
   boundary ((scalar *){uf});
-  uf.x.normal = uf.y.normal = true;  
+  foreach_dimension()
+    uf.x.normal = true;
 }
 
 /**
