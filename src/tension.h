@@ -18,6 +18,17 @@ attribute {
 }
 
 /**
+Surface tension is a source term in the right-hand-side of the
+evolution equation for the velocity of the [centered Navier--Stokes
+solver](navier-stokes/centered.h) i.e. it is an acceleration. If
+necessary, we allocate a new vector field to store it. */
+
+event defaults (i = 0) {
+  if (is_constant(a.x))
+    a = new face vector;
+}
+
+/**
 ## Stability condition
 
 The surface tension scheme is time-explicit so the maximum timestep is
@@ -33,7 +44,7 @@ event stability (i++) {
   /**
   We first compute the minimum and maximum values of $\alpha =
   1/\rho$, as well as $\Delta_{min}$. */
-  
+
   double amin = HUGE, amax = -HUGE, dmin = HUGE;
   foreach_face (reduction(min:amin) reduction(max:amax) reduction(min:dmin)) {
     if (alpha.x[] > amax) amax = alpha.x[];
@@ -93,15 +104,6 @@ event acceleration (i++)
     }
 
   /**
-  Surface tension is a source term in the right-hand-side of the
-  evolution equation for the velocity of the [centered Navier--Stokes
-  solver](navier-stokes/centered.h) i.e. it is an acceleration. If
-  necessary, we allocate a new vector field to store it. */
-
-  if (is_constant(a.x))
-    a = new face vector;
-
-  /**
   Finally, for each interface for which $\sigma$ is non-zero, we
   compute the surface tension acceleration
   $$
@@ -109,10 +111,10 @@ event acceleration (i++)
   $$ 
   */
 
-  foreach_face() {
-    a.x[] = 0.;
+  face vector st = a;
+  foreach_face()
     for (scalar c in list)
-      if (c[] != c[-1,0]) {
+      if (c[] != c[-1]) {
 	scalar kappa = c.kappa;
 	
 	/**
@@ -123,13 +125,12 @@ event acceleration (i++)
 	(*nodata* is a very large positive value). */
 
 	double kf = 
-	  (kappa[] != nodata && kappa[-1,0] != nodata) ? 
-	  (kappa[] + kappa[-1,0])/2. : 
-	  min(kappa[], kappa[-1,0]);
+	  (kappa[] != nodata && kappa[-1] != nodata) ? 
+	  (kappa[] + kappa[-1])/2. : 
+	  min(kappa[], kappa[-1]);
 
-	a.x[] += alpha.x[]*c.sigma*kf*(c[] - c[-1,0])/Delta;
+	st.x[] += alpha.x[]*c.sigma*kf*(c[] - c[-1])/Delta;
       }
-  }
 
   /**
   Finally we free the list of interfacial volume fractions. */

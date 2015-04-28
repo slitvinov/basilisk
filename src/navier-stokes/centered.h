@@ -118,7 +118,7 @@ event defaults (i = 0)
 
 /**
 We initialise the face velocity field and apply boundary conditions
-after user initialisation. */
+after user initialisation. We also define fluid properties. */
 
 event init (i = 0)
 {
@@ -127,6 +127,8 @@ event init (i = 0)
   foreach_face()
     uf.x[] = fm.x[]*(u.x[] + u.x[-1])/2.;
   boundary ((scalar *){uf});
+
+  event ("properties");
 }
 
 /**
@@ -256,11 +258,16 @@ event viscous_term (i++,last)
 
   /**
   The (provisionary) face velocity field at time $t+\Delta t$ is
-  obtained by simple interpolation. */
+  obtained by simple interpolation. We also reset the acceleration
+  field (if it is not a constant). */
 
-  trash ({uf});
-  foreach_face()
+  face vector af = a;
+  trash ({uf,af});
+  foreach_face() {
     uf.x[] = fm.x[]*(u.x[] + u.x[-1])/2.;
+    if (!is_constant(af.x))
+      af.x[] = 0.;
+  }
 }
 
 /**

@@ -23,7 +23,7 @@ int main() {
   The domain is unity, centered on the origin and periodic in all
   directions. */
   
-  origin (-0.5,-0,5);  
+  origin (-0.5,-0.5);
   foreach_dimension()
     periodic (right);
 

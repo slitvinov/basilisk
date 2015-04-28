@@ -43,6 +43,7 @@ Note that only the documented test cases appear in the list below
 * [Circular droplet in equilibrium](spurious.c)
 * [Capillary wave](capwave.c)
 * [Shape oscillation of an inviscid droplet](oscillation.c)
+* [Rising bubble](rising.c)
 
 ## General orthogonal coordinates
 

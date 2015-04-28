@@ -88,8 +88,6 @@ inverse. */
 
 face vector alphav[];
 
-void density();
-
 event init (i = 0) {
 
   /**
@@ -105,13 +103,16 @@ event init (i = 0) {
 #endif
 
   /**
-  The density is variable, and defined by a function given below. */
+  The density is variable, and defined by the function below. */
 
   alpha = alphav;
-  density();
 }
 
-void density() {
+/**
+The density is defined at each timestep via the *properties()* event
+declared by the Navier--Stokes solver. */
+
+event properties (i++) {
 
   /**
   When using smearing of the density jump, we initialise *cf* with the
@@ -134,15 +135,8 @@ void density() {
     double cm = (cf[] + cf[-1,0])/2.;
     alphav.x[] = 1./rho(cm);
   }
-  boundary ((scalar *){alphav});
+  boundary ((scalar *){alphav});  
 }
-
-/**
-The density function needs to be applied at each timestep via the
-*properties()* event defined by the Navier--Stokes solver. */
-
-event properties (i++)
-  density();
 
 /**
 By default tracers are defined at $t-\Delta t/2$. We use the *first*

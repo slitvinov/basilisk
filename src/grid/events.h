@@ -203,6 +203,21 @@ int events (int i, double t, bool action)
   return 0;
 }
 
+void event (const char * name)
+{
+  for (Event * ev = Events; !ev->last; ev++)
+    if (!strcmp (ev->name, name)) {
+#if DEBUG_EVENTS
+      char * root = strstr (ev->file, BASILISK);
+      fprintf (stderr, "  %-25s %s%s:%d\n", ev->name, 
+	       root ? "src" : "",
+	       root ? &ev->file[strlen(BASILISK)] : ev->file, 
+	       ev->line);
+#endif     
+      (* ev->action) (0, 0, ev);
+    }
+}
+
 double dtnext (double t, double dt)
 {
   if (tnext != HUGE && tnext > t) {
