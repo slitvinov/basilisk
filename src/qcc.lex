@@ -1092,7 +1092,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   varwasmaybeconst();
   if (infunction && scope <= functionscope)
     endfunction();
-  if (foreachdim && scope == foreachdim - 1) {
+  if (foreachdim && scope == foreachdim - 1 && para == foreachdimpara) {
     if (scope != 0 || infunctionproto)
       ECHO;
     endforeachdim ();

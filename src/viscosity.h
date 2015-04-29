@@ -7,6 +7,19 @@ struct Viscosity {
   double dt;
 };
 
+#if AXI
+# define lambda ((coord){1., 1. + dt*alpha[]*(mu.x[] + mu.x[1] + \
+					      mu.y[] + mu.y[0,1])/2./sq(y)})
+#else
+# if dimension == 1
+#   define lambda ((coord){1.})
+# elif dimension == 2
+#   define lambda ((coord){1.,1.})
+# elif dimension == 3
+#   define lambda ((coord){1.,1.,1.})
+#endif
+#endif
+
 static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
 {
   struct Viscosity * p = data;
@@ -15,7 +28,7 @@ static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
   double dt = p->dt;
   vector u = vector(a[0]), r = vector(b[0]);
 
-  foreach_level_or_leaf (l)
+  foreach_level_or_leaf (l) {
     foreach_dimension()
       u.x[] = (dt*alpha[]*(2.*mu.x[1]*u.x[1] + 2.*mu.x[]*u.x[-1]
 	       #if dimension > 1
@@ -35,14 +48,15 @@ static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
 				     (u.z[-1,0,-1] + u.z[-1,0,0])/4.)
                #endif
 			   ) + r.x[]*sq(Delta))/
-    (sq(Delta) + dt*alpha[]*(2.*mu.x[1] + 2.*mu.x[]
-			     #if dimension > 1
-			       + mu.y[0,1] + mu.y[]
-			     #endif
-			     #if dimension > 2
-			       + mu.z[0,0,1] + mu.z[]
-			     #endif
+    (sq(Delta)*lambda.x + dt*alpha[]*(2.*mu.x[1] + 2.*mu.x[]
+                                    #if dimension > 1
+				      + mu.y[0,1] + mu.y[]
+                                    #endif
+			            #if dimension > 2
+				      + mu.z[0,0,1] + mu.z[]
+			            #endif
 			     ));
+  }
   
 #if TRASH
   vector u1[];
@@ -94,16 +108,16 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
       #if dimension > 2
         d += taux.z[0,0,1] - taux.z[];
       #endif
-      res.x[] = r.x[] - u.x[] + dt*alpha[]*d/Delta;
+      res.x[] = r.x[] - lambda.x*u.x[] + dt*alpha[]*d/Delta;
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
     }
   }
 #else
   /* "naive" discretisation (only 1st order on quadtrees) */
-  foreach (reduction(max:maxres))
+  foreach (reduction(max:maxres)) {
     foreach_dimension() {
-      res.x[] = r.x[] - u.x[] +
+      res.x[] = r.x[] - lambda.x*u.x[] +
         dt*alpha[]*(2.*mu.x[1,0]*(u.x[1] - u.x[])
 		    - 2.*mu.x[]*(u.x[] - u.x[-1])
         #if dimension > 1
@@ -126,20 +140,47 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
     }
+  }
 #endif
   return maxres;
 }
 
+#undef lambda
+
 mgstats viscosity (struct Viscosity p)
 {
-  vector u = p.u;
-  (const) face vector mu = p.mu;
-  (const) scalar alpha = p.alpha;
-  vector r[];
+  vector u = p.u, r[];
   foreach()
     foreach_dimension()
       r.x[] = u.x[];
+
+  bool metric = false;
+  foreach_dimension()
+    if (constant(fm.x) != 1.)
+      metric = true;
+  
+  if (metric) {
+    (const) face vector mu = p.mu;
+    (const) scalar alpha = p.alpha;
+    face vector mu_m = new face vector;
+    scalar alpha_m = new scalar;
+    foreach_face()
+      mu_m.x[] = mu.x[]*fm.x[];
+    foreach()
+      alpha_m[] = alpha[]/cm[];
+    p.mu = mu_m;
+    p.alpha = alpha_m;
+  }
+
+  face vector mu = p.mu;
+  scalar alpha = p.alpha;
+  
   restriction ({mu,alpha});
-  return mg_solve ((scalar *){u}, (scalar *){r},
-		   residual_viscosity, relax_viscosity, &p);
+  mgstats s = mg_solve ((scalar *){u}, (scalar *){r},
+			residual_viscosity, relax_viscosity, &p);
+
+  if (metric)
+    delete ({mu,alpha});
+
+  return s;
 }

@@ -49,6 +49,7 @@ Note that only the documented test cases appear in the list below
 
 * [Circular dam break on a sphere](lonlat.c)
 * [Axisymmetric mass conservation](axiadvection.c)
+* [Convergence of axisymmetric viscous terms](axi.c)
 
 ## Electrohydrodynamics
 
