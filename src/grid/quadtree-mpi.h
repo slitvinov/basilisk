@@ -252,10 +252,12 @@ static void rcv_pid_sync (SndRcv * m, scalar * list, int l)
   scalar * listr = NULL;
   vector * listf = NULL;
   for (scalar s in list)
-    if (s.face)
-      listf = vectors_add (listf, s.v);
-    else
-      listr = list_add (listr, s);
+    if (!is_constant(s)) {
+      if (s.face)
+	listf = vectors_add (listf, s.v);
+      else
+	listr = list_add (listr, s);
+    }
   rcv_pid_send (m->snd, listr, listf, l);
   rcv_pid_receive (m->rcv, listr, listf, l);
   rcv_pid_wait (m->snd);

@@ -6,12 +6,12 @@
 scalar f[];
 scalar * interfaces = {f};
 face vector alphav[];
-scalar alphacv[];
+scalar rhov[];
 
 uf.n[left]   = 0;
+p[left] = neumann(0.);
 uf.n[right]  = 0;
-uf.n[top]    = 0;
-uf.n[bottom] = 0;
+p[right] = neumann(0.);
 
 int main() {
   size (4);
@@ -26,10 +26,12 @@ int main() {
 }
 
 event init (t = 0) {
+  mask (x < -0.5 ? left : x > 0.5 ? right : none);
+  
   const face vector g[] = {0,-9.81};
   a = g;
   alpha = alphav;
-  alphac = alphacv;
+  rho = rhov;
 
   vertex scalar phi[];
   foreach_vertex()
@@ -40,13 +42,13 @@ event init (t = 0) {
 #define rho(f) ((f)*1.225 + (1. - (f))*0.1694)
 
 event properties (i++) {
-  trash ({alphav,alphacv});
+  trash ({alphav,rhov});
   foreach_face() {
-    double fm = (f[] + f[-1,0])/2.;
-    alphav.x[] = 1./rho(fm);
+    double ff = (f[] + f[-1,0])/2.;
+    alphav.x[] = fm.x[]/rho(ff);
   }
   foreach()
-    alphacv[] = 1./rho(f[]);
+    rhov[] = cm[]*rho(f[]);
 }
 
 event logfile (i++) {
@@ -54,7 +56,7 @@ event logfile (i++) {
   printf ("%g %d %g %g %g %g %d %d %d\n", 
 	  t, i, dt, s.sum - 8., s.min, s.max - 1., mgp.i, mgpf.i, mgu.i);
   assert (s.min >= -1e-10 && s.max <= 1. + 1e-10);
-  assert (fabs (s.sum - 8.) < 5e-5);
+  assert (fabs (s.sum - 2.) < 5e-5);
 }
 
 // event interface (t = {0,0.7,0.8,0.9,1.}) {

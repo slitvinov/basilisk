@@ -91,8 +91,6 @@ event init (i = 0) {
 
 event integration (i++)
 {
-  const face vector mu[] = {1.,1.};
-  const scalar alpha[] = 1.;
   double dt = 1.;
 
   /**
@@ -112,7 +110,7 @@ event integration (i++)
   /**
   ...and then solve for viscosity. */
   
-  mg = viscosity (u, mu, alpha, dt);
+  mg = viscosity (u, fm, cm, dt);
 }
 
 event error (i = 20)

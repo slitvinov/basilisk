@@ -8,7 +8,7 @@ int main() {
   periodic (right);
   
   stokes = true;
-  TOLERANCE = 1e-5;
+  TOLERANCE = 1e-6;
 
   u.t[top] = dirichlet(0);
 
@@ -21,8 +21,7 @@ scalar un[];
 event init (t = 0) {
   const face vector g[] = {1.,0.};
   a = g;
-  const face vector muc[] = {1.,1.};
-  mu = muc;
+  mu = fm;
   foreach()
     un[] = u.x[];
 }

@@ -62,7 +62,7 @@ for which inertia is negligible compared to viscosity. */
 
 (const) face vector mu = zerof, a = zerof;
 (const) face vector alpha = unityf;
-(const) scalar alphac = unity;
+(const) scalar rho = unity;
 mgstats mgp, mgpf, mgu;
 bool stokes = false;
 
@@ -83,19 +83,19 @@ Taking care of boundary orientation and staggering of *uf*, this
 can be written */
 
 // fixme: use foreach_dimension()
-p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]*fm.x[ghost]));
-p[left]   = neumann(-uf.x[]/(dt*alpha.x[]*fm.x[]));
+p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]));
+p[left]   = neumann(-uf.x[]/(dt*alpha.x[]));
 
 #if AXI
 uf.n[bottom] = 0.;
 #else // !AXI
 #  if dimension > 1
-p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]*fm.y[ghost]));
-p[bottom] = neumann(-uf.y[]/(dt*alpha.y[]*fm.y[]));
+p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]));
+p[bottom] = neumann(-uf.y[]/(dt*alpha.y[]));
 #  endif
 #  if dimension > 2
-p[front]  = neumann(uf.z[ghost]/(dt*alpha.z[ghost]*fm.z[ghost]));
-p[back]   = neumann(-uf.z[]/(dt*alpha.z[]*fm.z[]));
+p[front]  = neumann(uf.z[ghost]/(dt*alpha.z[ghost]));
+p[back]   = neumann(-uf.z[]/(dt*alpha.z[]));
 #  endif
 #endif
 
@@ -133,6 +133,14 @@ event init (i = 0)
     uf.x[] = fm.x[]*(u.x[] + u.x[-1])/2.;
   boundary ((scalar *){uf});
 
+  /**
+  The default density field is set to unity (times the metric). */
+
+  if (alpha.x == unityf.x) {
+    alpha = fm;
+    rho = cm;
+  }
+    
   event ("properties");
 }
 
@@ -261,7 +269,7 @@ event viscous_term (i++,last)
 {
   if (constant(mu.x) != 0.) {
     correction (dt);
-    mgu = viscosity (u, mu, alphac, dt);
+    mgu = viscosity (u, mu, rho, dt);
     correction (-dt);
   }
 
@@ -327,7 +335,7 @@ event projection (i++,last)
 
   face vector gf[];
   foreach_face()
-    gf.x[] = a.x[] - alpha.x[]*(p[] - p[-1])/Delta;
+    gf.x[] = a.x[] - alpha.x[]/fm.x[]*(p[] - p[-1])/Delta;
   boundary_flux ({gf});
 
   /**

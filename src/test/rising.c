@@ -45,7 +45,7 @@ and viscosity (*alphav*, *alphacv* and *muv* respectively). */
 scalar f[];
 scalar * interfaces = {f};
 face vector alphav[];
-scalar alphacv[];
+scalar rhov[];
 face vector muv[];
 
 /**
@@ -64,11 +64,13 @@ p[bottom]    = neumann(0);
 
 /**
 The domain will span $[0:2]\times[0:0.5]$ and will be resolved with
-$256\times 64$ grid points. */
+$256\times 64$ grid points. We reduce the tolerance on the Poisson and
+viscous solvers to improve the accuracy. */
 
 int main() {
   size (2);
   init_grid (1 << LEVEL);
+  TOLERANCE = 1e-4;
   run();
 }
 
@@ -80,7 +82,7 @@ event init (t = 0) {
   *f*. */
   
   alpha = alphav;
-  alphac = alphacv;
+  rho = rhov;
   mu = muv;
   f.sigma = SIGMA;
 
@@ -115,12 +117,12 @@ The density and viscosity are defined using the arithmetic average. */
 
 event properties (i++) {
   foreach_face() {
-    double fm = (f[] + f[-1,0])/2.;
-    alphav.x[] = 1./rho(fm);
-    muv.x[] = mu(fm);
+    double ff = (f[] + f[-1,0])/2.;
+    alphav.x[] = fm.x[]/rho(ff);
+    muv.x[] = fm.x[]*mu(ff);
   }
   foreach()
-    alphacv[] = 1./rho(f[]);
+    rhov[] = cm[]*rho(f[]);
 }
 
 /**

@@ -42,13 +42,13 @@ on either side of the interface. */
 event stability (i++) {
 
   /**
-  We first compute the minimum and maximum values of $\alpha =
+  We first compute the minimum and maximum values of $\alpha/f_m =
   1/\rho$, as well as $\Delta_{min}$. */
 
   double amin = HUGE, amax = -HUGE, dmin = HUGE;
   foreach_face (reduction(min:amin) reduction(max:amax) reduction(min:dmin)) {
-    if (alpha.x[] > amax) amax = alpha.x[];
-    if (alpha.x[] < amin) amin = alpha.x[];
+    if (alpha.x[]/fm.x[] > amax) amax = alpha.x[]/fm.x[];
+    if (alpha.x[]/fm.x[] < amin) amin = alpha.x[]/fm.x[];
     if (Delta < dmin) dmin = Delta;
   }
   double rhom = (1./amin + 1./amax)/2.;
@@ -129,7 +129,7 @@ event acceleration (i++)
 	  (kappa[] + kappa[-1])/2. : 
 	  min(kappa[], kappa[-1]);
 
-	st.x[] += alpha.x[]*c.sigma*kf*(c[] - c[-1])/Delta;
+	st.x[] += alpha.x[]/fm.x[]*c.sigma*kf*(c[] - c[-1])/Delta;
       }
 
   /**
