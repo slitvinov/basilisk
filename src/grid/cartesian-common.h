@@ -231,6 +231,8 @@ void free_solver()
 @if TRACE
   trace_off();
 @endif
+  fflush (stdout);
+  fflush (stderr);
   qpclose_all();
 }
 

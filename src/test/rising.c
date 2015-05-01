@@ -8,8 +8,12 @@ FEATFLOW
 page](http://www.featflow.de/en/benchmarks/cfdbenchmarking/bubble.html)).
 
 We solve the incompressible, variable-density, Navier--Stokes
-equations with interfaces and surface tension. */
+equations with interfaces and surface tension. We can solve either the
+axisymmetric or planar version. */
 
+#if AXIS
+# include "axi.h"
+#endif
 #include "navier-stokes/centered.h"
 #include "vof.h"
 #include "tension.h"
@@ -45,20 +49,22 @@ scalar alphacv[];
 face vector muv[];
 
 /**
-The boundary conditions are slip lateral walls and no-slip on the top
-and bottom walls. */
+The boundary conditions are slip lateral walls and no-slip on the right
+and left walls. */
 
-u.t[top]     = dirichlet(0);
-uf.t[top]    = dirichlet(0);
-u.t[bottom]  = dirichlet(0);
-uf.t[bottom] = dirichlet(0);
+u.t[right]  = dirichlet(0);
+uf.t[right] = dirichlet(0);
+u.t[left]   = dirichlet(0);
+uf.t[left]  = dirichlet(0);
 
-uf.n[left]  = 0;
-uf.n[right] = 0;
+uf.n[top]    = 0;
+uf.n[bottom] = 0;
+p[top]       = neumann(0);
+p[bottom]    = neumann(0);
 
 /**
-The domain will span $[0.5:1]\times[0:2]$ and will be resolved with
-$64\times 256$ grid points. */
+The domain will span $[0:2]\times[0:0.5]$ and will be resolved with
+$256\times 64$ grid points. */
 
 int main() {
   size (2);
@@ -81,16 +87,14 @@ event init (t = 0) {
   /**
   The domain is a rectangle. We only simulate half the bubble. */
   
-  mask (x > 1. ? right :
-	x < 0.5 ? left :
-	none);
+  mask (y > 0.5 ? top : none);
 
   /**
-  The bubble is centered on (0.5,0.5) and has a radius of 0.25. */
+  The bubble is centered on (0.5,0) and has a radius of 0.25. */
 
   vertex scalar phi[];
   foreach_vertex()
-    phi[] = sq(x - 0.5) + sq(y - 0.5) - sq(0.25);
+    phi[] = sq(x - 0.5) + sq(y) - sq(0.25);
   fractions (phi, f);
 }
 
@@ -99,8 +103,8 @@ We add the acceleration of gravity. */
 
 event acceleration (i++) {
   face vector av = a;
-  foreach_face(y)
-    av.y[] -= 0.98;
+  foreach_face(x)
+    av.x[] -= 0.98;
 }
 
 /**
@@ -124,15 +128,15 @@ We log the position of the center of mass of the bubble, its velocity
 and volume. */
 
 event logfile (i++) {
-  double yb = 0., vb = 0., sb = 0.;
-  foreach(reduction(+:yb) reduction(+:vb) reduction(+:sb)) {
+  double xb = 0., vb = 0., sb = 0.;
+  foreach(reduction(+:xb) reduction(+:vb) reduction(+:sb)) {
     double dv = (1. - f[])*dv();
-    yb += y*dv;
-    vb += u.y[]*dv;
+    xb += x*dv;
+    vb += u.x[]*dv;
     sb += dv;
   }
   printf ("%g %g %g %g %g %g %d %d %d\n", 
-	  t, sb, -1., yb/sb, vb/sb, dt, mgp.i, mgpf.i, mgu.i);
+	  t, sb, -1., xb/sb, vb/sb, dt, mgp.i, mgpf.i, mgu.i);
 }
 
 /**
@@ -159,22 +163,28 @@ event gfsview (i += 10) {
 The final shape of the bubble is compared to that obtained with the
 MooNMD Lagrangian solver (see [the FEATFLOW
 page](http://www.featflow.de/en/benchmarks/cfdbenchmarking/bubble/bubble_verification.html))
-at the highest resolution.
+at the highest resolution. We also display the shape of the
+axisymmetric version of the test. The axisymmetric bubble moves much
+faster.
 
 ~~~gnuplot Bubble shapes at the final time ($t=3$) for test case 1.
 set size ratio -1
 set grid
-plot [0.1:0.9][0.8:1.4]'../c1g3l4s.txt' w l t 'MooNMD', 'log' w l t 'Basilisk'
+plot [][0:0.4]'../c1g3l4s.txt' u 2:($1-0.5) w l t 'MooNMD', \
+              'log' u 1:2 w l t 'Basilisk', \
+              '../rising-axi/log' u 1:2 w l t 'Basilisk (axisymmetric)'
 ~~~
 
-The agreement for the bubble raise velocity with time is also good.
+The agreement for the bubble rise velocity with time is also good.
 
 ~~~gnuplot Rise velocity as a function of time.
 reset
 set grid
 set xlabel 'Time'
-plot [0:3][0:0.3]'../c1g3l4.txt' u 1:5 w l t 'MooNMD', \
-                 'out' u 1:5 w l t 'Basilisk
+set key bottom right
+plot [0:3][0:]'../c1g3l4.txt' u 1:5 w l t 'MooNMD', \
+                 'out' u 1:5 w l t 'Basilisk', \
+                 '../rising-axi/out' u 1:5 w l t 'Basilisk (axisymmetric)' \
 ~~~
 
 */

@@ -606,7 +606,8 @@ void quadtree_trash (void * alist)
 	for (int j = 0; j < L->len; j++)
 	  if (L->m[i][j])
 	    for (scalar s in list)
-	      ((double *)(L->m[i][j] + sizeof(Cell)))[s] = undefined;
+	      if (!is_constant(s))
+		((double *)(L->m[i][j] + sizeof(Cell)))[s] = undefined;
   }
 }
 

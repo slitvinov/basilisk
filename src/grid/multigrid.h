@@ -155,7 +155,8 @@ void multigrid_trash (void * alist)
   for (; p.level >= 0; p.n /= 2, p.level--)
     for (int i = 0; i < (p.n + 2*GHOSTS)*(p.n + 2*GHOSTS); i++)
       for (scalar s in list)
-	((double *)(&multigrid->d[p.level][i*datasize]))[s] = undefined;
+	if (!is_constant(s))
+	  ((double *)(&multigrid->d[p.level][i*datasize]))[s] = undefined;
 }
 
 // ghost cell coordinates for each direction

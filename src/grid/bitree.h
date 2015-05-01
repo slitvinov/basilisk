@@ -480,14 +480,16 @@ void bitree_trash (void * alist)
     for (int i = 0; i < _size(l); i++)
       if (q->m[l][i])
 	for (scalar s in list)
-	  ((double *)(q->m[l][i] + sizeof(Cell)))[s] = undefined;
+	  if (!is_constant(s))
+	    ((double *)(q->m[l][i] + sizeof(Cell)))[s] = undefined;
 #else // !DYNAMIC
   int cellsize = sizeof(Cell) + datasize;;
   for (int l = 0; l <= q->depth; l++) {
     char * data = q->m[l] + sizeof(Cell);
     for (int i = 0; i < _size(l); i++, data += cellsize)
       for (scalar s in list)
-	((double *)data)[s] = undefined;
+	if (!is_constant(s))
+	  ((double *)data)[s] = undefined;
   }
 #endif // !DYNAMIC
 }

@@ -199,7 +199,8 @@ void cartesian1D_trash (void * alist)
   for (int i = 0; i < p->n + 2; i++, data += datasize) {
     double * v = (double *) data;
     for (scalar s in list)
-      v[s] = undefined;
+      if (!is_constant(s))
+	v[s] = undefined;
   }
 }
 

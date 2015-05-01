@@ -134,10 +134,9 @@ norm normf (scalar f)
     if (f[] != nodata) {
       double v = fabs(f[]);
       if (v > max) max = v;
-      double a = cm[]*dv();
-      avg  += a*v;
-      rms  += a*v*v;
-      volume += a;
+      volume += dv();
+      avg    += dv()*v;
+      rms    += dv()*sq(v);
     }
   norm n;
   n.avg = avg/volume;
@@ -157,10 +156,9 @@ stats statsf (scalar f)
   foreach(reduction(+:sum) reduction(+:sum2) reduction(+:volume)
 	  reduction(max:max) reduction(min:min)) 
     if (f[] != nodata) {
-      double a = cm[]*dv();
-      sum += f[]*a;
-      sum2 += sq(f[])*a;
-      volume += a;
+      volume += dv();
+      sum    += dv()*f[];
+      sum2   += dv()*sq(f[]);
       if (f[] > max) max = f[];
       if (f[] < min) min = f[];
     }

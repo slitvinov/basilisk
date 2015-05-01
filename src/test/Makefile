@@ -50,6 +50,14 @@ ponds.tst: ponds.s
 
 poisson.tst: poisson.ctst
 
+rising-axi.c: rising.c
+	ln -s rising.c rising-axi.c
+
+rising-axi.tst: rising-axi.s
+	@CFLAGS="$(CFLAGS) -DAXIS=1" $(BASILISK)/runtest rising-axi.tst
+
+rising.tst: rising-axi.tst
+
 reversed.tst: reversed.ctst
 
 rotate.tst: rotate.ctst

@@ -10,7 +10,7 @@ struct Viscosity {
 #if AXI
 # define lambda ((coord){1., 1. + dt*alpha[]*(mu.x[] + mu.x[1] + \
 					      mu.y[] + mu.y[0,1])/2./sq(y)})
-#else
+#else // not AXI
 # if dimension == 1
 #   define lambda ((coord){1.})
 # elif dimension == 2

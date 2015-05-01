@@ -66,7 +66,8 @@ void cartesian_trash (void * alist)
   Point * p = grid;
   for (int i = 0; i < sq(p->n + 2); i++)
     for (scalar s in list)
-      ((double *)(&p->data[i*datasize]))[s] = undefined;
+      if (!is_constant(s))
+	((double *)(&p->data[i*datasize]))[s] = undefined;
 }
 
 // ghost cell coordinates for each direction

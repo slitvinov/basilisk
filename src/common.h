@@ -368,13 +368,13 @@ typedef struct {
 
 #if dimension == 1
 # define norm(v) fabs(v.x[])
-# define dv() Delta
+# define dv() (Delta*cm[])
 #elif dimension == 2
 # define norm(v) (sqrt(sq(v.x[]) + sq(v.y[])))
-# define dv() sq(Delta)
+# define dv() (sq(Delta)*cm[])
 #else // dimension == 3
 # define norm(v) (sqrt(sq(v.x[]) + sq(v.y[]) + sq(v.z[])))
-# define dv() cube(Delta)
+# define dv() (cube(Delta)*cm[])
 #endif
 
 struct _origin { double x, y, z; };

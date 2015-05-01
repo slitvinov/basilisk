@@ -85,13 +85,18 @@ can be written */
 // fixme: use foreach_dimension()
 p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]*fm.x[ghost]));
 p[left]   = neumann(-uf.x[]/(dt*alpha.x[]*fm.x[]));
-#if dimension > 1
+
+#if AXI
+uf.n[bottom] = 0.;
+#else // !AXI
+#  if dimension > 1
 p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]*fm.y[ghost]));
 p[bottom] = neumann(-uf.y[]/(dt*alpha.y[]*fm.y[]));
-#endif
-#if dimension > 2
+#  endif
+#  if dimension > 2
 p[front]  = neumann(uf.z[ghost]/(dt*alpha.z[ghost]*fm.z[ghost]));
 p[back]   = neumann(-uf.z[]/(dt*alpha.z[]*fm.z[]));
+#  endif
 #endif
 
 /**
@@ -250,7 +255,7 @@ time $t+\Delta t$. */
 
 event viscous_term (i++,last)
 {
-  if (mu.x != zerof.x) {
+  if (constant(mu.x) != 0.) {
     correction (dt);
     mgu = viscosity (u, mu, alphac, dt);
     correction (-dt);

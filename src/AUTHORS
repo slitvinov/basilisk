@@ -1,12 +1,9 @@
-Original authors
-----------------
-
-* [Stéphane Popinet](http://gfs.sourceforge.net/wiki/index.php/User:Popinet)
-
-Contributors
-------------
-
-* Jose-Maria Fullana: [Conway's game of life](examples/life.c), 
-  [Brusselator](examples/brusselator.c), [reaction--diffusion](diffusion.h), [1D arterial flow](test/artery1D.c)
+* Jose-Maria Fullana: [Conway's game of life](examples/life.c),
+  [Brusselator](examples/brusselator.c),
+  [reaction--diffusion](diffusion.h), [1D arterial
+  flow](test/artery1D.c)
+* [Geoffroy Kirstetter](/sandbox/geoffroy/README): [fow rates for
+  multiple rivers](test/multiriverinflow.c)
 * Emily Lane: GRD export
 * Jose Lopez-Herrera: [Electrokinetics](pnp.h)
+* [Stéphane Popinet](http://gfs.sourceforge.net/wiki/index.php/User:Popinet)
