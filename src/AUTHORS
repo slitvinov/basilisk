@@ -4,6 +4,7 @@
   flow](test/artery1D.c)
 * [Geoffroy Kirstetter](/sandbox/geoffroy/README): [fow rates for
   multiple rivers](test/multiriverinflow.c)
+* [Pierre-Yves Lagrée](/sandbox/M1EMN/README): [SAG equation](test/sag.c)
 * Emily Lane: GRD export
 * Jose Lopez-Herrera: [Electrokinetics](pnp.h)
 * [Stéphane Popinet](http://gfs.sourceforge.net/wiki/index.php/User:Popinet)
