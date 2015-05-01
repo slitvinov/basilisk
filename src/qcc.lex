@@ -2701,11 +2701,11 @@ int main (int argc, char ** argv)
 	cppcommand = CPP99;
       if (!cppcommand) {
 	if (source) {
-	  /* remove -D.. flags from $CC99 */
+	  /* remove -D_GNU_SOURCE flags from $CC99 */
 	  char tmp[1000]; strcpy (tmp, command);
 	  char * s = strtok (tmp, " \t");
 	  while (s) {
-	    if (strncmp (s, "-D", 2)) {
+	    if (strncmp (s, "-D_GNU_SOURCE", 13)) {
 	      strcat (preproc, s);
 	      strcat (preproc, " ");
 	    }
