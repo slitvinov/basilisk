@@ -714,7 +714,10 @@
 	int n = vtype - listtype, i;
 	char * constant = var->constant ? "_NVARMAX + " : "";
 	char coord[80] = "";
-	for (i = 0; i < (1 << n); i++) {
+	int nd = 1;
+	for (i = 0; i < n; i++)
+	  nd *= dimension;
+	for (i = 0; i < nd; i++) {
 	  switch (listtype) {
 	  case scalar:
 	    sprintf (coord, "%s%d,", constant, var->i[i]); break;
