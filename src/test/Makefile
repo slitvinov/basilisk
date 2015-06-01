@@ -28,6 +28,14 @@ conicalsv.tst: conicalsv.s
 
 conical.tst: conicalsv.tst
 
+explicit.c: implicit.c
+	ln -s implicit.c explicit.c 
+
+explicit.tst: explicit.s
+	@CFLAGS="$(CFLAGS) -DEXPLICIT=1" $(BASILISK)/runtest explicit.tst
+
+implicit.tst: explicit.tst
+
 bore.tst: bore1.tst
 
 explosion.tst: explosion.ctst

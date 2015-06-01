@@ -31,6 +31,7 @@ Note that only the documented test cases appear in the list below
 * [Runup of a solitary wave on a conical island](conical.c)
 * [Shock reflection by a circular cylinder](shock.c)
 * [Flow rates for multiple rivers](multiriverinflow.c)
+* [Implicit Saint-Venant solutions for waves](implicit.c)
 
 ## Volume-Of-Fluid
 
