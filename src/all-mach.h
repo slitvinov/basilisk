@@ -38,7 +38,7 @@ incompressible). The reciprocal volume $\alpha=1/\rho$ is one by
 default (i.e. the density is one). */
 
 scalar ps[];
-(const) scalar rhoc2 = 0.;
+(const) scalar rhoc2 = zeroc;
 (const) face vector alpha = unityf, a = zerof;
 
 /**
@@ -47,15 +47,10 @@ acceleration field. */
 
 vector g[];
 
+/**
+We initialise default values for the primitive fields. */
+
 event defaults (i = 0) {
-
-  /**
-  We set slope limiting for the momentum and initialise default values
-  for the primitive fields. */
-  
-  for (scalar s in {q})
-    s.gradient = minmod2;
-
   foreach() {
     p[] = 0.;
     foreach_dimension()
@@ -71,19 +66,15 @@ event defaults (i = 0) {
 #endif
 }
 
-/**
-The equation of state is define by the "properties" event. */
-
 event init (i = 0) {
-  event ("properties");
-  foreach()
-    p[] = ps[];
   boundary ({q,p});
 
   /**
   The face velocity field is obtained by simple linear interpolation
-  from the momentum field. */
+  from the momentum field. We make sure that $\alpha$ is defined by
+  calling the "properties" event (see below). */
   
+  event ("properties");
   foreach_face()
     uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2.;
   boundary ((scalar *){uf});
