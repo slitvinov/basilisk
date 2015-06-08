@@ -27,7 +27,8 @@ int main()
   
   G = 10.;
   DT = 1e-2;
-
+  theta = 1.3;
+  
   /**
   We do several runs with increasing wave amplitude. */
   
