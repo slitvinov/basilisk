@@ -4,7 +4,7 @@
 We wish to solve the generic momentum equation
 $$
 \partial_t\mathbf{q} + \nabla\cdot(\mathbf{q}\mathbf{u}) = 
-- \nabla p + \mathbf{a}
+- \nabla p + \rho\mathbf{a}
 $$
 with $\mathbf{q}=\rho\mathbf{u}$ the momentum, $\mathbf{u}$ the
 velocity, $\rho$ the density, $p$ the pressure and $\mathbf{a}$ an
@@ -13,37 +13,45 @@ verifies the evolution equation
 $$
 \partial_t p + \mathbf{u}\cdot\nabla p = -\rho c^2\nabla\cdot\mathbf{u}
 $$
-with $c$ the speed of sound. 
+with $c$ the speed of sound. By default the solver sets $c=\infty$,
+$\rho=1$ and the pressure equation reduces to 
+$$
+\nabla\cdot\mathbf{u} = 0
+$$
 
-We build the solver using the generic time loop, Bell-Collela-Glaz
-advection scheme and multigrid Poisson--Helmholtz solver. */
+The advection of momentum is not performed by this solver (so that
+different schemes can be used) i.e. in the end, by default, we solve
+the incompressible (linearised) Euler equations with a projection
+method.
+
+We build the solver using the generic time loop and the multigrid
+Poisson--Helmholtz solver. */
 
 #include "run.h"
 #include "timestep.h"
-#include "bcg.h"
 #include "poisson.h"
 
 /**
-The primitive variables are the momentum $\mathbf{q}$, pressure $p$
-and (face) velocity field $\mathbf{uf}$. */
+The primitive variables are the momentum $\mathbf{q}$, pressure $p$,
+density $\rho$ and (face) velocity field $\mathbf{uf}$. */
 
 vector q[];
 scalar p[];
 face vector uf[];
+(const) scalar rho = unity;
 
 /**
 The equation of state is defined by the pressure field *ps* and $\rho
 c^2$. Both fields are zero by default (i.e. the fluid is
-incompressible). The reciprocal volume $\alpha=1/\rho$ is one by
-default (i.e. the density is one). */
+incompressible). */
 
 scalar ps[];
 (const) scalar rhoc2 = zeroc;
-(const) face vector alpha = unityf, a = zerof;
+(const) face vector a = zerof;
 
 /**
-We need a field to store the combined pressure gradient and
-acceleration field. */
+We store the combined pressure gradient and acceleration field in
+*g*. */
 
 vector g[];
 
@@ -57,26 +65,19 @@ event defaults (i = 0) {
       q.x[] = g.x[] = 0.;
   }
   boundary ({q,p,g});
-  
-#if QUADTREE
-  for (scalar s in {q}) {
-    s.refine = s.prolongation = refine_linear;
-    s.coarsen = coarsen_volume_average;
-  }
-#endif
 }
 
 event init (i = 0) {
-  boundary ({q,p});
+  boundary ({q,p,rho});
 
   /**
   The face velocity field is obtained by simple linear interpolation
-  from the momentum field. We make sure that $\alpha$ is defined by
-  calling the "properties" event (see below). */
+  from the momentum field. We make sure that the density field is
+  defined by calling the "properties" event (see below). */
   
   event ("properties");
   foreach_face()
-    uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2.;
+    uf.x[] = (q.x[] + q.x[-1])/(rho[] + rho[-1]);
   boundary ((scalar *){uf});
 }
 
@@ -89,31 +90,17 @@ event stability (i++,last) {
 }
 
 /**
-Tracers are advected by these events. */
+Tracers (including momentum $\mathbf{u}$) are advected by these events. */
 
 event vof (i++,last);
 event tracer_advection (i++,last);
 
 /**
-Momentum is advected using the [BCG scheme](bcg.h) and including the
-combined acceleration and pressure gradient source term *g* i.e. we now have
-$$
-\mathbf{q}_\star = \mathbf{q}_n - \Delta t
-\nabla\cdot(\mathbf{q}_{n+1/2}\mathbf{u}) 
-$$
-*/
-
-event advection_term (i++,last) {
-  advection ((scalar *){q}, uf, dt, (scalar *){g});
-}
-
-/**
-The equation of state (i.e. fields $\alpha$, $\rho c^2$ and *ps*) is
+The equation of state (i.e. fields $\rho$, $\rho c^2$ and *ps*) is
 defined by this event. */
 
 event properties (i++,last)
 {
-  boundary_flux ({alpha});
 
   /**
   If the acceleration is not constant, we reset it to zero. */
@@ -142,15 +129,34 @@ mgstats mgp;
 
 event pressure (i++, last)
 {
+
   /**
   We first define a temporary face velocity field $\mathbf{u}_\star$
-  using simple averaging from $\mathbf{q}_{\star}$ and the
-  acceleration term. */
+  using simple averaging from $\mathbf{q}_{\star}$, $\rho_{n+1}$ and
+  the acceleration term. */
 
   foreach_face()
-    uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2. + dt*a.x[];
+    uf.x[] = (q.x[] + q.x[-1])/(rho[] + rho[-1]) + dt*a.x[];
   boundary ((scalar *){uf});
+
+  /**
+  We compute the specific volume $\alpha=1/\rho$ which will be used in
+  the Poisson--Helmholtz equation for the pressure. */
   
+  face vector alpha, gf[];
+  if (is_constant(rho)) {
+    const face vector alphac[] = {1./constant(rho),
+				  1./constant(rho),
+				  1./constant(rho)};
+    alpha = alphac;
+  }
+  else {
+    alpha = gf;
+    foreach_face()
+      alpha.x[] = 2./(rho[] + rho[-1]);
+    boundary_flux ({alpha});
+  }
+    
   /**
   The evolution equation for the pressure is
   $$p_t +\mathbf{u} \cdot \nabla p = - \rho c^2 \nabla \cdot \mathbf{u}$$
@@ -214,35 +220,27 @@ event pressure (i++, last)
 
   /**
   The pressure gradient is applied to $\mathbf{u}_\star$ to obtain the
-  face velocity field at time $n + 1$. */
+  face velocity field at time $n + 1$. 
   
-  foreach_face()
-    uf.x[] -= dt*alpha.x[]*(p[] - p[-1])/Delta;
-  boundary ((scalar *){uf});
-  
-  /**
-  We define a combined face pressure and acceleration using a
-  density-weighted averaging. */
-  
-  face vector gf[];
-  foreach_face()
-    gf.x[] = a.x[] - alpha.x[]*(p[] - p[-1])/Delta;
+  We also store the combined face pressure gradient and acceleration
+  field *gf*. */
+
+  foreach_face() {
+    double dp = 2./(rho[] + rho[-1])*(p[] - p[-1])/Delta;
+    uf.x[] -= dt*dp;
+    gf.x[] = a.x[] - dp;
+  }
   boundary_flux ({gf});
 
   /**
-  We use the face pressure pressure to get the centered pressure gradient. */
-
-  trash ({g});
-  foreach()
-    foreach_dimension()
-      g.x[] = (gf.x[]/alpha.x[] + gf.x[1]/alpha.x[1])/2.;
-  boundary ((scalar *){g});
-
-  /**
-  And finally we apply the pressure gradient term to the flux/momentum. */
+  And finally we apply the pressure gradient/acceleration term to the
+  flux/momentum. We also store the centered, combined pressure
+  gradient and acceleration field *g*. */
   
   foreach()
-    foreach_dimension()
+    foreach_dimension() {
+      g.x[] = rho[]*(gf.x[] + gf.x[1])/2.;
       q.x[] += dt*g.x[];
-  boundary ((scalar *){q});
+    }
+  boundary ((scalar *){q,g,uf});
 }

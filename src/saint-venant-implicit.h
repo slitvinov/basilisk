@@ -3,37 +3,41 @@
 
 We solve the [Saint-Venant equations](saint-venant.h) semi-implicitly
 to lift the timestep restriction due to gravity waves. This is just a
-particular application of the "all Mach" semi-implicit solver. */
+particular application of the "all Mach" semi-implicit solver. We will
+use the Bell-Collela-Glaz advection scheme to transport mass and
+momentum. */
 
 #include "all-mach.h"
+#include "tracer.h"
 
 /**
 In addition to the momentum $\mathbf{q}=h\mathbf{u}$ defined by the
 all Mach solver, we will need the fluid depth *h* (i.e. the density
-$\rho$) and the topography *zb*. The acceleration of gravity is
+$\rho$) and the topography *zb*. Both the momentum $\mathbf{q}$ and
+mass $h$ are advected tracers. The acceleration of gravity is
 *G*. *dry* is the fluid depth below which a cell is considered
 "dry". */
 
-scalar h[], zb[];
+scalar h[], zb[], * tracers = {q,h};
 double G = 1.;
 double dry = 1e-10;
 
 /**
-We need fields to store the (varying) state fields $\alpha=1/\rho$,
-$\rho c^2$ and the acceleration $\mathbf{a}$. */
+We need fields to store the (varying) state field $\rho c^2$ and the
+acceleration $\mathbf{a}$. */
 
-face vector alphav[], av[];
 scalar rhoc2v[];
+face vector av[];
 
 event defaults (i = 0) {
-  alpha = alphav;
+  rho = h;
   a = av;
   rhoc2 = rhoc2v;
 
   /**
-  We set limiting for *h* and *zb*. */
+  We set limiting for *q*, *h* and *zb*. */
   
-  for (scalar s in {h,zb})
+  for (scalar s in {q,h,zb})
     s.gradient = minmod2;
 
   /**
@@ -46,7 +50,7 @@ event defaults (i = 0) {
   boundary ({h,zb});
   
 #if QUADTREE
-  for (scalar s in {h,zb}) {
+  for (scalar s in {q,h,zb}) {
     s.refine = s.prolongation = refine_linear;
     s.coarsen = coarsen_volume_average;
   }
@@ -54,41 +58,36 @@ event defaults (i = 0) {
 }
 
 /**
-We make sure that *h* is larger than *dry* after user initialisation. */
+We apply boundary conditions after user initialisation. The boundary
+conditions for $\rho=h$ and $\mathbf{q}$ are already applied by the
+[all Mach solver](all-mach.h). */
 
 event init (i = 0) {
-  foreach()
-    if (h[] < dry)
-      h[] = dry;
-  boundary ({h});
-}
-
-/**
-The water depth is advected by the face centered velocity field. */
-
-event tracer_advection (i++) {
-  advection ({h}, uf, dt);
-  foreach()
-    if (h[] < dry)
-      h[] = dry;
-  boundary ({h});
+  boundary ({zb});
 }
 
 /**
 The properties of the fluid are given by the "Saint-Venant equation of
-state" i.e. $p = gh^2/$, $c^2 = gh$, $\alpha = 1/h$. */
+state" i.e. $p = gh^2/2$, $c^2 = gh$. */
 
 event properties (i++) {
+
+  /**
+  We first make sure that the depth is (slightly) larger than zero. */
+  
+  foreach()
+    if (h[] < dry)
+      h[] = dry;
+  boundary ({h});
+
   foreach() {
     rhoc2v[] = G*sq(h[]);
     ps[] = rhoc2v[]/2.;
   }
-  foreach_face()
-    alphav.x[] = 2./(h[] + h[-1]);
 }
 
 /**
-The acceleration is $- g\nabla z_b$. */
+The acceleration due to the topography is $- g\nabla z_b$. */
 
 event acceleration (i++) {
   foreach_face()

@@ -12,6 +12,12 @@ check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst
 
 hf.tst: hf.ctst
 
+dry-explicit.c: dry.c
+	ln -s dry.c dry-explicit.c 
+
+dry-explicit.tst: dry-explicit.s
+	@CFLAGS="$(CFLAGS) -DEXPLICIT=1" $(BASILISK)/runtest dry-explicit.tst
+
 seawallsv.c: seawall.c
 	ln -s seawall.c seawallsv.c 
 
