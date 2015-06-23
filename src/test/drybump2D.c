@@ -1,4 +1,8 @@
-#include "saint-venant.h"
+#if IMPLICIT
+# include "saint-venant-implicit.h"
+#else
+# include "saint-venant.h"
+#endif
 
 #define LEVEL 7
 
@@ -6,13 +10,21 @@ int main()
 {
   origin (-0.5, -0.5);
   init_grid (1 << LEVEL);
+  DT = 1e-1;
   run();
 }
 
+#if IMPLICIT
+q.n[right]  = neumann(0);
+q.n[left]   = neumann(0);
+q.n[top]    = neumann(0);
+q.n[bottom] = neumann(0);
+#else
 u.n[right]  = neumann(0);
 u.n[left]   = neumann(0);
 u.n[top]    = neumann(0);
 u.n[bottom] = neumann(0);
+#endif
 
 double terrain (double x, double y)
 {
@@ -38,7 +50,14 @@ event init (i = 0)
 
 event logfile (i++) {
   stats s = statsf (h);
+#if IMPLICIT
+  scalar u[];
+  foreach()
+    u[] = h[] > dry ? q.x[]/h[] : 0.;
+  norm n = normf (u);
+#else
   norm n = normf (u.x);
+#endif
   if (i == 0)
     fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
   fprintf (stderr, "%g %d %g %g %.8f %g %g %g\n", t, i, s.min, s.max, s.sum, 
@@ -59,7 +78,7 @@ event outputfile (t <= 1.2; t += 1.2/8) {
 }
 
 event adapt (i++) {
-  // we dot this so that wavelets use the default bilinear
+  // we do this so that wavelets use the default bilinear
   // interpolation this is less noisy than the linear + gradient
   // limiters used in Saint-Venant not sure whether this is better
   // though.

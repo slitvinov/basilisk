@@ -4,7 +4,12 @@
 // use KDT database rather than analytical function
 #define KDT 1
 
-#include "saint-venant.h"
+#if IMPLICIT
+# include "saint-venant-implicit.h"
+#else
+# include "saint-venant.h"
+#endif
+
 #if KDT
 # include "terrain.h"
 #endif
@@ -16,6 +21,9 @@ int main()
   init_grid (1 << LEVEL);
   size (1000.);
   G = 9.81;
+#if IMPLICIT
+  DT = 10.;
+#endif
   run();
 }
 
@@ -51,6 +59,15 @@ event init (i = 0)
 }
 
 event friction (i++) {
+#if IMPLICIT
+  // quadratic bottom friction, coefficient 1e-4 (dimensionless)
+  foreach() {
+    double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(q)/sq(h[]);
+    foreach_dimension()
+      q.x[] /= a;
+  }
+  boundary ((scalar *){q});
+#else
   // quadratic bottom friction, coefficient 1e-4 (dimensionless)
   foreach() {
     double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(u)/h[];
@@ -58,19 +75,30 @@ event friction (i++) {
       u.x[] /= a;
   }
   boundary ((scalar *){u});
+#endif
 }
 
 event logfile (i += 10) {
   stats s = statsf (h);
+#if IMPLICIT
+  scalar u[];
+  foreach()
+    u[] = h[] > dry ? q.x[]/h[] : 0.;
+  norm n = normf (u);
+#else
   norm n = normf (u.x);
+#endif
   if (i == 0)
     fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
   fprintf (stderr, "%g %d %.4g %g %.8f %g %g %g %g\n", 
 	   t, i, s.min, s.max, s.sum, dt, n.rms, n.max, dt);
+#if !IMPLICIT
   assert (s.min > 0.);
+#endif
 }
 
 event outputfile (t <= 1200.; t += 1200./8) {
+#if !IMPLICIT  
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
   output_field ({h, zb, u}, stdout, N, linear = true);
@@ -82,6 +110,7 @@ event outputfile (t <= 1200.; t += 1200./8) {
   output_field ({h, zb, l}, stdout, N);
 
   nf++;
+#endif
 }
 
 // int event (t += 100)

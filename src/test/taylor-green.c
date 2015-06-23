@@ -11,11 +11,21 @@ gradients. Numerical diffusion will in particular introduce
 dissipation. This dissipation can be quantified and is a useful
 measure of the accuracy of the numerical scheme.
 
-We solve the incompressible Euler equations on a Cartesian
-(multi)grid. */
+We solve the incompressible Euler equations on a Cartesian (multi)grid
+either with the centered Navier-Stokes solver or with the "all Mach"
+solver (in incompressible mode). */
 
 #include "grid/multigrid.h"
-#include "navier-stokes/centered.h"
+#if ALL_MACH
+# include "all-mach.h"
+# include "bcg.h"
+# define u q
+
+event tracer_advection (i++)
+  advection ((scalar *){q}, uf, dt, (scalar *){g});
+#else
+# include "navier-stokes/centered.h"
+#endif
 
 int main() {
 
@@ -106,7 +116,9 @@ set xrange [16:512]
 plot exp (f2(log(x))) t ftitle(a2,b2), \
      exp (fm(log(x))) t ftitle(am,bm),  \
      'log' u 1:3 t '|e|_2' ps 1.5, \
-     'log' u 1:4 t '|e|_{max}' ps 1.5 lc 0
+     'log' u 1:4 t '|e|_{max}' ps 1.5 lc 0, \
+     '../taylor-green-all-mach/log' u 1:3 t '|e|_2 (all Mach)' ps 1.5, \
+     '' u 1:4 t '|e|_{max} (all Mach)' ps 1.5
 ~~~
 
 The divergence of the centered velocity field is well-behaved.
@@ -122,7 +134,15 @@ set yrange [1e-4:]
 plot '< grep "^32 " out' u 3:4 w l t '32^2', \
      '< grep "^64 " out' u 3:4 w l t '64^2', \
      '< grep "^128 " out' u 3:4 w l t '128^2', \
-     '< grep "^256 " out' u 3:4 w l t '256^2'
+     '< grep "^256 " out' u 3:4 w l t '256^2', \
+     '< grep "^32 " ../taylor-green-all-mach/out' \
+     u 3:4 w l t '32^2 (all Mach)',		  \
+     '< grep "^64 " ../taylor-green-all-mach/out' \
+     u 3:4 w l t '64^2 (all Mach)',		   \
+     '< grep "^128 " ../taylor-green-all-mach/out' \
+     u 3:4 w l t '128^2 (all Mach)',		   \
+     '< grep "^256 " ../taylor-green-all-mach/out' \
+     u 3:4 w l t '256^2 (all Mach)'
 ~~~
 
 By fitting the decrease of the kinetic energy, we get an estimate of
@@ -138,6 +158,7 @@ set xtics 16,2,256
 set xrange [16:512]
 f(x)=a*exp(-b*x)
 Re(b)=1./(b/(4.*(2.*pi)**2))
+
 set print "Re"
 fit [1:] f(x) '< grep "^32 " out' u 3:5 via a,b
 print 32,Re(b)
@@ -147,7 +168,17 @@ fit [1:] f(x) '< grep "^128 " out' u 3:5 via a,b
 print 128,Re(b)
 fit [1:] f(x) '< grep "^256 " out' u 3:5 via a,b
 print 256,Re(b)
-unset key
-plot 'Re' w lp
+
+set print "Re-all-mach"
+fit [1:] f(x) '< grep "^32 " ../taylor-green-all-mach/out' u 3:5 via a,b
+print 32,Re(b)
+fit [1:] f(x) '< grep "^64 " ../taylor-green-all-mach/out' u 3:5 via a,b
+print 64,Re(b)
+fit [1:] f(x) '< grep "^128 " ../taylor-green-all-mach/out' u 3:5 via a,b
+print 128,Re(b)
+fit [1:] f(x) '< grep "^256 " ../taylor-green-all-mach/out' u 3:5 via a,b
+print 256,Re(b)
+
+plot 'Re' w lp t 'centered', 'Re-all-mach' w lp t 'all Mach'
 ~~~
 */

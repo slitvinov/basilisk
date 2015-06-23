@@ -18,6 +18,34 @@ dry-explicit.c: dry.c
 dry-explicit.tst: dry-explicit.s
 	@CFLAGS="$(CFLAGS) -DEXPLICIT=1" $(BASILISK)/runtest dry-explicit.tst
 
+dry.tst: dry-explicit.tst
+
+drybump-explicit.c: drybump.c
+	ln -s drybump.c drybump-explicit.c 
+
+drybump-explicit.tst: drybump-explicit.s
+	@CFLAGS="$(CFLAGS) -DEXPLICIT=1" $(BASILISK)/runtest drybump-explicit.tst
+
+drybump.tst: drybump-explicit.tst
+
+drybump2D-implicit.c: drybump2D.c
+	ln -s drybump2D.c drybump2D-implicit.c 
+
+drybump2D-implicit.tst: drybump2D-implicit.s
+	@CFLAGS="$(CFLAGS) -DIMPLICIT=1" \
+		$(BASILISK)/runtest drybump2D-implicit.tst
+
+drybump2D.tst: drybump2D-implicit.tst
+
+parabola-explicit.c: parabola.c
+	ln -s parabola.c parabola-explicit.c 
+
+parabola-explicit.tst: parabola-explicit.s
+	@CFLAGS="$(CFLAGS) -DEXPLICIT=1" $(BASILISK)/runtest \
+		parabola-explicit.tst
+
+parabola.tst: parabola-explicit.tst
+
 seawallsv.c: seawall.c
 	ln -s seawall.c seawallsv.c 
 
@@ -32,7 +60,14 @@ conicalsv.c: conical.c
 conicalsv.tst: conicalsv.s
 	@CFLAGS="$(CFLAGS) -DSAINT_VENANT=1" $(BASILISK)/runtest conicalsv.tst
 
-conical.tst: conicalsv.tst
+conical-implicit.c: conical.c
+	ln -s conical.c conical-implicit.c 
+
+conical-implicit.tst: conical-implicit.s
+	@CFLAGS="$(CFLAGS) -DSAINT_VENANT=1 -DIMPLICIT=1" \
+		$(BASILISK)/runtest conical-implicit.tst
+
+conical.tst: conicalsv.tst conical-implicit.tst
 
 explicit.c: implicit.c
 	ln -s implicit.c explicit.c 
@@ -59,7 +94,14 @@ lid.tst: lidmac.tst
 nonlinear.tst: nonlinear.s
 	@LIBS="-lgsl -lgslcblas" $(BASILISK)/runtest nonlinear.tst
 
-ponds.tst: ponds.s
+ponds-implicit.c: ponds.c
+	ln -s ponds.c ponds-implicit.c
+
+ponds-implicit.tst: ponds-implicit.s
+	@LIBS="-L$(BASILISK)/kdt -lkdt" CFLAGS="$(CFLAGS) -DIMPLICIT=1" \
+		$(BASILISK)/runtest ponds-implicit.tst
+
+ponds.tst: ponds.s ponds-implicit.tst
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest ponds.tst
 
 poisson.tst: poisson.ctst
@@ -75,6 +117,14 @@ rising.tst: rising-axi.tst
 reversed.tst: reversed.ctst
 
 rotate.tst: rotate.ctst
+
+taylor-green-all-mach.c: taylor-green.c
+	ln -s taylor-green.c taylor-green-all-mach.c 
+
+taylor-green-all-mach.tst: taylor-green-all-mach.s
+	@CFLAGS="$(CFLAGS) -DALL_MACH=1" $(BASILISK)/runtest taylor-green-all-mach.tst
+
+taylor-green.tst: taylor-green-all-mach.tst
 
 terrain.tst: terrain.s
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst

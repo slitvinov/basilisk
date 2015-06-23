@@ -33,12 +33,14 @@ Poisson--Helmholtz solver. */
 
 /**
 The primitive variables are the momentum $\mathbf{q}$, pressure $p$,
-density $\rho$ and (face) velocity field $\mathbf{uf}$. */
+density $\rho$, (face) specific volume $\alpha=1/\rho$ and (face)
+velocity field $\mathbf{u}_f$. */
 
 vector q[];
 scalar p[];
 face vector uf[];
 (const) scalar rho = unity;
+(const) face vector alpha = unityf;
 
 /**
 The equation of state is defined by the pressure field *ps* and $\rho
@@ -77,7 +79,7 @@ event init (i = 0) {
   
   event ("properties");
   foreach_face()
-    uf.x[] = (q.x[] + q.x[-1])/(rho[] + rho[-1]);
+    uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2.;
   boundary ((scalar *){uf});
 }
 
@@ -94,18 +96,19 @@ event stability (i++,last) {
 }
 
 /**
-Tracers (including momentum $\mathbf{u}$) are advected by these events. */
+Tracers (including momentum $\mathbf{q}$) are advected by these events. */
 
 event vof (i++,last);
 event tracer_advection (i++,last);
 
 /**
-The equation of state (i.e. fields $\rho$, $\rho c^2$ and *ps*) is
-defined by this event. */
+The equation of state (i.e. fields $\alpha$, $\rho$, $\rho c^2$ and
+*ps*) is defined by this event. */
 
 event properties (i++,last)
 {
-
+  boundary_flux ({alpha});
+  
   /**
   If the acceleration is not constant, we reset it to zero. */
   
@@ -136,34 +139,16 @@ event pressure (i++, last)
 
   /**
   We first define a temporary face velocity field $\mathbf{u}_\star$
-  using simple averaging from $\mathbf{q}_{\star}$, $\rho_{n+1}$ and
+  using simple averaging from $\mathbf{q}_{\star}$, $\alpha_{n+1}$ and
   the acceleration term. */
 
   foreach_face()
-    uf.x[] = (q.x[] + q.x[-1])/(rho[] + rho[-1]) + dt*a.x[];
+    uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2. + dt*a.x[];
   boundary ((scalar *){uf});
 
   /**
-  We compute the specific volume $\alpha=1/\rho$ which will be used in
-  the Poisson--Helmholtz equation for the pressure. */
-  
-  face vector alpha, gf[];
-  if (is_constant(rho)) {
-    const face vector alphac[] = {1./constant(rho),
-				  1./constant(rho),
-				  1./constant(rho)};
-    alpha = alphac;
-  }
-  else {
-    alpha = gf;
-    foreach_face()
-      alpha.x[] = 2./(rho[] + rho[-1]);
-    boundary_flux ({alpha});
-  }
-    
-  /**
   The evolution equation for the pressure is
-  $$p_t +\mathbf{u} \cdot \nabla p = - \rho c^2 \nabla \cdot \mathbf{u}$$
+  $$\partial_tp +\mathbf{u} \cdot \nabla p = - \rho c^2 \nabla \cdot \mathbf{u}$$
   with $\rho$ the density and $c$ the speed of sound. Following the
   classical [projection
   method](navier-stokes/centered.h#approximate-projection) for
@@ -226,11 +211,12 @@ event pressure (i++, last)
   The pressure gradient is applied to $\mathbf{u}_\star$ to obtain the
   face velocity field at time $n + 1$. 
   
-  We also store the combined face pressure gradient and acceleration
+  We also compute the combined face pressure gradient and acceleration
   field *gf*. */
 
+  face vector gf[];
   foreach_face() {
-    double dp = 2./(rho[] + rho[-1])*(p[] - p[-1])/Delta;
+    double dp = alpha.x[]*(p[] - p[-1])/Delta;
     uf.x[] -= dt*dp;
     gf.x[] = a.x[] - dp;
   }

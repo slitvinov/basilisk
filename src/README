@@ -20,7 +20,7 @@ $$
     hu_xu_y & hu_y^2 + \frac{1}{2} gh^2
   \end{array}\right)
 $$
-    + [Implicit scheme](saint-venant-implicit.h)
+    + [Semi-implicit scheme](saint-venant-implicit.h)
     + [Green-Naghdi](green-naghdi.h)
 $$
   \partial_t \int_{\Omega} \mathbf{q} d \Omega =

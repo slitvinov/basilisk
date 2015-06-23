@@ -84,8 +84,7 @@ plot 'out-0.1' w l t 'implicit', '../explicit/out-0.1' w l t 'explicit'
 
 The solutions are not too far given that the explicit scheme requires
 698 time steps to verify the CFL condition, against only 51 steps for
-the implicit scheme. Also, the implicit scheme is only first-order
-accurate in time for now.
+the implicit scheme.
 
 For an amplitude of 0.4, the explicit solution is close to a weak
 shock and requires 840 timesteps against 186 timesteps for the

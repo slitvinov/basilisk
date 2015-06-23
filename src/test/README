@@ -24,6 +24,7 @@ Note that only the documented test cases appear in the list below
 
 * [Drying of a lake](dry.c)
 * [Simple Saint-Venant Riemann problem](bore1.c)
+* [Oscillations in a parabolic container](parabola.c)
 * [Undular bores for the Green-Naghdi equations](bore.c)
 * [Green-Naghdi soliton](soliton.c)
 * [Solitary wave run-up on a plane beach](beach.c)

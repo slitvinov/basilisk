@@ -8,10 +8,17 @@ case and experimental data many references are available (e.g. [Hou el
 al, 2013](/src/references.bib#hou2013), [Nikolos and Delis,
 2009](/src/references.bib#nikolos2009), [Lannes and Marche,
 2014](/src/references.bib#lannes2014), [Kazolea et al,
-2012](/src/references.bib#kazolea2012) etc...). */
+2012](/src/references.bib#kazolea2012) etc...). 
+
+We also test both the explicit and the implicit versions of the
+Saint-Venant solver. */
 
 #if SAINT_VENANT
-# include "saint-venant.h"
+# if IMPLICIT
+#  include "saint-venant-implicit.h"
+# else
+#  include "saint-venant.h"
+# endif
 # define MGD 0
 #else
 # include "green-naghdi.h"
@@ -29,6 +36,16 @@ int main()
 {
   G = 9.81;
   size (27.6);
+
+  /**
+  We set an "acoustic" CFL for the implicit solver, so that the
+  timestep is comparable to that of the explicit Saint-Venant
+  solver. With larger timesteps the scheme is too dissipative. */
+  
+#if IMPLICIT
+  CFLa = 0.25;
+#endif
+
   init_grid (1 << MAXLEVEL);
   run();
 }
@@ -63,8 +80,13 @@ We use the definition of the solitary wave to impose conditions on the
 left side (i.e. the "wave paddle"). */
 
 h[left] = H0 + eta0(t);
+#if IMPLICIT
+q.n[left] = (H0 + eta0(t))*uleft (t);
+q.t[left] = 0.;
+#else
 u.n[left] = uleft (t);
 u.t[left] = 0.;
+#endif
 
 /**
 This is the definition of the topography of the conical island. */
@@ -186,7 +208,16 @@ event logfile (i++) {
   We output various diagnostics. */
 
   stats s = statsf (h);
+
+  #if IMPLICIT
+  scalar u[];
+  foreach()
+    u[] = h[] > dry ? q.x[]/h[] : 0.;
+  norm n = normf (u);
+  #else
   norm n = normf (u.x);
+  #endif
+  
   if (i == 0)
     fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt mgD.i\n");
   fprintf (stderr, "%g %d %g %g %.8f %g %.4g %g %d\n", 
@@ -195,6 +226,13 @@ event logfile (i++) {
   /**
   Here we output surface elevation at the various gauges... */
 
+  #if IMPLICIT
+  scalar eta[];
+  foreach()
+    eta[] = h[] > dry ? h[] + zb[] : nodata;
+  boundary ({eta});
+  #endif
+  
   output_gauges (gauges, {eta});
 }
 
@@ -218,21 +256,26 @@ set multiplot layout 5,1 scale 1.,1.
 set xrange [3:20]
 t0=22.
 h0=0.32
-plot '../ts2b.txt' u ($1-t0):($4-0.001) pt 7 ps 0.25 t '',	\
-'../conicalsv/WG3' u 1:($2-h0) w l lt 4 t '',			\
-'./WG3' u 1:($2-h0) w l lw 2 lt 3 t 'WG3'
-plot '../ts2b.txt' u ($1-t0):($6-0.0004) pt 7 ps 0.25 t '',	\
+plot '../ts2b.txt' u ($1-t0):($4-0.001) pt 7 ps 0.25 t 'WG3',	\
+'../conicalsv/WG3' u 1:($2-h0) w l lt 4 t 'Saint-Venant explicit',	\
+'../conical-implicit/WG3' u 1:($2-h0) w l lt 5 t 'Saint-Venant implicit', \
+'./WG3' u 1:($2-h0) w l lw 2 lt 3 t 'Green-Naghdi'
+plot '../ts2b.txt' u ($1-t0):($6-0.0004) pt 7 ps 0.25 t 'WG6',	\
 '../conicalsv/WG6' u 1:($2-h0) w l lt 4 t '',			\
-'./WG6' u 1:($2-h0) w l lw 2 lt 3 t 'WG6'
-plot '../ts2b.txt' u ($1-t0):($7) pt 7 ps 0.25 t '',	\
+'../conical-implicit/WG6' u 1:($2-h0) w l lt 5 t '',		\
+'./WG6' u 1:($2-h0) w l lw 2 lt 3 t ''
+plot '../ts2b.txt' u ($1-t0):($7) pt 7 ps 0.25 t 'WG9',	\
 '../conicalsv/WG9' u 1:($2-h0) w l lt 4 t '',		\
-'./WG9' u 1:($2-h0) w l lw 2 lt 3 t 'WG9'
-plot '../ts2b.txt' u ($1-t0):($8-0.0017) pt 7 ps 0.25 t '',	\
+'../conical-implicit/WG9' u 1:($2-h0) w l lt 5 t '',	\
+'./WG9' u 1:($2-h0) w l lw 2 lt 3 t ''
+plot '../ts2b.txt' u ($1-t0):($8-0.0017) pt 7 ps 0.25 t 'WG16',	\
 '../conicalsv/WG16' u 1:($2-h0) w l lt 4 t '',		\
-'./WG16' u 1:($2-h0) w l lw 2 lt 3 t 'WG16'
+'../conical-implicit/WG16' u 1:($2-h0) w l lt 5 t '',		\
+'./WG16' u 1:($2-h0) w l lw 2 lt 3 t ''
 plot '../ts2b.txt' u ($1-t0):($9+0.0015) pt 7 ps 0.25 t '',	\
-'../conicalsv/WG22' u 1:($2-h0) w l lt 4 t '',		\
-'./WG22' u 1:($2-h0) w l lw 2 lt 3 t 'WG22'
+'../conicalsv/WG22' u 1:($2-h0) w l lt 4 t 'WG22',		\
+'../conical-implicit/WG22' u 1:($2-h0) w l lt 5 t '',	\
+'./WG22' u 1:($2-h0) w l lw 2 lt 3 t ''
 unset multiplot
   
 ! rm -f conical-?
