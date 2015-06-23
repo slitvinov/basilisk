@@ -85,8 +85,12 @@ event init (i = 0) {
 The timestep is computed using the CFL condition on the face velocity
 field. */
 
+double dtmax;
+
+event set_dtmax (i++,last) dtmax = DT;
+
 event stability (i++,last) {
-  dt = dtnext (t, timestep (uf));
+  dt = dtnext (t, timestep (uf, dtmax));
 }
 
 /**

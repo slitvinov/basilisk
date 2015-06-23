@@ -143,8 +143,12 @@ The timestep for this iteration is controlled by the CFL condition,
 applied to the face centered velocity field $\mathbf{u}_f$; and the
 timing of upcoming events. */
 
+double dtmax;
+
+event set_dtmax (i++,last) dtmax = DT;
+
 event stability (i++,last) {
-  dt = dtnext (t, timestep (uf));
+  dt = dtnext (t, timestep (uf, dtmax));
 }
 
 /**

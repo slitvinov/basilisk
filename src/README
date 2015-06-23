@@ -66,7 +66,7 @@ $$
 $$
 \partial_tf_i+\mathbf{u}\cdot\nabla f_i=0
 $$
-    + [Volume-Of_fluid advection](vof.h)
+    + [Volume-Of-Fluid advection](vof.h)
 * [Surface tension](tension.h)
 $$
 \sigma\kappa\mathbf{n}\delta_s/\rho

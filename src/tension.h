@@ -59,9 +59,9 @@ event stability (i++) {
   
   for (scalar c in interfaces)
     if (c.sigma) {
-      double dtmax = sqrt (rhom*cube(dmin)/(pi*c.sigma));
-      if (dtmax < DT)
-	DT = dtmax;
+      double dt = sqrt (rhom*cube(dmin)/(pi*c.sigma));
+      if (dt < dtmax)
+	dtmax = dt;
     }
 }
 

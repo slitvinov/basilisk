@@ -88,8 +88,12 @@ $$
 The timestep for this iteration is controlled by the CFL condition
 (and the timing of upcoming events). */
 
+double dtmax;
+
+event set_dtmax (i++,last) dtmax = DT;
+
 event stability (i++,last) {
-  dt = dtnext (t, timestep (u));
+  dt = dtnext (t, timestep (u, dtmax));
 }
 
 event advance (i++,last)
