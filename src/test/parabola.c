@@ -177,4 +177,8 @@ plot exp (f1(log(x))) t ftitle(a1,b1), \
      '../parabola-explicit/log' u 1:3 t '|h|_2 (explicit)' ps 1.5, \
      '../parabola-explicit/log' u 1:4 t '|h|_{max} (explicit)' ps 1.5
 ~~~
+
+## See also
+
+* [Same test with Gerris](http://gerris.dalembert.upmc.fr/gerris/tests/tests/parabola.html)
 */

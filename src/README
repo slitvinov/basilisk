@@ -48,12 +48,13 @@ $$
 $$
     + [Compressible gas dynamics](compressible.h)
     + [All Mach compressible flows](all-mach.h)
+
 $$
 \partial_t\mathbf{q} + \nabla\cdot(\mathbf{q}\mathbf{u}) = 
-- \nabla p + \mathbf{a}
+- \nabla p + \rho\mathbf{a}
 $$
 $$
-partial_t p + \mathbf{u}\cdot\nabla p = -\rho c^2\nabla\cdot\mathbf{u}
+\partial_t p + \mathbf{u}\cdot\nabla p = -\rho c^2\nabla\cdot\mathbf{u}
 $$
 * [Hele-Shaw/Darcy flows](hele-shaw.h)
 $$

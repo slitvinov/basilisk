@@ -44,8 +44,10 @@ face vector uf[];
 
 /**
 The equation of state is defined by the pressure field *ps* and $\rho
-c^2$. Both fields are zero by default (i.e. the fluid is
-incompressible). */
+c^2$. In the incompressible limit $\rho c^2\rightarrow\infty$. Rather
+than trying to compute this limit, we set both fields to zero and
+check for this particular case when computing the pressure (see
+below). This means that by default the fluid is incompressible. */
 
 scalar ps[];
 (const) scalar rhoc2 = zeroc;
@@ -74,13 +76,20 @@ event init (i = 0) {
 
   /**
   The face velocity field is obtained by simple linear interpolation
-  from the momentum field. We make sure that the density field is
-  defined by calling the "properties" event (see below). */
+  from the momentum field. We make sure that the specific volume
+  $\alpha$ is defined by calling the "properties" event (see
+  below). */
   
   event ("properties");
   foreach_face()
     uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2.;
   boundary ((scalar *){uf});
+
+  /**
+  The default density field is set to unity (times the metric). */
+
+  if (alpha.x == unityf.x)
+    alpha = fm;
 }
 
 /**
@@ -143,7 +152,7 @@ event pressure (i++, last)
   the acceleration term. */
 
   foreach_face()
-    uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2. + dt*a.x[];
+    uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2. + dt*fm.x[]*a.x[];
   boundary ((scalar *){uf});
 
   /**
@@ -187,7 +196,7 @@ event pressure (i++, last)
     if (constant(lambda) == 0.)
       rhs[] = 0.;
     else {
-      lambda[] = -1./(sq(dt)*rhoc2[]);
+      lambda[] = - cm[]/(sq(dt)*rhoc2[]);
       rhs[] = lambda[]*ps[];
     }
       
@@ -218,7 +227,7 @@ event pressure (i++, last)
   foreach_face() {
     double dp = alpha.x[]*(p[] - p[-1])/Delta;
     uf.x[] -= dt*dp;
-    gf.x[] = a.x[] - dp;
+    gf.x[] = a.x[] - dp/fm.x[];
   }
   boundary_flux ({gf});
 
