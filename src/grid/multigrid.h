@@ -265,10 +265,14 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 	point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
 	Point neighbor = {point.i + ig, point.j + jg, point.level};
 	for (scalar s in centered) {
-	  scalar b = (s.v.x < 0 ? s :
-		      s == s.v.x && d < top ? s.v.x :
-		      s == s.v.y && d >= top ? s.v.x :
-		      s.v.y);
+	  scalar b = s;
+	  if (s.v.x >= 0) {
+	    if ((d/2 == 0 && s != s.v.x) ||
+		(d/2 == 1 && s != s.v.y))
+	      b = s.v.y; // tangential BC
+	    else
+	      b = s.v.x; // normal BC
+	  }
 	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
 #if GHOSTS == 2
 	  point.i -= ig; point.j -= jg;
