@@ -9,7 +9,16 @@ We will use basic geometric functions for square cut cells and the
 "Mixed-Youngs-Centered" normal approximation of Ruben Scardovelli. */
 
 #include "geometry.h"
-#include "myc2d.h"
+#if dimension == 1
+coord mycs (Point point, scalar c) {
+  coord n = {1.};
+  return n;
+}
+#elif dimension == 2
+# include "myc2d.h"
+#else // dimension == 3
+# include "myc.h"
+#endif
 
 /**
 ## Coarsening and refinement of a volume fraction field 
@@ -29,16 +38,15 @@ void fraction_refine (Point point, scalar c)
 
   double cc = c[];
   if (cc <= 0. || cc >= 1.)
-    for (int k = 0; k < 2; k++)
-      for (int l = 0; l < 2; l++)
-	fine(c,k,l) = cc;
+    foreach_child()
+      c[] = cc;
   else {
 
     /**
     Otherwise, we reconstruct the interface in the parent cell. */
 
     coord n = mycs (point, c);
-    double alpha = line_alpha (cc, n.x, n.y);
+    double alpha = line_alpha (cc, n);
 
     /**
     And compute the volume fraction in the quadrant of the coarse cell
@@ -59,9 +67,15 @@ $\alpha$. This is done with the simple formula below. */
 static void alpha_refine (Point point, scalar alpha)
 {
   vector n = alpha.v;
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      fine(alpha,k,l) = 2.*alpha[] - ((2*k - 1)*n.x[] + (2*l - 1)*n.y[])/2.;
+  double alphac = 2.*alpha[];
+  coord m;
+  foreach_dimension()
+    m.x = n.x[];
+  foreach_child() {
+    alpha[] = alphac;
+    foreach_dimension()
+      alpha[] -= child.x*m.x/2.;
+  }
 }
 
 #endif // QUADTREE
@@ -176,7 +190,7 @@ void fractions (struct Fractions p)
     coord n;
     double nn = 0.;
     foreach_dimension() {
-      n.x = s.x[] - s.x[1,0];
+      n.x = s.x[] - s.x[1];
       nn += fabs(n.x);
     }
     
@@ -203,8 +217,8 @@ void fractions (struct Fractions p)
       double alpha = undefined;
       for (int i = 0; i <= 1; i++)
 	foreach_dimension()
-	  if (s.x[i,0] > 0. && s.x[i,0] < 1.) {
-	    double a = sign(Phi[i,0])*(s.x[i,0] - 0.5);
+	  if (s.x[i] > 0. && s.x[i] < 1.) {
+	    double a = sign(Phi[i])*(s.x[i] - 0.5);
 	    alpha = n.x*(i - 0.5) + n.y*a;
 	  }
 
@@ -213,7 +227,7 @@ void fractions (struct Fractions p)
       fully defined and we can compute the volume fraction using our
       pre-defined function. */
 
-      c[] = line_area (n.x, n.y, alpha);
+      c[] = line_area (n, alpha);
     }
   }
 
@@ -268,8 +282,11 @@ void reconstruction (const scalar c, vector n, scalar alpha)
     If the cell is empty or full, we set $\mathbf{n}$ and $\alpha$ only to
     avoid using uninitialised values in `alpha_refine()`. */
 
-    if (c[] <= 0. || c[] >= 1.)
-      alpha[] = n.x[] = n.y[] = 0.;
+    if (c[] <= 0. || c[] >= 1.) {
+      alpha[] = 0.;
+      foreach_dimension()
+	n.x[] = 0.;
+    }
     else {
 
       /**
@@ -281,7 +298,7 @@ void reconstruction (const scalar c, vector n, scalar alpha)
       // coord m = youngs_normal (point, c);
       foreach_dimension()
 	n.x[] = m.x;
-      alpha[] = line_alpha (c[], m.x, m.y);
+      alpha[] = line_alpha (c[], m);
     }
   }
 
@@ -292,8 +309,8 @@ void reconstruction (const scalar c, vector n, scalar alpha)
   any interpolation from coarse to fine i.e. we use straight
   "injection". */
 
-  n.x.refine = n.x.prolongation = 
-    n.y.refine = n.y.prolongation = refine_injection;
+  foreach_dimension()
+    n.x.refine = n.x.prolongation = refine_injection;
 
   /**
   For $\alpha$ we store the normal field in the `v` attribute (which is
@@ -359,7 +376,7 @@ void output_facets (struct OutputFacets p)
 	foreach_dimension()
 	  n.x /= nn;
       }
-      double alpha = line_alpha (c[], n.x, n.y);
+      double alpha = line_alpha (c[], n);
       coord segment[2];
       if (facets (c[], n, alpha, segment) == 2)
 	fprintf (p.fp, "%g %g\n%g %g\n\n", 

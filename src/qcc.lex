@@ -1942,6 +1942,8 @@ trace {
 foreach_dimension{WS}*[(]{WS}*[)] {
   if (debug)
     fprintf (stderr, "%s:%d: foreach_dimension (%d)\n", fname, line, dimension);
+  if (foreachdim)
+    return yyerror ("nested foreach_dimension() are not allowed");
   foreachdim = scope + 1; foreachdimpara = para;
   foreachdimfp = yyout;
   yyout = dopen ("_dimension.h", "w");

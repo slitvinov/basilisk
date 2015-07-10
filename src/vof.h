@@ -84,7 +84,8 @@ static void sweep_x (scalar c, scalar cc)
     /**
     We also check that we are not violating the CFL condition. */
 
-    if (un*fm.x[]*s/cm[] > cfl) cfl = un*fm.x[]*s/cm[];
+    if (un*fm.x[]*s/cm[] > cfl)
+      cfl = un*fm.x[]*s/cm[];
 
     /**
     If we assume that `un` is negative i.e. `s` is -1 and `i` is 0, the
@@ -117,10 +118,24 @@ static void sweep_x (scalar c, scalar cc)
 #if QUADTREE
   for (int l = depth() - 1; l >= 0; l--)
     foreach_halo (prolongation, l) {
-      if (is_refined (neighbor(-1,0)))
+#if dimension == 1
+      if (is_refined (neighbor(-1)))
+	flux[] = fine(flux,0);
+      if (is_refined (neighbor(1)))
+	flux[1] = fine(flux,2);
+#elif dimension == 2
+      if (is_refined (neighbor(-1)))
 	flux[] = (fine(flux,0,0) + fine(flux,0,1))/2.;
-      if (is_refined (neighbor(1,0)))
-	flux[1,0] = (fine(flux,2,0) + fine(flux,2,1))/2.;
+      if (is_refined (neighbor(1)))
+	flux[1] = (fine(flux,2,0) + fine(flux,2,1))/2.;
+#else // dimension == 3
+      if (is_refined (neighbor(-1)))
+	flux[] = (fine(flux,0,0,0) + fine(flux,0,1,0) +
+		  fine(flux,0,0,1) + fine(flux,0,1,1))/4.;
+      if (is_refined (neighbor(1)))
+	flux[1] = (fine(flux,2,0,0) + fine(flux,2,1,0) +
+		   fine(flux,2,0,1) + fine(flux,2,1,1))/4.;
+#endif
     }
 #endif
 
@@ -144,7 +159,7 @@ static void sweep_x (scalar c, scalar cc)
   a centered volume fraction field `cc` which will be defined below. */
 
   foreach()
-    c[] += dt*(flux[] - flux[1,0] + cc[]*(uf.x[1,0] - uf.x[]))/(cm[]*Delta);
+    c[] += dt*(flux[] - flux[1] + cc[]*(uf.x[1] - uf.x[]))/(cm[]*Delta);
   boundary ({c});
 }
 
@@ -174,8 +189,11 @@ event vof (i++)
     dimension. To try to minimise phase errors, we alternate dimensions
     according to the parity of the iteration index `i`. */
 
-    void (* sweep[2]) (scalar, scalar) = {sweep_x, sweep_y};
-    for (int d = 0; d < 2; d++)
-      sweep[(i + d) % 2] (c, cc);
+    void (* sweep[dimension]) (scalar, scalar);
+    int d = 0;
+    foreach_dimension()
+      sweep[d++] = sweep_x;
+    for (d = 0; d < dimension; d++)
+      sweep[(i + d) % dimension] (c, cc);
   }
 }
