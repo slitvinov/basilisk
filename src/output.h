@@ -609,6 +609,10 @@ void output_gfs (struct OutputGfs p)
 	   "1 0 GfsSimulation GfsBox GfsGEdge { binary = 1"
 	   " x = %g y = %g ",
 	   0.5 + X0/L0, 0.5 + Y0/L0);
+#if dimension == 3
+  fprintf (p.fp, "z = %g ", 0.5 + Z0/L0);
+#endif
+
   if (p.list != NULL && p.list[0] != -1) {
     scalar s = p.list[0];
     char * name = replace (s.name, '.', '_', p.translate);
@@ -633,15 +637,25 @@ void output_gfs (struct OutputGfs p)
 
   // see gerris/ftt.c:ftt_cell_write()
   //     gerris/domain.c:gfs_cell_write()
-  #if dimension == 2
   bool root = true;
   foreach_cell() {
     unsigned flags = 
       root ? 0 :
+#if dimension == 2
       child.x == -1 && child.y ==  1 ? 0 :
       child.x ==  1 && child.y ==  1 ? 1 :
       child.x == -1 && child.y == -1 ? 2 : 
       3;
+#else // dimension == 3
+      child.x == -1 && child.y ==  1 && child.z == 1  ? 0 :
+      child.x ==  1 && child.y ==  1 && child.z == 1  ? 1 :
+      child.x == -1 && child.y == -1 && child.z == 1  ? 2 : 
+      child.x ==  1 && child.y == -1 && child.z == 1  ? 3 : 
+      child.x == -1 && child.y ==  1 && child.z == -1 ? 4 :
+      child.x ==  1 && child.y ==  1 && child.z == -1 ? 5 :
+      child.x == -1 && child.y == -1 && child.z == -1 ? 6 : 
+      7;
+#endif
     root = false;
     if (is_leaf(cell))
       flags |= (1 << 4);
@@ -656,10 +670,8 @@ void output_gfs (struct OutputGfs p)
     if (is_leaf(cell))
       continue;
   }
-  #else
-  assert(false);
-  #endif
   fputs ("}\n", p.fp);
+  fflush (p.fp);
 
   if (opened)
     fclose (p.fp);

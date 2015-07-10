@@ -2138,7 +2138,8 @@ reduction{WS}*[(](min|max|\+):{ID}+[)] {
   free (fname);
   name++; quote = strchr (name, '"'); *quote = '\0';
   fname = strdup (name);
-  fprintf (yyout, "#line %d \"%s\"", line, fname);
+  if (!indef)
+    fprintf (yyout, "#line %d \"%s\"", line, fname);
   if (tracefp)
     fclose (tracefp);
   char * tracename = malloc (strlen(fname) + strlen(".trace") + 1);

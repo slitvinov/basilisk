@@ -42,15 +42,15 @@ static inline void face_average (Point point, vector v)
   foreach_dimension() {
     #if dimension == 1
       v.x[] = fine(v.x,0);
-      v.x[1,0] = fine(v.x,2);
+      v.x[1] = fine(v.x,2);
     #elif dimension == 2
       v.x[] = (fine(v.x,0,0) + fine(v.x,0,1))/2.;
-      v.x[1,0] = (fine(v.x,2,0) + fine(v.x,2,1))/2.;
+      v.x[1] = (fine(v.x,2,0) + fine(v.x,2,1))/2.;
     #else // dimension == 3
       v.x[] = (fine(v.x,0,0,0) + fine(v.x,0,1,0) +
 	       fine(v.x,0,0,1) + fine(v.x,0,1,1))/4.;
-      v.x[1,0] = (fine(v.x,2,0,0) + fine(v.x,2,1,0) +
-		  fine(v.x,2,0,1) + fine(v.x,2,1,1))/4.;
+      v.x[1] = (fine(v.x,2,0,0) + fine(v.x,2,1,0) +
+		fine(v.x,2,0,1) + fine(v.x,2,1,1))/4.;
     #endif
   }
 }
@@ -96,7 +96,7 @@ void wavelet (scalar s, scalar w)
 {
   restriction ({s});
   foreach_fine_to_coarse() {
-    double sc[4];
+    double sc[1 << dimension];
     int c = 0;
     foreach_child()
       sc[c++] = s[];

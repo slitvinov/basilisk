@@ -12,7 +12,7 @@ residual 7 10 3e-08
 residual 7 11 3e-09
 residual 7 12 3e-10
 residual 7 13 3e-11
-residual 7 14 8e-12
+residual 7 14 5e-12
 max error 7 0.0147821
 residual 8 0 2e+02
 residual 8 1 3e+01

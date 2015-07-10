@@ -52,22 +52,33 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
   /* for each child: (note that using foreach_child() would be nicer
      but it seems to be significanly slower) */
   int pactive = is_active(cell) ? active : 0;
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++) {
-      if (dimension == 2)
-	assert(!is_active(child(k,l)));
-      child(k,l).flags |= (pactive|premote|leaf);
+  for (int k = 0; k < 2; k++)    
+  #if dimension > 1
+    for (int l = 0; l < 2; l++)
+  #endif
+    #if dimension > 2
+      for (int m = 0; m < 2; m++)
+    #endif
+	{
+	  child(k,l,m).flags |= (pactive|premote|leaf);
 @if _MPI
-      if (is_border(cell))
-	for (int m = -GHOSTS; m <= GHOSTS; m++)
-	  for (int n = -GHOSTS; n <= GHOSTS; n++)
-	    if (child(k+m,l+n).pid != cell.pid) {
-	      child(k,l).flags |= border;
-	      m = n = GHOSTS + 1; // break
-	    }
+          if (is_border(cell)) {
+	    bool notb = true;
+	    for (int n = -GHOSTS; n <= GHOSTS && notb; n++)
+	    #if dimension > 1
+	      for (int o = -GHOSTS; o <= GHOSTS && notb; o++)
+	    #endif
+	      #if dimension > 2
+		for (int p = -GHOSTS; p <= GHOSTS && notb; p++)
+	      #endif
+		  if (child(k+n,l+o,m+p).pid != cell.pid) {
+		    child(k,l,m).flags |= border;
+		    notb = false;
+		  }
+	  }
 @endif
-    }
-
+        }
+  
   /* initialise scalars */
   for (scalar s in list)
     if (is_local(cell) || s.face)
@@ -75,7 +86,7 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
 
 @if _MPI
   if (refined && is_border(cell))
-    cache_append (refined, point, 0, 0, cell.flags);
+    cache_append (refined, point, 0, 0, 0, cell.flags);
 @endif
 }
 
@@ -112,10 +123,15 @@ bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
   if (!is_local(cell)) {
     cell.flags &= ~(active|border);
     for (int k = -GHOSTS; k < 2 + GHOSTS; k++)
+    #if dimension > 1
       for (int l = -GHOSTS; l < 2 + GHOSTS; l++)
-	if (allocated_child(k,l) &&
-	    is_local(child(k,l)) && !is_border(child(k,l)))
-	  child(k,l).flags |= border;
+    #endif
+      #if dimension > 2
+	for (int n = -GHOSTS; n < 2 + GHOSTS; n++)
+      #endif
+	  if (allocated_child(k,l,n) &&
+	      is_local(child(k,l,n)) && !is_border(child(k,l,n)))
+	    child(k,l,n).flags |= border;
   }
 @endif
 
@@ -196,16 +212,18 @@ astats adapt_wavelet (struct Adapt p)
 	  continue;
 	// check whether the cell or any of its children is local
 	bool local = is_local(cell);
-	for (int k = 0; k <= 1 && !local; k++)
-	  for (int l = 0; l <= 1 && !local; l++)
-	    if (is_local(child(k,l)))
+	if (!local)
+	  foreach_child()
+	    if (is_local(cell)) {
 	      local = true;
+	      break;
+	    }
 	if (local) {
 	  foreach_child()
 	    cell.flags &= ~(too_coarse|too_fine);
 	  int i = 0;
 	  for (scalar s in p.slist) {
-	    double max = p.max[i++], sc[4];
+	    double max = p.max[i++], sc[1 << dimension];
 	    int c = 0;
 	    foreach_child()
 	      sc[c++] = s[];
@@ -333,15 +351,32 @@ static void halo_restriction_flux (vector * list)
 
   if (listv) {
     for (int l = depth() - 1; l >= 0; l--)
-      foreach_halo (prolongation, l) {
+      foreach_halo (prolongation, l)
 	foreach_dimension() {
-	  if (is_refined (neighbor(-1,0)))
+#if dimension == 1
+	  if (is_refined (neighbor(-1)))
+	    for (vector f in listv)
+	      f.x[] = fine(f.x,0);
+	  if (is_refined (neighbor(1)))
+	    for (vector f in listv)
+	      f.x[1] = fine(f.x,2);
+#elif dimension == 2
+	  if (is_refined (neighbor(-1)))
 	    for (vector f in listv)
 	      f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
-	  if (is_refined (neighbor(1,0)))
+	  if (is_refined (neighbor(1)))
 	    for (vector f in listv)
-	      f.x[1,0] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
-        }
+	      f.x[1] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
+#else // dimension == 3
+	  if (is_refined (neighbor(-1)))
+	    for (vector f in listv)
+	      f.x[] = (fine(f.x,0,0,0) + fine(f.x,0,1,0) +
+		       fine(f.x,0,0,1) + fine(f.x,0,1,1))/4.;
+	  if (is_refined (neighbor(1)))
+	    for (vector f in listv)
+	      f.x[1] = (fine(f.x,2,0,0) + fine(f.x,2,1,0) +
+			fine(f.x,2,0,1) + fine(f.x,2,1,1))/4.;
+#endif
       }
     free (listv);
   }
@@ -453,7 +488,7 @@ static void quadtree_boundary_level (scalar * list, int l)
     for (int i = l - 1; i >= 0; i--) {
       foreach_halo (restriction, i) {
 	for (scalar s in listdef)
-	  s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+	  coarsen_average (point, s);
 	for (scalar s in listc)
 	  s.coarsen (point, s);
       }

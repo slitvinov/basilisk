@@ -15,13 +15,13 @@ int main (int argc, char ** argv)
 {
   /* Dirichlet condition on all boundaries */
   foreach_dimension() {
-    a[right]  = dirichlet (solution(x, y, z));
+    a[right] = dirichlet (solution(x, y, z));
     a[left]  = dirichlet (solution(x, y, z));
   }
   /* homogeneous conditions for dp */
   foreach_dimension() {
-    dp[right]  = dirichlet(0);
-    dp[left]   = dirichlet(0);
+    dp[right] = dirichlet(0);
+    dp[left]  = dirichlet(0);
   }
     
   origin (-0.5, -0.5, -0.5);
