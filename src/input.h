@@ -216,7 +216,7 @@ void input_gfs (struct OutputGfs p)
   scalar * input = NULL;
   s1 = strtok (s1, ", \t");
   while (s1) {
-    char * name = replace (s1, '_', '.');
+    char * name = replace (s1, '_', '.', false);
     bool found = false;
     for (scalar s in p.list) {
       if (!found && !strcmp (s.name, name)) {

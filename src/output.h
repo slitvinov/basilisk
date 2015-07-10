@@ -556,6 +556,10 @@ The arguments and their default values are:
 
 *file*
 : the name of the file to write to (mutually exclusive with *fp*).
+
+*translate*
+: whether to replace "well-known" Basilisk variables with their Gerris
+equivalents.
 */
 
 struct OutputGfs {
@@ -563,10 +567,20 @@ struct OutputGfs {
   scalar * list;
   double t;
   char * file;
+  bool translate;
 };
 
-static char * replace (const char * input, int target, int with)
+static char * replace (const char * input, int target, int with,
+		       bool translate)
 {
+  if (translate) {
+    if (!strcmp (input, "u.x"))
+      return strdup ("U");
+    if (!strcmp (input, "u.y"))
+      return strdup ("V");
+    if (!strcmp (input, "u.z"))
+      return strdup ("W");
+  }
   char * name = strdup (input), * i = name;
   while (*i != '\0') {
     if (*i == target)
@@ -597,13 +611,13 @@ void output_gfs (struct OutputGfs p)
 	   0.5 + X0/L0, 0.5 + Y0/L0);
   if (p.list != NULL && p.list[0] != -1) {
     scalar s = p.list[0];
-    char * name = replace (s.name, '.', '_');
+    char * name = replace (s.name, '.', '_', p.translate);
     fprintf (p.fp, "variables = %s", name);
     free (name);
     for (int i = 1; i < list_len(p.list); i++) {
       scalar s = p.list[i];
       if (s.name) {
-	char * name = replace (s.name, '.', '_');
+	char * name = replace (s.name, '.', '_', p.translate);
 	fprintf (p.fp, ",%s", name);
 	free (name);
       }
@@ -651,16 +665,38 @@ void output_gfs (struct OutputGfs p)
     fclose (p.fp);
 }
 
+/**
+## *dump()*: Basilisk snapshots
+
+This function (together with *restore()*) can be used to dump/restore
+entire simulations.
+
+The arguments and their default values are:
+
+*fp*
+: a file pointer. Default is *name* or stdout.
+
+*list*
+: a list of scalar fields to write. Default is *all*. 
+
+*t*
+: the physical time. Default is zero. 
+
+*file*
+: the name of the file to write to (mutually exclusive with *fp*).
+*/
+
 struct Dump {
   FILE * fp;
   scalar * list;
+  double t;
   char * file;
 };
 
 void dump (struct Dump p)
 {
   FILE * fp = p.fp;
-  scalar * list = p.list;
+  scalar * list = p.list ? p.list : all;
   char * file = p.file;
   if (file && (fp = fopen (file, "w")) == NULL) {
     perror (file);
@@ -668,6 +704,7 @@ void dump (struct Dump p)
   }
   assert (fp);
 
+  fwrite (&p.t, sizeof(double), 1, fp);
   int len = list_len (list);
   fwrite (&len, sizeof(int), 1, fp);
 
@@ -683,17 +720,20 @@ void dump (struct Dump p)
     fclose (fp);
 }
 
-void restore (struct Dump p)
+bool restore (struct Dump p)
 {
   FILE * fp = p.fp;
-  scalar * list = p.list;
+  scalar * list = p.list ? p.list : all;
   char * file = p.file;
-  if (file && (fp = fopen (file, "r")) == NULL) {
-    perror (file);
+  if (file && (fp = fopen (file, "r")) == NULL)
+    return false;
+  assert (fp);
+
+  double t = 0.;
+  if (fread (&t, sizeof(double), 1, fp) != 1) {
+    fprintf (stderr, "restore(): error: expecting 't'\n");
     exit (1);
   }
-  assert (fp);
-  
   int len;
   if (fread (&len, sizeof(int), 1, fp) != 1) {
     fprintf (stderr, "restore(): error: expecting 'len'\n");
@@ -727,5 +767,12 @@ void restore (struct Dump p)
   boundary (list);
   if (file)
     fclose (fp);
+
+  // the events are advanced to catch up with the time
+  double t1 = 0.;
+  while (t1 < t && events (0, t1, false))
+    t1 = tnext;
+
+  return true;
 }
 #endif // QUADTREE
