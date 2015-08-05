@@ -126,7 +126,11 @@ mgstats mg_solve (scalar * a, scalar * b,
   We allocate a new correction and residual field for each of the scalars
   in *a*. */
 
-  scalar * da = list_clone (a), * res = list_clone (a);
+  scalar * da = list_clone (a), * res = NULL;
+  for (scalar s in a) {
+    scalar r = new scalar;
+    res = list_append (res, r);
+  }
 
   /**
   The boundary conditions for the correction fields are the
@@ -274,6 +278,7 @@ static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
       maxres = fabs (res[]);
   }
 #endif
+  boundary (resl);
   return maxres;
 }
 

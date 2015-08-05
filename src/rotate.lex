@@ -91,7 +91,7 @@ back {
 {ID}+   ECHO;
 
 val_{ID}*{WS}*\( |
-(val|fine|coarse|allocated|neighbor|aparent){WS}*\( {
+(val|fine|coarse|allocated|neighbor|neighborp|aparent){WS}*\( {
   int para = 1;
   char * index[5];
   int len[5], i = 0, c = input(), j;
@@ -100,7 +100,7 @@ val_{ID}*{WS}*\( |
     index[j][0] = '\0';
     len[j] = 1;
   }
-  while (para > 0 && c != ')' && c != EOF) {
+  while ((para > 1 || c != ')') && c != EOF) {
     if (c == '(') para++;
     else if (c == ')') para--;
     if (c == ',' && para == 1 && i < 5)

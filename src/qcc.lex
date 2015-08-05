@@ -1694,7 +1694,7 @@ val{WS}*[(]    {
     REJECT;
 }
 
-(allocated|allocated_child|neighbor|aparent|child){WS}*\( {
+(allocated|allocated_child|neighbor|neighborp|aparent|child){WS}*\( {
   assert (!infine);
   infine = ++para;
   inarrayargs = 1;

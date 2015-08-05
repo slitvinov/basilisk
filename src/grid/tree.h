@@ -312,10 +312,19 @@ static void cache_append (Cache * c, Point p,
 @define child(k,l,n)   CELL(CHILD(k,l,n))
 
 /***** Quadtree macros ****/
-@define NN              (1 << point.level)
-@define cell		CELL(NEIGHBOR(0,0,0))
-@define neighbor(k,l,n)	CELL(NEIGHBOR(k,l,n))
+@define NN               (1 << point.level)
+@define cell		 CELL(NEIGHBOR(0,0,0))
+@define neighbor(k,l,n)	 CELL(NEIGHBOR(k,l,n))
+@define neighborp(k,l,n) neighborpf(point,k+0,l+0,n+0)
 
+static Point neighborpf (Point p, int k, int l, int n) {
+#if dimension == 2
+  return (Point){p.i + k, p.j + l, p.level};
+#else
+  return (Point){p.i + k, p.j + l, p.k + n, p.level};
+#endif
+}
+			
 /***** Data macros *****/
 @define data(k,l,n)     ((double *) (NEIGHBOR(k,l,n) + sizeof(Cell)))
 @define fine(a,k,l,n)   ((double *) (CHILD(k,l,n) + sizeof(Cell)))[a]
@@ -648,24 +657,27 @@ static void update_cache_f (void)
     }
     // boundaries
     if (!is_boundary(cell))
+      // look in a 3x3 neighborhood for boundary cells
+      // fixme: should probably be a 5x5 neighborhood
+      // fixme: foreach_neighbor() would be nicer
       for (int k = -1; k <= 1; k++)
 	for (int l = -1; l <= 1; l++)
 #if dimension == 3
 	  for (int n = -1; n <= 1; n++)
 #endif
-	  if (is_boundary(neighbor(k,l,n)) &&
-	      !(neighbor(k,l,n).flags & fboundary)) {
-	    point.i += k; point.j += l;
+	    if (is_boundary(neighbor(k,l,n)) &&
+		!(neighbor(k,l,n).flags & fboundary)) {
+	      point.i += k; point.j += l;
 #if dimension == 3
-	    point.k += n;
+	      point.k += n;
 #endif
-	    cache_level_append (&q->boundary[level], point);
-	    cell.flags |= fboundary;
-	    point.i -= k; point.j -= l;
+	      cache_level_append (&q->boundary[level], point);
+	      cell.flags |= fboundary;
+	      point.i -= k; point.j -= l;
 #if dimension == 3
-	    point.k -= n;
+	      point.k -= n;
 #endif
-	  }
+	    }
     if (is_leaf (cell)) {
       if (is_local(cell)) {
 	cache_append (&q->leaves, point, 0, 0, 0, 0);
@@ -747,13 +759,9 @@ static void update_cache_f (void)
       cell.flags &= ~(fboundary|halo);
     // we mark boundary cells which are required for halo restriction
     foreach_halo (restriction, l)
-      for (int k = 0; k <= 2; k++)
-	for (int l = 0; l <= 2; l++)
-#if dimension == 3
-	  for (int n = 0; n <= 2; n++)
-#endif
-	    if (is_boundary(child(k,l,n)))
-	      child(k,l,n).flags |= halo;
+      foreach_child()
+        if (is_boundary(cell))
+	  cell.flags |= halo;
   }
 }
 
@@ -1091,298 +1099,203 @@ void realloc_scalar (void)
 
 /* Boundaries */
 
-#if dimension == 2
-@def foreach_normal_neighbor(cond)
-  for (int i = -1; i <= 1; i++)
-    for (int j = -1; j <= 1; j++)
-      if ((i == 0 || j == 0) && allocated(i,j) && !is_boundary(neighbor(i,j))) {
-	Point neighbor = {point.i + i, point.j + j, point.level};
-	if (cond (neighbor)) {
-@
-#else // dimension == 3
-@def foreach_normal_neighbor(cond)
-  for (int i = -1; i <= 1; i++)
-    for (int j = -1; j <= 1; j++)
-      for (int k = -1; k <= 1; k++)
-	if ((i == 0 || j == 0 || k == 0) && allocated(i,j,k) &&
-	    !is_boundary(neighbor(i,j,k))) {
-	  Point neighbor = {point.i + i, point.j + j, point.k + k, point.level};
-	  if (cond (neighbor)) {
-@  
-#endif // dimension == 3
-@def end_foreach_normal_neighbor()
-        }
-      }
-@
-
-@def foreach_normal_neighbor_x(cond)
-  assert (dimension == 2);
-  for (int i = -1; i <= 1; i += 2)
-    if (allocated(i,0) && !is_boundary(neighbor(i,0))) {
-      Point neighbor = {point.i + i, point.j, point.level};
-      if (cond (neighbor)) {
-@
-@def end_foreach_normal_neighbor_x()
-      }
-    }
-@
-
-@def foreach_normal_neighbor_y(cond)
-  assert (dimension == 2);
-  for (int i = -1; i <= 1; i += 2)
-    if (allocated(0,i) && !is_boundary(neighbor(0,i))) {
-      Point neighbor = {point.i, point.j + i, point.level};
-      if (cond (neighbor)) {
-@
-@def end_foreach_normal_neighbor_y()
-      }
-    }
-@
-
-@def foreach_tangential_neighbor_x(cond)
-  assert (dimension == 2);
-  for (int j = -1; j <= 1; j += 2) {
-    Point neighbor = {point.i, point.j + j, point.level};
-    Point n2 = {point.i - 1, point.j + j, point.level};
-    if ((allocated(0,j) && !is_boundary(neighbor(0,j)) && cond(neighbor)) ||
-	(allocated(-1,j) && !is_boundary(neighbor(-1,j)) && cond(n2))) {
-@
-@def end_foreach_tangential_neighbor_x()
-    }
-  }
-@
-
-@def foreach_tangential_neighbor_y(cond)
-  assert (dimension == 2);
-  for (int j = -1; j <= 1; j += 2) {
-    Point neighbor = {point.i + j, point.j, point.level};
-    Point n2 = {point.i + j, point.j - 1, point.level};
-    if ((allocated(j,0) && !is_boundary(neighbor(j,0)) && cond(neighbor)) ||
-	(allocated(j,-1) && !is_boundary(neighbor(j,-1)) && cond(n2))) {
-@
-@def end_foreach_tangential_neighbor_y()
-    }
-  }
-@
-
 #define bid(cell) (- cell.pid - 1)
 
-static int boundary_scalar (Point point, bool (*cond)(Point), scalar * list)
-{
-  if (!list)
-    return 1;
-  int nc = 0, id = bid(cell);
-  for (scalar s in list)
-    s[] = 0.;
-  /* look first in normal directions */
-  foreach_normal_neighbor (cond) {
-    for (scalar s in list)
-      s[] += s.boundary[id] (neighbor, point, s);
-    nc++;
-  }
-  if (nc > 0)
-    for (scalar s in list)
-      s[] /= nc;
-  return nc;
-}
+@define VN v.x
+@define VT v.y
 
-@define VN _attribute[s].v.x
-@define VT _attribute[s].v.y
+#define is_neighbor(...) (allocated(__VA_ARGS__) && \
+			  !is_boundary(neighbor(__VA_ARGS__)) \
+			  && cond(neighborp(__VA_ARGS__)))
+
+#if _MPI
+# define disable_fpe_for_mpi() disable_fpe (FE_DIVBYZERO|FE_INVALID)
+# define enable_fpe_for_mpi()  enable_fpe (FE_DIVBYZERO|FE_INVALID)
+#else
+# define disable_fpe_for_mpi()
+# define enable_fpe_for_mpi()
+#endif
+
+static inline void no_coarsen (Point point, scalar s);
   
-foreach_dimension()
-static int boundary_vector_x (Point point, bool (*cond)(Point), scalar * list)
+void box_boundaries (int l,
+		     bool (cond1)(Point), bool (cond)(Point),
+		     scalar * list)
 {
-  if (!list)
-    return 1;
-#if dimension == 2
-  int nc = 0, id = bid(cell);
+  scalar * scalars = NULL;
+  vector * vectors = NULL, * faces = NULL;
   for (scalar s in list)
-    s[] = 0.;
-  /* look first in normal directions */
-  foreach_normal_neighbor_x (cond) {
-    for (scalar s in list) {
-      scalar n = VN;
-      s[] += n.boundary[id] (neighbor, point, s);
-    }
-    nc++;
-  }
-  if (!nc)
-    /* look in tangential directions */
-    foreach_normal_neighbor_y (cond) {
-      for (scalar s in list) {
-	scalar t = VT;
-	s[] += t.boundary[id] (neighbor, point, s);
+    if (!is_constant(s) && s.refine != no_coarsen) {
+      if (s.v.x == s) {
+	if (s.face)
+	  faces = vectors_add (faces, s.v);
+	else
+	  vectors = vectors_add (vectors, s.v);
       }
-      nc++;
+      else if (s.v.x < 0)
+	scalars = list_add (scalars, s);
     }
-  if (nc > 0)
-    for (scalar s in list)
-      s[] /= nc;
-  return nc;
-#else
-  assert (false);
-#endif
-}
-
-static void boundary_normal_x (Point point, bool (*cond) (Point), scalar * list)
-{
-  if (!list)
-    return;
-  int id = bid(cell);
-  foreach_normal_neighbor_x (cond)
-    for (scalar s in list) {
-      scalar n = VN;
-      if (s.normal && n.boundary[id])
-	s[(i + 1)/2,0] = n.boundary[id] (neighbor, point, s);
-    }
-}
-
-static void boundary_normal_y (Point point, bool (*cond) (Point), scalar * list)
-{
-  if (!list)
-    return;
-  int id = bid(cell);
-  foreach_normal_neighbor_y (cond)
-    for (scalar s in list) {
-      scalar n = VN;
-      if (s.normal && n.boundary[id])
-	s[0,(i + 1)/2] = n.boundary[id] (neighbor, point, s);
-    }
-}
-
-static void boundary_normal_z (Point point, bool (*cond) (Point), scalar * list)
-{
-  if (!list)
-    return;
-  assert (false);
-}
-
-foreach_dimension()
-static void boundary_tangential_x (Point point, bool (*cond)(Point),
-				   scalar * list)
-{
-  if (!list)
-    return;
+  
+  foreach_boundary (l)
+    if (cond1 (point)) {
+      int nc = 0, id = bid(cell);
+      coord nv;
+      foreach_dimension()
+	nv.x = 0;
+      for (scalar s in scalars)
+	s[] = 0.;
+      for (vector v in vectors)
+	foreach_dimension()
+	  v.x[] = 0.;
+      // normal directions
+      foreach_dimension()
+	for (int i = -1; i <= 1; i += 2)
+	  if (is_neighbor(i)) {
+	    Point neighbor = neighborp(i);
+	    for (scalar s in scalars)
+	      s[] += s.boundary[id](neighbor, point, s);
+	    for (vector v in vectors) {
+	      scalar vn = VN;
+	      v.x[] += vn.boundary[id](neighbor, point, v.x);
+	    }
+	    for (vector v in faces) {
+	      scalar vn = VN;
+	      if (v.x.normal && vn.boundary[id])
+		v.x[(i + 1)/2] = vn.boundary[id](neighbor, point, v.x);
+	    }
+	    nc++; nv.x++;
+	  }
+      if (vectors || faces)
 #if dimension == 2
-  if (allocated(-1) && neighbor(-1).pid < 0) {
-    int nc = 0, id = bid(cell);
-    for (scalar s in list)
-      s[] = 0.;
-    foreach_tangential_neighbor_x (cond) {
-      for (scalar s in list) {
-	scalar t = VT;
-	s[] += t.boundary[id] (neighbor, point, s);
-      }
-      nc++;
-    }
-    if (nc > 0) {
-      for (scalar s in list)
-	s[] /= nc;
-    }
-    else
-      for (scalar s in list)
-	s[] = 0.; // fixme: this should be undefined
-  }
-#else
-  assert (false);
-#endif
-}  
-
-static void boundary_diagonal (Point point, bool (*cond)(Point), scalar * list)
-{
-  if (!list)
-    return;
-  int nc = 0;
-#if dimension == 2
-  for (int k = -1; k <= 1; k += 2)
-    for (int l = -1; l <= 1; l += 2)
-      if (allocated(k,l) && neighbor(k,l).pid >= 0) {
-	Point neighbor = {point.i + k, point.j + l, point.level};
-	if (cond (neighbor)) {
-	  for (scalar s in list)
-	    s[] += s[k,0] + s[0,l] - s[k,l];
-	  nc++;
-	}
-      }
-#else // dimension == 3
-  for (int k = -1; k <= 1; k += 2)
-    for (int l = -1; l <= 1; l += 2)
-      for (int n = -1; n <= 1; n += 2)
-	if (allocated(k,l,n) && neighbor(k,l,n).pid >= 0) {
-	  Point neighbor = {point.i + k, point.j + l, point.k + n, point.level};
-	  if (cond (neighbor)) {
-	    for (scalar s in list)
-	      s[] += s[k,0,n] + s[0,l,n] - s[k,l,n]; // fixme
-	    nc++;
+	foreach_dimension() {
+	  // tangential directions
+	  if (nv.y == 0)
+	    for (int i = -1; i <= 1; i += 2)
+	      if (is_neighbor(i)) {
+		Point neighbor = neighborp(i);
+		for (vector v in vectors) {
+		  scalar vt = VT;
+		  v.y[] += vt.boundary[id](neighbor, point, v.y);
+		}
+		nv.y++;
+	      }
+	  // tangential face directions
+	  if (faces && allocated(-1) && is_boundary(neighbor(-1))) {
+	    int nf = 0;
+	    for (vector v in faces)
+	      v.x[] = 0.;
+	    for (int j = -1; j <= 1; j += 2)
+	      if (is_neighbor(0,j) || is_neighbor(-1,j)) {
+		Point neighbor = neighborp(0,j);
+		for (vector v in faces) {
+		  scalar vt = VT;
+		  v.x[] += vt.boundary[id](neighbor, point, v.x);
+		}
+		nf++;
+	      }
+	    if (nf > 0) {
+	      for (vector v in faces)
+		v.x[] /= nf;
+	    }
+	    else
+	      for (vector v in faces)
+		v.x[] = 0.; // fixme: this should be undefined
 	  }
 	}
+#else // dimension == 3
+      assert (false);
 #endif
-  if (nc > 0) {
-    for (scalar s in list)
-      s[] /= nc;
-  }
-  else
-    for (scalar s in list)
-      s[] = undefined;
+      // 2D diagonal directions
+      if (nc == 0)
+#if dimension == 3
+	foreach_dimension()
+#endif
+	  for (int k = -1; k <= 1; k += 2)
+	    if (is_boundary(neighbor(k,0))) {
+	      Point n1 = neighborp(k,0);
+	      int id1 = bid(neighbor(k,0));
+	      for (int l = -1; l <= 1; l += 2)
+		if (is_boundary(neighbor(0,l)) && is_neighbor(k,l)) {
+		  Point n = neighborp(k,l), n2 = neighborp(0,l);
+		  int id2 = bid(neighbor(0,l));
+		  for (scalar s in scalars)
+		    s[] += (s.boundary[id1](n,n1,s) + s.boundary[id2](n,n2,s) -
+			    s[k,l]);
+		  for (vector v in vectors) {
+		    scalar vt = VT, vn = VN;
+		    v.x[] += (vt.boundary[id1](n,n1,v.x) +
+			      vn.boundary[id2](n,n2,v.x) -
+			      v.x[k,l]);
+		    v.y[] += (vn.boundary[id1](n,n1,v.y) +
+			      vt.boundary[id2](n,n2,v.y) -
+			      v.y[k,l]);
+#if dimension == 3
+		    v.z[] += (vt.boundary[id1](n,n1,v.z) +
+			      vt.boundary[id2](n,n2,v.z) -
+			      v.z[k,l]);
+#endif
+		  }
+		  nv.x++; nv.y++;
+#if dimension == 3
+		  nv.z++;
+#endif
+		  nc++;
+		}
+	    }
+      // 3D diagonal directions
+#if dimension == 3
+      if (nc == 0)
+	for (int k = -1; k <= 1; k += 2)
+	  for (int l = -1; l <= 1; l += 2)
+	    if (is_boundary(neighbor(k,l,0))) {
+	      Point n1 = neighborp(k,l,0);
+	      int id1 = bid(neighbor(k,l,0));
+	      for (int n = -1; n <= 1; n += 2)
+		if (is_boundary(neighbor(k,0,n)) &&
+		    is_boundary(neighbor(0,l,n)) &&
+		    is_neighbor(k,l,n)) {
+		  Point n0 = neighborp(k,l,n), n2 = neighborp(k,0,n);
+		  Point n3 = neighborp(0,l,n);
+		  int id2 = bid(neighbor(k,0,n)), id3 = bid(neighbor(0,l,n));
+		  for (scalar s in scalars)
+		    s[] += (s.boundary[id1](n0,n1,s) +
+			    s.boundary[id2](n0,n2,s) +
+			    s.boundary[id3](n0,n3,s) -
+			    2.*s[k,l,n]);
+		  nc++;
+		}
+	    }
+#endif
+      // averaging
+      if (nc > 0) {
+	for (scalar s in scalars)
+	  s[] /= nc;
+      }
+      else
+	for (scalar s in scalars)
+	  s[] = undefined;
+      foreach_dimension() {
+	if (nv.x > 0) {
+	  for (vector v in vectors)
+	    v.x[] /= nv.x;
+	}
+	else
+	  for (vector v in vectors)
+	    v.x[] = undefined;
+      }
+    }
+  free (scalars);
+  free (vectors);
+  free (faces);
 }
 
-#define box_boundaries(l, cond1, cond, list)				\
-do {									\
-  scalar * lists = NULL;						\
-  scalar * list_x = NULL, * list_y = NULL, * list_z = NULL;		\
-  scalar * listf_x = NULL, * listf_y = NULL, * listf_z = NULL;		\
-  for (scalar s in list)						\
-    if (!is_constant(s)) {						\
-      if (s.v.x < 0)							\
-	lists = list_add (lists, s);					\
-      else {								\
-	if (s.v.x == s) {						\
-	  if (s.face)							\
-	    listf_x = list_add (listf_x, s);				\
-	  else								\
-	    list_x = list_add (list_x, s);				\
-	}								\
-	else if (s.face)						\
-	  listf_y = list_add (listf_y, s);				\
-	else								\
-	  list_y = list_add (list_y, s);				\
-      }									\
-    }									\
-  /* normal/tangential directions */					\
-  int diagonal = 1 << user, diagonal_x = 2*diagonal;			\
-  int diagonal_y = 4*diagonal, diagonal_z = 8*diagonal;			\
-  foreach_boundary(l)							\
-    if (cond1) {							\
-      if (!boundary_scalar (point, cond, lists))			\
-	cell.flags |= diagonal;						\
-      foreach_dimension() {						\
-	if (!boundary_vector_x (point, cond, list_x))			\
-	  cell.flags |= diagonal_x;					\
-	boundary_normal_x (point, cond, listf_x);			\
-      }									\
-    }									\
-  /* diagonal and tangential (face) directions */			\
-  foreach_boundary(l)							\
-    if (cond1) {							\
-      if (cell.flags & diagonal) {					\
-	boundary_diagonal (point, cond, lists);				\
-	cell.flags &= ~diagonal;					\
-      }									\
-      foreach_dimension() {						\
-	if (cell.flags & diagonal_x) {					\
-	  boundary_diagonal (point, cond, list_x);			\
-	  cell.flags &= ~diagonal_x;					\
-	}								\
-	boundary_tangential_x (point, cond, listf_x);			\
-      }									\
-    }									\
-  free (lists);								\
-  foreach_dimension() {							\
-    free (list_x);							\
-    free (listf_x);							\
-  }									\
- } while(0)
-
+#undef is_neighbor
+ 
+@undef VN
+@undef VT
+@define VN _attribute[s].v.x
+@define VT _attribute[s].v.y
+ 
 static bool retrue (Point point) { return true; }
 
 static bool retleaf (Point point) { return is_leaf(cell); }
@@ -1391,44 +1304,48 @@ static bool retleafhalo (Point point) {
   // leaf or prolongation or restriction halo
   return is_leaf(cell) || !cell.neighbors || (cell.flags & halo);
 }
+
+static bool retleafhalo1 (Point point) {
+  // leaf or restriction halo
+  return is_leaf(cell) || (cell.flags & halo);  
+}
+
+static bool rethalo (Point point) {
+  // restriction halo
+  return cell.flags & halo;
+}
  
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
-  /* we disable floating-point-exceptions to avoid having to deal with
-     undefined operations in non-trivial boundary conditions. */
-  disable_fpe (FE_DIVBYZERO|FE_INVALID);
+  disable_fpe_for_mpi();
   if (l < 0)
     for (l = 0; l <= depth(); l++)
-      box_boundaries (l, true, retleaf, list);
+      box_boundaries (l, retrue, retleaf, list);
   else
-    box_boundaries (l, true, retrue, list);
-  enable_fpe (FE_DIVBYZERO|FE_INVALID);
+    box_boundaries (l, retrue, retrue, list);
+  enable_fpe_for_mpi();
 }
 
 static void box_boundary_halo_restriction (const Boundary * b,
 					   scalar * list, int l)
 {
+  disable_fpe_for_mpi();
   if (l == 0)
     return;
-  /* we disable floating-point-exceptions to avoid having to deal with
-     undefined operations in non-trivial boundary conditions. */
-  disable_fpe (FE_DIVBYZERO|FE_INVALID);
-  box_boundaries (l, cell.flags & halo, retrue, list);
-  enable_fpe (FE_DIVBYZERO|FE_INVALID);
+  box_boundaries (l, rethalo, retleafhalo1, list);
+  enable_fpe_for_mpi();
 }
 
 static void box_boundary_halo_prolongation (const Boundary * b,
 					    scalar * list, 
 					    int l, int depth)
 {
-  /* we disable floating-point-exceptions to avoid having to deal with
-     undefined operations in non-trivial boundary conditions. */
-  disable_fpe (FE_DIVBYZERO|FE_INVALID);
+  disable_fpe_for_mpi();
   if (l == depth)
-    box_boundaries (l, true, retrue, list);
+    box_boundaries (l, retrue, retrue, list);
   else
-    box_boundaries (l, true, retleafhalo, list);
-  enable_fpe (FE_DIVBYZERO|FE_INVALID);
+    box_boundaries (l, retrue, retleafhalo, list);
+  enable_fpe_for_mpi();
 }
  
 #define mask(func) {					\
@@ -1742,7 +1659,11 @@ Point locate (struct _locate p)
     point.k = (p.z - Z0)/L0*n + GHOSTS;
 #endif
     if (point.i >= 0 && point.i < n + 2*GHOSTS &&
-	point.j >= 0 && point.j < n + 2*GHOSTS) {
+	point.j >= 0 && point.j < n + 2*GHOSTS
+#if dimension == 3
+	&& point.k >= 0 && point.k < n + 2*GHOSTS
+#endif
+	) {
       if (allocated(0) && is_local(cell) && is_leaf(cell))
 	return point;
     }

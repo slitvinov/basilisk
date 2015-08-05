@@ -174,7 +174,8 @@ static double residual_GN (scalar * a, scalar * r, scalar * resl, void * data)
       else
 	res.x[] = 0.;
     }
-
+  boundary (resl);
+  
   /**
   The maximum residual is normalised by gravity i.e. the tolerance is
   the relative acceleration times the depth. */

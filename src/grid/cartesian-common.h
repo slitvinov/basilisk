@@ -442,6 +442,7 @@ void cartesian_debug (Point point)
 
   fprintf (stderr, 
 	   "Last point stencils can be displayed using (in gnuplot)\n"
+	   "  set term x11\n"
 	   "  set size ratio -1\n"
 	   "  set key outside\n"
 	   "  v=0\n"
@@ -530,7 +531,7 @@ bid new_bid()
 
 static double periodic_bc (Point point, Point neighbor, scalar s)
 {
-  return undefined;
+  return HUGE;
 }
 
 void periodic (int dir)

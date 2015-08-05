@@ -142,6 +142,7 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
     }
   }
 #endif
+  boundary (resl);
   return maxres;
 }
 

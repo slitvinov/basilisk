@@ -115,7 +115,9 @@ event defaults (i = 0)
       u.x[] = g.x[] = 0.;
     p[] = pf[] = 0.;
   }
-  boundary ({p,pf,u,g});
+  foreach_face()
+    uf.x[] = 0.;
+  boundary ({p,pf,u,g,uf});
 #if QUADTREE
   uf.x.refine = refine_face_solenoidal;
 #endif
@@ -174,7 +176,7 @@ $\alpha_c$) or dynamic viscosity (face field $\mu_f$) -- at time
 $t+\Delta t/2$ -- can be defined by overloading this event. */
 
 event properties (i++,last) {
-  boundary ((scalar *){alpha, mu});
+  boundary ({alpha, mu, rho});
 }
 
 /**
