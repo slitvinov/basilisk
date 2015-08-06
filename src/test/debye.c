@@ -13,13 +13,13 @@ in a stationary situation and assuming fluid at rest, the
 Poisson-Nernst-Planck equations are,
 
 $$
-0 = \nabla \cdot (e \omega_i z_i c_i \nabla \phi) + \nabla \cdot 
+0 = \nabla \cdot (e \omega_i Z_i c_i \nabla \phi) + \nabla \cdot 
 (\omega_i k_B T \nabla c_i) \quad \mbox{with} \quad 
 \nabla \cdot (\epsilon \nabla \phi) = \sum_i e c_i
 $$
 
 where $\phi$ is the electric potential and $c_i$ is the number of
-$i$-ions per volume. $\omega_i$ and $z_i$ are the $i$-ion mobility and
+$i$-ions per volume. $\omega_i$ and $Z_i$ are the $i$-ion mobility and
 valence.  $k_B$ is the Boltzmann constant, $e$ is the electron charge,
 $\epsilon$ the electrical permittivity and $T$ the temperature.
 
@@ -42,12 +42,12 @@ $$
 
 /**
 We assume a fully dissolved binary system labelling the positive ion as $Cp$ 
-and the counterion as $Cm$. The valence is one, ($|z|=1$). */
+and the counterion as $Cm$. The valence is one, ($|Z|=1$). */
 
 scalar phi[];
 scalar Cp[], Cm[];
 double dt;
-int z[2] = {1,-1};
+int Z[2] = {1,-1};
 scalar * sp = {Cp, Cm};
 
 /**
@@ -101,9 +101,9 @@ event integration (i++) {
   account the ohmic transport. */
 
 #if 1
-  ohmic_flux (sp, z, dt, K);
+  ohmic_flux (sp, Z, dt, K);
 #else
-  ohmic_flux (sp, z, dt); // fixme: this does not work yet
+  ohmic_flux (sp, Z, dt); // fixme: this does not work yet
 #endif
 
   /**
@@ -121,7 +121,7 @@ event integration (i++) {
     int i = 0;
     rhs[] = 0.;
     for (scalar s in sp)
-      rhs[] -= z[i++]*s[];
+      rhs[] -= Z[i++]*s[];
   }
   poisson (phi, rhs);
 }

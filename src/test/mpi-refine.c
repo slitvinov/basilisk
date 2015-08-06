@@ -17,7 +17,8 @@ int main (int argc, char * argv[])
   foreach()
     for (int i = -1; i <= 1; i++)
       for (int j = -1; j <= 1; j++)
-	assert (s[i,j] == 1.);
+	for (int k = -1; k <= 1; k++)
+	  assert (s[i,j,k] == 1.);
 
   // rebalancing
   int nf = 0;
@@ -29,5 +30,5 @@ int main (int argc, char * argv[])
   scalar index[];
   z_indexing (index);
   foreach()
-    fprintf (stderr, "%g %g %d\n", x, y, min(npe - 1, (int)(index[]/nf)));
+    fprintf (stderr, "%g %g %g %d\n", x, y, z, min(npe - 1, (int)(index[]/nf)));
 }

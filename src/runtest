@@ -1,7 +1,8 @@
 #!/bin/sh
 
-test=`echo $1 | cut -d. -f1`
-ext=`echo $1 | cut -d. -f2`
+FILE="$1"
+test="${FILE%.*}"
+ext="${FILE##*.}"
 case $ext in
     ctst) log=clog; out=cout; ref=cref; ;;
     *)    log=log;  out=out; ref=ref; ;;

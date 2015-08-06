@@ -49,7 +49,7 @@ static void mpi_print (timer t, int i, size_t tnc,
 
 int main (int argc, char * argv[])
 {
-  int maxlevel = argc > 1 ? atoi(argv[1]) : 8;
+  int maxlevel = argc > 1 ? atoi(argv[1]) : (dimension == 2 ? 8 : 5);
   int minlevel = argc > 2 ? atoi(argv[2]) : 1;
   timer t;
 
@@ -78,7 +78,7 @@ int main (int argc, char * argv[])
   i = nloops = npe();
   while (i--) {
     foreach()
-      a[] = cos(pi*x)*cos(pi*y);
+      a[] = cos(pi*x)*cos(pi*y)*cos(pi*z);
 #if 0
     boundary ({a});
 #else
@@ -101,8 +101,12 @@ int main (int argc, char * argv[])
   t = timer_start();
   i = nloops = npe();
   while (i--) {
-    foreach()
-      b[] = (a[0,1] + a[1,0] + a[0,-1] + a[-1,0] - 4.*a[])/sq(Delta);
+    foreach() {
+      b[] = 0.;
+      foreach_dimension()
+        b[] += a[1] + a[-1];
+      b[] = (b[] - 2.*dimension*a[])/sq(Delta);
+    }
     boundary ({b});
   }
   mpi_print (t, nloops, tnc*nloops, "laplacian");
@@ -146,7 +150,7 @@ int main (int argc, char * argv[])
 
   scalar e[];
   foreach()
-    e[] = a[] - cos(pi*x)*cos(pi*y);
+    e[] = a[] - cos(pi*x)*cos(pi*y)*cos(pi*z);
   double max = normf(e).max;
   if (pid() == 0)
     fprintf (stderr, "error: %g\n", max);

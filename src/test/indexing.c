@@ -3,9 +3,10 @@
 int main (int argc, char ** argv)
 {
   int depth = 4;
-  X0 = Y0 = -0.5;
+  origin (-0.5, -0.5, -0.5);
   init_grid (1);
-  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)), NULL);
+  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)),
+  	  NULL);
   
   scalar reference[];
   int i = 0;
@@ -19,9 +20,7 @@ int main (int argc, char ** argv)
 
   output_cells (stdout);
   foreach() {
-    fprintf (stderr, "%g %g %g %g\n", x, y, index[], reference[]);
+    fprintf (stderr, "%g %g %g %g %g\n", x, y, z, index[], reference[]);
     assert (index[] == reference[]);
   }
-
-  free_grid ();
 }
