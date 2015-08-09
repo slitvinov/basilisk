@@ -463,8 +463,12 @@ static void update_cache_f (void)
 @
 @define end_foreach_level_or_leaf() } end_foreach_level(); }
 
-@define foreach_leaf()            foreach_cell() if (is_leaf (cell)) {
-@define end_foreach_leaf()        continue; } end_foreach_cell()
+@de foreach_leaf()
+  foreach_cell()
+    if (is_leaf (cell)) {
+      if (is_local(cell)) {
+@
+@define end_foreach_leaf() } continue; } end_foreach_cell()
 
 #if TRASH
 # undef trash

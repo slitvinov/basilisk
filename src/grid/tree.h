@@ -817,7 +817,7 @@ static void update_cache_f (void)
 
 @def foreach_leaf() foreach_cell()
   if (is_leaf (cell)) {
-    if (is_active(cell)) {
+    if (is_active(cell) && is_local(cell)) {
 @
 @define end_foreach_leaf() } continue; } end_foreach_cell()
 
