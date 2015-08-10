@@ -423,7 +423,7 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop();
-      if (!allocated (0,0,0))
+      if (!allocated (0))
 	continue;
       switch (stage) {
       case 0: {
@@ -475,7 +475,7 @@ void recursive (Point point)
     while (_s >= 0) {
       int stage;
       _pop();
-      if (!allocated (0,0,0))
+      if (!allocated (0))
 	continue;
       switch (stage) {
       case 0: {
@@ -542,32 +542,78 @@ void recursive (Point point)
 @def foreach_child() {
   int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
   point.level++;
-  for (int _k = 0; _k < 4; _k++) {
-    point.i = _i + _k/2; point.j = _j + _k%2;
-    POINT_VARIABLES;
+  for (int _k = 0; _k < 2; _k++) {
+    point.i = _i + _k;
+    for (int _l = 0; _l < 2; _l++) {
+      point.j = _j + _l;
+      POINT_VARIABLES;
 @
 @def end_foreach_child()
+    }
   }
   point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2;
   point.level--;
 }
 @
+@define foreach_child_break() _k = _l = 2
+
+@def foreach_neighbor(_s) {
+  int _nn = _s + 0 ? _s + 0 : GHOSTS;
+  int _i = point.i, _j = point.j;
+  for (int _k = - _nn; _k <= _nn; _k++) {
+    point.i = _i + _k;
+    for (int _l = - _nn; _l <= _nn; _l++) {
+      point.j = _j + _l;
+      POINT_VARIABLES;
+@
+@def end_foreach_neighbor()
+    }
+  }
+  point.i = _i; point.j = _j;
+}
+@
+@define foreach_neighbor_break() _k = _l = _nn + 1
 #else // dimension == 3
 @def foreach_child() {
-  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
-  int _k = 2*point.k - GHOSTS;
+  int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS, _k = 2*point.k - GHOSTS;
   point.level++;
-  for (int _l = 0; _l < 8; _l++) {
-    point.i = _i + _l/4; point.j = _j + (_l/2)%2; point.k = _k + _l%2;
-    POINT_VARIABLES;
+  for (int _l = 0; _l < 2; _l++) {
+    point.i = _i + _l;
+    for (int _m = 0; _m < 2; _m++) {
+      point.j = _j + _m;
+      for (int _n = 0; _n < 2; _n++) {
+	point.k = _k + _n;
+	POINT_VARIABLES;
 @
 @def end_foreach_child()
+      }
+    }
   }
-  point.i = (_i + GHOSTS)/2; point.j = (_j + GHOSTS)/2;
-  point.k = (_k + GHOSTS)/2;
+  point.i = (_i + GHOSTS)/2;point.j = (_j + GHOSTS)/2;point.k = (_k + GHOSTS)/2;
   point.level--;
 }
 @
+@define foreach_child_break() _l = _m = _n = 2
+
+@def foreach_neighbor(_s) {
+  int _nn = _s + 0 ? _s + 0 : GHOSTS;
+  int _i = point.i, _j = point.j, _k = point.k;
+  for (int _l = - _nn; _l <= _nn; _l++) {
+    point.i = _i + _l;
+    for (int _m = - _nn; _m <= _nn; _m++) {
+      point.j = _j + _m;
+      for (int _n = - _nn; _n <= _nn; _n++) {
+	point.k = _k + _n;
+	POINT_VARIABLES;
+@
+@def end_foreach_neighbor()
+      }
+    }
+  }
+  point.i = _i; point.j = _j; point.k = _k;
+}
+@
+@define foreach_neighbor_break() _l = _m = _n = _nn + 1
 #endif // dimension == 3
   
 #define update_cache() { if (quadtree->dirty) update_cache_f(); }
@@ -659,25 +705,11 @@ static void update_cache_f (void)
     if (!is_boundary(cell))
       // look in a 3x3 neighborhood for boundary cells
       // fixme: should probably be a 5x5 neighborhood
-      // fixme: foreach_neighbor() would be nicer
-      for (int k = -1; k <= 1; k++)
-	for (int l = -1; l <= 1; l++)
-#if dimension == 3
-	  for (int n = -1; n <= 1; n++)
-#endif
-	    if (is_boundary(neighbor(k,l,n)) &&
-		!(neighbor(k,l,n).flags & fboundary)) {
-	      point.i += k; point.j += l;
-#if dimension == 3
-	      point.k += n;
-#endif
-	      cache_level_append (&q->boundary[level], point);
-	      cell.flags |= fboundary;
-	      point.i -= k; point.j -= l;
-#if dimension == 3
-	      point.k -= n;
-#endif
-	    }
+      foreach_neighbor (1)
+	if (is_boundary(cell) && !(cell.flags & fboundary)) {
+	  cache_level_append (&q->boundary[level], point);
+	  cell.flags |= fboundary;
+	}
     if (is_leaf (cell)) {
       if (is_local(cell)) {
 	cache_append (&q->leaves, point, 0, 0, 0, 0);
@@ -732,15 +764,13 @@ static void update_cache_f (void)
     }
     else { // not a leaf
       bool restriction = level > 0 && (aparent(0).flags & halo);
-      for (int k = -GHOSTS; k <= GHOSTS && !restriction; k++)
-	for (int l = -GHOSTS; l <= GHOSTS && !restriction; l++)
-#if dimension == 3
-	  for (int n = -GHOSTS; n <= GHOSTS && !restriction; n++)
-#endif
-	    if (allocated(k,l,n) &&
-		((is_local(neighbor(k,l,n)) && is_leaf(neighbor(k,l,n))) ||
-		 is_remote_leaf(neighbor(k,l,n))))
-	      restriction = true;
+      if (!restriction)
+	foreach_neighbor()
+	  if (allocated(0) && ((is_local(cell) && is_leaf(cell)) ||
+			       is_remote_leaf(cell))) {
+	    restriction = true;
+	    break;
+	  }
       if (restriction) {
 	// halo restriction
 	cell.flags |= halo;
@@ -892,11 +922,10 @@ static void free_layer (void)
 }
 
 #if dimension == 2
-static void alloc_children (Point point, int i, int j, int k)
+static void alloc_children (Point point)
 {
   if (point.level == quadtree->depth)
     alloc_layer();
-  point.i += i; point.j += j;
   
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
@@ -911,34 +940,19 @@ static void alloc_children (Point point, int i, int j, int k)
     }
   }
 
-  // foreach child
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      child(k,l).pid = cell.pid;
+  int pid = cell.pid;
+  foreach_child()
+    cell.pid = pid;
 
 @if TRASH
-  // foreach child
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      for (scalar s in all)
-	fine(s,k,l) = undefined;
+  foreach_child()
+    for (scalar s in all)
+      s[] = undefined;
 @endif
 }
 
-void increment_neighbors (Point point)
+static void free_children (Point point)
 {
-  quadtree->dirty = true;
-  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
-    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++) {
-      if (neighbor(k,l).neighbors == 0)
-	alloc_children (point, k, l, 0);
-      neighbor(k,l).neighbors++;
-    }
-}
-				
-static void free_children (Point point, int i, int j)
-{
-  point.i += i; point.j += j;
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
   assert (CHILD(0,0,0));
@@ -952,24 +966,11 @@ static void free_children (Point point, int i, int j)
     }
   }
 }
-
-void decrement_neighbors (Point point)
-{
-  quadtree->dirty = true;
-  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
-    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
-      if (allocated(k,l)) {
-	neighbor(k,l).neighbors--;
-	if (neighbor(k,l).neighbors == 0)
-	  free_children (point,k,l);
-      }
-}
 #else // dimension == 3
-static void alloc_children (Point point, int i, int j, int k)
+static void alloc_children (Point point)
 {
   if (point.level == quadtree->depth)
     alloc_layer();
-  point.i += i; point.j += j; point.k += k;
   
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
@@ -985,37 +986,18 @@ static void alloc_children (Point point, int i, int j, int k)
       }
     }
 
-  // foreach child
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      for (int n = 0; n < 2; n++)
-	child(k,l,n).pid = cell.pid;
+  int pid = cell.pid;
+  foreach_child()
+    cell.pid = pid;
 
 @if TRASH
-  // foreach child
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++)
-      for (int n = 0; n < 2; n++)
-	for (scalar s in all)
-	  fine(s,k,l,n) = undefined;
+  foreach_child()
+    s[] = undefined;
 @endif
 }
 
-void increment_neighbors (Point point)
+static void free_children (Point point)
 {
-  quadtree->dirty = true;
-  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
-    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
-      for (int n = -GHOSTS/2; n <= GHOSTS/2; n++) {
-	if (neighbor(k,l,n).neighbors == 0)
-	  alloc_children (point, k, l, n);
-	neighbor(k,l,n).neighbors++;
-      }
-}
-
-static void free_children (Point point, int i, int j, int k)
-{
-  point.i += i; point.j += j; point.k += k;
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
   assert (CHILD(0,0,0));
@@ -1030,20 +1012,28 @@ static void free_children (Point point, int i, int j, int k)
       }
     }
 }
+#endif // dimension == 3
+
+void increment_neighbors (Point point)
+{
+  quadtree->dirty = true;
+  foreach_neighbor (GHOSTS/2) {
+    if (cell.neighbors == 0)
+      alloc_children (point);
+    cell.neighbors++;
+  }
+}
 
 void decrement_neighbors (Point point)
 {
   quadtree->dirty = true;
-  for (int k = -GHOSTS/2; k <= GHOSTS/2; k++)
-    for (int l = -GHOSTS/2; l <= GHOSTS/2; l++)
-      for (int n = -GHOSTS/2; n <= GHOSTS/2; n++)
-	if (allocated(k,l,n)) {
-	  neighbor(k,l,n).neighbors--;
-	  if (neighbor(k,l,n).neighbors == 0)
-	    free_children (point,k,l,n);
-	}
+  foreach_neighbor (GHOSTS/2)
+    if (allocated(0)) {
+      cell.neighbors--;
+      if (cell.neighbors == 0)
+	free_children (point);
+    }
 }
-#endif // dimension == 3
 
 void realloc_scalar (void)
 {
@@ -1614,6 +1604,7 @@ void init_grid (int n)
   init_events();
 }
 
+#if dimension == 2
 void check_two_one (void)
 {
   foreach_leaf()
@@ -1645,6 +1636,7 @@ void check_two_one (void)
 	  }
 	}
 }
+#endif
 
 struct _locate { double x, y, z; };
 

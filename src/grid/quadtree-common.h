@@ -50,36 +50,10 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
   /* update neighborhood */
   increment_neighbors (point);
 
-  /* for each child: (note that using foreach_child() would be nicer
-     but it seems to be significanly slower) */
   int pactive = is_active(cell) ? active : 0;
-  for (int k = 0; k < 2; k++)    
-  #if dimension > 1
-    for (int l = 0; l < 2; l++)
-  #endif
-    #if dimension > 2
-      for (int m = 0; m < 2; m++)
-    #endif
-	{
-	  child(k,l,m).flags |= (pactive|premote|leaf);
-@if _MPI
-          if (is_border(cell)) {
-	    bool notb = true;
-	    for (int n = -GHOSTS; n <= GHOSTS && notb; n++)
-	    #if dimension > 1
-	      for (int o = -GHOSTS; o <= GHOSTS && notb; o++)
-	    #endif
-	      #if dimension > 2
-		for (int p = -GHOSTS; p <= GHOSTS && notb; p++)
-	      #endif
-		  if (child(k+n,l+o,m+p).pid != cell.pid) {
-		    child(k,l,m).flags |= border;
-		    notb = false;
-		  }
-	  }
-@endif
-        }
-  
+  foreach_child()
+    cell.flags |= (pactive|premote|leaf);
+
   /* initialise scalars */
   for (scalar s in list)
     if (is_local(cell) || s.face)
@@ -87,6 +61,16 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
 
 @if _MPI
   if (is_border(cell)) {
+    int pid = cell.pid;
+    foreach_child() {
+      short flags = cell.flags;
+      foreach_neighbor()
+	if (cell.pid != pid) {
+	  flags |= border;
+	  break;
+	}
+      cell.flags = flags;
+    }
     if (refined)
       cache_append (refined, point, 0, 0, 0, cell.flags);
     nr++;
@@ -127,16 +111,10 @@ bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
     cache_level_append (coarsened, point);
   if (!is_local(cell)) {
     cell.flags &= ~(active|border);
-    for (int k = -GHOSTS; k < 2 + GHOSTS; k++)
-    #if dimension > 1
-      for (int l = -GHOSTS; l < 2 + GHOSTS; l++)
-    #endif
-      #if dimension > 2
-	for (int n = -GHOSTS; n < 2 + GHOSTS; n++)
-      #endif
-	  if (allocated_child(k,l,n) &&
-	      is_local(child(k,l,n)) && !is_border(child(k,l,n)))
-	    child(k,l,n).flags |= border;
+    foreach_neighbor(1)
+      foreach_child()
+        if (allocated(0) && is_local(cell) && !is_border(cell))
+	  cell.flags |= border;
   }
 @endif
 
@@ -400,6 +378,7 @@ static scalar quadtree_init_scalar (scalar s, const char * name)
 foreach_dimension()
 static void refine_face_x (Point point, scalar s)
 {
+  assert (dimension < 3);
   vector v = s.v;
   if (!is_refined(neighbor(-1,0)) &&
       (is_local(cell) || is_local(neighbor(-1,0)))) {
