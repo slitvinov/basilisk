@@ -228,10 +228,12 @@ struct _Point {
 };
 static Point last_point;
 
+#define BSIZE 128
+
 static void cache_level_append (CacheLevel * c, Point p)
 {
   if (c->n >= c->nm) {
-    c->nm += 100;
+    c->nm += BSIZE;
     c->p = realloc (c->p, sizeof (IndexLevel)*c->nm);
   }
   c->p[c->n].i = p.i;
@@ -242,12 +244,21 @@ static void cache_level_append (CacheLevel * c, Point p)
   c->n++;
 }
 
+static void cache_level_shrink (CacheLevel * c)
+{
+  if (c->nm > (c->n/BSIZE + 1)*BSIZE) {
+    c->nm = (c->n/BSIZE + 1)*BSIZE;
+    assert (c->nm > c->n);
+    c->p = realloc (c->p, sizeof (Index)*c->nm);
+  }
+}
+
 static void cache_append (Cache * c, Point p,
 			  int k, int l, int n,
 			  short flags)
 {
   if (c->n >= c->nm) {
-    c->nm += 100;
+    c->nm += BSIZE;
     c->p = realloc (c->p, sizeof (Index)*c->nm);
   }
   c->p[c->n].i = p.i + k;
@@ -259,6 +270,13 @@ static void cache_append (Cache * c, Point p,
   c->p[c->n].flags = flags;
   c->n++;
 }
+
+void cache_shrink (Cache * c)
+{
+  cache_level_shrink ((CacheLevel *)c);
+}
+
+#undef BSIZE
 
 @define cache_append_x(c,p,k,l,n,flags) cache_append(c,p,k,l,n,flags)
 #if dimension == 2
@@ -780,6 +798,17 @@ static void update_cache_f (void)
       else
 	cell.flags &= ~halo;
     }
+  }
+  
+  /* optimize caches */
+  cache_shrink (&q->leaves);
+  cache_shrink (&q->faces);
+  cache_shrink (&q->vertices);
+  for (int l = 0; l <= depth(); l++) {
+    cache_level_shrink (&q->active[l]);
+    cache_level_shrink (&q->prolongation[l]);
+    cache_level_shrink (&q->restriction[l]);
+    cache_level_shrink (&q->boundary[l]);
   }
   
   q->dirty = false;
