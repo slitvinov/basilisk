@@ -13,8 +13,9 @@ attribute {
 /*
   A cache of refined cells is maintained (if not NULL).
 */
-void refine_cell (Point point, scalar * list, int flag, Cache * refined)
+int refine_cell (Point point, scalar * list, int flag, Cache * refined)
 {
+  int nr = 0;
 #if TWO_ONE
   /* refine neighborhood if required */
   if (level > 0)
@@ -37,7 +38,7 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
             #if dimension > 2
 	      p.k = (point.k + GHOSTS)/2 + m;
             #endif
-	    refine_cell (p, list, flag, refined);
+	    nr += refine_cell (p, list, flag, refined);
 	    aparent(k,l,m).flags |= flag;
 	  }
 #endif
@@ -85,9 +86,13 @@ void refine_cell (Point point, scalar * list, int flag, Cache * refined)
       s.refine (point, s);
 
 @if _MPI
-  if (refined && is_border(cell))
-    cache_append (refined, point, 0, 0, 0, cell.flags);
+  if (is_border(cell)) {
+    if (refined)
+      cache_append (refined, point, 0, 0, 0, cell.flags);
+    nr++;
+  }
 @endif
+  return nr;
 }
 
 bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)

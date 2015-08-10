@@ -648,6 +648,122 @@ void mpi_boundary_update()
 #endif  
 }
 
+/*
+  Returns a linear quadtree containing the cells which are in the
+  (5x5) neighborhood of cells belonging to the (remote) process 'rpid'.
+ */
+trace
+Array * remote_cells (unsigned rpid)
+{
+  static const int remote = 1 << user;
+  foreach_cell_post (is_border(cell) && !is_leaf(cell))
+    if (is_border(cell)) {
+      if (!(cell.flags & remote)) {
+	short flags = cell.flags;
+	foreach_neighbor()
+	  if (cell.pid == rpid) {
+	    flags |= remote;
+	    break;
+	  }
+	cell.flags = flags;
+      }
+      if (level > 0 && (cell.flags & remote))
+	aparent(0).flags |= remote;
+    }
+  
+  Array * a = array_new (sizeof(unsigned));
+  foreach_cell() {
+    unsigned flags = cell.flags;
+    if (flags & remote) {
+      flags &= ~remote;
+      cell.flags = flags;
+    }
+    else
+      flags |= leaf;
+    if (is_leaf(cell))
+      flags |= remote_leaf;
+    array_append (a, &flags);
+    if (flags & leaf)
+      continue;
+  }
+  return a;
+}
+
+/**
+   Match the refinement given by the linear quadtree 'a'. 
+   Returns the number of border cells refined.
+*/
+trace
+int match_refine (unsigned * a, scalar * list, int pid)
+{
+  int nr = 0;
+  if (a != NULL)
+    foreach_cell() {
+      unsigned flags = *a++;
+      if (cell.pid == pid) {
+	if (flags & remote_leaf)
+	  cell.flags |= remote_leaf;
+	else
+	  cell.flags &= ~remote_leaf;
+      }
+      if (flags & leaf)
+	continue;
+      else if (is_leaf(cell))
+	nr += refine_cell (point, list, 0, NULL);
+    }
+  return nr;
+}
+
+#if 0
+trace
+void mpi_boundary_refine (scalar * list)
+{
+  prof_start ("mpi_boundary_refine");
+
+  MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
+  
+  /* Send halo mesh for each neighboring process. */
+  RcvPid * snd = mpi->restriction.snd;
+  Array * a[snd->npid];
+  MPI_Request r[2*snd->npid];
+  for (int i = 0; i < snd->npid; i++) {
+    int pid = snd->rcv[i].pid;
+    a[i] = remote_cells (pid);
+    assert (a[i]->len > 0);
+    int len = a[i]->len;
+    MPI_Isend (&len, 1, MPI_INT, pid, 0,  MPI_COMM_WORLD, &r[2*i]);
+    MPI_Isend (a[i]->p, len, MPI_INT, pid, 0, MPI_COMM_WORLD, &r[2*i+1]);
+  }
+    
+  /* Receive halo mesh from each neighboring process. */
+  RcvPid * rcv = mpi->restriction.rcv;
+  int refined = 0;
+  for (int i = 0; i < rcv->npid; i++) {
+    int pid = rcv->rcv[i].pid;
+    // we could use MPI_Probe, but apparently it's not a good idea,
+    // see http://cw.squyres.com/ and
+    // http://cw.squyres.com/columns/2004-07-CW-MPI-Mechanic.pdf
+    int len;
+    MPI_Recv (&len, 1, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    unsigned a[len];
+    MPI_Recv (a, len, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    refined += match_refine (a, list, pid);
+  }
+  
+  /* check that ghost values were received OK and free send buffers */
+  MPI_Waitall (2*snd->npid, r, MPI_STATUSES_IGNORE);
+  for (int i = 0; i < snd->npid; i++)
+    array_free (a[i]);
+  
+  prof_stop();
+  
+  /* If an active cell has been refined (due to the 2:1 refinement
+     constraint), we need to repeat the process. */
+  mpi_all_reduce (refined, MPI_INT, MPI_SUM);
+  if (refined)
+    mpi_boundary_refine (list);
+}
+#else
 trace
 void mpi_boundary_refine (scalar * list)
 {
@@ -682,8 +798,29 @@ void mpi_boundary_refine (scalar * list)
       Cache refined = {p, len, len};
       foreach_cache (refined,)
 	if (allocated(0)) {
-	  if (is_leaf(cell))
-	    refine_cell (point, list, 0, &rerefined);
+	  if (is_leaf(cell)) {
+	    bool neighbors = false;
+	    foreach_neighbor()
+	      if (allocated(0) && is_local(cell)) {
+		neighbors = true;
+		break;
+	      }
+	    // is this a non-local prolongation?
+	    if (!neighbors)
+	      foreach_neighbor (GHOSTS/2) {
+		if (allocated(0) && is_active(cell) && cell.neighbors)
+		  foreach_child()
+		    if (is_local(cell)) {
+		      neighbors = true;
+		      break;
+		    }
+		if (neighbors)
+		  break;
+	      }
+	    // refine the cell only if it has local neighbors
+	    if (neighbors)
+	      refine_cell (point, list, 0, &rerefined);
+	  }
 	  if (is_remote_leaf(cell))
 	    cell.flags &= ~remote_leaf;
 	}
@@ -705,6 +842,7 @@ void mpi_boundary_refine (scalar * list)
   if (rerefined.n)
     mpi_boundary_refine (list);
 }
+#endif
 
 trace
 void mpi_boundary_coarsen (int l)

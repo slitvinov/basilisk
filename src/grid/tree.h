@@ -1434,7 +1434,7 @@ static void periodic_boundary_halo_prolongation_x (const Boundary * b,
   periodic_boundary_level_x (b, list, l);
 }
 
-void refine_cell (Point point, scalar * list, int flag, Cache * refined);
+int refine_cell (Point point, scalar * list, int flag, Cache * refined);
 
 static void free_cache (CacheLevel * c)
 {
