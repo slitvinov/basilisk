@@ -41,8 +41,6 @@
   int foreachdim, foreachdimpara, foreachdimline;
   FILE * foreachdimfp;
 
-  int foreach_child, foreach_child_scope, foreach_child_para;
-
   int inattr, attrscope, attrline;
   FILE * attrfp;
 
@@ -183,6 +181,37 @@
     return varstack >= 0 ? &_varstack[varstack] : NULL;
   }
 
+  typedef struct {
+    void * p;
+    int n, size;
+  } Stack;
+
+  void stack_push (Stack * s, void * p) {
+    s->n++;
+    s->p = realloc (s->p, s->n*s->size);
+    char * dest = ((char *)s->p) + (s->n - 1)*s->size;
+    memcpy (dest, p, s->size);
+  }
+
+  void * stack_pop (Stack * s) {
+    if (!s->n)
+      return NULL;
+    return ((char *)s->p) + --s->n*s->size;
+  }
+
+  void * stack_top (Stack * s) {
+    if (!s->n)
+      return NULL;
+    return ((char *)s->p) + (s->n - 1)*s->size;
+  }
+
+  typedef struct {
+    int scope, para;
+    char name[80];
+  } foreach_child_t;
+  
+  Stack foreach_child_stack = {NULL, 0, sizeof(foreach_child_t)};
+  
   int identifier (int c) {
     return ((c >= 'a' && c <= 'z') || 
 	    (c >= 'A' && c <= 'Z') || 
@@ -1108,9 +1137,10 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     }
     ECHO;
   }
-  if (foreach_child && foreach_child_scope == scope) {
-    fputs (" end_foreach_child(); }", yyout);
-    foreach_child = 0;
+  foreach_child_t * child;
+  while ((child = stack_top(&foreach_child_stack)) && child->scope == scope) {
+    fprintf (yyout, " end_%s(); }", child->name);
+    stack_pop (&foreach_child_stack);
   }
   if (inforeach && scope == foreachscope)
     endforeach ();
@@ -1124,13 +1154,22 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     infunctionproto = 0;
 }
 
-
-(foreach_child|foreach_child_direction) {
+(foreach_child|foreach_child_direction|foreach_neighbor) {
   if (indef)
     REJECT;
   fputs (" { ", yyout);
   ECHO;
-  foreach_child = 1; foreach_child_scope = scope; foreach_child_para = para;
+  foreach_child_t child = {scope, para};
+  strcpy (child.name, yytext);
+  stack_push (&foreach_child_stack, &child);
+}
+
+break {
+  if (foreach_child_stack.n)
+    fprintf (yyout, "%s_break()",
+	     ((foreach_child_t *)stack_top(&foreach_child_stack))->name);
+  else
+    ECHO;
 }
 
 foreach{ID}* {
@@ -1189,9 +1228,14 @@ map{WS}+"{" {
     ECHO; insthg = 1;
     endforeachdim ();
   }
-  if (foreach_child && scope == foreach_child_scope && para == foreach_child_para) {
-    ECHO; insthg = 1;
-    fputs (" end_foreach_child(); }", yyout); foreach_child = 0;
+  foreach_child_t * child;
+  while ((child = stack_top(&foreach_child_stack)) &&
+	 child->scope == scope && child->para == para) {
+    if (!insthg) {
+      ECHO; insthg = 1;
+    }
+    fprintf (yyout, " end_%s(); }", child->name);
+    stack_pop (&foreach_child_stack);
   }
   if (infunction && scope == functionscope) {
     if (scope > 0 && !infunctiondecl) {
@@ -2285,7 +2329,7 @@ int endfor (FILE * fin, FILE * fout)
   brack = inarray = infine = 0;
   inevent = inreturn = inattr = inmap = 0;
   foreachdim = 0;
-  foreach_child = 0;
+  foreach_child_stack.n = 0;
   inboundary = nboundary = nsetboundary = 0;
   infunction = 0;
   infunctionproto = inmain = intrace = traceon = 0;
