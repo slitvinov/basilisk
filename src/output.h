@@ -641,7 +641,9 @@ void output_gfs (struct OutputGfs p)
   foreach_cell() {
     unsigned flags = 
       root ? 0 :
-#if dimension == 2
+#if dimension == 1
+      child.x == 1;
+#elif dimension == 2
       child.x == -1 && child.y ==  1 ? 0 :
       child.x ==  1 && child.y ==  1 ? 1 :
       child.x == -1 && child.y == -1 ? 2 : 
