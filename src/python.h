@@ -13,17 +13,21 @@ int py_scalar_init (scalar s, PyObject * f) {
 		   n == 2 ? "(dd)" : 
 		   n == 3 ? "(ddd)" :
 		   "(error)");
-  foreach() {
-    PyObject * arglist = Py_BuildValue (format, x, y); // z
-    PyObject * result = PyEval_CallObject (f, arglist);
-    Py_DECREF (arglist);
-    if (result == NULL)
-      return -1;
-    s[] = PyFloat_AsDouble (result);
-    Py_DECREF (result);
-  }
+  double status = 0;
+  foreach(reduction(min:status))
+    if (!status) {
+      PyObject * arglist = Py_BuildValue (format, x, y); // z
+      PyObject * result = PyEval_CallObject (f, arglist);
+      Py_DECREF (arglist);
+      if (result == NULL)
+	status = -1;
+      else {
+	s[] = PyFloat_AsDouble (result);
+	Py_DECREF (result);
+      }
+    }
   boundary ({s});
-  return 0;
+  return status;
 }
 
 typedef struct {
