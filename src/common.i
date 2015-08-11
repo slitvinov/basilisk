@@ -11,7 +11,7 @@
     vector x, y;
   } tensor;
 
-  extern void init_solver();
+  extern void _init_solver();
 %}
 
 %rename(_scalar) scalar;
@@ -79,7 +79,7 @@ typedef struct {
 
 %init %{
   import_array();
-  init_solver();
+  _init_solver();
 %}
 
 %pythoncode %{

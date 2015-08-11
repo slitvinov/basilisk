@@ -235,9 +235,13 @@ void free_solver()
   free (all); all = NULL;
   free (Events); Events = NULL;
   free (_attribute); _attribute = NULL;
+  free (_constant); _constant = NULL;
   free_grid();
 @if TRACE
   trace_off();
+@endif
+@if MTRACE
+  pmuntrace();
 @endif
   fflush (stdout);
   fflush (stderr);

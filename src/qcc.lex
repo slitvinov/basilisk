@@ -47,6 +47,8 @@
   int inmap, mapscope, mapline;
   FILE * mapfp;
 
+  int mallocpara;
+
   #define REDUCTMAX 10
   char foreachs[80], * fname;
   FILE * foreachfp;
@@ -1009,6 +1011,10 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   para--; if (para == invalpara) inval = 0;
   if (para < 0)
     return yyerror ("mismatched ')'");
+  if (para == mallocpara - 1) {
+    fputs (",__func__,__FILE__,__LINE__", yyout);
+    mallocpara = 0;
+  }
   if (inforeach == 1 && scope == foreachscope && para == foreachpara) {
     ECHO;
     fclose (yyout);
@@ -1101,7 +1107,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   if (infunction && functionpara == 1 && scope == functionscope)
     infunction_declarations (line - 1);
   if (inmain == 1 && scope == 0) {
-    fputs (" init_solver();", yyout);
+    fputs (" _init_solver();", yyout);
     inmain = 2;
   }
   if (intrace == 1 && scope == 0) {
@@ -1204,6 +1210,12 @@ attribute{WS}+"{" {
   inattr = 1; attrscope = scope++; attrline = line;
   attrfp = yyout;
   yyout = dopen ("_attribute.h", "w");
+}
+
+(malloc|realloc|calloc|free|strdup) {
+  fputc ('p', yyout);
+  ECHO;
+  mallocpara = para + 1;
 }
 
 map{WS}+"{" {
@@ -2330,6 +2342,7 @@ int endfor (FILE * fin, FILE * fout)
   inval = invalpara = indef = 0;
   brack = inarray = infine = 0;
   inevent = inreturn = inattr = inmap = 0;
+  mallocpara = 0;
   foreachdim = 0;
   foreach_child_stack.n = 0;
   inboundary = nboundary = nsetboundary = 0;
@@ -2459,16 +2472,12 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   for (i = 0; i < nsetboundary; i++)
     fprintf (fout, "static void _set_boundary%d (void);\n", 
 	     boundaryindex[i]);
-  /* init_solver() */
-  fputs ("void init_solver (void) {\n", fout);
-  /* MPI */
-  fputs ("#if _MPI\n"
-	 "  void mpi_init();\n"
-	 "  mpi_init();\n"
-	 "#endif\n",
-	 fout);
+  /* _init_solver() */
+  fputs ("void _init_solver (void) {\n"
+	 "  void init_solver();\n"
+	 "  init_solver();\n", fout);
   /* events */
-  fputs ("  Events = malloc (sizeof (Event));\n"
+  fputs ("  Events = pmalloc (sizeof (Event), __func__, __FILE__, __LINE__);\n"
 	 "  Events[0].last = 1;\n", fout);
   int last;
   for (last = 0; last <= 1; last++)
@@ -2481,12 +2490,12 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	}
       }
   /* scalar attributes */
-  fputs ("  _attribute = calloc (datasize/sizeof(double), "
-	 "sizeof (_Attributes));\n", 
+  fputs ("  _attribute = pcalloc (datasize/sizeof(double), "
+	 "sizeof (_Attributes), __func__, __FILE__, __LINE__);\n", 
 	 fout);
   /* list of all scalars */
   fprintf (fout, 
-	   "  all = malloc (sizeof (scalar)*%d);\n"
+	   "  all = pmalloc (sizeof (scalar)*%d,__func__, __FILE__, __LINE__);\n"
 	   "  for (int i = 0; i < %d; i++)\n"
 	   "    all[i].i = i;\n"
 	   "  all[%d].i = -1;\n"

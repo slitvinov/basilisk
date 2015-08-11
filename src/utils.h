@@ -1,5 +1,3 @@
-#include <sys/resource.h>
-
 // Default parameters
 // maximum timestep
 double DT = 1e10;
