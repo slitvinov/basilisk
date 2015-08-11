@@ -82,6 +82,7 @@ typedef struct {
   int n, nm;
 } Cache;
 
+#if dimension > 1
 // Refcounted array
 
 static void * new_refarray (size_t len, size_t size) {
@@ -102,6 +103,7 @@ static bool unrefarray (void * p, size_t len, size_t size) {
   }
   return false;
 }
+#endif // dimension > 1
 
 // Layer
 
@@ -1595,8 +1597,8 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   point.level = l < 0 ? depth() : l;
   int n = 1 << point.level;
   int j;
-  OMP(omp for schedule(static))
 #if dimension >= 2
+  OMP(omp for schedule(static))
   for (j = 0; j < n + 2*GHOSTS; j++)
 #endif
 #if dimension >= 3
