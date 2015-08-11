@@ -41,13 +41,13 @@ static size_t _size (size_t l)
 ((double *)
  &multigrid->d[point.level+1][((2*point.i-GHOSTS+l)*sq(2*(point.n + GHOSTS)) +
 			       (2*point.j-GHOSTS+m)*2*(point.n + GHOSTS) +
-			       (2*point.k-GHOSTS+o))*datasize])[a]
+			       (2*point.k-GHOSTS+o))*datasize])[a.i]
 @
 @def coarse(a,l,m,o)
 ((double *)
  &multigrid->d[point.level-1][(((point.i+GHOSTS)/2+l)*sq(point.n/2+2*GHOSTS) +
 			       ((point.j+GHOSTS)/2+m)*(point.n/2+2*GHOSTS) +
-			       (point.k+GHOSTS)/2+o)*datasize])[a]
+			       (point.k+GHOSTS)/2+o)*datasize])[a.i]
 @
 @def POINT_VARIABLES
   VARIABLES
@@ -174,7 +174,7 @@ void multigrid_trash (void * alist)
     for (int i = 0; i < cube(p.n + 2*GHOSTS); i++)
       for (scalar s in list)
 	if (!is_constant(s))
-	  ((double *)(&multigrid->d[p.level][i*datasize]))[s] = undefined;
+	  ((double *)(&multigrid->d[p.level][i*datasize]))[s.i] = undefined;
 }
 
 // ghost cell coordinates for each direction
@@ -327,10 +327,10 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 			    point.level};
 	  for (scalar s in centered) {
 	    scalar b = s;
-	    if (s.v.x >= 0) {
-	      if ((d/2 == 0 && s != s.v.x) ||
-		  (d/2 == 1 && s != s.v.y) ||
-		  (d/2 == 2 && s != s.v.z))
+	    if (s.v.x.i >= 0) {
+	      if ((d/2 == 0 && s.i != s.v.x.i) ||
+		  (d/2 == 1 && s.i != s.v.y.i) ||
+		  (d/2 == 2 && s.i != s.v.z.i))
 		b = s.v.y; // tangential BC
 	      else
 		b = s.v.x; // normal BC
@@ -358,7 +358,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 
 /* Periodic boundaries */
 
-@define VT _attribute[s].v.y
+@define VT _attribute[s.i].v.y
 
 foreach_dimension()
 static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)

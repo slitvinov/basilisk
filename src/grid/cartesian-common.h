@@ -2,7 +2,7 @@
 
 void (* debug)    (Point);
 
-@define _val_constant(a,k,l,m) ((const double) _constant[a -_NVARMAX])
+@define _val_constant(a,k,l,m) ((const double) _constant[a.i -_NVARMAX])
 
 @undef VARIABLES
 @def VARIABLES
@@ -38,12 +38,13 @@ void (* debug)    (Point);
 scalar new_scalar (const char * name)
 {
   int nvar = datasize/sizeof(double);
-  for (int i = 0; i < nvar; i++)
-    if (!list_lookup (all, i)) { // found a previously freed slot
-      all = list_append (all, i);
-      init_scalar (i, name);
-      trash (((scalar []){i, -1}));
-      return i;
+  scalar s;
+  for (s.i = 0; s.i < nvar; s.i++)
+    if (!list_lookup (all, s)) { // found a previously freed slot
+      all = list_append (all, s);
+      init_scalar (s, name);
+      trash (((scalar []){s, {-1}}));
+      return s;
     }
   
   // need to allocate a new slot
@@ -52,12 +53,13 @@ scalar new_scalar (const char * name)
   _attribute = realloc (_attribute, nvar*sizeof (_Attributes));
   memset (&_attribute[nvar-1], 0, sizeof (_Attributes));
   all = realloc (all, sizeof (scalar)*(nvar + 1));
-  all[nvar - 1] = nvar - 1;
-  all[nvar] = -1;
+  s = (scalar){nvar - 1};
+  all[nvar - 1] = s;
+  all[nvar].i = -1;
   realloc_scalar(); // allocate extra space on the grid
-  init_scalar (nvar - 1, name);
-  trash (((scalar []){nvar - 1, -1}));
-  return nvar - 1;
+  init_scalar (s, name);
+  trash (((scalar []){s, {-1}}));
+  return s;
 }
 
 scalar new_vertex_scalar (const char * name)
@@ -137,16 +139,16 @@ static int nconst = 0;
 
 void init_const_scalar (scalar s, const char * name, double val)
 {
-  if (s - _NVARMAX >= nconst) {
-    nconst = s - _NVARMAX + 1;
+  if (s.i - _NVARMAX >= nconst) {
+    nconst = s.i - _NVARMAX + 1;
     _constant = realloc (_constant, nconst*sizeof (double));
   }
-  _constant[s - _NVARMAX] = val;
+  _constant[s.i - _NVARMAX] = val;
 }
 
 scalar new_const_scalar (const char * name, int i, double val)
 {
-  scalar s = i + _NVARMAX;
+  scalar s = (scalar){i + _NVARMAX};
   init_const_scalar (s, name, val);
   return s;
 }
@@ -161,7 +163,7 @@ vector new_const_vector (const char * name, int i, double * val)
 {
   vector v;
   foreach_dimension()
-    v.x = _NVARMAX + i++;
+    v.x.i = _NVARMAX + i++;
   init_const_vector (v, name, val);
   return v;
 }
@@ -172,7 +174,7 @@ void scalar_clone (scalar a, scalar b)
   double (** boundary) (Point, Point, scalar) = a.boundary;
   double (** boundary_homogeneous) (Point, Point, scalar) =
     a.boundary_homogeneous;
-  _attribute[a] = _attribute[b];
+  _attribute[a.i] = _attribute[b.i];
   a.name = name;
   a.boundary = boundary;
   a.boundary_homogeneous = boundary_homogeneous;
@@ -191,13 +193,13 @@ scalar * list_clone (scalar * l)
   for (scalar s in l) {
     scalar c = new scalar;
     scalar_clone (c, s);
-    map[s] = c;
+    map[s.i] = c.i;
     list = list_append (list, c);
   }
   for (scalar s in list)
     foreach_dimension()
-      if (s.v.x >= 0 && map[s.v.x] >= 0)
-	s.v.x = map[s.v.x];
+      if (s.v.x.i >= 0 && map[s.v.x.i] >= 0)
+	s.v.x.i = map[s.v.x.i];
   return list;
 }
 
@@ -213,16 +215,16 @@ void delete (scalar * list)
   }
 
   if (list == all) {
-    all[0] = -1;
+    all[0].i = -1;
     return;
   }
 
   trash (list);
   for (scalar f in list) {
     scalar * s = all;
-    for (; *s >= 0 && *s != f; s++);
-    if (*s == f)
-      for (; *s >= 0; s++)
+    for (; s->i >= 0 && s->i != f.i; s++);
+    if (s->i == f.i)
+      for (; s->i >= 0; s++)
 	s[0] = s[1];
   }
 }
@@ -297,7 +299,7 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   free (s.boundary);
   free (s.boundary_homogeneous);
   // reset all attributes
-  _attribute[s] = (const _Attributes){0};
+  _attribute[s.i] = (const _Attributes){0};
   s.name = pname;
   /* set default boundary conditions */
   s.boundary = malloc (nboundary*sizeof (void (*)()));
@@ -308,7 +310,7 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   s.gradient = NULL;
   foreach_dimension() {
     s.d.x = 0;  // not face
-    s.v.x = -1; // not a vector component
+    s.v.x.i = -1; // not a vector component
   }
   s.face = false;
   return s;
@@ -520,9 +522,9 @@ bid new_bid()
 				      nboundary*sizeof (void (*)()));
   }
   for (scalar s in all) {
-    if (s.v.x < 0) // scalar
+    if (s.v.x.i < 0) // scalar
       s.boundary[b] = s.boundary_homogeneous[b] = symmetry;
-    else if (s.v.x == s) { // vector
+    else if (s.v.x.i == s.i) { // vector
       vector v = s.v;
       foreach_dimension()
 	v.y.boundary[b] = v.y.boundary_homogeneous[b] = symmetry;

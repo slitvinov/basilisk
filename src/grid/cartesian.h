@@ -67,7 +67,7 @@ void cartesian_trash (void * alist)
   for (int i = 0; i < sq(p->n + 2); i++)
     for (scalar s in list)
       if (!is_constant(s))
-	((double *)(&p->data[i*datasize]))[s] = undefined;
+	((double *)(&p->data[i*datasize]))[s.i] = undefined;
 }
 
 // ghost cell coordinates for each direction
@@ -157,9 +157,9 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
     point.j = d < top  ? _k : d == top   ? point.n : 1;
     Point neighbor = {point.i + ig, point.j + jg};
     for (scalar s in centered) {
-      scalar b = (s.v.x < 0 ? s :
-		  s == s.v.x && d < top ? s.v.x :
-		  s == s.v.y && d >= top ? s.v.x :
+      scalar b = (s.v.x.i < 0 ? s :
+		  s.i == s.v.x.i && d < top ? s.v.x :
+		  s.i == s.v.y.i && d >= top ? s.v.x :
 		  s.v.y);
       val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
     }

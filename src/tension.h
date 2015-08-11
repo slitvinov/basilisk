@@ -98,7 +98,7 @@ event acceleration (i++)
       already) and update the values using the height-function
       curvature calculation. */
 
-      if (!c.kappa)
+      if (!c.kappa.i)
 	c.kappa = new scalar;
       curvature (c, c.kappa);
     }

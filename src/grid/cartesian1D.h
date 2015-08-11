@@ -200,7 +200,7 @@ void cartesian1D_trash (void * alist)
     double * v = (double *) data;
     for (scalar s in list)
       if (!is_constant(s))
-	v[s] = undefined;
+	v[s.i] = undefined;
   }
 }
 

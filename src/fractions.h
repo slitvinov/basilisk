@@ -362,7 +362,7 @@ void output_facets (struct OutputFacets p)
   foreach()
     if (c[] > 1e-6 && c[] < 1. - 1e-6) {
       coord n;
-      if (!s.x)
+      if (!s.x.i)
 	// compute normal from volume fraction
 	n = mycs (point, c);
       else {

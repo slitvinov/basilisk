@@ -163,7 +163,7 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
   int scalars_len = list_len (scalars);
 
   scalar * scalars = list_copy (conserved);
-  if (scalars) scalars[scalars_len] = -1;
+  if (scalars) scalars[scalars_len].i = -1;
   vector * vectors = vectors_from_scalars (&conserved[scalars_len]);
   
   /**
@@ -171,14 +171,14 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
   into a list of vectors and a list of tensors. */
 
   vector * scalar_slopes = vectors_copy (slopes);
-  if (scalar_slopes) scalar_slopes[scalars_len] = (vector){-1};
+  if (scalar_slopes) scalar_slopes[scalars_len] = (vector){{-1}};
   tensor * vector_slopes = tensors_from_vectors (&slopes[scalars_len]);
 
   /**
   And again for the fluxes. */
   
   vector * scalar_fluxes = vectors_copy (lflux);
-  if (scalar_fluxes) scalar_fluxes[scalars_len] = (vector){-1};
+  if (scalar_fluxes) scalar_fluxes[scalars_len] = (vector){{-1}};
   tensor * vector_fluxes = tensors_from_vectors (&lflux[scalars_len]);
 
   /**

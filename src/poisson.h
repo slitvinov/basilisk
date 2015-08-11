@@ -299,11 +299,11 @@ mgstats poisson (struct Poisson p)
   unity vector (resp. zero scalar) fields. Note that the user is free to
   provide $\alpha$ and $\beta$ as constant fields. */
 
-  if (!p.alpha.x) {
+  if (!p.alpha.x.i) {
     const vector alpha[] = {1.,1.,1.};
     p.alpha = alpha;
   }
-  if (!p.lambda) {
+  if (!p.lambda.i) {
     const scalar lambda[] = 0.;
     p.lambda = lambda;
   }

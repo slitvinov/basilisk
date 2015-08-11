@@ -376,7 +376,7 @@ void output_ppm (struct OutputPPM p)
     double yp = Delta*j + p.box[0][1] + Delta/2.;
     for (int i = 0; i < p.n; i++) {
       double xp = Delta*i + p.box[0][0] + Delta/2., v;
-      if (p.mask) { // masking
+      if (p.mask.i) { // masking
 	if (p.linear) {
 	  double m = interpolate (p.mask, xp, yp, p.z);
 	  if (m < 0.)
@@ -501,7 +501,7 @@ void output_grd (struct OutputGRD p)
     double yp = Delta*j + p.box[0][1] + Delta/2.;
     for (int i = 0; i < nx; i++) {
       double xp = Delta*i + p.box[0][0] + Delta/2., v;
-      if (p.mask) { // masking
+      if (p.mask.i) { // masking
 	if (p.linear) {
 	  double m = interpolate (p.mask, xp, yp);
 	  if (m < 0.)
@@ -613,7 +613,7 @@ void output_gfs (struct OutputGfs p)
   fprintf (p.fp, "z = %g ", 0.5 + Z0/L0);
 #endif
 
-  if (p.list != NULL && p.list[0] != -1) {
+  if (p.list != NULL && p.list[0].i != -1) {
     scalar s = p.list[0];
     char * name = replace (s.name, '.', '_', p.translate);
     fprintf (p.fp, "variables = %s", name);

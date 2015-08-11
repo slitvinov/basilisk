@@ -225,7 +225,7 @@ void input_gfs (struct OutputGfs p)
       }
     }
     if (!found)
-      input = list_append (input, INT_MAX);
+      input = list_append (input, (scalar){INT_MAX});
     free (name);
     s1 = strtok (NULL, ", \t");
   }
@@ -276,7 +276,7 @@ void input_gfs (struct OutputGfs p)
 	fprintf (stderr, "input_gfs(): error: expecting a scalar\n");
 	exit (1);
       }
-      if (s != INT_MAX)
+      if (s.i != INT_MAX)
 	s[] = a;
     }
     if (is_leaf(cell))

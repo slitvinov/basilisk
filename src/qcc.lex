@@ -363,7 +363,7 @@
 	  if (foreachconst[i]->type == scalar) {
 	    if (bits & (1 << i))
 	      fprintf (yyout,
-		       "const double _const_%s = _constant[%s-_NVARMAX];\n"
+		       "const double _const_%s = _constant[%s.i -_NVARMAX];\n"
 		       "NOT_UNUSED(_const_%s);\n"
 		       "#undef val_%s\n"
 		       "#define val_%s(a,i,j,k) _const_%s\n"
@@ -395,10 +395,10 @@
 	      fputs ("const struct { double x", yyout);
 	      for (c = 'y', j = 1; j < dimension; c++, j++)
 		fprintf (yyout, ", %c", c);
-	      fprintf (yyout, "; } _const_%s = {_constant[%s.x -_NVARMAX]",
+	      fprintf (yyout, "; } _const_%s = {_constant[%s.x.i -_NVARMAX]",
 		       foreachconst[i]->v, foreachconst[i]->v);
 	      for (c = 'y', j = 1; j < dimension; c++, j++)
-		fprintf (yyout, ", _constant[%s.%c -_NVARMAX]",
+		fprintf (yyout, ", _constant[%s.%c.i - _NVARMAX]",
 			 foreachconst[i]->v, c);
 	      fprintf (yyout, "};\n"
 		       "NOT_UNUSED(_const_%s);\n",
@@ -593,7 +593,7 @@
     for (i = 0; i < dimension; i++)
       fprintf (fp,
 	       " int %cg = neighbor.%c - point.%c; "
-	       " if (%cg == 0) %cg = _attribute[_s].d.%c; "
+	       " if (%cg == 0) %cg = _attribute[_s.i].d.%c; "
 	       " NOT_UNUSED(%cg);",
 	       index[i], index[i], index[i],
 	       index[i], index[i], dir[i],
@@ -749,13 +749,13 @@
 	for (i = 0; i < nd; i++) {
 	  switch (listtype) {
 	  case scalar:
-	    sprintf (coord, "%s%d,", constant, var->i[i]); break;
+	    sprintf (coord, "{%s%d},", constant, var->i[i]); break;
 	  case vector: {
-	    sprintf (coord, "{%s%d", constant, var->i[dimension*i]);
+	    sprintf (coord, "{{%s%d}", constant, var->i[dimension*i]);
 	    int j;
 	    for (j = 1; j < dimension; j++) {
 	      char s[80];
-	      sprintf (s, ",%s%d", constant, var->i[dimension*i+j]);
+	      sprintf (s, ",{%s%d}", constant, var->i[dimension*i+j]);
 	      strcat (coord, s);
 	    }
 	    strcat (coord, "},");
@@ -768,7 +768,7 @@
 	      strcat (coord, "{");
 	      for (k = 0; k < dimension; k++) {
 		char m[30];
-		sprintf (m, "%s%d", constant, var->i[l++]);
+		sprintf (m, "{%s%d}", constant, var->i[l++]);
 		strcat (coord, m);
 		if (k < dimension - 1)
 		  strcat (coord, ",");
@@ -792,12 +792,12 @@
     free (text);
     char end[20];
     switch (listtype) {
-    case scalar: strcpy (end, "-1})"); break;
+    case scalar: strcpy (end, "{-1}})"); break;
     case vector: {
-      strcpy (end, "{-1");
+      strcpy (end, "{{-1}");
       int i;
       for (i = 1; i < dimension; i++)
-	strcat (end, ",-1");
+	strcat (end, ",{-1}");
       strcat (end, "}})");
       break;
     }
@@ -805,9 +805,9 @@
       strcpy (end, "{");
       int i, j;
       for (i = 0; i < dimension; i++) {
-	strcat (end, "{-1");
+	strcat (end, "{{-1}");
 	for (j = 1; j < dimension; j++)
-	  strcat (end, ",-1");
+	  strcat (end, ",{-1}");
 	strcat (end, "}");
 	if (i < dimension - 1)
 	  strcat (end, ",");
@@ -856,7 +856,7 @@
       int * n = var->constant ? &nconst : &nvar;
       char * constant = var->constant ? "_NVARMAX + " : "";
       if (var->type == scalar) {
-	fprintf (yyout, " %s%d", constant, (*n));
+	fprintf (yyout, " {%s%d}", constant, (*n));
 	var->i[0] = (*n)++;
       }
       else if (var->type == vector) {
@@ -864,7 +864,7 @@
 	int i;
 	for (i = 0; i < dimension; i++) {
 	  var->i[i] = (*n)++;
-	  fprintf (yyout, "%s%d", constant, var->i[i]);
+	  fprintf (yyout, "{%s%d}", constant, var->i[i]);
 	  if (i < dimension - 1)
 	    fputc (',', yyout);
 	}
@@ -876,7 +876,7 @@
 	for (i = 0; i < dimension; i++) {
 	  fputc ('{', yyout);
 	  for (j = 0; j < dimension; j++) {
-	    fprintf (yyout, "%s%d", constant, (*n));
+	    fprintf (yyout, "{%s%d}", constant, (*n));
 	    if (j < dimension - 1)
 	      fputc (',', yyout);
 	    var->i[k++] = (*n)++;
@@ -1272,8 +1272,8 @@ map{WS}+"{" {
     }
     /* function/file scope */
     fprintf (yyout,
-	     "_attribute[%s].boundary[%s] = _boundary%d; "
-	     "_attribute[%s].boundary_homogeneous[%s] = "
+	     "_attribute[%s.i].boundary[%s] = _boundary%d; "
+	     "_attribute[%s.i].boundary_homogeneous[%s] = "
 	     "_boundary%d_homogeneous;",
 	     boundaryvar, boundarydir, nboundary,
 	     boundaryvar, boundarydir, nboundary);
@@ -1392,7 +1392,7 @@ map{WS}+"{" {
     fputc ('=', yyout);
   else {
     var->conditional = malloc (strlen(arg) + 5);
-    sprintf (var->conditional, "%s%s", arg, 
+    sprintf (var->conditional, "%s%s.i", arg, 
 	     var->type == vector ? ".x" : var->type == tensor ? ".x.x" : "");
     fprintf (yyout, "= %s ? %s :", var->conditional, arg);
   }
@@ -1685,10 +1685,10 @@ val{WS}*[(]    {
     }
     /* function/file scope */
     fprintf (yyout,
-	     "_attribute[%s].boundary[%s] = "
-	     "_attribute[%s].boundary_homogeneous[%s] = "
-	     "_attribute[%s].boundary[%s] = "
-	     "_attribute[%s].boundary_homogeneous[%s] = "
+	     "_attribute[%s.i].boundary[%s] = "
+	     "_attribute[%s.i].boundary_homogeneous[%s] = "
+	     "_attribute[%s.i].boundary[%s] = "
+	     "_attribute[%s.i].boundary_homogeneous[%s] = "
 	     "periodic_bc;",
 	     boundaryvar, boundarydir,
 	     boundaryvar, boundarydir,
@@ -1811,7 +1811,7 @@ for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}+{WS}+in{WS}+ {
   if (debug)
     fprintf (stderr, "%s:%d: %s\n", fname, line, list);
   fprintf (yyout,
-	   "for (%s %s = *%s, *_i%d = %s; *((scalar *)&%s) >= 0; %s = *++_i%d%s",
+	   "for (%s %s = *%s, *_i%d = %s; ((scalar *)&%s)->i >= 0; %s = *++_i%d%s",
 	   vartype == scalar ? "scalar" : 
 	   vartype == vector ? "vector" : 
                                "tensor", 
@@ -1863,7 +1863,7 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
   fprintf (yyout, "if (%s) for (%s = *%s", list[0], id[0], list[0]);
   for (i = 1; i < nid; i++)
     fprintf (yyout, ", %s = *%s", id[i], list[i]);
-  fprintf (yyout, "; *((scalar *)&%s) >= 0; ", id[0]);
+  fprintf (yyout, "; ((scalar *)&%s)->i >= 0; ", id[0]);
   fprintf (yyout, "%s = *++_i%d", id[0], index);
   for (i = 1; i < nid; i++)
     fprintf (yyout, ", %s = *++_i%d", id[i], index + i);
@@ -2067,12 +2067,12 @@ reduction{WS}*[(](min|max|\+):{ID}+[)] {
 	   var->constant) {
     // replace global scalar/vector constants
     if (var->type == scalar)
-      fprintf (yyout, "(_NVARMAX + %d)", var->i[0]);
+      fprintf (yyout, "{(_NVARMAX + %d)}", var->i[0]);
     else if (var->type == vector) {      
-      fprintf (yyout, "{_NVARMAX + %d", var->i[0]);
+      fprintf (yyout, "{{_NVARMAX + %d}", var->i[0]);
       int i;
       for (i = 1; i < dimension; i++)
-	fprintf (yyout, ",_NVARMAX + %d", var->i[i]);
+	fprintf (yyout, ",{_NVARMAX + %d}", var->i[i]);
       fputc ('}', yyout);
     }
     else
@@ -2081,6 +2081,8 @@ reduction{WS}*[(](min|max|\+):{ID}+[)] {
   else
     ECHO;
 }
+
+{SCALAR}[.][xyzi] ECHO;
 
 {SCALAR}[.][a-wA-Z_0-9]+ {
   // scalar attributes
@@ -2093,9 +2095,9 @@ reduction{WS}*[(](min|max|\+):{ID}+[)] {
       dot1 = strchr (dot1 + 1, '.');
     }
     dot[0] = '\0'; dot++;
-    fprintf (yyout, "_attribute[%s].%s", yytext, dot);
+    fprintf (yyout, "_attribute[%s.i].%s", yytext, dot);
     if (debug)
-      fprintf (stderr, "%s:%d: _attribute[%s].%s\n", fname, line, yytext, dot);
+      fprintf (stderr, "%s:%d: _attribute[%s.i].%s\n", fname, line, yytext, dot);
   }
   else
     ECHO;
@@ -2486,8 +2488,8 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   fprintf (fout, 
 	   "  all = malloc (sizeof (scalar)*%d);\n"
 	   "  for (int i = 0; i < %d; i++)\n"
-	   "    all[i] = i;\n"
-	   "  all[%d] = -1;\n"
+	   "    all[i].i = i;\n"
+	   "  all[%d].i = -1;\n"
 	   "  set_fpe();\n",
 	   nvar + 1, nvar, nvar);
   if (catch)
@@ -2500,13 +2502,14 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	// global constants
 	if (var.type == scalar)
 	  fprintf (fout, 
-		   "  init_const_scalar (_NVARMAX+%d, \"%s\", %s);\n",
+		   "  init_const_scalar ((scalar){_NVARMAX+%d}, \"%s\", %s);\n",
 		   var.i[0], var.v, var.constant);
 	else if (var.type == vector) {
 	  int i;
-	  fprintf (fout, "  init_const_vector ((vector){_NVARMAX+%d", var.i[0]);
+	  fprintf (fout, "  init_const_vector ((vector){{_NVARMAX+%d}",
+		   var.i[0]);
 	  for (i = 1; i < dimension; i++)
-	    fprintf (fout, ",_NVARMAX+%d", var.i[i]);
+	    fprintf (fout, ",{_NVARMAX+%d}", var.i[i]);
 	  fprintf (fout, "}, \"%s\", (double [])%s);\n", var.v, var.constant);
 	}
 	else
@@ -2514,26 +2517,26 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
       }
       // global variables
       else if (var.type == scalar)
-	fprintf (fout, "  init_scalar (%d, \"%s\");\n",
+	fprintf (fout, "  init_scalar ((scalar){%d}, \"%s\");\n",
 		 var.i[0], var.v);
       else if (var.type == vector) {
-	fprintf (fout, "  init_%svector ((vector){%d",
+	fprintf (fout, "  init_%svector ((vector){{%d}",
 		 var.face ? "face_" : 
 		 var.vertex ? "vertex_" : 
 		 "",
 		 var.i[0]);
 	int i;
 	for (i = 1; i < dimension; i++)
-	  fprintf (fout, ",%d", var.i[i]);
+	  fprintf (fout, ",{%d}", var.i[i]);
 	fprintf (fout, "}, \"%s\");\n", var.v);
       }
       else if (var.type == tensor) {
 	fprintf (fout, "  init_tensor ((tensor){");
 	int i, j, k = 0;
 	for (i = 0; i < dimension; i++) {
-	  fprintf (fout, "{%d", var.i[k++]);
+	  fprintf (fout, "{{%d}", var.i[k++]);
 	  for (j = 1; j < dimension; j++)
-	    fprintf (fout, ",%d", var.i[k++]);
+	    fprintf (fout, ",{%d}", var.i[k++]);
 	  fprintf (fout, "}");
 	  if (i < dimension - 1)
 	    fputc (',', fout);

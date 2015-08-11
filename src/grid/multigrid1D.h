@@ -35,11 +35,11 @@ static size_t _size (size_t l)
 @define depth()       (((Multigrid *)grid)->depth)
 @def fine(a,k,l,m)
   ((double *)
-   &multigrid->d[point.level+1][(2*point.i-GHOSTS+k)*datasize])[a]
+   &multigrid->d[point.level+1][(2*point.i-GHOSTS+k)*datasize])[a.i]
 @
   @def coarse(a,k,l,m)
   ((double *)
-   &multigrid->d[point.level-1][((point.i+GHOSTS)/2+k)*datasize])[a]
+   &multigrid->d[point.level-1][((point.i+GHOSTS)/2+k)*datasize])[a.i]
 @
 @def POINT_VARIABLES
   VARIABLES
@@ -143,7 +143,7 @@ void multigrid_trash (void * alist)
     for (int i = 0; i < (p.n + 2*GHOSTS); i++)
       for (scalar s in list)
 	if (!is_constant(s))
-	  ((double *)(&multigrid->d[p.level][i*datasize]))[s] = undefined;
+	  ((double *)(&multigrid->d[p.level][i*datasize]))[s.i] = undefined;
 }
 
 // ghost cell coordinates for each direction

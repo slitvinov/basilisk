@@ -392,8 +392,8 @@ static Point neighborpf (Point p, int k, int l, int n) {
 			
 /***** Data macros *****/
 @define data(k,l,n)     ((double *) (NEIGHBOR(k,l,n) + sizeof(Cell)))
-@define fine(a,k,l,n)   ((double *) (CHILD(k,l,n) + sizeof(Cell)))[a]
-@define coarse(a,k,l,n) ((double *) (PARENT(k,l,n) + sizeof(Cell)))[a]
+@define fine(a,k,l,n)   ((double *) (CHILD(k,l,n) + sizeof(Cell)))[a.i]
+@define coarse(a,k,l,n) ((double *) (PARENT(k,l,n) + sizeof(Cell)))[a.i]
 
 @def POINT_VARIABLES
   VARIABLES
@@ -1019,20 +1019,20 @@ void quadtree_trash (void * alist)
 #if dimension == 1
 	for (scalar s in list)
 	  if (!is_constant(s))
-	    ((double *)(L->m[i] + sizeof(Cell)))[s] = undefined;	
+	    ((double *)(L->m[i] + sizeof(Cell)))[s.i] = undefined;	
 #else // dimension >= 2
 	for (int j = 0; j < L->len; j++)
 	  if (L->m[i][j])
 #if dimension == 2
 	    for (scalar s in list)
 	      if (!is_constant(s))
-		((double *)(L->m[i][j] + sizeof(Cell)))[s] = undefined;
+		((double *)(L->m[i][j] + sizeof(Cell)))[s.i] = undefined;
 #else // dimension == 3
           for (int k = 0; k < L->len; k++)
 	    if (L->m[i][j][k])
 	      for (scalar s in list)
   	        if (!is_constant(s))
-		  ((double *)(L->m[i][j][k] + sizeof(Cell)))[s] = undefined;
+		  ((double *)(L->m[i][j][k] + sizeof(Cell)))[s.i] = undefined;
 #endif
 #endif // dimension >= 2
   }
@@ -1310,13 +1310,13 @@ void box_boundaries (int l,
   vector * vectors = NULL, * faces = NULL;
   for (scalar s in list)
     if (!is_constant(s) && s.refine != no_coarsen) {
-      if (s.v.x == s) {
+      if (s.v.x.i == s.i) {
 	if (s.face)
 	  faces = vectors_add (faces, s.v);
 	else
 	  vectors = vectors_add (vectors, s.v);
       }
-      else if (s.v.x < 0)
+      else if (s.v.x.i < 0)
 	scalars = list_add (scalars, s);
     }
   
@@ -1479,8 +1479,8 @@ void box_boundaries (int l,
  
 @undef VN
 @undef VT
-@define VN _attribute[s].v.x
-@define VT _attribute[s].v.y
+@define VN _attribute[s.i].v.x
+@define VT _attribute[s.i].v.y
  
 static bool retrue (Point point) { return true; }
 

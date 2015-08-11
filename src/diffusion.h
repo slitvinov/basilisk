@@ -66,9 +66,9 @@ mgstats diffusion (struct Diffusion p)
   We define a (possibly constant) field equal to $\theta/dt$. */
 
   const scalar idt[] = - 1./p.dt;
-  (const) scalar theta_idt = p.theta ? p.theta : idt;
+  (const) scalar theta_idt = p.theta.i ? p.theta : idt;
   
-  if (p.theta) {
+  if (p.theta.i) {
     scalar theta_idt = p.theta;
     foreach()
       theta_idt[] *= idt[];
@@ -77,7 +77,7 @@ mgstats diffusion (struct Diffusion p)
   /**
   We use `r` to store the r.h.s. of the Poisson--Helmholtz solver. */
 
-  if (p.r)
+  if (p.r.i)
     foreach()
       r[] = theta_idt[]*f[] - r[];
   else // r was not passed by the user
@@ -88,7 +88,7 @@ mgstats diffusion (struct Diffusion p)
   If $\beta$ is provided, we use it to store the diagonal term $\lambda$. */
 
   scalar lambda = theta_idt;
-  if (p.beta) {
+  if (p.beta.i) {
     scalar beta = p.beta;
     foreach()
       beta[] += theta_idt[];

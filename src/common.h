@@ -16,8 +16,8 @@
 @define HUGE ((double)1e30)
 @define nodata DBL_MAX
 @define _NVARMAX 65536
-@define is_constant(v) ((v) >= _NVARMAX)
-@define constant(v) (is_constant(v) ? _constant[(v) - _NVARMAX] : nodata)
+@define is_constant(v) ((v).i >= _NVARMAX)
+@define constant(v) (is_constant(v) ? _constant[(v).i - _NVARMAX] : nodata)
 
 @define max(a,b) ((a) > (b) ? (a) : (b))
 @define min(a,b) ((a) < (b) ? (a) : (b))
@@ -292,7 +292,7 @@ void mpi_init()
 @define NOT_UNUSED(x) (void)(x)
 
 @define VARIABLES      _CATCH;
-@define val(a,i,j,k)   data(i,j,k)[a]
+@define val(a,k,l,m)   data(k,l,m)[a.i]
 
 double _val_higher_dimension = 0.;
 @define _val_higher_dimension(x,a,b,c) _val_higher_dimension
@@ -334,7 +334,7 @@ double L0 = 1.;
 // number of grid points
 int N = 64;
 
-typedef int scalar;
+typedef struct { int i; } scalar;
 
 typedef struct {
   scalar x;
@@ -450,14 +450,14 @@ scalar * list_append (scalar * list, scalar s)
   int len = list_len (list);
   list = realloc (list, sizeof (scalar)*(len + 2));
   list[len] = s;
-  list[len + 1] = -1;
+  list[len + 1].i = -1;
   return list;
 }
 
 scalar * list_add (scalar * list, scalar s)
 {
   for (scalar t in list)
-    if (t == s)
+    if (t.i == s.i)
       return list;
   return list_append (list, s);
 }
@@ -466,7 +466,7 @@ int list_lookup (scalar * l, scalar s)
 {
   if (l != NULL)
     for (scalar s1 in l)
-      if (s1 == s)
+      if (s1.i == s.i)
 	return true;
   return false;
 }
@@ -528,7 +528,7 @@ vector * vectors_append (vector * list, vector v)
   int len = vectors_len (list);
   list = realloc (list, sizeof (vector)*(len + 2));
   list[len] = v;
-  list[len + 1] = (vector){-1};
+  list[len + 1] = (vector){{-1}};
   return list;
 }
 
@@ -537,7 +537,7 @@ vector * vectors_add (vector * list, vector v)
   for (vector w in list) {
     bool id = true;
     foreach_dimension()
-      if (w.x != v.x)
+      if (w.x.i != v.x.i)
 	id = false;
     if (id)
       return list;
@@ -557,10 +557,10 @@ vector * vectors_copy (vector * l)
 vector * vectors_from_scalars (scalar * s)
 {
   vector * list = NULL;
-  while (*s >= 0) {
+  while (s->i >= 0) {
     vector v;
     foreach_dimension() {
-      assert (*s >= 0);
+      assert (s->i >= 0);
       v.x = *s++;
     }
     list = vectors_append (list, v);
@@ -581,17 +581,17 @@ tensor * tensors_append (tensor * list, tensor t)
   int len = tensors_len (list);
   list = realloc (list, sizeof (tensor)*(len + 2));
   list[len] = t;
-  list[len + 1] = (tensor){{-1}};
+  list[len + 1] = (tensor){{{-1}}};
   return list;
 }
 
 tensor * tensors_from_vectors (vector * v)
 {
   tensor * list = NULL;
-  while (v->x >= 0) {
+  while (v->x.i >= 0) {
     tensor t;
     foreach_dimension() {
-      assert (v->x >= 0);
+      assert (v->x.i >= 0);
       t.x = *v++;
     }
     list = tensors_append (list, t);

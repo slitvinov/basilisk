@@ -138,7 +138,7 @@ event init (i = 0)
   /**
   The default density field is set to unity (times the metric). */
 
-  if (alpha.x == unityf.x) {
+  if (alpha.x.i == unityf.x.i) {
     alpha = fm;
     rho = cm;
   }
