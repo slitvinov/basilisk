@@ -27,13 +27,14 @@ static void mpi_print (timer t, int i, size_t tnc,
 #endif
   
   if (pid() == 0) {
+
     /**
     *s.min/i*, *s.avg/i*, *s.max/i* are the minimum, average and maximum
     *times spent in communication routines. */
 
     printf ("%d %g %g %g %s %g %g %g %.2g%% %ld %ld ",
 	    npe(), s.cpu/i, s.real/i, s.speed, name, s.min/i, s.avg/i, s.max/i,
-	    100.*s.avg/s.real, s.mem, s.tnc);
+	    100.*s.avg/s.real, s.mem, s.tnc/i);
 
     /**
     We also output the times spent in communication routines for each process. */
@@ -41,6 +42,15 @@ static void mpi_print (timer t, int i, size_t tnc,
     for (int j = 0; j < npe(); j++)
       printf (" %g", mpi[j]/i);
 #endif
+
+    /**
+    If [memory profiling](/src/README.mtrace) is enabled we output the
+    maximum allocated memory (in kilobytes). */
+
+@if MTRACE
+    printf (" %ld", pmtrace.max/1024);
+@endif
+    
     printf ("\n");
   }
   
@@ -51,6 +61,7 @@ int main (int argc, char * argv[])
 {
   int maxlevel = argc > 1 ? atoi(argv[1]) : (dimension == 2 ? 8 : 5);
   int minlevel = argc > 2 ? atoi(argv[2]) : 1;
+  double minimum_time = 0.1;
   timer t;
 
   init_grid (1 << minlevel);
@@ -68,15 +79,15 @@ int main (int argc, char * argv[])
     tnc++;
   mpi_print (t, 1, tnc, "refine");
 
-  int nloops, i;
+  int i;
 
   /**
   We fill `a` with a simple function. */
 
   MPI_Barrier (MPI_COMM_WORLD);
+  i = 0;
   t = timer_start();
-  i = nloops = npe();
-  while (i--) {
+  while (timer_elapsed(t) < minimum_time) {
     foreach()
       a[] = cos(pi*x)*cos(pi*y)*cos(pi*z);
 #if 0
@@ -86,8 +97,9 @@ int main (int argc, char * argv[])
     MPI_Barrier (MPI_COMM_WORLD);
     prof_stop();
 #endif
+    i++;
   }
-  mpi_print (t, nloops, tnc*nloops, "cos");
+  mpi_print (t, i, tnc*i, "cos");
   boundary ({a});
 
   /**
@@ -98,9 +110,9 @@ int main (int argc, char * argv[])
   using a 5-points Laplacian operator. */
 
   MPI_Barrier (MPI_COMM_WORLD);
+  i = 0;
   t = timer_start();
-  i = nloops = npe();
-  while (i--) {
+  while (timer_elapsed(t) < minimum_time) {
     foreach() {
       b[] = 0.;
       foreach_dimension()
@@ -108,22 +120,24 @@ int main (int argc, char * argv[])
       b[] = (b[] - 2.*dimension*a[])/sq(Delta);
     }
     boundary ({b});
+    i++;
   }
-  mpi_print (t, nloops, tnc*nloops, "laplacian");
+  mpi_print (t, i, tnc*i, "laplacian");
   
   /**
   Something simpler: the sum of `a` over the entire mesh. */
 
   MPI_Barrier (MPI_COMM_WORLD);
+  i = 0;
   t = timer_start();
-  i = nloops = npe();
   double sum = 0.;
-  while (i--) {
+  while (timer_elapsed(t) < minimum_time) {
     sum = 0.;
     foreach(reduction(+:sum))
       sum += b[];
+    i++;
   }
-  mpi_print (t, nloops, tnc*nloops, "sum");
+  mpi_print (t, i, tnc*i, "sum");
   if (pid() == 0)
     fprintf (stderr, "sum: %g\n", sum);
 
@@ -131,22 +145,26 @@ int main (int argc, char * argv[])
   The restriction operator. */
 
   MPI_Barrier (MPI_COMM_WORLD);
+  i = 0;
   t = timer_start();
-  i = nloops = 1;
-  while (i--)
+  while (timer_elapsed(t) < minimum_time) {
     restriction ({b});
-  mpi_print (t, nloops, tnc*nloops, "restriction");
+    i++;
+  }
+  mpi_print (t, i, tnc*i, "restriction");
 
   /**
   And finally the Poisson solver. */
 
   MPI_Barrier (MPI_COMM_WORLD);
-  t = timer_start();
-  i = nloops = 1;
+  i = 0;
   TOLERANCE = HUGE;
-  while (i--)
+  t = timer_start();
+  while (timer_elapsed(t) < minimum_time) {
     poisson (a, b);
-  mpi_print (t, nloops, tnc*nloops, "poisson");
+    i++;
+  }
+  mpi_print (t, i, tnc*i, "poisson");
 
   scalar e[];
   foreach()
