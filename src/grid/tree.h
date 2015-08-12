@@ -154,6 +154,14 @@ static Layer * new_layer (int depth)
   return l;
 }
 
+static void destroy_layer (Layer * l)
+{
+  if (l->pool)
+    mempool_destroy (l->pool);
+  free (l->m);
+  free (l);
+}
+
 #if dimension == 1
 static void layer_add_row (Layer * l, int i)
 {
@@ -163,11 +171,7 @@ static void layer_add_row (Layer * l, int i)
 static bool layer_remove_row (Layer * l, int i)
 {
   if (--l->nc == 0) {
-    // fixme: need global depth in parallel
-    return false;
-    
-    free (l->m);
-    free (l);
+    destroy_layer (l);
     return true; // layer has been destroyed
   }
   return false;
@@ -187,11 +191,7 @@ static bool layer_remove_row (Layer * l, int i)
   if (unrefarray (l->m[i], l->len, sizeof (char *))) {
     l->m[i] = NULL;
     if (--l->nc == 0) {
-      // fixme: need global depth in parallel
-      return false;
-
-      free (l->m);
-      free (l);
+      destroy_layer (l);
       return true; // layer has been destroyed
     }
   }
@@ -217,11 +217,7 @@ static bool layer_remove_row (Layer * l, int i, int j)
     if (unrefarray (l->m[i], l->len, sizeof (char *))) {
       l->m[i] = NULL;
       if (--l->nc == 0) {
-	// fixme: need global depth in parallel
-	return false;
-	
-	free (l->m);
-	free (l);
+	destroy_layer (l);
 	return true; // layer has been destroyed
       }
     }
@@ -1049,42 +1045,26 @@ void quadtree_trash (void * alist)
 }
 @
 
-static void alloc_layer (void)
+static void update_depth (int inc)
 {
-  // fixme: need global depth in parallel
-
   Quadtree * q = quadtree;
-  q->depth++;
-  /* low-level memory management */
+  q->depth += inc;
   q->L = &(q->L[-1]);
   q->L = realloc(q->L, sizeof (Layer *)*(q->depth + 2));
   q->L = &(q->L[1]);
-  q->L[q->depth] = new_layer (q->depth);
-  cache_level_resize (active, +1);
-  cache_level_resize (prolongation, +1);
-  cache_level_resize (restriction, +1);
-  cache_level_resize (boundary, +1);
-}
-
-static void free_layer (void)
-{
-  Quadtree * q = quadtree;
-  q->depth--;
-  /* low-level memory management */
-  q->L = &(q->L[-1]);
-  q->L = realloc(q->L, sizeof (Layer *)*(q->depth + 2));
-  q->L = &(q->L[1]);
-  cache_level_resize (active, -1);
-  cache_level_resize (prolongation, -1);
-  cache_level_resize (restriction, -1);
-  cache_level_resize (boundary, -1);
+  if (inc > 0)
+    q->L[q->depth] = new_layer (q->depth);
+  cache_level_resize (active, inc);
+  cache_level_resize (prolongation, inc);
+  cache_level_resize (restriction, inc);
+  cache_level_resize (boundary, inc);
 }
 
 #if dimension == 1
 static void alloc_children (Point point)
 {
   if (point.level == quadtree->depth)
-    alloc_layer();
+    update_depth (+1);
   
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
@@ -1108,7 +1088,7 @@ static void free_children (Point point)
     CHILD(k,0,0) = NULL;
     if (layer_remove_row (L, 2*point.i - GHOSTS + k)) {
       assert (point.level + 1 == quadtree->depth);
-      free_layer();
+      update_depth (-1);
     }
   }
 }
@@ -1116,7 +1096,7 @@ static void free_children (Point point)
 static void alloc_children (Point point)
 {
   if (point.level == quadtree->depth)
-    alloc_layer();
+    update_depth (+1);
   
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
@@ -1143,7 +1123,7 @@ static void free_children (Point point)
       CHILD(k,l,0) = NULL;
     if (layer_remove_row (L, 2*point.i - GHOSTS + k)) {
       assert (point.level + 1 == quadtree->depth);
-      free_layer();
+      update_depth (-1);
     }
   }
 }
@@ -1151,7 +1131,7 @@ static void free_children (Point point)
 static void alloc_children (Point point)
 {
   if (point.level == quadtree->depth)
-    alloc_layer();
+    update_depth (+1);
   
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
@@ -1180,7 +1160,7 @@ static void free_children (Point point)
 	CHILD(k,l,n) = NULL;
       if (layer_remove_row (L, 2*point.i - GHOSTS + k, 2*point.j - GHOSTS + l)) {
 	assert (point.level + 1 == quadtree->depth);
-	free_layer();
+	update_depth (-1);
       }
     }
 }
@@ -1657,32 +1637,18 @@ void free_grid (void)
 #if dimension == 1
   for (int i = 0; i < L->len; i++)
     free (L->m[i]);
-  free (L->m);
-  free (L);
-  /* all other levels */
-  for (int l = 1; l <= q->depth; l++) {
-    Layer * L = q->L[l];
-    mempool_destroy (L->pool);
-    free (L->m);
-    free (L);
-  }
 #elif dimension == 2
   for (int i = 0; i < L->len; i++) {
     for (int j = 0; j < L->len; j++)
       free (L->m[i][j]);
     free (L->m[i]);
   }
-  free (L->m);
-  free (L);
   /* all other levels */
   for (int l = 1; l <= q->depth; l++) {
     Layer * L = q->L[l];
     for (int i = 0; i < L->len; i++)
       if (L->m[i])
 	free (L->m[i]);
-    mempool_destroy (L->pool);
-    free (L->m);
-    free (L);
   }
 #else // dimension == 3
   for (int i = 0; i < L->len; i++) {
@@ -1693,8 +1659,6 @@ void free_grid (void)
     }
     free (L->m[i]);
   }
-  free (L->m);
-  free (L);
   /* all other levels */
   for (int l = 1; l <= q->depth; l++) {
     Layer * L = q->L[l];
@@ -1705,11 +1669,10 @@ void free_grid (void)
 	    free (L->m[i][j]);
 	free (L->m[i]);
       }
-    mempool_destroy (L->pool);
-    free (L->m);
-    free (L);
   }
 #endif // dimension == 3
+  for (int l = 0; l <= q->depth; l++)
+    destroy_layer (q->L[l]);
   q->L = &(q->L[-1]);
   free (q->L);
   free_cache (q->active);

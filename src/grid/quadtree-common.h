@@ -112,9 +112,10 @@ bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
   if (!is_local(cell)) {
     cell.flags &= ~(active|border);
     foreach_neighbor(1)
-      foreach_child()
-        if (allocated(0) && is_local(cell) && !is_border(cell))
-	  cell.flags |= border;
+      if (cell.neighbors)
+	foreach_child()
+	  if (allocated(0) && is_local(cell) && !is_border(cell))
+	    cell.flags |= border;
   }
 @endif
 

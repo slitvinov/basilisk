@@ -136,8 +136,9 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-reduce.tst mpi-refine.tst mpi-refine.3D.tst \
 	mpi-laplacian.tst mpi-laplacian.3D.tst \
 	mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
-	mpi-interpu.tst mpi-coarsen.tst bump2Dp.tst vortex.tst \
-	axiadvection.tst
+	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
+	coarsen.tst bump2Dp.tst axiadvection.tst	\
+	vortex.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3
@@ -155,10 +156,11 @@ mpi-circle1.c: mpi-circle.c
 bump2Dp.c: bump2D.c
 	ln -s bump2D.c bump2Dp.c
 
-mpi-circle1.tst: CC = mpicc -D_MPI=6
-mpi-flux.tst:    CC = mpicc -D_MPI=6
-mpi-interpu.tst: CC = mpicc -D_MPI=5
-mpi-coarsen.tst: CC = mpicc -D_MPI=2
-bump2Dp.tst:     CC = mpicc -D_MPI=9
-vortex.tst:	 CC = mpicc -D_MPI=7
+mpi-circle1.tst:  CC = mpicc -D_MPI=6
+mpi-flux.tst:     CC = mpicc -D_MPI=6
+mpi-interpu.tst:  CC = mpicc -D_MPI=5
+mpi-coarsen.tst:  CC = mpicc -D_MPI=2
+mpi-coarsen1.tst: CC = mpicc -D_MPI=5
+bump2Dp.tst:      CC = mpicc -D_MPI=9
+vortex.tst:	  CC = mpicc -D_MPI=7
 axiadvection.tst: CC = mpicc -D_MPI=7

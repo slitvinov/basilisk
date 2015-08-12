@@ -1,11 +1,15 @@
 #define DEBUG 0
 
+// this can be used to control the outputs of debug_mpi()
+int debug_iteration = -1;
+
 typedef struct {
   CacheLevel * halo; // ghost cell indices for each level
-  int depth;         // the maximum number of levels
-  int pid;           // the rank of the PE  
   void * buf;        // MPI buffer
   MPI_Request r;     // MPI request
+  int depth;         // the maximum number of levels
+  int pid;           // the rank of the PE  
+  int maxdepth;      // the maximum depth for this PE (= depth or depth + 1)
 } Rcv;
 
 #if dimension == 2
@@ -15,7 +19,7 @@ typedef struct {
 #endif
 
 typedef struct {
-  int pid[PIDMAX], n;  
+  int pid[PIDMAX], n;
 } PidArray;
 
 typedef struct {
@@ -48,6 +52,10 @@ static void rcv_append (Point point, Rcv * rcv)
     rcv->depth = level;
   }
   cache_level_append (&rcv->halo[level], point);
+  if (is_refined(cell))
+    level++;
+  if (level > rcv->maxdepth)
+    rcv->maxdepth = level;
 }
 
 void rcv_print (Rcv * rcv, FILE * fp, const char * prefix)
@@ -101,7 +109,7 @@ static Rcv * rcv_pid_pointer (RcvPid * p, PidArray * a, int pid)
     p->rcv = realloc (p->rcv, ++p->npid*sizeof (Rcv));
     Rcv * rcv = &p->rcv[p->npid-1];
     rcv->pid = pid;
-    rcv->depth = 0;
+    rcv->depth = rcv->maxdepth = 0;
     rcv->halo = malloc (sizeof (CacheLevel));
     rcv->buf = NULL;
     cache_level_init (&rcv->halo[0]);
@@ -154,13 +162,38 @@ static void rcv_pid_destroy (RcvPid * p)
 
 static Boundary * mpi_boundary = NULL;
 
+#define BOUNDARY_TAG(level) (level)
+#define COARSEN_TAG(level)  ((level) + 64)
+#define REFINE_TAG()        (128)
+
+static size_t apply_bc (Rcv * rcv, scalar * list, vector * listf, int l)
+{
+  double * b = rcv->buf;
+  foreach_cache_level(rcv->halo[l], l,) {
+    for (scalar s in list)
+      s[] = *b++;
+    for (vector v in listf)
+      foreach_dimension() {
+	if (allocated(-1) && !is_local(neighbor(-1)))
+	  v.x[] = *b;
+	b++;
+	if (allocated(1) && !is_local(neighbor(1)))
+	  v.x[1] = *b;
+	b++;
+      }
+  }
+  size_t size = b - (double *) rcv->buf;
+  free (rcv->buf);
+  rcv->buf = NULL;
+  return size;
+}
+
 static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
 {
   prof_start ("rcv_pid_receive");
 
   int len = list_len (list) + 2*dimension*vectors_len (listf);
 
-  /* initiate non-blocking receives */
   MPI_Request r[m->npid];
   for (int i = 0; i < m->npid; i++) {
     Rcv * rcv = &m->rcv[i];
@@ -173,12 +206,18 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
 	       rcv->halo[l].n*len, rcv->pid, l);
       fflush (stderr);
 #endif
-      MPI_Irecv (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid, l,
-		 MPI_COMM_WORLD, &r[i]);
+#if 1 /* initiate non-blocking receive */
+      MPI_Irecv (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid,
+		 BOUNDARY_TAG(l), MPI_COMM_WORLD, &r[i]);
+#else /* blocking receive (useful for debugging) */
+      MPI_Recv (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid,
+		BOUNDARY_TAG(l), MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      apply_bc (rcv, list, listf, l);
+#endif
     }
   }
 
-  /* receive ghost values */
+  /* non-blocking receives (does nothing when using blocking receives) */
   int i;
   MPI_Status s;
   MPI_Waitany (m->npid, r, &i, &s);
@@ -186,28 +225,13 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
     Rcv * rcv = &m->rcv[i];
     assert (l <= rcv->depth && rcv->halo[l].n > 0);
     assert (rcv->buf);
-    double * b = rcv->buf;
-    foreach_cache_level(rcv->halo[l], l,) {
-      for (scalar s in list)
-	s[] = *b++;
-      for (vector v in listf)
-	foreach_dimension() {
-	  if (allocated(-1) && !is_local(neighbor(-1)))
-	    v.x[] = *b;
-	  b++;
-	  if (allocated(1) && !is_local(neighbor(1)))
-	    v.x[1] = *b;
-	  b++;
-	}
-    }
+    size_t size = apply_bc (rcv, list, listf, l);
     int rlen;
     MPI_Get_count (&s, MPI_DOUBLE, &rlen);
-    assert (rlen == (b - (double *) rcv->buf));
-    free (rcv->buf);
-    rcv->buf = NULL;
+    assert (rlen == size);
     MPI_Waitany (m->npid, r, &i, &s);
   }
-
+  
   prof_stop();
 }
 
@@ -246,7 +270,7 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
       fflush (stderr);
 #endif
       MPI_Isend (rcv->buf, (b - (double *) rcv->buf),
-		 MPI_DOUBLE, rcv->pid, l, MPI_COMM_WORLD, &rcv->r);
+		 MPI_DOUBLE, rcv->pid, BOUNDARY_TAG(l), MPI_COMM_WORLD, &rcv->r);
     }
   }
 
@@ -341,7 +365,10 @@ static FILE * fopen_prefix (FILE * fp, const char * name, char * prefix)
   else {
     strcpy (prefix, "");
     char fname[80];
-    sprintf (fname, "%s-%d", name, pid());
+    if (debug_iteration >= 0)
+      sprintf (fname, "%s-%d-%d", name, debug_iteration, pid());
+    else
+      sprintf (fname, "%s-%d", name, pid());
     return fopen (fname, "w");
   }
 }
@@ -437,6 +464,19 @@ void debug_mpi (FILE * fp1)
     if (is_leaf(cell))
       continue;
   }
+  if (!fp1)
+    fclose (fp);
+
+  fp = fopen_prefix (fp1, "depth", prefix);
+  fprintf (fp, "depth: %d %d\n", pid(), depth());
+  fprintf (fp, "======= restriction.snd ======\n");
+  RcvPid * snd = mpi->restriction.snd;
+  for (int i = 0; i < snd->npid; i++)
+    fprintf (fp, "%d %d %d\n", pid(), snd->rcv[i].pid, snd->rcv[i].maxdepth);
+  fprintf (fp, "======= restriction.rcv ======\n");
+  snd = mpi->restriction.rcv;
+  for (int i = 0; i < snd->npid; i++)
+    fprintf (fp, "%d %d %d\n", pid(), snd->rcv[i].pid, snd->rcv[i].maxdepth);
   if (!fp1)
     fclose (fp);
 }
@@ -689,8 +729,9 @@ void mpi_boundary_refine (scalar * list)
     a[i] = remote_cells (pid);
     assert (a[i]->len > 0);
     int len = a[i]->len;
-    MPI_Isend (&len, 1, MPI_INT, pid, 0,  MPI_COMM_WORLD, &r[2*i]);
-    MPI_Isend (a[i]->p, len, MPI_INT, pid, 0, MPI_COMM_WORLD, &r[2*i+1]);
+    MPI_Isend (&len, 1, MPI_INT, pid, REFINE_TAG(),  MPI_COMM_WORLD, &r[2*i]);
+    MPI_Isend (a[i]->p, len, MPI_INT, pid, REFINE_TAG(),
+	       MPI_COMM_WORLD, &r[2*i+1]);
   }
     
   /* Receive halo mesh from each neighboring process. */
@@ -702,9 +743,11 @@ void mpi_boundary_refine (scalar * list)
     // see http://cw.squyres.com/ and
     // http://cw.squyres.com/columns/2004-07-CW-MPI-Mechanic.pdf
     int len;
-    MPI_Recv (&len, 1, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv (&len, 1, MPI_INT, pid, REFINE_TAG(),
+	      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     unsigned a[len];
-    MPI_Recv (a, len, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv (a, len, MPI_INT, pid, REFINE_TAG(),
+	      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     refined += match_refine (a, list, pid);
   }
   
@@ -736,10 +779,10 @@ void mpi_boundary_refine (scalar * list)
   for (int i = 0; i < snd->npid; i++) {
     int pid = snd->rcv[i].pid;
     int len = quadtree->refined.n;
-    MPI_Isend (&len, 1, MPI_INT, pid, 0,  MPI_COMM_WORLD, &r[nr++]);
+    MPI_Isend (&len, 1, MPI_INT, pid, REFINE_TAG(),  MPI_COMM_WORLD, &r[nr++]);
     if (len > 0)
       MPI_Isend (quadtree->refined.p, sizeof(Index)/sizeof(int)*len,
-		 MPI_INT, pid, 0, MPI_COMM_WORLD, &r[nr++]);
+		 MPI_INT, pid, REFINE_TAG(), MPI_COMM_WORLD, &r[nr++]);
   }
 
   /* Receive refinement cache from each neighboring process. 
@@ -748,14 +791,15 @@ void mpi_boundary_refine (scalar * list)
   Cache rerefined = {NULL, 0, 0};
   for (int i = 0; i < rcv->npid; i++) {
     int pid = rcv->rcv[i].pid, len;
-    MPI_Recv (&len, 1, MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv (&len, 1, MPI_INT, pid, REFINE_TAG(),
+	      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     if (len > 0) {
       Index p[len];
       MPI_Recv (p, sizeof(Index)/sizeof(int)*len,
-		MPI_INT, pid, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_INT, pid, REFINE_TAG(), MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       Cache refined = {p, len, len};
       foreach_cache (refined,)
-	if (allocated(0)) {
+	if (level <= depth() && allocated(0)) {
 	  if (is_leaf(cell)) {
 	    bool neighbors = false;
 	    foreach_neighbor()
@@ -813,35 +857,41 @@ void mpi_boundary_coarsen (int l)
   RcvPid * snd = mpi->restriction.snd;
   MPI_Request r[2*snd->npid];
   int nr = 0;
-  for (int i = 0; i < snd->npid; i++) {
-    int pid = snd->rcv[i].pid;
-    int len = quadtree->coarsened.n;
-    MPI_Isend (&len, 1, MPI_INT, pid, l,  MPI_COMM_WORLD, &r[nr++]);
-    if (len > 0)
-      MPI_Isend (quadtree->coarsened.p, 2*len, MPI_INT, pid, l,
+  for (int i = 0; i < snd->npid; i++)
+    if (snd->rcv[i].maxdepth > l) {
+      int pid = snd->rcv[i].pid, len = quadtree->coarsened.n;
+      MPI_Isend (&len, 1, MPI_INT, pid, COARSEN_TAG(l),
 		 MPI_COMM_WORLD, &r[nr++]);
-  }
-
-  /* Receive coarsening cache from each neighboring process. 
+      if (len > 0)
+	MPI_Isend (quadtree->coarsened.p, sizeof(IndexLevel)/sizeof(int)*len,
+		   MPI_INT, pid, COARSEN_TAG(l), MPI_COMM_WORLD, &r[nr++]);
+    }
+    
+  /* Receive coarsening cache from each (fine enough) neighboring process. 
    fixme: use non-blocking receives */
   RcvPid * rcv = mpi->restriction.rcv;
-  for (int i = 0; i < rcv->npid; i++) {
-    int pid = rcv->rcv[i].pid, len;
-    MPI_Recv (&len, 1, MPI_INT, pid, l, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    if (len > 0) {
-      IndexLevel p[len];
-      MPI_Recv (p, 2*len, MPI_INT, pid, l, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      CacheLevel coarsened = {p, len, len};
-      foreach_cache_level (coarsened, l,)
-	if (allocated(0)) {
-	  if (is_refined(cell))
-	    assert (coarsen_cell (point, NULL, NULL));
-	  if (cell.pid == pid && is_leaf(cell) && !is_remote_leaf(cell))
-	    cell.flags |= remote_leaf;
+  for (int i = 0; i < rcv->npid; i++)
+    if (rcv->rcv[i].maxdepth > l) {
+      int pid = rcv->rcv[i].pid, len;
+      MPI_Recv (&len, 1, MPI_INT, pid, COARSEN_TAG(l),
+		MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      if (len > 0) {
+	IndexLevel p[len];
+	MPI_Recv (p, sizeof(IndexLevel)/sizeof(int)*len,
+		  MPI_INT, pid, COARSEN_TAG(l),
+		  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	CacheLevel coarsened = {p, len, len};
+	foreach_cache_level (coarsened, l,) {
+	  if (allocated(0)) {
+	    if (is_refined(cell))
+	      assert (coarsen_cell (point, NULL, NULL));
+	    if (cell.pid == pid && is_leaf(cell) && !is_remote_leaf(cell))
+	      cell.flags |= remote_leaf;
+	  }
 	}
+      }
     }
-  }
-  
+
   /* check that caches were received OK and free ressources */
   MPI_Waitall (nr, r, MPI_STATUSES_IGNORE);
   
