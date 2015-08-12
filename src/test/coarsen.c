@@ -1,29 +1,19 @@
-#include <sys/resource.h>
-
-void mem()
-{
-  struct rusage usage;
-  getrusage (RUSAGE_SELF, &usage);
-  fprintf (stderr, "%ld kB\n", usage.ru_maxrss);
-}
-
 int coarsen_func (Point point)
 {
-  return true;
+  return level > 5;
 }
 
 int main()
 {
-  mem();
   init_grid (64);
-  mem();
   scalar a[];
-  mem();
-  fprintf (stderr, "depth: %d\n", depth());
+  fprintf (stderr, "depth: %d mem: %ld\n", depth(), pmtrace.total);
+  refine (level < 8, NULL);
+  fprintf (stderr, "depth: %d mem: %ld\n", depth(), pmtrace.total);
   coarsen_function (coarsen_func, NULL);
   long tnc = 0;
   foreach()
     tnc++;
-  fprintf (stderr, "depth: %d leaves: %ld\n", depth(), tnc);
-  mem();
+  fprintf (stderr, "depth: %d leaves: %ld mem: %ld\n",
+	   depth(), tnc, pmtrace.total);
 }

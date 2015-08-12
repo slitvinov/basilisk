@@ -148,3 +148,32 @@ Trying to free memory twice or passing invalid pointers to `free()`
 can also be detected and will lead to the program aborting. A
 [debugger](README#tracking-floating-point-exceptions) can then be used
 to track the cause of the problem.
+
+## Controlling outputs
+
+The degree of verbosity of the profiling can be controlled by
+increasing the value of `MTRACE`.
+
+`MTRACE=1`:
+Profiling output and memory trace.
+
+`MTRACE=2`:
+Profiling output.
+
+`MTRACE=3`:
+Memory leak errors only.
+
+# Accessing the profiling summary
+
+The profiling summary is contained in
+
+~~~c
+struct {
+  FILE * fp;                     // trace file
+  size_t total, max;             // current and maximum allocated memory
+  size_t overhead, maxoverhead;  // current and maximum profiling overhead
+  size_t nr;                     // current number of records
+  size_t startrss, maxrss;       // starting and maximum system ressource usage
+  char * fname;                  // trace file name
+} pmtrace;
+~~~

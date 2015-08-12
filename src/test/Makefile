@@ -129,6 +129,8 @@ taylor-green.tst: taylor-green-all-mach.tst
 terrain.tst: terrain.s
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst
 
+coarsen.tst: CFLAGS=-DMTRACE=3
+
 # MPI tests
 
 mpi-tests: indexing.tst indexing.3D.tst \
@@ -137,8 +139,7 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-laplacian.tst mpi-laplacian.3D.tst \
 	mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
 	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
-	coarsen.tst bump2Dp.tst axiadvection.tst	\
-	vortex.tst
+	bump2Dp.tst axiadvection.tst vortex.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3

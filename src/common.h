@@ -41,9 +41,12 @@
 @if MTRACE
 
 struct {
-  FILE * fp;
-  size_t max, total, overhead, maxoverhead, nr, maxrss, startrss;
-  char * fname;
+  FILE * fp;                     // trace file
+  size_t total, max;             // current and maximum allocated memory
+  size_t overhead, maxoverhead;  // current and maximum profiling overhead
+  size_t nr;                     // current number of records
+  size_t startrss, maxrss;       // starting and maximum system ressource usage
+  char * fname;                  // trace file name
 } pmtrace;
 
 typedef struct {
@@ -79,26 +82,30 @@ static int pmfunc_index (const char * func, const char * file, int line)
   p->file = systrdup(file);
   p->line = line;
   p->id = pmfuncn;
-  fprintf (pmtrace.fp, "@ %d %s %s %d\n", pmfuncn, func, file, line);
+  if (pmtrace.fp)
+    fprintf (pmtrace.fp, "@ %d %s %s %d\n", pmfuncn, func, file, line);
   return pmfuncn;
 }
 
 static void pmfunc_trace (pmfunc * f, char c)
 {
-  fprintf (pmtrace.fp, "%c %d %ld %ld %ld",
-	   c, f->id, pmtrace.nr, pmtrace.total, f->total);
+  if (pmtrace.fp)
+    fprintf (pmtrace.fp, "%c %d %ld %ld %ld",
+	     c, f->id, pmtrace.nr, pmtrace.total, f->total);
 @if (_GNU_SOURCE || _DARWIN_C_SOURCE)
   if (pmtrace.nr % 1 == 0) {
     struct rusage usage;
     getrusage (RUSAGE_SELF, &usage);
-    fprintf (pmtrace.fp, " %ld", usage.ru_maxrss*1024);
+    if (pmtrace.fp)
+      fprintf (pmtrace.fp, " %ld", usage.ru_maxrss*1024);
     if (!pmtrace.nr)
       pmtrace.startrss = usage.ru_maxrss;
     if (usage.ru_maxrss > pmtrace.maxrss)
       pmtrace.maxrss = usage.ru_maxrss;
   }
 @endif
-  fputc ('\n', pmtrace.fp);
+  if (pmtrace.fp)
+    fputc ('\n', pmtrace.fp);
   pmtrace.nr++;
 }
 
@@ -166,59 +173,44 @@ static void * pmfunc_free (void * ptr, char c)
 static void * pmalloc (size_t size,
 		       const char * func, const char * file, int line)
 {
-  if (pmtrace.fp)
-    return pmfunc_alloc (sysmalloc (sizeof(pmdata) + size),
-			 size, func, file, line, '+');
-  else
-    return sysmalloc (size);
+  return pmfunc_alloc (sysmalloc (sizeof(pmdata) + size),
+		       size, func, file, line, '+');
 }
 
 static void * pcalloc (size_t nmemb, size_t size,
 		       const char * func, const char * file, int line)
 {
-  if (pmtrace.fp) {
-    void * p = pmalloc (nmemb*size, func, file, line);
-    return memset (p, 0, nmemb*size);
-  }
-  else
-    return syscalloc (nmemb, size);
+  void * p = pmalloc (nmemb*size, func, file, line);
+  return memset (p, 0, nmemb*size);
 }
 
 static void * prealloc (void * ptr, size_t size,
 			const char * func, const char * file, int line)
 {
-  if (pmtrace.fp)
-    return pmfunc_alloc (sysrealloc (pmfunc_free(ptr, '<'),
-				     sizeof(pmdata) + size),
-			 size, func, file, line, '>');
-  else
-    return sysrealloc (ptr, size);
+  return pmfunc_alloc (sysrealloc (pmfunc_free(ptr, '<'),
+				   sizeof(pmdata) + size),
+		       size, func, file, line, '>');
 }
 
 static void pfree (void * ptr,
 		   const char * func, const char * file, int line)
 {
-  if (pmtrace.fp && ptr)
-    sysfree (pmfunc_free (ptr, '-'));
-  else
-    sysfree (ptr);
+  sysfree (pmfunc_free (ptr, '-'));
 }
 
 static char * pstrdup (const char * s,
 		       const char * func, const char * file, int line)
 {
-  if (pmtrace.fp) {
-    char * d = pmalloc (strlen(s) + 1, func, file, line);
-    return strcpy (d, s);
-  }
-  else
-    return systrdup(s);
+  char * d = pmalloc (strlen(s) + 1, func, file, line);
+  return strcpy (d, s);
 }
 
+#if MTRACE < 3
 static int pmaxsort (const void * a, const void * b) {
   const pmfunc * p1 = a, * p2 = b;
   return p1->max < p2->max;
 }
+#endif
 
 static int ptotalsort (const void * a, const void * b) {
   const pmfunc * p1 = a, * p2 = b;
@@ -237,24 +229,26 @@ static void pmfuncs_free()
 
 void pmuntrace (void)
 {
-  if (pmtrace.fp) {
-    fprintf (stderr,
-	     "*** MTRACE: max resident  set size: %10ld bytes\n"
-	     "*** MTRACE: max traced memory size: %10ld bytes"
-	     " (tracing overhead %.1g%%)\n"
-	     "%10s    %20s   %s\n",
-	     pmtrace.maxrss*1024,
-	     pmtrace.max, pmtrace.maxoverhead*100./pmtrace.max,
-	     "max bytes", "function", "file");
-    qsort (pmfuncs, pmfuncn, sizeof(pmfunc), pmaxsort);
-    pmfunc * p = pmfuncs;
-    for (int i = 0; i < pmfuncn && p->max > 0; i++, p++)
-      fprintf (stderr, "%10ld    %20s   %s:%d\n",
-	       p->max, p->func, p->file, p->line);
+#if MTRACE < 3
+  fprintf (stderr,
+	   "*** MTRACE: max resident  set size: %10ld bytes\n"
+	   "*** MTRACE: max traced memory size: %10ld bytes"
+	   " (tracing overhead %.1g%%)\n"
+	   "%10s    %20s   %s\n",
+	   pmtrace.maxrss*1024,
+	   pmtrace.max, pmtrace.maxoverhead*100./pmtrace.max,
+	   "max bytes", "function", "file");
+  qsort (pmfuncs, pmfuncn, sizeof(pmfunc), pmaxsort);
+  pmfunc * p = pmfuncs;
+  for (int i = 0; i < pmfuncn && p->max > 0; i++, p++)
+    fprintf (stderr, "%10ld    %20s   %s:%d\n",
+	     p->max, p->func, p->file, p->line);
 
+  if (pmtrace.fp) {
     char * fname = pmtrace.fname, * s;
     while ((s = strchr(fname,'/')))
       fname = s + 1;
+
     fputs ("load(\"`echo $BASILISK`/mtrace.plot\")\n", pmtrace.fp);
     fprintf (pmtrace.fp,
 	     "plot '%s' u 3:($6-%g) w l t 'ru_maxrss - %.3g',"
@@ -263,33 +257,35 @@ void pmuntrace (void)
 	     pmtrace.startrss*1024.,
 	     pmtrace.startrss*1024.,
 	     fname);
-    p = pmfuncs;
+    pmfunc * p = pmfuncs;
     for (int i = 0; i < pmfuncn && p->max > 0.01*pmtrace.max; i++, p++)
       fprintf (pmtrace.fp,
 	       ",func(\"%s\",%d) w l t '%s'",
-	         fname, p->id, p->func);
+	       fname, p->id, p->func);
     fputc ('\n', pmtrace.fp);
     fprintf (stderr,
 	     "*** MTRACE: To get a graph use: tail -n 2 %s | gnuplot -persist\n",
 	     fname);
-    
     fclose (pmtrace.fp);
     pmtrace.fp = NULL;
     sysfree (pmtrace.fname);
+  }
+#endif // MTRACE < 3
 
-    if (pmtrace.total > 0) {
-      qsort (pmfuncs, pmfuncn, sizeof(pmfunc), ptotalsort);
-      pmfunc * p = pmfuncs;
-      for (int i = 0; i < pmfuncn && p->total > 0; i++, p++)
-	fprintf (stderr, "%s:%d: error: %ld bytes leaked here\n",
-		 p->file, p->line, p->total);
-      pmfuncs_free();
-      exit(1);
-    }
-    else {
-      fputs ("*** MTRACE: No memory leaks\n", stderr);
-      pmfuncs_free();
-    }
+  if (pmtrace.total > 0) {
+    qsort (pmfuncs, pmfuncn, sizeof(pmfunc), ptotalsort);
+    pmfunc * p = pmfuncs;
+    for (int i = 0; i < pmfuncn && p->total > 0; i++, p++)
+      fprintf (stderr, "%s:%d: error: %ld bytes leaked here\n",
+	       p->file, p->line, p->total);
+    pmfuncs_free();
+    exit(1);
+  }
+  else {
+#if MTRACE < 3
+    fputs ("*** MTRACE: No memory leaks\n", stderr);
+#endif
+    pmfuncs_free();
   }
 }
 
@@ -539,7 +535,7 @@ void mpi_init()
       sprintf (name, "%s-%d", etrace, mpi_rank);
       setenv ("MALLOC_TRACE", name, 1);
     }
-@if MTRACE
+@if MTRACE == 1
     etrace = getenv ("MTRACE");
     if (!etrace)
       etrace = "mtrace";
@@ -571,7 +567,7 @@ void init_solver()
 {
 @if _MPI
   mpi_init();
-@elif MTRACE
+@elif MTRACE == 1
   char * etrace = getenv ("MTRACE");
   pmtrace.fp = fopen (etrace ? etrace : "mtrace", "w");
   pmtrace.fname = systrdup (etrace ? etrace : "mtrace");
@@ -790,25 +786,6 @@ void list_print (scalar * l, FILE * fp)
   for (scalar s in l)
     fprintf (fp, "%s%s", i++ == 0 ? "{" : ",", s.name);
   fputs (i > 0 ? "}\n" : "{}\n", fp);
-}
-
-/**
-Given a list of scalars this functions splits it into two lists: a
-list of scalars defined on the faces in direction d and the
-rest. */
-
-void list_split (scalar * list, int d,
-		 scalar ** faces, scalar ** rest)
-{
-  *faces = *rest = NULL;
-  int component = d/2;
-  for (scalar s in list)
-    if (!is_constant(s) && s.boundary[d]) {
-      if (s.face && d % 2 && (&s.d.x)[component])
-	*faces = list_add (*faces, s);
-      else
-	*rest = list_add (*rest, s);
-    }
 }
 
 int vectors_len (vector * list)
