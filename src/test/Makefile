@@ -3,7 +3,7 @@ all: check mpi-tests
 include $(BASILISK)/Makefile.defs
 
 # the default CFLAGS are set in $(BASILISK)/config
-CFLAGS += -O2
+CFLAGS += -O2 -DMTRACE=3
 
 # list only non-default (!.tst) tests
 check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst

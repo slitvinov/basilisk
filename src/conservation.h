@@ -79,6 +79,12 @@ event defaults (i = 0)
 }
 
 /**
+At the end of the run we need to free the list (to avoid a memory
+leak). */
+
+event cleanup (i = end) free (evolving);
+
+/**
 We force boundary conditions on all fields after initialisation.
 */
 
@@ -121,13 +127,6 @@ static double riemann (const double * right, const double * left,
 
 double update_conservation (scalar * conserved, scalar * updates, double dtmax)
 {
-
-  /**
-  We declare an empty list of fluxes which will be filled with fluxes
-  for each scalar and vector quantity. */
-
-  vector * lflux = NULL;
-
   /**
   The gradients of each quantity are stored in a list of dynamically-allocated
   fields. First-order reconstruction is used for the gradient fields. */
@@ -146,8 +145,10 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
   gradients (conserved, slopes);
 
   /**
-  The flux fields are dynamically allocated. */
+  We allocated fields for storing fluxes for each scalar and vector
+  quantity. */
 
+  vector * lflux = NULL;
   int len = list_len (conserved);
   for (scalar s in conserved) {
     vector f1 = new vector;

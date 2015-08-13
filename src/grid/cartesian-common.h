@@ -209,6 +209,8 @@ void delete (scalar * list)
     return;
 
   for (scalar f in list) {
+    if (f.delete)
+      f.delete (f);
     free (f.name); f.name = NULL;
     free (f.boundary); f.boundary = NULL;
     free (f.boundary_homogeneous); f.boundary_homogeneous = NULL;
@@ -237,6 +239,7 @@ void free_solver()
   free (_attribute); _attribute = NULL;
   free (_constant); _constant = NULL;
   free_grid();
+  qpclose_all();
 @if TRACE
   trace_off();
 @endif
@@ -245,7 +248,6 @@ void free_solver()
 @endif
   fflush (stdout);
   fflush (stderr);
-  qpclose_all();
 }
 
 // Cartesian methods

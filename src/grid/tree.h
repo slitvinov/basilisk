@@ -1796,7 +1796,6 @@ void init_grid (int n)
   if (N > 1)
     mpi_partitioning();
 @endif
-  init_events();
 }
 
 #if dimension == 2

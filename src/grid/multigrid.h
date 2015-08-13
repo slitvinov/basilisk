@@ -393,7 +393,6 @@ void init_grid (int n)
     b->level = b->restriction = periodic_boundary_level_x;
     add_boundary (b);
   }
-  init_events();
 }
 
 void realloc_scalar (void)

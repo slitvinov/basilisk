@@ -68,10 +68,21 @@ void refine_terrain (Point point, scalar zb)
     reconstruct_terrain (point, zb);
 }
 
+static void delete_terrain (scalar zb)
+{
+  for (int i = 0; i < NPROC; i++) {
+    for (Kdt ** kdt = zb.kdt[i]; *kdt; kdt++)
+      kdt_destroy (*kdt);
+    free (zb.kdt[i]);
+  }
+  free (zb.kdt);
+}
+
 void terrain (scalar zb, ...)
 {
   zb.kdt = calloc (NPROC, sizeof (Kdt **));
-
+  zb.delete = delete_terrain;
+  
   int nt = 0;
   va_list ap;
   va_start (ap, zb);

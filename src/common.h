@@ -713,6 +713,7 @@ attribute {
   double (** boundary)             (Point, Point, scalar);
   double (** boundary_homogeneous) (Point, Point, scalar);
   double (* gradient)              (double, double, double);
+  void   (* delete)                (scalar);
   char * name;
   struct {
     int x;

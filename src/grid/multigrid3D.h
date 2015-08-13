@@ -456,7 +456,6 @@ void init_grid (int n)
     b->level = b->restriction = box_boundary_level;
     add_boundary (b);
   }
-  init_events();
 }
 
 void realloc_scalar (void)

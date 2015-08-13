@@ -81,23 +81,6 @@ static int event_finished (Event * ev)
   return event_done;
 }
 
-void init_events (void) {
-  for (Event * ev = Events; !ev->last; ev++) 
-    if (!strcmp (ev->name, "defaults")) {
-#if DEBUG_EVENTS
-      char * root = strstr (ev->file, BASILISK);
-      fprintf (stderr, "  %-25s %s%s:%d\n", ev->name, 
-	       root ? "src" : "",
-	       root ? &ev->file[strlen(BASILISK)] : ev->file, 
-	       ev->line);
-#endif
-      ev->action (0, 0., ev);
-      event_finished (ev);
-    }
-    else
-      init_event (ev);
-}
-
 void event_register (Event event) {
   assert (Events);
   assert (!event.last);
@@ -123,19 +106,25 @@ static int event_cond (Event * ev, int i, double t)
   return (* COND) (&i, &t, ev);
 }
 
+#if DEBUG_EVENTS
+static void event_print (Event * ev, FILE * fp)
+{
+  char * root = strstr (ev->file, BASILISK);
+  fprintf (fp, "  %-25s %s%s:%d\n", ev->name, 
+	   root ? "src" : "",
+	   root ? &ev->file[strlen(BASILISK)] : ev->file, 
+	   ev->line);
+}
+#endif
+
 static int event_do (Event * ev, int i, double t, bool action)
 {
   if ((i > ev->i && t > ev->t) || !event_cond (ev, i, t))
     return event_finished (ev);
   if (i == ev->i || fabs (t - ev->t) <= 1e-9) {
 #if DEBUG_EVENTS
-    if (action) {
-      char * root = strstr (ev->file, BASILISK);
-      fprintf (stderr, "  %-25s %s%s:%d\n", ev->name, 
-	       root ? "src" : "",
-	       root ? &ev->file[strlen(BASILISK)] : ev->file, 
-	       ev->line);
-    }
+    if (action)
+      event_print (ev, stderr);
 #endif
     if (action && (* ev->action) (i, t, ev)) {
       event_finished (ev);
@@ -166,9 +155,17 @@ static int event_do (Event * ev, int i, double t, bool action)
 
 static void end_event_do (int i, double t, bool action)
 {
+#if DEBUG_EVENTS
+  if (1/*action*/)
+    fprintf (stderr, "\nend events (i = %d, t = %g)\n", i, t);
+#endif
   for (Event * ev = Events; !ev->last; ev++)
-    if (ev->i == END_EVENT && action)
+    if (ev->i == END_EVENT && action) {
+#if DEBUG_EVENTS
+      event_print (ev, stderr);
+#endif
       ev->action (i, t, ev);
+    }
 }
 
 int events (int i, double t, bool action)
@@ -177,6 +174,11 @@ int events (int i, double t, bool action)
   if (1/*action*/)
     fprintf (stderr, "\nevents (i = %d, t = %g)\n", i, t);
 #endif
+
+  if (i == 0)
+    for (Event * ev = Events; !ev->last; ev++)    
+      init_event (ev);
+
   int inext = 0, cond = 0, cond1 = 0;
   tnext = HUGE;
   for (Event * ev = Events; !ev->last && !cond; ev++)
