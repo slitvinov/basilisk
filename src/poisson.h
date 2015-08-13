@@ -33,7 +33,7 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
 	       void (* relax) (scalar * da, scalar * res, 
 			       int depth, void * data),
 	       void * data,
-	       int nrelax, int minlevel)
+	       int nrelax, int minlevel, int maxlevel)
 {
 
   /**
@@ -45,7 +45,7 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
   We then proceed from the coarsest grid (*minlevel*) down to the
   finest grid. */
 
-  for (int l = minlevel; l <= depth(); l++) {
+  for (int l = minlevel; l <= maxlevel; l++) {
 
     /**
     On the coarsest grid, we take zero as initial guess. */
@@ -157,12 +157,18 @@ mgstats mg_solve (scalar * a, scalar * b,
   s.resb = s.resa = residual (a, b, res, data);
 
   /**
+  For parallelism with MPI, we need the global depth. */
+
+  int maxlevel = depth();
+  mpi_all_reduce (maxlevel, MPI_INT, MPI_MAX);
+  
+  /**
   We then iterate until convergence or until *NITERMAX* is reached. Note
   also that we force the solver to apply at least one cycle, even if the
   initial residual is lower than *TOLERANCE*. */
 
   for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.resa > TOLERANCE); s.i++) {
-    mg_cycle (a, res, da, relax, data, 4, 0);
+    mg_cycle (a, res, da, relax, data, 4, 0, maxlevel);
     s.resa = residual (a, b, res, data);
   }
 

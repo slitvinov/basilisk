@@ -805,18 +805,20 @@ void recursive (Point point)
 @define end_foreach_cache_level() } OMP_END_PARALLEL() }
 
 @def foreach_boundary(l) {
-  update_cache();
-  CacheLevel _boundary = quadtree->boundary[l];
-  foreach_cache_level (_boundary,l,)
+  if (l <= depth()) {
+    update_cache();
+    CacheLevel _boundary = quadtree->boundary[l];
+    foreach_cache_level (_boundary,l,)
 @
-@define end_foreach_boundary() end_foreach_cache_level(); }
+@define end_foreach_boundary() end_foreach_cache_level(); }}
 
 @def foreach_halo(name,_l) {
-  update_cache();
-  CacheLevel _cache = quadtree->name[_l];
-  foreach_cache_level (_cache, _l,)
+  if (l <= depth()) {
+    update_cache();
+    CacheLevel _cache = quadtree->name[_l];
+    foreach_cache_level (_cache, _l,)
 @
-@define end_foreach_halo() end_foreach_cache_level(); }
+@define end_foreach_halo() end_foreach_cache_level(); }}
 
 static void update_cache_f (void)
 {
@@ -978,11 +980,12 @@ static void update_cache_f (void)
 @define end_foreach_fine_to_coarse() } end_foreach_cache_level(); } }
 
 @def foreach_level(l) {
-  update_cache();
-  CacheLevel _active = quadtree->active[l];
-  foreach_cache_level (_active,l,)
+  if (l <= depth()) {
+    update_cache();
+    CacheLevel _active = quadtree->active[l];
+    foreach_cache_level (_active,l,)
 @
-@define end_foreach_level() end_foreach_cache_level(); }
+@define end_foreach_level() end_foreach_cache_level(); }}
 
 @define foreach_coarse_level(l) foreach_level(l) if (!is_leaf(cell)) {
 @define end_foreach_coarse_level() } end_foreach_level()

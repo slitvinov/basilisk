@@ -46,7 +46,7 @@ void solve (int depth)
   scalar * lres = {res};
   residual ({a}, {b}, lres, &p);
   for (int i = 0; i < NITER; i++) {
-    mg_cycle ({a}, lres, {dp}, relax, &p, nrelax, 0);
+    mg_cycle ({a}, lres, {dp}, relax, &p, nrelax, 0, depth());
     residual ({a}, {b}, lres, &p);
     double max = 0.;
     foreach(reduction(max:max))
