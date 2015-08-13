@@ -1995,6 +1995,9 @@ trace {
     REJECT;
 }
 
+stderr fputs ("qstderr()", yyout);
+stdout fputs ("qstdout()", yyout);
+
 foreach_dimension{WS}*[(]{WS}*[)] {
   if (debug)
     fprintf (stderr, "%s:%d: foreach_dimension (%d)\n", fname, line, dimension);
@@ -2288,7 +2291,7 @@ static{WS}+FILE{WS}*[*]{WS}*{ID}+{WS}*= {
 	   "NULL; if (!%s || i == 0) %s = pid() > 0 ? "
 	   "fopen(\"/dev/null\", \"w\") : ", id, id);
 }
-  
+
 "/*"                                    { ECHO; if (comment()) return 1; }
 "//".*                                  { ECHO; /* consume //-comment */ }
 ({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+	{ ECHO; /* STRING_LITERAL */ }

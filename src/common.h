@@ -33,8 +33,19 @@
 @define trash(x)  // data trashing is disabled by default. Turn it on with
                   // -DTRASH=1
 
-@define ferr stderr
-@define fout stdout
+@define systderr  stderr
+@define systdout  stdout
+
+@if _MPI
+static FILE * qstderr (void);
+static FILE * qstdout (void);
+FILE * ferr, * fout;
+@else
+@ define qstderr() stderr
+@ define qstdout() stdout
+@ define ferr      stderr
+@ define fout      stdout
+@endif
 
 // Memory tracing
 
@@ -205,12 +216,12 @@ static char * pstrdup (const char * s,
   return strcpy (d, s);
 }
 
-#if MTRACE < 3
+@if MTRACE < 3
 static int pmaxsort (const void * a, const void * b) {
   const pmfunc * p1 = a, * p2 = b;
   return p1->max < p2->max;
 }
-#endif
+@endif
 
 static int ptotalsort (const void * a, const void * b) {
   const pmfunc * p1 = a, * p2 = b;
@@ -229,7 +240,7 @@ static void pmfuncs_free()
 
 void pmuntrace (void)
 {
-#if MTRACE < 3
+@if MTRACE < 3
   fprintf (stderr,
 	   "*** MTRACE: max resident  set size: %10ld bytes\n"
 	   "*** MTRACE: max traced memory size: %10ld bytes"
@@ -270,7 +281,7 @@ void pmuntrace (void)
     pmtrace.fp = NULL;
     sysfree (pmtrace.fname);
   }
-#endif // MTRACE < 3
+@endif // MTRACE < 3
 
   if (pmtrace.total > 0) {
     qsort (pmfuncs, pmfuncn, sizeof(pmfunc), ptotalsort);
@@ -282,9 +293,9 @@ void pmuntrace (void)
     exit(1);
   }
   else {
-#if MTRACE < 3
+@if MTRACE < 3
     fputs ("*** MTRACE: No memory leaks\n", stderr);
-#endif
+@endif
     pmfuncs_free();
   }
 }
@@ -498,14 +509,42 @@ static int mpi_rank, mpi_npe;
 @define pid() mpi_rank
 @define npe() mpi_npe
 
+@define QFILE FILE // a dirty trick to avoid qcc 'static FILE *' rule
+
+static FILE * qstderr (void)
+{
+  static QFILE * fp = NULL;
+  if (!fp) {
+    if (mpi_rank > 0) {
+      char name[80];
+      sprintf (name, "log-%d", mpi_rank);
+      fp = fopen (name, "w");
+    }
+    else
+      fp = systderr;
+  }
+  return fp;
+}
+
+static FILE * qstdout (void)
+{
+  static QFILE * fp = NULL;
+  if (!fp) {
+    if (mpi_rank > 0) {
+      char name[80];
+      sprintf (name, "out-%d", mpi_rank);
+      fp = fopen (name, "w");
+    }
+    else
+      fp = systdout;
+  }
+  return fp;
+}
+
 static void finalize (void)
 {
   MPI_Finalize();
 }
-
-@undef ferr
-@undef fout
-FILE * ferr, * fout;
 
 void mpi_init()
 {
@@ -517,12 +556,7 @@ void mpi_init()
     atexit (finalize);
     MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
-    char name[80];
     if (mpi_rank > 0) {
-      sprintf (name, "out-%d", mpi_rank);
-      stdout = freopen (name, "w", stdout);
-      sprintf (name, "log-%d", mpi_rank);
-      stderr = freopen (name, "w", stderr);
       ferr = fopen ("/dev/null", "w");
       fout = fopen ("/dev/null", "w");
     }
@@ -530,7 +564,7 @@ void mpi_init()
       ferr = stderr;
       fout = stdout;
     }
-    char * etrace = getenv ("MALLOC_TRACE");
+    char * etrace = getenv ("MALLOC_TRACE"), name[80];
     if (etrace && mpi_rank > 0) {
       sprintf (name, "%s-%d", etrace, mpi_rank);
       setenv ("MALLOC_TRACE", name, 1);

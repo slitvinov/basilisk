@@ -246,8 +246,6 @@ void free_solver()
 @if MTRACE
   pmuntrace();
 @endif
-  fflush (stdout);
-  fflush (stderr);
 }
 
 // Cartesian methods
