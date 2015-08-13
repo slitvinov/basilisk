@@ -32,7 +32,7 @@ static void mpi_print (timer t, int i, size_t tnc,
     *s.min/i*, *s.avg/i*, *s.max/i* are the minimum, average and maximum
     *times spent in communication routines. */
 
-    printf ("%d %g %g %g %s %g %g %g %.2g%% %ld %ld ",
+    printf ("%d %g %g %g %s %g %g %g %.2g%% %ld %ld",
 	    npe(), s.cpu/i, s.real/i, s.speed, name, s.min/i, s.avg/i, s.max/i,
 	    100.*s.avg/s.real, s.mem, s.tnc/i);
 
@@ -61,8 +61,19 @@ int main (int argc, char * argv[])
 {
   int maxlevel = argc > 1 ? atoi(argv[1]) : (dimension == 2 ? 8 : 5);
   int minlevel = argc > 2 ? atoi(argv[2]) : 1;
-  double minimum_time = 0.1;
   timer t;
+
+  double speed = 1e6; // approx speed in points/sec/core
+  size_t tnc = ((size_t)1) << (dimension*maxlevel);
+  int i, nloops = max(0.1*speed*npe()/(double)tnc, 1);
+  if (!pid())
+    fprintf (stderr, "grid: %s\nnloops = %d\n", GRIDNAME, nloops);
+
+  if (tnc*nloops/(speed*npe()) > 100.) {
+    fprintf (stderr, "this run would probably take more than 100 seconds."
+	     " Aborting ...\n");
+    exit(1);
+  }
 
   init_grid (1 << minlevel);
 
@@ -74,12 +85,10 @@ int main (int argc, char * argv[])
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
   refine (level < maxlevel, NULL);
-  size_t tnc = 0;
+  tnc = 0;
   foreach(reduction(+:tnc))
     tnc++;
   mpi_print (t, 1, tnc, "refine");
-
-  int i;
 
   /**
   We fill `a` with a simple function. */
@@ -87,7 +96,7 @@ int main (int argc, char * argv[])
   MPI_Barrier (MPI_COMM_WORLD);
   i = 0;
   t = timer_start();
-  while (timer_elapsed(t) < minimum_time) {
+  while (i < nloops) {
     foreach()
       a[] = cos(pi*x)*cos(pi*y)*cos(pi*z);
 #if 0
@@ -112,7 +121,7 @@ int main (int argc, char * argv[])
   MPI_Barrier (MPI_COMM_WORLD);
   i = 0;
   t = timer_start();
-  while (timer_elapsed(t) < minimum_time) {
+  while (i < nloops) {
     foreach() {
       b[] = 0.;
       foreach_dimension()
@@ -131,7 +140,7 @@ int main (int argc, char * argv[])
   i = 0;
   t = timer_start();
   double sum = 0.;
-  while (timer_elapsed(t) < minimum_time) {
+  while (i < nloops) {
     sum = 0.;
     foreach(reduction(+:sum))
       sum += b[];
@@ -147,7 +156,7 @@ int main (int argc, char * argv[])
   MPI_Barrier (MPI_COMM_WORLD);
   i = 0;
   t = timer_start();
-  while (timer_elapsed(t) < minimum_time) {
+  while (i < nloops) {
     restriction ({b});
     i++;
   }
@@ -160,7 +169,7 @@ int main (int argc, char * argv[])
   i = 0;
   TOLERANCE = HUGE;
   t = timer_start();
-  while (timer_elapsed(t) < minimum_time) {
+  while (i < nloops) {
     poisson (a, b);
     i++;
   }
