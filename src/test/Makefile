@@ -6,7 +6,8 @@ include $(BASILISK)/Makefile.defs
 CFLAGS += -O2 -DMTRACE=3
 
 # list only non-default (!.tst) tests
-check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst
+check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst \
+	poisson.3D.tst circle.3D.tst
 
 # these tests have special depencies/compilation requirements
 

@@ -1,8 +1,8 @@
 reset
 set title 'Poisson solution with a circular refined patch'
 
-minlevel = 7
-maxlevel = 10
+minlevel = 5
+maxlevel = 7
 
 ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
 f(x)=a+b*x

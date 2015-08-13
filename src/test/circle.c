@@ -5,44 +5,43 @@
 
 scalar a[], b[], res[], dp[];
 
-double solution (double x, double y)
+double solution (double x, double y, double z)
 {
-  return sin(3.*pi*x)*sin(3.*pi*y);
+  return cos(3.*pi*x)*cos(3.*pi*y)*cos(3.*pi*z);
 }
-
-/* Dirichlet condition on all boundaries */
-a[right]  = dirichlet (solution(x, y));
-a[left]   = dirichlet (solution(x, y));
-a[top]    = dirichlet (solution(x, y));
-a[bottom] = dirichlet (solution(x, y));
-
-/* homogeneous conditions for dp */
-dp[right]  = dirichlet(0);
-dp[left]   = dirichlet(0);
-dp[top]    = dirichlet(0);
-dp[bottom] = dirichlet(0);
 
 void solve (int depth)
 {
-  origin (-0.5, -0.5);
+  /* Dirichlet condition on all boundaries */
+  foreach_dimension() {
+    a[right] = dirichlet (solution(x, y, z));
+    a[left]  = dirichlet (solution(x, y, z));
+  }
+  /* homogeneous conditions for dp */
+  foreach_dimension() {
+    dp[right] = dirichlet(0);
+    dp[left]  = dirichlet(0);
+  }
+  
+  origin (-0.5, -0.5, -0.5);
   int nrelax = 4;
   init_grid(1);
 
-  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)), NULL);
+  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)),
+	  NULL);
   
   foreach() {
+    b[] = - 9.*dimension*pi*pi*cos(3.*pi*x)*cos(3.*pi*y)*cos(3.*pi*z);
     a[] = 0.;
-    b[] = -18.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y);
   }
   boundary ({a});
 
   #define NITER 15
   clock_t start = clock(), iter[NITER];
   double maxres[NITER];
-  const vector alpha[] = {1.,1.};
   const scalar lambda[] = 0.;
   struct Poisson p;
-  p.a = a; p.b = b; p.alpha = alpha; p.lambda = lambda;
+  p.a = a; p.b = b; p.alpha = unityf; p.lambda = lambda;
   scalar * lres = {res};
   residual ({a}, {b}, lres, &p);
   for (int i = 0; i < NITER; i++) {
@@ -63,17 +62,19 @@ void solve (int depth)
 
   double max = 0;
   foreach(reduction(max:max)) {
-    double e = a[] - solution(x, y);
+    double e = a[] - solution(x, y, z);
     if (fabs(e) > max) max = fabs(e);
     //    printf ("%g %g %g %g %g %g\n", x, y, a[], b[], res[], e);
   }
   fprintf (stderr, "max error %d %g\n", depth, max);
-
-  free_grid();
 }
 
 int main (int argc, char ** argv)
 {
+#if dimension <= 2
   for (int depth = 7; depth <= 10; depth++)
+#else
+  for (int depth = 5; depth <= 7; depth++)
+#endif
     solve (depth);
 }
