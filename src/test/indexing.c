@@ -16,7 +16,7 @@ int main (int argc, char ** argv)
   mpi_partitioning();
 
   scalar index[];
-  z_indexing (index);
+  z_indexing (index, true);
 
   output_cells (stdout);
   foreach() {

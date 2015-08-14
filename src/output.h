@@ -707,29 +707,65 @@ struct Dump {
   char * file;
 };
 
+struct DumpHeader {
+  double t;
+  long len;
+};
+
 void dump (struct Dump p)
 {
   FILE * fp = p.fp;
-  scalar * list = p.list ? p.list : all;
+  scalar * list = p.list ? p.list : list_copy (all);
   char * file = p.file;
+
   if (file && (fp = fopen (file, "w")) == NULL) {
     perror (file);
     exit (1);
   }
   assert (fp);
 
-  fwrite (&p.t, sizeof(double), 1, fp);
-  int len = list_len (list);
-  fwrite (&len, sizeof(int), 1, fp);
+  struct DumpHeader header = { p.t, list_len(list) };
 
+  if (pid() == 0 && fwrite (&header, sizeof(header), 1, fp) < 1) {
+    perror ("dump(): error while writing header");
+    exit (1);
+  }
+
+  scalar index = {-1};
+  
+#if _MPI // Parallel
+  index = new scalar;
+  z_indexing (index, false);
+  int cell_size = sizeof(unsigned) + header.len*sizeof(double);
+#endif
+  
   foreach_cell() {
-    fwrite (&cell.flags, sizeof(unsigned), 1, fp);
-    for (scalar s in list)
-      fwrite (&s[], sizeof(double), 1, fp);
+    if (is_local(cell)) {
+#if _MPI
+      if (fseek (fp, sizeof(header) + index[]*cell_size, SEEK_SET) < 0) {
+	perror ("dump(): error while seeking");
+	exit (1);
+      }
+#endif
+      unsigned flags = cell.flags & leaf;
+      if (fwrite (&flags, sizeof(unsigned), 1, fp) < 1) {
+	perror ("dump(): error while writing flags");
+	exit (1);
+      }
+      for (scalar s in list)
+	if (fwrite (&s[], sizeof(double), 1, fp) < 1) {
+	  perror ("dump(): error while writing scalars");
+	  exit (1);
+	}
+    }
     if (is_leaf(cell))
       continue;
   }
+
+  delete ({index});
   
+  if (!p.list)
+    free (list);
   if (file)
     fclose (fp);
 }
@@ -743,20 +779,17 @@ bool restore (struct Dump p)
     return false;
   assert (fp);
 
+  struct DumpHeader header;
+  
   double t = 0.;
-  if (fread (&t, sizeof(double), 1, fp) != 1) {
-    fprintf (stderr, "restore(): error: expecting 't'\n");
+  if (fread (&header, sizeof(header), 1, fp) < 1) {
+    fprintf (stderr, "restore(): error: expecting header\n");
     exit (1);
   }
-  int len;
-  if (fread (&len, sizeof(int), 1, fp) != 1) {
-    fprintf (stderr, "restore(): error: expecting 'len'\n");
-    exit (1);
-  }
-  if (len != list_len (list)) {
+  if (header.len != list_len (list)) {
     fprintf (stderr,
-	     "restore(): error: the list lengths don't match: %d != %d\n",
-	     len, list_len (list));
+	     "restore(): error: the list lengths don't match: %ld != %d\n",
+	     header.len, list_len (list));
     exit (1);
   }
   
@@ -774,7 +807,6 @@ bool restore (struct Dump p)
       }
     if (!(flags & leaf) && is_leaf(cell))
       refine_cell (point, NULL, 0, NULL);
-    cell.flags = flags;
     if (is_leaf(cell))
       continue;
   }

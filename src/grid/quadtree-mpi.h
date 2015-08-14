@@ -975,7 +975,9 @@ void mpi_partitioning()
 /**
 # *z_indexing()*: fills *index* with the Z-ordering index.
    
-On a single processor, we would just need something like
+If `leaves` is `true` only leaves are indexed, otherwise all active
+cells are indexed. On a single processor, we would just need something
+like (for leaves)
 
 ~~~literatec
 double i = 0;
@@ -983,10 +985,13 @@ foreach()
   index[] = i++;
 ~~~
 
-In parallel, this is a bit more difficult. */
+In parallel, this is a bit more difficult. 
+
+On the master process (`pid() == 0`), the function returns the
+(global) maximum index (and -1 on all other processes). */
 
 trace
-void z_indexing (scalar index)
+double z_indexing (scalar index, bool leaves)
 {
   /**
   ## Size of subtrees
@@ -1009,7 +1014,7 @@ void z_indexing (scalar index)
   boundary_iterate (restriction, {size}, depth());
   for (int l = depth() - 1; l >= 0; l--) {
     foreach_coarse_level(l) { // fixme: we could use restriction()
-      double sum = 0.;
+      double sum = !leaves;
       foreach_child()
 	sum += size[];
       size[] = sum;
@@ -1018,20 +1023,32 @@ void z_indexing (scalar index)
   }
 
   /**
+  The maximum index value is the size of the entire tree (i.e. the
+  value of `size` in the root cell on the master process) minus
+  one. */
+  
+  double maxi = -1.;
+  if (pid() == 0)
+    foreach_level(0)
+      maxi = size[] - 1.;
+  
+  /**
   ## Indexing
   
   Indexing can then be done locally. */
 
   double i = 0;
   foreach_cell() {
-    if (is_leaf(cell)) {
+    double s = size[];
+    if (!leaves || is_leaf(cell))
       index[] = i++;
+    if (is_leaf(cell))
       continue;
-    }
-    else if (!is_active(cell)) {
-      i += size[];
+    if (!is_active(cell)) {
+      i += s - !leaves;
       continue;
     }
   }
-}
 
+  return maxi;
+}
