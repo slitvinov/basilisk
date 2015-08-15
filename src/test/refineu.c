@@ -112,6 +112,4 @@ int main (int argc, char ** argv)
 
   if (error())
     return 1;
-
-  free_grid();
 }

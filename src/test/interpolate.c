@@ -36,7 +36,5 @@ int main (int argc, char ** argv)
     fprintf (stderr, "%d %g\n", n*4, emax);
     if (n == 16)
       output_cells (stdout);
-
-    free_grid();
   }
 }

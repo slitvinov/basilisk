@@ -75,8 +75,6 @@ int main (int argc, char * argv[])
     end = clock();
     printf ("res %d %g %g\n", l, 
 	    1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)), sum);
-
-    free_grid();
   }
 }
 

@@ -66,6 +66,4 @@ int main (int argc, char ** argv)
   printf ("%d halo points\n", nhalos);
   printf ("%4d iterations:     %6g CPU, %.3g halos.steps/s\n",
 	  i, cpu, nhalos*i/cpu);
-
-  free_grid();
 }

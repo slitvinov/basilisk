@@ -23,6 +23,4 @@ int main (int argc, char ** argv)
     foreach_halo (restriction, l)
       fprintf (stderr, "%g %g %d %d res\n", x, y, level, cell.neighbors);
   output_cells (stdout);
-
-  free_grid ();
 }

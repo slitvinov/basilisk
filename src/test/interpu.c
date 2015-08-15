@@ -48,7 +48,5 @@ int main (int argc, char ** argv)
 
   fprintf (stderr, "maximum error on halos: %g %g\n", max, maxv);
 
-  free_grid ();
-
   return (max > tolerance || maxv > tolerance || max != maxv);
 }

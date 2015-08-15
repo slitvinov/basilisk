@@ -26,5 +26,4 @@ int main ()
       fprintf (stderr, "%g %g %g\n", t, a[], a[] - exp(-A*t)*sin(t));
     runge_kutta (2, t, dt, 1, f, df, advance, update);
   }
-  free_grid();
 }

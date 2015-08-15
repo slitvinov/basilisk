@@ -48,6 +48,4 @@ int main (int argc, char * argv[])
     fprintf (stderr, "face %g %g %g %g\n", x, y, z, s[] - s[-1,0]);
     assert (s[] == s[-1]);
   }
-
-  free_grid();
 }

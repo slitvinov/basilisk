@@ -75,8 +75,6 @@ void solve (int depth)
     //    printf ("%g %g %g %g %g %g\n", x, y, a[], b[], res[], e);
   }
   fprintf (stderr, "max error %d %g\n", depth, max);
-
-  free_grid();
 }
 
 int main (int argc, char ** argv)

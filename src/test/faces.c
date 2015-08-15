@@ -10,5 +10,4 @@ int main()
   foreach_face()
     fprintf (stderr, "%g %g\n", x, y);
   output_cells (stdout);
-  free_grid();
 }

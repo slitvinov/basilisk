@@ -70,6 +70,4 @@ int main (int argc, char ** argv)
     //    printf ("%g %g %g %g %g %g\n", x, y, a[], b[], res[], e);
   }
   fprintf (stderr, "# max error %g\n", max);
-
-  free_grid();
 }

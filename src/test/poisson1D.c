@@ -36,8 +36,6 @@ int main (int argc, char ** argv)
       printf ("%g %g %g %g\n", x, a[], b[], e);
     }
     fprintf (stderr, "%d %g\n", depth, max);
-
-    free_grid();
   }
 }
 
