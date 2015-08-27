@@ -54,8 +54,6 @@ int main()
 		   x + p[0].x*Delta, y + p[0].y*Delta, 
 		   x + p[1].x*Delta, y + p[1].y*Delta);
       }
-
-  free_grid ();
 }
 
 /**

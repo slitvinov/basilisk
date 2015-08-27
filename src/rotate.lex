@@ -38,28 +38,6 @@ ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 
 %%
 
-({ID}+\.)+x{WS}*,{WS}*({ID}+\.)+y |
-({ID}+\.)+x{WS}*,{WS}*({ID}+\.)+y,{WS}*({ID}+\.)+z {
-  // do not rotate lists of vector components
-  char * id1 = strdup (yytext);
-  char * s = strchr (id1, ','), * id2 = s + 1; 
-  do *s-- = '\0'; while (strchr(" \t\v\n\f",*s));
-  while (strchr(" \t\v\n\f",*id2)) id2++;
-  s = strchr (id2, ',');
-  char * id3 = s ? s + 1 : NULL;
-  if (id3) {
-    do *s-- = '\0'; while (strchr(" \t\v\n\f",*s));
-    while (strchr(" \t\v\n\f",*id3)) id3++;
-  }
-  if (strlen(id1) != strlen(id2) || strncmp (id1, id2, strlen(id1) - 2) ||
-      (id3 && (strlen(id1) != strlen(id3) ||
-	       strncmp (id1, id3, strlen(id1) - 2))))
-    rotate_string(yytext);
-  else
-    ECHO;
-  free (id1);
-}
-
 {ID}*_[xyz] |
 [.][xyz]  rotate_string (yytext);
 

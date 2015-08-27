@@ -46,27 +46,40 @@ void fraction_refine (Point point, scalar c)
     Otherwise, we reconstruct the interface in the parent cell. */
 
     coord n = mycs (point, c);
-    double alpha = line_alpha (cc, n);
+    double alpha = plane_alpha (cc, n);
 
     /**
     And compute the volume fraction in the quadrant of the coarse cell
     matching the fine cells. We use symmetries to simplify the
     combinations. */
 
-    for (int k = 0; k < 2; k++)
-      for (int l = 0; l < 2; l++)
-	fine(c,k,l) = rectangle_fraction ((2*k - 1)*n.x, (2*l - 1)*n.y, alpha,
-					  0., 0., 0.5, 0.5);
+    coord a, b;
+    foreach_dimension() {
+      a.x = 0.; b.x = 0.5;
+    }
+    
+    foreach_child() {
+      coord nc;
+      foreach_dimension()
+	nc.x = child.x*n.x;
+      c[] = rectangle_fraction (nc, alpha, a, b);
+    }
   }
 }
 
 /**
 Finally, we also need to prolongate the reconstructed value of
-$\alpha$. This is done with the simple formula below. */
+$\alpha$. This is done with the simple formula below. We add an
+attribute so that we can access the normal from the refinement
+function. */
+
+attribute {
+  vector n;
+}
 
 static void alpha_refine (Point point, scalar alpha)
 {
-  vector n = alpha.v;
+  vector n = alpha.n;
   double alphac = 2.*alpha[];
   coord m;
   foreach_dimension()
@@ -106,67 +119,89 @@ struct Fractions {
   face vector s;     // optional
 };
 
-void fractions (struct Fractions p)
+void fractions (struct Fractions a)
 {
-  vertex scalar Phi = p.Phi;
-  scalar c = p.c;
-  face vector s = automatic (p.s);
+  vertex scalar Phi = a.Phi;
+  scalar c = a.c;
+  face vector s = automatic (a.s);
 
   /**
-  ### Surface fraction computation
+  We store the positions of the intersections of the surface with the
+  edges of the cell in vector field `p`. In two dimensions, this field
+  is just the transpose of the *line fractions* `s`, in 3D we need to
+  allocate a new field. */
   
-  We start by computing the surface fractions. */
+#if dimension == 3
+  vector p[];
+#else // dimension == 2
+  vector p;
+  p.x = s.y; p.y = s.x;
+#endif
+  
+  /**
+  ### Line fraction computation
+  
+  We start by computing the *line fractions* i.e. the (normalised)
+  lengths of the edges of the cell within the surface. */
 
-  foreach_face() {
+  foreach_edge() {
 
     /**
-    If the values of $\Phi$ on the vertices of the face have opposite
-    signs, we know that the face is cut by the interface. */
+    If the values of $\Phi$ on the vertices of the edge have opposite
+    signs, we know that the edge is cut by the interface. */
 
-    if (Phi[]*Phi[0,1] < 0.) {
+    if (Phi[]*Phi[1] < 0.) {
 
       /**
       In that case we can find an approximation of the interface position by
       simple linear interpolation. We also check the sign of one of the
       vertices to orient the interface properly. */
 
-      s.x[] = Phi[]/(Phi[] - Phi[0,1]);
+      p.x[] = Phi[]/(Phi[] - Phi[1]);
       if (Phi[] < 0.)
-	s.x[] = 1. - s.x[];
+	p.x[] = 1. - p.x[];
     }
 
     /**
-    If the values of $\Phi$ on the vertices of the face have the same sign
-    (or are zero), then the face is either entirely outside or entirely
+    If the values of $\Phi$ on the vertices of the edge have the same sign
+    (or are zero), then the edge is either entirely outside or entirely
     inside the interface. We check the sign of both vertices to treat
-    limit cases properly (when the interface intersects the face exactly
+    limit cases properly (when the interface intersects the edge exactly
     on one of the vertices). */
 
     else
-      s.x[] = (Phi[] > 0. || Phi[0,1] > 0.);
+      p.x[] = (Phi[] > 0. || Phi[1] > 0.);
   }
 
   /**
-  We make sure that surface fractions are defined conservatively (on
-  quadtree meshes). */
+  ### Surface fraction computation 
 
+  We can now compute the surface fractions. In 3D they will be
+  computed for each face (in the z, x and y directions) and stored in
+  the face field `s`. In 2D the surface fraction in the z-direction is
+  the *volume fraction* `c`. The call to `boundary_flux()` defines
+  consistent line fractions on quadtrees. */
+
+#if dimension == 3
+  scalar s_x = s.x, s_y = s.y, s_z = s.z;
+  foreach_face(z,x,y)
+#else // dimension == 2
   boundary_flux ({s});
-
-  /**
-  ### Volume fraction computation */
-
-  foreach() {
+  scalar s_z = c;
+  foreach()
+#endif
+  {
 
     /**
     We first compute the normal to the interface. This can be done easily
-    using the surface fractions. The idea is to compute the circulation of
+    using the line fractions. The idea is to compute the circulation of
     the normal along the boundary $\partial\Omega$ of the fraction of the
     cell $\Omega$ inside the interface. Since this is a closed curve, we
     have
     $$
     \oint_{\partial\Omega}\mathbf{n}\;dl = 0
     $$ 
-    We can further decompose the integral into its parts along the faces
+    We can further decompose the integral into its parts along the edges
     of the square and the part along the interface. For the case pictured
     above, we get for one component (and similarly for the other)
     $$
@@ -189,48 +224,96 @@ void fractions (struct Fractions p)
 
     coord n;
     double nn = 0.;
-    foreach_dimension() {
-      n.x = s.x[] - s.x[1];
+    foreach_dimension(2) {
+      n.x = p.y[] - p.y[1];
       nn += fabs(n.x);
     }
     
     /**
-    If the norm is zero, the cell is full or empty and the volume fraction
-    is identical to one of the surface fractions. */
+    If the norm is zero, the cell is full or empty and the surface fraction
+    is identical to one of the line fractions. */
 
     if (nn == 0.)
-      c[] = s.x[];
-
-    /**
-    Otherwise we are in a cell containing the interface. We first
-    normalise the normal. */
-
+      s_z[] = p.x[];
     else {
-      foreach_dimension()
+    
+      /**
+      Otherwise we are in a cell containing the interface. We first
+      normalise the normal. */
+
+      foreach_dimension(2)
 	n.x /= nn;
 
       /**
-      To find the intercept $\alpha$, we look for a face which is cut by the
+      To find the intercept $\alpha$, we look for edges which are cut by the
       interface, find the coordinate $a$ of the intersection and use it to
-      derive $\alpha$. */
+      derive $\alpha$. We take the average of $\alpha$ for all intersections. */
       
-      double alpha = undefined;
+      double alpha = 0., ni = 0.;
       for (int i = 0; i <= 1; i++)
-	foreach_dimension()
-	  if (s.x[i] > 0. && s.x[i] < 1.) {
-	    double a = sign(Phi[i])*(s.x[i] - 0.5);
-	    alpha = n.x*(i - 0.5) + n.y*a;
+	foreach_dimension(2)
+	  if (p.x[0,i] > 0. && p.x[0,i] < 1.) {
+	    double a = sign(Phi[0,i])*(p.x[0,i] - 0.5);
+	    alpha += n.x*a + n.y*(i - 0.5);
+	    ni++;
 	  }
 
       /**
       Once we have $\mathbf{n}$ and $\alpha$, the (linear) interface is
-      fully defined and we can compute the volume fraction using our
+      fully defined and we can compute the surface fraction using our
       pre-defined function. */
 
-      c[] = line_area (n, alpha);
+      s_z[] = line_area (n.x, n.y, alpha/ni);
     }
   }
 
+  /**
+  ### Volume fraction computation
+
+  To compute the volume fraction in 3D, we use the same approach. */
+  
+#if dimension == 3
+  boundary_flux ({s});
+  foreach() {
+
+    /**
+    Estimation of the average normal from the surface fractions. */
+       
+    coord n;
+    double nn = 0.;
+    foreach_dimension(3) {
+      n.x = s.x[] - s.x[1];
+      nn += fabs(n.x);
+    }
+    if (nn == 0.)
+      c[] = s.x[];
+    else {
+      foreach_dimension(3)
+	n.x /= nn;
+
+      /**
+      We compute the average value of *alpha* by looking at the
+      intersections of the surface with the twelve edges of the
+      cube. */
+      
+      double alpha = 0., ni = 0.;
+      for (int i = 0; i <= 1; i++)
+	for (int j = 0; j <= 1; j++)
+	  foreach_dimension(3)
+	    if (p.x[0,i,j] > 0. && p.x[0,i,j] < 1.) {
+	      double a = sign(Phi[0,i,j])*(p.x[0,i,j] - 0.5);
+	      alpha += n.x*a + n.y*(i - 0.5) + n.z*(j - 0.5);
+	      ni++;
+	    }
+
+      /**
+      Finally we compute the volume fraction. */
+      
+      c[] = plane_volume (n, alpha/ni);
+    }
+  }
+#endif
+  
   /**
   Finally we apply the boundary conditions. */
 
@@ -253,6 +336,7 @@ coord youngs_normal (Point point, scalar c)
 {
   coord n;
   double nn = 0.;
+  assert (dimension == 2);
   foreach_dimension() {
     n.x = (c[-1,1] + 2.*c[-1,0] + c[-1,-1] -
 	   c[+1,1] - 2.*c[+1,0] - c[+1,-1]);
@@ -298,7 +382,7 @@ void reconstruction (const scalar c, vector n, scalar alpha)
       // coord m = youngs_normal (point, c);
       foreach_dimension()
 	n.x[] = m.x;
-      alpha[] = line_alpha (c[], m);
+      alpha[] = plane_alpha (c[], m);
     }
   }
 
@@ -313,11 +397,9 @@ void reconstruction (const scalar c, vector n, scalar alpha)
     n.x.refine = n.x.prolongation = refine_injection;
 
   /**
-  For $\alpha$ we store the normal field in the `v` attribute (which is
-  not really meant to be used this way) to be able to pass it to the
-  prolongation function. */
+  We set our refinement function for *alpha*. */
 
-  alpha.v = n;
+  alpha.n = n;
   alpha.refine = alpha.prolongation = alpha_refine;
 #endif
 
@@ -355,6 +437,8 @@ struct OutputFacets {
 
 void output_facets (struct OutputFacets p)
 {
+  assert (dimension == 2);
+  
   scalar c = p.c;
   face vector s = p.s;
   if (!p.fp) p.fp = stdout;
@@ -369,14 +453,14 @@ void output_facets (struct OutputFacets p)
 	// compute normal from face fractions
 	double nn = 0.;
 	foreach_dimension() {
-	  n.x = s.x[] - s.x[1,0];
+	  n.x = s.x[] - s.x[1];
 	  nn += fabs(n.x);
 	}
 	assert (nn > 0.);
 	foreach_dimension()
 	  n.x /= nn;
       }
-      double alpha = line_alpha (c[], n);
+      double alpha = plane_alpha (c[], n);
       coord segment[2];
       if (facets (c[], n, alpha, segment) == 2)
 	fprintf (p.fp, "%g %g\n%g %g\n\n", 

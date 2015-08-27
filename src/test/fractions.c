@@ -35,8 +35,6 @@ int main()
 
   output_facets (c, stdout, s);
   output_facets (c, stderr);
-
-  free_grid ();
 }
 
 /**

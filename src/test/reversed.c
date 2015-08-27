@@ -102,7 +102,7 @@ zero and one. */
 
 event logfile (t = {0,T}) {
   stats s = statsf (f);
-  fprintf (stderr, "# %f %.12f %g %g\n", t, s.sum, s.min, s.max);
+  fprintf (stderr, "# %f %.12f %.9f %g\n", t, s.sum, s.min, s.max);
 }
 
 /**

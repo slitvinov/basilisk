@@ -72,7 +72,7 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
       cell.flags = flags;
     }
     if (refined)
-      cache_append (refined, point, 0, 0, 0, cell.flags);
+      cache_append (refined, point, cell.flags);
     nr++;
   }
 @endif
@@ -102,7 +102,7 @@ bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
   
   if (cell.neighbors)
     foreach_child() {
-      cell.flags &= ~(leaf|active);
+      cell.flags &= ~(leaf|active|vertex);
       cell.pid = pid;
     }
 
@@ -322,9 +322,6 @@ int coarsen_function (int (* func) (Point p), scalar * list)
   mpi_boundary_refine (list);						\
   mpi_boundary_update();						\
 }
-
-#define is_refined(cell) ((cell).neighbors && !is_leaf (cell) && \
-			  !is_boundary(cell))
 
 static void halo_restriction_flux (vector * list)
 {

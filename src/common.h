@@ -683,13 +683,7 @@ typedef struct {
 } tensor;
 
 typedef struct {
-  double x;
-#if dimension > 1
-  double y;
-#endif
-#if dimension > 2
-  double z;
-#endif
+  double x, y, z;
 } coord;
 
 #if dimension == 1

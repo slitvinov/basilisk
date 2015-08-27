@@ -104,6 +104,8 @@ foreach_face_generic() {
 @
 @define end_foreach_vertex() } end_foreach_face_generic()
 
+#define foreach_edge() foreach_face(y,x)
+
 @define is_face_x() (point.j < point.n + GHOSTS)
 @define is_face_y() (point.i < point.n + GHOSTS)
 

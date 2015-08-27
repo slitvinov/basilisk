@@ -38,8 +38,36 @@
   int nexpr[EVMAX], eventline[EVMAX], eventparent[EVMAX], eventchild[EVMAX];
   int eventlast[EVMAX];
 
-  int foreachdim, foreachdimpara, foreachdimline;
-  FILE * foreachdimfp;
+  typedef struct {
+    void * p;
+    int n, size;
+  } Stack;
+
+  void stack_push (Stack * s, void * p) {
+    s->n++;
+    s->p = realloc (s->p, s->n*s->size);
+    char * dest = ((char *)s->p) + (s->n - 1)*s->size;
+    memcpy (dest, p, s->size);
+  }
+
+  void * stack_pop (Stack * s) {
+    if (!s->n)
+      return NULL;
+    return ((char *)s->p) + --s->n*s->size;
+  }
+
+  void * stack_top (Stack * s) {
+    if (!s->n)
+      return NULL;
+    return ((char *)s->p) + (s->n - 1)*s->size;
+  }
+
+  typedef struct {
+    int scope, para, line, dim;
+    FILE * fp;
+  } foreachdim_t;
+
+  Stack foreachdim_stack = {NULL, 0, sizeof(foreachdim_t)};
 
   int inattr, attrscope, attrline;
   FILE * attrfp;
@@ -74,8 +102,8 @@
   char * tracefunc = NULL;
   
   int foreach_line;
-  enum { face_x, face_y, face_z, face_xyz };
-  int foreach_face_xyz;
+  enum { face_x = 0, face_y, face_z, face_xyz };
+  int foreach_face_xyz, foreach_face_start;
 
   char ** args = NULL, ** argss = NULL;
   int nargs = 0, inarg;
@@ -184,30 +212,6 @@
   }
 
   typedef struct {
-    void * p;
-    int n, size;
-  } Stack;
-
-  void stack_push (Stack * s, void * p) {
-    s->n++;
-    s->p = realloc (s->p, s->n*s->size);
-    char * dest = ((char *)s->p) + (s->n - 1)*s->size;
-    memcpy (dest, p, s->size);
-  }
-
-  void * stack_pop (Stack * s) {
-    if (!s->n)
-      return NULL;
-    return ((char *)s->p) + --s->n*s->size;
-  }
-
-  void * stack_top (Stack * s) {
-    if (!s->n)
-      return NULL;
-    return ((char *)s->p) + (s->n - 1)*s->size;
-  }
-
-  typedef struct {
     int scope, para;
     char name[80];
   } foreach_child_t;
@@ -248,36 +252,42 @@
 
   int rotate (FILE * fin, FILE * fout, int n, int dimension);
 
-  void writefile (FILE * fp, int nrotate, int line1, const char * condition) {
+  void writefile (FILE * fp, int nrotate, int dim,
+		  int line1, const char * condition) {
     if (condition)
       fprintf (yyout, " if (%s) {", condition);
     if (line1 >= 0)
       fprintf (yyout, "\n#line %d\n", line1);
-    rotate (fp, yyout, nrotate, dimension);
+    rotate (fp, yyout, nrotate, dim);
     if (condition)
       fputs (" } ", yyout);
   }
 
-  void endforeachdim () {
-    fclose (yyout);
-    yyout = foreachdimfp;
-    if (foreachdim > 1)
-      fputc ('{', yyout);
-    FILE * fp = dopen ("_dimension.h", "r");
-    int i;
-    for (i = 0; i < dimension; i++)
-      writefile (fp, i, foreachdimline, NULL);
-    fclose (fp);
-    if (foreachdim > 1)
-      fputc ('}', yyout);
-    foreachdim = 0;
+  void endforeachdim() {
+    foreachdim_t * dim;
+    while ((dim = stack_top(&foreachdim_stack)) &&
+	   dim->scope == scope && dim->para == para) {
+      if (debug)
+	fprintf (stderr, "%s:%d: popping foreach_dim\n", fname, line);
+      FILE * fp = yyout;
+      yyout = dim->fp;
+      if (dim->scope > 0)
+	fputc ('{', yyout);
+      int i;
+      for (i = 0; i < dim->dim; i++)
+	writefile (fp, i, dim->dim, dim->line, NULL);
+      fclose (fp);
+      if (dim->scope > 0)
+	fputc ('}', yyout);
+      stack_pop (&foreachdim_stack);
+    }
   }
 
   void write_face (FILE * fp, int i, int n) {
     fprintf (yyout, " { int %cg = -1; VARIABLES; ", 'i' + i);
     char s[30];
     sprintf (s, "is_face_%c()", 'x' + i);
-    writefile (fp, n, foreach_line, s);
+    writefile (fp, n, dimension, foreach_line, s);
     fputs (" }} ", yyout);
   }
   
@@ -289,7 +299,7 @@
       if (foreach_face_xyz == face_xyz) {
 	int i;
 	for (i = 0; i < dimension; i++)
-	  write_face (fp, i, i);
+	  write_face (fp, (i + foreach_face_start) % dimension, i);
       }
       else if (foreach_face_xyz == face_x)
 	write_face (fp, 0, 0);
@@ -1046,16 +1056,21 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     maps (line);
     if (inforeach_face) {
       foreach_face_xyz = face_xyz;
+      foreach_face_start = 0;
       if (nreduct == 0) { // foreach_face (x)
 	FILE * fp = dopen ("_foreach.h", "r");
 	int c;
-	while ((c = fgetc (fp)) != EOF)
-	  if (c == 'x')
-	    foreach_face_xyz = face_x;
-	  else if (c == 'y')
-	    foreach_face_xyz = face_y;
-	  else if (c == 'z')
-	    foreach_face_xyz = face_z;
+	while ((c = fgetc (fp)) != EOF) {
+	  if (c == 'x' || c == 'y' || c == 'z') {
+	    if (foreach_face_xyz == face_xyz)
+	      foreach_face_xyz = face_x + c - 'x';
+	  }
+	  else if (c == ',') {
+	    foreach_face_start = foreach_face_xyz;
+	    foreach_face_xyz = face_xyz;
+	    break;
+	  }	    
+	}
 	fclose (fp);
 	if (foreach_face_xyz != face_xyz &&
 	    ((dimension < 2 && foreach_face_xyz > face_x) ||
@@ -1102,7 +1117,8 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 }
 
 "{" {
-  if (foreachdim != 1 || scope != 0 || infunctionproto)
+  foreachdim_t * dim = stack_top(&foreachdim_stack);
+  if ((!dim || dim->scope) || scope != 0 || infunctionproto)
     ECHO;
   if (infunction && functionpara == 1 && scope == functionscope)
     infunction_declarations (line - 1);
@@ -1130,10 +1146,11 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   varwasmaybeconst();
   if (infunction && scope <= functionscope)
     endfunction();
-  if (foreachdim && scope == foreachdim - 1 && para == foreachdimpara) {
+  foreachdim_t * dim = stack_top(&foreachdim_stack);
+  if (dim && dim->scope == scope && dim->para == para) {
     if (scope != 0 || infunctionproto)
       ECHO;
-    endforeachdim ();
+    endforeachdim();
   }
   else if ((!inattr || scope != attrscope) &&
 	   (!inmap || scope != mapscope)) {
@@ -1236,7 +1253,8 @@ map{WS}+"{" {
   int insthg = 0;
   if (scope == 0)
     infunctionproto = 0;
-  if (foreachdim && scope == foreachdim - 1 && para == foreachdimpara) {
+  foreachdim_t * dim = stack_top(&foreachdim_stack);
+  if (dim && dim->scope == scope && dim->para == para) {
     ECHO; insthg = 1;
     endforeachdim ();
   }
@@ -1998,15 +2016,22 @@ trace {
 stderr fputs ("qstderr()", yyout);
 stdout fputs ("qstdout()", yyout);
 
-foreach_dimension{WS}*[(]{WS}*[)] {
+foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
+  int c;
+  foreachdim_t dim;
+  dim.dim = dimension;
+  for (c = '1'; c <= '3'; c++)
+    if (strchr(yytext, c))
+      dim.dim = c - '1' + 1;
   if (debug)
-    fprintf (stderr, "%s:%d: foreach_dimension (%d)\n", fname, line, dimension);
-  if (foreachdim)
-    return yyerror ("nested foreach_dimension() are not allowed");
-  foreachdim = scope + 1; foreachdimpara = para;
-  foreachdimfp = yyout;
-  yyout = dopen ("_dimension.h", "w");
-  foreachdimline = indef ? -1 : line;
+    fprintf (stderr, "%s:%d: foreach_dimension (%d)\n", fname, line, dim.dim);
+  dim.scope = scope; dim.para = para;
+  dim.fp = yyout;
+  char name[80];
+  sprintf (name, "_dimension_%d.h", foreachdim_stack.n);
+  yyout = dopen (name, "w+");
+  dim.line = indef ? -1 : line;
+  stack_push (&foreachdim_stack, &dim);
 }
 
 {ID}+{WS}+{ID}+{WS}*\( {
@@ -2346,7 +2371,7 @@ int endfor (FILE * fin, FILE * fout)
   brack = inarray = infine = 0;
   inevent = inreturn = inattr = inmap = 0;
   mallocpara = 0;
-  foreachdim = 0;
+  foreachdim_stack.n = 0;
   foreach_child_stack.n = 0;
   inboundary = nboundary = nsetboundary = 0;
   infunction = 0;

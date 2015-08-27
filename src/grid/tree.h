@@ -26,7 +26,8 @@ enum {
   border  = 1 << 4,
   remote_leaf = 1 << 5,
   fboundary = 1 << 6,
-  user    = 7,
+  vertex  = 1 << 7,
+  user    = 8,
 
   face_x = 1 << 0
 #if dimension >= 2
@@ -287,20 +288,18 @@ static void cache_level_shrink (CacheLevel * c)
   }
 }
 
-static void cache_append (Cache * c, Point p,
-			  int k, int l, int n,
-			  short flags)
+static void cache_append (Cache * c, Point p, short flags)
 {
   if (c->n >= c->nm) {
     c->nm += BSIZE;
     c->p = realloc (c->p, sizeof (Index)*c->nm);
   }
-  c->p[c->n].i = p.i + k;
+  c->p[c->n].i = p.i;
 #if dimension >= 2
-  c->p[c->n].j = p.j + l;
+  c->p[c->n].j = p.j;
 #endif
 #if dimension >= 3
-  c->p[c->n].k = p.k + n;
+  c->p[c->n].k = p.k;
 #endif  
   c->p[c->n].level = p.level;
   c->p[c->n].flags = flags;
@@ -313,14 +312,6 @@ void cache_shrink (Cache * c)
 }
 
 #undef BSIZE
-
-@define cache_append_x(c,p,k,l,n,flags) cache_append(c,p,k,l,n,flags)
-#if dimension == 2
-@define cache_append_y(c,p,k,l,n,flags) cache_append(c,p,l,k,n,flags)
-#else // dimension == 3
-@define cache_append_y(c,p,k,l,n,flags) cache_append(c,p,n,k,l,flags)
-@define cache_append_z(c,p,k,l,n,flags) cache_append(c,p,l,n,k,flags)
-#endif
 
 /* low-level memory management */
 #if dimension == 1
@@ -376,17 +367,16 @@ void cache_shrink (Cache * c)
 @define NN               (1 << point.level)
 @define cell		 CELL(NEIGHBOR(0,0,0))
 @define neighbor(k,l,n)	 CELL(NEIGHBOR(k,l,n))
-@define neighborp(k,l,n) neighborpf(point,k+0,l+0,n+0)
-
-static Point neighborpf (Point p, int k, int l, int n) {
-#if dimension == 1
-  return (Point){p.i + k, p.level};
-#elif dimension == 2
-  return (Point){p.i + k, p.j + l, p.level};
-#else
-  return (Point){p.i + k, p.j + l, p.k + n, p.level};
+@def neighborp(l,m,n) (Point) {
+    point.i + l,
+#if dimension >= 2
+    point.j + m,
 #endif
-}
+#if dimension >= 3
+    point.k + n,
+#endif
+    point.level }
+@
 			
 /***** Data macros *****/
 @define data(k,l,n)     ((double *) (NEIGHBOR(k,l,n) + sizeof(Cell)))
@@ -737,6 +727,8 @@ void recursive (Point point)
   
 #define update_cache() { if (quadtree->dirty) update_cache_f(); }
 
+#define is_refined(cell)      (!is_leaf (cell) && cell.neighbors && \
+                               cell.pid >= 0)
 #define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors && \
 			       cell.pid >= 0)
 #define is_boundary(cell) (cell.pid < 0)
@@ -824,6 +816,10 @@ static void update_cache_f (void)
 {
   Quadtree * q = grid;
 
+  foreach_cache(q->vertices,)
+    if (level <= depth() && allocated(0))
+      cell.flags &= ~vertex;
+  
   /* empty caches */
   q->leaves.n = q->faces.n = q->vertices.n = 0;
   for (int l = 0; l <= depth(); l++)
@@ -847,7 +843,7 @@ static void update_cache_f (void)
 	}
     if (is_leaf (cell)) {
       if (is_local(cell)) {
-	cache_append (&q->leaves, point, 0, 0, 0, 0);
+	cache_append (&q->leaves, point, 0);
 	// faces
 	unsigned flags = 0;
 	foreach_dimension()
@@ -855,19 +851,23 @@ static void update_cache_f (void)
 	      is_leaf(neighbor(-1)))
 	    flags |= face_x;
 	if (flags)
-	  cache_append (&q->faces, point, 0, 0, 0, flags);
+	  cache_append (&q->faces, point, flags);
 	foreach_dimension()
 	  if (is_boundary(neighbor(1)) || is_prolongation(neighbor(1)) ||
 	      (!is_local(neighbor(1)) && is_leaf(neighbor(1))))
-	    cache_append_x (&q->faces, point, 1, 0, 0, face_x);
-	// vertices: fixme 3D
-	cache_append (&q->vertices, point, 0, 0, 0, 0);
-	if (!is_leaf(neighbor(1,1)) || !is_local(neighbor(1,1)))
-	  cache_append (&q->vertices, point, 1, 1, 0, 0);
-	foreach_dimension()
-	  if ((!is_leaf(neighbor(0,-1)) || !is_local(neighbor(0,-1))) &&
-	      (!is_leaf(neighbor(1,0)) || !is_local(neighbor(1,0))))
-	    cache_append_x (&q->vertices, point, 1, 0, 0, 0);
+	    cache_append (&q->faces, neighborp(1), face_x);
+	// vertices
+	for (int i = 0; i <= 1; i++)
+        #if dimension >= 2
+	  for (int j = 0; j <= 1; j++)
+        #endif
+          #if dimension >= 3
+	    for (int k = 0; k <= 1; k++)
+	  #endif
+	      if (!(neighbor(i,j,k).flags & vertex)) {
+		cache_append (&q->vertices, neighborp(i,j,k), 0);
+		neighbor(i,j,k).flags |= vertex;
+	      }
 	// halo prolongation
         if (cell.neighbors > 0)
 	  cache_level_append (&q->prolongation[level], point);
@@ -881,19 +881,11 @@ static void update_cache_f (void)
 	      is_local(neighbor(-1)) && is_prolongation(neighbor(-1)))
 	    flags |= face_x;
 	if (flags)
-	  cache_append (&q->faces, point, 0, 0, 0, flags);
+	  cache_append (&q->faces, point, flags);
 	foreach_dimension()
 	  if (allocated(1) && is_local(neighbor(1)) &&
 	      is_prolongation(neighbor(1)))
-	    cache_append_x (&q->faces, point, 1, 0, 0, face_x);
-	// vertices: fixme: this is too complicated, 3D?
-	foreach_dimension()
-	  for (int i = -1; i <= 1; i += 2)
-	    if (allocated(i) && is_local(neighbor(i)) &&
-		is_prolongation(neighbor(i))) {
-	      cache_append_x (&q->vertices, point, (i + 1)/2, 0, 0, 0);
-	      cache_append_x (&q->vertices, point, (i + 1)/2, 1, 0, 0);
-	    }
+	    cache_append (&q->faces, neighborp(1), face_x);
       }
       continue;
     }
@@ -969,6 +961,15 @@ static void update_cache_f (void)
 #endif
 @
 @define end_foreach_vertex() } end_foreach_cache()
+
+#if dimension == 3
+# define foreach_edge()				\
+    foreach_vertex()				\
+      foreach_dimension()			\
+        if (neighbor(1).flags & vertex)
+#else // dimension < 3
+# define foreach_edge() foreach_face(y,x)
+#endif
 
 @def foreach_fine_to_coarse(clause)     {
   update_cache();
@@ -1539,7 +1540,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 	decrement_neighbors (point);			\
 	if (cell.neighbors)				\
 	  foreach_child() {				\
-	    cell.flags &= ~(leaf|active);		\
+	    cell.flags &= ~(leaf|active|vertex);	\
 	    cell.pid = pid;				\
 	  }						\
       }							\

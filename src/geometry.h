@@ -24,6 +24,7 @@ $\mathbf{n}$ and either $\alpha$ or $c$ i.e. there is a unique
 function which computes $\alpha$ given $c$ and $\mathbf{n}$. We call
 this function `line_alpha()` and define it as: */
 
+#if dimension >= 2
 double line_alpha (double c, coord n)
 {
   double alpha, n1, n2;
@@ -46,7 +47,12 @@ double line_alpha (double c, coord n)
     alpha += n.y;
 
   return alpha - (n.x + n.y)/2.;
-#else // dimension == 3
+}
+#endif // dimension >= 2
+
+#if dimension >= 3
+double plane_alpha (double c, coord n)
+{
   double alpha;
   coord n1;
   
@@ -112,62 +118,71 @@ double line_alpha (double c, coord n)
   if (n.z < 0.)
     alpha += n.z;
 
-  return alpha;
-#endif // dimension == 3
+  return alpha - (n.x + n.y + n.z)/2.;;
 }
+#else // dimension < 3
+# define plane_alpha line_alpha
+#endif
 
 /**
 Conversely there is a unique function computing $c$ as a function of
 $\mathbf{n}$ and $\alpha$. We call this function `line_area()` and
 define it as: */
 
-double line_area (coord n, double alpha)
+#if dimension >= 2
+double line_area (double nx, double ny, double alpha)
 {
   double alpha1, a, v, area;
 
-  alpha1 = alpha + (n.x + n.y)/2.;
-  if (n.x < 0.) {
-    alpha1 -= n.x;
-    n.x = - n.x;
+  alpha1 = alpha + (nx + ny)/2.;
+  if (nx < 0.) {
+    alpha1 -= nx;
+    nx = - nx;
   }
-  if (n.y < 0.) {
-    alpha1 -= n.y;
-    n.y = - n.y;
+  if (ny < 0.) {
+    alpha1 -= ny;
+    ny = - ny;
   }
 
   if (alpha1 <= 0.)
     return 0.;
 
-  if (alpha1 >= n.x + n.y)
+  if (alpha1 >= nx + ny)
     return 1.;
 
-  if (n.x == 0.)
-    area = alpha1/n.y;
-  else if (n.y == 0.)
-    area = alpha1/n.x;
+  if (nx == 0.)
+    area = alpha1/ny;
+  else if (ny == 0.)
+    area = alpha1/nx;
   else {
     v = alpha1*alpha1;
 
-    a = alpha1 - n.x;
+    a = alpha1 - nx;
     if (a > 0.)
       v -= a*a;
     
-    a = alpha1 - n.y;
+    a = alpha1 - ny;
     if (a > 0.)
       v -= a*a;
 
-    area = v/(2.*n.x*n.y);
+    area = v/(2.*nx*ny);
   }
 
   return clamp (area, 0., 1.);
-#else // dimension == 3
-  double al = alpha + max(0., -n.x) + max(0., -n.y) + max(0., -n.z);
+}
+#endif // dimension >= 2
+
+#if dimension >= 3
+double plane_volume (coord n, double alpha)
+{
+  double al = alpha + (n.x + n.y + n.z)/2. +
+    max(0., -n.x) + max(0., -n.y) + max(0., -n.z);
   if (al <= 0.)
     return 0.;
   double tmp = fabs(n.x) + fabs(n.y) + fabs(n.z);
   if (al >= tmp)
     return 1.;
-  g_assert (tmp > 0.);
+  assert (tmp > 0.);
   double n1 = fabs(n.x)/tmp;
   double n2 = fabs(n.y)/tmp;
   double n3 = fabs(n.z)/tmp;
@@ -204,29 +219,28 @@ double line_area (coord n, double alpha)
 
   double volume = al <= 0.5 ? tmp : 1. - tmp;
   return clamp (volume, 0., 1.);
-#endif // dimension == 3
 }
+#else // dimension < 3
+# define plane_volume(n, alpha) line_area(n.x, n.y, alpha)
+#endif
 
 /**
 VOF algorithms require the computation of volume fractions on
 (rectangular) parts of the initial square cell.
 
 We first define a function which takes an interface definition
-($\mathbf{n}$, $\alpha$), the coordinates of the lower-left `(a_x,a_y)`
-and upper-right `(b_x,b_y)` corners of a rectangle and returns the
+($\mathbf{n}$, $\alpha$), the coordinates of the lower-left `a`
+and upper-right `b` corners of a rectangle and returns the
 fraction of this rectangle which lies inside the interface. */
 
-double rectangle_fraction (double n_x, double n_y, double n_z,
-			   double alpha,
-			   double a_x, double a_y, double a_z,
-			   double b_x, double b_y, double b_z)
+double rectangle_fraction (coord n, double alpha, coord a, coord b)
 {
-  coord n;
+  coord n1;
   foreach_dimension() {
-    alpha -= n_x*(b_x + a_x)/2.;
-    n.x = n_x*(b_x - a_x);
+    alpha -= n.x*(b.x + a.x)/2.;
+    n1.x = n.x*(b.x - a.x);
   }
-  return line_area (n, alpha);
+  return plane_volume (n1, alpha);
 }
 
 /**
@@ -243,6 +257,7 @@ a vertex. */
 int facets (double c, coord n, double alpha,
 	    coord p[2])
 {
+  assert (dimension == 2);
   int i = 0;
   if (c > 0. && c < 1.) {
     for (double s = -0.5; s <= 0.5; s += 1.)

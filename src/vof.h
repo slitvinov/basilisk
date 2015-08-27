@@ -71,6 +71,7 @@ static void sweep_x (scalar c, scalar cc)
   face of the grid. */
 
   reconstruction (c, n, alpha);
+
   foreach_face(x) {
 
     /**
@@ -98,12 +99,14 @@ static void sweep_x (scalar c, scalar cc)
     When the upwind cell is entirely full or empty we can avoid this
     computation. */
 
-    double cf = (c[i,0] <= 0. || c[i,0] >= 1.) ? c[i,0] :
-      rectangle_fraction (- s*n.x[i,0], n.y[i,0], alpha[i,0],
-			  -0.5, -0.5, s*un - 0.5, 0.5);
+    double cf = (c[i] <= 0. || c[i] >= 1.) ? c[i] :
+      rectangle_fraction ((coord){-s*n.x[i], n.y[i], n.z[i]}, alpha[i],
+			  (coord){-0.5, -0.5, -0.5},
+			  (coord){s*un - 0.5, 0.5, 0.5});
+    
     /**
-    Once we have the upwind volume fraction, the volume fraction flux
-    through the face is simply: */
+    Once we have the upwind volume fraction *cf*, the volume fraction
+    flux through the face is simply: */
 
     flux[] = cf*uf.x[];
   }
@@ -193,6 +196,7 @@ event vof (i++)
     int d = 0;
     foreach_dimension()
       sweep[d++] = sweep_x;
+    boundary ({c});
     for (d = 0; d < dimension; d++)
       sweep[(i + d) % dimension] (c, cc);
   }
