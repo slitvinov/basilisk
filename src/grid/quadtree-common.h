@@ -289,7 +289,7 @@ int coarsen_function (int (* func) (Point p), scalar * list)
   for (int l = depth() - 1; l >= 0; l--) {
     quadtree->coarsened.n = 0;
     foreach_cell() {
-      if (is_local (cell)) { // always true in serial
+      if (is_local (cell)) {
 	if (is_leaf (cell))
 	  continue;
 	else if (level == l) {
@@ -376,24 +376,30 @@ static scalar quadtree_init_scalar (scalar s, const char * name)
 foreach_dimension()
 static void refine_face_x (Point point, scalar s)
 {
-  assert (dimension < 3);
+  assert (dimension > 1);
   vector v = s.v;
-  if (!is_refined(neighbor(-1,0)) &&
-      (is_local(cell) || is_local(neighbor(-1,0)))) {
-    double g = (v.x[0,+1] - v.x[0,-1])/8.;
-    fine(v.x,0,0) = v.x[] - g;
-    fine(v.x,0,1) = v.x[] + g;
+  if (!is_refined(neighbor(-1)) &&
+      (is_local(cell) || is_local(neighbor(-1)))) {
+    double g1 = (v.x[0,+1] - v.x[0,-1])/8.;
+    double g2 = (v.x[0,0,+1] - v.x[0,0,-1])/8.;
+    for (int j = 0; j <= 1; j++)
+      for (int k = 0; k <= 1; k++)
+	fine(v.x,0,j,k) = v.x[] + (2*j - 1)*g1 + (2*k - 1)*g2;
   }
-  if (!is_refined(neighbor(1,0)) && neighbor(1,0).neighbors &&
-      (is_local(cell) || is_local(neighbor(1,0)))) {
-    double g = (v.x[1,+1] - v.x[1,-1])/8.;
-    fine(v.x,2,0) = v.x[1,0] - g;
-    fine(v.x,2,1) = v.x[1,0] + g;
+  if (!is_refined(neighbor(1)) && neighbor(1).neighbors &&
+      (is_local(cell) || is_local(neighbor(1)))) {
+    double g1 = (v.x[1,+1] - v.x[1,-1])/8.;
+    double g2 = (v.x[1,0,+1] - v.x[1,0,-1])/8.;
+    for (int j = 0; j <= 1; j++)
+      for (int k = 0; k <= 1; k++)
+	fine(v.x,2,j,k) = v.x[1] + (2*j - 1)*g1 + (2*k - 1)*g2;
   }
   if (is_local(cell)) {
-    double g = (v.x[0,+1] + v.x[1,+1] - v.x[0,-1] - v.x[1,-1])/16.;
-    fine(v.x,1,0) = (v.x[] + v.x[1,0])/2. - g;
-    fine(v.x,1,1) = (v.x[] + v.x[1,0])/2. + g;
+    double g1 = (v.x[0,+1] + v.x[1,+1] - v.x[0,-1] - v.x[1,-1])/16.;
+    double g2 = (v.x[0,0,+1] + v.x[1,0,+1] - v.x[0,0,-1] - v.x[1,0,-1])/16.;
+    for (int j = 0; j <= 1; j++)
+      for (int k = 0; k <= 1; k++)
+	fine(v.x,1,j,k) = (v.x[] + v.x[1])/2. + (2*j - 1)*g1 + (2*k - 1)*g2;
   }
 }
 
@@ -408,26 +414,52 @@ void refine_face_solenoidal (Point point, scalar s)
 {
   refine_face (point, s);
   if (is_local(cell)) {
-    #if dimension == 2
     // local projection, see section 3.3 of Popinet, JCP, 2009
     vector v = s.v;
-    double d[4], p[4];
-    d[0] = fine(v.x,1,1) - fine(v.x,0,1) + fine(v.y,0,2) - fine(v.y,0,1);
-    d[1] = fine(v.x,2,1) - fine(v.x,1,1) + fine(v.y,1,2) - fine(v.y,1,1);
-    d[2] = fine(v.x,1,0) - fine(v.x,0,0) + fine(v.y,0,1) - fine(v.y,0,0);
-    d[3] = fine(v.x,2,0) - fine(v.x,1,0) + fine(v.y,1,1) - fine(v.y,1,0);
-
+    double d[1 << dimension], p[1 << dimension];
+    int i = 0;
+    foreach_child() {
+      d[i] = 0.;
+      foreach_dimension()
+	d[i] += v.x[1] - v.x[];
+      i++;
+    }
+#if dimension == 2
     p[0] = 0.;
-    p[1] = (3.*d[1] + d[2])/4. + d[3]/2.;
-    p[2] = (d[1] + 3.*d[2])/4. + d[3]/2.;
-    p[3] = (d[1] + d[2])/2. + d[3];
+    p[1] = (3.*d[3] + d[0])/4. + d[2]/2.;
+    p[2] = (d[3] + 3.*d[0])/4. + d[2]/2.;
+    p[3] = (d[3] + d[0])/2. + d[2];
     fine(v.x,1,1) += p[1] - p[0];
     fine(v.x,1,0) += p[3] - p[2];
     fine(v.y,0,1) += p[0] - p[2];
     fine(v.y,1,1) += p[1] - p[3];
-    #else
-    assert (false);
-    #endif
+#else // dimension == 3
+    static double m[7][7] = {
+      {7./12,5./24,3./8,5./24,3./8,1./4,1./3},
+      {5./24,7./12,3./8,5./24,1./4,3./8,1./3},
+      {3./8,3./8,3./4,1./4,3./8,3./8,1./2},
+      {5./24,5./24,1./4,7./12,3./8,3./8,1./3},
+      {3./8,1./4,3./8,3./8,3./4,3./8,1./2},
+      {1./4,3./8,3./8,3./8,3./8,3./4,1./2},
+      {1./3,1./3,1./2,1./3,1./2,1./2,5./6}
+    };
+    p[0] = 0.;
+    for (int i = 0; i < 7; i++) {
+      p[i + 1] = 0.;
+      for (int j = 0; j < 7; j++)
+	p[i + 1] += m[i][j]*d[j+1];
+    }
+    for (int k = 0; k <= 1; k++) {
+      fine(v.x,1,0,k) += p[4+k] - p[0+k];
+      fine(v.x,1,1,k) += p[6+k] - p[2+k];
+      fine(v.y,0,1,k) += p[2+k] - p[0+k];
+      fine(v.y,1,1,k) += p[6+k] - p[4+k];
+    }
+    fine(v.z,0,0,1) += p[1] - p[0];
+    fine(v.z,0,1,1) += p[3] - p[2];
+    fine(v.z,1,0,1) += p[5] - p[4];
+    fine(v.z,1,1,1) += p[7] - p[6];
+#endif // dimension == 3
   }
 }
 

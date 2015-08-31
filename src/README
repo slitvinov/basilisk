@@ -1,6 +1,6 @@
 # Solvers
 
-* [Saint-Venant](saint-venant.h)
+## [Saint-Venant](saint-venant.h)
 $$
   \partial_t \int_{\Omega} \mathbf{q} d \Omega =
   \int_{\partial \Omega} \mathbf{f} (
@@ -20,8 +20,9 @@ $$
     hu_xu_y & hu_y^2 + \frac{1}{2} gh^2
   \end{array}\right)
 $$
-    + [Semi-implicit scheme](saint-venant-implicit.h)
-    + [Green-Naghdi](green-naghdi.h)
+
+* [Semi-implicit scheme](saint-venant-implicit.h)
+* [Green-Naghdi](green-naghdi.h)
 $$
   \partial_t \int_{\Omega} \mathbf{q} d \Omega =
   \int_{\partial \Omega} \mathbf{f} (
@@ -36,7 +37,8 @@ $$
 b = \left[ \frac{g}{\alpha} \nabla \eta +\mathcal{Q}_1 \left( u \right)
 \right]
 $$
-* [Systems of conservation laws](conservation.h)
+
+## [Systems of conservation laws](conservation.h)
 $$
 \partial_t\left(\begin{array}{c}
     s_i\\
@@ -46,8 +48,9 @@ $$
     \mathbf{T}_j\\
  \end{array}\right) = 0
 $$
-    + [Compressible gas dynamics](compressible.h)
-    + [All Mach compressible flows](all-mach.h)
+
+* [Compressible gas dynamics](compressible.h)
+* [All Mach compressible flows](all-mach.h)
 
 $$
 \partial_t\mathbf{q} + \nabla\cdot(\mathbf{q}\mathbf{u}) = 
@@ -56,6 +59,27 @@ $$
 $$
 \partial_t p + \mathbf{u}\cdot\nabla p = -\rho c^2\nabla\cdot\mathbf{u}
 $$
+
+## Navier--Stokes
+* [Streamfunction--Vorticity formulation](navier-stokes/stream.h)
+$$
+\partial_t\omega + \mathbf{u}\cdot\nabla\omega = \nu\nabla^2\omega
+$$
+$$
+\nabla^2\psi = \omega
+$$
+
+* ["Markers-And-Cells" (MAC or "C-grid") formulation](navier-stokes/mac.h)
+* [Centered formulation](navier-stokes/centered.h)
+$$
+\partial_t\mathbf{u}+\nabla\cdot(\mathbf{u}\otimes\mathbf{u}) = 
+\frac{1}{\rho}\left[-\nabla p + \nabla\cdot(\mu\nabla\mathbf{u})\right] + \mathbf{a}
+$$
+$$
+\nabla\cdot\mathbf{u} = 0
+$$
+
+## Other equations
 * [Hele-Shaw/Darcy flows](hele-shaw.h)
 $$
 \mathbf{u} = \beta\nabla p
@@ -79,23 +103,6 @@ $$
 * [Poisson--Helmholtz](poisson.h)
 $$
 \nabla\cdot (\alpha\nabla a) + \lambda a = b
-$$
-* Navier--Stokes
-    + [Streamfunction--Vorticity formulation](navier-stokes/stream.h)
-$$
-\partial_t\omega + \mathbf{u}\cdot\nabla\omega = \nu\nabla^2\omega
-$$
-$$
-\nabla^2\psi = \omega
-$$
-    + ["Markers-And-Cells" (MAC or "C-grid") formulation](navier-stokes/mac.h)
-    + [Centered formulation](navier-stokes/centered.h)
-$$
-\partial_t\mathbf{u}+\nabla\cdot(\mathbf{u}\otimes\mathbf{u}) = 
-\frac{1}{\rho}\left[-\nabla p + \nabla\cdot(\mu\nabla\mathbf{u})\right] + \mathbf{a}
-$$
-$$
-\nabla\cdot\mathbf{u} = 0
 $$
 * [Ohmic conduction flux of charged species](pnp.h)
 $$

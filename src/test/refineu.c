@@ -5,79 +5,89 @@
 scalar h[];
 face vector u[];
 
-static double solution (double x, double y)
+static double solution (double x, double y, double z)
 {
 #if 0
   double R0 = 0.1;
   return exp(-(x*x+y*y)/sq(R0));
 #else
-  return x - y;
+  return dimension == 2 ? x - y : 2.*x - y - z;
 #endif
 }
-
-// fixme: this does not work with -DTRASH=1
-
-u.n[right]  = solution(x,y);
-u.n[left]   = solution(x,y);
-u.n[top]    = solution(x,y);
-u.n[bottom] = solution(x,y);
-
-u.t[top]    = dirichlet(solution(x,y));
-u.t[bottom] = dirichlet(solution(x,y));
-u.t[right]  = dirichlet(solution(x,y));
-u.t[left]   = dirichlet(solution(x,y));
 
 double tolerance = 1e-4;
 
 static int error()
 {
-  double max = 0, maxv = 0.;
+  double max = 0, maxv = 0., maxw = 0.;
 
   scalar eu[];
   foreach(reduction(max:max) reduction(max:maxv))
     for (int i = 0; i <= 1; i++) {
-      double xu = x + (i - 0.5)*Delta, yu = y;
-      eu[] = fabs (solution(xu,yu) - u.x[i,0]);
+      double xu = x + (i - 0.5)*Delta, yu = y, zu = z ;
+      eu[] = fabs (solution(xu,yu,zu) - u.x[i,0]);
       if (eu[] > max)
 	max = eu[];
 
-      double xv = x, yv = y + (i - 0.5)*Delta;
-      double e = solution(xv,yv) - u.y[0,i];
+      double xv = x, yv = y + (i - 0.5)*Delta, zv = z;
+      double e = solution(xv,yv,zv) - u.y[0,i];
       if (fabs(e) > maxv)
 	maxv = fabs(e);
 #if DEBUG
-      printf ("%g %g %d %d %g %g\n", 
-	      xu, yu, level, cell.neighbors, u.x[i,0], eu[]);
+      printf ("%g %g %g %d %d %g %g\n", 
+	      xu, yu, zu, level, cell.neighbors, u.x[i,0], eu[]);
 #endif
+
+#if dimension == 2
+      maxw = maxv;
+#else // dimension == 3
+      double xw = x, yw = y, zw = z + (i - 0.5)*Delta;
+      e = solution(xw,yw,zw) - u.z[0,0,i];
+      if (fabs(e) > maxw)
+	maxw = fabs(e);
+#endif      
     }
 
-  fprintf (ferr, "maximum error: %g %g\n", max, maxv);
+  fprintf (ferr, "maximum error: %g %g %g\n", max, maxv, maxw);
   stats s = statsf (eu);
   fprintf (ferr, "eu: avg: %g stddev: %g max: %g\n", 
 	   s.sum/s.volume, s.stddev, s.max);
 
-  return (max != maxv);
+  return (max != maxv || max != maxw);
 }
 
 int main (int argc, char ** argv)
 {
-  int n = 1024;
+  int maxlevel = dimension == 2 ? 10 : 7;
+  int n = 1 << maxlevel;
   init_grid (n);
 
-  origin (-0.5, -0.5);
+  u.x.refine = refine_face_solenoidal;
+  
+  foreach_dimension() {
+    u.n[right] = solution(x,y,z);
+    u.n[left]  = solution(x,y,z);
+  }
+
+  foreach_dimension() {
+    u.t[right] = dirichlet(solution(x,y,z));
+    u.t[left]  = dirichlet(solution(x,y,z));
+  }
+
+  origin (-0.5, -0.5, -0.5);
   double R0 = 0.1;
   foreach()
-    h[] = exp(-(x*x + y*y)/sq(R0));
+    h[] = exp(-(x*x + y*y + z*z)/sq(R0));
   boundary ({h});
 
   foreach_face()
-    u.x[] = solution(x,y);
+    u.x[] = solution(x,y,z);
   boundary ((scalar *){u});
 
-  astats s = adapt_wavelet ({h}, &tolerance, 10);
+  astats s = adapt_wavelet ({h}, &tolerance, maxlevel);
   while (s.nc) {
     fprintf (ferr, "refined: %d coarsened: %d\n", s.nf, s.nc);
-    s = adapt_wavelet ({h}, &tolerance, 10);
+    s = adapt_wavelet ({h}, &tolerance, maxlevel);
   }
   
 #if DEBUG
@@ -90,17 +100,23 @@ int main (int argc, char ** argv)
     return 1;
 
   scalar div[];
-  foreach()
-    div[] = u.x[] - u.x[1,0] + u.y[] - u.y[0,1];
+  foreach() {
+    div[] = 0.;
+    foreach_dimension()
+      div[] += u.x[] - u.x[1];
+  }
   stats sdiv = statsf(div);
   fprintf (ferr, "div before: %g\n", sdiv.max);
 
   tolerance = 1e-5;
-  s = adapt_wavelet ({h}, &tolerance, 10, list = {h,u});
+  s = adapt_wavelet ({h}, &tolerance, maxlevel, list = {h,u});
   fprintf (ferr, "refined: %d coarsened: %d\n", s.nf, s.nc);
 
-  foreach()
-    div[] = u.x[] - u.x[1,0] + u.y[] - u.y[0,1];
+  foreach() {
+    div[] = 0.;
+    foreach_dimension()
+      div[] += u.x[] - u.x[1];
+  }
   sdiv = statsf(div);
   fprintf (ferr, "div after: %g\n", sdiv.max);
 
@@ -109,7 +125,7 @@ int main (int argc, char ** argv)
   output_cells (fp);
   fclose (fp);
 #endif
-
+  
   if (error())
     return 1;
 }
