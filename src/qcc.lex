@@ -574,12 +574,14 @@
   }
 
   int boundary_component (char * boundaryvar) {
+    foreachdim_t * dim = stack_top(&foreachdim_stack);
     char * s1 = boundaryvar;
     int component = 0;
     while (*s1 != '\0') {
       if (*s1 == '.') {
 	s1++;
-	*s1 = *s1 == 'n' ? 'x' : 'y'; // replace .n, .t with .x, .y
+	if (!dim)
+	  *s1 = *s1 == 'n' ? 'x' : 'y'; // replace .n, .t with .x, .y
 	component = *s1;
       }
       else

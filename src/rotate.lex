@@ -1,7 +1,7 @@
 %option noyywrap
 %option yylineno
 %{
-  static int n = 0, dimension = 2;
+  static int n = 0, dimension = 2, para = 0, scope = 0;
 
   static int identifier (int c) {
     return ((c >= 'a' && c <= 'z') || 
@@ -37,6 +37,46 @@ WS     [ \t\v\n\f]
 ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 
 %%
+
+\( { para++; scope = 0; ECHO; }
+\) { para--; ECHO; }
+\{ { scope++; ECHO; }
+\} { scope--; ECHO; }
+
+_attribute\[{ID}+.[nt].i\] {
+  // replace tangential and normal components
+  char * s = strstr (yytext, ".n");
+  if (s)
+    s[1] = 'x';
+  else {
+    s = strstr (yytext, ".t");
+    s[1] = 'y';
+  }
+  ECHO;
+}
+
+({ID}+\.)+x{WS}*,{WS}*({ID}+\.)+y |
+({ID}+\.)+x{WS}*,{WS}*({ID}+\.)+y,{WS}*({ID}+\.)+z {
+  // do not rotate lists of vector components
+  char * id1 = strdup (yytext);
+  char * s = strchr (id1, ','), * id2 = s + 1; 
+  do *s-- = '\0'; while (strchr(" \t\v\n\f",*s));
+  while (strchr(" \t\v\n\f",*id2)) id2++;
+  s = strchr (id2, ',');
+  char * id3 = s ? s + 1 : NULL;
+  if (id3) {
+    do *s-- = '\0'; while (strchr(" \t\v\n\f",*s));
+    while (strchr(" \t\v\n\f",*id3)) id3++;
+  }
+  if (scope == 0 ||
+      strlen(id1) != strlen(id2) || strncmp (id1, id2, strlen(id1) - 2) ||
+      (id3 && (strlen(id1) != strlen(id3) ||
+	       strncmp (id1, id3, strlen(id1) - 2))))
+    rotate_string(yytext);
+  else
+    ECHO;
+  free (id1);
+}
 
 {ID}*_[xyz] |
 [.][xyz]  rotate_string (yytext);
@@ -150,6 +190,7 @@ int rotate (FILE * fin, FILE * fout, int nrotate, int dim)
   yylineno = 1;
   n = nrotate;
   dimension = dim;
+  para = scope = 0;
   return yylex();
 }
 
