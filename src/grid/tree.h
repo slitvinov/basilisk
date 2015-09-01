@@ -1566,8 +1566,13 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 	  list1 = list_add (list1, s);
 #endif
       }
-      else if (s.boundary[right] == periodic_bc)
-	list1 = list_add (list1, s);
+      else if (s.boundary[right] == periodic_bc) {
+	if (s.v.x.i >= 0) // component of a vector field
+	  foreach_dimension()
+	    list1 = list_add (list1, s.v.x);
+	else
+	  list1 = list_add (list1, s);
+      }
     }
   if (!list1)
     return;

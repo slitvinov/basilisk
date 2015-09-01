@@ -543,7 +543,7 @@ bid new_bid()
 
 static double periodic_bc (Point point, Point neighbor, scalar s)
 {
-  return HUGE;
+  return HUGE; // should not be used
 }
 
 void periodic (int dir)
