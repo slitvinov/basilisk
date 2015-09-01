@@ -107,16 +107,18 @@ timing timer_timing (timer t, int i, size_t tnc, double * mpi)
 void timer_print (timer t, int i, size_t tnc)
 {
   timing s = timer_timing (t, i, tnc, NULL);
-  printf ("\n# " GRIDNAME 
-	  ", %d steps, %g CPU, %.4g real, %.3g points.step/s, %d var\n",
-	  i, s.cpu, s.real, s.speed, (int) (datasize/sizeof(double)));
+  fprintf (fout,
+	   "\n# " GRIDNAME 
+	   ", %d steps, %g CPU, %.4g real, %.3g points.step/s, %d var\n",
+	   i, s.cpu, s.real, s.speed, (int) (datasize/sizeof(double)));
 @if _MPI
-  printf ("# %d procs, MPI: min %.2g (%.2g%%) "
-	  "avg %.2g (%.2g%%) max %.2g (%.2g%%)\n",
-	  npe(),
-	  s.min, 100.*s.min/s.real,
-	  s.avg, 100.*s.avg/s.real,
-	  s.max, 100.*s.max/s.real);
+  fprintf (fout,
+	   "# %d procs, MPI: min %.2g (%.2g%%) "
+	   "avg %.2g (%.2g%%) max %.2g (%.2g%%)\n",
+	   npe(),
+	   s.min, 100.*s.min/s.real,
+	   s.avg, 100.*s.avg/s.real,
+	   s.max, 100.*s.max/s.real);
 @endif
 }
 

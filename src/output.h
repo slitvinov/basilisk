@@ -603,7 +603,7 @@ void output_gfs (struct OutputGfs p)
     else
       opened = true;
   }
-  if (p.list == NULL) p.list = all;
+  scalar * list = p.list ? p.list : list_copy (all);
 
   fprintf (p.fp, 
 	   "1 0 GfsSimulation GfsBox GfsGEdge { binary = 1"
@@ -613,68 +613,102 @@ void output_gfs (struct OutputGfs p)
   fprintf (p.fp, "z = %g ", 0.5 + Z0/L0);
 #endif
 
-  if (p.list != NULL && p.list[0].i != -1) {
-    scalar s = p.list[0];
+  if (list != NULL && list[0].i != -1) {
+    scalar s = list[0];
     char * name = replace (s.name, '.', '_', p.translate);
     fprintf (p.fp, "variables = %s", name);
     free (name);
-    for (int i = 1; i < list_len(p.list); i++) {
-      scalar s = p.list[i];
+    for (int i = 1; i < list_len(list); i++) {
+      scalar s = list[i];
       if (s.name) {
 	char * name = replace (s.name, '.', '_', p.translate);
 	fprintf (p.fp, ",%s", name);
 	free (name);
       }
     }
-    fputc (' ', p.fp);
+    fprintf (p.fp, " ");
   }
-  fputs ("} {\n", p.fp);
+  fprintf (p.fp, "} {\n");
   if (p.t > 0.)
     fprintf (p.fp, "  Time { t = %g }\n", p.t);
   if (L0 != 1.)
     fprintf (p.fp, "  PhysicalParams { L = %g }\n", L0);
-  fputs ("}\nGfsBox { x = 0 y = 0 z = 0 } {\n", p.fp);
+  fprintf (p.fp, "}\nGfsBox { x = 0 y = 0 z = 0 } {\n");
 
+@if _MPI
+  long header;
+  if ((header = ftell (p.fp)) < 0) {
+    perror ("output_gfs(): error in header");
+    exit (1);
+  }
+  int cell_size = sizeof(unsigned) + sizeof(double);
+  for (scalar s in list)
+    if (s.name)
+      cell_size += sizeof(double);
+  scalar index = new scalar;
+  size_t total_size = header + (z_indexing (index, false) + 1)*cell_size;
+@endif
+  
   // see gerris/ftt.c:ftt_cell_write()
   //     gerris/domain.c:gfs_cell_write()
-  bool root = true;
   foreach_cell() {
-    unsigned flags = 
-      root ? 0 :
+@if _MPI // fixme: this won't work when combining MPI and mask()
+    if (is_local(cell))
+@endif
+    {
+@if _MPI
+      if (fseek (p.fp, header + index[]*cell_size, SEEK_SET) < 0) {
+	perror ("output_gfs(): error while seeking");
+	exit (1);
+      }
+@endif
+      unsigned flags = 
+	level == 0 ? 0 :
 #if dimension == 1
-      child.x == 1;
+	child.x == 1;
 #elif dimension == 2
       child.x == -1 && child.y ==  1 ? 0 :
-      child.x ==  1 && child.y ==  1 ? 1 :
-      child.x == -1 && child.y == -1 ? 2 : 
-      3;
+	child.x ==  1 && child.y ==  1 ? 1 :
+	child.x == -1 && child.y == -1 ? 2 : 
+	3;
 #else // dimension == 3
       child.x == -1 && child.y ==  1 && child.z == 1  ? 0 :
-      child.x ==  1 && child.y ==  1 && child.z == 1  ? 1 :
-      child.x == -1 && child.y == -1 && child.z == 1  ? 2 : 
-      child.x ==  1 && child.y == -1 && child.z == 1  ? 3 : 
-      child.x == -1 && child.y ==  1 && child.z == -1 ? 4 :
-      child.x ==  1 && child.y ==  1 && child.z == -1 ? 5 :
-      child.x == -1 && child.y == -1 && child.z == -1 ? 6 : 
-      7;
+	child.x ==  1 && child.y ==  1 && child.z == 1  ? 1 :
+	child.x == -1 && child.y == -1 && child.z == 1  ? 2 : 
+	child.x ==  1 && child.y == -1 && child.z == 1  ? 3 : 
+	child.x == -1 && child.y ==  1 && child.z == -1 ? 4 :
+	child.x ==  1 && child.y ==  1 && child.z == -1 ? 5 :
+	child.x == -1 && child.y == -1 && child.z == -1 ? 6 : 
+	7;
 #endif
-    root = false;
-    if (is_leaf(cell))
-      flags |= (1 << 4);
-    fwrite (&flags, sizeof (unsigned), 1, p.fp);
-    double a = -1;
-    fwrite (&a, sizeof (double), 1, p.fp);
-    for (scalar s in p.list)
-      if (s.name) {
-	a = is_local(cell) ? s[] : DBL_MAX;
-	fwrite (&a, sizeof (double), 1, p.fp);
-      }
+      if (is_leaf(cell))
+	flags |= (1 << 4);
+      fwrite (&flags, sizeof (unsigned), 1, p.fp);
+      double a = -1;
+      fwrite (&a, sizeof (double), 1, p.fp);
+      for (scalar s in list)
+	if (s.name) {
+	  a = is_local(cell) ? s[] : DBL_MAX;
+	  fwrite (&a, sizeof (double), 1, p.fp);
+	}
+    }
     if (is_leaf(cell))
       continue;
   }
-  fputs ("}\n", p.fp);
+  
+@if _MPI
+  delete ({index});
+  if (!pid() && fseek (p.fp, total_size, SEEK_SET) < 0) {
+    perror ("output_gfs(): error while finishing");
+    exit (1);
+  }
+  if (!pid())
+@endif  
+    fputs ("}\n", p.fp);
   fflush (p.fp);
 
+  if (!p.list)
+    free (list);
   if (opened)
     fclose (p.fp);
 }
@@ -733,20 +767,23 @@ void dump (struct Dump p)
 
   scalar index = {-1};
   
-#if _MPI // Parallel
+@if _MPI // Parallel
   index = new scalar;
   z_indexing (index, false);
   int cell_size = sizeof(unsigned) + header.len*sizeof(double);
-#endif
+@endif
   
   foreach_cell() {
-    if (is_local(cell)) {
-#if _MPI
+@if _MPI // fixme: this won't work when combining MPI and mask()
+    if (is_local(cell))
+@endif
+    {
+@if _MPI
       if (fseek (fp, sizeof(header) + index[]*cell_size, SEEK_SET) < 0) {
 	perror ("dump(): error while seeking");
 	exit (1);
       }
-#endif
+@endif
       unsigned flags = cell.flags & leaf;
       if (fwrite (&flags, sizeof(unsigned), 1, fp) < 1) {
 	perror ("dump(): error while writing flags");

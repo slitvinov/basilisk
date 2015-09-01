@@ -1,26 +1,21 @@
 #include "utils.h"
-double t = 0;
-#include "input.h"
 
 int main()
 {
-  init_grid (32);
+  int depth = 6;
+  origin (-0.5, -0.5, -0.5);
+  init_grid (8);
+  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)),
+  	  NULL);
+  
   scalar a[];
   vector u[];
   foreach()
     u.x[] = u.y[] = a[] = sin(2.*pi*x)*cos(2.*pi*y);
+  boundary ({a,u});
+  restriction ({a,u});
 
-  FILE * fp = fopen("test.gfs", "w");
+  FILE * fp = fopen ("test.gfs", "w");
   output_gfs (fp);
   fclose (fp);
-
-  fp = fopen("test.gfs", "r");
-  input_gfs (fp);
-  fclose (fp);
-
-  foreach() {
-    assert (fabs(a[] - sin(2.*pi*x)*cos(2.*pi*y)) < 1e-12);
-    assert (fabs(u.x[] - sin(2.*pi*x)*cos(2.*pi*y)) < 1e-12);
-    assert (fabs(u.y[] - sin(2.*pi*x)*cos(2.*pi*y)) < 1e-12);
-  }    
 }

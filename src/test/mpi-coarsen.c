@@ -33,7 +33,7 @@ int main (int argc, char * argv[])
   MPI_Comm_size (MPI_COMM_WORLD, &npe);
   nf = max(1, nf/npe);
   scalar index[];
-  z_indexing (index);
+  z_indexing (index, true);
   foreach()
     fprintf (stderr, "%g %g %d\n", x, y, min(npe - 1, (int)(index[]/nf)));
 }
