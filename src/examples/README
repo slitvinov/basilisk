@@ -13,6 +13,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [Breakup of a rectangular perturbation into a train of solitons](madsen.c)
 * [Bénard–von Kármán Vortex Street for flow around a cylinder at
   Re=160](karman.c)
+* [Vortex shedding behind a sphere at Re=300](sphere.c)
 
 ## Python interface
 
