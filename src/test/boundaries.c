@@ -16,19 +16,27 @@ int main()
   face vector f[];
 
   a[right] = dirichlet(x + y + z);
+  v.n[right] = dirichlet(x + y + z);
+  v.t[right] = dirichlet(x + y + z);
   f.n[right] = 0.;
   
   foreach() {
     a[] = x + y + z;
     foreach_dimension()
-      v.x[] = 1.;
+      v.x[] = x + y + z;
   }
 
-  boundary ({a});
+  foreach_face()
+    f.x[] = 1.;
+  
+  boundary ({a,v,f});
 
   output_cells (stdout);
   foreach_boundary (depth()) {
-    fprintf (stderr, "%g %g %g %g %g %g\n", x, y, z, a[], v.x[], v.y[]);
+    fprintf (stderr, "%g %g %g %g %g %g %g\n",
+	     x, y, z, a[], v.x[], v.y[], v.x[]);
     assert (a[] == x + y + z);
+    foreach_dimension()
+      assert (v.x[] == x + y + z);
   }
 }

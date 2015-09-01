@@ -1287,7 +1287,7 @@ void realloc_scalar (void)
 #endif
 
 static inline void no_coarsen (Point point, scalar s);
-  
+
 void box_boundaries (int l,
 		     bool (cond1)(Point), bool (cond)(Point),
 		     scalar * list)
@@ -1337,10 +1337,9 @@ void box_boundaries (int l,
 	  }
 #if dimension > 1
       if (vectors || faces)
-#if dimension == 2
 	foreach_dimension() {
 	  // tangential directions
-	  if (nv.y == 0)
+	  if (vectors && nv.y == 0)
 	    for (int i = -1; i <= 1; i += 2)
 	      if (is_neighbor(i)) {
 		Point neighbor = neighborp(i);
@@ -1350,7 +1349,20 @@ void box_boundaries (int l,
 		}
 		nv.y++;
 	      }
+#if dimension == 3
+	  if (vectors && nv.z == 0)
+	    for (int i = -1; i <= 1; i += 2)
+	      if (is_neighbor(i)) {
+		Point neighbor = neighborp(i);
+		for (vector v in vectors) {
+		  scalar vt = VT;
+		  v.z[] += vt.boundary[id](neighbor, point, v.z);
+		}
+		nv.z++;
+	      }
+#endif // dimension == 3
 	  // tangential face directions
+	  // fixme: this may not use the normal BCs
 	  if (faces && allocated(-1) && is_boundary(neighbor(-1))) {
 	    int nf = 0;
 	    for (vector v in faces)
@@ -1364,6 +1376,18 @@ void box_boundaries (int l,
 		}
 		nf++;
 	      }
+#if dimension == 3
+	    // fixme: what about diagonals?
+	    for (int j = -1; j <= 1; j += 2)
+	      if (is_neighbor(0,0,j) || is_neighbor(-1,0,j)) {
+		Point neighbor = neighborp(0,0,j);
+		for (vector v in faces) {
+		  scalar vt = VT;
+		  v.x[] += vt.boundary[id](neighbor, point, v.x);
+		}
+		nf++;
+	      }	    
+#endif // dimension == 3
 	    if (nf > 0) {
 	      for (vector v in faces)
 		v.x[] /= nf;
@@ -1373,9 +1397,6 @@ void box_boundaries (int l,
 		v.x[] = 0.; // fixme: this should be undefined
 	  }
 	}
-#else // dimension == 3
-      assert (false);
-#endif
       // 2D diagonal directions
       if (nc == 0)
 #if dimension == 3
@@ -1433,7 +1454,22 @@ void box_boundaries (int l,
 			    s.boundary[id2](n0,n2,s) +
 			    s.boundary[id3](n0,n3,s) -
 			    2.*s[k,l,n]);
-		  nc++;
+		  for (vector v in vectors) {
+		    scalar vt = VT, vn = VN;
+		    v.x[] += (vt.boundary[id1](n0,n1,v.x) +
+			      vt.boundary[id2](n0,n2,v.x) +
+			      vn.boundary[id3](n0,n3,v.x) -
+			      2.*v.x[k,l,n]);
+		    v.y[] += (vt.boundary[id1](n0,n1,v.y) +
+			      vn.boundary[id2](n0,n2,v.y) +
+			      vt.boundary[id3](n0,n3,v.y) -
+			      2.*v.y[k,l,n]);
+		    v.z[] += (vn.boundary[id1](n0,n1,v.z) +
+			      vt.boundary[id2](n0,n2,v.z) +
+			      vt.boundary[id3](n0,n3,v.z) -
+			      2.*v.z[k,l,n]);
+		  }
+		  nc++; nv.x++; nv.y++; nv.z++;
 		}
 	    }
 #endif
@@ -1760,12 +1796,12 @@ void init_grid (int n)
     for (int l = -GHOSTS; l <= GHOSTS; l++)
       for (int n = -GHOSTS; n <= GHOSTS; n++)
 	CELL(L->m[GHOSTS+k][GHOSTS+l][GHOSTS+n]).pid =
-	  (k < 0 ? -1 - left :
-	   k > 0 ? -1 - right :
+	  (k > 0 ? -1 - right :
+	   k < 0 ? -1 - left :
 	   l > 0 ? -1 - top :
 	   l < 0 ? -1 - bottom :
-	   n > 0 ? -1 - back :
-	   n < 0 ? -1 - front :
+	   n > 0 ? -1 - front :
+	   n < 0 ? -1 - back :
 	   pid());
 #endif // dimension == 3
   q->active = calloc (1, sizeof (CacheLevel));
