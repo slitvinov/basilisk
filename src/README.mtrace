@@ -118,7 +118,7 @@ gnuplot> load "< tail -n2 mtrace"
 
 which will give something like
 
-![Graph of memory trace](load "< tail -n2 mtrace")
+![Graph of memory trace](figures/mtrace.png)
 
 By default only functions representing more than 1% of the total
 allocated memory are displayed. The initial amount of memory reported

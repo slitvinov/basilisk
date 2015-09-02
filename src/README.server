@@ -10,6 +10,7 @@ Install the KDT library and binaries in
 $HOME/lib/libkdt.a
 $HOME/include/kdt/kdt.h
 $HOME/bin/ppm2mpeg
+$HOME/bin/ppm2gif
 $HOME/bin/xyz2kdt
 ~~~
 
