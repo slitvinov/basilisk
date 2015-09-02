@@ -1,5 +1,5 @@
 # generate results for Curie
-cd '../curie'
+cd '../occigen/3D'
 
 # generate weak scaling curves
 ! bash weak.sh > weak
@@ -10,59 +10,47 @@ set style increment user
 
 set logscale
 set grid
-set xrange [1:16384]
+set xrange [2:32768]
 set xtics 2
-
-# Model for memory usage
-cst(level)=2**(2*level)*12./1024**3
-data(level)=2**(2*level)*8*20./1024**3
-tot(level,np)=cst(level)/sqrt(np)+data(level)/np+np*7e-6+0.02
 
 set xlabel "# of cores"
 set ylabel "Memory/core (GB)"
 set output 'memory.png'
-plot [][0.01:]\
-     for [i=10:15] '< sh table.sh poisson '.i u 1:($2/$1) t ''.i.' levels', \
-     for [i=10:15] tot(i,x) t '' lt 1
+minlevel=9
+maxlevel=11
+plot [][0.1:] for [i=minlevel:maxlevel] \
+     '< sh table.sh poisson '.i u 1:($2/$1) t ''.i.' levels' w lp, \
+     18/x**0.9
 
 set ylabel 'Time (sec)'
 
-# model of computation time
-tc(level,np)=2**(2.*level)/(np*2.1e6)
-tcom(level,np)=2**(1.6*level)/(1e7*sqrt(np))+np**0.3/2e3
-tt(level,np)=tc(level,np)+tcom(level,np)
-
 set output 'poisson.png'
-plot [][:100] \
-     for [i=10:15] '< sh time.sh poisson '.i u 1:2 t ''.i.' levels', \
-     for [i=10:15] tt(i,x) t '' lt 1, \
-     'weak' u 1:2 w l t 'weak scaling'
+plot [][0.01:100] for [i=minlevel:maxlevel] \
+     '< sh time.sh poisson '.i u 1:2 t ''.i.' levels' w lp, \
+     'weak' u 1:2 w lp t 'weak scaling', \
+     500/x**0.9
      
 set output 'poisson-mpi.png'
-plot [][1e-3:]\
-     for [i=10:15] '< sh time.sh poisson '.i u 1:3 t ''.i.' levels', \
-     for [i=10:15] tcom(i,x) t '' lt 1
+plot [][1e-2:10] for [i=minlevel:maxlevel] \
+     '< sh time.sh poisson '.i u 1:3 w lp t ''.i.' levels', \
+     2./x**0.5
 
 set output 'laplacian.png'
-tc(level,np)=2**(2.*level)/(np*30e6)
-tcom(level,np)=2**(1.6*level)/(1.5e8*sqrt(np))+8e-5
-plot [][1e-4:]\
-     for [i=10:15] '< sh time.sh laplacian '.i u 1:2 t ''.i.' levels', \
-     for [i=10:15] tt(i,x) t '' lt 1
+plot [][1e-3:10] for [i=minlevel:maxlevel] \
+     '< sh time.sh laplacian '.i u 1:2 w lp t ''.i.' levels', \
+     50/x**0.93
 
 set output 'laplacian-mpi.png'
-plot [][1e-5:]\
-     for [i=10:15] '< sh time.sh laplacian '.i u 1:3 t ''.i.' levels', \
-     for [i=10:15] tcom(i,x) t '' lt 1
+plot [][1e-4:] for [i=minlevel:maxlevel] \
+     '< sh time.sh laplacian '.i u 1:3 w lp t ''.i.' levels', \
+     1./x**0.6
 
 set output 'restriction.png'
-tc(level,np)=2**(2.*level)/(np*35e6)
-tcom(level,np)=2**(1.5*level)/(7e7*sqrt(np))+5e4
-plot [][:10]\
-     for [i=10:15] '< sh time.sh restriction '.i u 1:2 t ''.i.' levels', \
-     for [i=10:15] tt(i,x) t '' lt 1
+plot [][:1] for [i=minlevel:maxlevel] \
+     '< sh time.sh restriction '.i u 1:2 w lp t ''.i.' levels', \
+     18/x**0.85
 
 set output 'restriction-mpi.png'
-plot [][1e-4:0.1]\
-     for [i=10:15] '< sh time.sh restriction '.i u 1:3 t ''.i.' levels', \
-     for [i=10:15] tcom(i,x) t '' lt 1
+plot [][1e-3:1] for [i=minlevel:maxlevel] \
+     '< sh time.sh restriction '.i u 1:3 w lp t ''.i.' levels', \
+     1.8/x**0.6

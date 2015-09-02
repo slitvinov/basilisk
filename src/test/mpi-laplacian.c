@@ -206,99 +206,106 @@ int main (int argc, char * argv[])
 }
 
 /**
-## How to run on Curie
+## How to run on Occigen
 
 This test is run on
-[Curie](http://www.prace-ri.eu/best-practice-guide-curie-html/#curie-configuration). The
+[Occigen](https://www.cines.fr/calcul/materiels/occigen/configuration/). The
 C99 source code is generated on a system with *qcc* installed and then
-copied to Curie using something like
+copied to Occigen using something like
 
 ~~~bash
-CC99='cc -std=c99' qcc -source mpi-laplacian.c
-scp _mpi-laplacian.c popinets@curie-fr.ccc.cea.fr:
+qcc -grid=octree -source mpi-laplacian.c
+scp _mpi-laplacian.c popinet@occigen.cines.fr:
 ~~~
 
-On Curie the following script (*run.sh*) is used to compile and run
+On Occigen the following script (*run.sh*) is used to compile and run
 the code
 
 ~~~bash
 #!/bin/bash
-#MSUB -r mpi-laplacian
-#MSUB -n 32
-#MSUB -T 600
-####MSUB -Q test
-#MSUB -o basilisk_%I.out
-#MSUB -e basilisk_%I.log
-#MSUB -q standard
-#MSUB -A gen7325
-#MSUB -w
+#SBATCH -J basilisk
+##SBATCH -d singleton
+#SBATCH --nodes=1
+#SBATCH --ntasks=2
+#SBATCH --ntasks-per-node=2
+#SBATCH --threads-per-core=1
+#SBATCH --time=00:10:00
+#SBATCH --output basilisk.output
 
-LEVEL=10
+LEVEL=11
 
-set -x
-cd ${BRIDGE_MSUB_PWD}
-mpicc -O2 -Wall -std=c99 -D_MPI=1 _mpi-laplacian.c -o mpi-laplacian -lm
-rm -f trace-*
-ccc_mprun -n ${BRIDGE_MSUB_NPROC} ./mpi-laplacian ${LEVEL} 8 \
-    2> log-${LEVEL}-${BRIDGE_MSUB_NPROC} > out-${LEVEL}-${BRIDGE_MSUB_NPROC}
+module purge
+module load intel/15.0.0.090
+module load bullxmpi/1.2.8.3
+mpicc -Wall -std=c99 -O2 -D_MPI=1 -D_DARWIN_C_SOURCE=1 _mpi-laplacian.c -o mpi-laplacian -lm
+srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./mpi-laplacian $LEVEL 6 \
+     2> log-$LEVEL-$SLURM_NTASKS > out-$LEVEL-$SLURM_NTASKS
 ~~~
 
-LEVEL is varied from 10 (~1 million grid points) to 15 (~1 billion
+LEVEL is varied from 9 (~134 million grid points) to 11 (~8.6 billion
 grid points) and the number of processes up to 16384 using something like
 
 ~~~bash
-for i in 16 32 64 128 256 512 1024 2048 4096 8192 16384; do 
-  ccc_msub -n $i run.sh; 
-done
+sbatch --ntasks=1 --ntasks-per-node=1 run.sh
+sbatch --ntasks=2 --ntasks-per-node=2 run.sh
+sbatch --ntasks=4 --ntasks-per-node=4 run.sh
+sbatch --ntasks=8 --ntasks-per-node=8 run.sh
+sbatch --ntasks=16 --ntasks-per-node=16 run.sh
+sbatch --ntasks=32 --ntasks-per-node=16 --nodes=2 run.sh
+sbatch --ntasks=64 --ntasks-per-node=16 --nodes=4 run.sh
+sbatch --ntasks=128 --ntasks-per-node=16 --nodes=8 run.sh
+sbatch --ntasks=256 --ntasks-per-node=16 --nodes=16 run.sh
+sbatch --ntasks=512 --ntasks-per-node=16 --nodes=32 run.sh
+sbatch --ntasks=1024 --ntasks-per-node=16 --nodes=64 run.sh
+sbatch --ntasks=2048 --ntasks-per-node=16 --nodes=128 run.sh
+sbatch --ntasks=4096 --ntasks-per-node=16 --nodes=256 run.sh
+sbatch --ntasks=8192 --ntasks-per-node=16 --nodes=512 run.sh
+sbatch --ntasks=16384 --ntasks-per-node=24 --nodes=683 run.sh
 ~~~
 
 The results can then be collected using
 
 ~~~bash
-tar czvf curie.tgz out-*-*
+tar czvf occigen.tgz out-*-*
 ~~~
 
-## Results on Curie
+## Results on Occigen
 
-The memory usage per core is given below. The curves are a model (see
-[mpi-laplacian.plot]() for details). The increase for a large number
+The memory usage per core is given below. The increase for a large number
 of cores corresponds to the memory overhead of communication buffers
 etc...
 
-![Memory usage on Curie](curie/memory.png)
+![Memory usage on Occigen](occigen/3D/memory.png)
 
 The wall-clock time for one iteration of the multigrid Poisson solver
-is given below. The red lines are a model of strong scaling. For a low
-enough number of cores, close to perfect scaling is obtained with a
-best fit computation speed close to 2.1 million grid points/core.
+is given below.
 
 The pink lines connect points corresponding with weak (or
-*iso-granular*) scaling i.e. quadrupling both the computation size and
-the number of cores. The ideal weak scaling would give horizontal
-lines (i.e. constant computation time for proportionally-increasing
-problem sizes and number of cores).
+*iso-granular*) scaling i.e. multiplying by eight both the computation
+size and the number of cores. The ideal weak scaling would give
+horizontal lines (i.e. constant computation time for
+proportionally-increasing problem sizes and number of cores).
 
-![Wall-clock time on Curie for the Poisson solver](curie/poisson.png)
+![Wall-clock time on Occigen for the Poisson solver](occigen/3D/poisson.png)
 
-The time spent in communication routines is illustrated below,
-together with the model (corresponding to the communication part of
-the total time in the previous figure).
+The time spent in communication routines is illustrated below.
 
-![Communication time on Curie for the Poisson solver](curie/poisson-mpi.png)
+![Communication time on Occigen for the Poisson
+ solver](occigen/3D/poisson-mpi.png)
 
-Similar results are obtained for a pure Laplacian with a best fit
-speed of order 30 million grid points/core. This speed is larger than
-for the Poisson solver and hence does not scale as well.
+Similar results are obtained for a pure Laplacian.
 
-![Wall-clock time on Curie for the Laplacian](curie/laplacian.png)
+![Wall-clock time on Occigen for the Laplacian](occigen/3D/laplacian.png)
 
-![Communication time on Curie for the Laplacian](curie/laplacian-mpi.png)
+![Communication time on Occigen for the
+ Laplacian](occigen/3D/laplacian-mpi.png)
 
-Similarly, the pure restriction operator scales quite well, with a
-best fit speed of around 35 million grid points/core.
+And for the restriction operator.
 
-![Wall-clock time on Curie for the restriction operator](curie/restriction.png)
+![Wall-clock time on Occigen for the restriction
+ operator](occigen/3D/restriction.png)
 
-![Communication time on Curie for the restriction operator](curie/restriction-mpi.png)
+![Communication time on Occigen for the restriction
+ operator](occigen/3D/restriction-mpi.png)
 
 */
