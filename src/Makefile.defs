@@ -29,6 +29,11 @@ clean:
 
 .DELETE_ON_ERROR:
 
+%.3D.c: %.c
+	ln -s $*.c $*.3D.c
+%.3D.tst: %.3D.s %.3D.c
+	@CFLAGS="$(CFLAGS) -grid=octree" $(BASILISK)/runtest $*.3D.tst
+
 %.tst: %.s %.c
 	@PNG=$(PNG) $(BASILISK)/runtest $@
 
@@ -37,11 +42,6 @@ clean:
 
 %.vtst: %.s %.c
 	@PNG=$(PNG) EXEC="$(VALGRIND)" $(BASILISK)/runtest $@
-
-%.3D.c: %.c
-	ln -s $*.c $*.3D.c
-%.3D.tst: %.3D.s %.3D.c
-	@CFLAGS="$(CFLAGS) -grid=octree" $(BASILISK)/runtest $*.3D.tst
 
 %.h: %.h.page
 	ln -s $< $@
