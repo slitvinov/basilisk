@@ -224,6 +224,19 @@
 	    (c >= '0' && c <= '9'));
   }
 
+  int component (char * s, int c) {
+    while (*s != '\0') {
+      if (*s == '.') {
+	s++;
+	while (strchr(" \t\v\n\f", *s)) s++;
+	if (*s == c)
+	  return 1;
+      }
+      s++;
+    }
+    return 0;
+  }
+  
   var_t * varlookup (char * s, int len) {
     int i;
     for (i = varstack; i >= 0; i--)
@@ -1013,7 +1026,7 @@ ID  [a-zA-Z_0-9]
 SP  [ \t]
 ES  (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 WS  [ \t\v\n\f]
-SCALAR [a-zA-Z_0-9]+[.xyz]*
+SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyz])*
 
 %%
 
@@ -1559,10 +1572,10 @@ val{WS}*[(]    {
     while (!strchr(" \t\v\n\f[.", *s)) s++;
     if ((var = varlookup (yytext, s - yytext))) {
       s = yytext;
-      while (!strchr(" \t\v\n\f[", *s)) s++;
+      while (*s != '[') s++;
       *s = '\0';
-      if ((dimension < 2 && strstr(yytext, ".y")) ||
-	  (dimension < 3 && strstr(yytext, ".z"))) {
+      if ((dimension < 2 && component (yytext, 'y')) ||
+	  (dimension < 3 && component (yytext, 'z'))) {
 	if (debug)
 	  fprintf (stderr, "%s:%d: the dimension of '%s' is too high\n",
 		   fname, line, yytext);
