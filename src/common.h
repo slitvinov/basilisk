@@ -556,6 +556,7 @@ void mpi_init()
     atexit (finalize);
     MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
+    srand (mpi_rank + 1);
     if (mpi_rank > 0) {
       ferr = fopen ("/dev/null", "w");
       fout = fopen ("/dev/null", "w");
