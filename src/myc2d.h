@@ -33,14 +33,14 @@ coord mycs (Point point, scalar c)
   /* Youngs' normal to the interface */
   mm1 = c[-1,-1] + 2.0*c[-1,0] + c[-1,1];
   mm2 = c[1,-1] + 2.0*c[1,0] + c[1,1];
-  mx1 = mm1 - mm2;
+  mx1 = mm1 - mm2 + NOT_ZERO;
   mm1 = c[-1,-1] + 2.0*c[0,-1] + c[1,-1];
   mm2 = c[-1,1] + 2.0*c[0,1] + c[1,1];
-  my1 = mm1 - mm2;
+  my1 = mm1 - mm2 + NOT_ZERO;
 
   /* choose between the best central and Youngs' scheme */ 
   if (ix) {
-    mm1 = fabs(my1) + NOT_ZERO; 
+    mm1 = fabs(my1);
     mm1 = fabs(mx1)/mm1;
     if (mm1 > fabs(mx0)) {
       mx0 = mx1;
@@ -48,7 +48,7 @@ coord mycs (Point point, scalar c)
     }
   }
   else {
-    mm1 = fabs(mx1) + NOT_ZERO; 
+    mm1 = fabs(mx1);
     mm1 = fabs(my1)/mm1;
     if (mm1 > fabs(my0)) {
       mx0 = mx1;
@@ -58,7 +58,7 @@ coord mycs (Point point, scalar c)
 	
   /* normalize the set (mx0,my0): |mx0|+|my0|=1 and
      write the two components of the normal vector  */
-  mm1 = fabs(mx0) + fabs(my0) + NOT_ZERO; 
+  mm1 = fabs(mx0) + fabs(my0);
   coord n = {mx0/mm1, my0/mm1};
   
   return n;
