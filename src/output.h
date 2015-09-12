@@ -744,6 +744,7 @@ struct Dump {
 struct DumpHeader {
   double t;
   long len;
+  int depth;
 };
 
 void dump (struct Dump p)
@@ -758,7 +759,7 @@ void dump (struct Dump p)
   }
   assert (fp);
 
-  struct DumpHeader header = { p.t, list_len(list) };
+  struct DumpHeader header = { p.t, list_len(list), depth() };
 
   if (pid() == 0 && fwrite (&header, sizeof(header), 1, fp) < 1) {
     perror ("dump(): error while writing header");
@@ -829,8 +830,12 @@ bool restore (struct Dump p)
 	     header.len, list_len (list));
     exit (1);
   }
-  
+
+#if QUADTREE
   init_grid (1);
+#else
+  init_grid (1 << header.depth);
+#endif
   foreach_cell() {
     unsigned flags;
     if (fread (&flags, sizeof(unsigned), 1, fp) != 1) {
