@@ -534,7 +534,7 @@ void output_grd (struct OutputGRD p)
   fflush (p.fp);
 }
 
-#if QUADTREE
+#if MULTIGRID
 
 /**
 ## *output_gfs()*: Gerris simulation format
@@ -784,7 +784,7 @@ void dump (struct Dump p)
 	exit (1);
       }
 @endif
-      unsigned flags = cell.flags & leaf;
+      unsigned flags = is_leaf(cell) ? leaf : 0;
       if (fwrite (&flags, sizeof(unsigned), 1, fp) < 1) {
 	perror ("dump(): error while writing flags");
 	exit (1);
@@ -858,4 +858,5 @@ bool restore (struct Dump p)
 
   return true;
 }
-#endif // QUADTREE
+
+#endif // MULTIGRID

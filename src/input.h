@@ -104,7 +104,7 @@ void input_pgm (struct InputPGM p)
   }
 }
 
-#if QUADTREE
+#if MULTIGRID
 
 static void next_char (FILE * fp, int target)
 {
@@ -256,8 +256,11 @@ void input_gfs (struct OutputGfs p)
 
   scalar * listm = {cm,fm};
   scalar * listr = !is_constant(cm) ? listm : NULL;
+  NOT_UNUSED (listr);
 
+  #if QUADTREE
   init_grid (1);
+  #endif
   foreach_cell() {
     unsigned flags;
     if (fread (&flags, sizeof (unsigned), 1, p.fp) != 1) {
@@ -294,4 +297,5 @@ void input_gfs (struct OutputGfs p)
   while (t1 <= t && events (0, t1, false))
     t1 = tnext;
 }
-#endif
+
+#endif // MULTIGRID

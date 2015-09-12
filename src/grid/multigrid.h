@@ -4,7 +4,7 @@
 
 #define I      (point.i - GHOSTS)
 #define J      (point.j - GHOSTS)
-#define DELTA  (1./point.n)
+#define DELTA  (1./(1 << point.level))
 
 typedef struct {
   char ** d;
@@ -28,7 +28,8 @@ static size_t _size (size_t l)
 
 /***** Cartesian macros *****/
 @def data(k,l,m)
-  ((double *)&multigrid->d[point.level][((point.i + k)*(point.n + 2*GHOSTS) +
+  ((double *)&multigrid->d[point.level][((point.i + k)*((1 << point.level) +
+							2*GHOSTS) +
 					 (point.j + l))*datasize]) @
 @define allocated(...) true
 @define allocated_child(...) true
@@ -37,12 +38,14 @@ static size_t _size (size_t l)
 @define depth()       (((Multigrid *)grid)->depth)
 @def fine(a,k,l,m)
   ((double *)
-   &multigrid->d[point.level+1][((2*point.i-GHOSTS+k)*2*(point.n + GHOSTS) +
+   &multigrid->d[point.level+1][((2*point.i-GHOSTS+k)*2*((1 << point.level) +
+							 GHOSTS) +
 			    (2*point.j-GHOSTS+l))*datasize])[a.i]
 @
 @def coarse(a,k,l,m)
   ((double *)
-   &multigrid->d[point.level-1][(((point.i+GHOSTS)/2+k)*(point.n/2+2*GHOSTS) +
+   &multigrid->d[point.level-1][(((point.i+GHOSTS)/2+k)*((1 << point.level)/2 +
+							 2*GHOSTS) +
 			    (point.j+GHOSTS)/2+l)*datasize])[a.i]
 @
 @def POINT_VARIABLES
@@ -83,6 +86,18 @@ static size_t _size (size_t l)
       POINT_VARIABLES
 @
 @define end_foreach() }} OMP_END_PARALLEL()
+
+@define is_active(cell) (true)
+@define is_leaf(cell)   (level == depth())
+@define is_local(cell)  (true)
+@define leaf            2
+@def refine_cell(...) do {
+  fprintf (stderr, "grid depths do not match. Aborting.\n");
+  assert (0);
+} while (0)
+@
+@define quadtree multigrid
+#include "foreach_cell.h"
 
 @def foreach_face_generic(clause)
   OMP_PARALLEL()
