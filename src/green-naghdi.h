@@ -10,7 +10,11 @@ $$
 $$
 with $h_0$ the typical depth and $L$ the typical horizontal scale. In
 contrast to the Saint-Venant equations the Green-Naghdi equations have
-*dispersive* wave solutions.
+*dispersive* wave solutions. 
+
+A more detailed description of the context and numerical scheme
+implemented here is given in [Popinet,
+2015](/src/references.bib#popinet2015).
 
 The solver is built by adding a source term to the momentum equation
 of the [Saint-Venant solver](saint-venant.h). Following [Bonneton et
