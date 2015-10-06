@@ -58,7 +58,7 @@ void heights (scalar c, vector h)
   for (int l = 1; l <= depth(); l++) {
     foreach_level (l)
       foreach_dimension()
-        h.x[] = Delta*(c[-2,0] + c[-1,0] + c[] + c[1,0] + c[2,0] - 7./2.);
+        h.x[] = Delta*(c[-2] + c[-1] + c[] + c[1] + c[2] - 7./2.);
     for (int j = -1; j <= 1; j += 2) {
       vector cs[];
       // shift fine level by 2
@@ -80,8 +80,8 @@ void heights (scalar c, vector h)
       // add 3rd cell
       foreach_level (l)
         foreach_dimension() {
-	  h.x[] += Delta*cs.x[j,0];
-	  if (j == 1 && cs.x[1,0] > 0.5)
+	  h.x[] += Delta*cs.x[j];
+	  if (j == 1 && cs.x[1] > 0.5)
 	    h.x[] = -h.x[];
         }
       }

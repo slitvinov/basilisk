@@ -152,17 +152,17 @@ static double residual_GN (scalar * a, scalar * r, scalar * resl, void * data)
   double maxres = 0.;
   foreach (reduction(max:maxres))
     foreach_dimension() {
-      if (wet[-1,0] == 1 && wet[] == 1 && wet[1,0] == 1) {
+      if (wet[-1] == 1 && wet[] == 1 && wet[1] == 1) {
 	double hc = h[], dxh = dx(h), dxzb = dx(zb), dxeta = dxzb + dxh;
-	double hl3 = (hc + h[-1,0])/2.; hl3 = cube(hl3);
-	double hr3 = (hc + h[1,0])/2.;  hr3 = cube(hr3);
+	double hl3 = (hc + h[-1])/2.; hl3 = cube(hl3);
+	double hr3 = (hc + h[1])/2.;  hr3 = cube(hr3);
 	
 	/**
 	Finally we translate the formula above to its discrete
 	version. */
 	
 	res.x[] = b.x[] -
-	  (-alpha_d/3.*(hr3*D.x[1,0] + hl3*D.x[-1,0] - 
+	  (-alpha_d/3.*(hr3*D.x[1] + hl3*D.x[-1] - 
 			(hr3 + hl3)*D.x[])/sq(Delta) +
 	   hc*(alpha_d*(dxeta*dxzb + hc/2.*d2x(zb)) + 1.)*D.x[] +
 	   alpha_d*hc*((hc/2.*d2xy(zb) + dxeta*dy(zb))*D.y[] + 
@@ -198,12 +198,12 @@ static void relax_GN (scalar * a, scalar * r, int l, void * data)
   vector D = vector(a[0]), b = vector(r[0]);
   foreach_level_or_leaf (l)
     foreach_dimension() {
-      if (wet[-1,0] == 1 && wet[] == 1 && wet[1,0] == 1) {
+      if (wet[-1] == 1 && wet[] == 1 && wet[1] == 1) {
 	double hc = h[], dxh = dx(h), dxzb = dx(zb), dxeta = dxzb + dxh;
-	double hl3 = (hc + h[-1,0])/2.; hl3 = cube(hl3);
-	double hr3 = (hc + h[1,0])/2.;  hr3 = cube(hr3);
+	double hl3 = (hc + h[-1])/2.; hl3 = cube(hl3);
+	double hr3 = (hc + h[1])/2.;  hr3 = cube(hr3);
 	D.x[] = (b.x[] -
-		 (-alpha_d/3.*(hr3*D.x[1,0] + hl3*D.x[-1,0])/sq(Delta) +
+		 (-alpha_d/3.*(hr3*D.x[1] + hl3*D.x[-1])/sq(Delta) +
 		  alpha_d*hc*((hc/2.*d2xy(zb) + dxeta*dy(zb))*D.y[] + 
 			      hc/2.*dy(zb)*dx(D.y) - sq(hc)/3.*d2xy(D.y)
 			      - hc*dy(D.y)*(dxh + dxzb/2.))))/
@@ -312,7 +312,7 @@ static double update_green_naghdi (scalar * current, scalar * updates,
 
     if (fabs(dx(eta)) < breaking && fabs(dy(eta)) < breaking)
       foreach_dimension()
-	if (wet[-1,0] == 1 && wet[] == 1 && wet[1,0] == 1)
+	if (wet[-1] == 1 && wet[] == 1 && wet[1] == 1)
 	  dhu.x[] += h[]*(G/alpha_d*dx(eta) - D.x[]);
   }
 
