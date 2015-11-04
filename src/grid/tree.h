@@ -1270,11 +1270,16 @@ void box_boundaries (int l,
 	    else if (i == -1) {
 	      // tangential neighbor
 	      Point neighbor = tangential_neighbor_x (point, cond);
-	      if (neighbor.level >= 0)
+	      if (neighbor.level >= 0) {
 		for (vector v in faces) {
 		  scalar vt = VT;
 		  v.x[] = vt.boundary[id](neighbor, point, v.x);
 		}
+	      }
+	      else
+		// no neighbor
+		for (vector v in faces)
+		  v.x[] = 0.;
 	    }
 #endif // dimension > 1
 	  }
