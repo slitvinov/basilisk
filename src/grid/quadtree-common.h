@@ -413,6 +413,7 @@ void refine_face (Point point, scalar s)
 void refine_face_solenoidal (Point point, scalar s)
 {
   refine_face (point, s);
+#if dimension > 1
   if (is_local(cell)) {
     // local projection, see section 3.3 of Popinet, JCP, 2009
     vector v = s.v;
@@ -433,7 +434,7 @@ void refine_face_solenoidal (Point point, scalar s)
     fine(v.x,1,0) += p[3] - p[2];
     fine(v.y,0,1) += p[0] - p[2];
     fine(v.y,1,1) += p[1] - p[3];
-#else // dimension == 3
+#elif dimension == 3
     static double m[7][7] = {
       {7./12,5./24,3./8,5./24,3./8,1./4,1./3},
       {5./24,7./12,3./8,5./24,1./4,3./8,1./3},
@@ -461,6 +462,7 @@ void refine_face_solenoidal (Point point, scalar s)
     fine(v.z,1,1,1) += p[7] - p[6];
 #endif // dimension == 3
   }
+#endif // dimension > 1
 }
 
 vector quadtree_init_face_vector (vector v, const char * name)

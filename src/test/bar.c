@@ -25,7 +25,7 @@ int main() {
 
 /**
 We use ["radiation"
-conditions](src/saint-venant.h#radiation-boundary-conditions) at the
+conditions](/src/saint-venant.h#radiation-boundary-conditions) at the
 inlet and outlet. At the inlet (on the left), we try to impose the
 desired sinusoidal wave form. We have to tune the amplitude to obtain
 the required amplitude as measured in the experiment at gauge 4. The

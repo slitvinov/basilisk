@@ -15,7 +15,7 @@ $$
 The scheme implemented here is close to that used in Gerris ([Popinet,
 2003](/src/references.bib#popinet2003), [Popinet,
 2009](/src/references.bib#popinet2009), [Lagrée et al,
-2012](/src/references.bib#lagree2011)).
+2011](/src/references.bib#lagree2011)).
 
 We will use the generic time loop, a CFL-limited timestep, the
 Bell-Collela-Glaz advection scheme and the implicit viscosity

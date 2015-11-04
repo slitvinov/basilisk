@@ -1800,7 +1800,12 @@ dirichlet{WS}*[(] {
 
 ghost {
   if (inforeach_boundary) {
-    char * name[3] = {"ig","ig,jg","ig,jg,kg"};
+    char * name[3] = {"(ig > 0 ? 1 : ig < 0 ? -1 : 0)",
+		      "(ig > 0 ? 1 : ig < 0 ? -1 : 0),"
+		      "(jg > 0 ? 1 : jg < 0 ? -1 : 0)",
+		      "(ig > 0 ? 1 : ig < 0 ? -1 : 0),"
+		      "(jg > 0 ? 1 : jg < 0 ? -1 : 0),"
+		      "(kg > 0 ? 1 : kg < 0 ? -1 : 0)"};
     fputs (name[dimension - 1], yyout);
     if (infine || inarray)
       inarrayargs += dimension - 1;

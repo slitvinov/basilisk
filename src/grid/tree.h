@@ -315,14 +315,21 @@ void cache_shrink (Cache * c)
 
 /* low-level memory management */
 #if dimension == 1
-@define allocated(k,l,n) (quadtree->L[point.level]->m[point.i+k])
+@def allocated(k,l,n) (point.i+k >= 0 &&
+		       point.i+k < (1 << point.level) + 2*GHOSTS &&
+		       quadtree->L[point.level]->m[point.i+k])
+@
 @define NEIGHBOR(k,l,n)	(quadtree->L[point.level]->m[point.i+k])
 @define PARENT(k,l,n) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k])
 @def allocated_child(k,l,n) (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k])
 @
 @define CHILD(k,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k])
 #elif dimension == 2
-@def allocated(k,l,n) (quadtree->L[point.level]->m[point.i+k] &&
+@def allocated(k,l,n) (point.i+k >= 0 &&
+		       point.i+k < (1 << point.level) + 2*GHOSTS &&
+		       quadtree->L[point.level]->m[point.i+k] &&
+		       point.j+l >= 0 &&
+		       point.j+l < (1 << point.level) + 2*GHOSTS &&
 		       quadtree->L[point.level]->m[point.i+k][point.j+l])
 @
 @define NEIGHBOR(k,l,n)	(quadtree->L[point.level]->m[point.i+k][point.j+l])
@@ -336,10 +343,16 @@ void cache_shrink (Cache * c)
 		 [2*point.j-GHOSTS+l])
 @
 #else // dimension == 3
-@def allocated(a,l,n) (quadtree->L[point.level]->m[point.i+a] &&
-			 quadtree->L[point.level]->m[point.i+a][point.j+l] &&
-			 quadtree->L[point.level]->m[point.i+a][point.j+l]
-			 [point.k+n])
+@def allocated(a,l,n) (point.i+a >= 0 &&
+		       point.i+a < (1 << point.level) + 2*GHOSTS &&
+		       quadtree->L[point.level]->m[point.i+a] &&
+		       point.j+l >= 0 &&
+		       point.j+l < (1 << point.level) + 2*GHOSTS &&
+		       quadtree->L[point.level]->m[point.i+a][point.j+l] &&
+		       point.k+n >= 0 &&
+		       point.k+n < (1 << point.level) + 2*GHOSTS &&
+		       quadtree->L[point.level]->m[point.i+a][point.j+l]
+		       [point.k+n])
 @
 @def NEIGHBOR(a,l,n)	(quadtree->L[point.level]->m[point.i+a][point.j+l]
 			                                       [point.k+n])
@@ -626,9 +639,8 @@ static void update_cache_f (void)
     }
     // boundaries
     if (!is_boundary(cell))
-      // look in a 3x3 neighborhood for boundary cells
-      // fixme: should probably be a 5x5 neighborhood
-      foreach_neighbor (1)
+      // look in a 5x5 neighborhood for boundary cells
+      foreach_neighbor(2)
 	if (is_boundary(cell) && !(cell.flags & fboundary)) {
 	  cache_level_append (&q->boundary[level], point);
 	  cell.flags |= fboundary;
@@ -1080,6 +1092,137 @@ void realloc_scalar (void)
 
 static inline void no_coarsen (Point point, scalar s);
 
+static bool normal_neighbor (Point point, bool (cond)(Point),
+			     scalar * scalars, vector * vectors)
+{
+  for (int k = 1; k <= 2; k++)
+    foreach_dimension()
+      for (int i = -k; i <= k; i += 2*k)
+	if (is_neighbor(i)) {
+	  Point neighbor = neighborp(i);
+	  int id = bid(cell);
+	  for (scalar s in scalars)
+	    s[] = s.boundary[id](neighbor, point, s);
+	  for (vector v in vectors) {
+	    scalar vn = VN;
+	    v.x[] = vn.boundary[id](neighbor, point, v.x);
+#if dimension >= 2
+	    scalar vt = VT;
+	    v.y[] = vt.boundary[id](neighbor, point, v.y);
+#endif
+#if dimension >= 3
+	    v.z[] = vt.boundary[id](neighbor, point, v.z);
+#endif
+	  }
+	  return true;
+	}
+  return false;
+}
+
+static bool diagonal_neighbor_2D (Point point, bool (cond)(Point),
+				  scalar * scalars, vector * vectors)
+{
+#if dimension >= 2
+  for (int k = 1; k <= 2; k++)
+#if dimension == 3
+    foreach_dimension()
+#endif
+      for (int i = -k; i <= k; i += 2*k)
+	for (int j = -k; j <= k; j += 2*k)
+	  if (is_neighbor(i,j) &&
+	      is_boundary(neighbor(i,0)) &&
+	      is_boundary(neighbor(0,j))) {
+	    Point n = neighborp(i,j),
+	      n1 = neighborp(i,0), n2 = neighborp(0,j);
+	    int id1 = bid(neighbor(i,0)), id2 = bid(neighbor(0,j));
+	    for (scalar s in scalars)
+	      s[] = (s.boundary[id1](n,n1,s) + s.boundary[id2](n,n2,s) -
+		     s[i,j]);
+	    for (vector v in vectors) {
+	      scalar vt = VT, vn = VN;
+	      v.x[] = (vt.boundary[id1](n,n1,v.x) +
+		       vn.boundary[id2](n,n2,v.x) -
+		       v.x[i,j]);
+	      v.y[] = (vn.boundary[id1](n,n1,v.y) +
+		       vt.boundary[id2](n,n2,v.y) -
+		       v.y[i,j]);
+#if dimension == 3
+	      v.z[] = (vt.boundary[id1](n,n1,v.z) +
+		       vt.boundary[id2](n,n2,v.z) -
+		       v.z[i,j]);
+#endif
+	    }
+	    return true;
+	  }
+#endif // dimension >= 2
+  return false;
+}
+
+static bool diagonal_neighbor_3D (Point point, bool (cond)(Point),
+				  scalar * scalars, vector * vectors)
+{
+#if dimension == 3
+  for (int n = 1; n <= 2; n++)
+    for (int i = -n; i <= n; i += 2*n)
+      for (int j = -n; j <= n; j += 2*n)
+	for (int k = -n; k <= n; k += 2*n)
+	  if (is_neighbor(i,j,k) &&
+	      is_boundary(neighbor(i,j,0)) &&
+	      is_boundary(neighbor(i,0,k)) &&
+	      is_boundary(neighbor(0,j,k))) {
+	    Point
+	      n0 = neighborp(i,j,k),
+	      n1 = neighborp(i,j,0),
+	      n2 = neighborp(i,0,k),
+	      n3 = neighborp(0,j,k);
+	    int
+	      id1 = bid(neighbor(i,j,0)),
+	      id2 = bid(neighbor(i,0,k)),
+	      id3 = bid(neighbor(0,j,k));
+	    for (scalar s in scalars)
+	      s[] = (s.boundary[id1](n0,n1,s) +
+		     s.boundary[id2](n0,n2,s) +
+		     s.boundary[id3](n0,n3,s) -
+		     2.*s[i,j,k]);
+	    for (vector v in vectors) {
+	      scalar vt = VT, vn = VN;
+	      v.x[] = (vt.boundary[id1](n0,n1,v.x) +
+		       vt.boundary[id2](n0,n2,v.x) +
+		       vn.boundary[id3](n0,n3,v.x) -
+		       2.*v.x[i,j,k]);
+	      v.y[] = (vt.boundary[id1](n0,n1,v.y) +
+		       vn.boundary[id2](n0,n2,v.y) +
+		       vt.boundary[id3](n0,n3,v.y) -
+		       2.*v.y[i,j,k]);
+	      v.z[] = (vn.boundary[id1](n0,n1,v.z) +
+		       vt.boundary[id2](n0,n2,v.z) +
+		       vt.boundary[id3](n0,n3,v.z) -
+		       2.*v.z[i,j,k]);
+	    }
+	    return true;
+	  }
+#endif
+  return false;
+}
+
+#if dimension > 1
+foreach_dimension()
+static Point tangential_neighbor_x (Point point, bool (cond)(Point))
+{
+  for (int k = 1; k <= 2; k++)
+    for (int j = -k; j <= k; j += 2*k) {
+      if (is_neighbor(0,j) || is_neighbor(-1,j))
+	return neighborp(0,j);
+#if dimension == 3
+      // fixme: what about diagonals?
+      if (is_neighbor(0,0,j) || is_neighbor(-1,0,j))
+	return neighborp(0,0,j);
+#endif // dimension == 3
+    }
+  return (Point){.level = -1};
+}
+#endif // dimension > 1
+
 void box_boundaries (int l,
 		     bool (cond1)(Point), bool (cond)(Point),
 		     scalar * list)
@@ -1100,190 +1243,44 @@ void box_boundaries (int l,
   
   foreach_boundary (l)
     if (cond1 (point)) {
-      int nc = 0, id = bid(cell);
-      coord nv;
-      foreach_dimension()
-	nv.x = 0;
-      for (scalar s in scalars)
-	s[] = 0.;
-      for (vector v in vectors)
-	foreach_dimension()
-	  v.x[] = 0.;
-      // normal directions
-      foreach_dimension()
-	for (int i = -1; i <= 1; i += 2)
-	  if (is_neighbor(i)) {
-	    Point neighbor = neighborp(i);
-	    for (scalar s in scalars)
-	      s[] += s.boundary[id](neighbor, point, s);
-	    for (vector v in vectors) {
-	      scalar vn = VN;
-	      v.x[] += vn.boundary[id](neighbor, point, v.x);
-	    }
-	    for (vector v in faces) {
-	      scalar vn = VN;
-	      if (v.x.normal && vn.boundary[id])
-		v.x[(i + 1)/2] = vn.boundary[id](neighbor, point, v.x);
-	    }
-	    nc++; nv.x++;
-	  }
-#if dimension > 1
-      if (vectors || faces)
-	foreach_dimension() {
-	  // tangential directions
-	  if (vectors && nv.y == 0)
-	    for (int i = -1; i <= 1; i += 2)
-	      if (is_neighbor(i)) {
-		Point neighbor = neighborp(i);
-		for (vector v in vectors) {
-		  scalar vt = VT;
-		  v.y[] += vt.boundary[id](neighbor, point, v.y);
-		}
-		nv.y++;
-	      }
-#if dimension == 3
-	  if (vectors && nv.z == 0)
-	    for (int i = -1; i <= 1; i += 2)
-	      if (is_neighbor(i)) {
-		Point neighbor = neighborp(i);
-		for (vector v in vectors) {
-		  scalar vt = VT;
-		  v.z[] += vt.boundary[id](neighbor, point, v.z);
-		}
-		nv.z++;
-	      }
-#endif // dimension == 3
-	  // tangential face directions
-	  // fixme: this may not use the normal BCs
-	  if (faces && allocated(-1) && is_boundary(neighbor(-1))) {
-	    int nf = 0;
-	    for (vector v in faces)
-	      v.x[] = 0.;
-	    for (int j = -1; j <= 1; j += 2)
-	      if (is_neighbor(0,j) || is_neighbor(-1,j)) {
-		Point neighbor = neighborp(0,j);
-		for (vector v in faces) {
-		  scalar vt = VT;
-		  v.x[] += vt.boundary[id](neighbor, point, v.x);
-		}
-		nf++;
-	      }
-#if dimension == 3
-	    // fixme: what about diagonals?
-	    for (int j = -1; j <= 1; j += 2)
-	      if (is_neighbor(0,0,j) || is_neighbor(-1,0,j)) {
-		Point neighbor = neighborp(0,0,j);
-		for (vector v in faces) {
-		  scalar vt = VT;
-		  v.x[] += vt.boundary[id](neighbor, point, v.x);
-		}
-		nf++;
-	      }	    
-#endif // dimension == 3
-	    if (nf > 0) {
-	      for (vector v in faces)
-		v.x[] /= nf;
-	    }
-	    else
-	      for (vector v in faces)
-		v.x[] = 0.; // fixme: this should be undefined
-	  }
-	}
-      // 2D diagonal directions
-      if (nc == 0)
-#if dimension == 3
-	foreach_dimension()
-#endif
-	  for (int k = -1; k <= 1; k += 2)
-	    if (is_boundary(neighbor(k,0))) {
-	      Point n1 = neighborp(k,0);
-	      int id1 = bid(neighbor(k,0));
-	      for (int l = -1; l <= 1; l += 2)
-		if (is_boundary(neighbor(0,l)) && is_neighbor(k,l)) {
-		  Point n = neighborp(k,l), n2 = neighborp(0,l);
-		  int id2 = bid(neighbor(0,l));
-		  for (scalar s in scalars)
-		    s[] += (s.boundary[id1](n,n1,s) + s.boundary[id2](n,n2,s) -
-			    s[k,l]);
-		  for (vector v in vectors) {
-		    scalar vt = VT, vn = VN;
-		    v.x[] += (vt.boundary[id1](n,n1,v.x) +
-			      vn.boundary[id2](n,n2,v.x) -
-			      v.x[k,l]);
-		    v.y[] += (vn.boundary[id1](n,n1,v.y) +
-			      vt.boundary[id2](n,n2,v.y) -
-			      v.y[k,l]);
-#if dimension == 3
-		    v.z[] += (vt.boundary[id1](n,n1,v.z) +
-			      vt.boundary[id2](n,n2,v.z) -
-			      v.z[k,l]);
-#endif
-		  }
-		  nv.x++; nv.y++;
-#if dimension == 3
-		  nv.z++;
-#endif
-		  nc++;
-		}
-	    }
-      // 3D diagonal directions
-#if dimension == 3
-      if (nc == 0)
-	for (int k = -1; k <= 1; k += 2)
-	  for (int l = -1; l <= 1; l += 2)
-	    if (is_boundary(neighbor(k,l,0))) {
-	      Point n1 = neighborp(k,l,0);
-	      int id1 = bid(neighbor(k,l,0));
-	      for (int n = -1; n <= 1; n += 2)
-		if (is_boundary(neighbor(k,0,n)) &&
-		    is_boundary(neighbor(0,l,n)) &&
-		    is_neighbor(k,l,n)) {
-		  Point n0 = neighborp(k,l,n), n2 = neighborp(k,0,n);
-		  Point n3 = neighborp(0,l,n);
-		  int id2 = bid(neighbor(k,0,n)), id3 = bid(neighbor(0,l,n));
-		  for (scalar s in scalars)
-		    s[] += (s.boundary[id1](n0,n1,s) +
-			    s.boundary[id2](n0,n2,s) +
-			    s.boundary[id3](n0,n3,s) -
-			    2.*s[k,l,n]);
-		  for (vector v in vectors) {
-		    scalar vt = VT, vn = VN;
-		    v.x[] += (vt.boundary[id1](n0,n1,v.x) +
-			      vt.boundary[id2](n0,n2,v.x) +
-			      vn.boundary[id3](n0,n3,v.x) -
-			      2.*v.x[k,l,n]);
-		    v.y[] += (vt.boundary[id1](n0,n1,v.y) +
-			      vn.boundary[id2](n0,n2,v.y) +
-			      vt.boundary[id3](n0,n3,v.y) -
-			      2.*v.y[k,l,n]);
-		    v.z[] += (vn.boundary[id1](n0,n1,v.z) +
-			      vt.boundary[id2](n0,n2,v.z) +
-			      vt.boundary[id3](n0,n3,v.z) -
-			      2.*v.z[k,l,n]);
-		  }
-		  nc++; nv.x++; nv.y++; nv.z++;
-		}
-	    }
-#endif
-#endif // dimension > 1      
-      // averaging
-      if (nc > 0) {
-	for (scalar s in scalars)
-	  s[] /= nc;
-      }
-      else
+      if (!normal_neighbor (point, cond, scalars, vectors) &&
+	  !diagonal_neighbor_2D (point, cond, scalars, vectors) &&
+	  !diagonal_neighbor_3D (point, cond, scalars, vectors)) {
+	// no neighbors
 	for (scalar s in scalars)
 	  s[] = undefined;
-      foreach_dimension() {
-	if (nv.x > 0) {
-	  for (vector v in vectors)
-	    v.x[] /= nv.x;
-	}
-	else
-	  for (vector v in vectors)
+	for (vector v in vectors)
+	  foreach_dimension()
 	    v.x[] = undefined;
       }
+      if (faces) {
+	int id = bid(cell);
+	foreach_dimension()
+	  for (int i = -1; i <= 1; i += 2) {
+	    // normal neighbor for faces
+	    if (is_neighbor(i)) {
+	      Point neighbor = neighborp(i);
+	      for (vector v in faces) {
+		scalar vn = VN;
+		if (v.x.normal && vn.boundary[id])
+		  v.x[(i + 1)/2] = vn.boundary[id](neighbor, point, v.x);
+	      }
+	    }
+#if dimension > 1
+	    else if (i == -1) {
+	      // tangential neighbor
+	      Point neighbor = tangential_neighbor_x (point, cond);
+	      if (neighbor.level >= 0)
+		for (vector v in faces) {
+		  scalar vt = VT;
+		  v.x[] = vt.boundary[id](neighbor, point, v.x);
+		}
+	    }
+#endif // dimension > 1
+	  }
+      }
     }
+
   free (scalars);
   free (vectors);
   free (faces);
@@ -1413,8 +1410,8 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 #endif
   point.level = l < 0 ? depth() : l;
   int n = 1 << point.level;
-  int j;
 #if dimension >= 2
+  int j;
   OMP(omp for schedule(static))
   for (j = 0; j < n + 2*GHOSTS; j++)
 #endif

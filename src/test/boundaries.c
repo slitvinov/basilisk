@@ -6,7 +6,7 @@ double z = 0.;
 
 int main()
 {
-  init_grid (8);
+  init_grid (16);
   origin (-0.5, -0.5, -0.5);
   mask (sq(x) + sq(y) + sq(z) < sq(0.4) ? none : right);
   output_cells (stdout);
