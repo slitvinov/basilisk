@@ -88,7 +88,7 @@ event amplitude (t += 3.04290519077e-3; t <= 2.2426211256) {
   double max = - HUGE;;
   foreach() 
     if (c[] > 0 && c[] < 1) {
-      double yi = y + h.y[];
+      double yi = y + height(h.y[])*Delta;
       if (yi > max)
 	max = yi;
     }
@@ -121,9 +121,9 @@ error. */
 event error (t = end)
   fprintf (stderr, "%g %g\n", N/L0, sqrt(se/ne)/0.01);
 
-#if QUADTREE
+#if 0
 event gfsview (i += 1) {
-  static FILE * fp = popen ("gfsview2D -s oscillation.gfv", "w");
+  static FILE * fp = popen ("gfsview2D -s ../capwave.gfv", "w");
   output_gfs (fp, t = t);
 }
 #endif
