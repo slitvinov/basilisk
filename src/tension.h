@@ -2,10 +2,9 @@
 # Surface tension
 
 We will need to compute the curvature of the interface, using its
-Volume-Of-Fluid description. This is done with the Height-Function
-implementation. */
+Volume-Of-Fluid description. */
 
-#include "heights.h"
+#include "curvature.h"
 
 /**
 The surface tension $\sigma$ and interface curvature $\kappa$ will be

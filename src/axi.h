@@ -9,7 +9,7 @@ longitudinal coordinate ($z$-axis) is *x* and the radial coordinate
 negative.
 
 We first define a macro which will be used in some geometry-specific
-code (e.g. [curvature computation](heights.h)). */
+code (e.g. [curvature computation](curvature.h)). */
 
 #define AXI 1
 

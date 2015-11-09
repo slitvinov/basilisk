@@ -132,36 +132,36 @@ define it as: */
 #if dimension >= 2
 double line_area (double nx, double ny, double alpha)
 {
-  double alpha1, a, v, area;
+  double a, v, area;
 
-  alpha1 = alpha + (nx + ny)/2.;
+  alpha += (nx + ny)/2.;
   if (nx < 0.) {
-    alpha1 -= nx;
+    alpha -= nx;
     nx = - nx;
   }
   if (ny < 0.) {
-    alpha1 -= ny;
+    alpha -= ny;
     ny = - ny;
   }
 
-  if (alpha1 <= 0.)
+  if (alpha <= 0.)
     return 0.;
 
-  if (alpha1 >= nx + ny)
+  if (alpha >= nx + ny)
     return 1.;
 
   if (nx == 0.)
-    area = alpha1/ny;
+    area = alpha/ny;
   else if (ny == 0.)
-    area = alpha1/nx;
+    area = alpha/nx;
   else {
-    v = alpha1*alpha1;
+    v = sq(alpha);
 
-    a = alpha1 - nx;
+    a = alpha - nx;
     if (a > 0.)
       v -= a*a;
     
-    a = alpha1 - ny;
+    a = alpha - ny;
     if (a > 0.)
       v -= a*a;
 
@@ -272,3 +272,66 @@ int facets (double c, coord n, double alpha,
   }
   return i;
 }
+
+/**
+This function fills the coordinates *p* of the centroid of the
+interface fragment and returns the length of the fragment. */
+
+#if dimension == 2
+double line_length_center (coord m, double alpha, coord * p)
+{
+  alpha += (m.x + m.y)/2.;
+
+  coord n = m;
+  if (n.x < 0.) {
+    alpha -= n.x;
+    n.x = - n.x;
+  }
+  if (n.y < 0.) {
+    alpha -= n.y;
+    n.y = - n.y;
+  }
+
+  p->x = p->y = 0.;
+  
+  if (alpha <= 0. || alpha >= n.x + n.y)
+    return 0.;
+
+  foreach_dimension()
+    if (n.x < 1e-4) {
+      p->x = 0.;
+      p->y = (m.y < 0. ? 1. - alpha : alpha) - 0.5;
+      return 1.;
+    }
+
+  if (alpha >= n.x) {
+    p->x += 1.;
+    p->y += (alpha - n.x)/n.y;
+  }
+  else
+    p->x += alpha/n.x;
+
+  double ax = p->x, ay = p->y;
+  if (alpha >= n.y) {
+    p->y += 1.;
+    ay -= 1.;
+    p->x += (alpha - n.y)/n.x;
+    ax -= (alpha - n.y)/n.x;
+  }
+  else {
+    p->y += alpha/n.y;
+    ay -= alpha/n.y;
+  }
+
+  foreach_dimension() {
+    p->x /= 2.;
+    p->x = clamp (p->x, 0., 1.);
+    if (m.x < 0.)
+      p->x = 1. - p->x;
+    p->x -= 0.5;
+  }
+
+  return sqrt (ax*ax + ay*ay);
+}
+#define plane_area_center(m,a,p) line_length_center(m,a,p)
+#endif

@@ -81,6 +81,12 @@ _attribute\[{ID}+.[nt].i\] {
 {ID}*_[xyz] |
 [.][xyz]  rotate_string (yytext);
 
+{ID}*->[xyz] {
+  int i = strlen(yytext) - 1;
+  yytext[i] = 'x' + (yytext[i] + n - 'x') % dimension;
+  ECHO;
+}
+
 left {
   char * s[3] = {"left", "bottom", "back"};
   fputs (s[n % dimension], yyout);

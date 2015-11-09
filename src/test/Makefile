@@ -111,7 +111,7 @@ poisson.tst: poisson.ctst
 rising-axi.c: rising.c
 	ln -s rising.c rising-axi.c
 
-rising-axi.tst: rising-axi.s
+rising-axi.tst: rising-axi.s rising.s
 	@CFLAGS="$(CFLAGS) -DAXIS=1" $(BASILISK)/runtest rising-axi.tst
 
 rising.tst: rising-axi.tst
@@ -168,6 +168,7 @@ mpi-coarsen1.tst: CC = mpicc -D_MPI=5
 bump2Dp.tst:      CC = mpicc -D_MPI=9
 vortex.tst:	  CC = mpicc -D_MPI=7
 axiadvection.tst: CC = mpicc -D_MPI=7
+hf1.tst:	  CC = mpicc -D_MPI=7
 
 pdump.tst: CC = mpicc -D_MPI=7
 restore.tst: pdump.tst

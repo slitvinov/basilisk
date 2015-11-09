@@ -15,7 +15,7 @@
 @define pi 3.14159265358979
 @undef HUGE
 @define HUGE ((double)1e30)
-@define nodata DBL_MAX
+@define nodata HUGE
 @define _NVARMAX 65536
 @define is_constant(v) ((v).i >= _NVARMAX)
 @define constant(v) (is_constant(v) ? _constant[(v).i - _NVARMAX] : nodata)

@@ -1,5 +1,5 @@
 #include "fractions.h"
-#include "heights.h"
+#include "curvature.h"
 #include "utils.h"
 
 int main()

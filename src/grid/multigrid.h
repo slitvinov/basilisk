@@ -158,7 +158,25 @@ foreach_face_generic() {
   point.n /= 2;
 }
 @
+@define foreach_child_break() _k = _l = 2
 
+@def foreach_neighbor(_s) {
+  int _nn = _s + 0 ? _s + 0 : GHOSTS;
+  int _i = point.i, _j = point.j;
+  for (int _k = - _nn; _k <= _nn; _k++) {
+    point.i = _i + _k;
+    for (int _l = - _nn; _l <= _nn; _l++) {
+      point.j = _j + _l;
+      POINT_VARIABLES;
+@
+@def end_foreach_neighbor()
+    }
+  }
+  point.i = _i; point.j = _j;
+}
+@
+@define foreach_neighbor_break() _k = _l = _nn + 1
+  
 @if TRASH
 @ undef trash
 @ define trash multigrid_trash
