@@ -1,15 +1,10 @@
-static int coarsen_all_but_corner (Point point)
-{
-  return (x < 0.75 || y < 0.75) && level > 2;
-}
-
 scalar s[];
 
 int main (int argc, char * argv[])
 {
   init_grid (64);
   
-  coarsen_function (coarsen_all_but_corner, NULL);
+  unrefine ((x < 0.75 || y < 0.75) && level > 2, NULL);
   
   output_cells (stdout);
   

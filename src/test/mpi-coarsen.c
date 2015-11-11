@@ -1,8 +1,3 @@
-static int coarsen_circle (Point point)
-{
-  return sq(x - 0.1) + sq(y - 0.1) > sq(0.1);
-}
-
 scalar s[];
 
 int main (int argc, char * argv[])
@@ -10,7 +5,7 @@ int main (int argc, char * argv[])
   X0 = Y0 = -0.5;
   init_grid (argc > 1 ? atoi(argv[1]) : 32);
 
-  coarsen_function (coarsen_circle, NULL);
+  unrefine (sq(x - 0.1) + sq(y - 0.1) > sq(0.1), NULL);
   
   output_cells (stdout);
   

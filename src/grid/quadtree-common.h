@@ -283,29 +283,30 @@ astats adapt_wavelet (struct Adapt p)
   return st;
 }
 
-int coarsen_function (int (* func) (Point p), scalar * list)
-{
-  int nc = 0;
-  for (int l = depth() - 1; l >= 0; l--) {
-    quadtree->coarsened.n = 0;
-    foreach_cell() {
-      if (is_local (cell)) {
-	if (is_leaf (cell))
-	  continue;
-	else if (level == l) {
-	  if ((*func) (point) &&
-	      coarsen_cell (point, list, &quadtree->coarsened))
-	    nc++;
-	  continue;
-	}
-      } // non-local cell
-      else if (level == l || is_leaf(cell))
-	continue;
-    }
-    mpi_boundary_coarsen (l);
-  }
-  mpi_boundary_update();
-  return nc;
+#define unrefine(cond, list) {						\
+  int _nc;								\
+  do {									\
+    _nc = 0;								\
+    for (int _l = depth() - 1; _l >= 0; _l--) {				\
+      quadtree->coarsened.n = 0;					\
+      foreach_cell() {							\
+        if (is_local (cell)) {						\
+  	  if (is_leaf (cell))						\
+	    continue;							\
+	  else if (level == _l) {					\
+	    if ((cond) &&						\
+		coarsen_cell (point, list, &quadtree->coarsened))	\
+	      _nc++;							\
+	    continue;							\
+	  }								\
+	}								\
+	else if (level == _l || is_leaf(cell))				\
+	  continue;							\
+      }									\
+      mpi_boundary_coarsen (_l);					\
+    }									\
+    mpi_boundary_update();						\
+  } while (_nc);							\
 }
 
 #define refine(cond, list) {						\
