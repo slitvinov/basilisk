@@ -275,9 +275,8 @@ int facets (double c, coord n, double alpha,
 
 /**
 This function fills the coordinates *p* of the centroid of the
-interface fragment and returns the length of the fragment. */
+interface fragment and returns the length/area of the fragment. */
 
-#if dimension == 2
 double line_length_center (coord m, double alpha, coord * p)
 {
   alpha += (m.x + m.y)/2.;
@@ -333,5 +332,86 @@ double line_length_center (coord m, double alpha, coord * p)
 
   return sqrt (ax*ax + ay*ay);
 }
+
+#if dimension == 2
 #define plane_area_center(m,a,p) line_length_center(m,a,p)
-#endif
+#else // dimension == 3
+double plane_area_center (coord m, double alpha, coord * p)
+{
+  if (fabs (m.x) < 1e-4) {
+    coord n, q;
+    n.x = m.y;
+    n.y = m.z;
+    double length = line_length_center (n, alpha, &q);
+    p->x = 0.;
+    p->y = q.x;
+    p->z = q.y;
+    return sq(length);
+  }
+  if (fabs (m.y) < 1e-4) {
+    coord n, q;
+    n.x = m.z;
+    n.y = m.x;
+    double length = line_length_center (n, alpha, &q);
+    p->x = q.y;
+    p->y = 0.;
+    p->z = q.x;
+    return sq(length);
+  }
+  if (fabs (m.z) < 1e-4) {
+    double length = line_length_center (m, alpha, p);
+    p->z = 0.;
+    return sq(length);
+  }
+  
+  alpha += (m.x + m.y + m.z)/2.;
+  coord n = m;
+  foreach_dimension()
+    if (n.x < 0.) {
+      alpha -= n.x;
+      n.x = - n.x;
+    }
+
+  double amax = n.x + n.y + n.z;
+  if (alpha <= 0. || alpha >= amax) {
+    p->x = p->y = p->z = 0.;
+    return 0.;
+  }
+
+  double area = sq(alpha);
+  p->x = p->y = p->z = area*alpha;
+
+  foreach_dimension() {
+    double b = alpha - n.x;
+    if (b > 0.) {
+      area -= b*b;
+      p->x -= b*b*(2.*n.x + alpha);
+      p->y -= b*b*b;
+      p->z -= b*b*b;
+    }
+  }
+
+  amax = alpha - amax;
+  foreach_dimension() {
+    double b = amax + n.x;
+    if (b > 0.) {
+      area += b*b;
+      p->y += b*b*(2.*n.y + alpha - n.z);
+      p->z += b*b*(2.*n.z + alpha - n.y);
+      p->x += b*b*b;
+    }
+  }
+
+  area *= 3.;
+  foreach_dimension() {
+    p->x /= area*n.x;
+    p->x = clamp (p->x, 0., 1.);
+    if (m.x < 0.) p->x = 1. - p->x;
+    p->x -= 0.5;
+  }
+
+  return area*sqrt (1./(sq(n.x)*sq(n.y)) +
+		    1./(sq(n.x)*sq(n.z)) +
+		    1./(sq(n.z)*sq(n.y)))/6.;
+}
+#endif // dimension == 3

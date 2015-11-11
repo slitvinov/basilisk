@@ -194,7 +194,7 @@ static double height_curvature_fit (Point point, scalar c, vector h)
   The coordinates of the interface points and the number of
   interface points. */
   
-  coord ip[6];
+  coord ip[dimension == 2 ? 6 : 27];
   int n = 0;
 
   /**
@@ -207,23 +207,35 @@ static double height_curvature_fit (Point point, scalar c, vector h)
     find the "dominant" orientation *ori*. */
     
     int n1 = 0, n2 = 0;
+#if dimension == 2
     for (int i = -1; i <= 1; i++)
       if (h.y[i] != nodata) {
-	if (orientation(h.y[i]))
-	  n1++;
-	else
-	  n2++;
+	if (orientation(h.y[i])) n1++; else n2++;
       }
+#else // dimension == 3
+    for (int i = -1; i <= 1; i++)
+      for (int j = -1; j <= 1; j++)
+	if (h.z[i,j] != nodata) {
+	  if (orientation(h.z[i,j])) n1++; else n2++;
+	}
+#endif
     int ori = (n1 > n2);
 
     /**
     We look for height-functions with the dominant orientation and
     store the corresponding interface coordinates (relative to the
     center of the cell and normalised by the cell size). */
-    
+
+#if dimension == 2
     for (int i = -1; i <= 1; i++)
       if (h.y[i] != nodata && orientation(h.y[i]) == ori)
 	ip[n].x = i, ip[n++].y = height(h.y[i]);
+#else // dimension == 3
+    for (int i = -1; i <= 1; i++)
+      for (int j = -1; j <= 1; j++)
+	if (h.z[i,j] != nodata && orientation(h.z[i,j]) == ori)
+	  ip[n].x = i, ip[n].y = j, ip[n++].z = height(h.z[i,j]);
+#endif
   }
 
   /**
@@ -239,11 +251,16 @@ static double height_curvature_fit (Point point, scalar c, vector h)
   
   coord m = mycs (point, c), fc;
   double alpha = plane_alpha (c[], m);
-  plane_area_center (m, alpha, &fc);
+  double area = plane_area_center (m, alpha, &fc);
   ParabolaFit fit;
   parabola_fit_init (&fit, fc, m);
+#if dimension == 2
+  NOT_UNUSED(area);
   parabola_fit_add (&fit, fc, PARABOLA_FIT_CENTER_WEIGHT);
-
+#else // dimension == 3
+  parabola_fit_add (&fit, fc, area*100.);
+#endif
+  
   /**
   We add the collected interface positions and compute the
   curvature. */
