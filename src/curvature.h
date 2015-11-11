@@ -259,15 +259,65 @@ static double height_curvature_fit (Point point, scalar c, vector h)
 }
 
 /**
+## Parabolic fit of centroids
+
+If all else fails, we try a parabolic fit of interface centroids. */
+
+static double centroids_curvature_fit (Point point, scalar c)
+{
+
+  /**
+  We recover the interface normal and the centroid of the interface
+  fragment and initialize the parabolic fit. */
+  
+  coord m = mycs (point, c), fc;
+  double alpha = plane_alpha (c[], m);
+  plane_area_center (m, alpha, &fc);
+  ParabolaFit fit;
+  parabola_fit_init (&fit, fc, m);
+
+  /**
+  We add the interface centroids in a $3^d$ neighborhood and compute
+  the curvature. */
+
+  coord r = {x,y,z};
+  foreach_neighbor(1)
+    if (c[] > 0. && c[] < 1.) {
+      coord m = mycs (point, c), fc;
+      double alpha = plane_alpha (c[], m);
+      double area = plane_area_center (m, alpha, &fc);
+      coord rn = {x,y,z};
+      foreach_dimension()
+	fc.x += (rn.x - r.x)/Delta;
+      parabola_fit_add (&fit, fc, area);
+    }
+  parabola_fit_solve (&fit);
+  double kappa = parabola_fit_curvature (&fit, 2., NULL)/Delta;
+#if AXI
+  parabola_fit_axi_curvature (&fit, y + fc.y*Delta, Delta, &kappa, NULL);
+#endif
+  return kappa;
+}
+
+/**
 ## General curvature computation
 
 The function below computes the mean curvature *kappa* of the
 interface defined by the volume fraction *c*. It uses a combination of
-the methods above. */
+the methods above: statistics on the number of curvatures computed
+which each method is returned in a *cstats* data structure. */
+
+typedef struct {
+  int h; // number of standard HF curvatures
+  int f; // number of parabolic fit HF curvatures
+  int a; // number of averaged curvatures
+  int c; // number of centroids fit curvatures
+} cstats;
 
 trace
-void curvature (scalar c, scalar kappa)
+cstats curvature (scalar c, scalar kappa)
 {
+  cstats s = {0,0,0,0};
   vector h[];
   heights (c, h);
 
@@ -299,11 +349,10 @@ void curvature (scalar c, scalar kappa)
     Otherwise we try the standard HF curvature calculation first, and
     the "mixed heights" HF curvature second. */ 
     
-    else {
-      k[] = height_curvature (point, c, h);
-      if (k[] == nodata)
-	k[] = height_curvature_fit (point, c, h);
-    }
+    else if ((k[] = height_curvature (point, c, h)) != nodata)
+      s.h++;
+    else if ((k[] = height_curvature_fit (point, c, h)) != nodata)
+      s.f++;
   }
   boundary ({k});
 
@@ -318,20 +367,26 @@ void curvature (scalar c, scalar kappa)
     else if (c[] > 0. && c[] < 1.) {
 
       /**
-      ...or the average of the neighboring
-      curvatures (in the $3^{d}$ neighborhood of interfacial cells). */
+      ...or the average of the curvatures in the $3^{d}$ neighborhood
+      of interfacial cells. */
       
-      double s = 0., a = 0.;
+      double sk = 0., a = 0.;
       foreach_neighbor(1)
 	if (k[] != nodata)
-	  s += k[], a++;
+	  sk += k[], a++;
       if (a > 0.)
-	kappa[] = s/a;
+	kappa[] = sk/a, s.a++;
       else
-	kappa[] = nodata;
+
+	/**
+	Empty neighborhood: we try centroids as a last resort. */
+	
+	kappa[] = centroids_curvature_fit (point, c), s.c++;
     }
     else
       kappa[] = nodata;
   }
   boundary ({kappa});
+
+  return s;
 }
