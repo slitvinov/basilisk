@@ -33,6 +33,12 @@ static inline int orientation (double H) {
 }
 
 /**
+We make sure that two layers of ghost cells are defined on the
+boundaries (the default is one layer). */
+
+#define BGHOSTS 2
+
+/**
 ## Half-column integration 
 
 This helper function performs the integration on half a column, either

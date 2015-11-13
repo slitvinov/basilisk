@@ -3,6 +3,13 @@
 #define TWO_ONE 1 // enforce 2:1 refinement ratio
 #define GHOSTS  2
 
+/* By default only one layer of ghost cells is used on the boundary to
+   optimise the cost of boundary conditions. */
+
+#ifndef BGHOSTS
+@ define BGHOSTS 1
+#endif
+
 #define I     (point.i - GHOSTS)
 #if dimension >= 2
 # define J    (point.j - GHOSTS)
@@ -315,16 +322,25 @@ void cache_shrink (Cache * c)
 
 /* low-level memory management */
 #if dimension == 1
+# if BGHOSTS == 1
+@define allocated(k,l,n) (quadtree->L[point.level]->m[point.i+k])
+# else
 @def allocated(k,l,n) (point.i+k >= 0 &&
 		       point.i+k < (1 << point.level) + 2*GHOSTS &&
 		       quadtree->L[point.level]->m[point.i+k])
 @
+# endif
 @define NEIGHBOR(k,l,n)	(quadtree->L[point.level]->m[point.i+k])
 @define PARENT(k,l,n) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k])
 @def allocated_child(k,l,n) (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k])
 @
 @define CHILD(k,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k])
 #elif dimension == 2
+# if BGHOSTS == 1
+@def allocated(k,l,n) (quadtree->L[point.level]->m[point.i+k] &&
+		       quadtree->L[point.level]->m[point.i+k][point.j+l])
+@
+# else
 @def allocated(k,l,n) (point.i+k >= 0 &&
 		       point.i+k < (1 << point.level) + 2*GHOSTS &&
 		       quadtree->L[point.level]->m[point.i+k] &&
@@ -332,6 +348,7 @@ void cache_shrink (Cache * c)
 		       point.j+l < (1 << point.level) + 2*GHOSTS &&
 		       quadtree->L[point.level]->m[point.i+k][point.j+l])
 @
+# endif
 @define NEIGHBOR(k,l,n)	(quadtree->L[point.level]->m[point.i+k][point.j+l])
 @def PARENT(k,l,n) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k]
 		  [(point.j+GHOSTS)/2+l])
@@ -343,6 +360,13 @@ void cache_shrink (Cache * c)
 		 [2*point.j-GHOSTS+l])
 @
 #else // dimension == 3
+# if BGHOSTS == 1
+@def allocated(a,l,n) (quadtree->L[point.level]->m[point.i+a] &&
+		       quadtree->L[point.level]->m[point.i+a][point.j+l] &&
+		       quadtree->L[point.level]->m[point.i+a][point.j+l]
+		       [point.k+n])
+@
+#else     
 @def allocated(a,l,n) (point.i+a >= 0 &&
 		       point.i+a < (1 << point.level) + 2*GHOSTS &&
 		       quadtree->L[point.level]->m[point.i+a] &&
@@ -354,6 +378,7 @@ void cache_shrink (Cache * c)
 		       quadtree->L[point.level]->m[point.i+a][point.j+l]
 		       [point.k+n])
 @
+#endif
 @def NEIGHBOR(a,l,n)	(quadtree->L[point.level]->m[point.i+a][point.j+l]
 			                                       [point.k+n])
 @			
@@ -640,7 +665,7 @@ static void update_cache_f (void)
     // boundaries
     if (!is_boundary(cell))
       // look in a 5x5 neighborhood for boundary cells
-      foreach_neighbor(2)
+      foreach_neighbor (BGHOSTS)
 	if (is_boundary(cell) && !(cell.flags & fboundary)) {
 	  cache_level_append (&q->boundary[level], point);
 	  cell.flags |= fboundary;
@@ -1095,7 +1120,7 @@ static inline void no_coarsen (Point point, scalar s);
 static bool normal_neighbor (Point point, bool (cond)(Point),
 			     scalar * scalars, vector * vectors)
 {
-  for (int k = 1; k <= 2; k++)
+  for (int k = 1; k <= BGHOSTS; k++)
     foreach_dimension()
       for (int i = -k; i <= k; i += 2*k)
 	if (is_neighbor(i)) {
@@ -1123,7 +1148,7 @@ static bool diagonal_neighbor_2D (Point point, bool (cond)(Point),
 				  scalar * scalars, vector * vectors)
 {
 #if dimension >= 2
-  for (int k = 1; k <= 2; k++)
+  for (int k = 1; k <= BGHOSTS; k++)
 #if dimension == 3
     foreach_dimension()
 #endif
@@ -1162,7 +1187,7 @@ static bool diagonal_neighbor_3D (Point point, bool (cond)(Point),
 				  scalar * scalars, vector * vectors)
 {
 #if dimension == 3
-  for (int n = 1; n <= 2; n++)
+  for (int n = 1; n <= BGHOSTS; n++)
     for (int i = -n; i <= n; i += 2*n)
       for (int j = -n; j <= n; j += 2*n)
 	for (int k = -n; k <= n; k += 2*n)
@@ -1209,7 +1234,7 @@ static bool diagonal_neighbor_3D (Point point, bool (cond)(Point),
 foreach_dimension()
 static Point tangential_neighbor_x (Point point, bool (cond)(Point))
 {
-  for (int k = 1; k <= 2; k++)
+  for (int k = 1; k <= BGHOSTS; k++)
     for (int j = -k; j <= k; j += 2*k) {
       if (is_neighbor(0,j) || is_neighbor(-1,j))
 	return neighborp(0,j);

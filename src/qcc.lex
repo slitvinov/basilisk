@@ -14,7 +14,7 @@
   typedef struct { int x, y, face; char * name; } Vector;
   typedef struct { Vector x, y; char * name; } Tensor;
 
-  int dimension = 2;
+  int dimension = 2, bghosts = 0;
   
   int debug = 0, catch = 0, nolineno = 0, events = 0;
   char dir[] = ".qccXXXXXX";
@@ -2376,7 +2376,7 @@ int getput(void)
 void stripname (char * path);
 char * stripslash (char * path);
 int includes (int argc, char ** argv, char ** out, 
-	      char ** grid, int * default_grid, int * dimension,
+	      char ** grid, int * default_grid, int * dimension, int * bg,
 	      const char * dir);
 
 int endfor (FILE * fin, FILE * fout)
@@ -2709,7 +2709,7 @@ int main (int argc, char ** argv)
   if (file) {
     char * out[100], * grid = NULL;
     int default_grid;
-    includes (argc, argv, out, &grid, &default_grid, &dimension,
+    includes (argc, argv, out, &grid, &default_grid, &dimension, &bghosts,
 	      dep || tags ? NULL : dir);
     FILE * swigfp = NULL;
     char swigname[80] = "";
@@ -2769,6 +2769,8 @@ int main (int argc, char ** argv)
       else
 	fputs ("#define _CATCH\n", fout);
       fprintf (fout, "#define dimension %d\n", dimension);
+      if (bghosts)
+	fprintf (fout, "#define BGHOSTS %d\n", bghosts);
       fputs ("#include \"common.h\"\n", fout);
       /* catch */
       if (catch)
