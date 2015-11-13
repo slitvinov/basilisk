@@ -111,11 +111,11 @@ locally()
 remotely()
 {
     rhost=$1
-    chksum=`$GENSUM $test.s | cut -d' ' -f1`.$ext
-    cd $test
-    mkdir $chksum
     qcc -source $CFLAGS $test.c
-    mv -f _$test.c $chksum/$test.c
+    chksum=`$GENSUM $test.s | cut -d' ' -f1`.$ext
+    mkdir $test/$chksum
+    mv -f _$test.c $test/$chksum/$test.c
+    cd $test
     cp -f $test.*ref $chksum 2> /dev/null || true
     PCFLAGS=`echo $CFLAGS | sed 's/-grid=[^-]*//'`
     cat <<EOF >$chksum/$test.sh

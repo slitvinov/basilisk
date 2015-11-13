@@ -11,6 +11,7 @@ interface tracking and surface tension. */
 #include "navier-stokes/centered.h"
 #include "vof.h"
 #include "tension.h"
+#include "prosperetti.h"
 
 /**
 The interface is represented by the volume fraction field *c*. */
@@ -31,7 +32,7 @@ uf.n[bottom] = 0.;
 We will store the accumulated error in *se* and the number of samples
 in *ne*. */
 
-double se = 0, ne = 0;
+double se = 0; int ne = 0;
 
 int main() {
 
@@ -105,12 +106,9 @@ event amplitude (t += 3.04290519077e-3; t <= 2.2426211256) {
 
   /**
   To compute the RMS error, we get data from the reference file
-  *prosperetti* and add the difference to the accumulated error. */
+  *prosperetti.h* and add the difference to the accumulated error. */
 
-  static FILE * fp1 = fopen ("../prosperetti", "r");
-  double t1, max1;
-  fscanf (fp1, "%lf %lf", &t1, &max1);
-  se += sq(max - max1); ne++;
+  se += sq(max - prosperetti[ne][1]); ne++;
 }
 
 /**
@@ -135,7 +133,8 @@ event gfsview (i += 1) {
 set output 'amplitude.png'
 set xlabel 'tau'
 set ylabel 'Relative amplitude'
-plot '../prosperetti' w l t "Prosperetti", 'wave-128' every 10 w p t "Basilisk"
+plot '../prosperetti.h' u 2:4 w l t "Prosperetti", \
+     'wave-128' every 10 w p t "Basilisk"
 ~~~
 
 ~~~gnuplot Convergence of the RMS error as a function of resolution (number of grid points per wavelength)
