@@ -118,6 +118,8 @@ remotely()
     cd $test
     cp -f $test.*ref $chksum 2> /dev/null || true
     PCFLAGS=`echo $CFLAGS | sed 's/-grid=[^-]*//'`
+    NCORES=`echo $EXEC | awk 'BEGIN{ np = 1 }{
+      if ($1 == "mpirun") np = $3; }END{ print np;}'`
     cat <<EOF >$chksum/$test.sh
 #!/bin/sh
 \$CC99 $PCFLAGS -I\$HOME/include -o $test $test.c -L\$HOME/lib $LIBS -lm > warn 2>&1 || mv -f warn fail
@@ -178,7 +180,7 @@ EOF
     rm -r -f $chksum
 
     if ! ( scp -q $chksum.tgz $rhost: && rm -f $chksum.tgz && \
-	ssh $rhost sh -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -n nice -19 sh $test.sh\" && sleep 0 && tsp -p && tsp -w" > tspid.$ext && \
+	ssh $rhost bash -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -N \$(test \$(tsp -S) -le $NCORES && echo \$(tsp -S) || echo $NCORES) -n nice -19 sh $test.sh\" && sleep 0 && tsp -p && tsp -w" > tspid.$ext && \
 	scp -q $rhost:$chksum.tgz $chksum.tgz && \
 	ssh $rhost rm -r -f $chksum.tgz && \
 	tar xmzf $chksum.tgz && \
