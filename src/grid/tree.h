@@ -463,20 +463,6 @@ void cache_shrink (Cache * c)
 }
 @
 @define foreach_child_break() _k = 2
-
-@def foreach_neighbor(_s) {
-  int _nn = _s + 0 ? _s + 0 : GHOSTS;
-  int _i = point.i;
-  for (int _k = - _nn; _k <= _nn; _k++) {
-    point.i = _i + _k;
-    POINT_VARIABLES;
-@
-@def end_foreach_neighbor()
-  }
-  point.i = _i;
-}
-@
-@define foreach_neighbor_break() _k = _nn + 1
 #elif dimension == 2
 @def foreach_child() {
   int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
@@ -495,23 +481,6 @@ void cache_shrink (Cache * c)
 }
 @
 @define foreach_child_break() _k = _l = 2
-
-@def foreach_neighbor(_s) {
-  int _nn = _s + 0 ? _s + 0 : GHOSTS;
-  int _i = point.i, _j = point.j;
-  for (int _k = - _nn; _k <= _nn; _k++) {
-    point.i = _i + _k;
-    for (int _l = - _nn; _l <= _nn; _l++) {
-      point.j = _j + _l;
-      POINT_VARIABLES;
-@
-@def end_foreach_neighbor()
-    }
-  }
-  point.i = _i; point.j = _j;
-}
-@
-@define foreach_neighbor_break() _k = _l = _nn + 1
 #else // dimension == 3
 @def foreach_child() {
   int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS, _k = 2*point.k - GHOSTS;
@@ -533,26 +502,6 @@ void cache_shrink (Cache * c)
 }
 @
 @define foreach_child_break() _l = _m = _n = 2
-
-@def foreach_neighbor(_s) {
-  int _nn = _s + 0 ? _s + 0 : GHOSTS;
-  int _i = point.i, _j = point.j, _k = point.k;
-  for (int _l = - _nn; _l <= _nn; _l++) {
-    point.i = _i + _l;
-    for (int _m = - _nn; _m <= _nn; _m++) {
-      point.j = _j + _m;
-      for (int _n = - _nn; _n <= _nn; _n++) {
-	point.k = _k + _n;
-	POINT_VARIABLES;
-@
-@def end_foreach_neighbor()
-      }
-    }
-  }
-  point.i = _i; point.j = _j; point.k = _k;
-}
-@
-@define foreach_neighbor_break() _l = _m = _n = _nn + 1
 #endif // dimension == 3
   
 #define update_cache() { if (quadtree->dirty) update_cache_f(); }
@@ -641,6 +590,8 @@ void cache_shrink (Cache * c)
     foreach_cache_level (_cache, _l,)
 @
 @define end_foreach_halo() end_foreach_cache_level(); }}
+
+#include "neighbors.h"
 
 static void update_cache_f (void)
 {

@@ -133,6 +133,17 @@ foreach_face_generic() {
 @
 @define end_foreach_vertex() } end_foreach_face_generic()
 
+@def foreach_vertex_aux()
+foreach_vertex() {
+  struct { int x, y, z; } _a = {point.i, point.j, point.k};
+@
+@define end_foreach_vertex_aux() } end_foreach_vertex()
+
+#define foreach_edge()					\
+  foreach_vertex_aux()					\
+    foreach_dimension()					\
+      if (_a.x < point.n + GHOSTS)
+    
 @define is_face_x() (point.j < point.n + GHOSTS && point.k < point.n + GHOSTS)
 @define is_face_y() (point.i < point.n + GHOSTS && point.k < point.n + GHOSTS)
 @define is_face_z() (point.i < point.n + GHOSTS && point.j < point.n + GHOSTS)
@@ -182,6 +193,8 @@ foreach_face_generic() {
 @ undef trash
 @ define trash multigrid_trash
 @endif
+
+#include "neighbors.h"
 
 void multigrid_trash (void * alist)
 {
@@ -354,7 +367,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 		b = s.v.x; // normal BC
 	    }
 	    val(s,ig,jg,kg) = b.boundary[d] (point, neighbor, s);
-#if 0 //GHOSTS == 2
+#if GHOSTS == 2
 	    point.i -= ig; point.j -= jg; point.k -= kg;
 	    neighbor.i += ig; neighbor.j += jg; neighbor.k += kg;
 	    double vb = b.boundary[d] (point, neighbor, s);

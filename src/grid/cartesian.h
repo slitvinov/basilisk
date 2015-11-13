@@ -62,6 +62,8 @@ foreach_face_generic() {
 @ define trash cartesian_trash
 @endif
 
+#include "neighbors.h"
+
 void cartesian_trash (void * alist)
 {
   scalar * list = alist;
