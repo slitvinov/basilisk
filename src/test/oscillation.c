@@ -15,10 +15,9 @@ This simulation is also a stringent test case of the accuracy of the
 surface tension representation as no explicit viscosity can damp
 eventual parasitic currents. 
 
-We use a constant-resolution grid, the Navier--Stokes solver with VOF
-interface tracking and surface tension. */
+We use a the Navier--Stokes solver with VOF interface tracking and
+surface tension. */
 
-#include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
 #include "vof.h"
 #include "tension.h"
@@ -33,7 +32,7 @@ The diameter of the droplet is 0.2. The density inside the droplet is
 one and outside 10^-3^. */
 
 #define D 0.2
-#define rho(c) (1.*(c) + 1e-3*(1. - (c)))
+#define rho(c) (clamp(c,0,1)*(1. - 1e-3) + 1e-3)
 
 /**
 We will vary the level of refinement to study convergence. */
@@ -45,14 +44,13 @@ int LEVEL;
 int main() {
   
   /**
-  The box size is 0.5, the surface tension unity. We cleanup existing
-  files and vary the level of refinement. */
+  The surface tension is unity. We cleanup existing files and vary the
+  level of refinement. */
 
-  L0 = 0.5;
   c.sigma = 1.;
   remove ("error");
   remove ("laplace");
-  for (LEVEL = 5; LEVEL <= 7; LEVEL++) {
+  for (LEVEL = 5; LEVEL <= 8; LEVEL++) {
     N = 1 << LEVEL;
     
     /**
@@ -132,7 +130,7 @@ event properties (i++) {
   defined by *rho()*. */
 
   foreach_face() {
-    double cm = (cf[] + cf[-1,0])/2.;
+    double cm = (cf[] + cf[-1])/2.;
     alphav.x[] = 1./rho(cm);
   }
   boundary ((scalar *){alphav});  
@@ -203,15 +201,18 @@ event fit (t = end) {
   pclose (fp);
 }
 
-#if QUADTREE
-event gfsview (i += 1) {
-  static FILE * fp = popen ("gfsview2D -s oscillation.gfv", "w");
+#if 0
+event gfsview (i += 10) {
+  static FILE * fp = popen ("gfsview2D oscillation.gfv", "w");
   output_gfs (fp, t = t);
 }
+#endif
 
+#if QUADTREE
 event adapt (i++) {
   adapt_wavelet ({c,u}, (double[]){5e-3,1e-3,1e-3}, LEVEL,
-		 list = {p,u,pf,uf,g,c,alpha}, listb = {u,pf,uf,g,c,alpha});
+		 list = {p,u,pf,uf,g,c}, listb = {u,pf,uf,g,c});
+  event ("properties");
 }
 #endif
 
@@ -223,9 +224,9 @@ set output 'k.png'
 set xlabel 'Time'
 set ylabel 'Kinetic energy'
 set logscale y
-plot [0:1][8e-5:]'k-7' t "51.2" w l,				\
-  'k-6' t "25.6" w l, 'k-5' t "12.8" w l,			\
-  'fit-7' t "" w l lt 7, 'fit-6' t "" w l lt 7,			\
+plot [0:1][8e-5:]'k-8' t "51.2" w l, 'k-7' t "25.6" w l,               \
+  'k-6' t "12.8" w l, 'k-5' t "6.4" w l,			       \
+  'fit-8' t "" w l lt 7, 'fit-7' t "" w l lt 7, 'fit-6' t "" w l lt 7, \
   'fit-5' t "" w l lt 7
 ~~~
 

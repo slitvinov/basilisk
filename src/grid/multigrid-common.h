@@ -62,6 +62,11 @@ static inline void coarsen_face (Point point, scalar s)
 
 static inline void no_coarsen (Point point, scalar s) {}
 
+static inline void no_data (Point point, scalar s) {
+  foreach_child()
+    s[] = nodata;
+}
+
 void restriction (scalar * list)
 {
   scalar * listc = NULL;

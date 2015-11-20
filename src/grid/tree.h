@@ -1504,11 +1504,7 @@ void init_grid (int n)
   // check 64 bits structure alignment
   assert (sizeof(Cell) % 8 == 0);
   
-  Quadtree * q = grid;
-  if (q && n == 1 << q->depth)
-    return;
   free_grid();
-
   int depth = 0;
   while (n > 1) {
     if (n % 2) {
@@ -1518,7 +1514,7 @@ void init_grid (int n)
     n /= 2;
     depth++;
   }
-  q = calloc (1, sizeof (Quadtree));
+  Quadtree * q = calloc (1, sizeof (Quadtree));
   q->depth = 0;
 
   /* low-level memory management */

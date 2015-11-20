@@ -296,7 +296,7 @@ double line_length_center (coord m, double alpha, coord * p)
   if (alpha <= 0. || alpha >= n.x + n.y)
     return 0.;
 
-  foreach_dimension()
+  foreach_dimension(2)
     if (n.x < 1e-4) {
       p->x = 0.;
       p->y = (m.y < 0. ? 1. - alpha : alpha) - 0.5;
@@ -322,7 +322,7 @@ double line_length_center (coord m, double alpha, coord * p)
     ay -= alpha/n.y;
   }
 
-  foreach_dimension() {
+  foreach_dimension(2) {
     p->x /= 2.;
     p->x = clamp (p->x, 0., 1.);
     if (m.x < 0.)
@@ -363,7 +363,7 @@ double plane_area_center (coord m, double alpha, coord * p)
     p->z = 0.;
     return sq(length);
   }
-  
+
   alpha += (m.x + m.y + m.z)/2.;
   coord n = m;
   foreach_dimension()

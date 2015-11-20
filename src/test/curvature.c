@@ -1,54 +1,82 @@
 /**
-# Curvature of a circular interface
+# Curvature of a circular/spherical interface
 
 This test evaluates the accuracy of the generalised height-function
 curvature calculation. It is similar to the case presented in
-[Popinet, 2009](references.bib#popinet2009) (Figure 5). The curvatures
-of circles with a randomised position and varying radii are computed
-and statistics on the error are gathered and displayed on the graph
-below. */
+[Popinet, 2009](/src/references.bib#popinet2009) (Figure 5). The
+curvatures of circles/spheres with a randomised position and varying
+radii are computed and statistics on the error are gathered and
+displayed on the graph below. 
+
+We use the *Vofi* library for accurate initialisation of interfacial
+shapes [Bna et al, 2015](/src/references.bib#bna2015). */
+
+#include <vofi.h>
 
 #include "fractions.h"
 #include "curvature.h"
+
+/**
+We pass arguments to *Vofi* through these global variables. */
+
+static double xc, yc, zc, Rc;
+
+static double sphere (creal p[dimension])
+{
+#if dimension == 3
+  return sq(p[0] - xc) + sq(p[1] - yc) + sq(p[2] - zc) - sq(Rc);
+#else
+  return sq(p[0] - xc) + sq(p[1] - yc) - sq(Rc);
+#endif
+}
+
+static void vofi (scalar c, int levelmax)
+{
+  double fh = Get_fh (sphere, NULL, 1./(1 << levelmax), dimension, 0);
+  foreach() {
+    creal p[3] = {x - Delta/2., y - Delta/2., z - Delta/2.};
+    c[] = Get_cc (sphere, p, Delta, fh, dimension);
+  }
+  boundary ({c});
+}
 
 /**
 The function below is called with different arguments for "coarse" and
 "fine" interface resolution in order to minimize the computation
 times. The number of randomised positions is *nr*, the radius of the
 circle is *R*, the maximum refinement level to consider is *levelmax*,
-the number of grid points used to initialise (accurately) the volume
-fraction field is *ninit^2^* and the statistics for each level are
-stored in the array *n*, while the statistics on which method is used
-are stored in *sc*. */
+and the statistics for each level are stored in the array *n*, while
+the statistics on which method is used are stored in *sc*. */
 
-void sample_circles (int nr, double R, int levelmax, int ninit,
-		     norm * n, cstats * sc)
+void sample_circles (int nr, double R, int levelmax, norm * n, cstats * sc)
 {
   while (nr--) {
 
     /**
-    It is important to use an accurate enough initialisation of the
-    volume fraction field for the circular interface. To do this we
-    use the standard (low order) *fractions()* function on a fine
-    enough grid. */
+    We refine the grid down to *levelmax* but only around the interface. */
 
-    init_grid (ninit);
     scalar c[], kappa[];
-    vertex scalar phi[];
-    double x0 = noise()/8., y0 = noise()/8.;
-    foreach_vertex()
-      phi[] = - (sq(x - x0) + sq(y - y0) - sq(R));
-    fractions (phi, c);
+    c.refine = c.prolongation = fraction_refine;
 
+    init_grid (1 << 5);
+    xc = noise()/8., yc = noise()/8., zc = noise()/8., Rc = R;
+    vofi (c, 5);
+    for (int l = 6; l <= levelmax; l++) {
+      refine (c[] > 0. && c[] < 1. && level < l, {c});
+      vofi (c, l);
+    }
+    
     /**
     We then successively coarsen this fine initial grid to compute the
     curvature on coarser and coarser grids (thus saving on the
     expensive initial condition). */
 
+    restriction ({c});
     for (int l = levelmax; l >= 3; l--) {
-      unrefine (level >= l, {c});
+      unrefine (level >= l || c[] <= 0. || c[] >= 1., {c});
+      
       cstats s = curvature (c, kappa);
-
+      
       /**
       We store statistics on the methods used for curvature
       computation... */
@@ -60,7 +88,7 @@ void sample_circles (int nr, double R, int levelmax, int ninit,
           /**
 	  ...and error statistics (for a given level of refinement *l*). */
            
-	  double e = fabs(kappa[] - 1./R)*R;
+	  double e = fabs(kappa[] - (dimension - 1)/R)*R/(dimension - 1);
 	  n[l].volume += dv();
 	  n[l].avg += dv()*e;
 	  n[l].rms += dv()*e*e;
@@ -73,7 +101,7 @@ void sample_circles (int nr, double R, int levelmax, int ninit,
 
 int main()
 {
-  origin (-0.5, -0.5);
+  origin (-0.5, -0.5, -0.5);
  
   /**
   We try a wide enough range of radii. */
@@ -84,7 +112,7 @@ int main()
     We initialize the arrays required to store the statistics for each
     level of refinement. */
 
-    int levelmax = 7;
+    int levelmax = 8;
     norm n[levelmax + 1];
     cstats sc[levelmax + 1];
     for (int i = 0; i <= levelmax; i++) {
@@ -93,31 +121,35 @@ int main()
     }
 
     /**
-    The finer the (initialisation) mesh, the more expensive the
-    computation. On the other hand, we can limit randomisation for the
-    higher resolutions (since we expect less "special cases" on fine
-    meshes). We thus limit the total runtime by sampling many (100)
-    locations on coarse meshes but only few (1) location on the finest
-    mesh. Note that to get second-order convergence, the finest mesh
-    (128^2^) requires an initialisation at 2048^2^. */
+    We can limit randomisation for the higher resolutions (since we
+    expect less "special cases" on fine meshes). We thus limit the
+    total runtime by sampling many (100) locations on coarse meshes
+    but only few (1) location on the finest mesh. */
 
-    sample_circles (100, R, 4, 256, n, sc);
-    sample_circles (10, R, 6, 512, n, sc);
-    sample_circles (1, R, levelmax, 2048, n, sc);
-
+#if dimension == 2
+    sample_circles (1000, R, 4, n, sc);
+    sample_circles (100, R, 6, n, sc);
+    sample_circles (10, R, levelmax, n, sc);
+#else // dimension == 3
+    sample_circles (100, R, 4, n, sc);
+    sample_circles (10, R, 6, n, sc);
+    sample_circles (1, R, levelmax, n, sc);
+#endif
+    
     /**
     Finally we output the statistics for this particular radius and for
     each level of refinement. */
 
-    for (int l = levelmax; l >= 3; l--) {
-      n[l].avg /= n[l].volume;
-      n[l].rms = sqrt(n[l].rms/n[l].volume);
-      double t = sc[l].h + sc[l].f + sc[l].a + sc[l].c;
-      fprintf (stderr, "%g %g %g %g %g %g %g %g\n",
-	       2.*R*(1 << l),
-	       n[l].avg, n[l].rms, n[l].max,
-	       sc[l].h/t, sc[l].f/t, sc[l].a/t, sc[l].c/t);
-    }
+    for (int l = levelmax; l >= 3; l--)
+      if (n[l].volume) {
+	n[l].avg /= n[l].volume;
+	n[l].rms = sqrt(n[l].rms/n[l].volume);
+	double t = sc[l].h + sc[l].f + sc[l].a + sc[l].c;
+	fprintf (stderr, "%g %g %g %g %g %g %g %g\n",
+		 2.*R*(1 << l),
+		 n[l].avg, n[l].rms, n[l].max,
+		 sc[l].h/t, sc[l].f/t, sc[l].a/t, sc[l].c/t);
+      }
   }
 
   /**
@@ -139,7 +171,7 @@ the whole range of diameters. There is a significant degradation of
 the max norm between 7 and 15 grid points, corresponding with the
 introduction of the "averaging" and "(mixed) HF fit" methods. This
 degradation is significantly less pronounced for the method
-implemented in [Popinet, 2009](references.bib#popinet2009).
+implemented in [Popinet, 2009](/src/references.bib#popinet2009).
 
 The grading of the methods used for curvature calculation follows what
 is expected: 
@@ -156,9 +188,20 @@ set key bottom left
 set xlabel 'Diameter (grid points)'
 set ylabel 'Relative curvature error / percentage' 
 f(x)=(x > 0. ? 100.*x : 1e1000)
+set yrange [:100]
 plot 2./(x*x) t '2/x^{2}', 'log' u 1:4 w lp t 'Max', '' u 1:3 w lp t 'RMS', \
   '../popinet.csv' u ($1*2):2 w lp t 'Popinet (2009)', \
   'log' u 1:(f($5)) w lp t 'HF', '' u 1:(f($6)) w lp t 'HF fit', \
+  '' u 1:(f($7)) w lp t 'Average', '' u 1:(f($8)) w lp t 'Centroids'
+~~~
+
+Similar results are obtained in three dimensions, but with a much
+wider intermediate range of low-order convergence for the max-norm.
+
+~~~gnuplot Relative curvature error as a function of resolution in three dimensions
+plot 2./(x*x) t '2/x^{2}', '../curvature.3D/log' u 1:4 w lp t 'Max',	\
+  '' u 1:3 w lp t 'RMS', '../curvature.3D/log' u 1:(f($5)) w lp t 'HF',	\
+  '' u 1:(f($6)) w lp t 'HF fit',					\
   '' u 1:(f($7)) w lp t 'Average', '' u 1:(f($8)) w lp t 'Centroids'
 ~~~
 */

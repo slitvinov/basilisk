@@ -6,15 +6,15 @@ along each coordinate axis, from the center of the cell to the closest
 interface defined by a volume fraction field. This distance is
 estimated using the "column integral" of the volume fraction in the
 corresponding direction. This integral is not always defined (for
-example because the interface is too far i.e. farther than 3.5 cells
+example because the interface is too far i.e. farther than 5.5 cells
 in our implementation) in which case the value of the field is set to
 *nodata*. See e.g. [Popinet, 2009](references.bib#popinet2009) for
 more details on height functions.
 
-We also store the "orientation" of the height function together with its
-value by adding 10 if the volume fraction is unity on the "top" end. The
-function below applied to the value will return the corresponding height
-and orientation. 
+We also store the "orientation" of the height function together with
+its value by adding *HSHIFT* if the volume fraction is unity on the
+"top" end. The function below applied to the value will return the
+corresponding height and orientation.
 
 The distance is normalised with the cell size so that the coordinates
 of the interface are given by
@@ -24,12 +24,14 @@ of the interface are given by
 ~~~
 */
 
+#define HSHIFT 20.
+
 static inline double height (double H) {
-  return H > 5. ? H - 10. : H < -5. ? H + 10. : H;
+  return H > HSHIFT/2. ? H - HSHIFT : H < -HSHIFT/2. ? H + HSHIFT : H;
 }
 
 static inline int orientation (double H) {
-  return fabs(H) > 5.;
+  return fabs(H) > HSHIFT/2.;
 }
 
 /**
@@ -46,10 +48,9 @@ This helper function performs the integration on half a column, either
 
 static void half_column (Point point, scalar c, vector h, vector cs, int j)
 {
+
   /**
-  We store both the state and the temporary value of the height
-  function in two floats stored in the (double) height function
-  field. The 'state' of the height function can be: *complete* if both
+  The 'state' of the height function can be: *complete* if both
   ends were found, zero or one if one end was found and between zero
   and one if only the interface was found. */
 
@@ -85,7 +86,7 @@ static void half_column (Point point, scalar c, vector h, vector cs, int j)
       Otherwise, this is either a complete or a partial height. */
       
       else {
-	int s = (h.x[] + 5.)/100.;
+	int s = (h.x[] + HSHIFT/2.)/100.;
 	state.h = h.x[] - 100.*s;
 	state.s = s - 1;
       }
@@ -131,16 +132,16 @@ static void half_column (Point point, scalar c, vector h, vector cs, int j)
        If *S* is empty or full and *ci* is full or empty, we went
        right through he interface i.e. the height is complete and
        we can stop the integration. The origin is shifted
-       appropriately and the orientation is encoded using the "10
+       appropriately and the orientation is encoded using the "HSHIFT
        trick". */
       
       else if (S >= 1. && ci <= 0.) {
-	H = (H - 0.5)*j + (j == -1)*10.;
+	H = (H - 0.5)*j + (j == -1)*HSHIFT;
 	S = complete;
 	break;
       }
       else if (S <= 0. && ci >= 1.) {
-	H = (i + 0.5 - H)*j + (j == 1)*10.;
+	H = (i + 0.5 - H)*j + (j == 1)*HSHIFT;
 	S = complete;
 	break;
       }
@@ -208,6 +209,28 @@ static void half_column (Point point, scalar c, vector h, vector cs, int j)
 }
 
 /**
+## Column propagation
+
+Once columns are computed on a local 9-cells-high stencil, we will
+need to "propagate" these values upward or downward so that they are
+accessible at distances of up to 5.5 cells from the interface. This is
+important in 3D in particular where marginal (~45 degrees) cases may
+require such high stencils to compute consistent HF curvatures. We do
+this by selecting the smallest height in a 5-cells neighborhood along
+each direction. */
+
+static void column_propagation (vector h)
+{
+  foreach()
+    for (int i = -2; i <= 2; i++)
+      foreach_dimension()
+	if (fabs(height(h.x[i])) <= 3.5 &&
+	    fabs(height(h.x[i]) + i) < fabs(height(h.x[])))
+	  h.x[] = h.x[i] + i;
+  boundary ((scalar *){h});
+}
+
+/**
 ## Multigrid implementation
 
 The *heights()* function takes a volume fraction field *c* and returns
@@ -252,37 +275,80 @@ void heights (scalar c, vector h)
       half_column (point, c, h, cs, j);
   }
   boundary ((scalar *){h});
+
+  /**
+  Finally we "propagate" values along columns. */
+  
+  column_propagation (h);
 }
 
 /**
 ## Quadtree implementation 
 
-We first define the prolongation functions for heights. We first check
-that the (three in 2D, nine in 3D) coarse heights are defined and have
-compatible orientations. If not, the children heights are
-undefined. Otherwise, a parabolic fit of the coarse heights is used to
-compute the children heights. */
+We first define the prolongation functions for heights. */
 
 #else // QUADTREE
 foreach_dimension()
 static void refine_h_x (Point point, scalar h)
 {
-#if dimension == 2
-  int ori = orientation(h[]);
-  for (int i = -1; i <= 1; i++)
-    if (h[0,i] == nodata || orientation(h[0,i]) != ori) {
-      foreach_child()
-        h[] = nodata;
-      return;
-    }
 
-  double h0 = (30.*height(h[]) + height(h[0,1]) + height(h[0,-1]))/16.;
+  /**
+  We try to prolongate columns from nearby non-prolongation cells. */
+
+  bool complete = true;
+  foreach_child() {
+    for (int i = -2; i <= 2; i++)
+      if (allocated(i) && !is_prolongation(neighbor(i)) &&
+	  fabs(height(h[i])) <= 3.5 &&
+	  fabs(height(h[i]) + i) < fabs(height(h[])))
+	h[] = h[i] + i;
+    if (h[] == nodata)
+      complete = false;
+  }
+  if (complete)
+    return;
+
+  /**
+  If some children have not been initialised, we first check that the
+  (three in 2D, nine in 3D) coarse heights are defined and have
+  compatible orientations. If not, the children heights are
+  undefined. Otherwise, a (bi)quadratic fit of the coarse heights is
+  used to compute the children heights. */
+
+  int ori = orientation(h[]);
+#if dimension == 2
+  for (int i = -1; i <= 1; i++)
+    if (h[0,i] == nodata || orientation(h[0,i]) != ori)
+      return;
+
+  double h0 = (30.*height(h[]) + height(h[0,1]) + height(h[0,-1]))/16.
+    + HSHIFT*ori;
   double dh = (height(h[0,1]) - height(h[0,-1]))/4.;
   foreach_child()
-    h[] = h0 + dh*child.y - child.x/2. + 10.*ori;
-#else
-  assert (false);
-#endif
+    if (h[] == nodata)
+      h[] = h0 + dh*child.y - child.x/2.;
+#else // dimension == 3
+  double H[3][3], H0 = height(h[]);
+  for (int i = -1; i <= 1; i++)
+    for (int j = -1; j <= 1; j++)
+      if (h[0,i,j] == nodata || orientation(h[0,i,j]) != ori)
+	return;
+      else
+	H[i+1][j+1] = height(h[0,i,j]) - H0;
+
+  double h0 = 
+    2.*H0 + (H[2][2] + H[2][0] + H[0][0] + H[0][2] +
+	     30.*(H[2][1] + H[0][1] + H[1][0] + H[1][2]))/512.
+    + HSHIFT*ori;
+  double h1 = (H[2][2] + H[2][0] - H[0][0] - H[0][2] +
+	       30.*(H[2][1] - H[0][1]))/128.;
+  double h2 = (H[2][2] - H[2][0] - H[0][0] + H[0][2] +
+	       30.*(H[1][2] - H[1][0]))/128.;
+  double h3 = (H[0][0] + H[2][2] - H[0][2] - H[2][0])/32.;
+  foreach_child()
+    if (h[] == nodata)
+      h[] = h0 + h1*child.y + h2*child.z + h3*child.y*child.z - child.x/2.;
+#endif // dimension == 3
 }
 
 /**
@@ -349,14 +415,28 @@ void heights (scalar c, vector h)
     }
 
   /**
-  We set the prolongation function for *h*. The restriction function
-  does nothing as we have already defined *h* on all levels. */
+  We fill the prolongation cells with "nodata". The restriction
+  function does nothing as we have already defined *h* on all
+  levels. */
   
   foreach_dimension() {
-    h.x.prolongation = refine_h_x;
+    h.x.prolongation = no_data;
     h.x.coarsen = no_coarsen;
   }
   boundary ((scalar *){h});
+
+  /**
+  Final prolongation cells will be filled with values obtained either
+  from neighboring columns or by interpolation from coarser levels
+  (see *refine_h_x()* above). */
+  
+  foreach_dimension()
+    h.x.prolongation = refine_h_x;
+
+  /**
+  Finally, we "propagate" values along columns. */
+  
+  column_propagation (h);
 }
 
 #endif // QUADTREE

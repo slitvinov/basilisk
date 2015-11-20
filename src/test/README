@@ -43,7 +43,7 @@ Note that only the documented test cases appear in the list below
 
 ## Surface tension
 
-* [Curvature of a circular interface](curvature.c)
+* [Curvature of a circular/spherical interface](curvature.c)
 * [Circular droplet in equilibrium](spurious.c)
 * [Capillary wave](capwave.c)
 * [Shape oscillation of an inviscid droplet](oscillation.c)

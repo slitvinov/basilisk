@@ -309,7 +309,7 @@ void fractions (struct Fractions a)
       /**
       Finally we compute the volume fraction. */
       
-      c[] = plane_volume (n, alpha/ni);
+      c[] = ni ? plane_volume (n, alpha/ni) : s.x[];
     }
   }
 #endif

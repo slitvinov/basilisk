@@ -242,7 +242,7 @@ static double height_curvature_fit (Point point, scalar c, vector h)
   If we don't have enough independent points, we cannot do the
   parabolic fit. */
   
-  if (independents (ip, n) < 3*(dimension - 1))
+  if (independents (ip, n) < (dimension == 2 ? 3 : 9))
     return nodata;
 
   /**

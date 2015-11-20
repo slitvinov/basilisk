@@ -1,4 +1,4 @@
-all: check mpi-tests
+all: check 3D-tests mpi-tests curvature-tests
 
 include $(BASILISK)/Makefile.defs
 
@@ -6,13 +6,9 @@ include $(BASILISK)/Makefile.defs
 CFLAGS += -O2 -DMTRACE=3
 
 # list only non-default (!.tst) tests
-check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst \
-	poisson.3D.tst circle.3D.tst refineu.3D.tst solenoidal.3D.tst \
-	periodic.3D.tst
+check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst
 
 # these tests have special depencies/compilation requirements
-
-hf.tst: hf.ctst
 
 dry-explicit.c: dry.c
 	ln -s dry.c dry-explicit.c 
@@ -70,6 +66,15 @@ conical-implicit.tst: conical-implicit.s
 		$(BASILISK)/runtest conical-implicit.tst
 
 conical.tst: conicalsv.tst conical-implicit.tst
+
+curvature.tst: curvature.s curvature.3D.tst
+	@LIBS="-L$(HOME)/local/lib -lvofi" \
+	$(BASILISK)/runtest curvature.tst
+
+curvature.3D.tst: curvature.3D.s
+	@CFLAGS="$(CFLAGS) -grid=octree" \
+	LIBS="-L$(HOME)/local/lib -lvofi" \
+	$(BASILISK)/runtest curvature.3D.tst
 
 explicit.c: implicit.c
 	ln -s implicit.c explicit.c 
@@ -133,6 +138,16 @@ terrain.tst: terrain.s
 
 coarsen.tst: CFLAGS=-DMTRACE=3
 
+# 3D tests
+
+3D-tests: circle.3D.tst curvature.3D.tst hf.3D.tst periodic.3D.tst \
+	poisson.3D.tst refineu.3D.tst solenoidal.3D.tst
+
+# Curvature tests
+
+curvature-tests: hf.tst hf3D.tst hf.ctst hf.3D.tst hf1.tst \
+	curvature.tst curvature.3D.tst
+
 # MPI tests
 
 mpi-tests: indexing.tst indexing.3D.tst \
@@ -141,7 +156,7 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-laplacian.tst mpi-laplacian.3D.tst \
 	mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
 	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
-	bump2Dp.tst axiadvection.tst vortex.tst pdump.tst restore.tst \
+	bump2Dp.tst axiadvection.tst hf1.tst vortex.tst pdump.tst restore.tst \
 	gfsi.tst gfs.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
