@@ -688,7 +688,7 @@ void output_gfs (struct OutputGfs p)
       fwrite (&a, sizeof (double), 1, p.fp);
       for (scalar s in list)
 	if (s.name) {
-	  a = is_local(cell) ? s[] : DBL_MAX;
+	  a = is_local(cell) && !isnan(s[]) && s[] != nodata ? s[] : DBL_MAX;
 	  fwrite (&a, sizeof (double), 1, p.fp);
 	}
     }
@@ -750,9 +750,13 @@ struct DumpHeader {
 void dump (struct Dump p)
 {
   FILE * fp = p.fp;
-  scalar * list = p.list ? p.list : list_copy (all);
+  scalar * lista = p.list ? p.list : all, * list = NULL;
   char * file = p.file;
 
+  for (scalar s in lista)
+    if (!s.face && s.i != cm.i)
+      list = list_add (list, s);
+  
   if (file && (fp = fopen (file, "w")) == NULL) {
     perror (file);
     exit (1);
@@ -802,8 +806,7 @@ void dump (struct Dump p)
 
   delete ({index});
   
-  if (!p.list)
-    free (list);
+  free (list);
   if (file)
     fclose (fp);
 }
@@ -811,11 +814,15 @@ void dump (struct Dump p)
 bool restore (struct Dump p)
 {
   FILE * fp = p.fp;
-  scalar * list = p.list ? p.list : all;
+  scalar * lista = p.list ? p.list : all, * list = NULL;
   char * file = p.file;
   if (file && (fp = fopen (file, "r")) == NULL)
     return false;
   assert (fp);
+
+  for (scalar s in lista)
+    if (!s.face && s.i != cm.i)
+      list = list_add (list, s);
 
   struct DumpHeader header;
   
@@ -861,6 +868,7 @@ bool restore (struct Dump p)
   while (t1 < t && events (0, t1, false))
     t1 = tnext;
 
+  free (list);
   return true;
 }
 
