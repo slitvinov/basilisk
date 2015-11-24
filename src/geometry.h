@@ -150,9 +150,9 @@ double line_area (double nx, double ny, double alpha)
   if (alpha >= nx + ny)
     return 1.;
 
-  if (nx == 0.)
+  if (nx <= 1e-10)
     area = alpha/ny;
-  else if (ny == 0.)
+  else if (ny <= 1e-10)
     area = alpha/nx;
   else {
     v = sq(alpha);
