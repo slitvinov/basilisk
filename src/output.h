@@ -435,6 +435,15 @@ void output_ppm (struct OutputPPM p)
 }
 
 /**
+We also define a convenience macro which calls *avconv* to generate a
+MPEG movie from the PPM stream. */
+
+#define mpeg(c,name,...) {					\
+    static FILE * fp = popen ("ppm2mpeg > " name, "w");		\
+    output_ppm (c, fp, __VA_ARGS__);				\
+  }
+
+/**
 ## *output_grd()*: ESRI ASCII Grid format
 
 The [ESRI GRD format](http://en.wikipedia.org/wiki/Esri_grid) is a
