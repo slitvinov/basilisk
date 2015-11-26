@@ -141,6 +141,29 @@ static inline void refine_bilinear (Point point, scalar s)
     s[] = bilinear (point, s);
 }
 
+static inline double biquadratic (Point point, scalar s)
+{
+#if dimension == 1
+  assert (false);
+  return 0.;
+#elif dimension == 2
+  return (900.*coarse(s,0,0) + 25.*coarse(s,child.x,child.y) +
+	  150.*(coarse(s,child.x,0) + coarse(s,0,child.y)) +
+	  9.*coarse(s,-child.x,-child.y) -
+	  90.*(coarse(s,-child.x, 0) + coarse(s,0,-child.y)) -
+	  15.*(coarse(s,child.x,-child.y) + coarse(s,-child.x,child.y)))/1024.;
+#else // dimension == 3
+  assert (false);
+  return 0.;
+#endif
+}
+
+static inline void refine_biquadratic (Point point, scalar s)
+{
+  foreach_child()
+    s[] = biquadratic (point, s);
+}
+
 static inline void refine_linear (Point point, scalar s)
 {
   coord g;
