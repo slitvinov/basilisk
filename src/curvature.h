@@ -87,7 +87,8 @@ static double height_curvature (Point point, scalar c, vector h)
   struct { NormKappa x, y, z; } n;  
   foreach_dimension()
     n.x.n = c[1] - c[-1], n.x.kappa = kappa_x;
-
+  double (* kappaf) (Point, vector) = NULL; NOT_UNUSED (kappaf);
+  
   /**
   We sort these pairs in decreasing order of $|n|$. */
   
@@ -107,8 +108,11 @@ static double height_curvature (Point point, scalar c, vector h)
   foreach_dimension()
     if (kappa == nodata) {
       kappa = n.x.kappa (point, h);
-      if (kappa != nodata && n.x.n < 0.)
-	kappa =- kappa;
+      if (kappa != nodata) {
+	kappaf = n.x.kappa;
+	if (n.x.n < 0.)
+	  kappa = - kappa;
+      }
     }
 
   if (kappa != nodata) {
@@ -124,21 +128,17 @@ static double height_curvature (Point point, scalar c, vector h)
       
 #if AXI
     double nr, r = y, hx;
-    coord n;
-    foreach_dimension()
-      n.x = c[1] - c[-1];
-    if (fabs(n.x) > fabs(n.y)) {
+    if (kappaf == kappa_x) {
       hx = (height(h.x[0,1]) - height(h.x[0,-1]))/2.;
-      nr = sign(n.x)*hx;
+      nr = hx*(orientation(h.x[]) ? 1 : -1);
     }
     else {
       r += height(h.y[])*Delta;
       hx = (height(h.y[1,0]) - height(h.y[-1,0]))/2.;
-      nr = - sign(n.y);
+      nr = orientation(h.y[]) ? -1 : 1;
     }
     /* limit the minimum radius to half the grid size */
-    double kaxi = nr/max (sqrt(1. + sq(hx))*r, Delta/2.);
-    kappa += kaxi;
+    kappa += nr/max (sqrt(1. + sq(hx))*r, Delta/2.);
 #endif
   }
   
