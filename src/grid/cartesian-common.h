@@ -452,15 +452,30 @@ void cartesian_debug (Point point)
   #endif
   fclose (fp);
 
+  fp = fopen ("debug.plot", "w");
+  fprintf (fp, 
+	   "set term x11\n"
+	   "set size ratio -1\n"
+	   "set key outside\n");
+  for (scalar s in all) {
+    char * name = strdup (s.name), * c = name;
+    while (*c != '\0') {
+      if (*c == '.')
+	*c = '_';
+      c++;
+    }
+    fprintf (fp, "%s = %d\n", name, s.i);
+    free (name);
+  }
+  fclose (fp);
+  
   fprintf (stderr, 
 	   "Last point stencils can be displayed using (in gnuplot)\n"
-	   "  set term x11\n"
-	   "  set size ratio -1\n"
-	   "  set key outside\n"
-	   "  v=0\n"
+	   "  load 'debug.plot'\n"
+	   "  v=%s\n"
 	   "  plot '%s' w l lc 0, "
 	   "'%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 1 title columnhead(3+3*v)",
-	   name, stencil);
+	   _attribute[0].name, name, stencil);
 }
 
 void cartesian_methods()
