@@ -102,10 +102,8 @@ p[back]   = neumann(-uf.z[]/(dt*alpha.z[]));
 /**
 ## Initial conditions
 
-The default velocity and pressure are zero. 
-
-On quadtrees, refinement of the face-centered velocity field needs to
-preserve the divergence-free condition. */
+The default velocity and pressure are zero. The default density is
+one. */
 
 event defaults (i = 0)
 {
@@ -117,7 +115,20 @@ event defaults (i = 0)
   }
   foreach_face()
     uf.x[] = 0.;
+
+  if (!is_constant(alpha.x)) {
+    face vector alphav = alpha;
+    foreach_face()
+      alphav.x[] = 1.;
+    boundary ((scalar *){alpha});
+  }
+  
   boundary ({p,pf,u,g,uf});
+
+  /**
+  On quadtrees, refinement of the face-centered velocity field needs to
+  preserve the divergence-free condition. */
+
 #if QUADTREE
   uf.x.refine = refine_face_solenoidal;
 #endif

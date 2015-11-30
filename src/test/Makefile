@@ -1,4 +1,4 @@
-all: check 3D-tests mpi-tests curvature-tests
+all: check 3D-tests mpi-tests curvature-tests axi-tests
 
 include $(BASILISK)/Makefile.defs
 
@@ -119,8 +119,6 @@ rising-axi.c: rising.c
 rising-axi.tst: rising-axi.s rising.s
 	@CFLAGS="$(CFLAGS) -DAXIS=1" $(BASILISK)/runtest rising-axi.tst
 
-rising.tst: rising-axi.tst
-
 reversed.tst: reversed.ctst
 
 rotate.tst: rotate.ctst
@@ -137,6 +135,11 @@ terrain.tst: terrain.s
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst
 
 coarsen.tst: CFLAGS=-DMTRACE=3
+
+# Axisymmetric tests
+
+axi-tests: axiadvection.tst axi.tst plateau.tst poiseuille-axi.tst \
+	rising-axi.tst
 
 # 3D tests
 

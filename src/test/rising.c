@@ -62,29 +62,31 @@ uf.n[bottom] = 0;
 p[top]       = neumann(0);
 p[bottom]    = neumann(0);
 
-/**
-The domain will span $[0:2]\times[0:0.5]$ and will be resolved with
-$256\times 64$ grid points. We reduce the tolerance on the Poisson and
-viscous solvers to improve the accuracy. */
-
 int main() {
+
+  /**
+  The domain will span $[0:2]\times[0:0.5]$ and will be resolved with
+  $256\times 64$ grid points. */
+
   size (2);
   init_grid (1 << LEVEL);
-  TOLERANCE = 1e-4;
-  run();
-}
-
-event init (t = 0) {
   
   /**
   The density and viscosity are defined by the variable fields we
-  allocated above. We also set the surface tension for interface
-  *f*. */
+  allocated above. We also set the surface tension for interface *f*.
+  We reduce the tolerance on the Poisson and viscous solvers to
+  improve the accuracy. */
   
   alpha = alphav;
   rho = rhov;
   mu = muv;
   f.sigma = SIGMA;
+  TOLERANCE = 1e-4;
+
+  run();
+}
+
+event init (t = 0) {
 
   /**
   The domain is a rectangle. We only simulate half the bubble. */
@@ -117,7 +119,7 @@ The density and viscosity are defined using the arithmetic average. */
 
 event properties (i++) {
   foreach_face() {
-    double ff = (f[] + f[-1,0])/2.;
+    double ff = (f[] + f[-1])/2.;
     alphav.x[] = fm.x[]/rho(ff);
     muv.x[] = fm.x[]*mu(ff);
   }

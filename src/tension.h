@@ -16,15 +16,33 @@ attribute {
   scalar kappa;
 }
 
-/**
-Surface tension is a source term in the right-hand-side of the
-evolution equation for the velocity of the [centered Navier--Stokes
-solver](navier-stokes/centered.h) i.e. it is an acceleration. If
-necessary, we allocate a new vector field to store it. */
-
 event defaults (i = 0) {
-  if (is_constant(a.x))
+  
+  /**
+  Surface tension is a source term in the right-hand-side of the
+  evolution equation for the velocity of the [centered Navier--Stokes
+  solver](navier-stokes/centered.h) i.e. it is an acceleration. If
+  necessary, we allocate a new vector field to store it. */
+
+  if (is_constant(a.x)) {
     a = new face vector;
+    foreach_face()
+      a.x[] = 0.;
+    boundary ((scalar *){a});
+  }
+
+  /**
+  Each interface for which $\sigma$ is not zero needs a new field to
+  store the curvature. */
+  
+  for (scalar c in interfaces)
+    if (c.sigma && !c.kappa.i) {
+      scalar kappa = new_scalar ("kappa");
+      foreach()
+	kappa[] = 0.;
+      boundary ({kappa});
+      c.kappa = kappa;
+    }
 }
 
 /**
@@ -93,14 +111,25 @@ event acceleration (i++)
       boundary ({c});
       
       /**
-      We also allocate the curvature fields (if this has not been done
-      already) and update the values using the height-function
+      We update the values of $\kappa$ using the height-function
       curvature calculation. */
 
-      if (!c.kappa.i)
-	c.kappa = new scalar;
+      assert (c.kappa.i);
       curvature (c, c.kappa);
     }
+
+  /**
+  On quadtrees we need to make sure that the volume fraction gradient
+  is computed exactly like the pressure gradient. This is necessary to
+  ensure well-balancing of the pressure gradient and surface tension
+  term. To do so, we apply the same prolongation to the volume
+  fraction field as applied to the pressure field. */
+  
+#if QUADTREE
+  for (scalar c in list)
+    c.prolongation = p.prolongation;
+  boundary (list);
+#endif
 
   /**
   Finally, for each interface for which $\sigma$ is non-zero, we
@@ -118,19 +147,32 @@ event acceleration (i++)
 	
 	/**
 	We need to compute the curvature *kf* on the face, using its
-	values at the center of the cell. If both cells are cut by the
-	interface, we take the average of both curvatures, otherwise
-	we take the single value in the cell cut by the interface
-	(*nodata* is a very large positive value). */
+	values at the center of the cell. If both curvatures are
+	defined, we take the average, otherwise we take a single
+	value. If all fails we set the curvature to zero: this should
+	happen only because of very pathological cases e.g. weird
+	boundary conditions for the volume fraction. */
 
 	double kf = 
-	  (kappa[] != nodata && kappa[-1] != nodata) ? 
-	  (kappa[] + kappa[-1])/2. : 
-	  min(kappa[], kappa[-1]);
-
+	  (kappa[] < nodata && kappa[-1] < nodata) ?
+	     (kappa[] + kappa[-1])/2. :
+	  kappa[] < nodata ? kappa[] :
+	  kappa[-1] < nodata ? kappa[-1] :
+	  0.;
+	
 	st.x[] += alpha.x[]/fm.x[]*c.sigma*kf*(c[] - c[-1])/Delta;
       }
 
+  /**
+  On quadtrees, we need to restore the prolongation values for the
+  volume fraction field. */
+  
+#if QUADTREE
+  for (scalar c in list)
+    c.prolongation = fraction_refine;
+  boundary (list);
+#endif
+  
   /**
   Finally we free the list of interfacial volume fractions. */
 

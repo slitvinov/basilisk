@@ -92,20 +92,18 @@ double plane_alpha (double c, coord n)
   else if (ch < V2)
     alpha = (m1 + sqrt(m1*m1 + 8.*m2*m3*(ch - V1)))/2.;
   else if (ch < V3) {
-    double p = 2.*m1*m2;
-    double q = 3.*m1*m2*(m12 - 2.*m3*ch)/2.;
-    double p12 = sqrt (p);
-    double teta = acos(q/(p*p12))/3.;
+    double p12 = sqrt (2.*m1*m2);
+    double q = 3.*(m12 - 2.*m3*ch)/(4.*p12);
+    double teta = acos(clamp(q,-1.,1.))/3.;
     double cs = cos(teta);
     alpha = p12*(sqrt(3.*(1. - cs*cs)) - cs) + m12;
   }
   else if (m12 < m3)
     alpha = m3*ch + mm/2.;
   else {
-    double p = m1*(m2 + m3) + m2*m3 - 1./4.;
-    double q = 3.*m1*m2*m3*(1./2. - ch)/2.;
-    double p12 = sqrt(p);
-    double teta = acos(q/(p*p12))/3.;
+    double p = m1*(m2 + m3) + m2*m3 - 1./4., p12 = sqrt(p);
+    double q = 3.*m1*m2*m3*(1./2. - ch)/(2.*p*p12);
+    double teta = acos(clamp(q,-1.,1.))/3.;
     double cs = cos(teta);
     alpha = p12*(sqrt(3.*(1. - cs*cs)) - cs) + 1./2.;
   }
@@ -150,9 +148,9 @@ double line_area (double nx, double ny, double alpha)
   if (alpha >= nx + ny)
     return 1.;
 
-  if (nx <= 1e-10)
+  if (nx < 1e-10)
     area = alpha/ny;
-  else if (ny <= 1e-10)
+  else if (ny < 1e-10)
     area = alpha/nx;
   else {
     v = sq(alpha);
@@ -182,14 +180,15 @@ double plane_volume (coord n, double alpha)
   double tmp = fabs(n.x) + fabs(n.y) + fabs(n.z);
   if (al >= tmp)
     return 1.;
-  assert (tmp > 0.);
+  if (tmp < 1e-10)
+    return 0.;
   double n1 = fabs(n.x)/tmp;
   double n2 = fabs(n.y)/tmp;
   double n3 = fabs(n.z)/tmp;
   al = max(0., min(1., al/tmp));
   double al0 = min(al, 1. - al);
-  double b1 = min(n1*1, n2);
-  double b3 = max(n1*1, n2);
+  double b1 = min(n1, n2);
+  double b3 = max(n1, n2);
   double b2 = n3;
   if (b2 < b1) {
     tmp = b1;

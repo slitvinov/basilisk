@@ -2,19 +2,43 @@
 # Curvature of an interface
 
 The curvature field is defined only in interfacial cells. In all the
-other cells it takes the value *nodata*. On quadtrees, we need to
-redefine the restriction function to take this into account i.e. the
-curvature of the parent cell is the average of the curvatures in the
-interfacial child cells. */
+other cells it takes the value *nodata*. 
+
+On quadtrees, we need to redefine the restriction function to take
+this into account i.e. the curvature of the parent cell is the average
+of the curvatures in the interfacial child cells. */
 
 #if QUADTREE
-static void coarsen_curvature (Point point, scalar kappa)
+static void curvature_restriction (Point point, scalar kappa)
 {
   double k = 0., s = 0.;
   foreach_child()
     if (kappa[] != nodata)
       k += kappa[], s++;
   kappa[] = s ? k/s : nodata;
+}
+
+/**
+The prolongation function performs a similar averaging, but using the
+same stencil as that used for bilinear interpolation, so that the
+symmetries of the volume fraction field and curvature field are
+preserved. */
+
+static void curvature_prolongation (Point point, scalar kappa)
+{
+  foreach_child() {
+    double sk = 0., s = 0.;
+    for (int i = 0; i <= 1; i++)
+    #if dimension > 1
+      for (int j = 0; j <= 1; j++)
+    #endif
+      #if dimension > 2
+	for (int k = 0; k <= 1; k++)
+      #endif
+	  if (coarse(kappa,child.x*i,child.y*j,child.z*k) != nodata)
+	    sk += coarse(kappa,child.x*i,child.y*j,child.z*k), s++;
+    kappa[] = s ? sk/s : nodata;
+  }
 }
 #endif // QUADTREE
 
@@ -319,6 +343,34 @@ static double centroids_curvature_fit (Point point, scalar c)
 /**
 ## General curvature computation
 
+We first need to define "interfacial cells" i.e. cells which contain
+an interface. A simple test would just be that the volume fraction is
+neither zero nor one. As usual things are more complicated because of
+round-off errors. They can cause the interface to be exactly aligned
+with cell boundaries, so that cells on either side of this interface
+have fractions exactly equal to zero or one. The function below takes
+this into account. */
+
+static inline bool interfacial (Point point, scalar c)
+{
+  if (c[] >= 1.) {
+    for (int i = -1; i <= 1; i += 2)
+      foreach_dimension()
+	if (c[i] <= 0.)
+	  return true;
+  }
+  else if (c[] <= 0.) {
+    for (int i = -1; i <= 1; i += 2)
+      foreach_dimension()
+	if (c[i] >= 1.)
+	  return true;
+  }
+  else // c[] > 0. && c[] < 1.
+    return true;
+  return false;
+}
+
+/**
 The function below computes the mean curvature *kappa* of the
 interface defined by the volume fraction *c*. It uses a combination of
 the methods above: statistics on the number of curvatures computed
@@ -343,8 +395,8 @@ cstats curvature (scalar c, scalar kappa)
   the curvature. */
   
 #if QUADTREE
-  kappa.prolongation = refine_injection;
-  kappa.coarsen = coarsen_curvature;
+  kappa.prolongation = curvature_prolongation;
+  kappa.coarsen = curvature_restriction;
 #endif
 
   /**
@@ -359,7 +411,7 @@ cstats curvature (scalar c, scalar kappa)
     /**
     If we are not in an interfacial cell, we set $\kappa$ to *nodata*. */
 
-    if (c[] <= 0. || c[] >= 1.)
+    if (!interfacial (point, c))
       k[] = nodata;
 
     /**
@@ -379,9 +431,9 @@ cstats curvature (scalar c, scalar kappa)
     We then construct the final curvature field using either the
     computed temporary curvature... */
   
-    if (k[] != nodata)
+    if (k[] < nodata)
       kappa[] = k[];
-    else if (c[] > 0. && c[] < 1.) {
+    else if (interfacial (point, c)) {
 
       /**
       ...or the average of the curvatures in the $3^{d}$ neighborhood
@@ -389,7 +441,7 @@ cstats curvature (scalar c, scalar kappa)
       
       double sk = 0., a = 0.;
       foreach_neighbor(1)
-	if (k[] != nodata)
+	if (k[] < nodata)
 	  sk += k[], a++;
       if (a > 0.)
 	kappa[] = sk/a, s.a++;

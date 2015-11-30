@@ -4,10 +4,9 @@
 This is the classical "spurious" or "parasitic currents" test case
 discussed in [Popinet, 2009](/src/references.bib#popinet2009).
 
-We use a constant-resolution grid, the Navier--Stokes solver with VOF
-interface tracking and surface tension. */
+We use the Navier--Stokes solver with VOF interface tracking and
+surface tension. */
 
-#include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
 #include "vof.h"
 #include "tension.h"
@@ -70,11 +69,10 @@ int main() {
 }
 
 /**
-We allocate fields to store the reference solution (i.e. the circular
-shape we start from) and the previous volume fraction field (to
+We allocate a field to store the previous volume fraction field (to
 check for stationary solutions). */
 
-scalar cref[], cn[];
+scalar cn[];
 
 event init (i = 0) {
 
@@ -95,16 +93,16 @@ event init (i = 0) {
   fp = fopen (name, "w");
 
   /**
-  ... and initialise the shape of the interface, the reference
-  solution and the initial volume fraction field. */
+  ... and initialise the shape of the interface and the initial volume
+  fraction field. */
   
   scalar phi[];
   foreach_vertex()
     phi[] = sq(DIAMETER/2) - sq(x) - sq(y);
   fractions (phi, c);
   foreach()
-    cref[] = cn[] = c[];
-  boundary ({cref,cn});
+    cn[] = c[];
+  boundary ({cn});
 }
 
 event logfile (i++; t <= TMAX)
@@ -136,9 +134,18 @@ event error (t = end) {
   double radius = sqrt(4.*vol/pi);
 
   /**
+  We recompute the reference solution. */
+  
+  vertex scalar phi[];
+  scalar cref[];
+  foreach_vertex()
+    phi[] = sq(DIAMETER/2) - sq(x) - sq(y);
+  fractions (phi, cref);
+  
+  /**
   And compute the maximum error on the curvature *ekmax*, the norm of
   the velocity *un* and the shape error *ec*. */
-
+  
   double ekmax = 0.;
   scalar un[], ec[];
   scalar kappa = c.kappa;
@@ -146,7 +153,7 @@ event error (t = end) {
     un[] = norm(u);
     ec[] = c[] - cref[];
     if (kappa[] != nodata) {
-      double ek = fabs (kappa[] - 1./radius);
+      double ek = fabs (kappa[] - (/*AXI*/ + 1.)/radius);
       if (ek > ekmax)
 	ekmax = ek;
     }
@@ -165,8 +172,19 @@ event error (t = end) {
 
 #if 0
 event gfsview (i += 10) {
-  static FILE * fp = popen ("gfsview2D -s spurious.gfv", "w");
+  static FILE * fp = popen ("gfsview2D spurious.gfv", "w");
   output_gfs (fp, t = t);
+}
+#endif
+
+/**
+We use an adaptive mesh with a constant (maximum) resolution along the
+interface. */
+
+#if QUADTREE
+event adapt (i <= 10; i++) {
+  adapt_wavelet ({c}, (double[]){0}, maxlevel = LEVEL, minlevel = 0,
+		 list = {p,u,pf,uf,g,c,fm,cm}, listb = {u,pf,uf,g,c,fm,cm});
 }
 #endif
 
