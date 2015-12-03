@@ -396,13 +396,26 @@ void output_cells (FILE * fp)
     Delta /= 2.;
     #if dimension == 1
       fprintf (fp, "%g 0\n%g 0\n\n", x - Delta, x + Delta);
-    #else
+    #elif dimension == 2
       fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
 	       x - Delta, y - Delta,
 	       x - Delta, y + Delta,
 	       x + Delta, y + Delta,
 	       x + Delta, y - Delta,
 	       x - Delta, y - Delta);
+    #else // dimension == 3
+      for (int i = -1; i <= 1; i += 2) {
+	fprintf (fp, "%g %g %g\n%g %g %g\n%g %g %g\n%g %g %g\n%g %g %g\n\n",
+		 x - Delta, y - Delta, z + i*Delta,
+		 x - Delta, y + Delta, z + i*Delta,
+		 x + Delta, y + Delta, z + i*Delta,
+		 x + Delta, y - Delta, z + i*Delta,
+		 x - Delta, y - Delta, z + i*Delta);
+	for (int j = -1; j <= 1; j += 2)
+	  fprintf (fp, "%g %g %g\n%g %g %g\n\n",
+		   x + i*Delta, y + j*Delta, z - Delta,
+		   x + i*Delta, y + j*Delta, z + Delta);
+      }
     #endif
   }
   fflush (fp);
