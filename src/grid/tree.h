@@ -1238,7 +1238,7 @@ void box_boundaries (int l,
 	      Point neighbor = neighborp(i);
 	      for (vector v in faces) {
 		scalar vn = VN;
-		if (v.x.normal && vn.boundary[id])
+		if (vn.boundary[id])
 		  v.x[(i + 1)/2] = vn.boundary[id](neighbor, point, v.x);
 	      }
 	    }

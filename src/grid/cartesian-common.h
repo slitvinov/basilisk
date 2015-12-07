@@ -351,7 +351,7 @@ vector cartesian_init_face_vector (vector v, const char * name)
   v = cartesian_init_vector (v, name);
   foreach_dimension() {
     v.x.d.x = -1;
-    v.x.face = v.x.normal = true;
+    v.x.face = true;
   }
   for (int d = 0; d < nboundary; d++)
     v.x.boundary[d] = v.x.boundary_homogeneous[d] = NULL;

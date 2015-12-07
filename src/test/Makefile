@@ -67,7 +67,7 @@ conical-implicit.tst: conical-implicit.s
 
 conical.tst: conicalsv.tst conical-implicit.tst
 
-curvature.tst: curvature.s curvature.3D.tst
+curvature.tst: curvature.s
 	@LIBS="-L$(HOME)/local/lib -lvofi" \
 	$(BASILISK)/runtest curvature.tst
 
@@ -138,7 +138,7 @@ coarsen.tst: CFLAGS=-DMTRACE=3
 
 # Axisymmetric tests
 
-axi-tests: axiadvection.tst axi.tst plateau.tst poiseuille-axi.tst \
+axi-tests: axiadvection.tst axi.tst poiseuille-axi.tst \
 	rising-axi.tst
 
 # 3D tests

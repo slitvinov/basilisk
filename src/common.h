@@ -754,7 +754,7 @@ attribute {
 #endif
   } d; // staggering
   vector v;
-  bool   face, normal;
+  bool   face;
 }
 
 // lists

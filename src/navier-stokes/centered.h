@@ -70,43 +70,36 @@ bool stokes = false;
 ## Boundary conditions
 
 For the default symmetric boundary conditions, we need to ensure that
-the normal component of the velocity is zero after projection. Given
-that
-$$
-\mathbf{u}^{n+1} = \mathbf{u}^\star - \Delta t\alpha\nabla p
-$$
-on the boundary $p$ must verify
-$$
-\nabla p|_{b} = \frac{u^\star_n}{\Delta t\alpha}
-$$
-Taking care of boundary orientation and staggering of *uf*, this
-can be written */
+the normal component of the velocity is zero after projection. This
+means that, at the boundary, the acceleration $\mathbf{a}$ must be
+balanced by the pressure gradient. Taking care of boundary orientation
+and staggering of $\mathbf{a}$, this can be written */
 
-// fixme: use foreach_dimension()
-p[right]  = neumann(uf.x[ghost]/(dt*alpha.x[ghost]));
-p[left]   = neumann(-uf.x[]/(dt*alpha.x[]));
+p[right] = neumann(a.x[ghost]*fm.x[ghost]/alpha.x[ghost]);
+p[left]  = neumann(-a.x[]*fm.x[]/alpha.x[]);
 
 #if AXI
 uf.n[bottom] = 0.;
 #else // !AXI
 #  if dimension > 1
-p[top]    = neumann(uf.y[ghost]/(dt*alpha.y[ghost]));
-p[bottom] = neumann(-uf.y[]/(dt*alpha.y[]));
+p[top]    = neumann(a.y[ghost]*fm.y[ghost]/alpha.y[ghost]);
+p[bottom] = neumann(-a.y[]*fm.y[]/alpha.y[]);
 #  endif
 #  if dimension > 2
-p[front]  = neumann(uf.z[ghost]/(dt*alpha.z[ghost]));
-p[back]   = neumann(-uf.z[]/(dt*alpha.z[]));
+p[front]  = neumann(a.z[ghost]*fm.z[ghost]/alpha.z[ghost]);
+p[back]   = neumann(-a.z[]*fm.z[]/alpha.z[]);
 #  endif
 #endif
 
 /**
-## Initial conditions
-
-The default velocity and pressure are zero. The default density is
-one. */
+## Initial conditions */
 
 event defaults (i = 0)
 {
+
+  /**
+  The default velocity and pressure are zero. */
+  
   CFL = 0.8;
   foreach() {
     foreach_dimension()
@@ -116,11 +109,24 @@ event defaults (i = 0)
   foreach_face()
     uf.x[] = 0.;
 
+  /**
+  The default density is one. */
+  
   if (!is_constant(alpha.x)) {
     face vector alphav = alpha;
     foreach_face()
       alphav.x[] = 1.;
     boundary ((scalar *){alpha});
+  }
+
+  /**
+  The default acceleration is zero. */
+  
+  if (!is_constant(a.x)) {
+    face vector av = a;
+    foreach_face()
+      av.x[] = 0.;
+    boundary ((scalar *){av});
   }
   
   boundary ({p,pf,u,g,uf});
@@ -318,16 +324,7 @@ event acceleration (i++,last)
   boundary_flux ({a});
   foreach_face()
     uf.x[] += dt*fm.x[]*a.x[];
-
-  /**
-  We apply boundary conditions but only in the tangential direction so
-  that the acceleration term is preserved on the boundary. */
-
-  foreach_dimension()
-    uf.x.normal = false;
   boundary ((scalar *){uf});
-  foreach_dimension()
-    uf.x.normal = true;
 }
 
 /**
