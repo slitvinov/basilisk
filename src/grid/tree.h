@@ -575,18 +575,18 @@ void cache_shrink (Cache * c)
 @
 @define end_foreach_cache_level() } OMP_END_PARALLEL() }
 
-@def foreach_boundary(l) {
-  if (l <= depth()) {
+@def foreach_boundary(_l) {
+  if (_l <= depth()) {
     update_cache();
-    CacheLevel _boundary = quadtree->boundary[l];
-    foreach_cache_level (_boundary,l,)
+    CacheLevel _boundary = quadtree->boundary[_l];
+    foreach_cache_level (_boundary,_l,)
 @
 @define end_foreach_boundary() end_foreach_cache_level(); }}
 
-@def foreach_halo(name,_l) {
-  if (l <= depth()) {
+@def foreach_halo(_name,_l) {
+  if (_l <= depth()) {
     update_cache();
-    CacheLevel _cache = quadtree->name[_l];
+    CacheLevel _cache = quadtree->_name[_l];
     foreach_cache_level (_cache, _l,)
 @
 @define end_foreach_halo() end_foreach_cache_level(); }}
