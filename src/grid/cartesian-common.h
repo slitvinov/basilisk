@@ -435,7 +435,13 @@ void cartesian_debug (Point point)
     sprintf (stencil, "stencil-%d", pid());
   fp = fopen (stencil, "w");
   for (scalar v in all)
+#if dimension == 1
+    fprintf (fp, "x %s ", v.name);
+#elif dimension == 2
     fprintf (fp, "x y %s ", v.name);
+#elif dimension == 3
+    fprintf (fp, "x y z %s ", v.name);
+#endif
   fputc ('\n', fp);
   #if dimension == 1
     for (int k = -2; k <= 2; k++) {
@@ -448,7 +454,7 @@ void cartesian_debug (Point point)
       }
       fputc ('\n', fp);
     }
-  #else
+  #elif dimension == 2
     for (int k = -2; k <= 2; k++)
       for (int l = -2; l <= 2; l++) {
 	for (scalar v in all) {
@@ -462,6 +468,22 @@ void cartesian_debug (Point point)
 	}
 	fputc ('\n', fp);
       }
+  #elif dimension == 3
+    for (int k = -2; k <= 2; k++)
+      for (int l = -2; l <= 2; l++)
+	for (int m = -2; m <= 2; m++) {
+	  for (scalar v in all) {
+	    fprintf (fp, "%g %g %g ",
+		     x + k*Delta + v.d.x*Delta/2., 
+		     y + l*Delta + v.d.y*Delta/2.,
+		     z + m*Delta + v.d.z*Delta/2.);
+	    if (allocated(k,l,m))
+	      fprintf (fp, "%g ", v[k,l,m]);
+	    else
+	      fputs ("n/a ", fp);
+	  }
+	  fputc ('\n', fp);
+	}
   #endif
   fclose (fp);
 
@@ -486,8 +508,17 @@ void cartesian_debug (Point point)
 	   "Last point stencils can be displayed using (in gnuplot)\n"
 	   "  load 'debug.plot'\n"
 	   "  v=%s\n"
+#if dimension == 1   
+	   "  plot '%s' w l lc 0, "
+	   "'%s' u 1+2*v:(0):2+2*v w labels tc lt 1 title columnhead(2+2*v)",
+#elif dimension == 2
 	   "  plot '%s' w l lc 0, "
 	   "'%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 1 title columnhead(3+3*v)",
+#elif dimension == 3
+	   "  splot '%s' w l lc 0, "
+	   "'%s' u 1+4*v:2+4*v:3+4*v:4+4*v w labels tc lt 1"
+           " title columnhead(4+4*v)",
+#endif
 	   _attribute[0].name, name, stencil);
 }
 

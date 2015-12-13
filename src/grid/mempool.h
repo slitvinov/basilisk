@@ -74,11 +74,11 @@ void * mempool_alloc (Mempool * m)
     }
   }
   m->first = next;
-#if TRASH
+@if TRASH
   double * v = ret;
   for (int i = 0; i < m->size/sizeof(double); i++)
     v[i] = undefined;
-#endif
+@endif
   return ret;
 }
 
@@ -91,11 +91,11 @@ void * mempool_alloc0 (Mempool * m)
 
 void mempool_free (Mempool * m, void * p)
 {
-#if TRASH
+@if TRASH
   double * v = p;
   for (int i = 0; i < m->size/sizeof(double); i++)
     v[i] = undefined;
-#endif
+@endif
   FreeBlock * b = p;
   b->next = m->first;
   m->first = p;

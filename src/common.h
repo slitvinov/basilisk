@@ -478,7 +478,7 @@ static double prof_start, _prof;
 @if FAKE_MPI
 @define mpi_all_reduce(v,type,op)
 @define mpi_all_reduce_double(v,op)
-@else
+@else // !FAKE_MPI
 trace
 static int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
 			    MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
@@ -502,7 +502,7 @@ static int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
 }
 @
 
-@endif
+@endif // !FAKE_MPI
 
 static int mpi_rank, mpi_npe;
 @define tid() mpi_rank

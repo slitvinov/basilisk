@@ -223,7 +223,8 @@ void multigrid_debug (Point point)
 		   xc + k*child.x*Delta*2. + v.d.x*Delta, 
 		   coarse(v,k*child.x));
       fputc ('\n', fp);
-    #else
+      fprintf (stderr, ", '%s' u 1+2*v:(0):2+2*v w labels tc lt 3 t ''", name);
+    #elif dimension == 2
       double xc = x - child.x*Delta/2., yc = y - child.y*Delta/2.;
       for (int k = 0; k <= 1; k++)
 	for (int l = 0; l <= 1; l++) {
@@ -234,9 +235,25 @@ void multigrid_debug (Point point)
 		     coarse(v,k*child.x,l*child.y));
 	  fputc ('\n', fp);
 	}
+      fprintf (stderr, ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 3 t ''", name);
+    #elif dimension == 3
+      double xc = x - child.x*Delta/2., yc = y - child.y*Delta/2.;
+      double zc = z - child.z*Delta/2.;
+      for (int k = 0; k <= 1; k++)
+	for (int l = 0; l <= 1; l++)
+	  for (int m = 0; m <= 1; m++) {
+	    for (scalar v in all)
+	      fprintf (fp, "%g %g %g %g ", 
+		       xc + k*child.x*Delta*2. + v.d.x*Delta, 
+		       yc + l*child.y*Delta*2. + v.d.y*Delta,
+		       zc + m*child.z*Delta*2. + v.d.z*Delta,
+		       coarse(v,k*child.x,l*child.y,m*child.z));
+	    fputc ('\n', fp);
+	  }
+      fprintf (stderr, ", '%s' u 1+4*v:2+4*v:3+4*v:4+4*v w labels tc lt 3 t ''",
+	       name);
     #endif
     fclose (fp);
-    fprintf (stderr, ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 3 t ''", name);
   }
 
   if (is_coarse()) {
@@ -255,7 +272,8 @@ void multigrid_debug (Point point)
 	    fputs ("n/a ", fp);
 	}
       fputc ('\n', fp);
-    #else
+      fprintf (stderr, ", '%s' u 1+2*v:(0):2+2*v w labels tc lt 2 t ''", name);
+    #elif dimension == 2
       double xf = x - Delta/4., yf = y - Delta/4.;
       for (int k = -2; k <= 3; k++)
 	for (int l = -2; l <= 3; l++) {
@@ -270,9 +288,28 @@ void multigrid_debug (Point point)
 	  }
 	  fputc ('\n', fp);
 	}
+      fprintf (stderr, ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 2 t ''", name);
+    #elif dimension == 3
+      double xf = x - Delta/4., yf = y - Delta/4., zf = z - Delta/4.;
+      for (int k = -2; k <= 3; k++)
+	for (int l = -2; l <= 3; l++)
+	  for (int m = -2; m <= 3; m++) {
+	    for (scalar v in all) {
+	      fprintf (fp, "%g %g %g ", 
+		       xf + k*Delta/2. + v.d.x*Delta/4., 
+		       yf + l*Delta/2. + v.d.y*Delta/4.,
+		       zf + m*Delta/2. + v.d.z*Delta/4.);
+	      if (allocated_child(k,l,m))
+		fprintf (fp, "%g ", fine(v,k,l,m));
+	      else
+		fputs ("n/a ", fp);
+	    }
+	    fputc ('\n', fp);
+	  }
+      fprintf (stderr, ", '%s' u 1+4*v:2+4*v:3+4*v:4+4*v w labels tc lt 2 t ''",
+	       name);
     #endif
     fclose (fp);
-    fprintf (stderr, ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 2 t ''", name);
   }
 }
 
