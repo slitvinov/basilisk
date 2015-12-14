@@ -24,6 +24,7 @@ typedef struct {
 
 typedef struct {
   Rcv * rcv;
+  char * name;
   int npid;
 } RcvPid;
 
@@ -86,9 +87,11 @@ static void rcv_destroy (Rcv * rcv)
   free (rcv->halo);
 }
 
-static RcvPid * rcv_pid_new (void)
+static RcvPid * rcv_pid_new (const char * name)
 {
-  return calloc (sizeof (RcvPid), 1);
+  RcvPid * r = calloc (sizeof (RcvPid), 1);
+  r->name = strdup (name);
+  return r;
 }
 
 static Rcv * rcv_pid_pointer (RcvPid * p, PidArray * a, int pid)
@@ -157,6 +160,7 @@ static void rcv_pid_destroy (RcvPid * p)
   for (int i = 0; i < p->npid; i++)
     rcv_destroy (&p->rcv[i]);
   free (p->rcv);
+  free (p->name);
   free (p);
 }
 
@@ -202,8 +206,8 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
       assert (!rcv->buf);
       rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
 #if 0
-      fprintf (stderr, "receiving %d doubles from %d level %d\n",
-	       rcv->halo[l].n*len, rcv->pid, l);
+      fprintf (stderr, "%s receiving %d doubles from %d level %d\n",
+	       m->name, rcv->halo[l].n*len, rcv->pid, l);
       fflush (stderr);
 #endif
 #if 1 /* initiate non-blocking receive */
@@ -265,8 +269,8 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
 	  }
       }
 #if 0
-      fprintf (stderr, "sending %d doubles to %d level %d\n",
-	       rcv->halo[l].n*len, rcv->pid, l);
+      fprintf (stderr, "%s sending %d doubles to %d level %d\n",
+	       m->name, rcv->halo[l].n*len, rcv->pid, l);
       fflush (stderr);
 #endif
       MPI_Isend (rcv->buf, (b - (double *) rcv->buf),
@@ -301,10 +305,15 @@ static void snd_rcv_destroy (SndRcv * m)
   rcv_pid_destroy (m->snd);
 }
 
-static void snd_rcv_init (SndRcv * m)
+static void snd_rcv_init (SndRcv * m, const char * name)
 {
-  m->rcv = rcv_pid_new();
-  m->snd = rcv_pid_new();
+  char s[strlen(name) + 5];
+  strcpy (s, name);
+  strcat (s, ".rcv");
+  m->rcv = rcv_pid_new (s);
+  strcpy (s, name);
+  strcat (s, ".snd");
+  m->snd = rcv_pid_new (s);
 }
 
 static void mpi_boundary_destroy (Boundary * b)
@@ -350,9 +359,9 @@ void mpi_boundary_new()
   mpi_boundary->halo_restriction = mpi_boundary_halo_restriction;
   mpi_boundary->halo_prolongation = mpi_boundary_halo_prolongation;
   MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
-  snd_rcv_init (&mpi->restriction);
-  snd_rcv_init (&mpi->halo_restriction);
-  snd_rcv_init (&mpi->prolongation);
+  snd_rcv_init (&mpi->restriction, "restriction");
+  snd_rcv_init (&mpi->halo_restriction, "halo_restriction");
+  snd_rcv_init (&mpi->prolongation, "prolongation");
   add_boundary (mpi_boundary);
 }
 
@@ -483,10 +492,13 @@ void debug_mpi (FILE * fp1)
 
 static void snd_rcv_free (SndRcv * p)
 {
+  char name[strlen(p->rcv->name) + 1];
+  strcpy (name, p->rcv->name);
   rcv_pid_destroy (p->rcv);
-  p->rcv = rcv_pid_new();
+  p->rcv = rcv_pid_new (name);
+  strcpy (name, p->snd->name);
   rcv_pid_destroy (p->snd);
-  p->snd = rcv_pid_new();
+  p->snd = rcv_pid_new (name);
 }
 
 trace
