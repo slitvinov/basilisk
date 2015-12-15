@@ -28,10 +28,16 @@ static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
   double dt = p->dt;
   vector u = vector(a[0]), r = vector(b[0]);
 
+#if JACOBI
+  vector w[];
+#else
+  vector w = u;
+#endif
+  
   foreach_level_or_leaf (l) {
     foreach_dimension()
-      u.x[] = (dt/rho[]*(2.*mu.x[1]*u.x[1] + 2.*mu.x[]*u.x[-1]
-	       #if dimension > 1
+      w.x[] = (dt/rho[]*(2.*mu.x[1]*u.x[1] + 2.*mu.x[]*u.x[-1]
+               #if dimension > 1
 			   + mu.y[0,1]*(u.x[0,1] +
 					(u.y[1,0] + u.y[1,1])/4. -
 					(u.y[-1,0] + u.y[-1,1])/4.)
@@ -57,6 +63,12 @@ static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
 			            #endif
 			     ));
   }
+
+#if JACOBI
+  foreach_level_or_leaf (l)
+    foreach_dimension()
+      u.x[] = (u.x[] + 2.*w.x[])/3.;
+#endif
   
 #if TRASH
   vector u1[];

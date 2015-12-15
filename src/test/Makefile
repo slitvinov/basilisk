@@ -184,7 +184,7 @@ mpi-interpu.tst:  CC = mpicc -D_MPI=5
 mpi-coarsen.tst:  CC = mpicc -D_MPI=2
 mpi-coarsen1.tst: CC = mpicc -D_MPI=5
 bump2Dp.tst:      CC = mpicc -D_MPI=9
-vortex.tst:	  CC = mpicc -D_MPI=7
+vortex.tst:	  CC = mpicc -D_MPI=7 -DJACOBI=1
 axiadvection.tst: CC = mpicc -D_MPI=7
 hf1.tst:	  CC = mpicc -D_MPI=7
 

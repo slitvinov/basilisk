@@ -226,17 +226,43 @@ static void relax (scalar * al, scalar * bl, int l, void * data)
   (const) scalar lambda = p->lambda;
 
   /**
+  We use either Jacobi (under)relaxation or we directly reuse values
+  as soon as they are updated. For Jacobi, we need to allocate space
+  for the new field *c*. Jacobi is useful mostly as it gives results
+  which are independent of the order in which the cells are
+  traversed. This is not the case for the simple traversal, which
+  means for example that results will depend on whether a quadtree or
+  a multigrid is used (because cells will be traversed in a different
+  order). The same comment applies to OpenMP or MPI parallelism. In
+  practice however Jacobi convergence tends to be slower than simple
+  reuse. */
+  
+#if JACOBI
+  scalar c[];
+#else
+  scalar c = a;
+#endif
+  
+  /**
   We use the face values of $\alpha$ to weight the gradients of the
   5-points Laplacian operator. We get the relaxation function. */
-
+  
   foreach_level_or_leaf (l) {
     double n = - sq(Delta)*b[], d = - lambda[]*sq(Delta);
     foreach_dimension() {
       n += alpha.x[1]*a[1] + alpha.x[]*a[-1];
       d += alpha.x[1] + alpha.x[];
     }
-    a[] = n/d;
+    c[] = n/d;
   }
+
+  /**
+  For weighted Jacobi we under-relax by using a weight of 2/3. */
+  
+#if JACOBI
+  foreach_level_or_leaf (l)
+    a[] = (a[] + 2.*c[])/3.;
+#endif
   
 #if TRASH
   scalar a1[];
