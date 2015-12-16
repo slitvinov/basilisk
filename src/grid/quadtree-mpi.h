@@ -194,6 +194,9 @@ static size_t apply_bc (Rcv * rcv, scalar * list, vector * listf, int l)
 
 static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
 {
+  if (m->npid == 0)
+    return;
+  
   prof_start ("rcv_pid_receive");
 
   int len = list_len (list) + 2*dimension*vectors_len (listf);
@@ -248,6 +251,9 @@ static void rcv_pid_wait (RcvPid * m)
 
 static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
 {
+  if (m->npid == 0)
+    return;
+
   prof_start ("rcv_pid_send");
 
   int len = list_len (list) + 2*dimension*vectors_len (listf);
@@ -741,7 +747,8 @@ void mpi_boundary_refine (scalar * list)
     a[i] = remote_cells (pid);
     assert (a[i]->len > 0);
     int len = a[i]->len;
-    MPI_Isend (&len, 1, MPI_INT, pid, REFINE_TAG(),  MPI_COMM_WORLD, &r[2*i]);
+    MPI_Isend (&a[i]->len, 1, MPI_INT, pid,
+	       REFINE_TAG(),  MPI_COMM_WORLD, &r[2*i]);
     MPI_Isend (a[i]->p, len, MPI_INT, pid, REFINE_TAG(),
 	       MPI_COMM_WORLD, &r[2*i+1]);
   }
@@ -789,9 +796,9 @@ void mpi_boundary_refine (scalar * list)
   MPI_Request r[2*snd->npid];
   int nr = 0;
   for (int i = 0; i < snd->npid; i++) {
-    int pid = snd->rcv[i].pid;
-    int len = quadtree->refined.n;
-    MPI_Isend (&len, 1, MPI_INT, pid, REFINE_TAG(),  MPI_COMM_WORLD, &r[nr++]);
+    int pid = snd->rcv[i].pid, len = quadtree->refined.n;
+    MPI_Isend (&quadtree->refined.n, 1, MPI_INT, pid,
+	       REFINE_TAG(), MPI_COMM_WORLD, &r[nr++]);
     if (len > 0)
       MPI_Isend (quadtree->refined.p, sizeof(Index)/sizeof(int)*len,
 		 MPI_INT, pid, REFINE_TAG(), MPI_COMM_WORLD, &r[nr++]);
@@ -842,7 +849,8 @@ void mpi_boundary_refine (scalar * list)
   }
   
   /* check that caches were received OK and free ressources */
-  MPI_Waitall (nr, r, MPI_STATUSES_IGNORE);
+  if (nr)
+    MPI_Waitall (nr, r, MPI_STATUSES_IGNORE);
 
   /* update the refinement cache with "re-refined" cells */
   free (quadtree->refined.p);
@@ -872,7 +880,7 @@ void mpi_boundary_coarsen (int l)
   for (int i = 0; i < snd->npid; i++)
     if (snd->rcv[i].maxdepth > l) {
       int pid = snd->rcv[i].pid, len = quadtree->coarsened.n;
-      MPI_Isend (&len, 1, MPI_INT, pid, COARSEN_TAG(l),
+      MPI_Isend (&quadtree->coarsened.n, 1, MPI_INT, pid, COARSEN_TAG(l),
 		 MPI_COMM_WORLD, &r[nr++]);
       if (len > 0)
 	MPI_Isend (quadtree->coarsened.p, sizeof(IndexLevel)/sizeof(int)*len,
@@ -905,7 +913,8 @@ void mpi_boundary_coarsen (int l)
     }
 
   /* check that caches were received OK and free ressources */
-  MPI_Waitall (nr, r, MPI_STATUSES_IGNORE);
+  if (nr)
+    MPI_Waitall (nr, r, MPI_STATUSES_IGNORE);
   
   prof_stop();  
 }
