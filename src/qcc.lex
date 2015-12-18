@@ -1072,10 +1072,14 @@ SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyz])*
     if (inforeach_face) {
       foreach_face_xyz = face_xyz;
       foreach_face_start = 0;
-      if (nreduct == 0) { // foreach_face (x)
-	FILE * fp = dopen ("_foreach.h", "r");
-	int c;
-	while ((c = fgetc (fp)) != EOF) {
+      FILE * fp = dopen ("_foreach.h", "r");
+      int c, inbody = 0;
+      while ((c = fgetc (fp)) != EOF) {
+	if (c == '(')
+	  inbody = 1;
+	else if (c == ')')
+	  break;
+	else if (inbody) {
 	  if (c == 'x' || c == 'y' || c == 'z') {
 	    if (foreach_face_xyz == face_xyz)
 	      foreach_face_xyz = face_x + c - 'x';
@@ -1084,14 +1088,16 @@ SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyz])*
 	    foreach_face_start = foreach_face_xyz;
 	    foreach_face_xyz = face_xyz;
 	    break;
-	  }	    
+	  }
+	  else if (!strchr (" \t\v\n\f", c))
+	    break;
 	}
-	fclose (fp);
-	if (foreach_face_xyz != face_xyz &&
-	    ((dimension < 2 && foreach_face_xyz > face_x) ||
-	     (dimension < 3 && foreach_face_xyz > face_y)))
-	  return yyerror ("face dimension is too high");
       }
+      fclose (fp);
+      if (foreach_face_xyz != face_xyz &&
+	  ((dimension < 2 && foreach_face_xyz > face_x) ||
+	   (dimension < 3 && foreach_face_xyz > face_y)))
+	return yyerror ("face dimension is too high");
     }
     inforeach = 2;
   }
@@ -2087,7 +2093,9 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     REJECT;
 }
 
-reduction{WS}*[(](min|max|\+):{ID}+[)] {
+,?{WS}*reduction{WS}*[(](min|max|\+):{ID}+[)] {
+  if (yytext[0] == ',')
+    yytext[0] = ' ';
   if (strchr(yytext, '+'))
     ECHO;
   char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':');
