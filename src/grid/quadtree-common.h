@@ -122,6 +122,19 @@ bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
   return true;
 }
 
+void coarsen_cell_recursive (Point point, scalar * list, CacheLevel * coarsened)
+{
+#if TWO_ONE
+  /* recursively coarsen children cells */
+  foreach_child()
+    if (cell.neighbors)
+      foreach_neighbor(1)
+	if (is_refined (cell))
+	  coarsen_cell_recursive (point, list, coarsened);
+#endif
+  assert (coarsen_cell (point, list, coarsened));
+}
+
 typedef struct {
   int nc, nf;
 } astats;
@@ -198,10 +211,8 @@ astats adapt_wavelet (struct Adapt p)
 	bool local = is_local(cell);
 	if (!local)
 	  foreach_child()
-	    if (is_local(cell)) {
-	      local = true;
-	      break;
-	    }
+	    if (is_local(cell))
+	      local = true, break;
 	if (local) {
 	  foreach_child()
 	    cell.flags &= ~(too_coarse|too_fine);
@@ -283,33 +294,28 @@ astats adapt_wavelet (struct Adapt p)
   return st;
 }
 
-#define unrefine(cond, list) {						\
-  int _nc;								\
-  do {									\
-    _nc = 0;								\
-    for (int _l = depth() - 1; _l >= 0; _l--) {				\
-      quadtree->coarsened.n = 0;					\
-      foreach_cell() {							\
-        if (is_local (cell)) {						\
-  	  if (is_leaf (cell))						\
-	    continue;							\
-	  else if (level == _l) {					\
-	    if ((cond) &&						\
-		coarsen_cell (point, list, &quadtree->coarsened))	\
-	      _nc++;							\
-	    continue;							\
-	  }								\
-	}								\
-	else if (level == _l || is_leaf(cell))				\
+#define unrefine(cond, list) do {					\
+  for (int _l = depth() - 1; _l >= 0; _l--) {				\
+    quadtree->coarsened.n = 0;						\
+    foreach_cell() {							\
+      if (is_local (cell)) {						\
+	if (is_leaf (cell))						\
 	  continue;							\
+	else if (level == _l) {						\
+	  if (cond)							\
+	    coarsen_cell (point, list, &quadtree->coarsened);		\
+	  continue;							\
+	}								\
       }									\
-      mpi_boundary_coarsen (_l);					\
+      else if (level == _l || is_leaf(cell))				\
+	continue;							\
     }									\
-    mpi_boundary_update();						\
-  } while (_nc);							\
-}
+    mpi_boundary_coarsen (_l);						\
+  }									\
+  mpi_boundary_update();						\
+} while (0)
 
-#define refine(cond, list) {						\
+#define refine(cond, list) do {						\
   quadtree->refined.n = 0;						\
   int refined;								\
   do {									\
@@ -322,7 +328,7 @@ astats adapt_wavelet (struct Adapt p)
   } while (refined);							\
   mpi_boundary_refine (list);						\
   mpi_boundary_update();						\
-}
+} while (0)
 
 static void halo_restriction_flux (vector * list)
 {
@@ -480,8 +486,7 @@ vector quadtree_init_face_vector (vector v, const char * name)
 
 static void quadtree_boundary_level (scalar * list, int l)
 {
-  if (l < 0)
-    l = depth();
+  int depth = l < 0 ? depth() : l;
 
   scalar * listdef = NULL, * listc = NULL, * list2 = NULL;
   for (scalar s in list) 
@@ -501,8 +506,8 @@ static void quadtree_boundary_level (scalar * list, int l)
     }
 
   if (listdef || listc) {
-    boundary_iterate (halo_restriction, list2, l);
-    for (int i = l - 1; i >= 0; i--) {
+    boundary_iterate (halo_restriction, list2, depth);
+    for (int i = depth - 1; i >= 0; i--) {
       foreach_halo (restriction, i) {
 	for (scalar s in listdef)
 	  coarsen_average (point, s);
@@ -528,7 +533,7 @@ static void quadtree_boundary_level (scalar * list, int l)
 
   if (listr || listf) {
     boundary_iterate (halo_prolongation, list, 0, l);
-    for (int i = 0; i < l; i++) {
+    for (int i = 0; i < depth; i++) {
       foreach_halo (prolongation, i) {
 	for (scalar s in listr)
           s.prolongation (point, s);

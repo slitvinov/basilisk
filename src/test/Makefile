@@ -67,7 +67,7 @@ conical-implicit.tst: conical-implicit.s
 
 conical.tst: conicalsv.tst conical-implicit.tst
 
-curvature.tst: curvature.s
+curvature.tst: curvature.s curvature.3D.tst
 	@LIBS="-L$(HOME)/local/lib -lvofi" \
 	$(BASILISK)/runtest curvature.tst
 
@@ -155,7 +155,7 @@ curvature-tests: hf.tst hf3D.tst hf.ctst hf.3D.tst hf1.tst \
 
 mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-restriction.tst mpi-restriction.3D.tst \
-	mpi-reduce.tst mpi-refine.tst mpi-refine.3D.tst \
+	mpi-reduce.tst mpi-refine.tst mpi-refine1.tst mpi-refine.3D.tst \
 	mpi-laplacian.tst mpi-laplacian.3D.tst \
 	mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
 	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
@@ -168,6 +168,7 @@ mpi-restriction.tst:	CC = mpicc -D_MPI=3
 mpi-restriction.3D.tst:	CC = mpicc -D_MPI=3
 mpi-reduce.tst:		CC = mpicc -D_MPI=3
 mpi-refine.tst:		CC = mpicc -D_MPI=4
+mpi-refine1.tst:	CC = mpicc -D_MPI=11
 mpi-refine.3D.tst:	CC = mpicc -D_MPI=4
 mpi-laplacian.tst:	CC = mpicc -D_MPI=3
 mpi-laplacian.3D.tst:	CC = mpicc -D_MPI=3

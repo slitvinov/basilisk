@@ -8,8 +8,10 @@ curvatures of circles/spheres with a randomised position and varying
 radii are computed and statistics on the error are gathered and
 displayed on the graph below. 
 
-We use the *Vofi* library for accurate initialisation of interfacial
-shapes [Bna et al, 2015](/src/references.bib#bna2015). */
+We use the
+[Vofi](http://www.ida.upmc.fr/~zaleski/paris/Vofi-1.0.tar.gz) library
+for accurate initialisation of interfacial shapes [Bna et al,
+2015](/src/references.bib#bna2015). */
 
 #include <vofi.h>
 

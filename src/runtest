@@ -37,7 +37,7 @@ script()
     test -s warn || rm -f warn
 
     pass=true
-    rm -f $log log-* stencil stencil-* fine fine-* coarse coarse-*
+    rm -f log-* stencil stencil-* fine fine-* coarse coarse-*
     if test -n "$EXEC" -o -z `which gdb`; then
 	if ! $EXEC ./$test 2> $log > $out; then
 	    pass=false

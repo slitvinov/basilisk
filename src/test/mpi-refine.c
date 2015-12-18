@@ -17,9 +17,15 @@ int main (int argc, char * argv[])
   foreach()
     for (int i = -1; i <= 1; i++)
       for (int j = -1; j <= 1; j++)
-	for (int k = -1; k <= 1; k++)
+	for (int k = -1; k <= 1; k++) {
+#if 1
 	  assert (s[i,j,k] == 1.);
-
+#else
+	  fprintf (stderr, "%g %g %g %g\n",
+		   x + i*Delta, y + j*Delta, z + k*Delta, s[i,j,k]);
+#endif
+	}
+  
   // rebalancing
   int nf = 0;
   foreach(reduction(+:nf))
