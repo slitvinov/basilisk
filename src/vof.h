@@ -72,7 +72,7 @@ static void sweep_x (scalar c, scalar cc)
 
   reconstruction (c, n, alpha);
 
-  foreach_face(x) {
+  foreach_face(x, reduction (max:cfl)) {
 
     /**
     To compute the volume fraction flux, we check the sign of the velocity
@@ -145,10 +145,10 @@ static void sweep_x (scalar c, scalar cc)
   /**
   We warn the user if the CFL condition has been violated. */
 
-  if (cfl > 0.5)
-    fprintf (stderr, 
-	     "WARNING: CFL must be <= 0.5 for VOF (cfl = %g, CFL = %g)\n", 
-	     cfl, CFL);
+  if (cfl > 0.5 + 1e-6)
+    fprintf (ferr, 
+	     "WARNING: CFL must be <= 0.5 for VOF (cfl - 0.5 = %g)\n", 
+	     cfl - 0.5), fflush (ferr);
 
   /**
   Once we have computed the fluxes on all faces, we can update the

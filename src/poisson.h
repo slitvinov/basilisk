@@ -176,10 +176,10 @@ mgstats mg_solve (scalar * a, scalar * b,
   If we have reached the maximum number of iterations, we warn the user. */
 
   if (s.i == NITERMAX)
-    fprintf (stderr, 
+    fprintf (ferr, 
 	     "WARNING: convergence not reached after %d iterations\n"
 	     "  res: %g sum: %g\n", 
-	     NITERMAX, s.resa, s.sum);
+	     NITERMAX, s.resa, s.sum), fflush (ferr);
 
   /**
   We deallocate the residual and correction fields and free the lists. */
