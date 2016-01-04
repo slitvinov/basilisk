@@ -25,7 +25,7 @@ itags: $(subst .h.page,.h.itags,$(ALLPAGES))
 clean:
 	rm -f *.o *.s *.*tst *.d *.prof Makefile.deps
 
-.PRECIOUS: %.prof %.s
+.PRECIOUS: %.prof %.s %.c %.h %.plot
 
 .DELETE_ON_ERROR:
 
