@@ -61,9 +61,9 @@ static void rcv_append (Point point, Rcv * rcv)
 
 void rcv_print (Rcv * rcv, FILE * fp, const char * prefix)
 {
-  for (int i = 0; i <= rcv->depth; i++)
-    if (rcv->halo[i].n > 0)
-      foreach_cache_level(rcv->halo[i], i,)
+  for (int l = 0; l <= rcv->depth; l++)
+    if (rcv->halo[l].n > 0)
+      foreach_cache_level(rcv->halo[l], l,)
 	fprintf (fp, "%s%g %g %g %d %d\n", prefix, x, y, z, rcv->pid, level);
 }
 
@@ -169,6 +169,7 @@ static Boundary * mpi_boundary = NULL;
 #define BOUNDARY_TAG(level) (level)
 #define COARSEN_TAG(level)  ((level) + 64)
 #define REFINE_TAG()        (128)
+#define MOVED_TAG()         (256)
 
 static size_t apply_bc (Rcv * rcv, scalar * list, vector * listf, int l)
 {
@@ -551,10 +552,9 @@ void mpi_boundary_update()
   if (npe() == 1)
     return;
 
-  MpiBoundary * m = (MpiBoundary *) mpi_boundary;
-  
   prof_start ("mpi_boundary_update");
 
+  MpiBoundary * m = (MpiBoundary *) mpi_boundary;  
   SndRcv * restriction = &m->restriction;
   SndRcv * prolongation = &m->prolongation;
   SndRcv * halo_restriction = &m->halo_restriction;
@@ -970,6 +970,39 @@ void mpi_boundary_coarsen (int l)
   prof_stop();  
 }
 
+static void flag_border_cells()
+{
+  foreach_cell() {
+    if (is_active(cell)) {
+      short flags = cell.flags & ~border;
+      foreach_neighbor()
+	if (!is_local(cell) || (level > 0 && !is_local(aparent(0))))
+	  flags |= border, break;
+      cell.flags = flags;
+    }
+    else {
+      cell.flags &= ~border;
+      continue;
+    }
+    if (is_leaf(cell)) {
+      if (cell.neighbors) {
+	foreach_child()
+	  cell.flags &= ~border;
+	if (is_border(cell)) {
+	  bool remote = false;
+	  foreach_neighbor (GHOSTS/2)
+	    if (!is_local(cell))
+	      remote = true, break;
+	  if (remote)
+	    foreach_child()
+	      cell.flags |= border;
+	}
+      }
+      continue;
+    }
+  }
+}
+
 trace
 void mpi_partitioning()
 {
@@ -1001,39 +1034,14 @@ void mpi_partitioning()
 	cell.pid = child(0,1,1).pid;
 	bool inactive = true;
 	foreach_child()
-	  if (is_active(cell)) {
-	    inactive = false;
-	    break;
-	  }
+	  if (is_active(cell))
+	    inactive = false, break;
 	if (inactive)
 	  cell.flags &= ~(active|remote_leaf);
       }
     }
 
-  // flag border cells
-  foreach_cell() {
-    if (is_active(cell)) {
-      short flags = cell.flags;
-      foreach_neighbor()
-	if (!is_local(cell) || (level > 0 && !is_local(aparent(0))))
-	  flags |= border, break;
-      cell.flags = flags;
-    }
-    else
-      continue;
-    if (is_leaf(cell)) {
-      if (is_border(cell) && cell.neighbors) {
-	bool remote = false;
-	foreach_neighbor (GHOSTS/2)
-	  if (!is_local(cell))
-	    remote = true, break;
-	if (remote)
-	  foreach_child()
-	    cell.flags |= border;
-      }
-      continue;
-    }
-  }
+  flag_border_cells();
   
   prof_stop();
   
@@ -1044,7 +1052,12 @@ void mpi_partitioning()
 # *z_indexing()*: fills *index* with the Z-ordering index.
    
 If `leaves` is `true` only leaves are indexed, otherwise all active
-cells are indexed. On a single processor, we would just need something
+cells are indexed. 
+
+On the master process (`pid() == 0`), the function returns the
+(global) maximum index (and -1 on all other processes).
+
+On a single processor, we would just need something
 like (for leaves)
 
 ~~~literatec
@@ -1053,10 +1066,7 @@ foreach()
   index[] = i++;
 ~~~
 
-In parallel, this is a bit more difficult. 
-
-On the master process (`pid() == 0`), the function returns the
-(global) maximum index (and -1 on all other processes). */
+In parallel, this is a bit more difficult. */
 
 trace
 double z_indexing (scalar index, bool leaves)
