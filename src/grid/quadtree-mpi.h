@@ -1,5 +1,3 @@
-#define DEBUG 0
-
 // this can be used to control the outputs of debug_mpi()
 int debug_iteration = -1;
 
@@ -496,8 +494,7 @@ void debug_mpi (FILE * fp1)
   foreach_cell() {
     if (!is_active(cell))
       fprintf (fp, "%s%g %g %g %d %d %d %d\n",
-	       prefix, x, y, z, level, cell.neighbors, cell.pid,
-	       is_remote_leaf(cell));
+	       prefix, x, y, z, level, cell.neighbors, cell.pid, cell.flags);
     else if (!is_border(cell))
       continue;
     if (is_leaf(cell))
@@ -636,7 +633,7 @@ void mpi_boundary_update()
 	  // non-local cell: do we need to receive it?
 	  RcvPid * pro = prolongation->rcv;
 	  RcvPid * res = restriction->rcv;
-	  bool neighbors = false;
+	  bool coarsen = true;
 	  PidArray apro, ares;
 	  apro.n = ares.n = 0;
 	  int pid = cell.pid;
@@ -644,13 +641,13 @@ void mpi_boundary_update()
 	  foreach_neighbor()
 	    if (allocated(0)) {
 	      if (is_local(cell)) {
-		neighbors = true;
+		coarsen = false;
 		rcv_pid_append (res, &ares, pid, p);
 		if (is_leaf(cell) || !is_active(cell))
 		  rcv_pid_append (pro, &apro, pid, p);
 	      }
 	      else if (level > 0 && is_local(aparent(0))) {
-		neighbors = true;
+		coarsen = false;
 		rcv_pid_append (res, &ares, pid, p);
 	      }
 	    }
@@ -686,13 +683,13 @@ void mpi_boundary_update()
 	    foreach_neighbor (GHOSTS/2)
 	      foreach_child()
 	        if (is_local(cell)) {
-		  neighbors = true;
+		  coarsen = false;
 		  rcv_pid_append (res, &ares, pid, p);
 		  break;
 		}
 	    // non-local coarse cell with no local neighbors:
 	    // destroy its children
-	    if (!neighbors)
+	    if (coarsen)
 	      coarsen_cell (point, NULL, NULL);
 	  }
 	  // halo restriction
@@ -711,7 +708,7 @@ void mpi_boundary_update()
   
   prof_stop();
 
-#if DEBUG
+#if DEBUG_MPI
   debug_mpi (NULL);
 #endif  
 }
@@ -748,8 +745,6 @@ Array * remote_cells (unsigned rpid)
     }
     else
       flags |= leaf;
-    if (is_leaf(cell))
-      flags |= remote_leaf;
     array_append (a, &flags);
     if (flags & leaf)
       continue;
@@ -768,12 +763,6 @@ int match_refine (unsigned * a, scalar * list, int pid)
   if (a != NULL)
     foreach_cell() {
       unsigned flags = *a++;
-      if (cell.pid == pid) {
-	if (flags & remote_leaf)
-	  cell.flags |= remote_leaf;
-	else
-	  cell.flags &= ~remote_leaf;
-      }
       if (flags & leaf)
 	continue;
       else if (is_leaf(cell))
@@ -894,8 +883,6 @@ void mpi_boundary_refine (scalar * list)
 	    if (neighbors)
 	      refine_cell (point, list, 0, &rerefined);
 	  }
-	  if (is_remote_leaf(cell))
-	    cell.flags &= ~remote_leaf;
 	}
     }
   }
@@ -954,12 +941,8 @@ void mpi_boundary_coarsen (int l)
 		  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	CacheLevel coarsened = {p, len, len};
 	foreach_cache_level (coarsened, l,)
-	  if (allocated(0)) {
-	    if (is_refined(cell))
-	      coarsen_cell_recursive (point, NULL, NULL);
-	    if (cell.pid == pid && is_leaf(cell) && !is_remote_leaf(cell))
-	      cell.flags |= remote_leaf;
-	  }
+	  if (allocated(0) && is_refined(cell))
+	    coarsen_cell_recursive (point, NULL, NULL);
       }
     }
 
@@ -1025,10 +1008,8 @@ void mpi_partitioning()
 	  foreach_child()
 	    cell.pid = pid;
 	}
-	if (!is_local(cell)) {
+	if (!is_local(cell))
 	  cell.flags &= ~active;
-	  cell.flags |= remote_leaf;
-	}
       }
       else {
 	cell.pid = child(0,1,1).pid;
@@ -1037,7 +1018,7 @@ void mpi_partitioning()
 	  if (is_active(cell))
 	    inactive = false, break;
 	if (inactive)
-	  cell.flags &= ~(active|remote_leaf);
+	  cell.flags &= ~active;
       }
     }
 

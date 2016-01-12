@@ -44,15 +44,14 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
 #endif
 
   /* refine */
-  int premote = is_remote_leaf(cell) ? remote_leaf : 0;
-  cell.flags &= ~(leaf|remote_leaf);
+  cell.flags &= ~leaf;
 
   /* update neighborhood */
   increment_neighbors (point);
 
   int pactive = is_active(cell) ? active : 0;
   foreach_child()
-    cell.flags |= (pactive|premote|leaf);
+    cell.flags |= (pactive|leaf);
 
   /* initialise scalars */
   for (scalar s in list)
@@ -96,13 +95,14 @@ bool coarsen_cell (Point point, scalar * list, CacheLevel * coarsened)
 
   /* coarsen */
   cell.flags |= leaf;
+  cell.flags &= ~halo;
 
   /* update neighborhood */
   decrement_neighbors (point);
   
   if (cell.neighbors)
     foreach_child() {
-      cell.flags &= ~(leaf|active|vertex);
+      cell.flags &= ~(leaf|active|vertex|halo);
       cell.pid = pid;
     }
 

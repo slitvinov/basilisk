@@ -26,15 +26,14 @@ typedef struct {
 } Cell;
 
 enum {
-  active  = 1 << 0,
-  leaf    = 1 << 1,
-  refined = 1 << 2,
-  halo    = 1 << 3,
-  border  = 1 << 4,
-  remote_leaf = 1 << 5,
-  fboundary = 1 << 6,
-  vertex  = 1 << 7,
-  user    = 8,
+  active    = 1 << 0,
+  leaf      = 1 << 1,
+  refined   = 1 << 2,
+  halo      = 1 << 3,
+  border    = 1 << 4,
+  fboundary = 1 << 5,
+  vertex    = 1 << 6,
+  user      = 7,
 
   face_x = 1 << 0
 #if dimension >= 2
@@ -50,12 +49,6 @@ enum {
 @define is_coarse()      ((cell).neighbors > 0)
 @define is_border(cell)  ((cell).flags & border)
 @define is_local(cell)   ((cell).pid == pid())
-
-@if _MPI
-@ define is_remote_leaf(cell) ((cell).flags & remote_leaf)
-@else
-@ define is_remote_leaf(cell) false
-@endif
 
 // Caches
 
@@ -593,6 +586,14 @@ void cache_shrink (Cache * c)
 
 #include "neighbors.h"
 
+static inline bool has_local_children (Point point)
+{
+  foreach_child()
+    if (is_local(cell))
+      return true;
+  return false;
+}
+  
 static void update_cache_f (void)
 {
   Quadtree * q = grid;
@@ -671,13 +672,17 @@ static void update_cache_f (void)
     }
     else { // not a leaf
       bool restriction = level > 0 && (aparent(0).flags & halo);
-      if (!restriction)
-	foreach_neighbor()
-	  if (allocated(0) && ((is_local(cell) && is_leaf(cell)) ||
-			       is_remote_leaf(cell))) {
-	    restriction = true;
-	    break;
-	  }
+      if (!restriction) {
+	if (is_local(cell) || has_local_children(point)) {
+	  foreach_neighbor()
+	    if (allocated(0) && is_leaf(cell) && !is_boundary(cell))
+	      restriction = true, break;
+	}
+	else
+	  foreach_neighbor()
+	    if (allocated(0) && is_leaf(cell) && is_local(cell))
+	      restriction = true, break;
+      }
       if (restriction) {
 	// halo restriction
 	cell.flags |= halo;
