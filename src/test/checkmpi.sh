@@ -5,13 +5,13 @@ echo "checkmpi" > /dev/stderr
 npe=`ls mpi-prolongation-* | cut -d '-' -f4 | sort -n -r | head -n1`
 for i in `seq 0 1 $npe`; do
     for j in `seq 0 1 $npe`; do
-	for op in prolongation restriction halo-restriction; do
+	for op in prolongation restriction restriction-children halo-restriction; do
 	    awk -v j=$j '{if ($4 == j) print $1,$2,$3;}' \
 		< mpi-$op-rcv-$i > rcv-$op-$i-$j
 	    awk -v i=$i '{if ($4 == i) print $1,$2,$3;}' \
 		< mpi-$op-snd-$j > snd-$op-$j-$i
 	    if ! diff rcv-$op-$i-$j snd-$op-$j-$i > diff; then
-		echo rcv-$op-$i-$j snd-$op-$j-$i > /dev/stderr
+		echo \'rcv-$op-$i-$j\', \'snd-$op-$j-$i\' > /dev/stderr
 		cat diff > /dev/stderr
 	    else
 		rm -f rcv-$op-$i-$j snd-$op-$j-$i

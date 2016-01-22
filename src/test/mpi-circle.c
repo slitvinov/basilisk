@@ -7,6 +7,7 @@ combinations, in particular the multigrid Poisson solver. */
 
 #include "poisson.h"
 #include "utils.h"
+#include "check_restriction.h"
 
 scalar a[], b[];
 
@@ -56,6 +57,8 @@ int main (int argc, char * argv[])
   t = timer_start();
   refine (level <= maxlevel*(1. - sqrt(sq((x - 0.5) - 0.1) +
 				       sq((y - 0.5) - 0.1))), NULL);
+  check_restriction (a);
+  
   size_t tnc = 0;
   foreach(reduction(+:tnc))
     tnc++;

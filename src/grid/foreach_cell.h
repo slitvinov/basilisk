@@ -79,7 +79,6 @@ void recursive (Point point)
 #endif
     int _s = -1;
     _push (0, GHOSTS, GHOSTS, GHOSTS, 0); /* the root cell */
-    if (is_active(cell))
     while (_s >= 0) {
       int stage;
       _pop();

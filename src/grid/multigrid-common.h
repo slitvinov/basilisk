@@ -311,6 +311,7 @@ void multigrid_debug (Point point)
     #endif
     fclose (fp);
   }
+  fflush (stderr);
 }
 
 void multigrid_methods()

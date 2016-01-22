@@ -5,17 +5,11 @@
 
 void image()
 {
+  // const scalar pid[] = pid(); // fixme: this should work
   scalar pid[];
   foreach()
     pid[] = pid();
   output_ppm (pid, n = 128, min = 0, max = npe() - 1);
-}
-
-void refinement()
-{
-  refine (level < 5 && x < 0.315 && y < 0.438 && x > 0.25 && y > 0.375, NULL);
-  unrefine (x < 0.25 && y > 0.5, NULL);
-  refine (level < 7 && x < 0.315 && y > 0.8, NULL);
 }
 
 void partition (const char * prog)
@@ -24,7 +18,7 @@ void partition (const char * prog)
   init_grid (1);
   refine (level < 4, NULL);
 
-  refinement();
+  refine (level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05), NULL);
   
   mpi_partitioning();
 
@@ -46,20 +40,36 @@ int main (int argc, char * argv[])
   partition (argv[0]);
   
   init_grid (16);
-  refinement();
 
   scalar s[];
   foreach()
     s[] = 1;
+  boundary ({s});
+  scalar * list = {s};
   
-  do image(); while (balance(0));
+  int refined;
+  do {
+    refined = 0;
+    quadtree->refined.n = 0;
+    foreach_leaf()
+      if (level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05)) {
+	refine_cell (point, list, 0, &quadtree->refined);
+	refined++;
+      }
+    mpi_boundary_refine (list);
+    mpi_boundary_update();
+    balance(0);
+    foreach()
+      assert (s[] == 1);
+    boundary (list);
+    mpi_all_reduce (refined, MPI_INT, MPI_SUM);
+    image();
+  } while (refined);
 
   debug_mpi (stderr);
 
-  mpi_boundary_update(); // balance3.tst used to fail with this
-
   foreach()
     assert (s[] == 1);
-
+  
   check_restriction (s);
 }

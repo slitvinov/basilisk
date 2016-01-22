@@ -33,7 +33,8 @@ enum {
   border    = 1 << 4,
   fboundary = 1 << 5,
   vertex    = 1 << 6,
-  user      = 7,
+  ignored   = 1 << 7,
+  user      = 8,
 
   face_x = 1 << 0
 #if dimension >= 2
@@ -499,11 +500,9 @@ void cache_shrink (Cache * c)
   
 #define update_cache() { if (quadtree->dirty) update_cache_f(); }
 
-#define is_refined(cell)      (!is_leaf (cell) && cell.neighbors && \
-                               cell.pid >= 0)
-#define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors && \
-			       cell.pid >= 0)
-#define is_boundary(cell) (cell.pid < 0)
+#define is_refined(cell)      (!is_leaf (cell) && cell.neighbors && cell.pid >= 0)
+#define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors && cell.pid >= 0)
+#define is_boundary(cell)     (cell.pid < 0)
 
 @def foreach_cache(_cache,clause) {
   int ig = 0; NOT_UNUSED(ig);
@@ -673,7 +672,7 @@ static void update_cache_f (void)
     else { // not a leaf
       bool restriction = level > 0 && (aparent(0).flags & halo);
       if (!restriction) {
-	if (is_local(cell) || has_local_children(point)) {
+	if (is_active(cell)) {
 	  foreach_neighbor()
 	    if (allocated(0) && is_leaf(cell) && !is_boundary(cell))
 	      restriction = true, break;
@@ -1063,13 +1062,13 @@ void realloc_scalar (void)
 			  !is_boundary(neighbor(__VA_ARGS__)) \
 			  && cond(neighborp(__VA_ARGS__)))
 
-#if _MPI
-# define disable_fpe_for_mpi() disable_fpe (FE_DIVBYZERO|FE_INVALID)
-# define enable_fpe_for_mpi()  enable_fpe (FE_DIVBYZERO|FE_INVALID)
-#else
-# define disable_fpe_for_mpi()
-# define enable_fpe_for_mpi()
-#endif
+@if _MPI
+@ define disable_fpe_for_mpi() disable_fpe (FE_DIVBYZERO|FE_INVALID)
+@ define enable_fpe_for_mpi()  enable_fpe (FE_DIVBYZERO|FE_INVALID)
+@else
+@ define disable_fpe_for_mpi()
+@ define enable_fpe_for_mpi()
+@endif
 
 static inline void no_coarsen (Point point, scalar s);
 

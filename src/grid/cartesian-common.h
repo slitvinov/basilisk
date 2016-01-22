@@ -520,6 +520,7 @@ void cartesian_debug (Point point)
            " title columnhead(4+4*v)",
 #endif
 	   _attribute[0].name, name, stencil);
+  fflush (stderr);
 }
 
 void cartesian_methods()

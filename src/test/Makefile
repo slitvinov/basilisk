@@ -1,4 +1,4 @@
-all: check 3D-tests mpi-tests curvature-tests axi-tests
+all: check 3D-tests mpi-tests load-balancing curvature-tests axi-tests
 
 include $(BASILISK)/Makefile.defs
 
@@ -151,7 +151,7 @@ axi-tests: axiadvection.tst axi.tst poiseuille-axi.tst \
 curvature-tests: hf.tst hf3D.tst hf.ctst hf.3D.tst hf1.tst \
 	curvature.tst curvature.3D.tst
 
-# MPI tests
+## MPI tests
 
 mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-restriction.tst mpi-restriction.3D.tst \
@@ -159,8 +159,9 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-laplacian.tst mpi-laplacian.3D.tst \
 	mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
 	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
-	bump2Dp.tst axiadvection.tst hf1.tst vortex.tst pdump.tst restore.tst \
-	gfsi.tst gfs.tst balance.tst balance1.tst
+	axiadvection.tst hf1.tst vortex.tst pdump.tst restore.tst \
+	gfsi.tst gfs.tst \
+	load-balancing
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3
@@ -189,11 +190,33 @@ vortex.tst:	  CC = mpicc -D_MPI=7 -DJACOBI=1
 axiadvection.tst: CC = mpicc -D_MPI=7
 hf1.tst:	  CC = mpicc -D_MPI=7
 
+# parallel dump()
+
 pdump.tst: CC = mpicc -D_MPI=7
 restore.tst: pdump.tst
+
+# parallel output_gfs()
 
 gfs.tst: CC = mpicc -D_MPI=7
 gfsi.tst: gfs.tst
 
+# load-balancing
+
+load-balancing: balance.tst balance1.tst balance2.tst balance3.tst \
+		balance4.tst balance5.tst balance6.tst bump2Dp.tst
+
 balance.tst: CC = mpicc -D_MPI=3
 balance1.tst: CC = mpicc -D_MPI=3
+balance2.c: balance1.c
+	ln -s balance1.c balance2.c
+balance2.tst: CC = mpicc -D_MPI=4
+balance3.c: balance1.c
+	ln -s balance1.c balance3.c
+balance3.tst: CC = mpicc -D_MPI=8
+balance4.c: balance1.c
+	ln -s balance1.c balance4.c
+balance4.tst: CC = mpicc -D_MPI=9
+balance5.tst: CC = mpicc -D_MPI=9
+balance6.c: balance5.c
+	ln -s balance5.c balance6.c
+balance6.tst: CC = mpicc -D_MPI=17

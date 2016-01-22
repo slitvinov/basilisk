@@ -51,4 +51,10 @@ event outputfile (t <= 2.5; t += 2.5/8) {
 event adapt (i++) {
   astats s = adapt_wavelet ({h}, (double[]){1e-3}, LEVEL);
   fprintf (ferr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
+@if _MPI
+  if (s.nf || s.nc) {
+    do ; while(balance (0));
+    boundary (all);
+  }
+@endif
 }

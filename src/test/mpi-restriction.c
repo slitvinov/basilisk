@@ -1,3 +1,5 @@
+#define BGHOSTS 2
+
 int main (int argc, char * argv[])
 {
   origin (-0.6, -0.6, -0.6);
@@ -19,9 +21,9 @@ int main (int argc, char * argv[])
 
   // check boundary conditions on leaves
   foreach()
-    for (int i = -1; i <= 1; i++)
-      for (int j = -1; j <= 1; j++)
-	for (int k = -1; k <= 1; k++)
+    for (int i = -2; i <= 2; i++)
+      for (int j = -2; j <= 2; j++)
+	for (int k = -2; k <= 2; k++)
 	  assert (s[i,j,k] == 1.);
 
   // check boundary conditions on levels
