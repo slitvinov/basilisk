@@ -13,9 +13,10 @@ void image()
 
 void refinement()
 {
-  refine (level < 5 && x < 0.315 && y < 0.438 && x > 0.25 && y > 0.375, NULL);
-  unrefine (x < 0.25 && y > 0.5, NULL);
-  refine (level < 6 && x < 0.315 && y > 0.8, NULL);  
+  refine (level < 5 && y < 0.315 && (1. - x) < 0.438
+	  && y > 0.25 && (1. - x) > 0.375, NULL);
+  unrefine (y < 0.25 && (1. - x) > 0.5, NULL);
+  refine (level < 6 && y < 0.315 && (1. - x) > 0.8, NULL);  
 }
 
 void partition (const char * prog)

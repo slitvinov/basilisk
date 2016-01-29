@@ -159,7 +159,7 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-laplacian.tst mpi-laplacian.3D.tst \
 	mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
 	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
-	axiadvection.tst hf1.tst vortex.tst pdump.tst restore.tst \
+	axiadvection.tst hf1.tst pdump.tst restore.tst \
 	gfsi.tst gfs.tst \
 	load-balancing
 
@@ -203,7 +203,8 @@ gfsi.tst: gfs.tst
 # load-balancing
 
 load-balancing: balance.tst balance1.tst balance2.tst balance3.tst \
-		balance4.tst balance5.tst balance6.tst bump2Dp.tst
+		balance4.tst balance5.tst balance6.tst \
+		bump2Dp.tst vortex.tst
 
 balance.tst: CC = mpicc -D_MPI=3
 balance1.tst: CC = mpicc -D_MPI=3

@@ -62,7 +62,8 @@ void rcv_print (Rcv * rcv, FILE * fp, const char * prefix)
   for (int l = 0; l <= rcv->depth; l++)
     if (rcv->halo[l].n > 0)
       foreach_cache_level(rcv->halo[l], l,)
-	fprintf (fp, "%s%g %g %g %d %d\n", prefix, x, y, z, rcv->pid, level);
+	//	if (!is_prolongation(cell))
+	  fprintf (fp, "%s%g %g %g %d %d\n", prefix, x, y, z, rcv->pid, level);
 }
 
 static void rcv_free_buf (Rcv * rcv)
@@ -628,6 +629,14 @@ void mpi_boundary_update()
   snd_rcv_free (restriction);
   snd_rcv_free (prolongation);
   snd_rcv_free (halo_restriction);
+
+  char name[80];
+  if (debug_iteration >= 0)
+    sprintf (name, "update-%d-%d", debug_iteration, pid());
+  else
+    sprintf (name, "update-%d", pid());
+
+  FILE * fp = fopen (name, "w");
   
   /* we build arrays of ghost cell indices for restriction and prolongation
      we do a breadth-first traversal from fine to coarse, so that
@@ -702,25 +711,35 @@ void mpi_boundary_update()
 	  apro.n = ares.n = 0;
 	  int pid = cell.pid;
 	  Point p = point;
+	  double x1 = x, y1 = y;
 	  foreach_neighbor()
 	    if (allocated(0) && !is_boundary(cell)) {
 	      if (is_local(cell)) {
-		used = true, rcv_pid_append (res, &ares, pid, p);
+		if (!used) {
+		  used = true, rcv_pid_append (res, &ares, pid, p);
+		  fprintf (fp, "%g %g a\n", x1, y1);
+		}
 		if (is_leaf(cell) || !is_active(cell))
-		  rcv_pid_append (pro, &apro, pid, p);
-	      }
-	      // root cell: fixme: optimise?
-	      if (is_refined(cell))
-		foreach_child()
-		  if (is_local(cell)) {
-		    used = true, rcv_pid_append (res, &ares, pid, p);
+		  rcv_pid_append (pro, &apro, pid, p),
 		    break;
-		  }
-	      /* see the corresponding condition in
-		 mpi_boundary_refine(), and src/test/mpi-refine1.c
-		 on why `level > 0 && is_local(aparent(0)))` is necessary. */
-	      if (level > 0 && is_local(aparent(0)))
-		used = true, rcv_pid_append (res, &ares, pid, p);
+	      }
+	      else if (!used) {
+		// root cell: fixme: optimise?
+		if (is_refined(cell))
+		  foreach_child()
+		    if (is_local(cell)) {
+		      used = true, rcv_pid_append (res, &ares, pid, p);
+		      fprintf (fp, "%g %g b\n", x1, y1);
+		      break;
+		    }
+		/* see the corresponding condition in
+		   mpi_boundary_refine(), and src/test/mpi-refine1.c
+		   on why `level > 0 && is_local(aparent(0)))` is necessary. */
+		if (level > 0 && is_local(aparent(0))) {
+		  used = true, rcv_pid_append (res, &ares, pid, p);
+		  fprintf (fp, "%g %g c\n", x1, y1);
+		}
+	      }
 	    }
 	  if (is_leaf(cell)) {
 	    foreach_neighbor (1)
@@ -749,10 +768,18 @@ void mpi_boundary_update()
 	    if (used)
 	      foreach_child()
 		cell.flags &= ~ignored;
-	    else
+	    else {
+	      bool coarsen = true;
+	      foreach_child()
+		if (!(cell.flags & ignored))
+		  coarsen = false;
 	      // non-local coarse cell with no local neighbors:
 	      // destroy its children
-	      coarsen_cell (point, NULL, NULL);
+	      if (coarsen) {
+		coarsen_cell (point, NULL, NULL);
+		fprintf (fp, "%g %g coarsen\n", x, y);
+	      }
+	    }
 	  }
 	  if (used)
 	    cell.flags &= ~ignored;
@@ -771,6 +798,8 @@ void mpi_boundary_update()
       if (is_leaf(cell))
 	continue;
     }
+
+  fclose (fp);
   
   prof_stop();
 
@@ -912,7 +941,7 @@ static void flag_border_cells()
     }
     else {
       cell.flags &= ~border;
-      continue;
+      //      continue;
     }
     if (is_leaf(cell)) {
       if (cell.neighbors) {
@@ -959,7 +988,7 @@ void mpi_partitioning()
 	  cell.flags &= ~active;
       }
       else {
-	cell.pid = child(0,1,1).pid;
+	cell.pid = child(0).pid;
 	bool inactive = true;
 	foreach_child()
 	  if (is_active(cell))
@@ -1005,7 +1034,7 @@ double z_indexing (scalar index, bool leaves)
   We first compute the size of each subtree. We use *index* to store
   this. */
   
-  scalar size = index;
+  scalar size[];
 
   /**
   The size of leaf "subtrees" is one. */
@@ -1037,24 +1066,35 @@ double z_indexing (scalar index, bool leaves)
   if (pid() == 0)
     foreach_level(0)
       maxi = size[] - 1.;
-  
-  /**
-  ## Indexing
-  
-  Indexing can then be done locally. */
 
-  double i = 0;
-  foreach_cell() {
-    double s = size[];
-    if (!leaves || is_leaf(cell))
-      index[] = i++;
-    if (is_leaf(cell))
-      continue;
-    if (!is_active(cell)) {
-      i += s - !leaves;
-      continue;
+  /**
+  fixme: doc */
+  
+  foreach_level(0)
+    index[] = 0;
+  for (int l = 0; l < depth(); l++) {
+    boundary_iterate (restriction, {index}, l);
+    foreach_cell() {
+      if (is_leaf(cell))
+	continue;
+      if (level == l) {
+	bool loc = is_local(cell);
+	if (!loc)
+	  foreach_child()
+	    if (is_local(cell))
+	      loc = true, break;
+	if (loc) {
+	  int i = index[] + !leaves;
+	  foreach_child() {
+	    index[] = i;
+	    i += size[]; 
+	  }
+	}
+	continue;
+      }
     }
   }
+  boundary_iterate (restriction, {index}, depth());
 
   return maxi;
 }

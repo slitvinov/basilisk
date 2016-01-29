@@ -6,6 +6,9 @@ Navier--Stokes solver (without viscosity). It also shows how to
 convert a vorticity field into a velocity field. */
 
 #include "navier-stokes/centered.h"
+@if _MPI
+#include "grid/balance.h"
+@endif
 
 /**
 The domain is centered on $(0,0)$ and the maximum level of refinement
@@ -104,6 +107,11 @@ event movie (t += 0.2; t <= 30) {
   foreach()
     omega[] = level;
   output_ppm (omega, fp1, spread = 2);
+
+  static FILE * fp2 = popen ("ppm2mpeg > pid.mpg", "w");
+  foreach()
+    omega[] = pid();
+  output_ppm (omega, fp2, min = 0, max = npe() - 1);
 }
 
 /**
@@ -145,8 +153,14 @@ conditions (see
 
 #if QUADTREE
 event adapt (i++) {
-  adapt_wavelet ((scalar *){u}, (double[]){5e-5,5e-5}, MAXLEVEL,
-		 list = {p,u,pf,uf,g}, listb = {u,pf,uf,g});
+  astats s = adapt_wavelet ((scalar *){u}, (double[]){5e-5,5e-5}, MAXLEVEL,
+			    list = {p,u,pf,uf,g}, listb = {u,pf,uf,g});
+@if _MPI
+  if (s.nf || s.nc) {
+    do ; while(balance (0));
+    boundary ({u,pf,uf,g});
+  }
+@endif
 }
 #endif
 

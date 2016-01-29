@@ -676,18 +676,18 @@ void output_gfs (struct OutputGfs p)
 #if dimension == 1
 	child.x == 1;
 #elif dimension == 2
-      child.x == -1 && child.y ==  1 ? 0 :
-	child.x ==  1 && child.y ==  1 ? 1 :
-	child.x == -1 && child.y == -1 ? 2 : 
+      child.x == -1 && child.y == -1 ? 0 :
+	child.x == -1 && child.y ==  1 ? 1 :
+	child.x ==  1 && child.y == -1 ? 2 : 
 	3;
-#else // dimension == 3
-      child.x == -1 && child.y ==  1 && child.z == 1  ? 0 :
-	child.x ==  1 && child.y ==  1 && child.z == 1  ? 1 :
-	child.x == -1 && child.y == -1 && child.z == 1  ? 2 : 
-	child.x ==  1 && child.y == -1 && child.z == 1  ? 3 : 
-	child.x == -1 && child.y ==  1 && child.z == -1 ? 4 :
-	child.x ==  1 && child.y ==  1 && child.z == -1 ? 5 :
-	child.x == -1 && child.y == -1 && child.z == -1 ? 6 : 
+#else // dimension == 3 fixme: this may not work
+      child.x == -1 && child.y == -1 && child.z == 1  ? 0 :
+	child.x == -1 && child.y ==  1 && child.z == 1  ? 1 :
+	child.x ==  1 && child.y == -1 && child.z == 1  ? 2 : 
+	child.x ==  1 && child.y ==  1 && child.z == 1  ? 3 : 
+	child.x == -1 && child.y == -1 && child.z == -1 ? 4 :
+	child.x == -1 && child.y ==  1 && child.z == -1 ? 5 :
+	child.x ==  1 && child.y == -1 && child.z == -1 ? 6 : 
 	7;
 #endif
       if (is_leaf(cell))

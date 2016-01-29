@@ -5,8 +5,8 @@ int main (int argc, char ** argv)
   int minlevel = argc > 1 ? atoi(argv[1]) : 5;
 
   init_grid (1);
-  refine (level <= minlevel*(1. - sqrt(sq((x - 0.5) - 0.1) +
-				       sq((y - 0.5)- 0.1))), NULL);
+  refine (level <= minlevel*(1. - sqrt(sq((y - 0.5) - 0.1) +
+				       sq((0.5 - x) - 0.1))), NULL);
   mpi_partitioning();
 
   output_cells (stdout);

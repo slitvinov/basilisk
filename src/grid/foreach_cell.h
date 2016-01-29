@@ -92,30 +92,32 @@ void recursive (Point point)
 @def end_foreach_cell()
         if (point.level < quadtree->depth) {
 	  _push (point.level, point.i, point.j, point.k, 1);
-          _push (point.level + 1, _LEFT, _TOP, _FRONT, 0);
+          _push (point.level + 1, _LEFT, _BOTTOM, _BACK, 0);
         }
         break;
       }
 #if dimension == 1
-      case 1: _push (point.level + 1, _RIGHT, _TOP, _FRONT, 0); break;
-#else // dimension >= 2
+      case 1: _push (point.level + 1, _RIGHT, _BOTTOM, _BACK, 0); break;
+#elif dimension == 2
       case 1: _push (point.level, point.i, point.j, point.k, 2);
-	      _push (point.level + 1, _RIGHT, _TOP, _FRONT, 0); break;
+	      _push (point.level + 1, _LEFT,  _TOP, _BACK, 0); break;
       case 2: _push (point.level, point.i, point.j, point.k, 3);
-	      _push (point.level + 1, _LEFT,  _BOTTOM, _FRONT, 0); break;
-#endif
-#if dimension == 2
-      case 3: _push (point.level + 1, _RIGHT, _BOTTOM, _FRONT, 0); break;
-#else // dimension >= 3
-      case 3: _push (point.level, point.i, point.j, point.k, 4);
-	      _push (point.level + 1, _RIGHT, _BOTTOM, _FRONT, 0); break;
-      case 4: _push (point.level, point.i, point.j, point.k, 5);
+	      _push (point.level + 1, _RIGHT, _BOTTOM, _BACK, 0); break;
+      case 3: _push (point.level + 1, _RIGHT, _TOP, _BACK, 0); break;
+#elif dimension == 3
+      case 1: _push (point.level, point.i, point.j, point.k, 2);
+	      _push (point.level + 1, _LEFT, _BOTTOM, _FRONT, 0); break;
+      case 2: _push (point.level, point.i, point.j, point.k, 3);
 	      _push (point.level + 1, _LEFT, _TOP, _BACK, 0); break;
+      case 3: _push (point.level, point.i, point.j, point.k, 4);
+	      _push (point.level + 1, _LEFT, _TOP, _FRONT, 0); break;
+      case 4: _push (point.level, point.i, point.j, point.k, 5);
+	      _push (point.level + 1, _RIGHT, _BOTTOM, _BACK, 0); break;
       case 5: _push (point.level, point.i, point.j, point.k, 6);
-	      _push (point.level + 1, _RIGHT, _TOP, _BACK, 0); break;
+	      _push (point.level + 1, _RIGHT, _BOTTOM, _FRONT, 0); break;
       case 6: _push (point.level, point.i, point.j, point.k, 7);
-	      _push (point.level + 1, _LEFT, _BOTTOM, _BACK, 0); break;
-      case 7: _push (point.level + 1, _RIGHT, _BOTTOM, _BACK, 0); break;
+	      _push (point.level + 1, _RIGHT, _TOP, _BACK, 0); break;
+      case 7: _push (point.level + 1, _RIGHT, _TOP, _FRONT, 0); break;
 #endif
       }
     }
@@ -152,47 +154,67 @@ void recursive (Point point)
 	else {
 	  _push (point.level, point.i, point.j, point.k, 1);
 	  if (condition)
-	    _push (point.level + 1, _LEFT, _TOP, _FRONT, 0);
+	    _push (point.level + 1, _LEFT, _BOTTOM, _BACK, 0);
 	}
 	break;
       }
+#if dimension == 1
       case 1:
 	_push (point.level, point.i, point.j, point.k, 2);
 	if (condition)
-	  _push (point.level + 1, _RIGHT, _TOP, _FRONT, 0);
+	  _push (point.level + 1, _RIGHT, _BOTTOM, _BACK, 0);
 	break;
-#if dimension >= 2
+#elif dimension == 2
+      case 1:
+	_push (point.level, point.i, point.j, point.k, 2);
+	if (condition)
+	  _push (point.level + 1, _LEFT, _TOP, _BACK, 0);
+	break;
       case 2:
 	_push (point.level, point.i, point.j, point.k, 3);
 	if (condition)
-	  _push (point.level + 1, _LEFT,  _BOTTOM, _FRONT, 0);
+	  _push (point.level + 1, _RIGHT, _BOTTOM, _BACK, 0);
 	break;
       case 3:
 	_push (point.level, point.i, point.j, point.k, 4);
 	if (condition)
-	  _push (point.level + 1, _RIGHT, _BOTTOM, _FRONT, 0);
+	  _push (point.level + 1, _RIGHT, _TOP, _BACK, 0);
 	break;
-#endif
-#if dimension >= 3
+#elif dimension == 3
+      case 1:
+	_push (point.level, point.i, point.j, point.k, 2);
+	if (condition)
+	  _push (point.level + 1, _LEFT, _BOTTOM, _FRONT, 0);
+	break;
+      case 2:
+	_push (point.level, point.i, point.j, point.k, 3);
+	if (condition)
+	  _push (point.level + 1, _LEFT, _TOP, _BACK, 0);
+	break;
+      case 3:
+	_push (point.level, point.i, point.j, point.k, 4);
+	if (condition)
+	  _push (point.level + 1, _LEFT, _TOP, _FRONT, 0);
+	break;
       case 4:
 	_push (point.level, point.i, point.j, point.k, 5);
 	if (condition)
-	  _push (point.level + 1, _LEFT, _TOP, _BACK, 0);
+	  _push (point.level + 1, _RIGHT, _BOTTOM, _BACK, 0);
 	break;
       case 5:
 	_push (point.level, point.i, point.j, point.k, 6);
 	if (condition)
-	  _push (point.level + 1, _RIGHT, _TOP, _BACK, 0);
+	  _push (point.level + 1, _RIGHT, _BOTTOM, _FRONT, 0);
 	break;
       case 6:
 	_push (point.level, point.i, point.j, point.k, 7);
 	if (condition)
-	  _push (point.level + 1, _LEFT,  _BOTTOM, _BACK, 0);
+	  _push (point.level + 1, _RIGHT, _TOP, _BACK, 0);
 	break;
       case 7:
 	_push (point.level, point.i, point.j, point.k, 8);
 	if (condition)
-	  _push (point.level + 1, _RIGHT, _BOTTOM, _BACK, 0);
+	  _push (point.level + 1, _RIGHT, _TOP, _FRONT, 0);
 	break;	
 #endif
       default: {
