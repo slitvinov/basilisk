@@ -592,7 +592,33 @@ static inline bool has_local_children (Point point)
       return true;
   return false;
 }
-  
+
+static inline void cache_append_face (Point point, short flags)
+{
+  Quadtree * q = grid;
+  cache_append (&q->faces, point, flags);
+#if dimension == 2
+  if (!(cell.flags & vertex)) {
+    cache_append (&q->vertices, point, 0);
+    cell.flags |= vertex;
+  }
+  foreach_dimension()
+    if ((flags & face_y) && !(neighbor(1).flags & vertex)) {
+      cache_append (&q->vertices, neighborp(1), 0);
+      neighbor(1).flags |= vertex;
+    }
+#elif dimension == 3
+  foreach_dimension()
+    if (flags & face_x)
+      for (int i = 0; i <= 1; i++)
+	for (int j = 0; j <= 1; j++)
+	  if (!(neighbor(0,i,j).flags & vertex)) {
+	    cache_append (&q->vertices, neighborp(0,i,j), 0);
+	    neighbor(0,i,j).flags |= vertex;
+	  }
+#endif
+}
+
 static void update_cache_f (void)
 {
   Quadtree * q = grid;
@@ -625,7 +651,7 @@ static void update_cache_f (void)
       if (is_local(cell)) {
 	cache_append (&q->leaves, point, 0);
 	// faces
-	unsigned flags = 0;
+	short flags = 0;
 	foreach_dimension()
 	  if (is_boundary(neighbor(-1)) || is_prolongation(neighbor(-1)) ||
 	      is_leaf(neighbor(-1)))
@@ -655,17 +681,17 @@ static void update_cache_f (void)
       }
       else if (!is_boundary(cell) || is_local(aparent(0))) { // non-local
 	// faces
-	unsigned flags = 0;
+	short flags = 0;
 	foreach_dimension()
 	  if (allocated(-1) &&
 	      is_local(neighbor(-1)) && is_prolongation(neighbor(-1)))
 	    flags |= face_x;
 	if (flags)
-	  cache_append (&q->faces, point, flags);
+	  cache_append_face (point, flags);
 	foreach_dimension()
 	  if (allocated(1) && is_local(neighbor(1)) &&
 	      is_prolongation(neighbor(1)))
-	    cache_append (&q->faces, neighborp(1), face_x);
+	    cache_append_face (neighborp(1), face_x);
       }
       continue;
     }
