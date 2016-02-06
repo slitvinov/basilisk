@@ -2187,6 +2187,14 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   args[nargs-1] = strdup (s);
   argss[nargs-1] = strdup (s1);
   varpush (s2, struct_type, scope + 1, 0);
+  // function tracing
+  if (traceon) {
+    intrace = 1; traceon = 0;
+    free (tracefunc);
+    tracefunc = strdup (s);
+  }
+  else
+    intrace = 0;
   if (debug)
     fprintf (stderr, 
 	     "%s:%d: function '%s' with struct '%s' '%s' returns '%s'\n", 

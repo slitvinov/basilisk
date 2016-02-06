@@ -253,6 +253,7 @@ void free_solver()
 void (* boundary_level) (scalar *, int l);
 void (* boundary_flux)  (vector *);
 
+trace
 void boundary (scalar * list)
 {
   vector * listf = NULL;
@@ -539,6 +540,7 @@ struct _interpolate {
   double x, y, z;
 };
 
+trace
 double interpolate (struct _interpolate p)
 {
   Point point = locate (p.x, p.y, p.z);

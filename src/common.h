@@ -342,7 +342,7 @@ void array_append (Array * a, void * elem, size_t size)
 
 // Function tracing
 
-@if TRACE
+@if TRACE == 1 // with Extrae library
 @include <extrae_user_events.h>
 
 typedef struct {
@@ -427,7 +427,106 @@ static void trace_off()
 #endif
 @  define trace(func, file, line)     trace_push (TRACE_TYPE(func), func)
 @  define end_trace(func, file, line) trace_pop (TRACE_TYPE(func), func)
-@else // !TRACE
+
+@elif TRACE // built-in function tracing
+
+typedef struct {
+  char * func, * file;
+  int line, calls;
+  double total, self;
+} TraceIndex;
+				      
+struct {
+  Array stack, index;
+  double t0;
+} Trace = {
+  {NULL, 0, 0}, {NULL, 0, 0},
+  -1
+};
+
+static void trace_add (const char * func, const char * file, int line,
+		       double total, double self)
+{
+  TraceIndex * t = (TraceIndex *) Trace.index.p;
+  int i, len = Trace.index.len/sizeof(TraceIndex);
+  for (i = 0; i < len; i++, t++)
+    if (t->line == line && !strcmp (func, t->func) && !strcmp (file, t->file))
+      break;
+  if (i == len) {
+    TraceIndex t = {strdup(func), strdup(file), line, 1, total, self};
+    array_append (&Trace.index, &t, sizeof(TraceIndex));
+  }
+  else
+    t->calls++, t->total += total, t->self += self;
+}
+
+static void trace (const char * func, const char * file, int line)
+{
+  struct timeval tv;
+  gettimeofday (&tv, NULL);
+  if (Trace.t0 < 0)
+    Trace.t0 = tv.tv_sec + tv.tv_usec/1e6;
+  double t[2] = {(tv.tv_sec - Trace.t0) + tv.tv_usec/1e6, 0.};
+  array_append (&Trace.stack, t, 2*sizeof(double));
+#if 0
+  fprintf (stderr, "trace %s:%s:%d t: %g sum: %g\n",
+	   func, file, line, t[0], t[1]);
+#endif
+}
+
+static void end_trace (const char * func, const char * file, int line)
+{
+  struct timeval tv;
+  gettimeofday (&tv, NULL);
+  double te = (tv.tv_sec - Trace.t0) + tv.tv_usec/1e6;
+  double * t = (double *) Trace.stack.p;
+  assert (Trace.stack.len >= 2*sizeof(double));
+  t += Trace.stack.len/sizeof(double) - 2;
+  Trace.stack.len -= 2*sizeof(double);
+  double dt = te - t[0];
+#if 0
+  fprintf (stderr, "end trace %s:%s:%d ts: %g te: %g dt: %g sum: %g\n",
+	   func, file, line, t[0], te, dt, t[1]);
+#endif
+  trace_add (func, file, line, dt, dt - t[1]);
+  if (Trace.stack.len >= 2*sizeof(double)) {
+    t -= 2;
+    t[1] += dt;
+  }
+}
+
+static int compar_self (const void * p1, const void * p2)
+{
+  const TraceIndex * t1 = p1, * t2 = p2;
+  return t1->self < t2->self;
+}
+
+static void trace_off()
+{
+  int i, len = Trace.index.len/sizeof(TraceIndex);
+  double total = 0.;
+  TraceIndex * t;
+  for (i = 0, t = (TraceIndex *) Trace.index.p; i < len; i++, t++)
+    total += t->self;
+  qsort (Trace.index.p, len, sizeof(TraceIndex), compar_self);
+  fprintf (stderr, "   calls    total     self   %% total   function\n");  
+  for (i = 0, t = (TraceIndex *) Trace.index.p; i < len; i++, t++) {
+    fprintf (stderr, "%8d   %6.2f   %6.2f     %4.1f%%   %s():%s:%d\n",
+	     t->calls, t->total, t->self, t->self*100./total,
+	     t->func, t->file, t->line);
+    free (t->func); free (t->file);
+  }
+
+  free (Trace.index.p);
+  Trace.index.p = NULL;
+  Trace.index.len = Trace.index.max = 0;
+  
+  free (Trace.stack.p);
+  Trace.stack.p = NULL;
+  Trace.stack.len = Trace.stack.max = 0;
+}
+
+@else // disable tracing
 @  define trace(...)
 @  define end_trace(...)
 @endif

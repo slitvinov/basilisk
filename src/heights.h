@@ -356,6 +356,7 @@ The *heights()* function implementation is similar to the multigrid
 case, but the construction of the shifted volume fraction field *cs*
 is more complex. */
 
+trace
 void heights (scalar c, vector h)
 {
   vector cs[];

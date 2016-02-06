@@ -37,6 +37,7 @@ struct OutputField {
   bool linear;
 };
 
+trace
 void output_field (struct OutputField p)
 {
   if (!p.list) p.list = all;
@@ -131,6 +132,7 @@ struct OutputMatrix {
   bool linear;
 };
 
+trace
 void output_matrix (struct OutputMatrix p)
 {
   if (p.n == 0) p.n = N;
@@ -346,6 +348,7 @@ struct OutputPPM {
   colormap map;
 };
 
+trace
 void output_ppm (struct OutputPPM p)
 {
   // default values
@@ -482,6 +485,7 @@ struct OutputGRD {
   scalar mask;
 };
 
+trace
 void output_grd (struct OutputGRD p)
 {
   // default values
@@ -599,6 +603,7 @@ static char * replace (const char * input, int target, int with,
   return name;
 }
 
+trace
 void output_gfs (struct OutputGfs p)
 {
   bool opened = false;
@@ -756,6 +761,7 @@ struct DumpHeader {
   int depth;
 };
 
+trace
 void dump (struct Dump p)
 {
   FILE * fp = p.fp;
@@ -820,6 +826,7 @@ void dump (struct Dump p)
     fclose (fp);
 }
 
+trace
 bool restore (struct Dump p)
 {
   FILE * fp = p.fp;
