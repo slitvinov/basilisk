@@ -21,7 +21,7 @@ static inline void update_pid (Point point, int pid)
 #if dimension >= 3
   int kg = 0; NOT_UNUSED(kg);
 #endif
-  short _flag = data;
+  unsigned short _flag = data;
   long _len = 0, _alen = (a)->len;
   while (_len < _alen) {
     Point point = *((Point *)((a)->p + _len)); _len += sizeof(Point);
@@ -38,12 +38,14 @@ static inline void update_pid (Point point, int pid)
 
 static inline void append_neighbor (Point point, Array * a,
 				    int pid,
-				    const short next, const short dnext,
+				    const unsigned short next,
+				    const unsigned short dnext,
+				    const unsigned short lnext,
 				    char c, FILE * fp)
 {
-  const short flag = 1 << user;
+  const unsigned short flag = 1 << user;
   if (!(cell.flags & flag)) {
-    if (true/*cell.pid != pid || (cell.flags & next)*/) {
+    if (!(cell.flags & lnext) || ((cell.flags & dnext) && !is_leaf(cell))) {
       array_append (a, &point, sizeof(Point));
       if (cell.flags & dnext)
 	array_append (a, &cell, sizeof(Cell) + datasize);
@@ -64,22 +66,25 @@ static inline void append_neighbor (Point point, Array * a,
 }
 
 static Array * neighborhood (int pid,
-			     const short next, const short dnext, FILE * fp)
+			     const unsigned short next,
+			     const unsigned short dnext,
+			     const unsigned short lnext,
+			     FILE * fp)
 {
   Array * a = array_new();
-  const short flag = 1 << user;
+  const unsigned short flag = 1 << user;
   foreach_cell() {
     if (cell.flags & next) {
       if (fp)
 	fprintf (fp, "%g %g noxt\n", x, y);
       foreach_neighbor() {
-	append_neighbor (point, a, pid, next, dnext, 'a', fp);
+	append_neighbor (point, a, pid, next, dnext, lnext, 'a', fp);
 #if 1
 	if (is_refined(cell)) { // fixme: test whether append above did something
 	  int pid = cell.pid;
 	  foreach_child()
 	    if (cell.pid != pid)
-	      append_neighbor (point, a, pid, next, dnext, 'b', fp);
+	      append_neighbor (point, a, pid, next, dnext, lnext, 'b', fp);
 	}
 #endif
       }
@@ -87,17 +92,17 @@ static Array * neighborhood (int pid,
       foreach_neighbor(1)
 	if (!(cell.flags & next) && is_refined(cell))
 	  foreach_child()
-	    append_neighbor (point, a, pid, next, dnext, 'c', fp);
+	    append_neighbor (point, a, pid, next, dnext, lnext, 'c', fp);
       if (is_leaf(cell) && cell.neighbors > 0)
 	foreach_child() {
 	  cell.flags |= dnext;
-	  append_neighbor (point, a, pid, next, dnext, 'd', fp);
+	  append_neighbor (point, a, pid, next, dnext, lnext, 'd', fp);
 	}
 #else
       foreach_neighbor(1)
 	if (cell.neighbors)
 	  foreach_child()
-	    append_neighbor (point, a, pid, next, dnext, 'c', fp);
+	    append_neighbor (point, a, pid, next, dnext, lnext, 'c', fp);
 #endif
     }
     else
@@ -109,30 +114,31 @@ static Array * neighborhood (int pid,
   foreach_neighborhood(a, dnext) {
     if (is_refined(cell)) {
       c->flags |= next;
+      //      int ppid = cell.pid;
       foreach_child()
-	if (!(cell.flags & flag)) { // fixme: send only root cells
-	  assert (!(cell.flags & next));
-	  append_neighbor (point, a, pid, next, dnext, 'e', fp);
-	  // fprintf (fp, "%g %g d noxt\n", x, y);
+	if (true/*cell.pid != ppid*/) {
+	  // fixme: send only root cells
+	  append_neighbor (point, a, pid, next, dnext, lnext, 'e', fp);
 	  cell.flags &= ~flag;
 	}
     }
     else
       c->flags &= ~next;
-    cell.flags &= ~(next|dnext|flag);
+    cell.flags &= ~(next|dnext|lnext|flag);
   }
 
 #if 1
   foreach_cell()
-    cell.flags &= ~(next|dnext);
+    cell.flags &= ~(next|dnext|lnext);
 #endif
 
   return a;
 }
 
 #if 1
-static inline void mark_neighbor (Point point, int pid,
-				  const short next, const short dnext)
+static inline void mark_neighbor (Point point,
+				  const unsigned short next,
+				  const unsigned short dnext)
 {
   cell.flags |= next;
   if (is_leaf(cell)) {
@@ -146,7 +152,8 @@ static inline void mark_neighbor (Point point, int pid,
 }
 #else
 static inline void mark_neighbor (Point point,
-				  const short next, const short dnext)
+				  const unsigned short next,
+				  const unsigned short dnext)
 {
   cell.flags |= next;
   if (is_leaf(cell)) {
@@ -171,7 +178,8 @@ static bool send_tree (Array * a, int to, MPI_Request * r)
     return false;
 }
 
-static bool receive_tree (int from, const short next, const short dnext,
+static bool receive_tree (int from,
+			  const unsigned short next, const unsigned short dnext,
 			  FILE * fp)
 {
   Array a;
@@ -184,7 +192,6 @@ static bool receive_tree (int from, const short next, const short dnext,
     MPI_Recv (a.p, a.len, MPI_BYTE, from, MOVED_TAG(),
 	      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     foreach_neighborhood (&a, dnext) {
-      //      assert (!(c->flags & ignored)); // fixme
       if (!(c->flags & ignored)) {
 	if (fp)
 	  fprintf (fp, "recv %g %g %g %d %d %d %d %d %d\n",
@@ -195,7 +202,6 @@ static bool receive_tree (int from, const short next, const short dnext,
 	  memcpy (((char *)&cell) + sizeof(Cell), ((char *)c) + sizeof(Cell),
 		  datasize);
       }
-      //      if (!(c->flags & leaf) && is_leaf(cell)) {
       if (is_leaf(cell) && (c->flags & next)) {
 	if (fp)
 	  fprintf (fp, "refine %g %g %g %d %d %d %d %d\n",
@@ -257,23 +263,26 @@ bool balance (double imbalance)
   FILE * fp = NULL;
 #endif
   
-  static const short prev = 1 << (user + 2), next = 1 << (user + 3);
-  static const short dprev = 1 << (user + 4), dnext = 1 << (user + 5);
+  static const unsigned short prev = 1 << (user + 2),  next = 1 << (user + 3);
+  static const unsigned short dprev = 1 << (user + 4), dnext = 1 << (user + 5);
+  static const unsigned short lprev = 1 << (user + 6), lnext = 1 << (user + 7);
   bool pid_changed = false;
   foreach_cell_post (!is_leaf(cell)) {
+
+    if (cell.pid == pid() - 1)
+      cell.flags |= lprev;
+    else if (cell.pid == pid() + 1)
+      cell.flags |= lnext;
+      
     if (!(cell.flags & ignored)) {
       int pid = balanced_pid (index[], nt);
       pid = clamp (pid, cell.pid - 1, cell.pid + 1);
-      if (cell.pid == pid() - 1)
-	fprintf (fp, "%g %g privi\n", x, y);
-      else if (cell.pid == pid() + 1)
-	fprintf (fp, "%g %g nixti\n", x, y);
       if (cell.pid != pid) {
 	if (is_local(cell)) {
 	  if (pid == cell.pid - 1)
-	    mark_neighbor (point, cell.pid - 1, prev, dprev);
+	    mark_neighbor (point, prev, dprev);
 	  else
-	    mark_neighbor (point, cell.pid + 1, next, dnext);
+	    mark_neighbor (point, next, dnext);
 	}
 	if (fp)
 	  fprintf (fp, "changed %g %g %g %d %d %d\n",
@@ -282,17 +291,20 @@ bool balance (double imbalance)
 	pid_changed = true;
       }
     }
-    if (level > 0 && (cell.flags & prev))
-      aparent(0).flags |= prev;
-    if (level > 0 && (cell.flags & next))
-      aparent(0).flags |= next;
-  }
 
-  Array * aprev = neighborhood (pid() - 1, prev, dprev, NULL);
-  Array * anext = neighborhood (pid() + 1, next, dnext, fp);
+    if (level > 0) {
+      if (cell.flags & prev)
+	aparent(0).flags |= prev;
+      if (cell.flags & next)
+	aparent(0).flags |= next;
+    }
+  }
+    
+  Array * aprev = neighborhood (pid() - 1, prev, dprev, lprev, fp);
+  Array * anext = neighborhood (pid() + 1, next, dnext, lnext, fp);
 
   check_flags();
-  
+    
   /* fixme: this should be optimisable using the fact that "send to
      next" must be mutually exclusive with "receive from next" */
   // send mesh to previous/next process
@@ -322,10 +334,10 @@ bool balance (double imbalance)
   if (quadtree->dirty) {
 #if 1
     // update active cells: fixme: can this be done above
-    static const short refined = 1 << user;
+    static const unsigned short refined = 1 << user;
     foreach_cell_post (!is_leaf (cell)) {
       if (!is_leaf(cell) && !is_local(cell)) {
-	short flags = cell.flags & ~active;
+	unsigned short flags = cell.flags & ~active;
 	foreach_child()
 	  if (is_active(cell))
 	    flags |= active, break;
