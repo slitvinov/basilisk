@@ -20,8 +20,8 @@
 #define DELTA (1./(1 << point.level))
 
 typedef struct {
-  short flags;
-  short neighbors; // number of refined neighbors in a 3x3 neighborhood
+  unsigned short flags;
+  unsigned short neighbors; // number of refined neighbors in a 3x3 neighborhood
   int pid;         // process id
 } Cell;
 
@@ -289,7 +289,7 @@ static void cache_level_shrink (CacheLevel * c)
   }
 }
 
-static void cache_append (Cache * c, Point p, short flags)
+static void cache_append (Cache * c, Point p, unsigned short flags)
 {
   if (c->n >= c->nm) {
     c->nm += BSIZE;
@@ -520,7 +520,7 @@ void cache_shrink (Cache * c)
 #else
   Point point = {GHOSTS,GHOSTS,GHOSTS,0};
 #endif
-  int _k; short _flags; NOT_UNUSED(_flags);
+  int _k; unsigned short _flags; NOT_UNUSED(_flags);
   OMP(omp for schedule(static) clause)
   for (_k = 0; _k < _cache.n; _k++) {
     point.i = _cache.p[_k].i;
@@ -593,7 +593,7 @@ static inline bool has_local_children (Point point)
   return false;
 }
 
-static inline void cache_append_face (Point point, short flags)
+static inline void cache_append_face (Point point, unsigned short flags)
 {
   Quadtree * q = grid;
   cache_append (&q->faces, point, flags);
@@ -633,6 +633,10 @@ static void update_cache_f (void)
     q->active[l].n = q->prolongation[l].n =
       q->restriction[l].n = q->boundary[l].n = 0;
 
+  char name[80];
+  sprintf (name, "cache-%d", pid());
+  FILE * fp = fopen (name, "w");
+  
   foreach_cell() {
     if (is_local(cell)) {
       // active cells
@@ -651,7 +655,7 @@ static void update_cache_f (void)
       if (is_local(cell)) {
 	cache_append (&q->leaves, point, 0);
 	// faces
-	short flags = 0;
+	unsigned short flags = 0;
 	foreach_dimension()
 	  if (is_boundary(neighbor(-1)) || is_prolongation(neighbor(-1)) ||
 	      is_leaf(neighbor(-1)))
@@ -681,7 +685,7 @@ static void update_cache_f (void)
       }
       else if (!is_boundary(cell) || is_local(aparent(0))) { // non-local
 	// faces
-	short flags = 0;
+	unsigned short flags = 0;
 	foreach_dimension()
 	  if (allocated(-1) &&
 	      is_local(neighbor(-1)) && is_prolongation(neighbor(-1)))
@@ -696,14 +700,20 @@ static void update_cache_f (void)
       continue;
     }
     else { // not a leaf
+@if _MPI
+      // halo flag is already set by mpi_boundary_update()
+      if (is_local(cell) && (cell.flags & halo))
+	cache_level_append (&q->restriction[level], point);
+@else // not _MPI
       bool restriction = level > 0 && (aparent(0).flags & halo);
       if (!restriction) {
+	// fixme: assert (is_active(cell));
 	if (is_active(cell)) {
 	  foreach_neighbor()
 	    if (allocated(0) && is_leaf(cell) && !is_boundary(cell))
 	      restriction = true, break;
 	}
-	else
+	else // this is necessary so that boundary cells are recognised
 	  foreach_neighbor()
 	    if (allocated(0) && is_leaf(cell) && is_local(cell))
 	      restriction = true, break;
@@ -716,8 +726,11 @@ static void update_cache_f (void)
       }
       else
 	cell.flags &= ~halo;
+@endif // not _MPI
     }
   }
+
+  fclose (fp);
   
   /* optimize caches */
   cache_shrink (&q->leaves);
@@ -1455,8 +1468,6 @@ static void periodic_boundary_halo_prolongation_x (const Boundary * b,
   periodic_boundary_level_x (b, list, l);
 }
 
-int refine_cell (Point point, scalar * list, int flag, Cache * refined);
-
 static void free_cache (CacheLevel * c)
 {
   Quadtree * q = grid;
@@ -1528,6 +1539,8 @@ void free_grid (void)
   grid = NULL;
 }
 
+static void refine_level (int depth);
+
 trace
 void init_grid (int n)
 {
@@ -1559,19 +1572,23 @@ void init_grid (int n)
     layer_add_row (L, i);
     L->m[i] = calloc (1, sizeof(Cell) + datasize);
   }
-  CELL(L->m[GHOSTS]).flags |= (leaf|active);
+  CELL(L->m[GHOSTS]).flags |= leaf;
+  if (pid() == 0)
+    CELL(L->m[GHOSTS]).flags |= active;
   for (int k = -GHOSTS; k <= GHOSTS; k++)
     CELL(L->m[GHOSTS+k]).pid =
       (k < 0 ? -1 - left :
        k > 0 ? -1 - right :
-       pid());
+       0;
 #elif dimension == 2
   for (int i = 0; i < L->len; i++) {
     layer_add_row (L, i);
     for (int j = 0; j < L->len; j++)
       L->m[i][j] = calloc (1, sizeof(Cell) + datasize);
   }
-  CELL(L->m[GHOSTS][GHOSTS]).flags |= (leaf|active);
+  CELL(L->m[GHOSTS][GHOSTS]).flags |= leaf;
+  if (pid() == 0)
+    CELL(L->m[GHOSTS][GHOSTS]).flags |= active;
   for (int k = -GHOSTS; k <= GHOSTS; k++)
     for (int l = -GHOSTS; l <= GHOSTS; l++)
       CELL(L->m[GHOSTS+k][GHOSTS+l]).pid =
@@ -1579,7 +1596,7 @@ void init_grid (int n)
 	 k > 0 ? -1 - right :
 	 l > 0 ? -1 - top :
 	 l < 0 ? -1 - bottom :
-	 pid());
+	 0);
 #else // dimension == 3
   for (int i = 0; i < L->len; i++)
     for (int j = 0; j < L->len; j++) {
@@ -1587,7 +1604,9 @@ void init_grid (int n)
       for (int k = 0; k < L->len; k++)
 	L->m[i][j][k] = calloc (1, sizeof(Cell) + datasize);
     }
-  CELL(L->m[GHOSTS][GHOSTS][GHOSTS]).flags |= (leaf|active);
+  CELL(L->m[GHOSTS][GHOSTS][GHOSTS]).flags |= leaf;
+  if (pid() == 0)
+    CELL(L->m[GHOSTS][GHOSTS][GHOSTS]).flags |= active;
   for (int k = -GHOSTS; k <= GHOSTS; k++)
     for (int l = -GHOSTS; l <= GHOSTS; l++)
       for (int n = -GHOSTS; n <= GHOSTS; n++)
@@ -1598,7 +1617,7 @@ void init_grid (int n)
 	   l < 0 ? -1 - bottom :
 	   n > 0 ? -1 - front :
 	   n < 0 ? -1 - back :
-	   pid());
+	   0);
 #endif // dimension == 3
   q->active = calloc (1, sizeof (CacheLevel));
   q->prolongation = calloc (1, sizeof (CacheLevel));
@@ -1607,15 +1626,11 @@ void init_grid (int n)
   q->dirty = true;
   grid = q;
   N = 1 << depth;
-  while (depth--)
-    foreach_leaf()
-      refine_cell (point, NULL, 0, NULL);
 @if _MPI
   void mpi_boundary_new();
   mpi_boundary_new();
 @endif
   update_cache();
-  trash (all);
   // boundaries
   Boundary * b = calloc (1, sizeof (Boundary));
   b->level = b->restriction = box_boundary_level;
@@ -1629,11 +1644,8 @@ void init_grid (int n)
     b->halo_prolongation = periodic_boundary_halo_prolongation_x;
     add_boundary (b);
   }
-@if _MPI
-  void mpi_partitioning();
-  if (N > 1)
-    mpi_partitioning();
-@endif
+  refine_level (depth);
+  trash (all);
 }
 
 #if dimension == 2
@@ -1702,8 +1714,13 @@ Point locate (struct _locate p)
   return point;
 }
 
+@if _MPI
+bool balance (double imbalance);
+@endif
+
 #include "quadtree-common.h"
 
 @if _MPI
 #include "quadtree-mpi.h"
+#include "balance.h"
 @endif

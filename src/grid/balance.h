@@ -357,13 +357,12 @@ bool balance (double imbalance)
     }
 #endif
     flag_border_cells(); // fixme: can this be done above?
-  }
-
-  if (quadtree->dirty || pid_changed) {
     pid_changed = true;
-    mpi_boundary_update();
   }
 
   mpi_all_reduce (pid_changed, MPI_INT, MPI_MAX);
+  if (pid_changed)
+    mpi_boundary_update();
+
   return pid_changed;
 }
