@@ -695,12 +695,6 @@ void mpi_boundary_update()
 	      free (cpro.p); free (cres.p);
 	    }
 	  }
-	  // halo restriction
-	  if (level > 0 && !is_local(aparent(0))) {
-	    RcvPid * halo_res = halo_restriction->snd;
-	    apro.len = 0;
-	    rcv_pid_append (halo_res, &apro, aparent(0).pid, point);
-	  }
 	  cell.flags &= ~ignored;
 	  free (apro.p); free (ares.p);
 	}
@@ -740,10 +734,6 @@ void mpi_boundary_update()
 		  fprintf (fp, "%g %g c\n", x1, y1);
 		  used = true, rcv_pid_append (res, &ares, pid, p);
 		}
-#if 0
-		if (is_active(cell))
-		  coarsen = false; // to avoid un-necessary restrictions
-#endif
 	      }
 	    }
 	  if (is_leaf(cell)) {
@@ -788,12 +778,6 @@ void mpi_boundary_update()
 	    cell.flags &= ~ignored;
 	  else
 	    cell.flags |= ignored;
-	  // halo restriction
-	  if (level > 0 && is_local(aparent(0))) {
-	    RcvPid * halo_res = halo_restriction->rcv;
-	    apro.len = 0;
-	    rcv_pid_append (halo_res, &apro, cell.pid, point);
-	  }
 	  free (apro.p); free (ares.p);
 	}
 	continue; // level == l
@@ -809,41 +793,57 @@ void mpi_boundary_update()
   scalar halov[];
   quadtree->dirty = true;
   for (int l = 0; l <= depth(); l++) {
+    Array apro = {NULL, 0, 0};
     foreach_cell() {
-      if (is_leaf(cell))
-	continue;
       if (level == l) {
 	if (is_local(cell)) {
 	  bool restriction = level > 0 && coarse(halov,0);
-	  if (!restriction)
-	    foreach_neighbor()
-	      if (is_leaf(cell) && !is_boundary(cell))
-		restriction = true, break;
-	  if (restriction) {
-	    cell.flags |= halo;
-	    halov[] = true;
+	  if (restriction && !is_local(aparent(0))) {
+	    RcvPid * halo_res = halo_restriction->snd;
+	    apro.len = 0;
+	    rcv_pid_append (halo_res, &apro, aparent(0).pid, point);
 	  }
-	  else {
-	    cell.flags &= ~halo;
-	    halov[] = false;
+	  if (!is_leaf(cell)) {
+	    if (!restriction)
+	      foreach_neighbor()
+		if (is_leaf(cell) && !is_boundary(cell))
+		  restriction = true, break;
+	    if (restriction) {
+	      cell.flags |= halo;
+	      halov[] = true;
+	    }
+	    else {
+	      cell.flags &= ~halo;
+	      halov[] = false;
+	    }
 	  }
 	}
 	else { // non-local cell
-	  // this is necessary so that boundary cells are recognised
 	  bool restriction = level > 0 && (aparent(0).flags & halo);
-	  if (!restriction)
-	    foreach_neighbor()
-	      if (allocated(0) && is_leaf(cell) && is_local(cell))
-		restriction = true, break;
-	  if (restriction)
-	    cell.flags |= halo;
-	  else
-	    cell.flags &= ~halo;
+	  if (restriction && is_local(aparent(0))) {
+	    RcvPid * halo_res = halo_restriction->rcv;
+	    apro.len = 0;
+	    rcv_pid_append (halo_res, &apro, cell.pid, point);
+	  }
+	  if (!is_leaf(cell)) {
+	    if (!restriction)
+	      // this is necessary so that boundary cells are recognised
+	      foreach_neighbor()
+		if (allocated(0) && is_leaf(cell) && is_local(cell))
+		  restriction = true, break;
+	    if (restriction)
+	      cell.flags |= halo;
+	    else
+	      cell.flags &= ~halo;
+	  }
 	}
 	continue; // level == l
       }
+      if (is_leaf(cell))
+	continue;
     }
-    // fixme: optimise, we use only parent values
+    free (apro.p);
+    // fixme: optimise, we use only parent values, not neighbors
     mpi_boundary_restriction (mpi_boundary, {halov}, l);
   }
     

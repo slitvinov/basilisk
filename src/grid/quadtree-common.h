@@ -13,7 +13,8 @@ attribute {
 /*
   A cache of refined cells is maintained (if not NULL).
 */
-int refine_cell (Point point, scalar * list, int flag, Cache * refined)
+int refine_cell (Point point, scalar * list, int flag, Cache * refined,
+		 FILE * fp)
 {
   int nr = 0;
 #if TWO_ONE
@@ -38,11 +39,15 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
             #if dimension > 2
 	      p.k = (point.k + GHOSTS)/2 + m;
             #endif
-	    nr += refine_cell (p, list, flag, refined);
+	      nr += refine_cell (p, list, flag, refined, fp);
 	    aparent(k,l,m).flags |= flag;
 	  }
 #endif
 
+  if (fp)
+    fprintf (fp, "refine_cell %g %g %g %d %d\n", x, y, z, cell.pid,
+	     cell.flags & ignored);
+  
   /* refine */
   cell.flags &= ~leaf;
 
@@ -50,9 +55,13 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
   increment_neighbors (point);
 
   int cflag = is_active(cell) ? (active|leaf) : leaf;
-  foreach_child()
+  foreach_child() {
+    if (fp)
+      fprintf (fp, "refine_child %g %g %g %d %d\n", x, y, z, cell.pid,
+	       cell.flags & ignored);
     cell.flags |= cflag;
-
+  }
+    
   /* initialise scalars */
   for (scalar s in list)
     if (is_local(cell) || s.face)
@@ -140,19 +149,21 @@ void coarsen_cell_recursive (Point point, scalar * list, CacheLevel * coarsened)
   assert (coarsen_cell (point, list, coarsened));
 }
 
-typedef struct {
-  int nc, nf;
-} astats;
-
 @if _MPI
-void mpi_boundary_refine  (scalar * list);
+void mpi_boundary_refine  (scalar *);
 void mpi_boundary_coarsen (int);
 void mpi_boundary_update  (void);
+bool balance (double);
 @else
 @ define mpi_boundary_refine(list)
 @ define mpi_boundary_coarsen(a)
 @ define mpi_boundary_update()
+@ define balance(...) false
 @endif
+
+typedef struct {
+  int nc, nf;
+} astats;
 
 struct Adapt {
   scalar * slist; // list of scalars
@@ -160,7 +171,7 @@ struct Adapt {
   int maxlevel;   // maximum level of refinement
   int minlevel;   // minimum level of refinement (default 1)
   scalar * list;  // list of fields to update (default all)
-  scalar * listb; // fields which need BCs (default list)
+  scalar * listb; // fields which need BCs (default list): fixme obsolete
 };
 
 astats adapt_wavelet (struct Adapt p)
@@ -199,7 +210,7 @@ astats adapt_wavelet (struct Adapt p)
       if (is_leaf (cell)) {
 	if (cell.flags & too_coarse) {
 	  cell.flags &= ~too_coarse;
-	  refine_cell (point, listc, refined, &quadtree->refined);
+	  refine_cell (point, listc, refined, &quadtree->refined, NULL);
 	  st.nf++;
 	}
 	continue;
@@ -293,10 +304,37 @@ astats adapt_wavelet (struct Adapt p)
   if (st.nc || st.nf) {
     mpi_boundary_update();
     boundary (p.listb ? p.listb : p.list);
+    do ; while (balance (0));
+    //    boundary (p.listb ? p.listb : p.list);
   }
   free (listcm);
 
   return st;
+}
+
+#define refine(cond, list) do {			                        \
+  int refined;								\
+  do {									\
+    refined = 0;							\
+    quadtree->refined.n = 0;						\
+    foreach()								\
+      if (is_leaf(cell) && (cond)) {					\
+	refine_cell (point, list, 0, &quadtree->refined, NULL);		\
+	refined++;							\
+      }									\
+    mpi_all_reduce (refined, MPI_INT, MPI_SUM);				\
+    if (refined) {							\
+      mpi_boundary_refine (list);					\
+      mpi_boundary_update();						\
+      boundary (list);							\
+      do ; while (balance(0));						\
+    }									\
+  } while (refined);							\
+} while(0)
+
+static void refine_level (int depth)
+{
+  refine (level < depth, NULL);
 }
 
 #define unrefine(cond, list) do {					\
@@ -317,21 +355,6 @@ astats adapt_wavelet (struct Adapt p)
     }									\
     mpi_boundary_coarsen (_l);						\
   }									\
-  mpi_boundary_update();						\
-} while (0)
-
-#define refine(cond, list) do {						\
-  quadtree->refined.n = 0;						\
-  int refined;								\
-  do {									\
-    refined = 0;							\
-    foreach_leaf()							\
-      if (cond)	{							\
-        refine_cell (point, list, 0, &quadtree->refined);		\
-	refined++;							\
-      }									\
-  } while (refined);							\
-  mpi_boundary_refine (list);						\
   mpi_boundary_update();						\
 } while (0)
 
