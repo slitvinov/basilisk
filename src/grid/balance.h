@@ -45,7 +45,8 @@ static inline void append_neighbor (Point point, Array * a,
 {
   const unsigned short flag = 1 << user;
   if (!(cell.flags & flag)) {
-    if (!(cell.flags & lnext) || ((cell.flags & dnext) && !is_leaf(cell))) {
+    if (!(cell.flags & lnext) ||
+	((cell.flags & dnext) && is_refined(cell))) {
       array_append (a, &point, sizeof(Point));
       if (cell.flags & dnext)
 	array_append (a, &cell, sizeof(Cell) + datasize);
@@ -79,7 +80,7 @@ static Array * neighborhood (int pid,
 	fprintf (fp, "%g %g noxt\n", x, y);
       foreach_neighbor() {
 	append_neighbor (point, a, pid, next, dnext, lnext, 'a', fp);
-#if 1
+#if 0
 	if (is_refined(cell)) { // fixme: test whether append above did something
 	  int pid = cell.pid;
 	  foreach_child()
@@ -88,7 +89,7 @@ static Array * neighborhood (int pid,
 	}
 #endif
       }
-#if 1
+#if 0
       foreach_neighbor(1)
 	if (!(cell.flags & next) && is_refined(cell))
 	  foreach_child()
@@ -135,7 +136,7 @@ static Array * neighborhood (int pid,
   return a;
 }
 
-#if 1
+#if 0
 static inline void mark_neighbor (Point point,
 				  const unsigned short next,
 				  const unsigned short dnext)
@@ -269,10 +270,18 @@ bool balance (double imbalance)
   bool pid_changed = false;
   foreach_cell_post (!is_leaf(cell)) {
 
-    if (cell.pid == pid() - 1)
+    if (cell.pid == pid() - 1) {
       cell.flags |= lprev;
-    else if (cell.pid == pid() + 1)
+      if (is_leaf(cell) && cell.neighbors)
+	foreach_child()
+	  cell.flags |= lprev;
+    }
+    else if (cell.pid == pid() + 1) {
       cell.flags |= lnext;
+      if (is_leaf(cell) && cell.neighbors)
+	foreach_child()
+	  cell.flags |= lnext;
+    }
       
     if (!(cell.flags & ignored)) {
       int pid = balanced_pid (index[], nt);
