@@ -159,7 +159,7 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-laplacian.tst mpi-laplacian.3D.tst \
 	mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
 	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
-	axiadvection.tst hf1.tst pdump.tst restore.tst \
+	hf1.tst pdump.tst restore.tst \
 	gfsi.tst gfs.tst \
 	load-balancing
 
@@ -187,7 +187,7 @@ mpi-coarsen.tst:  CC = mpicc -D_MPI=2
 mpi-coarsen1.tst: CC = mpicc -D_MPI=5
 bump2Dp.tst:      CC = mpicc -D_MPI=9
 vortex.tst:	  CC = mpicc -D_MPI=7 -DJACOBI=1
-axiadvection.tst: CC = mpicc -D_MPI=7
+axiadvection.tst: CC = mpicc -D_MPI=7 -DJACOBI=1
 hf1.tst:	  CC = mpicc -D_MPI=7
 
 # parallel dump()
@@ -203,8 +203,8 @@ gfsi.tst: gfs.tst
 # load-balancing
 
 load-balancing: balance.tst balance1.tst balance2.tst balance3.tst \
-		balance4.tst balance5.tst balance6.tst \
-		bump2Dp.tst vortex.tst
+		balance4.tst balance5.tst balance6.tst balance7.tst \
+		balance8.tst bump2Dp.tst vortex.tst axiadvection.tst
 
 balance.tst: CC = mpicc -D_MPI=3
 balance1.tst: CC = mpicc -D_MPI=3
@@ -221,3 +221,5 @@ balance5.tst: CC = mpicc -D_MPI=9
 balance6.c: balance5.c
 	ln -s balance5.c balance6.c
 balance6.tst: CC = mpicc -D_MPI=17
+balance7.tst: CC = mpicc -D_MPI=17
+balance8.tst: CC = mpicc -D_MPI=7

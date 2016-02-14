@@ -458,6 +458,7 @@ void debug_mpi (FILE * fp1)
     sprintf (name, "mpi-halo-restriction-snd-%d", pid()); remove (name);
     sprintf (name, "mpi-prolongation-snd-%d", pid()); remove (name);
     sprintf (name, "mpi-border-%d", pid()); remove (name);
+    sprintf (name, "mpi-rborder-%d", pid()); remove (name);
     sprintf (name, "exterior-%d", pid()); remove (name);
     sprintf (name, "depth-%d", pid()); remove (name);
     sprintf (name, "refined-%d", pid()); remove (name);
@@ -565,6 +566,15 @@ void debug_mpi (FILE * fp1)
     if (is_leaf(cell))
       continue;
   }
+  if (!fp1)
+    fclose (fp);
+
+  fp = fopen_prefix (fp1, "mpi-rborder", prefix);
+  foreach_cell()
+    if (is_rborder(cell))
+      fprintf (fp, "%s%g %g %g %d %d %d\n",
+	       prefix, x, y, z, level, cell.neighbors,
+	       (cell.flags & ignored) ? npe() : cell.pid);
   if (!fp1)
     fclose (fp);
 
@@ -744,10 +754,12 @@ void mpi_boundary_update()
 	    if (cell.neighbors) {
 	      // prolongation
 	      Array cpro = {NULL, 0, 0}, cres = {NULL, 0, 0};
+	      bool used = false;
 	      foreach_neighbor (1)
 		if (allocated(0) && is_active(cell) && cell.neighbors)
 		  foreach_child()
 		    if (is_local(cell)) {
+		      used = true;
 		      rcv_pid_append (res, &ares, pid, p);
 		      rcv_pid_append_children (res, &cres, pid, p);
 		      if (!is_refined(cell)) {
@@ -757,9 +769,15 @@ void mpi_boundary_update()
 		      }
 		    }
 	      free (cpro.p); free (cres.p);
+	      if (used)
+		foreach_child()
+		  cell.flags |= rborder;
+	      else
+		foreach_child()
+		  cell.flags &= ~rborder;
 	    }
 	  }
-	  else {
+	  else { // not leaf
 	    if (used)
 	      foreach_child()
 		cell.flags &= ~ignored;
@@ -773,11 +791,15 @@ void mpi_boundary_update()
 	      if (coarsen)
 		coarsen_cell (point, NULL, NULL);
 	    }
-	  }
-	  if (used)
+	  } // not leaf
+	  if (used) {
 	    cell.flags &= ~ignored;
-	  else
+	    cell.flags |= rborder;
+	  }
+	  else {
 	    cell.flags |= ignored;
+	    cell.flags &= ~rborder;
+	  }
 	  free (apro.p); free (ares.p);
 	}
 	continue; // level == l
@@ -971,7 +993,7 @@ static void flag_border_cells()
 {
   foreach_cell() {
     if (is_active(cell)) {
-      short flags = cell.flags & ~border;
+      short flags = cell.flags & ~(border|rborder);
       foreach_neighbor() {
 	if (!is_local(cell) || (level > 0 && !is_local(aparent(0))))
 	  flags |= border, break;
@@ -986,13 +1008,13 @@ static void flag_border_cells()
       cell.flags = flags;
     }
     else {
-      cell.flags &= ~border;
+      cell.flags &= ~(border|rborder);
       //      continue; // fixme
     }
     if (is_leaf(cell)) {
       if (cell.neighbors) {
 	foreach_child()
-	  cell.flags &= ~border;
+	  cell.flags &= ~(border|rborder);
 	if (is_border(cell)) {
 	  bool remote = false;
 	  foreach_neighbor (GHOSTS/2)

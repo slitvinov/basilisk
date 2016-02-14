@@ -6,9 +6,6 @@ Navier--Stokes solver (without viscosity). It also shows how to
 convert a vorticity field into a velocity field. */
 
 #include "navier-stokes/centered.h"
-@if _MPI
-#include "grid/balance.h"
-@endif
 
 /**
 The domain is centered on $(0,0)$ and the maximum level of refinement
@@ -76,7 +73,7 @@ event init (t = 0)
   $$ */
 
   poisson (psi, omega);
-  struct { double x, y; } f = {-1.,1.};
+  coord f = {-1.,1.};
   foreach()
     foreach_dimension()
       u.x[] = f.x*(psi[0,1] - psi[0,-1])/(2.*Delta);
@@ -143,24 +140,11 @@ event output (t += 5) {
 If we are using a quadtree grid, it is adapted using wavelet error
 control on both components of the velocity field. Note that the error
 thresholds need to be specified twice (once for each component of
-vector $\mathbf{u}$). 
-
-We need to adapt p to get an initial guess for the next iteration, but
-we can't apply boundary conditions (for the pressure) because alpha is
-not consistent and is used to compute the consistent Neumann
-conditions (see
-[navier-stokes/centered.h](/src/navier-stokes/centered.h)). */
+vector $\mathbf{u}$). */
 
 #if QUADTREE
 event adapt (i++) {
-  astats s = adapt_wavelet ((scalar *){u}, (double[]){5e-5,5e-5}, MAXLEVEL,
-			    list = {p,u,pf,uf,g}, listb = {u,pf,uf,g});
-@if _MPI
-  if (s.nf || s.nc) {
-    do ; while(balance (0));
-    boundary ({u,pf,uf,g});
-  }
-@endif
+  adapt_wavelet ((scalar *){u}, (double[]){5e-5,5e-5}, MAXLEVEL);
 }
 #endif
 

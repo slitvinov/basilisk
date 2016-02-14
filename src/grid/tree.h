@@ -31,7 +31,7 @@ enum {
   refined   = 1 << 2,
   halo      = 1 << 3,
   border    = 1 << 4,
-  fboundary = 1 << 5,
+  rborder   = 1 << 5,
   vertex    = 1 << 6,
   ignored   = 1 << 7,
   user      = 8,
@@ -49,6 +49,7 @@ enum {
 @define is_leaf(cell)    ((cell).flags & leaf)
 @define is_coarse()      ((cell).neighbors > 0)
 @define is_border(cell)  ((cell).flags & border)
+@define is_rborder(cell) ((cell).flags & rborder)
 @define is_local(cell)   ((cell).pid == pid())
 
 // Caches
@@ -636,7 +637,8 @@ static void update_cache_f (void)
   char name[80];
   sprintf (name, "cache-%d", pid());
   FILE * fp = fopen (name, "w");
-  
+
+  const unsigned short fboundary = 1 << user;
   foreach_cell() {
     if (is_local(cell)) {
       // active cells

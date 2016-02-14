@@ -63,6 +63,7 @@ event logfile (i++; t <= 0.8) {
   double e = 2.*(sfmax - sfmin)/(sfmax + sfmin);
   double e1 = 2.*(sfmax1 - sfmin1)/(sfmax1 + sfmin1);
   fprintf (ferr, "%g %.12f %.12f %.10f %.10f\n", t, s, s1, e, e1);
+  fflush (ferr);
   assert (e < 4e-8);
   assert (e1 < 5e-5);
 }
@@ -85,14 +86,7 @@ event gfsview (i++) {
 event adapt (i++) {
   double sb = statsf(f).sum;
   double sb1 = statsf(f1).sum;
-  /* we need to adapt p to get an initial guess for the next
-     iteration, but we can't apply boundary conditions (for the
-     pressure) because alpha is not consistent and is used to compute
-     the consistent Neumann conditions (see navier-stokes/centered.h). */
-  adapt_wavelet ({f1}, (double[]){5e-3}, 
-		 maxlevel = 6, minlevel = 4,
-		 list = {cm,fm,p,u,pf,uf,g,f,f1}, 
-		 listb = {cm,fm,u,pf,uf,g,f,f1});
+  adapt_wavelet ({f1}, (double[]){5e-3}, maxlevel = 6, minlevel = 4);
   double sa = statsf(f).sum;
   double sa1 = statsf(f1).sum;
   // the mass of VOF tracers is not conserved exactly

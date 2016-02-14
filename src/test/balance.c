@@ -1,7 +1,9 @@
-#include "grid/balance.h"
 #include "utils.h"
 #include "output.h"
 #include "check_restriction.h"
+#include "refine_unbalanced.h"
+
+#define BGHOSTS 2
 
 void image()
 {
@@ -13,17 +15,24 @@ void image()
 
 void refinement()
 {
-  refine (level < 5 && y < 0.315 && (1. - x) < 0.438
-	  && y > 0.25 && (1. - x) > 0.375, NULL);
+  refine_unbalanced (level < 5 && y < 0.315 && (1. - x) < 0.438
+  		     && y > 0.25 && (1. - x) > 0.375, NULL);
   unrefine (y < 0.25 && (1. - x) > 0.5, NULL);
-  refine (level < 6 && y < 0.315 && (1. - x) > 0.8, NULL);  
+  refine_unbalanced (level < 6 && y < 0.315 && (1. - x) > 0.8, NULL);  
 }
 
 void partition (const char * prog)
 {
   // generates reference solution
   init_grid (1);
-  refine (level < 4, NULL);
+
+  foreach_cell() {
+    cell.pid = pid();
+    cell.flags |= active;
+  }
+  quadtree->dirty = true;
+
+  refine_unbalanced (level < 4, NULL);
 
   refinement();
   
@@ -45,20 +54,44 @@ void partition (const char * prog)
 int main (int argc, char * argv[])
 {
   partition (argv[0]);
-  
-  init_grid (16);
-  refinement();
 
+#if 1
+  init_grid (16);
+#else
+  init_grid (1);
+  foreach_cell() {
+    cell.pid = pid();
+    cell.flags |= active;
+  }
+  quadtree->dirty = true;
+
+  refine_unbalanced (level < 4, NULL);
+
+  mpi_partitioning();
+#endif
+  
+  refinement();
+  
   scalar s[];
+  face vector u[];
+  quadtree_trash ({s,u});
   foreach()
     s[] = 1;
-
-  do image(); while (balance(0));
-
+  foreach_face()
+    u.x[] = 1;
+  boundary ({s, u});
+  
+  //  do image(); while (balance(0));
+  balance(0);
+  
   debug_mpi (stderr);
 
   foreach()
-    assert (s[] == 1);
-
+    foreach_neighbor()
+      assert (s[] == 1);
   check_restriction (s);
+
+  foreach_face()
+    for (int i = -2; i <= 2; i++)
+      assert (u.x[0,i] == 1);
 }

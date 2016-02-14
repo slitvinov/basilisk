@@ -202,6 +202,8 @@ astats adapt_wavelet (struct Adapt p)
       listc = list_add (listc, s);
 
   // refinement
+  if (p.minlevel < 1)
+    p.minlevel = 1;
   quadtree->refined.n = 0;
   static const int refined = 1 << user, too_fine = 1 << (user + 1);
   foreach_cell() {
@@ -243,8 +245,10 @@ astats adapt_wavelet (struct Adapt p)
 		cell.flags &= ~too_fine;
 		cell.flags |= too_coarse;
 	      }
-	      else if (e <= max/1.5 && !(cell.flags & (too_coarse|just_fine)))
-		cell.flags |= too_fine;
+	      else if (e <= max/1.5 && !(cell.flags & (too_coarse|just_fine))) {
+		if (level >= p.minlevel)
+		  cell.flags |= too_fine;
+	      }
 	      else if (!(cell.flags & too_coarse)) {
 		cell.flags &= ~too_fine;
 		cell.flags |= just_fine;
@@ -270,7 +274,7 @@ astats adapt_wavelet (struct Adapt p)
   
   // coarsening
   // the loop below is only necessary to ensure symmetry of 2:1 constraint
-  for (int l = depth(); l >= max(p.minlevel, 1); l--) {
+  for (int l = depth(); l >= p.minlevel; l--) {
     quadtree->coarsened.n = 0;
     foreach_cell()
       if (!is_boundary(cell)) {
@@ -304,11 +308,10 @@ astats adapt_wavelet (struct Adapt p)
   if (st.nc || st.nf) {
     mpi_boundary_update();
     boundary (p.listb ? p.listb : p.list);
-    do ; while (balance (0));
-    //    boundary (p.listb ? p.listb : p.list);
+    while (balance (0));
   }
   free (listcm);
-
+  
   return st;
 }
 
@@ -327,7 +330,7 @@ astats adapt_wavelet (struct Adapt p)
       mpi_boundary_refine (list);					\
       mpi_boundary_update();						\
       boundary (list);							\
-      do ; while (balance(0));						\
+      while (balance(0));						\
     }									\
   } while (refined);							\
 } while(0)
