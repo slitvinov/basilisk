@@ -1,0 +1,53 @@
+# Parallel runs with MPI
+
+To compile with MPI parallelism enabled, you need to use something like:
+
+~~~bash
+CC='mpicc -D_MPI=1' qcc example.c -o example -lm
+~~~
+
+where *mpicc* calls the MPI compiler on your system. The resulting
+executable can then be run in parallel using something like
+
+~~~bash
+mpirun -np 8 ./example
+~~~
+
+The details may vary according to how the MPI compiler is setup on
+your system.
+
+## Using Makefiles
+
+The "manual" way above is automated if you use the [standard
+Makefiles](/Tutorial#using-makefiles) provided by Basilisk. You can
+then compile and run the example above on eight processes using:
+
+~~~bash
+CC='mpicc -D_MPI=8' make example.tst
+~~~
+
+This assumes that *mpicc* and *mpirun* are available on your system.
+
+## Running on supercomputers
+
+A simple way to run Basilisk code on a supercomputer is to first
+generate a portable (ISO C99) source code on a machine where *qcc* is
+installed i.e.
+
+~~~bash
+%localmachine: qcc -source example.c
+~~~
+
+Then copy the portable source code *_example.c* on the supercomputer
+and compile it:
+
+~~~bash
+%localmachine: scp _example.c login@supercomputer.org:
+%localmachine: ssh login@supercomputer.org
+%supercomputer.org: CC='mpicc -D_MPI=1' qcc _example.c -o example -lm
+~~~
+
+You will then need to use the job submission system of the
+supercomputer to set the number of processes and run the
+executable. See also [this complete
+example](test/mpi-laplacian.c#how-to-run-on-occigen).
