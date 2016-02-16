@@ -44,8 +44,12 @@ and compile it:
 ~~~bash
 %localmachine: scp _example.c login@supercomputer.org:
 %localmachine: ssh login@supercomputer.org
-%supercomputer.org: CC='mpicc -D_MPI=1' qcc _example.c -o example -lm
+%supercomputer.org: mpicc -Wall -std=c99 -O2 -D_MPI=1 _example.c -o example -lm
 ~~~
+
+where the *-std=c99* option sets the version of the language to C99. Note that 
+this option may change depending on the compiler (the options shown above are 
+valid for *gcc* or *icc*, the Intel compiler).
 
 You will then need to use the job submission system of the
 supercomputer to set the number of processes and run the
