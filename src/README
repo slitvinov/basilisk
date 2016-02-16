@@ -79,6 +79,20 @@ $$
 \nabla\cdot\mathbf{u} = 0
 $$
 
+## Electrohydrodynamics
+
+* [Electrohydrodynamics ohmic conduction](ehd_implicit.h)
+$$
+\partial_t\rho_e = \nabla \cdot(K \nabla \phi)
+$$
+$$
+\nabla \cdot (\epsilon \nabla \phi) = - \rho_e
+$$
+* [Ohmic conduction flux of charged species](pnp.h)
+$$
+\partial_tc_i = \nabla \cdot( K_i c_i \nabla \phi)
+$$
+
 ## Other equations
 * [Hele-Shaw/Darcy flows](hele-shaw.h)
 $$
@@ -103,10 +117,6 @@ $$
 * [Poisson--Helmholtz](poisson.h)
 $$
 \nabla\cdot (\alpha\nabla a) + \lambda a = b
-$$
-* [Ohmic conduction flux of charged species](pnp.h)
-$$
-\partial_tc_i = \nabla \cdot( K_i c_i \nabla \phi)
 $$
 
 # General orthogonal coordinates
