@@ -131,6 +131,9 @@ tensor new_symmetric_tensor (const char * name)
     t.y.z = new_scalar(cname);
     t.z.y = t.y.z;
   #endif
+  /* fixme: boundary conditions don't work!  This is because boundary
+     attributes depend on the index and should (but cannot) be
+     different for t.x.y and t.y.x */
   init_tensor (t, NULL);
   return t;
 }
