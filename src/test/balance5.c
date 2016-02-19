@@ -1,7 +1,9 @@
-#include "grid/balance.h"
 #include "utils.h"
 #include "output.h"
+#include "refine_unbalanced.h"
 #include "check_restriction.h"
+
+#define BGHOSTS 2
 
 void image()
 {
@@ -16,9 +18,16 @@ void partition (const char * prog)
 {
   // generates reference solution (in ref)
   init_grid (1);
-  refine (level < 4, NULL);
+  
+  foreach_cell() {
+    cell.pid = pid();
+    cell.flags |= active;
+  }
+  quadtree->dirty = true;
+  
+  refine_unbalanced (level < 5, NULL);
 
-  refine (level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05), NULL);
+  refine_unbalanced (level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05), NULL);
   
   mpi_partitioning();
 
@@ -39,37 +48,50 @@ int main (int argc, char * argv[])
 {
   partition (argv[0]);
   
-  init_grid (16);
+  init_grid (32);
 
   scalar s[];
+  face vector u[];
+  quadtree_trash ({s,u});
   foreach()
     s[] = 1;
-  boundary ({s});
-  scalar * list = {s};
+  foreach_face()
+    u.x[] = 1;
+  
+  boundary ({s,u});
+  scalar * list = {s,u};
+
+  /** the loop below is the prototype for grid/quadtree-common.h:refine()
+      Fixes made here must also be applied to refine() */
   
   int refined;
   do {
     refined = 0;
     quadtree->refined.n = 0;
-    foreach_leaf()
-      if (level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05)) {
-	refine_cell (point, list, 0, &quadtree->refined);
+    foreach()
+      if (is_leaf(cell) && level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05)) {
+	refine_cell (point, list, 0, &quadtree->refined, NULL);
 	refined++;
       }
-    mpi_boundary_refine (list);
-    mpi_boundary_update();
-    balance(0);
-    foreach()
-      assert (s[] == 1);
-    boundary (list);
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);
-    image();
+    if (refined) {
+      mpi_boundary_refine (list);
+      mpi_boundary_update();
+      boundary (list);
+      image();
+      while (balance(0)) {
+	foreach()
+	  foreach_neighbor()
+          assert (s[] == 1);
+	foreach_face()
+	  for (int i = -2; i <= 2; i++)
+	    assert (u.x[0,i] == 1);
+	image();
+      }
+    }
   } while (refined);
-
+  
   debug_mpi (stderr);
 
-  foreach()
-    assert (s[] == 1);
-  
   check_restriction (s);
 }

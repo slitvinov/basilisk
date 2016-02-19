@@ -62,10 +62,4 @@ event image(i++)
 event adapt (i++) {
   astats s = adapt_wavelet ({h}, (double[]){1e-3}, LEVEL);
   fprintf (ferr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
-#if _MPI
-  /* This is necessary because the Saint-Venant solver uses some
-     tricks which use the restricted values of zb and h. */
-  if (s.nc || s.nf)
-    boundary ({zb, h});
-#endif
 }

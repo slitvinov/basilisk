@@ -52,8 +52,7 @@ void rcv_print (Rcv * rcv, FILE * fp, const char * prefix)
   for (int l = 0; l <= rcv->depth; l++)
     if (rcv->halo[l].n > 0)
       foreach_cache_level(rcv->halo[l], l,)
-	//	if (!is_prolongation(cell))
-	  fprintf (fp, "%s%g %g %g %d %d\n", prefix, x, y, z, rcv->pid, level);
+	fprintf (fp, "%s%g %g %g %d %d\n", prefix, x, y, z, rcv->pid, level);
 }
 
 static void rcv_free_buf (Rcv * rcv)
@@ -158,8 +157,6 @@ static Boundary * mpi_boundary = NULL;
 #define REFINE_TAG()        (128)
 #define MOVED_TAG()         (256)
 
-FILE * fpdebug = NULL;
-
 static size_t apply_bc (Rcv * rcv, scalar * list, vector * listf, int l,
 			bool children)
 {
@@ -169,18 +166,11 @@ static size_t apply_bc (Rcv * rcv, scalar * list, vector * listf, int l,
       for (scalar s in list)
 	s[] = *b++;
       for (vector v in listf) {
-	if (fpdebug)
-	  fprintf (fpdebug, "%g %g %g %s %d recv\n",
-		   x, y, *b, v.x.name, rcv->pid);
 	foreach_dimension() {
-	  if (allocated(-1)
-	      // && !is_local(neighbor(-1))
-	      )
+	  if (allocated(-1))
 	    v.x[] = *b;
 	  b++;
-	  if (allocated(1)
-	      // && !is_local(neighbor(1))
-	      )
+	  if (allocated(1))
 	    v.x[1] = *b;
 	  b++;
 	}
@@ -285,15 +275,11 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l,
 	foreach_cache_level(rcv->halo[l], l,) {
 	  for (scalar s in list)
 	    *b++ = s[];
-	  for (vector v in listf) {	
-	    if (fpdebug)
-	      fprintf (fpdebug, "%g %g %g %s %d send\n",
-		       x, y, v.x[], v.x.name, rcv->pid);
+	  for (vector v in listf)
 	    foreach_dimension() {
 	      *b++ = v.x[];
 	      *b++ = allocated(1) ? v.x[1] : undefined;
 	    }
-	  }
 	}
       }
       else { // send children of refined cells
@@ -385,12 +371,7 @@ static void mpi_boundary_halo_restriction (const Boundary * b,
 					   scalar * list, int l)
 {
   MpiBoundary * m = (MpiBoundary *) b;
-  char name[80];
-  sprintf (name, "debug-%d-%d", pid(), l);
-  fpdebug = fopen (name, "w");
   rcv_pid_sync (&m->halo_restriction, list, l, false);
-  fclose (fpdebug);
-  fpdebug = NULL;
 }
 
 trace
@@ -647,10 +628,6 @@ void mpi_boundary_update()
   snd_rcv_free (prolongation);
   snd_rcv_free (halo_restriction);
 
-  char name[80];
-  sprintf (name, "update-%d", pid());
-  FILE * fp = fopen (name, "w");
-  
   /* we build arrays of ghost cell indices for restriction and prolongation
      we do a breadth-first traversal from fine to coarse, so that
      coarsening of unused cells can proceed fully. See also
@@ -717,14 +694,11 @@ void mpi_boundary_update()
 	  Array apro = {NULL, 0, 0}, ares = {NULL, 0, 0};
 	  int pid = cell.pid;
 	  Point p = point;
-	  double x1 = x, y1 = y;
 	  foreach_neighbor()
 	    if (allocated(0) && !is_boundary(cell)) {
 	      if (is_local(cell)) {
-		if (!used) {
+		if (!used)
 		  used = true, rcv_pid_append (res, &ares, pid, p);
-		  fprintf (fp, "%g %g a\n", x1, y1);
-		}
 		if (is_leaf(cell) || !is_active(cell))
 		  rcv_pid_append (pro, &apro, pid, p),
 		    break;
@@ -733,17 +707,13 @@ void mpi_boundary_update()
 		// root cell: fixme: optimise?
 		if (is_refined(cell))
 		  foreach_child()
-		    if (is_local(cell)) {
-		      fprintf (fp, "%g %g b\n", x1, y1);
+		    if (is_local(cell))
 		      used = true, rcv_pid_append (res, &ares, pid, p), break;
-		    }
 		/* see the corresponding condition in
 		   mpi_boundary_refine(), and src/test/mpi-refine1.c
 		   on why `level > 0 && is_local(aparent(0)))` is necessary. */
-		if (level > 0 && is_local(aparent(0))) {
-		  fprintf (fp, "%g %g c\n", x1, y1);
+		if (level > 0 && is_local(aparent(0)))
 		  used = true, rcv_pid_append (res, &ares, pid, p);
-		}
 	      }
 	    }
 	  if (is_leaf(cell)) {
@@ -810,6 +780,10 @@ void mpi_boundary_update()
     }
   
   prof_stop();
+
+#if DEBUG_MPI
+  debug_mpi (NULL);
+#endif
   
   // halo restriction
   scalar halov[];
@@ -868,12 +842,6 @@ void mpi_boundary_update()
     // fixme: optimise, we use only parent values, not neighbors
     mpi_boundary_restriction (mpi_boundary, {halov}, l);
   }
-    
-  fclose(fp);
-
-#if DEBUG_MPI
-  debug_mpi (NULL);
-#endif
 }
 
 trace

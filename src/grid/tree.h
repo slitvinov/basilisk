@@ -634,10 +634,6 @@ static void update_cache_f (void)
     q->active[l].n = q->prolongation[l].n =
       q->restriction[l].n = q->boundary[l].n = 0;
 
-  char name[80];
-  sprintf (name, "cache-%d", pid());
-  FILE * fp = fopen (name, "w");
-
   const unsigned short fboundary = 1 << user;
   foreach_cell() {
     if (is_local(cell)) {
@@ -731,8 +727,6 @@ static void update_cache_f (void)
 @endif // not _MPI
     }
   }
-
-  fclose (fp);
   
   /* optimize caches */
   cache_shrink (&q->leaves);

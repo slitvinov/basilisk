@@ -5,14 +5,6 @@
 
 #define BGHOSTS 2
 
-void image()
-{
-  scalar pid[];
-  foreach()
-    pid[] = pid();
-  output_ppm (pid, n = 128, min = 0, max = npe() - 1);
-}
-
 void refinement()
 {
   refine_unbalanced (level < 5 && y < 0.315 && (1. - x) < 0.438
@@ -81,7 +73,6 @@ int main (int argc, char * argv[])
     u.x[] = 1;
   boundary ({s, u});
   
-  //  do image(); while (balance(0));
   balance(0);
   
   debug_mpi (stderr);
