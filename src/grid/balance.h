@@ -5,8 +5,10 @@ static inline void update_pid (Point point, int pid)
   if (cell.pid == pid)
     return;
   if (is_leaf(cell) && cell.neighbors)
-    foreach_child()
+    foreach_child() {
       cell.pid = pid;
+      cell.flags &= ~ignored;
+    }
   cell.pid = pid;
   cell.flags &= ~(active|border|ignored);
   if (is_local(cell))
@@ -213,6 +215,7 @@ void check_flags()
 #endif
 }
 
+trace
 bool balance (double imbalance)
 {
   check_flags();
@@ -352,7 +355,7 @@ bool balance (double imbalance)
     wait_tree (anext, rnext);
   array_free (anext);
   
-  if (quadtree->dirty) {
+  if (quadtree->dirty || pid_changed) {
 #if 1
     // update active cells: fixme: can this be done above
     static const unsigned short refined = 1 << user;

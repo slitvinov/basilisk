@@ -199,48 +199,54 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l,
   int len = list_len (list) + 2*dimension*vectors_len (listf);
 
   MPI_Request r[m->npid];
+  Rcv * rrcv[m->npid]; // fixme: using NULL requests should be OK
+  int nr = 0;
   for (int i = 0; i < m->npid; i++) {
     Rcv * rcv = &m->rcv[i];
-    r[i] = MPI_REQUEST_NULL;
     if (l <= rcv->depth && rcv->halo[l].n > 0) {
       assert (!rcv->buf);
-      int n = 0;
+      long n = 0;
       if (!children)
 	n = rcv->halo[l].n;
       else
 	foreach_cache_level(rcv->halo[l], l,)
 	  if (is_refined(cell))
 	    n += (1 << dimension);
-      rcv->buf = malloc (sizeof (double)*n*len);
+      if (n > 0) {
+	rcv->buf = malloc (sizeof (double)*n*len);
 #if 0
-      fprintf (stderr, "%s receiving %d doubles from %d level %d\n",
-	       m->name, n*len, rcv->pid, l);
-      fflush (stderr);
+	fprintf (stderr, "%s receiving %d doubles from %d level %d\n",
+		 m->name, n*len, rcv->pid, l);
+	fflush (stderr);
 #endif
 #if 1 /* initiate non-blocking receive */
-      MPI_Irecv (rcv->buf, n*len, MPI_DOUBLE, rcv->pid,
-		 BOUNDARY_TAG(l), MPI_COMM_WORLD, &r[i]);
+	MPI_Irecv (rcv->buf, n*len, MPI_DOUBLE, rcv->pid,
+		   BOUNDARY_TAG(l), MPI_COMM_WORLD, &r[nr]);
+	rrcv[nr++] = rcv;
 #else /* blocking receive (useful for debugging) */
-      MPI_Recv (rcv->buf, n*len, MPI_DOUBLE, rcv->pid,
-		BOUNDARY_TAG(l), MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      apply_bc (rcv, list, listf, l, children);
+	MPI_Recv (rcv->buf, n*len, MPI_DOUBLE, rcv->pid,
+		  BOUNDARY_TAG(l), MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	apply_bc (rcv, list, listf, l, children);
 #endif
+      }
     }
   }
 
   /* non-blocking receives (does nothing when using blocking receives) */
-  int i;
-  MPI_Status s;
-  MPI_Waitany (m->npid, r, &i, &s);
-  while (i != MPI_UNDEFINED) {
-    Rcv * rcv = &m->rcv[i];
-    assert (l <= rcv->depth && rcv->halo[l].n > 0);
-    assert (rcv->buf);
-    size_t size = apply_bc (rcv, list, listf, l, children);
-    int rlen;
-    MPI_Get_count (&s, MPI_DOUBLE, &rlen);
-    assert (rlen == size);
-    MPI_Waitany (m->npid, r, &i, &s);
+  if (nr > 0) {
+    int i;
+    MPI_Status s;
+    MPI_Waitany (nr, r, &i, &s);
+    while (i != MPI_UNDEFINED) {
+      Rcv * rcv = rrcv[i];
+      assert (l <= rcv->depth && rcv->halo[l].n > 0);
+      assert (rcv->buf);
+      size_t size = apply_bc (rcv, list, listf, l, children);
+      int rlen;
+      MPI_Get_count (&s, MPI_DOUBLE, &rlen);
+      assert (rlen == size);
+      MPI_Waitany (nr, r, &i, &s);
+    }
   }
   
   prof_stop();
@@ -269,8 +275,10 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l,
     if (l <= rcv->depth && rcv->halo[l].n > 0) {
       assert (!rcv->buf);
       double * b;
+      long n = 0;
       if (!children) {
-	rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
+	n = rcv->halo[l].n;
+	rcv->buf = malloc (sizeof (double)*n*len);
 	b = rcv->buf;
 	foreach_cache_level(rcv->halo[l], l,) {
 	  for (scalar s in list)
@@ -283,25 +291,28 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l,
 	}
       }
       else { // send children of refined cells
-	int n = 0;
 	foreach_cache_level(rcv->halo[l], l,)
 	  if (is_refined(cell))
 	    n += (1 << dimension);
-	rcv->buf = malloc (sizeof(double)*n*len);
-	b = rcv->buf;
-	foreach_cache_level(rcv->halo[l], l,)
-	  if (is_refined(cell))
-	    foreach_child()
-	      for (scalar s in list)
-		*b++ = s[];
+	if (n > 0) {
+	  rcv->buf = malloc (sizeof(double)*n*len);
+	  b = rcv->buf;
+	  foreach_cache_level(rcv->halo[l], l,)
+	    if (is_refined(cell))
+	      foreach_child()
+		for (scalar s in list)
+		  *b++ = s[];
+	}
       }
 #if 0
       fprintf (stderr, "%s sending %d doubles to %d level %d\n",
 	       m->name, rcv->halo[l].n*len, rcv->pid, l);
       fflush (stderr);
 #endif
-      MPI_Isend (rcv->buf, (b - (double *) rcv->buf),
-		 MPI_DOUBLE, rcv->pid, BOUNDARY_TAG(l), MPI_COMM_WORLD, &rcv->r);
+      if (n > 0)
+	MPI_Isend (rcv->buf, (b - (double *) rcv->buf),
+		   MPI_DOUBLE, rcv->pid, BOUNDARY_TAG(l), MPI_COMM_WORLD,
+		   &rcv->r);
     }
   }
 
@@ -561,14 +572,16 @@ void debug_mpi (FILE * fp1)
 
   fp = fopen_prefix (fp1, "exterior", prefix);
   foreach_cell() {
-    if (!is_active(cell))
+    if (!is_local(cell))
       fprintf (fp, "%s%g %g %g %d %d %d %d\n",
 	       prefix, x, y, z, level, cell.neighbors,
 	       (cell.flags & ignored) ? npe() : cell.pid, cell.flags);
-    else if (!is_border(cell))
+#if 1
+    else if (is_active(cell) && !is_border(cell))
       continue;
     if (is_leaf(cell))
       continue;
+#endif
   }
   if (!fp1)
     fclose (fp);
@@ -764,10 +777,16 @@ void mpi_boundary_update()
 	  } // not leaf
 	  if (used) {
 	    cell.flags &= ~ignored;
+	    if (is_leaf(cell) && cell.neighbors)
+	      foreach_child()
+		cell.flags &= ~ignored;
 	    cell.flags |= rborder;
 	  }
 	  else {
 	    cell.flags |= ignored;
+	    if (is_leaf(cell) && cell.neighbors)
+	      foreach_child()
+		cell.flags |= ignored;
 	    cell.flags &= ~rborder;
 	  }
 	  free (apro.p); free (ares.p);
