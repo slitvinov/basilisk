@@ -23,7 +23,7 @@ typedef struct {
 typedef struct {
   Boundary parent;
   
-  SndRcv restriction, halo_restriction, prolongation;
+  SndRcv restriction, restriction_root, halo_restriction, prolongation;
 } MpiBoundary;
 
 static void cache_level_init (CacheLevel * c)
@@ -41,8 +41,10 @@ static void rcv_append (Point point, Rcv * rcv)
     rcv->depth = level;
   }
   cache_level_append (&rcv->halo[level], point);
+#if 0
   if (is_refined(cell))
     level++;
+#endif
   if (level > rcv->maxdepth)
     rcv->maxdepth = level;
 }
@@ -115,13 +117,48 @@ static void rcv_pid_append (RcvPid * p, Array * a, int pid, Point point)
     rcv_append (point, rcv);
 }
 
-static void rcv_pid_append_children (RcvPid * p, Array * a, int pid, Point point)
+static Rcv * rcv_pid_pointer1 (RcvPid * p, int pid)
+{
+  assert (pid >= 0 && pid < npe());
+  
+  int i;
+  for (i = 0; i < p->npid; i++)
+    if (pid == p->rcv[i].pid)
+      break;
+
+  if (i == p->npid) {
+    p->rcv = realloc (p->rcv, ++p->npid*sizeof (Rcv));
+    Rcv * rcv = &p->rcv[p->npid-1];
+    rcv->pid = pid;
+    rcv->depth = rcv->maxdepth = 0;
+    rcv->halo = malloc (sizeof (CacheLevel));
+    rcv->buf = NULL;
+    cache_level_init (&rcv->halo[0]);
+  }
+  return &p->rcv[i];
+}
+
+static const unsigned short used = 1 << user;
+
+static void rcv_pid_append1 (RcvPid * p, int pid, Point point)
+{
+  Rcv * rcv = rcv_pid_pointer1 (p, pid);
+  if (rcv) {
+    cell.flags |= used;
+    rcv_append (point, rcv);
+  }
+}
+
+#if 0
+static void rcv_pid_append_children (RcvPid * p, Array * a, int pid,
+				     Point point)
 {
   Rcv * rcv = rcv_pid_pointer (p, a, pid);
   if (rcv)
     foreach_child()
       rcv_append (point, rcv);
 }
+#endif
 
 void rcv_pid_write (RcvPid * p, const char * name)
 {
@@ -358,6 +395,7 @@ static void mpi_boundary_destroy (Boundary * b)
 {
   MpiBoundary * m = (MpiBoundary *) b;
   snd_rcv_destroy (&m->restriction);
+  snd_rcv_destroy (&m->restriction_root);
   snd_rcv_destroy (&m->halo_restriction);
   snd_rcv_destroy (&m->prolongation);
   free (m);
@@ -368,6 +406,7 @@ static void mpi_boundary_restriction (const Boundary * b, scalar * list, int l)
 {
   MpiBoundary * m = (MpiBoundary *) b;
   rcv_pid_sync (&m->restriction, list, l, false);
+  rcv_pid_sync (&m->restriction_root, list, l, false);
 }
 
 trace
@@ -375,6 +414,7 @@ void mpi_boundary_restriction_children (const Boundary * b, scalar * list, int l
 {
   MpiBoundary * m = (MpiBoundary *) b;
   rcv_pid_sync (&m->restriction, list, l, true);
+  rcv_pid_sync (&m->restriction_root, list, l, true);
 }
 
 trace
@@ -390,8 +430,10 @@ static void mpi_boundary_halo_prolongation (const Boundary * b,
 					    scalar * list, int l, int depth)
 {
   MpiBoundary * m = (MpiBoundary *) b;
-  if (l == depth)
+  if (true /*l == depth*/) {
     rcv_pid_sync (&m->restriction, list, l, false);
+    rcv_pid_sync (&m->restriction_root, list, l, false);
+  }
   else
     rcv_pid_sync (&m->prolongation, list, l, false);
 }
@@ -405,6 +447,7 @@ void mpi_boundary_new()
   mpi_boundary->halo_prolongation = mpi_boundary_halo_prolongation;
   MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
   snd_rcv_init (&mpi->restriction, "restriction");
+  snd_rcv_init (&mpi->restriction_root, "restriction_root");
   snd_rcv_init (&mpi->halo_restriction, "halo_restriction");
   snd_rcv_init (&mpi->prolongation, "prolongation");
   add_boundary (mpi_boundary);
@@ -439,14 +482,14 @@ void debug_mpi (FILE * fp1)
     char name[80];
     sprintf (name, "halo-%d", pid()); remove (name);
     sprintf (name, "cells-%d", pid()); remove (name);
+    sprintf (name, "faces-%d", pid()); remove (name);
     sprintf (name, "neighbors-%d", pid()); remove (name);
     sprintf (name, "restriction-%d", pid()); remove (name);
+    sprintf (name, "restriction-root-%d", pid()); remove (name);
     sprintf (name, "mpi-restriction-rcv-%d", pid()); remove (name);
-    sprintf (name, "mpi-restriction-children-rcv-%d", pid()); remove (name);
     sprintf (name, "mpi-halo-restriction-rcv-%d", pid()); remove (name);
     sprintf (name, "mpi-prolongation-rcv-%d", pid()); remove (name);
     sprintf (name, "mpi-restriction-snd-%d", pid()); remove (name);
-    sprintf (name, "mpi-restriction-children-snd-%d", pid()); remove (name);
     sprintf (name, "mpi-halo-restriction-snd-%d", pid()); remove (name);
     sprintf (name, "mpi-prolongation-snd-%d", pid()); remove (name);
     sprintf (name, "mpi-border-%d", pid()); remove (name);
@@ -472,9 +515,21 @@ void debug_mpi (FILE * fp1)
     fclose (fp);
   }
   
+  fp = fopen_prefix (fp1, "faces", prefix);
+  foreach_face()
+    fprintf (fp, "%s%g %g %g %d\n", prefix, x, y, z, level);
+  if (!fp1)
+    fclose (fp);
+
   fp = fopen_prefix (fp1, "neighbors", prefix);
-  foreach()
+  foreach() {
+    int n = 0;
+    foreach_neighbor(1)
+      if (is_refined(cell))
+	n++;
     fprintf (fp, "%s%g %g %g %d\n", prefix, x, y, z, cell.neighbors);
+    assert (cell.neighbors == n);
+  }
   if (!fp1)
     fclose (fp);
 
@@ -492,22 +547,12 @@ void debug_mpi (FILE * fp1)
   rcv_pid_print (mpi->restriction.rcv, fp, prefix);
   if (!fp1)
     fclose (fp);
-  
-  fp = fopen_prefix (fp1, "mpi-restriction-children-rcv", prefix);
-  RcvPid * p = mpi->restriction.rcv;
-  for (int i = 0; i < p->npid; i++) {
-    Rcv * rcv = &p->rcv[i];
-    for (int l = 0; l <= rcv->depth; l++)
-      if (rcv->halo[l].n > 0)
-	foreach_cache_level(rcv->halo[l], l,)
-	  if (is_refined(cell))
-	    foreach_child()
-	      fprintf (fp, "%s%g %g %g %d %d\n",
-		       prefix, x, y, z, rcv->pid, level);
-  }
+
+  fp = fopen_prefix (fp1, "mpi-restriction-root-rcv", prefix);
+  rcv_pid_print (mpi->restriction_root.rcv, fp, prefix);
   if (!fp1)
     fclose (fp);
-  
+    
   fp = fopen_prefix (fp1, "mpi-halo-restriction-rcv", prefix);
   rcv_pid_print (mpi->halo_restriction.rcv, fp, prefix);
   if (!fp1)
@@ -517,26 +562,17 @@ void debug_mpi (FILE * fp1)
   rcv_pid_print (mpi->prolongation.rcv, fp, prefix);
   if (!fp1)
     fclose (fp);
+
   fp = fopen_prefix (fp1, "mpi-restriction-snd", prefix);
   rcv_pid_print (mpi->restriction.snd, fp, prefix);
   if (!fp1)
     fclose (fp);
 
-  fp = fopen_prefix (fp1, "mpi-restriction-children-snd", prefix);
-  p = mpi->restriction.snd;
-  for (int i = 0; i < p->npid; i++) {
-    Rcv * rcv = &p->rcv[i];
-    for (int l = 0; l <= rcv->depth; l++)
-      if (rcv->halo[l].n > 0)
-	foreach_cache_level(rcv->halo[l], l,)
-	  if (is_refined(cell))
-	    foreach_child()
-	      fprintf (fp, "%s%g %g %g %d %d\n",
-		       prefix, x, y, z, rcv->pid, level);
-  }
+  fp = fopen_prefix (fp1, "mpi-restriction-root-snd", prefix);
+  rcv_pid_print (mpi->restriction_root.snd, fp, prefix);
   if (!fp1)
     fclose (fp);
-  
+
   fp = fopen_prefix (fp1, "mpi-halo-restriction-snd", prefix);
   rcv_pid_print (mpi->halo_restriction.snd, fp, prefix);
   if (!fp1)
@@ -575,8 +611,8 @@ void debug_mpi (FILE * fp1)
     if (!is_local(cell))
       fprintf (fp, "%s%g %g %g %d %d %d %d\n",
 	       prefix, x, y, z, level, cell.neighbors,
-	       (cell.flags & ignored) ? npe() : cell.pid, cell.flags);
-#if 1
+	       (cell.flags & ignored) ? npe() : cell.pid, cell.flags & leaf);
+#if 0
     else if (is_active(cell) && !is_border(cell))
       continue;
     if (is_leaf(cell))
@@ -624,6 +660,201 @@ static void snd_rcv_free (SndRcv * p)
   p->snd = rcv_pid_new (name);
 }
 
+static bool is_root (Point point)
+{
+  if (is_refined(cell))
+    foreach_child()
+      if (is_local(cell))
+	return true;
+  return false;
+}
+
+static void append_pid (Array * pids, Point point)
+{
+  for (int i = 0, * p = (int *) pids->p; i < pids->len/sizeof(int); i++, p++)
+    if (*p == cell.pid)
+      return;
+  array_append (pids, &cell.pid, sizeof(int));
+}
+
+// see src/figures/prolongation.svg
+static bool is_local_prolongation (Point point, Point p)
+{  
+  int i = p.i - point.i, j = p.j - point.j;
+  if (j == 0) {
+    for (int j = -1; j <= 1; j += 2)
+      if (is_refined(neighbor(0,j)))
+	return true;
+  }
+  else if (i == 0) {
+    for (int i = -1; i <= 1; i += 2)
+      if (is_refined(neighbor(i,0)))
+	return true;
+  }
+  else if (is_refined(neighbor(i,0)) || is_refined(neighbor(0,j)))
+    return true;
+  return false;
+}
+		
+static int locals_pids (Point point, Array * pids)
+{
+  if (is_leaf(cell)) { // prolongation
+    if (is_local(cell)) {
+      Point p = point;
+      foreach_neighbor(1) {
+	if (cell.pid >= 0 && !is_local(cell) &&
+	    (is_refined(cell) || is_local_prolongation (point, p)))
+	  append_pid (pids, point);
+	if (is_refined(cell))
+	  foreach_child()
+	    if (cell.pid >= 0 && !is_local(cell))
+	      append_pid (pids, point);
+      }
+    }
+  }
+  else
+    foreach_neighbor(1) {
+      if (cell.pid >= 0 && !is_local(cell))
+	append_pid (pids, point);
+      if (is_refined(cell))
+	foreach_child()
+	  if (cell.pid >= 0 && !is_local(cell))
+	    append_pid (pids, point);
+    }
+  return pids->len/sizeof(int);
+}
+
+static int root_pids (Point point, Array * pids)
+{
+  foreach_child()
+    if (cell.pid >= 0 && !is_local(cell))
+      append_pid (pids, point);
+  return pids->len/sizeof(int);
+}
+
+trace
+void mpi_boundary_update_new()
+{
+  MpiBoundary * m = (MpiBoundary *) mpi_boundary;
+  SndRcv * restriction = &m->restriction;
+  SndRcv * restriction_root = &m->restriction_root;
+
+#if 0
+  char name[80];
+  sprintf (name, "update-%d", pid());
+  FILE * fp = fopen (name, "w");
+#endif
+  
+  snd_rcv_free (restriction);
+  snd_rcv_free (restriction_root);
+
+  foreach_cell() {
+    if (cell.neighbors) {
+      // sending
+      Array pids = {NULL, 0, 0};
+      int n = locals_pids (point, &pids);
+      if (n) {
+	foreach_child()
+	  if (is_local(cell))
+	    for (int i = 0, * p = (int *) pids.p; i < n; i++, p++)
+	      rcv_pid_append1 (restriction->snd, *p, point);
+	free (pids.p);
+      }
+      // receiving
+      bool locals = false;
+      if (is_leaf(cell)) { // prolongation
+	if (cell.pid >= 0 && !is_local(cell)) {
+	  Point p = point;
+	  foreach_neighbor(1)
+	    if ((is_local(cell) &&
+		 (is_refined(cell) || is_local_prolongation (point, p))) ||
+		is_root(point))
+	      locals = true, break;
+	}
+      }
+      else
+	foreach_neighbor(1)
+	  if (is_local(cell) || is_root(point))
+	    locals = true, break;
+      if (locals)
+	foreach_child()
+	  if (cell.pid >= 0 && !is_local(cell))
+            rcv_pid_append1 (restriction->rcv, cell.pid, point);
+
+      // root cells
+      if (!is_leaf(cell)) {
+	// sending
+	if (is_local(cell)) {
+	  Array pids = {NULL, 0, 0};
+	  // root cell
+	  int n = root_pids (point, &pids);
+	  if (n) {
+	    foreach_neighbor()
+	      for (int i = 0, * p = (int *) pids.p; i < n; i++, p++)
+		if (cell.pid >= 0 && cell.pid != *p)
+		  rcv_pid_append1 (restriction_root->snd, *p, point);
+	    free (pids.p);
+	  }
+	}
+	// receiving
+	else if (cell.pid >= 0) {
+	  bool root = false;
+	  foreach_child()
+	    if (is_local(cell))
+	      root = true, break;
+	  if (root) {
+	    int pid = cell.pid;
+	    foreach_neighbor()
+	      if (cell.pid >= 0 && !is_local(cell))
+		rcv_pid_append1 (restriction_root->rcv, pid, point);
+	  }
+	}
+      }
+    }
+#if 0
+    // we mark all non-local cells as "ignored"
+    if (cell.pid >= 0 && !is_local(cell))
+      cell.flags |= ignored;
+    else // local cells are not ignored
+      cell.flags &= ~ignored;
+#endif
+  }
+
+  // all received non-local cells are marked as "not ignored"
+  
+  
+  /* we mark/remove unused cells
+     we do a breadth-first traversal from fine to coarse, so that
+     coarsening of unused cells can proceed fully. See also
+     quadtree-common.h:coarsen_function() */
+  for (int l = depth(); l >= 0; l--)
+    foreach_cell()
+      if (level == l) {
+	if (cell.flags & used)
+	  cell.flags &= ~used;
+	else if (!is_local(cell) && !is_prolongation(cell)) {
+	  cell.pid = npe();
+	  if (is_leaf(cell) && cell.neighbors)
+	    foreach_child()
+	      cell.pid = npe();
+	}
+	if (is_refined(cell)) {
+	  bool coarsen = true;
+	  foreach_child()
+	    if (!is_leaf(cell) || cell.pid != npe())
+	      coarsen = false, break;
+	  if (coarsen)
+	    coarsen_cell (point, NULL, NULL);
+	}
+	continue; // level == l
+      }
+  
+#if 0
+  fclose (fp);
+#endif
+  
+}
+  
 trace
 void mpi_boundary_update()
 {
@@ -633,14 +864,14 @@ void mpi_boundary_update()
   prof_start ("mpi_boundary_update");
 
   MpiBoundary * m = (MpiBoundary *) mpi_boundary;  
+
+#if 0
   SndRcv * restriction = &m->restriction;
   SndRcv * prolongation = &m->prolongation;
-  SndRcv * halo_restriction = &m->halo_restriction;
 
   snd_rcv_free (restriction);
   snd_rcv_free (prolongation);
-  snd_rcv_free (halo_restriction);
-
+  
   /* we build arrays of ghost cell indices for restriction and prolongation
      we do a breadth-first traversal from fine to coarse, so that
      coarsening of unused cells can proceed fully. See also
@@ -797,14 +1028,21 @@ void mpi_boundary_update()
       if (is_leaf(cell))
 	continue;
     }
+
+#endif  
   
-  prof_stop();
+  mpi_boundary_update_new();
+  
+  prof_stop();  
 
 #if DEBUG_MPI
   debug_mpi (NULL);
 #endif
-  
+
+#if 1
   // halo restriction
+  SndRcv * halo_restriction = &m->halo_restriction;
+  snd_rcv_free (halo_restriction);
   scalar halov[];
   quadtree->dirty = true;
   for (int l = 0; l <= depth(); l++) {
@@ -861,6 +1099,7 @@ void mpi_boundary_update()
     // fixme: optimise, we use only parent values, not neighbors
     mpi_boundary_restriction (mpi_boundary, {halov}, l);
   }
+#endif  
 }
 
 trace
@@ -870,6 +1109,10 @@ void mpi_boundary_refine (scalar * list)
 
   MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
 
+  char name[80];
+  sprintf (name, "refine-%d", pid());
+  FILE * fp = fopen (name, "w");
+  
   /* Send refinement cache to each neighboring process. */
   RcvPid * snd = mpi->restriction.snd;
   MPI_Request r[2*snd->npid];
@@ -904,12 +1147,16 @@ void mpi_boundary_refine (scalar * list)
 	      if (allocated(0) && (is_active(cell) || is_local(aparent(0))))
 		neighbors = true, break;
 	    // refine the cell only if it has local neighbors
-	    if (neighbors)
+	    fprintf (fp, "%g %g\n", x, y);
+	    if (neighbors) {
 	      refine_cell (point, list, 0, &rerefined, NULL);
+	    }
 	  }
 	}
     }
   }
+
+  fclose (fp);
   
   /* check that caches were received OK and free ressources */
   if (nr)
@@ -928,13 +1175,105 @@ void mpi_boundary_refine (scalar * list)
     mpi_boundary_refine (list);
 }
 
-trace
-void mpi_boundary_coarsen (int l)
+static void check_depth()
 {
-  prof_start ("mpi_boundary_coarsen");
+  int max = 0;
+  foreach_cell_all()
+    if (level > max)
+      max = level;
+  if (depth() != max) {
+    FILE * fp = fopen ("layer", "w");
+    fprintf (fp, "depth() = %d, max = %d\n", depth(), max);
+    for (int l = 0; l <= depth(); l++) {
+      Layer * L = quadtree->L[l];
+      fprintf (fp, "Layer level = %d, nc = %d, len = %d\n", l, L->nc, L->len);
+      for (int i = 0; i < L->len; i++)
+	if (L->m[i]) {
+	  fprintf (fp, "  i = %d, refcount = %d\n", i,
+		   *((int *)(((char *)L->m[i]) + L->len*sizeof(char *))));
+	  for (int j = 0; j < L->len; j++)
+	    if (L->m[i][j]) {
+	      fprintf (fp, "    j = %d\n", j);
+	      fprintf (fp, "point %g %g %d\n",
+		       X0 + (i - 1.5)*L0/(1 << l), Y0 + (j - 1.5)*L0/(1 << l),
+		       l);
+	    }
+	}
+    }
+    fclose (fp);
+    fp = fopen ("colls", "w");
+    output_cells (fp);
+    fclose (fp);
+    assert (false);
+  }
+}
 
-  MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
+trace
+void mpi_boundary_coarsen (int l, int too_fine)
+{
+  //  prof_start ("mpi_boundary_coarsen");
+
+  char name[80];
+  sprintf (name, "coarsen-%d-%d", pid(), l);
+  FILE * fp = fopen (name, "w");
+
+#if 1
+  check_depth();
   
+  scalar refined[];
+  quadtree_trash ({refined}); // fixme
+  foreach_cell() {
+    if (level == l) {
+      if (is_local(cell))
+	refined[] = is_refined(cell);
+      continue;
+    }
+    if (is_leaf(cell))
+      continue;
+  }
+  mpi_boundary_restriction (mpi_boundary, {refined}, l);
+
+  foreach_cell() {
+    if (level == l) {
+      if (!is_local(cell) && is_refined(cell) &&
+	  !isnan(refined[]) && !refined[]) {
+	fprintf (fp, "%g %g %d refined\n", x, y, cell.pid);
+	//	coarsen_cell_recursive (point, NULL, NULL);
+	assert (coarsen_cell (point, NULL, NULL));
+      }
+      continue;
+    }
+    if (is_leaf(cell))
+      continue;
+  }
+
+  check_depth();
+
+  if (l > 0) {
+    // fixme: optimize cell.neighbors
+    foreach_cell() {
+      if (level == l) {
+	if (is_local(cell))
+	  refined[] = cell.neighbors;
+	continue;
+      }
+      if (is_leaf(cell))
+	continue;
+    }
+    mpi_boundary_restriction (mpi_boundary, {refined}, l);
+    foreach_cell() {
+      if (level == l) {
+	if (!is_local(cell) && !isnan(refined[]) && refined[])
+	  aparent(0).flags &= ~too_fine;
+	continue;
+      }
+      if (is_leaf(cell))
+	continue;
+    }
+  }
+#else
+  MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
+
   /* Send coarsening cache to each neighboring process. */
   RcvPid * snd = mpi->restriction.snd;
   MPI_Request r[2*snd->npid];
@@ -944,11 +1283,13 @@ void mpi_boundary_coarsen (int l)
       int pid = snd->rcv[i].pid, len = quadtree->coarsened.n;
       MPI_Isend (&quadtree->coarsened.n, 1, MPI_INT, pid, COARSEN_TAG(l),
 		 MPI_COMM_WORLD, &r[nr++]);
-      if (len > 0)
+      fprintf (fp, "%d sending %d to %d\n", pid(), len, pid);
+      if (len > 0) {
 	MPI_Isend (quadtree->coarsened.p, sizeof(IndexLevel)/sizeof(int)*len,
 		   MPI_INT, pid, COARSEN_TAG(l), MPI_COMM_WORLD, &r[nr++]);
+      }
     }
-
+  
   /* Receive coarsening cache from each (fine enough) neighboring process. 
    fixme: use non-blocking receives */
   RcvPid * rcv = mpi->restriction.rcv;
@@ -957,6 +1298,7 @@ void mpi_boundary_coarsen (int l)
       int pid = rcv->rcv[i].pid, len;
       MPI_Recv (&len, 1, MPI_INT, pid, COARSEN_TAG(l),
 		MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      fprintf (fp, "%d receiving %d from %d\n", pid(), len, pid);
       if (len > 0) {
 	IndexLevel p[len];
 	MPI_Recv (p, sizeof(IndexLevel)/sizeof(int)*len,
@@ -964,16 +1306,21 @@ void mpi_boundary_coarsen (int l)
 		  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	CacheLevel coarsened = {p, len, len};
 	foreach_cache_level (coarsened, l,)
-	  if (allocated(0) && is_refined(cell))
+	  if (allocated(0) && is_refined(cell)) {
+	    fprintf (fp, "%g %g %d coarsened\n", x, y, pid);
 	    coarsen_cell_recursive (point, NULL, NULL);
+	  }
       }
     }
 
   /* check that caches were received OK and free resources */
   if (nr)
     MPI_Waitall (nr, r, MPI_STATUSES_IGNORE);
-
-  prof_stop();  
+#endif
+  
+  fclose (fp);
+  
+  //  prof_stop();
 }
 
 static void flag_border_cells()
@@ -1138,23 +1485,32 @@ double z_indexing (scalar index, bool leaves)
   for (int l = 0; l < depth(); l++) {
     boundary_iterate (restriction, {index}, l);
     foreach_cell() {
-      if (is_leaf(cell))
-	continue;
       if (level == l) {
-	bool loc = is_local(cell);
-	if (!loc)
-	  foreach_child()
-	    if (is_local(cell))
-	      loc = true, break;
-	if (loc) {
-	  int i = index[] + !leaves;
-	  foreach_child() {
-	    index[] = i;
-	    i += size[]; 
+	if (is_leaf(cell)) {
+	  if (is_local(cell) && cell.neighbors) {
+	    int i = index[];
+	    foreach_child()
+	      index[] = i;
+	  }
+	}
+	else { // not leaf
+	  bool loc = is_local(cell);
+	  if (!loc)
+	    foreach_child()
+	      if (is_local(cell))
+		loc = true, break;
+	  if (loc) {
+	    int i = index[] + !leaves;
+	    foreach_child() {
+	      index[] = i;
+	      i += size[]; 
+	    }
 	  }
 	}
 	continue;
       }
+      if (is_leaf(cell))
+	continue;
     }
   }
   boundary_iterate (restriction, {index}, depth());

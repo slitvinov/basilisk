@@ -63,22 +63,20 @@ void recursive (Point point)
     stage = stack[_s].stage; _s--; }
 #endif
 
-@def foreach_cell()
+@def foreach_cell_root(root)
   {
     int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);
+    Point point;
 #if dimension == 1
-    Point point = {GHOSTS,0};
     struct { int l, i, stage; } stack[STACKSIZE];
 #elif dimension == 2
-    Point point = {GHOSTS,GHOSTS,0};
     struct { int l, i, j, stage; } stack[STACKSIZE];
 #else // dimension == 3
     int kg = 0; NOT_UNUSED(kg);
-    Point point = {GHOSTS,GHOSTS,GHOSTS,0};
     struct { int l, i, j, k, stage; } stack[STACKSIZE];
 #endif
     int _s = -1;
-    _push (0, GHOSTS, GHOSTS, GHOSTS, 0); /* the root cell */
+    _push (0, root.i, root.j, root.k, 0);
     while (_s >= 0) {
       int stage;
       _pop();
@@ -89,7 +87,7 @@ void recursive (Point point)
 	POINT_VARIABLES;
 	/* do something */
 @
-@def end_foreach_cell()
+@def end_foreach_cell_root()
         if (point.level < quadtree->depth) {
 	  _push (point.level, point.i, point.j, point.k, 1);
           _push (point.level + 1, _LEFT, _BOTTOM, _BACK, 0);
@@ -124,22 +122,45 @@ void recursive (Point point)
   }
 @
 
-@def foreach_cell_post(condition)
+@def foreach_cell() {
+#if dimension == 1
+  Point root = {GHOSTS,0};
+#elif dimension == 2
+  Point root = {GHOSTS,GHOSTS,0};
+#else // dimension == 3
+  Point root = {GHOSTS,GHOSTS,GHOSTS,0};
+#endif
+  foreach_cell_root (root)
+@
+@define end_foreach_cell() end_foreach_cell_root() }
+
+@def foreach_cell_all() {
+  Point root = { .level = 0 };
+  for (root.i = 0; root.i <= 2*GHOSTS; root.i++)
+#if dimension >= 2
+    for (root.j = 0; root.j <= 2*GHOSTS; root.j++)
+#endif
+#if dimension >= 3
+      for (root.k = 0; root.k <= 2*GHOSTS; root.k++)
+#endif
+	foreach_cell_root (root)
+@
+@define end_foreach_cell_all() end_foreach_cell_root() }
+
+@def foreach_cell_post_root(condition, root)
   {
     int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);
+    Point point;
 #if dimension == 1
-    Point point = {GHOSTS,0};
     struct { int l, i, stage; } stack[STACKSIZE];
 #elif dimension == 2
-    Point point = {GHOSTS,GHOSTS,0};
     struct { int l, i, j, stage; } stack[STACKSIZE];
 #else // dimension == 3
     int kg = 0; NOT_UNUSED(kg);
-    Point point = {GHOSTS,GHOSTS,GHOSTS,0};
     struct { int l, i, j, k, stage; } stack[STACKSIZE];
 #endif
     int _s = -1;
-    _push (0, GHOSTS, GHOSTS, GHOSTS, 0); /* the root cell */
+    _push (0, root.i, root.j, root.k, 0); /* the root cell */
     while (_s >= 0) {
       int stage;
       _pop();
@@ -221,9 +242,35 @@ void recursive (Point point)
         POINT_VARIABLES;
 	/* do something */
 @
-@def end_foreach_cell_post()
+@def end_foreach_cell_post_root()
       }
       }
     }
   }
 @
+
+@def foreach_cell_post(condition)
+  {
+#if dimension == 1
+    Point root = {GHOSTS,0};
+#elif dimension == 2
+    Point root = {GHOSTS,GHOSTS,0};
+#else // dimension == 3
+    Point root = {GHOSTS,GHOSTS,GHOSTS,0};
+#endif
+    foreach_cell_post_root(condition, root)
+@
+@define end_foreach_cell_post() end_foreach_cell_post_root() }
+
+@def foreach_cell_post_all(condition) {
+  Point root = { .level = 0 };
+  for (root.i = 0; root.i <= 2*GHOSTS; root.i++)
+#if dimension >= 2
+    for (root.j = 0; root.j <= 2*GHOSTS; root.j++)
+#endif
+#if dimension >= 3
+      for (root.k = 0; root.k <= 2*GHOSTS; root.k++)
+#endif
+	foreach_cell_post_root (condition, root)
+@
+@define end_foreach_cell_post_all() end_foreach_cell_post_root() }

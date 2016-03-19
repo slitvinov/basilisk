@@ -197,6 +197,7 @@ static bool layer_remove_row (Layer * l, int i)
       destroy_layer (l);
       return true; // layer has been destroyed
     }
+    assert (l->nc >= 0);
   }
   return false;
 }
@@ -645,7 +646,7 @@ static void update_cache_f (void)
     if (!is_boundary(cell))
       // look in a 5x5 neighborhood for boundary cells
       foreach_neighbor (BGHOSTS)
-	if (is_boundary(cell) && !(cell.flags & fboundary)) {
+	if (allocated(0) && is_boundary(cell) && !(cell.flags & fboundary)) {
 	  cache_level_append (&q->boundary[level], point);
 	  cell.flags |= fboundary;
 	}
@@ -920,6 +921,8 @@ static void alloc_children (Point point)
 {
   if (point.level == quadtree->depth)
     update_depth (+1);
+  else if (allocated_child(0,0,0))
+    return;
   
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
@@ -933,6 +936,15 @@ static void alloc_children (Point point)
       b += len;
     }
   }
+
+  int pid = cell.pid;
+  foreach_child() {
+    cell.pid = pid;
+@if TRASH
+    for (scalar s in all)
+      s[] = undefined;
+@endif    
+  }
 }
 
 static void free_children (Point point)
@@ -945,7 +957,20 @@ static void free_children (Point point)
     for (int l = 0; l < 2; l++)
       CHILD(k,l,0) = NULL;
     if (layer_remove_row (L, 2*point.i - GHOSTS + k)) {
+#if 0
       assert (point.level + 1 == quadtree->depth);
+#else
+      if (point.level + 1 != quadtree->depth) {
+	FILE * fp = fopen ("bugos", "w");
+	foreach_cell_all() {
+	  double x = X0 + (point.i - 1.5)*L0/(1 << point.level);
+	  double y = Y0 + (point.j - 1.5)*L0/(1 << point.level);
+	  fprintf (fp, "%g %g %d %d\n", x, y, level, cell.pid);
+	}
+	fclose (fp);
+	assert (false);
+      }
+#endif
       update_depth (-1);
     }
   }
@@ -992,21 +1017,9 @@ static void free_children (Point point)
 void increment_neighbors (Point point)
 {
   quadtree->dirty = true;
-  foreach_neighbor (GHOSTS/2) {
-    if (cell.neighbors == 0) {
+  foreach_neighbor (GHOSTS/2)
+    if (cell.neighbors++ == 0)
       alloc_children (point);
-      
-      int pid = cell.pid;
-      foreach_child() {
-	cell.pid = pid;
-@if TRASH
-        for (scalar s in all)
-	  s[] = undefined;
-@endif
-      }
-    }
-    cell.neighbors++;
-  }
 }
 
 void decrement_neighbors (Point point)
@@ -1018,6 +1031,13 @@ void decrement_neighbors (Point point)
       if (cell.neighbors == 0)
 	free_children (point);
     }
+  if (cell.neighbors) {
+    int pid = cell.pid;
+    foreach_child() {
+      cell.flags = 0;
+      cell.pid = pid;
+    }
+  }
 }
 
 void realloc_scalar (void)
@@ -1144,9 +1164,9 @@ static bool diagonal_neighbor_2D (Point point, bool (cond)(Point),
 #endif
       for (int i = -k; i <= k; i += 2*k)
 	for (int j = -k; j <= k; j += 2*k)
-	  if (is_neighbor(i,j) &&
-	      is_boundary(neighbor(i,0)) &&
-	      is_boundary(neighbor(0,j))) {
+	  if (allocated(i,j) && is_neighbor(i,j) &&
+	      allocated(i,0) && is_boundary(neighbor(i,0)) &&
+	      allocated(0,j) && is_boundary(neighbor(0,j))) {
 	    Point n = neighborp(i,j),
 	      n1 = neighborp(i,0), n2 = neighborp(0,j);
 	    int id1 = bid(neighbor(i,0)), id2 = bid(neighbor(0,j));
@@ -1364,7 +1384,7 @@ static void box_boundary_halo_prolongation (const Boundary * b,
     box_boundaries (l, retrue, retleafhalo, list);
   enable_fpe_for_mpi();
 }
- 
+
 #define mask(func) {					\
   foreach_cell_post(!is_leaf(cell)) {			\
     if (is_leaf(cell)) {				\
@@ -1374,20 +1394,14 @@ static void box_boundary_halo_prolongation (const Boundary * b,
     }							\
     else { /* not a leaf */				\
       int pid = -1;					\
-      foreach_child() {					\
+      foreach_child()					\
 	if (cell.pid >= 0 || pid < 0)			\
 	  pid = cell.pid;				\
-      }							\
       cell.pid = pid;					\
       if (pid < 0) {					\
 	/* fixme: call coarsen_cell()? */		\
 	cell.flags |= leaf;				\
 	decrement_neighbors (point);			\
-	if (cell.neighbors)				\
-	  foreach_child() {				\
-	    cell.flags &= ~(leaf|active|vertex);	\
-	    cell.pid = pid;				\
-	  }						\
       }							\
     }							\
   }							\
@@ -1537,6 +1551,8 @@ void free_grid (void)
 
 static void refine_level (int depth);
 
+#define NOBALANCE 0
+
 trace
 void init_grid (int n)
 {
@@ -1582,7 +1598,11 @@ void init_grid (int n)
     for (int j = 0; j < L->len; j++)
       L->m[i][j] = calloc (1, sizeof(Cell) + datasize);
   }
-  CELL(L->m[GHOSTS][GHOSTS]).flags |= leaf;
+  CELL(L->m[GHOSTS][GHOSTS]).flags |= leaf
+#if NOBALANCE
+       | active
+#endif
+       ;
   if (pid() == 0)
     CELL(L->m[GHOSTS][GHOSTS]).flags |= active;
   for (int k = -GHOSTS; k <= GHOSTS; k++)
@@ -1592,7 +1612,12 @@ void init_grid (int n)
 	 k > 0 ? -1 - right :
 	 l > 0 ? -1 - top :
 	 l < 0 ? -1 - bottom :
-	 0);
+#if NOBALANCE
+	 pid()
+#else	 
+	 0
+#endif
+	 );
 #else // dimension == 3
   for (int i = 0; i < L->len; i++)
     for (int j = 0; j < L->len; j++) {
@@ -1642,6 +1667,13 @@ void init_grid (int n)
   }
   refine_level (depth);
   trash (all);
+#if NOBALANCE
+@if _MPI
+  void mpi_partitioning();
+  if (N > 1)
+    mpi_partitioning();
+@endif
+#endif
 }
 
 #if dimension == 2
