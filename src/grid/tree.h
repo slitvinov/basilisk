@@ -31,10 +31,8 @@ enum {
   refined   = 1 << 2,
   halo      = 1 << 3,
   border    = 1 << 4,
-  rborder   = 1 << 5,
-  vertex    = 1 << 6,
-  ignored   = 1 << 7,
-  user      = 8,
+  vertex    = 1 << 5,
+  user      = 6,
 
   face_x = 1 << 0
 #if dimension >= 2
@@ -49,7 +47,6 @@ enum {
 @define is_leaf(cell)    ((cell).flags & leaf)
 @define is_coarse()      ((cell).neighbors > 0)
 @define is_border(cell)  ((cell).flags & border)
-@define is_rborder(cell) ((cell).flags & rborder)
 @define is_local(cell)   ((cell).pid == pid())
 
 // Caches
@@ -244,7 +241,6 @@ typedef struct {
   CacheLevel * prolongation; /* halo prolongation indices for each level */
   CacheLevel * restriction;  /* halo restriction indices for each level */
   CacheLevel * boundary;  /* boundary indices for each level */
-  CacheLevel   coarsened; /* coarsened cells */
   
   bool dirty;       /* whether caches should be updated */
 } Quadtree;
@@ -884,12 +880,14 @@ static void update_depth (int inc)
   cache_level_resize (boundary, inc);
 }
 
-#if dimension == 1
 static void alloc_children (Point point)
 {
   if (point.level == quadtree->depth)
     update_depth (+1);
+  else if (allocated_child(0,0,0))
+    return;
   
+#if dimension == 1
   /* low-level memory management */
   Layer * L = quadtree->L[point.level + 1];
   size_t len = sizeof(Cell) + datasize;
@@ -900,8 +898,46 @@ static void alloc_children (Point point)
     CHILD(k,0,0) = b;
     b += len;
   }
+#elif dimension == 2
+  /* low-level memory management */
+  Layer * L = quadtree->L[point.level + 1];
+  size_t len = sizeof(Cell) + datasize;
+  char * b = mempool_alloc0 (L->pool);
+  for (int k = 0; k < 2; k++) {
+    layer_add_row (L, 2*point.i - GHOSTS + k);
+    for (int l = 0; l < 2; l++) {
+      assert (!CHILD(k,l,0));
+      CHILD(k,l,0) = b;
+      b += len;
+    }
+  }
+#else // dimension == 3
+  /* low-level memory management */
+  Layer * L = quadtree->L[point.level + 1];
+  size_t len = sizeof(Cell) + datasize;
+  char * b = mempool_alloc0 (L->pool);
+  for (int k = 0; k < 2; k++)
+    for (int l = 0; l < 2; l++) {
+      layer_add_row (L, 2*point.i - GHOSTS + k, 2*point.j - GHOSTS + l);
+      for (int n = 0; n < 2; n++) {
+	assert (!CHILD(k,l,n));
+	CHILD(k,l,n) = b;
+	b += len;
+      }
+    }
+#endif
+  
+  int pid = cell.pid;
+  foreach_child() {
+    cell.pid = pid;
+@if TRASH
+    for (scalar s in all)
+      s[] = undefined;
+@endif    
+  }
 }
 
+#if dimension == 1 
 static void free_children (Point point)
 {
   /* low-level memory management */
@@ -917,36 +953,6 @@ static void free_children (Point point)
   }
 }
 #elif dimension == 2
-static void alloc_children (Point point)
-{
-  if (point.level == quadtree->depth)
-    update_depth (+1);
-  else if (allocated_child(0,0,0))
-    return;
-  
-  /* low-level memory management */
-  Layer * L = quadtree->L[point.level + 1];
-  size_t len = sizeof(Cell) + datasize;
-  char * b = mempool_alloc0 (L->pool);
-  for (int k = 0; k < 2; k++) {
-    layer_add_row (L, 2*point.i - GHOSTS + k);
-    for (int l = 0; l < 2; l++) {
-      assert (!CHILD(k,l,0));
-      CHILD(k,l,0) = b;
-      b += len;
-    }
-  }
-
-  int pid = cell.pid;
-  foreach_child() {
-    cell.pid = pid;
-@if TRASH
-    for (scalar s in all)
-      s[] = undefined;
-@endif    
-  }
-}
-
 static void free_children (Point point)
 {
   /* low-level memory management */
@@ -957,45 +963,12 @@ static void free_children (Point point)
     for (int l = 0; l < 2; l++)
       CHILD(k,l,0) = NULL;
     if (layer_remove_row (L, 2*point.i - GHOSTS + k)) {
-#if 0
       assert (point.level + 1 == quadtree->depth);
-#else
-      if (point.level + 1 != quadtree->depth) {
-	FILE * fp = fopen ("bugos", "w");
-	foreach_cell_all() {
-	  double x = X0 + (point.i - 1.5)*L0/(1 << point.level);
-	  double y = Y0 + (point.j - 1.5)*L0/(1 << point.level);
-	  fprintf (fp, "%g %g %d %d\n", x, y, level, cell.pid);
-	}
-	fclose (fp);
-	assert (false);
-      }
-#endif
       update_depth (-1);
     }
   }
 }
 #else // dimension == 3
-static void alloc_children (Point point)
-{
-  if (point.level == quadtree->depth)
-    update_depth (+1);
-  
-  /* low-level memory management */
-  Layer * L = quadtree->L[point.level + 1];
-  size_t len = sizeof(Cell) + datasize;
-  char * b = mempool_alloc0 (L->pool);
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++) {
-      layer_add_row (L, 2*point.i - GHOSTS + k, 2*point.j - GHOSTS + l);
-      for (int n = 0; n < 2; n++) {
-	assert (!CHILD(k,l,n));
-	CHILD(k,l,n) = b;
-	b += len;
-      }
-    }
-}
-
 static void free_children (Point point)
 {
   /* low-level memory management */
@@ -1496,7 +1469,6 @@ void free_grid (void)
   free (q->faces.p);
   free (q->vertices.p);
   free (q->refined.p);
-  free (q->coarsened.p);
   /* low-level memory management */
   /* the root level is allocated differently */
   Layer * L = q->L[0];

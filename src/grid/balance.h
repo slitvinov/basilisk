@@ -61,32 +61,18 @@ static bool receive_tree (int from, scalar index, FILE * fp)
     foreach_tree (&a, sizeof(Cell) + datasize, NULL) {
       memcpy (((char *)&cell) + sizeof(Cell), ((char *)c) + sizeof(Cell),
 	      datasize);
-      if (fp) {
-	scalar s = {0};
-	fprintf (fp, "%g %g %g %d %d %d %d %g %d recv\n",
+      if (fp)
+	fprintf (fp, "%g %g %g %d %d %d %d recv\n",
 		 x, y, index[], cell.pid,
 		 c->flags & leaf,
-		 cell.flags & leaf, from, s[],
-		 (cell.pid == from) && (c->flags & leaf) && !is_leaf(cell));
-      }
+		 cell.flags & leaf, from);
       if ((c->flags & next) && (c->flags & leaf) && !is_leaf(cell)) {
 	if (fp)
 	  fprintf (fp, "%g %g %g %d blarg\n", x, y, index[], cell.pid);
-	//	  assert (false);
 	if (cell.neighbors)
-	  assert (coarsen_cell (point, NULL, NULL));
+	  assert (coarsen_cell (point, NULL));
 	cell.flags |= leaf;
       }
-#if 1
-      if ((cell.pid == from) && (c->flags & leaf) && !is_leaf(cell)) {
-	assert (false);
-	cell.flags |= leaf;
-	if (cell.neighbors) {
-	  // decrement_neighbors (point);
-	  coarsen_cell_recursive (point, NULL, NULL);
-	}
-      }
-#endif
     }
     free (a.p);
     return true;
@@ -115,6 +101,7 @@ static void check_flags()
 
 static void check_s()
 {
+#if DEBUG_MPI
   extern double t;
   if (t <= 0.1)
     return;
@@ -123,6 +110,7 @@ static void check_s()
     foreach_neighbor()
       if (!is_boundary(cell))
 	assert (!isnan(s[]));
+#endif
 }
 
 trace
@@ -146,33 +134,10 @@ bool balance (double imbalance)
   
   if (nmax - nmin <= 1 || nmax - nmin <= ne*imbalance)
     return false;
-
-#if 0  
-  {
-    char name[80];
-    sprintf (name, "before-%d", pid());
-    FILE * fp = fopen(name, "w");
-    output_cells (fp);
-
-    foreach_cell() {
-      fprintf (fp, "pid %g %g %d\n", x, y, cell.pid);
-      if (is_leaf(cell))
-	continue;
-    }
-
-    fclose (fp);
-  }
-#endif
   
   scalar index[];
   quadtree_trash ({index}); // fixme
   z_indexing (index, true);
-  
-#if 0  
-  // parallel index restriction
-  for (int l = depth(); l >= 0; l--)
-    mpi_boundary_restriction_children (mpi_boundary, {index}, l);
-#endif
   
 #if DEBUG_MPI
   char name[80];
@@ -183,19 +148,6 @@ bool balance (double imbalance)
 #endif
 
   // compute new pid, stored in index[]
-#if 0
-  foreach_cell() {
-    if (!isnan(index[]) && cell.pid < npe()) {
-      int pid = balanced_pid (index[], nt);
-      assert (cell.pid >= 0);
-      index[] = clamp (pid, cell.pid - 1, cell.pid + 1);
-    }
-    else
-      index[] = npe();
-    if (fp && index[] >= 0)
-      fprintf (fp, "%g %g %g %d index\n", x, y, index[], cell.pid);
-  }
-#else
   foreach_cell()
     if (is_local(cell)) {
       int pid = balanced_pid (index[], nt);
@@ -205,19 +157,12 @@ bool balance (double imbalance)
     }
   for (int l = 0; l <= depth(); l++)
     boundary_iterate (restriction, {index}, l);
-#endif
     
   Array * anext = neighborhood (index, pid() + 1, fp);
-  Array * aprev = neighborhood (index, pid() - 1, NULL);
+  Array * aprev = neighborhood (index, pid() - 1, fp);
 
-  if (fp) {
-    check_flags();
-    foreach_tree (anext, sizeof(Cell) + datasize, NULL)
-      fprintf (fp, "%g %g %g %d next\n", x, y, index[], cell.pid);
-    foreach_tree (aprev, sizeof(Cell) + datasize, NULL)
-      fprintf (fp, "%g %g %g %d prev\n", x, y, index[], cell.pid);
-  }
-
+  check_flags();
+  
   /* fixme: this should be optimisable using the fact that "send to
      next" must be mutually exclusive with "receive from next" */
   // send mesh to previous/next process
@@ -241,12 +186,6 @@ bool balance (double imbalance)
     wait_tree (anext, rnext);
   array_free (anext);
 
-#if 0
-  if (fp)
-    fclose (fp);
-  return false;
-#endif
-
   foreach_cell_all() {
     if (fp)
       fprintf (fp, "%g %g %g %d %d nindex\n", x, y, index[], cell.pid,
@@ -269,18 +208,19 @@ bool balance (double imbalance)
 	fprintf (fp, "%g %g %g %d %d %d new\n", x, y, index[], cell.pid,
 		 is_leaf(cell), cell.neighbors);
       cell.pid = index[];
-      cell.flags &= ~(active|border|ignored);
+      cell.flags &= ~(active|border);
       if (is_local(cell))
 	cell.flags |= active;
       if (is_leaf(cell) && cell.neighbors) {
 	int pid = cell.pid;
 	foreach_child() {
+#if DEBUG_MPI
 	  if (!isnan(index[]) && index[] < npe() && index[] != pid) {
 	    fprintf (fp, "%g %g %g %d %d bloug\n", x, y, index[], cell.pid, pid);
-	    //	    assert (false);
+	    assert (false);
 	  }
+#endif
 	  cell.pid = pid;
-	  cell.flags &= ~ignored;
 	}
       }
       pid_changed = true;
