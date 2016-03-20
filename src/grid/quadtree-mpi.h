@@ -697,28 +697,19 @@ void mpi_boundary_update()
   /* we mark/remove unused cells
      we do a breadth-first traversal from fine to coarse, so that
      coarsening of unused cells can proceed fully. */
+  
+  static const unsigned short keep = 1 << (user + 1);
   for (int l = depth(); l >= 0; l--)
     foreach_cell()
       if (level == l) {
-	if (cell.flags & used)
-	  cell.flags &= ~used;
-	else if (cell.pid >= 0 && !is_local(cell) && !is_prolongation(cell)) {
-	  cell.pid = npe();
-	  if (is_leaf(cell) && cell.neighbors)
-	    foreach_child()
-	      cell.pid = npe();
-	}
-	if (is_refined(cell)) {
-	  bool coarsen = true;
-	  foreach_child()
-	    if (!is_leaf(cell) || cell.pid != npe())
-	      coarsen = false, break;
-	  if (coarsen)
-	    coarsen_cell (point, NULL);
-	}
+	if (level > 0 && (cell.pid < 0 || is_local(cell) || (cell.flags & used)))
+	  aparent(0).flags |= keep;
+	if (is_refined(cell) && !(cell.flags & keep))
+	  coarsen_cell (point, NULL);
+	cell.flags &= ~(used|keep);
 	continue; // level == l
       }
-  
+
   prof_stop();  
 
 #if DEBUG_MPI
@@ -884,11 +875,9 @@ void mpi_boundary_coarsen (int l, int too_fine)
   check_depth();
   
   scalar refined[];
-  quadtree_trash ({refined}); // fixme
   foreach_cell() {
     if (level == l) {
-      if (is_local(cell))
-	refined[] = is_refined(cell);
+      refined[] = !is_local(cell) || is_refined(cell);
       continue;
     }
     if (is_leaf(cell))
@@ -898,8 +887,7 @@ void mpi_boundary_coarsen (int l, int too_fine)
 
   foreach_cell() {
     if (level == l) {
-      if (!is_local(cell) && is_refined(cell) &&
-	  !isnan(refined[]) && !refined[])
+      if (!is_local(cell) && is_refined(cell) && !refined[])
 	assert (coarsen_cell (point, NULL));
       continue;
     }
@@ -911,22 +899,18 @@ void mpi_boundary_coarsen (int l, int too_fine)
 
   if (l > 0) {
     // fixme: optimize cell.neighbors
-    foreach_cell() {
+    foreach_cell()
       if (level == l) {
-	if (is_local(cell))
-	  refined[] = cell.neighbors;
+	refined[] = is_local(cell) ? cell.neighbors : 0;
 	continue;
       }
-      if (is_leaf(cell))
-	continue;
-    }
     mpi_boundary_restriction (mpi_boundary, {refined}, l);
     foreach_cell() {
-      if (level == l) {
-	if (!is_local(cell) && !isnan(refined[]) && refined[])
+      if (level == l)
+	if (!is_local(cell) && is_local(aparent(0)) && refined[]) {
 	  aparent(0).flags &= ~too_fine;
-	continue;
-      }
+	  continue;
+	}
       if (is_leaf(cell))
 	continue;
     }

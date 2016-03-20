@@ -1,5 +1,11 @@
 // Dynamic load-balancing
 
+@if TRASH
+@ define is_indexed(v) (cell.pid < 0 || (!isnan(v) && v >= 0))
+@else
+@ define is_indexed(v) (cell.pid < 0 || v >= 0)
+@endif
+
 Array * neighborhood (scalar index, int nextpid, FILE * fp)
 {
   const unsigned short sent = 1 << user;
@@ -14,7 +20,7 @@ Array * neighborhood (scalar index, int nextpid, FILE * fp)
 	if (fp)
 	  fprintf (fp, "%g %g %g %d root\n", x, y, index[], cell.pid);
 	foreach_neighbor()
-	  if (cell.pid != nextpid && !isnan(index[]))
+	  if (cell.pid != nextpid && is_indexed(index[]))
 	    cell.flags |= sent;
       }
     }
@@ -25,7 +31,7 @@ Array * neighborhood (scalar index, int nextpid, FILE * fp)
       foreach_neighbor(1)
 	if (cell.neighbors && cell.pid != nextpid)
 	  foreach_child()
-	    if (cell.pid != nextpid && !isnan(index[]))
+	    if (cell.pid != nextpid && is_indexed(index[]))
 	      cell.flags |= sent;
     }
     if (is_leaf(cell))
@@ -61,6 +67,7 @@ static bool receive_tree (int from, scalar index, FILE * fp)
     foreach_tree (&a, sizeof(Cell) + datasize, NULL) {
       memcpy (((char *)&cell) + sizeof(Cell), ((char *)c) + sizeof(Cell),
 	      datasize);
+      assert (cell.pid < 0 || index[] >= 0);
       if (fp)
 	fprintf (fp, "%g %g %g %d %d %d %d recv\n",
 		 x, y, index[], cell.pid,
@@ -136,7 +143,6 @@ bool balance (double imbalance)
     return false;
   
   scalar index[];
-  quadtree_trash ({index}); // fixme
   z_indexing (index, true);
   
 #if DEBUG_MPI
@@ -148,16 +154,19 @@ bool balance (double imbalance)
 #endif
 
   // compute new pid, stored in index[]
-  foreach_cell()
+  foreach_cell() {
     if (is_local(cell)) {
       int pid = balanced_pid (index[], nt);
       index[] = clamp (pid, cell.pid - 1, cell.pid + 1);
       if (fp)
 	fprintf (fp, "%g %g %g %d index\n", x, y, index[], cell.pid);
     }
+    else
+      index[] = -1;
+  }
   for (int l = 0; l <= depth(); l++)
     boundary_iterate (restriction, {index}, l);
-    
+
   Array * anext = neighborhood (index, pid() + 1, fp);
   Array * aprev = neighborhood (index, pid() - 1, fp);
 
@@ -199,11 +208,11 @@ bool balance (double imbalance)
       free_children (point);
     }
   }
-  
+
   // set new pids
   int pid_changed = false;
   foreach_cell() {
-    if (!isnan(index[]) && cell.pid != index[]) {
+    if (is_indexed(index[]) && cell.pid != index[]) {
       if (fp)
 	fprintf (fp, "%g %g %g %d %d %d new\n", x, y, index[], cell.pid,
 		 is_leaf(cell), cell.neighbors);
@@ -213,15 +222,8 @@ bool balance (double imbalance)
 	cell.flags |= active;
       if (is_leaf(cell) && cell.neighbors) {
 	int pid = cell.pid;
-	foreach_child() {
-#if DEBUG_MPI
-	  if (!isnan(index[]) && index[] < npe() && index[] != pid) {
-	    fprintf (fp, "%g %g %g %d %d bloug\n", x, y, index[], cell.pid, pid);
-	    assert (false);
-	  }
-#endif
+	foreach_child()
 	  cell.pid = pid;
-	}
       }
       pid_changed = true;
     }

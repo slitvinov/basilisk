@@ -253,8 +253,7 @@ astats adapt_wavelet (struct Adapt p)
 	      // cell was refined previously, unset the flag
 	      cell.flags &= ~(refined|too_fine);
 	    else if (cell.flags & too_fine) {
-	      if (is_local(cell) &&
-		  coarsen_cell (point, listc))
+	      if (is_local(cell) && coarsen_cell (point, listc))
 		st.nc++;
 	      cell.flags &= ~too_fine; // do not coarsen parent
 	    }
