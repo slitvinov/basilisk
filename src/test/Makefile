@@ -177,15 +177,13 @@ mpi-circle.tst:		CC = mpicc -D_MPI=5
 
 mpi-circle1.c: mpi-circle.c
 	ln -s mpi-circle.c mpi-circle1.c
-bump2Dp.c: bump2D.c
-	ln -s bump2D.c bump2Dp.c
 
 mpi-circle1.tst:  CC = mpicc -D_MPI=6
 mpi-flux.tst:     CC = mpicc -D_MPI=6
 mpi-interpu.tst:  CC = mpicc -D_MPI=5
 mpi-coarsen.tst:  CC = mpicc -D_MPI=2
 mpi-coarsen1.tst: CC = mpicc -D_MPI=5
-bump2Dp.tst:      CC = mpicc -D_MPI=9
+bump2Dp.tst:      CC = mpicc -D_MPI=55
 vortex.tst:	  CC = mpicc -D_MPI=7 -DJACOBI=1
 axiadvection.tst: CC = mpicc -D_MPI=7 -DJACOBI=1
 hf1.tst:	  CC = mpicc -D_MPI=7
