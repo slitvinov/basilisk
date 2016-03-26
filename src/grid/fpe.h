@@ -1,6 +1,14 @@
-// Catching floating-point-exceptions
+// Catching floating-point-exceptions (and other signals)
 
 @include <signal.h>
+@include <unistd.h>
+
+static void gdb()
+{
+  char command[80];
+  sprintf (command, "exec xterm -e gdb -p %d", getpid());
+  system (command);
+}
 
 static void caught_abort (int sig)
 {
@@ -9,17 +17,20 @@ static void caught_abort (int sig)
     debug (last_point);
     fputc ('\n', stderr);
   }
+  gdb();
 }
 
 static void caught_fpe (int sig)
 {
   fprintf (stderr, "Caught signal %d (Floating Point Exception)\n", sig);
+  gdb();
   abort();
 }
 
 static void caught_segfault (int sig)
 {
   fprintf (stderr, "Caught signal %d (Segmentation Fault)\n", sig);
+  gdb();
   abort();
 }
 
