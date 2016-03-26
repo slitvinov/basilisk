@@ -148,9 +148,7 @@ static size_t apply_bc (Rcv * rcv, scalar * list, vector * listf, int l)
       s[] = *b++;
     for (vector v in listf) {
       foreach_dimension() {
-	if (allocated(-1))
-	  v.x[] = *b;
-	b++;
+	v.x[] = *b++;
 	if (allocated(1))
 	  v.x[1] = *b;
 	b++;
@@ -559,20 +557,18 @@ static void append_pid (Array * pids, Point point)
 
 // see src/figures/prolongation.svg
 static bool is_local_prolongation (Point point, Point p)
-{  
-  int i = p.i - point.i, j = p.j - point.j;
-  if (j == 0) {
-    for (int j = -1; j <= 1; j += 2)
-      if (is_refined(neighbor(0,j)))
-	return true;
+{
+#if dimension == 2
+  struct { int x, y; } dp = {p.i - point.i, p.j - point.j};
+#elif dimension == 3
+  struct { int x, y, z; } dp = {p.i - point.i, p.j - point.j, p.k - point.k};
+#endif
+  foreach_dimension() {
+    if (dp.x == 0 && (is_refined(neighbor(-1)) || is_refined(neighbor(1))))
+      return true;
+    if (is_refined(neighbor(dp.x)))
+      return true;
   }
-  else if (i == 0) {
-    for (int i = -1; i <= 1; i += 2)
-      if (is_refined(neighbor(i,0)))
-	return true;
-  }
-  else if (is_refined(neighbor(i,0)) || is_refined(neighbor(0,j)))
-    return true;
   return false;
 }
 		
@@ -623,9 +619,11 @@ void mpi_boundary_update()
   MpiBoundary * m = (MpiBoundary *) mpi_boundary;
   SndRcv * restriction = &m->restriction;
   SndRcv * restriction_root = &m->restriction_root;
+  SndRcv * halo_restriction = &m->halo_restriction;
 
   snd_rcv_free (restriction);
   snd_rcv_free (restriction_root);
+  snd_rcv_free (halo_restriction);
 
   static const unsigned short used = 1 << user;
   foreach_cell()
@@ -694,7 +692,7 @@ void mpi_boundary_update()
       }
     }
 
-  /* we mark/remove unused cells
+  /* we remove unused cells
      we do a breadth-first traversal from fine to coarse, so that
      coarsening of unused cells can proceed fully. */
   
@@ -710,15 +708,13 @@ void mpi_boundary_update()
 	continue; // level == l
       }
 
-  prof_stop();  
+  prof_stop();
 
 #if DEBUG_MPI
   debug_mpi (NULL);
 #endif
 
   // halo restriction
-  SndRcv * halo_restriction = &m->halo_restriction;
-  snd_rcv_free (halo_restriction);
   scalar halov[];
   quadtree->dirty = true;
   for (int l = 0; l <= depth(); l++) {
