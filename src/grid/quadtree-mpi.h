@@ -884,7 +884,7 @@ void mpi_boundary_coarsen (int l, int too_fine)
   foreach_cell() {
     if (level == l) {
       if (!is_local(cell) && is_refined(cell) && !refined[])
-	assert (coarsen_cell (point, NULL));
+	coarsen_cell_recursive (point, NULL);
       continue;
     }
     if (is_leaf(cell))

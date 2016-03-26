@@ -1334,10 +1334,14 @@ static void box_boundary_halo_prolongation (const Boundary * b,
 					    int l, int depth)
 {
   disable_fpe_for_mpi();
+@if _MPI // fixme: prolongation does not work with MPI yet
+    box_boundaries (l, retrue, retrue, list);
+@else
   if (l == depth)
     box_boundaries (l, retrue, retrue, list);
   else
     box_boundaries (l, retrue, retleafhalo, list);
+@endif
   enable_fpe_for_mpi();
 }
 

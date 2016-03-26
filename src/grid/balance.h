@@ -1,10 +1,8 @@
 // Dynamic load-balancing
 
-@if TRASH
-@ define is_indexed(v) (cell.pid < 0 || (!isnan(v) && v >= 0))
-@else
-@ define is_indexed(v) (cell.pid < 0 || v >= 0)
-@endif
+/* fixme: !isnan(v) is only useful because of problems in
+   box_boundaries() on level 0. */
+@define is_indexed(v) (!isnan(v) && v >= 0)
 
 Array * neighborhood (scalar index, int nextpid, FILE * fp)
 {
@@ -67,7 +65,7 @@ static bool receive_tree (int from, scalar index, FILE * fp)
     foreach_tree (&a, sizeof(Cell) + datasize, NULL) {
       memcpy (((char *)&cell) + sizeof(Cell), ((char *)c) + sizeof(Cell),
 	      datasize);
-      assert (cell.pid < 0 || index[] >= 0);
+      assert (index[] >= 0);
       if (fp)
 	fprintf (fp, "%g %g %g %d %d %d %d recv\n",
 		 x, y, index[], cell.pid,
@@ -77,7 +75,7 @@ static bool receive_tree (int from, scalar index, FILE * fp)
 	if (fp)
 	  fprintf (fp, "%g %g %g %d blarg\n", x, y, index[], cell.pid);
 	if (cell.neighbors)
-	  assert (coarsen_cell (point, NULL));
+	  coarsen_cell_recursive (point, NULL);
 	cell.flags |= leaf;
       }
     }
@@ -154,7 +152,7 @@ bool balance (double imbalance)
 #endif
 
   // compute new pid, stored in index[]
-  foreach_cell() {
+  foreach_cell_all() {
     if (is_local(cell)) {
       int pid = balanced_pid (index[], nt);
       index[] = clamp (pid, cell.pid - 1, cell.pid + 1);
@@ -201,7 +199,12 @@ bool balance (double imbalance)
 	       is_leaf(cell));
     if (level < depth() && !cell.neighbors &&
 	point.i > 0 && point.i <= (1 << level) + 2 &&
+#if dimension >= 2
 	point.j > 0 && point.j <= (1 << level) + 2 &&
+#endif
+#if dimension >= 3
+	point.k > 0 && point.k <= (1 << level) + 2 &&
+#endif	
 	allocated_child(0)) {
       if (fp)
 	fprintf (fp, "%g %g %g %d freechildren\n", x, y, index[], cell.pid);

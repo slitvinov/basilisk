@@ -85,10 +85,10 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
 
 bool coarsen_cell (Point point, scalar * list)
 {
-  int pid = cell.pid;
 #if TWO_ONE
   /* check that neighboring cells are not too fine.
      check that children are not different boundaries */
+  int pid = cell.pid;
   foreach_child()
     if (cell.neighbors || (cell.pid < 0 && cell.pid != pid))
       return false; // cannot coarsen
@@ -117,6 +117,19 @@ bool coarsen_cell (Point point, scalar * list)
 @endif
 
   return true;
+}
+
+void coarsen_cell_recursive (Point point, scalar * list)
+{
+#if TWO_ONE
+  /* recursively coarsen children cells */
+  foreach_child()
+    if (cell.neighbors)
+      foreach_neighbor(1)
+	if (is_refined (cell))
+	  coarsen_cell_recursive (point, list);
+#endif
+  assert (coarsen_cell (point, list));
 }
 
 @if _MPI
