@@ -174,20 +174,30 @@ static bool layer_remove_row (Layer * l, int i)
     destroy_layer (l);
     return true; // layer has been destroyed
   }
+  assert (l->nc >= 0);
   return false;
 }
-#elif dimension == 2
-static void layer_add_row (Layer * l, int i)
+#else // dimension != 1
+static void layer_add_row (Layer * l, int i, int j)
 {
   if (!l->m[i]) {
     l->m[i] = new_refarray (l->len, sizeof (char *));
     l->nc++;
   }
   refarray (l->m[i], l->len, sizeof(char *));
+#if dimension > 2
+  if (!l->m[i][j])
+    l->m[i][j] = new_refarray (l->len, sizeof (char *));
+  refarray (l->m[i][j], l->len, sizeof(char *));
+#endif
 }
 
-static bool layer_remove_row (Layer * l, int i)
+static bool layer_remove_row (Layer * l, int i, int j)
 {
+#if dimension > 2
+  if (unrefarray (l->m[i][j], l->len, sizeof (char *)))
+    l->m[i][j] = NULL;
+#endif
   if (unrefarray (l->m[i], l->len, sizeof (char *))) {
     l->m[i] = NULL;
     if (--l->nc == 0) {
@@ -198,34 +208,7 @@ static bool layer_remove_row (Layer * l, int i)
   }
   return false;
 }
-#else // dimension == 3
-static void layer_add_row (Layer * l, int i, int j)
-{
-  if (!l->m[i]) {
-    l->m[i] = new_refarray (l->len, sizeof (char *));
-    l->nc++;
-  }
-  refarray (l->m[i], l->len, sizeof(char *));
-  if (!l->m[i][j])
-    l->m[i][j] = new_refarray (l->len, sizeof (char *));
-  refarray (l->m[i][j], l->len, sizeof(char *));  
-}
-
-static bool layer_remove_row (Layer * l, int i, int j)
-{
-  if (unrefarray (l->m[i][j], l->len, sizeof (char *))) {
-    l->m[i][j] = NULL;
-    if (unrefarray (l->m[i], l->len, sizeof (char *))) {
-      l->m[i] = NULL;
-      if (--l->nc == 0) {
-	destroy_layer (l);
-	return true; // layer has been destroyed
-      }
-    }
-  }
-  return false;
-}
-#endif // dimension == 3
+#endif // dimension != 1
 
 // Quadtree
 
@@ -904,7 +887,7 @@ static void alloc_children (Point point)
   size_t len = sizeof(Cell) + datasize;
   char * b = mempool_alloc0 (L->pool);
   for (int k = 0; k < 2; k++) {
-    layer_add_row (L, 2*point.i - GHOSTS + k);
+    layer_add_row (L, 2*point.i - GHOSTS + k, 0);
     for (int l = 0; l < 2; l++) {
       assert (!CHILD(k,l,0));
       CHILD(k,l,0) = b;
@@ -962,7 +945,7 @@ static void free_children (Point point)
   for (int k = 0; k < 2; k++) {
     for (int l = 0; l < 2; l++)
       CHILD(k,l,0) = NULL;
-    if (layer_remove_row (L, 2*point.i - GHOSTS + k)) {
+    if (layer_remove_row (L, 2*point.i - GHOSTS + k, 0)) {
       assert (point.level + 1 == quadtree->depth);
       update_depth (-1);
     }
@@ -1566,7 +1549,7 @@ void init_grid (int n)
        0;
 #elif dimension == 2
   for (int i = 0; i < L->len; i++) {
-    layer_add_row (L, i);
+    layer_add_row (L, i, 0);
     for (int j = 0; j < L->len; j++)
       L->m[i][j] = calloc (1, sizeof(Cell) + datasize);
   }
