@@ -31,11 +31,14 @@ Array * tree (size_t size, scalar newpid)
       if (cell.pid >= 0 && NEWPID()->leaf)
 	assert (is_leaf(cell));
       if (is_refined(cell)) {
+	/* check that we are not too refined i.e. that none of our
+	   children are prolongations */
 	bool prolo = false;
 	foreach_child()
 	  if (NEWPID()->prolongation)
 	    prolo = true;
 	if (prolo) {
+	  /* if we are too refined, we unrefine before sending */
 	  cell.flags |= leaf;
 	  array_append (a, &cell, sizeof(Cell));
 	  cell.flags &= ~leaf;
@@ -44,14 +47,6 @@ Array * tree (size_t size, scalar newpid)
 	  array_append (a, &cell, sizeof(Cell));
       }
       else
-#if 0
-      if (!is_leaf(cell) && is_newpided() && NEWPID()->leaf) {
-	cell.flags |= leaf;
-	array_append (a, &cell, sizeof(Cell));
-	cell.flags &= ~leaf;
-      }
-      else
-#endif
 	array_append (a, &cell, sizeof(Cell));
     }
     if (cell.flags & next)
@@ -167,7 +162,6 @@ static bool receive_tree (int from, scalar newpid, FILE * fp)
 		 x, y, z, NEWPID()->pid - 1, cell.pid,
 		 c->flags & leaf,
 		 cell.flags & leaf, from, NEWPID()->leaf);
-      //      if ((c->flags & next) && (c->flags & leaf) && !is_leaf(cell)) {
       if (cell.pid >= 0 && NEWPID()->leaf && !is_leaf(cell)) {
 	if (fp)
 	  fprintf (fp, "%g %g %g %d %d blarg\n",
@@ -249,10 +243,12 @@ bool balance (double imbalance)
   z_indexing (newpid, true);
 
   FILE * fp = NULL;
-#if 1 // DEBUG_MPI
+#ifdef DEBUGCOND
   extern double t;
   if (DEBUGCOND)
     fp = lfopen ("bal", "w");
+#elif DEBUG_MPI
+  fp = lfopen ("bal", "w");
 #endif
 
   // compute new pid, stored in newpid[]
@@ -271,7 +267,7 @@ bool balance (double imbalance)
   for (int l = 0; l <= depth(); l++)
     boundary_iterate (restriction, {newpid}, l);
 
-#if 1
+#ifdef DEBUGCOND
   extern double t;
   if (DEBUGCOND) {
     char name[80];
@@ -291,7 +287,7 @@ bool balance (double imbalance)
     }
     fclose (fp);  
   }
-#endif
+#endif // DEBUGCOND
   
   Array * anext = neighborhood (newpid, pid() + 1, fp);
   Array * aprev = neighborhood (newpid, pid() - 1, NULL);
@@ -356,6 +352,7 @@ bool balance (double imbalance)
 	fprintf (fp, "%g %g %g %d %d %d %d %d new\n",
 		 x, y, z, NEWPID()->pid - 1, cell.pid,
 		 is_leaf(cell), cell.neighbors, NEWPID()->leaf);
+#ifdef DEBUGCOND
       if (NEWPID()->leaf) {
 	if (!is_leaf(cell)) {
 	  fprintf (stderr, "not leaf! %g %g %g %d\n", x, y, z, cell.pid);
@@ -365,6 +362,7 @@ bool balance (double imbalance)
 	}
 	assert (is_leaf(cell));
       }
+#endif // DEBUGCOND
       if (cell.pid != NEWPID()->pid - 1) {
 	cell.pid = NEWPID()->pid - 1;
 	cell.flags &= ~(active|border);
@@ -372,22 +370,9 @@ bool balance (double imbalance)
 	  cell.flags |= active;
 	pid_changed = true;
       }
-#if 0      
-      if (NEWPID()->leaf && cell.neighbors) {
-	int pid = cell.pid;
-	foreach_child()
-	  cell.pid = pid;
-      }
-#endif
     }
-    else if (level > 0) {
-      if (((NewPid *)&coarse(newpid,0))->leaf)
-	cell.pid = aparent(0).pid;
-      else
-	cell.pid = npe();
-    }
-    //    if (is_leaf(cell))
-    //      continue;
+    else if (level > 0 && ((NewPid *)&coarse(newpid,0))->leaf)
+      cell.pid = aparent(0).pid;
   }
 
   if (quadtree->dirty || pid_changed) {
@@ -414,23 +399,8 @@ bool balance (double imbalance)
     fclose (fp);
 
   mpi_all_reduce (pid_changed, MPI_INT, MPI_MAX);
-  if (pid_changed) {
+  if (pid_changed)
     mpi_boundary_update();
-#if 0
-    char name[80];
-    sprintf (name, "colls-%d", pid());
-    FILE * fp = fopen (name, "w");
-    output_cells (fp);
-    fclose (fp);
-
-    sprintf (name, "pid-%d", pid());
-    fp = fopen (name, "w");
-    foreach_cell()
-      fprintf (fp, "%g %g %g %d\n", x, y, z, cell.pid);
-    fclose (fp);  
-#endif
-    //    check_pid();
-  }
 
   check_s();
   

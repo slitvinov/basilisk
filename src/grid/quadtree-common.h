@@ -2,8 +2,6 @@
 
 #include "multigrid-common.h"
 
-bool is_bug (Point point);
-
 // scalar attributes
 
 attribute {
@@ -44,9 +42,6 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
 	    aparent(k,l,m).flags |= flag;
 	  }
 #endif
-
-  if (is_bug(point))
-    fprintf (stderr, "refined_cell %g %g %g\n", x, y, z);
 
   /* refine */
   cell.flags &= ~leaf;
@@ -135,8 +130,6 @@ bool coarsen_cell (Point point, scalar * list)
 
 void coarsen_cell_recursive (Point point, scalar * list)
 {
-  if (is_bug(point))
-    fprintf (stderr, "coarsen_cell_recursive %g %g %g\n", x, y, z);
 #if TWO_ONE
   /* recursively coarsen children cells */
   foreach_child()
@@ -150,7 +143,7 @@ void coarsen_cell_recursive (Point point, scalar * list)
 
 @if _MPI
 void mpi_boundary_refine  (scalar *, int);
-void mpi_boundary_coarsen (int, int, scalar, scalar, scalar);
+void mpi_boundary_coarsen (int, int);
 void mpi_boundary_update  (void);
 bool balance (double);
 @else
@@ -287,7 +280,6 @@ astats adapt_wavelet (struct Adapt p)
   
   // coarsening
   // the loop below is only necessary to ensure symmetry of 2:1 constraint
-  scalar refined1[], is_remote_leaf[], is_remote_prolongation[];
   for (int l = depth(); l >= p.minlevel; l--) {
     foreach_cell()
       if (!is_boundary(cell)) {
@@ -311,22 +303,10 @@ astats adapt_wavelet (struct Adapt p)
 	else if (is_leaf(cell))
 	  continue;
       }
-    mpi_boundary_coarsen (l, too_fine, refined1, is_remote_leaf,
-			  is_remote_prolongation);
+    mpi_boundary_coarsen (l, too_fine);
   }
   free (listc);
 
-#if 0
-  FILE * fp = lfopen ("refinod", "w");
-  foreach_cell() {
-    fprintf (fp, "%g %g %g %g %g\n", x, y, refined1[], is_remote_leaf[],
-	     is_remote_prolongation[]);
-    if (is_leaf(cell))
-      continue;
-  }
-  fclose (fp);
-#endif
-  
   mpi_all_reduce (st.nf, MPI_INT, MPI_SUM);
   mpi_all_reduce (st.nc, MPI_INT, MPI_SUM);
   if (st.nc || st.nf) {

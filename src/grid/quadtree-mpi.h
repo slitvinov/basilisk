@@ -3,14 +3,6 @@ int debug_iteration = -1;
 
 void debug_mpi (FILE * fp1);
 
-bool is_bug (Point point)
-{
-  return false;
-  return (level == 5 &&
-	  x > 0.0936945 && x < 0.187432 && y > 0.000138640 && y < 0.0941169 &&
-	  z > 0.2 && z < 0.3);
-}
-
 typedef struct {
   CacheLevel * halo; // ghost cell indices for each level
   void * buf;        // MPI buffer
@@ -756,6 +748,13 @@ static int root_pids (Point point, Array * pids)
   return pids->len/sizeof(int);
 }
 
+// turns on check_pid() and co with outputs controlled by the condition
+// #define DEBUGCOND (pid() >= 1300 && pid() <= 1400 && t > 0.278088)
+
+// turns on check_pid() and co without any outputs
+// #define DEBUGCOND false
+
+#ifdef DEBUGCOND
 static void nopid (Point point, scalar pid)
 {
   foreach_child()
@@ -764,24 +763,22 @@ static void nopid (Point point, scalar pid)
 
 static void check_pid()
 {
-  scalar pid[], isleaf[], isprolongation[];
+  scalar pid[], isleaf[];
   pid.refine = nopid;
   foreach_cell() {
     if (is_local(cell)) {
       pid[] = pid();
       isleaf[] = is_leaf(cell);
-      isprolongation[] = is_prolongation(cell);
     }
     else {
       pid[] = -1;
       isleaf[] = -1;
-      isprolongation[] = -1;
     }
   }
   for (int l = 0; l <= depth(); l++)
     // fixme: this should be enough
     // mpi_boundary_restriction (mpi_boundary, {pid, isleaf}, l);
-    boundary_iterate (restriction, {pid, isleaf, isprolongation}, l);
+    boundary_iterate (restriction, {pid, isleaf}, l);
 
   foreach_cell() {
     // fixme: isnan is only necessary when refining below
@@ -789,15 +786,12 @@ static void check_pid()
     if (!isnan(pid[]) && pid[] >= 0) {
       // assert (pid[] == cell.pid);
       //      cell.pid = pid[]; // fixme
+
       // necessary for refined root cells
       if (isleaf[] && !is_leaf(cell) && is_leaf(aparent(0)))
 	refine_cell (parent, {pid}, 0, NULL);
 
       assert (isleaf[] <= 0 || is_leaf(cell));
-#if 0
-      if (isprolongation[] > 0)
-	assert (is_prolongation(cell));
-#endif
     }
     else {
       if (level > 0 && coarse(isleaf,0) > 0) {
@@ -811,6 +805,7 @@ static void check_pid()
     }
   }
 }
+#endif
 
 static void rcv_pid_row (RcvPid * m, int l, int * row)
 {
@@ -823,13 +818,8 @@ static void rcv_pid_row (RcvPid * m, int l, int * row)
   }
 }
 
-static void check_snd_rcv_matrix (SndRcv * sndrcv, const char * name)
+void check_snd_rcv_matrix (SndRcv * sndrcv, const char * name)
 {
-  return;
-  extern double t;
-  if (t < 0.274249)
-    return;
-  
   int maxlevel = depth();
   mpi_all_reduce (maxlevel, MPI_INT, MPI_MAX);
   int * row = malloc (npe()*sizeof(int));
@@ -891,9 +881,6 @@ static void check_snd_rcv_matrix (SndRcv * sndrcv, const char * name)
   }
   free (row);
 }
-
-// #define DEBUGCOND (pid() >= 1300 && pid() <= 1400 && t > 0.278088)
-#define DEBUGCOND false
 
 trace
 void mpi_boundary_update()
@@ -1008,31 +995,14 @@ void mpi_boundary_update()
   debug_mpi (NULL);
 #endif
 
-  check_snd_rcv_matrix (restriction, "restriction");
-  check_snd_rcv_matrix (restriction_root, "restriction_root");
-  
-#if 1
+#ifdef DEBUGCOND
   extern double t;
+  // check_snd_rcv_matrix (restriction, "restriction");
+  // check_snd_rcv_matrix (restriction_root, "restriction_root");
   if (DEBUGCOND)
     debug_mpi (NULL);
-#endif
-
-#if 0
-  {
-    char name[80];
-    sprintf (name, "colls-%d", pid());
-    FILE * fp = fopen (name, "w");
-    output_cells (fp);
-    fclose (fp);
-
-    sprintf (name, "pid-%d", pid());
-    fp = fopen (name, "w");
-    foreach_cell()
-      fprintf (fp, "%g %g %g %d\n", x, y, z, cell.pid);
-    fclose (fp);
-  }
-#endif
   check_pid();
+#endif
   
   // halo restriction
   scalar halov[];
@@ -1083,41 +1053,11 @@ void mpi_boundary_update()
     // fixme: optimise, we use only parent values, not neighbors
     mpi_boundary_restriction (mpi_boundary, {halov}, l);
   }
-
-  check_snd_rcv_matrix (halo_restriction, "halo_restriction");
-}
-
-void mpi_boundary_refine1()
-{
-  scalar depth[];
-  foreach()
-    depth[] = is_local(cell) ? level : -1;
-  mpi_boundary_restriction (mpi_boundary, {depth}, depth());
-  for (int l = depth() - 1; l >= 0; l--) {
-    foreach_coarse_level(l) { // fixme: we could use restriction()
-      double max = 0;
-      foreach_child()
-	if (depth[] > max)
-	  max = depth[];
-      depth[] = max;
-    }
-    mpi_boundary_restriction (mpi_boundary, {depth}, l);
-  }
-
-  FILE * fp = lfopen ("mpi_boundary_refine1", "w");
-  foreach_cell()
-    if (is_leaf(cell)) {
-      fprintf (fp, "%g %g %g\n", x, y, depth[]);
-      continue;
-    }
-  fclose (fp);
 }
 
 trace
 void mpi_boundary_refine (scalar * list, int file)
 {
-  //  mpi_boundary_refine1();
-
   prof_start ("mpi_boundary_refine");
 
   MpiBoundary * mpi = (MpiBoundary *) mpi_boundary;
@@ -1219,49 +1159,34 @@ static void check_depth()
 }
 
 trace
-void mpi_boundary_coarsen (int l, int too_fine,
-			   scalar refined, scalar is_remote_leaf,
-			   scalar is_remote_prolongation)
+void mpi_boundary_coarsen (int l, int too_fine)
 {
   check_depth();
 
+  scalar refined[], is_remote_leaf[];
   foreach_cell()
     if (level == l) {
       if (is_local(cell)) {
 	refined[] = is_refined(cell);
 	is_remote_leaf[] = is_leaf(cell);
-	is_remote_prolongation[] = is_prolongation(cell);
       }
       else {
 	refined[] = true;
-#if 0
-	if (is_refined(cell)) {
-	  bool prolo = false;
-	  foreach_child()
-	    if (is_remote_prolongation[] > 0)
-	      prolo = true, break;
-	  if (prolo)
-	    refined[] = false;
-	}
-#endif
 	is_remote_leaf[] = false;
-	is_remote_prolongation[] = -1;
       }
       continue;
     }
-  mpi_boundary_restriction (mpi_boundary, {refined, is_remote_leaf, is_remote_prolongation}, l);
+  mpi_boundary_restriction (mpi_boundary, {refined, is_remote_leaf}, l);
   
   foreach_cell() {
     if (level == l) {
       if (!is_local(cell)) {
 	if (is_refined(cell) && !refined[])
 	  coarsen_cell_recursive (point, NULL);
-	else if (is_leaf(cell) && cell.neighbors) {
-	  if (is_remote_leaf[]) {
-	    int pid = cell.pid;
-	    foreach_child()
-	      cell.pid = pid;
-	  }
+	else if (is_leaf(cell) && cell.neighbors && is_remote_leaf[]) {
+	  int pid = cell.pid;
+	  foreach_child()
+	    cell.pid = pid;
 	}
       }
       continue;
@@ -1274,16 +1199,15 @@ void mpi_boundary_coarsen (int l, int too_fine,
 
   if (l > 0) {
     // fixme: optimize cell.neighbors
-    scalar neighbors[];
     foreach_cell()
       if (level == l) {
-	neighbors[] = is_local(cell) ? cell.neighbors : 0;
+	refined[] = is_local(cell) ? cell.neighbors : 0;
 	continue;
       }
-    mpi_boundary_restriction (mpi_boundary, {neighbors}, l);
+    mpi_boundary_restriction (mpi_boundary, {refined}, l);
     foreach_cell() {
       if (level == l)
-	if (!is_local(cell) && is_local(aparent(0)) && neighbors[]) {
+	if (!is_local(cell) && is_local(aparent(0)) && refined[]) {
 	  aparent(0).flags &= ~too_fine;
 	  continue;
 	}
