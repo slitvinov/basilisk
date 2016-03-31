@@ -2,6 +2,8 @@
 
 #include "multigrid-common.h"
 
+bool is_bug (Point point);
+
 // scalar attributes
 
 attribute {
@@ -43,6 +45,9 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
 	  }
 #endif
 
+  if (is_bug(point))
+    fprintf (stderr, "refined_cell %g %g %g\n", x, y, z);
+
   /* refine */
   cell.flags &= ~leaf;
 
@@ -50,8 +55,10 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
   increment_neighbors (point);
 
   int cflag = is_active(cell) ? (active|leaf) : leaf;
-  foreach_child()
+  foreach_child() {
     cell.flags |= cflag;
+    //    cell.pid = pid;
+  }
     
   /* initialise scalars */
   for (scalar s in list)
@@ -105,6 +112,13 @@ bool coarsen_cell (Point point, scalar * list)
   /* update neighborhood */
   decrement_neighbors (point);
 
+#if 0  
+  fprintf (stderr, "coarsen_cell %g %g %g %d\n", x, y, z, cell.pid);
+  if (cell.neighbors)
+    foreach_child()
+      fprintf (stderr, "coarsen_cell_child %g %g %g %d\n", x, y, z, cell.pid);
+#endif
+  
 @if _MPI
   if (!is_local(cell)) {
     cell.flags &= ~(active|border);
@@ -121,6 +135,8 @@ bool coarsen_cell (Point point, scalar * list)
 
 void coarsen_cell_recursive (Point point, scalar * list)
 {
+  if (is_bug(point))
+    fprintf (stderr, "coarsen_cell_recursive %g %g %g\n", x, y, z);
 #if TWO_ONE
   /* recursively coarsen children cells */
   foreach_child()
@@ -133,8 +149,8 @@ void coarsen_cell_recursive (Point point, scalar * list)
 }
 
 @if _MPI
-void mpi_boundary_refine  (scalar *);
-void mpi_boundary_coarsen (int, int);
+void mpi_boundary_refine  (scalar *, int);
+void mpi_boundary_coarsen (int, int, scalar, scalar, scalar);
 void mpi_boundary_update  (void);
 bool balance (double);
 @else
@@ -160,22 +176,36 @@ struct Adapt {
 astats adapt_wavelet (struct Adapt p)
 {
   scalar * listcm = NULL;
-    
-  if (is_constant(cm)) {
-    if (p.list == NULL)
-      p.list = all;
-    restriction (p.slist);
+
+#if 0
+  {
+    char name[80];
+    sprintf (name, "cells-before-%d", pid());
+    FILE * fp = fopen (name, "w");
+    output_cells (fp);
+    fclose (fp);
+
+    sprintf (name, "pid-before-%d", pid());
+    fp = fopen (name, "w");
+    foreach_cell()
+      fprintf (fp, "%g %g %g %d\n", x, y, z, cell.pid);
+    fclose (fp);
   }
+#endif
+
+  if (is_constant(cm))
+    restriction (p.slist);
   else {
-    if (p.list == NULL) {
+    if (p.list == NULL)
       listcm = list_concat (NULL, {cm,fm});
-      for (scalar s in all)
-	listcm = list_add (listcm, s);
-      p.list = listcm;
-    }
     scalar * listr = list_concat (p.slist, {cm});
     restriction (listr);
     free (listr);
+  }
+  if (p.list == NULL) {
+    for (scalar s in all)
+      listcm = list_add (listcm, s);
+    p.list = listcm;
   }
 
   astats st = {0, 0};
@@ -253,10 +283,11 @@ astats adapt_wavelet (struct Adapt p)
     else // inactive cell
       continue;
   }
-  mpi_boundary_refine (listc);
+  mpi_boundary_refine (listc, 1);
   
   // coarsening
   // the loop below is only necessary to ensure symmetry of 2:1 constraint
+  scalar refined1[], is_remote_leaf[], is_remote_prolongation[];
   for (int l = depth(); l >= p.minlevel; l--) {
     foreach_cell()
       if (!is_boundary(cell)) {
@@ -280,10 +311,22 @@ astats adapt_wavelet (struct Adapt p)
 	else if (is_leaf(cell))
 	  continue;
       }
-    mpi_boundary_coarsen (l, too_fine);
+    mpi_boundary_coarsen (l, too_fine, refined1, is_remote_leaf,
+			  is_remote_prolongation);
   }
   free (listc);
 
+#if 0
+  FILE * fp = lfopen ("refinod", "w");
+  foreach_cell() {
+    fprintf (fp, "%g %g %g %g %g\n", x, y, refined1[], is_remote_leaf[],
+	     is_remote_prolongation[]);
+    if (is_leaf(cell))
+      continue;
+  }
+  fclose (fp);
+#endif
+  
   mpi_all_reduce (st.nf, MPI_INT, MPI_SUM);
   mpi_all_reduce (st.nc, MPI_INT, MPI_SUM);
   if (st.nc || st.nf) {
@@ -308,7 +351,7 @@ astats adapt_wavelet (struct Adapt p)
       }									\
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);				\
     if (refined) {							\
-      mpi_boundary_refine (list);					\
+      mpi_boundary_refine (list, 0);					\
       mpi_boundary_update();						\
       boundary (list);							\
       while (balance(0)); 						\
@@ -582,65 +625,6 @@ void output_tree (FILE * fp)
 	  fprintf (fp, "%g %g\n%g %g\n\n",
 		   treex(parent), treey(parent), treex(point), treey(point));
 }
-
-Array * tree (size_t size)
-{
-  const unsigned short sent = 1 << user, next = 1 << (user + 1);  
-  Array * a = array_new();
-
-  foreach_cell_post_all (true)
-    if (level > 0 && (cell.flags & (sent|next)))
-      aparent(0).flags |= next;
-
-  bool empty = true;
-  foreach_cell_all() {
-    if (cell.flags & sent) {
-      array_append (a, &cell, size);
-      cell.flags &= ~sent;
-      empty = false;
-    }
-    else
-      array_append (a, &cell, sizeof(Cell));
-    if (cell.flags & next)
-      cell.flags &= ~next;
-    else
-      continue;
-  }
-
-  if (empty)
-    a->len = 0;
-  return a;
-}
-
-@def foreach_tree(t, size, list)
-{
-  const unsigned short _sent = 1 << user, _next = 1 << (user + 1);
-  scalar * _list = list;
-  char * _i = (char *) (t)->p;
-  foreach_cell_all() {
-    Cell * c = (Cell *) _i;
-    if (c->flags & _sent) {
-      _i += size;
-@
-
-@def end_foreach_tree()
-    }
-    else
-      _i += sizeof(Cell);
-    if (c->flags & _next) {
-      assert (c->neighbors);
-      if (!(c->flags & leaf) && is_leaf(cell))
-	/* refined */
-	refine_cell (point, _list, 0, NULL);
-      else if (!cell.neighbors)
-	/* prolongation */
-	alloc_children (point);
-    }
-    else
-      continue;
-  } end_foreach_cell_all();
-}
-@
 
 void quadtree_methods()
 {
