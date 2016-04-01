@@ -749,10 +749,10 @@ static int root_pids (Point point, Array * pids)
 }
 
 // turns on check_pid() and co with outputs controlled by the condition
-// #define DEBUGCOND (pid() >= 1300 && pid() <= 1400 && t > 0.278088)
+// #define DEBUGCOND (pid() >= 300 && pid() <= 400 && t > 0.0784876)
 
 // turns on check_pid() and co without any outputs
-// #define DEBUGCOND false
+#define DEBUGCOND false
 
 #ifdef DEBUGCOND
 static void nopid (Point point, scalar pid)
@@ -799,7 +799,7 @@ static void check_pid()
        	assert (cell.pid == aparent(0).pid);	
       }
       else if (level > 0) {
-	cell.pid = npe();
+	// cell.pid = npe();
 	// assert (cell.pid == npe());
       }
     }
@@ -1002,6 +1002,7 @@ void mpi_boundary_update()
   if (DEBUGCOND)
     debug_mpi (NULL);
   check_pid();
+  quadtree_check();
 #endif
   
   // halo restriction
@@ -1158,32 +1159,39 @@ static void check_depth()
 #endif
 }
 
+typedef struct {
+  int refined, leaf;
+} Remote;
+
 trace
 void mpi_boundary_coarsen (int l, int too_fine)
 {
   check_depth();
 
-  scalar refined[], is_remote_leaf[];
+  assert (sizeof(Remote) == sizeof(double));
+  #define REMOTE() ((Remote *)&val(remote,0,0,0))
+  
+  scalar remote[];
   foreach_cell()
     if (level == l) {
       if (is_local(cell)) {
-	refined[] = is_refined(cell);
-	is_remote_leaf[] = is_leaf(cell);
+	REMOTE()->refined = is_refined(cell);
+	REMOTE()->leaf = is_leaf(cell);
       }
       else {
-	refined[] = true;
-	is_remote_leaf[] = false;
+	REMOTE()->refined = true;
+	REMOTE()->leaf = false;
       }
       continue;
     }
-  mpi_boundary_restriction (mpi_boundary, {refined, is_remote_leaf}, l);
+  mpi_boundary_restriction (mpi_boundary, {remote}, l);
   
   foreach_cell() {
     if (level == l) {
       if (!is_local(cell)) {
-	if (is_refined(cell) && !refined[])
+	if (is_refined(cell) && !REMOTE()->refined)
 	  coarsen_cell_recursive (point, NULL);
-	else if (is_leaf(cell) && cell.neighbors && is_remote_leaf[]) {
+	else if (is_leaf(cell) && cell.neighbors && REMOTE()->leaf) {
 	  int pid = cell.pid;
 	  foreach_child()
 	    cell.pid = pid;
@@ -1201,13 +1209,13 @@ void mpi_boundary_coarsen (int l, int too_fine)
     // fixme: optimize cell.neighbors
     foreach_cell()
       if (level == l) {
-	refined[] = is_local(cell) ? cell.neighbors : 0;
+	remote[] = is_local(cell) ? cell.neighbors : 0;
 	continue;
       }
-    mpi_boundary_restriction (mpi_boundary, {refined}, l);
+    mpi_boundary_restriction (mpi_boundary, {remote}, l);
     foreach_cell() {
       if (level == l)
-	if (!is_local(cell) && is_local(aparent(0)) && refined[]) {
+	if (!is_local(cell) && is_local(aparent(0)) && remote[]) {
 	  aparent(0).flags &= ~too_fine;
 	  continue;
 	}

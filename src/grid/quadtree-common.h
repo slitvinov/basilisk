@@ -606,6 +606,48 @@ void output_tree (FILE * fp)
 		   treex(parent), treey(parent), treex(point), treey(point));
 }
 
+void quadtree_check()
+{
+  // checks the consistency of the quadtree
+
+  long nleaves = 0, nactive = 0;
+  foreach_cell() {
+    if (is_leaf(cell)) {
+      assert (cell.pid >= 0); // boundaries cannot be leaves
+      nleaves++;
+    }
+    if (is_local(cell))
+      assert (is_active(cell) || is_prolongation(cell));
+    if (is_active(cell))
+      nactive++;
+    // check number of refined neighbors
+    int neighbors = 0;
+    foreach_neighbor(1)
+      if (allocated(0) && is_refined(cell))
+	neighbors++;
+    assert (cell.neighbors == neighbors);
+  }
+
+  // checks that all active cells are reachable
+  long reachable = 0;
+  foreach_cell() {
+    if (is_active(cell))
+      reachable++;
+    else
+      continue;
+  }
+  assert (nactive == reachable);
+
+  // checks that all leaf cells are reachable
+  reachable = 0;
+  foreach_cell()
+    if (is_leaf(cell)) {
+      reachable++;
+      continue;
+    }
+  assert (nleaves == reachable);
+}
+
 void quadtree_methods()
 {
   multigrid_methods();
