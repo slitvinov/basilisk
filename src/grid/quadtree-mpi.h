@@ -748,64 +748,11 @@ static int root_pids (Point point, Array * pids)
   return pids->len/sizeof(int);
 }
 
-// turns on check_pid() and co with outputs controlled by the condition
+// turns on quadtree_check() and co with outputs controlled by the condition
 // #define DEBUGCOND (pid() >= 300 && pid() <= 400 && t > 0.0784876)
 
-// turns on check_pid() and co without any outputs
+// turns on quadtree_check() and co without any outputs
 #define DEBUGCOND false
-
-#ifdef DEBUGCOND
-static void nopid (Point point, scalar pid)
-{
-  foreach_child()
-    pid[] = -1;
-}
-
-static void check_pid()
-{
-  scalar pid[], isleaf[];
-  pid.refine = nopid;
-  foreach_cell() {
-    if (is_local(cell)) {
-      pid[] = pid();
-      isleaf[] = is_leaf(cell);
-    }
-    else {
-      pid[] = -1;
-      isleaf[] = -1;
-    }
-  }
-  for (int l = 0; l <= depth(); l++)
-    // fixme: this should be enough
-    // mpi_boundary_restriction (mpi_boundary, {pid, isleaf}, l);
-    boundary_iterate (restriction, {pid, isleaf}, l);
-
-  foreach_cell() {
-    // fixme: isnan is only necessary when refining below
-    // it's not consistent when nans are not used
-    if (!isnan(pid[]) && pid[] >= 0) {
-      // assert (pid[] == cell.pid);
-      //      cell.pid = pid[]; // fixme
-
-      // necessary for refined root cells
-      if (isleaf[] && !is_leaf(cell) && is_leaf(aparent(0)))
-	refine_cell (parent, {pid}, 0, NULL);
-
-      assert (isleaf[] <= 0 || is_leaf(cell));
-    }
-    else {
-      if (level > 0 && coarse(isleaf,0) > 0) {
-	// cell.pid = aparent(0).pid;
-       	assert (cell.pid == aparent(0).pid);	
-      }
-      else if (level > 0) {
-	// cell.pid = npe();
-	// assert (cell.pid == npe());
-      }
-    }
-  }
-}
-#endif
 
 static void rcv_pid_row (RcvPid * m, int l, int * row)
 {
@@ -1001,7 +948,6 @@ void mpi_boundary_update()
   // check_snd_rcv_matrix (restriction_root, "restriction_root");
   if (DEBUGCOND)
     debug_mpi (NULL);
-  check_pid();
   quadtree_check();
 #endif
   

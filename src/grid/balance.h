@@ -141,13 +141,6 @@ static bool send_tree (Array * a, int to, MPI_Request * r)
     return false;
 }
 
-#define CHECKFACE 0
-
-#if CHECKFACE
-face vector uu[];
-scalar ss[];
-#endif
-
 static bool receive_tree (int from, scalar newpid, FILE * fp)
 {
   Array a;
@@ -165,38 +158,10 @@ static bool receive_tree (int from, scalar newpid, FILE * fp)
 	      datasize);
       assert (NEWPID()->pid > 0);
       if (fp)
-#if CHECKFACE
-	fprintf (fp, "%g %g %g %d %d %d %d %d %d %g recv\n",
-		 x, y, z, NEWPID()->pid - 1, cell.pid,
-		 c->flags & leaf,
-		 cell.flags & leaf, from, NEWPID()->leaf, uu.y[]);
-#else
 	fprintf (fp, "%g %g %g %d %d %d %d %d %d recv\n",
 		 x, y, z, NEWPID()->pid - 1, cell.pid,
 		 c->flags & leaf,
 		 cell.flags & leaf, from, NEWPID()->leaf);
-#endif
-#if 0
-	if (cell.pid >= 0 && NEWPID()->leaf && !is_leaf(cell)) {
-#if 0	
-	if (fp)
-	  fprintf (fp, "%g %g %g %d %d blarg\n",
-		   x, y, z, NEWPID()->pid - 1, cell.pid);
-	if (cell.neighbors)
-	  coarsen_cell_recursive (point, NULL);
-#else
-	if (!cell.neighbors)
-#endif
-	cell.flags |= leaf;
-      }
-#endif
-#if 0 // fixme: redundant
-      if (cell.pid >= 0 && NEWPID()->leaf && cell.neighbors) {
-	int pid = NEWPID()->pid - 1;
-	foreach_child()
-	  cell.pid = pid;
-      }
-#endif
     }
     free (a.p);
     return true;
@@ -223,94 +188,13 @@ static void check_flags()
 #endif
 }
 
-static void check_s()
-{
-#if DEBUG_MPI
-  extern double t;
-  if (t <= 0.1)
-    return;
-  scalar s = {1};
-  foreach()
-    foreach_neighbor()
-      if (!is_boundary(cell))
-	assert (!isnan(s[]));
-#endif
-}
-
-#if CHECKFACE
-static void check_restriction (scalar a)
-{
-  double val = 123;
-  int maxlevel = depth();
-  mpi_all_reduce (maxlevel, MPI_INT, MPI_MAX);
-  for (int l = 0; l <= maxlevel; l++) {
-    if (l == 0)
-      foreach_level_or_leaf (l)
-	a[] = val;
-    else
-      foreach_level (l) {
-	for (int i = -2; i <= 2; i++)
-	  for (int j = -2; j <= 2; j++)
-	    // fixme: boundary conditions should work too
-	    assert ((aparent(i,j).pid < 0) || coarse(a,i,j) == val);
-	a[] = val;
-      }
-    boundary_level ({a}, l);
-  }
-}
-
-static void abortion()
-{
-  FILE * fp = lfopen ("uu", "w");
-  foreach_face(x)
-    for (int i = -2; i <= 2; i++)
-      if (neighbor(0,i).pid >= 0)
-	fprintf (fp, "%g %g %g %d\n", x, y + i*Delta, uu.x[0,i],
-		 neighbor(0,i).pid);
-  foreach_face(y)
-    for (int i = -2; i <= 2; i++)
-      if (neighbor(i).pid >= 0)
-	fprintf (fp, "%g %g %g %d\n", x + i*Delta, y, uu.y[i], neighbor(i).pid);
-  fclose (fp);
-}
-
-static int check_uu()
-{
-  foreach_cell()
-    if (is_leaf(cell) && is_local(cell)) {
-      foreach_neighbor()
-	if (cell.pid >= 0) // fixme
-	  assert (ss[] == 1);
-      continue;
-    }
-#if 1
-  //  check_restriction (ss);
-  foreach_face()
-    for (int i = -2; i <= 2; i++)
-      if (neighbor(0,i).pid >= 0 && uu.x[0,i] != 1) {
-	abortion();
-	fprintf (stderr, "uu.x = %g at %g %g\n", uu.x[0,i], x, y);
-	return false;
-      }
-#endif  
-  return true;
-}
-#endif // CHECKFACE
-
 trace
 bool balance (double imbalance)
 {
   assert (sizeof(NewPid) == sizeof(double));
 
   check_flags();
-  check_s();
 
-#if CHECKFACE  
-  extern double t;
-  if (t > 0)
-    assert (check_uu());
-#endif
-  
   long nl = 0;
   foreach()
     nl++;
@@ -367,15 +251,9 @@ bool balance (double imbalance)
     sprintf (name, "pid-before-%d", pid());
     fp = fopen (name, "w");
     foreach_cell() {
-#if CHECKFACE
-      fprintf (fp, "%g %g %g %d %d %d %d %g\n",
-	       x, y, z, cell.pid, NEWPID()->pid - 1,
-	       NEWPID()->leaf, is_leaf(cell), uu.y[]);
-#else
       fprintf (fp, "%g %g %g %d %d %d %d\n",
 	       x, y, z, cell.pid, NEWPID()->pid - 1,
 	       NEWPID()->leaf, is_leaf(cell));
-#endif
       if (NEWPID()->leaf)
 	assert (is_leaf(cell));
     }
@@ -456,17 +334,6 @@ bool balance (double imbalance)
 	fprintf (fp, "%g %g %g %d %d %d %d %d new\n",
 		 x, y, z, NEWPID()->pid - 1, cell.pid,
 		 is_leaf(cell), cell.neighbors, NEWPID()->leaf);
-#ifdef DEBUGCOND
-      if (NEWPID()->leaf) {
-	if (!is_leaf(cell)) {
-	  fprintf (stderr, "not leaf! %g %g %g %d\n", x, y, z, cell.pid);
-	  fflush (stderr);
-	  if (fp)
-	    fflush (fp);
-	}
-	assert (is_leaf(cell));
-      }
-#endif // DEBUGCOND
       if (cell.pid != NEWPID()->pid - 1) {
 	cell.pid = NEWPID()->pid - 1;
 	cell.flags &= ~(active|border);
@@ -502,16 +369,9 @@ bool balance (double imbalance)
   if (fp)
     fclose (fp);
 
-#if CHECKFACE
-  if (t > 0)
-    assert (check_uu());
-#endif
-
   mpi_all_reduce (pid_changed, MPI_INT, MPI_MAX);
   if (pid_changed)
     mpi_boundary_update();
-
-  check_s();
   
   return pid_changed;
 }
