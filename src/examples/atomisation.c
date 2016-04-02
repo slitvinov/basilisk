@@ -128,20 +128,15 @@ and volume. */
 
 event logfile (i++) {
   double xb = 0., vb = 0., sb = 0.;
-  int nc = 0;
-  static long tnc = 0;
-  foreach(reduction(+:xb) reduction(+:vb) reduction(+:sb) reduction(+:nc)) {
+  foreach(reduction(+:xb) reduction(+:vb) reduction(+:sb)) {
     double dv = (1. - f[])*dv();
     xb += x*dv;
     vb += u.x[]*dv;
     sb += dv;
-    nc++;
   }
-  double elapsed = timer_elapsed (tt);
-  tnc += nc;
   fprintf (ferr, "%g %g %g %g %g %g %d %d %d %d %g %g\n", 
 	   t, sb, -1., xb/sb, vb/sb, dt, mgp.i, mgpf.i, mgu.i,
-	   nc, elapsed, tnc/elapsed);
+	   perf.nc, perf.t, perf.speed);
 }
 
 /**

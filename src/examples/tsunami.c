@@ -245,9 +245,9 @@ event logfile (i++) {
   stats s = statsf (h);
   norm n = normf (u.x);
   if (i == 0)
-    fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt\n");
-  fprintf (stderr, "%g %d %g %g %g %g %g %g\n", t, i, s.min, s.max, s.sum, 
-	   n.rms, n.max, dt);
+    fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt speed tn\n");
+  fprintf (stderr, "%g %d %g %g %g %g %g %g %g %ld\n",
+	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, perf.speed, perf.tn);
 
   /**
   We also use a simple implicit scheme to implement quadratic bottom
@@ -279,9 +279,12 @@ bilinearly onto a *n x n* regular grid and written on standard
 output. */
 
 event snapshots (t += 60; t <= 600) {
+
+#if !_MPI
   printf ("file: t-%g\n", t);
   output_field ({h, zb, hmax}, stdout, n = 1 << MAXLEVEL, linear = true);
-
+#endif
+  
   /**
   We also save a snapshot file we can restart from. */
 

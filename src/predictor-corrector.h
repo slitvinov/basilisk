@@ -51,8 +51,9 @@ void run()
   init_grid (N);
 
   // main loop
-  timer start = timer_start();
-  int i = 0; long tnc = 0;
+  int i = 0;
+  perf.nc = perf.tnc = 0;
+  perf.gt = timer_start();
   while (events (i, t, true)) {
     // list of updates
     scalar * updates = list_clone (evolving);
@@ -70,13 +71,10 @@ void run()
     advance (evolving, evolving, updates, dt);
     delete (updates);
     free (updates);
-    long nc = 0;
-    foreach (reduction(+:nc)) 
-      nc++;
-    tnc += nc;
+    update_perf();
     i++; t = tnext;
   }
-  timer_print (start, i, tnc);
+  timer_print (perf.gt, i, perf.tnc);
 
   free_grid();
 }

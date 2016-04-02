@@ -241,4 +241,36 @@ void vorticity (const vector u, scalar omega)
   #endif
 }
 
+/**
+Performance statistics are stored in this structure. */
+
+struct {
+  // number of leaf cells for this process and this iteration
+  long n;
+  // number of leaf cells for all processes
+  long tn;
+  // total number of leaf cells for this process
+  long nc;
+  // total number of leaf cells for all processes
+  long tnc;
+  // real time elapsed since the start
+  double t;
+  // average computational speed (leaves/sec)
+  double speed;
+  // global timer
+  timer gt;
+} perf;
+
+static void update_perf() {
+  long tn = 0;
+  perf.n = 0;
+  foreach(reduction(+:tn))
+    perf.n++, tn++;
+  perf.tn = tn;
+  perf.nc += perf.n;
+  perf.tnc += perf.tn;
+  perf.t = timer_elapsed (perf.gt);
+  perf.speed = perf.tnc/perf.t;
+}
+
 #include "output.h"

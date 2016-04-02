@@ -17,25 +17,23 @@ void run (void)
   t = 0.; dt = 1.;
   init_grid (N);
 
-  timer start = timer_start();
-  int i = 0; long tnc = 0;
+  int i = 0;
+  perf.nc = perf.tnc = 0;
+  perf.gt = timer_start();
   while (events (i, t, true)) {
 
     /**
     We store the total number of cells advanced in time for computing
     speed statistics. */
 
-    long nc = 0;
-    foreach(reduction(+:nc))
-      nc++;
-    tnc += nc;
+    update_perf();
     i++; t = tnext;
   }
 
   /**
   Time/speed statistics are written out on standard output. */
 
-  timer_print (start, i, tnc);
+  timer_print (perf.gt, i, perf.tnc);
 
   free_grid();
 }
