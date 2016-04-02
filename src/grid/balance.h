@@ -132,18 +132,16 @@ Array * neighborhood (scalar newpid, int nextpid, FILE * fp)
   return tree (sizeof(Cell) + datasize, newpid);
 }
 
-static bool send_tree (Array * a, int to, MPI_Request * r)
+static void send_tree (Array * a, int to, MPI_Request * r)
 {
   MPI_Isend (&a->len, 1, MPI_LONG, to, MOVED_TAG(), MPI_COMM_WORLD, &r[0]);
   if (a->len > 0) {
     MPI_Isend (a->p, a->len, MPI_BYTE, to, MOVED_TAG(), MPI_COMM_WORLD, &r[1]);
-    return true;
+    quadtree->dirty = true;
   }
-  else
-    return false;
 }
 
-static bool receive_tree (int from, scalar newpid, FILE * fp)
+static void receive_tree (int from, scalar newpid, FILE * fp)
 {
   Array a;
   mpi_recv_check (&a.len, 1, MPI_LONG, from, MOVED_TAG(),
@@ -166,10 +164,8 @@ static bool receive_tree (int from, scalar newpid, FILE * fp)
 		 cell.flags & leaf, from, NEWPID()->leaf);
     }
     free (a.p);
-    return true;
+    quadtree->dirty = true;
   }
-  else
-    return false;
 }
 
 static void wait_tree (Array * a, MPI_Request * r)
@@ -193,6 +189,9 @@ static void check_flags()
 trace
 bool balance (double imbalance)
 {
+  if (npe() == 1)
+    return false;
+
   assert (sizeof(NewPid) == sizeof(double));
 
   check_flags();
@@ -226,10 +225,16 @@ bool balance (double imbalance)
 #endif
 
   // compute new pid, stored in newpid[]
+  bool next = false, prev = false;
   foreach_cell_all() {
     if (is_local(cell)) {
       int pid = balanced_pid (newpid[], nt);
-      NEWPID()->pid = clamp (pid, cell.pid - 1, cell.pid + 1) + 1;
+      pid = clamp (pid, cell.pid - 1, cell.pid + 1);
+      if (pid == pid() + 1)
+	next = true;
+      else if (pid == pid() - 1)
+	prev = true;
+      NEWPID()->pid = pid + 1;
       NEWPID()->leaf = is_leaf(cell);
       NEWPID()->prolongation = is_prolongation(cell);
       if (fp)
@@ -263,28 +268,26 @@ bool balance (double imbalance)
   }
 #endif // DEBUGCOND
   
-  Array * anext = neighborhood (newpid, pid() + 1, fp);
-  Array * aprev = neighborhood (newpid, pid() - 1, NULL);
+  Array * anext = next ? neighborhood (newpid, pid() + 1, fp) : array_new();
+  Array * aprev = prev ? neighborhood (newpid, pid() - 1, fp) : array_new();
 
   if (fp)
     fflush (fp);
   
   check_flags();
   
-  /* fixme: this should be optimisable using the fact that "send to
-     next" must be mutually exclusive with "receive from next" */
   // send mesh to previous/next process
   MPI_Request rprev[2], rnext[2];
-  if (pid() > 0         && send_tree (aprev, pid() - 1, rprev))
-    quadtree->dirty = true;
-  if (pid() < npe() - 1 && send_tree (anext, pid() + 1, rnext))
-    quadtree->dirty = true;
+  if (pid() > 0)
+    send_tree (aprev, pid() - 1, rprev);
+  if (pid() < npe() - 1)
+    send_tree (anext, pid() + 1, rnext);
 
   // receive mesh from next/previous process
-  if (pid() < npe() - 1 && receive_tree (pid() + 1, newpid, fp))
-    quadtree->dirty = true;
-  if (pid() > 0 &&         receive_tree (pid() - 1, newpid, fp))
-    quadtree->dirty = true;
+  if (pid() < npe() - 1)
+    receive_tree (pid() + 1, newpid, fp);
+  if (pid() > 0)
+    receive_tree (pid() - 1, newpid, fp);
 
   /* check that mesh was received OK and free send buffers */
   if (pid() > 0)

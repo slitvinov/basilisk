@@ -818,7 +818,12 @@ void mpi_boundary_update()
   snd_rcv_free (halo_restriction);
   
   static const unsigned short used = 1 << user;
-  foreach_cell()
+  foreach_cell() {
+    if (is_active(cell) && !is_border(cell))
+      /* We skip the interior of the local domain.
+	 Note that this can be commented out in case of suspicion that
+	 something is wrong with border cell tagging. */
+      continue;
     if (cell.neighbors) {
       // sending
       Array pids = {NULL, 0, 0};
@@ -882,8 +887,9 @@ void mpi_boundary_update()
 	  }
 	}
       }
-    }
-
+    }    
+  }
+    
   /* we remove unused cells
      we do a breadth-first traversal from fine to coarse, so that
      coarsening of unused cells can proceed fully. */
@@ -1085,6 +1091,9 @@ typedef struct {
 trace
 void mpi_boundary_coarsen (int l, int too_fine)
 {
+  if (npe() == 1)
+    return;
+  
   check_depth();
 
   assert (sizeof(Remote) == sizeof(double));
