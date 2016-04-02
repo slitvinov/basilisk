@@ -179,6 +179,7 @@ event snapshot (t = 0.1; t += 0.1; t <= 1.8) { // t <= 1.8
 #endif
 }
 
+#ifdef DEBUGCOND
 static void check_restriction (scalar a)
 {
   double val = 123;
@@ -214,10 +215,11 @@ static void abortion (face vector uu)
 	fprintf (fp, "%g %g %g %d\n", x + i*Delta, y, uu.y[i], neighbor(i).pid);
   fclose (fp);
 }
+#endif // DEBUGCOND
 
 event adapt (i++) {
   
-#if 1// BGHOSTS == 2
+#ifdef DEBUGCOND
   scalar ss[];
   face vector uu[];
   quadtree_trash ({ss,uu});
@@ -233,7 +235,7 @@ event adapt (i++) {
   restriction ({f0}); // for boundary conditions on restricted f
   event ("properties");
   
-#if 1//BGHOSTS == 2
+#ifdef DEBUGCOND
   foreach()
     foreach_neighbor()
       if (cell.pid >= 0) // fixme

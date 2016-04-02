@@ -28,11 +28,10 @@ typedef struct {
 enum {
   active    = 1 << 0,
   leaf      = 1 << 1,
-  refined   = 1 << 2,
-  halo      = 1 << 3,
-  border    = 1 << 4,
-  vertex    = 1 << 5,
-  user      = 6,
+  halo      = 1 << 2,
+  border    = 1 << 3,
+  vertex    = 1 << 4,
+  user      = 5,
 
   face_x = 1 << 0
 #if dimension >= 2
@@ -307,7 +306,9 @@ void cache_shrink (Cache * c)
 # endif
 @define NEIGHBOR(k,l,n)	(quadtree->L[point.level]->m[point.i+k])
 @define PARENT(k,l,n) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k])
-@def allocated_child(k,l,n) (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k])
+@def allocated_child(k,l,n) (level < depth() &&
+			     point.i > 0 && point.i <= (1 << level) + 2 &&
+			     quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k])
 @
 @define CHILD(k,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k])
 #elif dimension == 2
@@ -328,7 +329,10 @@ void cache_shrink (Cache * c)
 @def PARENT(k,l,n) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k]
 		  [(point.j+GHOSTS)/2+l])
 @
-@def allocated_child(k,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
+@def allocated_child(k,l,n)  (level < depth() &&
+			      point.i > 0 && point.i <= (1 << level) + 2 &&
+			      point.j > 0 && point.j <= (1 << level) + 2 &&
+			      quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
    && quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k][2*point.j-GHOSTS+l])
 @			   
 @def CHILD(k,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
@@ -360,7 +364,11 @@ void cache_shrink (Cache * c)
 @def PARENT(a,l,n) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+a]
 		  [(point.j+GHOSTS)/2+l][(point.k+GHOSTS)/2+n])
 @
-@def allocated_child(a,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+a]
+@def allocated_child(a,l,n)  (level < depth() &&
+			      point.i > 0 && point.i <= (1 << level) + 2 &&
+			      point.j > 0 && point.j <= (1 << level) + 2 &&
+			      point.k > 0 && point.k <= (1 << level) + 2 &&
+			      quadtree->L[point.level+1]->m[2*point.i-GHOSTS+a]
    && quadtree->L[point.level+1]->m[2*point.i-GHOSTS+a][2*point.j-GHOSTS+l]
    && quadtree->L[point.level+1]->m[2*point.i-GHOSTS+a][2*point.j-GHOSTS+l]
 			      [2*point.k-GHOSTS+n])

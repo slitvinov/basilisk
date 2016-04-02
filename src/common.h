@@ -311,7 +311,7 @@ void pmuntrace (void)
 // Arrays
 
 typedef struct {
-  char * p;
+  void * p;
   long max, len;
 } Array;
 
@@ -336,7 +336,7 @@ void array_append (Array * a, void * elem, size_t size)
     a->max += max (size, 4096);
     a->p = realloc (a->p, a->max);
   }
-  memcpy (a->p + a->len, elem, size);
+  memcpy (((char *)a->p) + a->len, elem, size);
   a->len += size;
 }
 
@@ -744,7 +744,11 @@ double X0 = 0., Y0 = 0., Z0 = 0.;
 // size of the box
 double L0 = 1.;
 // number of grid points
+#if dimension <= 2
 int N = 64;
+#else
+int N = 16;
+#endif
 
 typedef struct { int i; } scalar;
 
@@ -1113,7 +1117,7 @@ static void qpclose_all()
 
 // files with pid
 
-static FILE * lfopen (const char * name, const char * mode)
+FILE * lfopen (const char * name, const char * mode)
 {
   char fname[80];
   sprintf (fname, "%s-%d", name, pid());

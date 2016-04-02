@@ -106,23 +106,6 @@ static Rcv * rcv_pid_pointer (RcvPid * p, int pid)
 
 static void rcv_pid_append (RcvPid * p, int pid, Point point)
 {
-  if (pid < 0 || pid >= npe()) {
-    fprintf (stderr,
-	     "pid = %d at %g %g %g %d\n", pid, x, y, z, level);
-    debug_mpi (NULL);
-    char name[80];
-    sprintf (name, "colls-%d", pid());
-    FILE * fp = fopen (name, "w");
-    output_cells (fp);
-    fclose (fp);
-
-    sprintf (name, "pid-%d", pid());
-    fp = fopen (name, "w");
-    foreach_cell()
-      fprintf (fp, "%g %g %g %d\n", x, y, z, cell.pid);
-    fclose (fp);  
-    assert (false);
-  }
   rcv_append (point, rcv_pid_pointer (p, pid));
 }
 
@@ -307,7 +290,7 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
 	       m->name, rcv->halo[l].n*len, rcv->pid, l);
       fflush (stderr);
 #endif
-#if 0 /* initiate non-blocking receive */
+#if 1 /* initiate non-blocking receive */
       MPI_Irecv (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid,
 		 BOUNDARY_TAG(l), MPI_COMM_WORLD, &r[nr]);
       rrcv[nr++] = rcv;
@@ -617,18 +600,6 @@ void debug_mpi (FILE * fp1)
   if (!fp1)
     fclose (fp);
 
-#if 0
-  scalar index[];
-  foreach_cell_all() {
-    if (is_local(cell))
-      index[] = 1;
-    else
-      index[] = 0;
-  }
-  for (int l = 0; l <= depth(); l++)
-    boundary_iterate (restriction, {index}, l);
-#endif
-  
   fp = fopen_prefix (fp1, "exterior", prefix);
   foreach_cell() {
     if (!is_local(cell))
@@ -752,7 +723,7 @@ static int root_pids (Point point, Array * pids)
 // #define DEBUGCOND (pid() >= 300 && pid() <= 400 && t > 0.0784876)
 
 // turns on quadtree_check() and co without any outputs
-#define DEBUGCOND false
+// #define DEBUGCOND false
 
 static void rcv_pid_row (RcvPid * m, int l, int * row)
 {
@@ -1109,16 +1080,17 @@ typedef struct {
   int refined, leaf;
 } Remote;
 
+#define REMOTE() ((Remote *)&val(remote,0))
+
 trace
 void mpi_boundary_coarsen (int l, int too_fine)
 {
   check_depth();
 
   assert (sizeof(Remote) == sizeof(double));
-  #define REMOTE() ((Remote *)&val(remote,0,0,0))
   
   scalar remote[];
-  foreach_cell()
+  foreach_cell() {
     if (level == l) {
       if (is_local(cell)) {
 	REMOTE()->refined = is_refined(cell);
@@ -1130,6 +1102,9 @@ void mpi_boundary_coarsen (int l, int too_fine)
       }
       continue;
     }
+    if (is_leaf(cell))
+      continue;
+  }
   mpi_boundary_restriction (mpi_boundary, {remote}, l);
   
   foreach_cell() {
@@ -1152,12 +1127,14 @@ void mpi_boundary_coarsen (int l, int too_fine)
   check_depth();
 
   if (l > 0) {
-    // fixme: optimize cell.neighbors
-    foreach_cell()
+    foreach_cell() {
       if (level == l) {
 	remote[] = is_local(cell) ? cell.neighbors : 0;
 	continue;
       }
+      if (is_leaf(cell))
+	continue;
+    }
     mpi_boundary_restriction (mpi_boundary, {remote}, l);
     foreach_cell() {
       if (level == l)

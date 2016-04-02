@@ -268,7 +268,7 @@ void input_gfs (struct OutputGfs p)
       exit (1);
     }
     if (!(flags & (1 << 4)) && is_leaf(cell))
-      refine_cell (point, listr, 0, NULL);
+      refine_cell (point, listr, 0, NULL, NULL);
     double a;
     if (fread (&a, sizeof (double), 1, p.fp) != 1 || a != -1) {
       fprintf (stderr, "input_gfs(): error: expecting '-1'\n");

@@ -50,10 +50,8 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
   increment_neighbors (point);
 
   int cflag = is_active(cell) ? (active|leaf) : leaf;
-  foreach_child() {
+  foreach_child()
     cell.flags |= cflag;
-    //    cell.pid = pid;
-  }
     
   /* initialise scalars */
   for (scalar s in list)
@@ -106,13 +104,6 @@ bool coarsen_cell (Point point, scalar * list)
 
   /* update neighborhood */
   decrement_neighbors (point);
-
-#if 0  
-  fprintf (stderr, "coarsen_cell %g %g %g %d\n", x, y, z, cell.pid);
-  if (cell.neighbors)
-    foreach_child()
-      fprintf (stderr, "coarsen_cell_child %g %g %g %d\n", x, y, z, cell.pid);
-#endif
   
 @if _MPI
   if (!is_local(cell)) {
@@ -169,22 +160,6 @@ struct Adapt {
 astats adapt_wavelet (struct Adapt p)
 {
   scalar * listcm = NULL;
-
-#if 0
-  {
-    char name[80];
-    sprintf (name, "cells-before-%d", pid());
-    FILE * fp = fopen (name, "w");
-    output_cells (fp);
-    fclose (fp);
-
-    sprintf (name, "pid-before-%d", pid());
-    fp = fopen (name, "w");
-    foreach_cell()
-      fprintf (fp, "%g %g %g %d\n", x, y, z, cell.pid);
-    fclose (fp);
-  }
-#endif
 
   if (is_constant(cm))
     restriction (p.slist);
@@ -611,7 +586,7 @@ void quadtree_check()
   // checks the consistency of the quadtree
 
   long nleaves = 0, nactive = 0;
-  foreach_cell() {
+  foreach_cell_all() {
     if (is_leaf(cell)) {
       assert (cell.pid >= 0); // boundaries cannot be leaves
       nleaves++;
@@ -626,6 +601,10 @@ void quadtree_check()
       if (allocated(0) && is_refined(cell))
 	neighbors++;
     assert (cell.neighbors == neighbors);
+    
+    // checks that prolongation cells do not have children
+    if (!cell.neighbors)
+      assert (!allocated_child(0));
   }
 
   // checks that all active cells are reachable

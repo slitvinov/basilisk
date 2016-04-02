@@ -1242,6 +1242,8 @@ end_foreach{ID}*{SP}*"()" {
 	     fname, line, foreachs, yytext);
     return 1;
   }
+  if (indef)
+    ECHO;
 }
 
 attribute{WS}+"{" {

@@ -5,11 +5,13 @@ typedef struct {
   int pid;
 } NewPid;
 
-@define NEWPID() ((NewPid *)&val(newpid,0,0,0))
+#define NEWPID() ((NewPid *)&val(newpid,0,0,0))
 
-/* fixme: !isnan(v) is only useful because of problems in
-   box_boundaries() on level 0. */
-@define is_newpided() (!isnan(val(newpid,0,0,0)) && NEWPID()->pid > 0)
+@if TRASH
+@ define is_newpid() (!isnan(val(newpid,0,0,0)) && NEWPID()->pid > 0)
+@else
+@ define is_newpid() (NEWPID()->pid > 0)
+@endif
 
 Array * tree (size_t size, scalar newpid)
 {
@@ -78,7 +80,7 @@ Array * tree (size_t size, scalar newpid)
     if (c->flags & _next) {
       assert (c->neighbors);
       if (!(c->flags & leaf) && is_leaf(cell) &&
-	  (!is_newpided() || !NEWPID()->leaf))
+	  (!is_newpid() || !NEWPID()->leaf))
 	/* refined */
 	refine_cell (point, _list, 0, NULL);
       else if (!cell.neighbors)
@@ -103,7 +105,7 @@ Array * neighborhood (scalar newpid, int nextpid, FILE * fp)
 	  root = true, break;
       if (root && cell.pid != nextpid) {
 	foreach_neighbor()
-	  if (cell.pid != nextpid && is_newpided()) {
+	  if (cell.pid != nextpid && is_newpid()) {
 	    if (fp)
 	      fprintf (fp, "%g %g %g %d %d root\n",
 		       x, y, z, NEWPID()->pid - 1, cell.pid);
@@ -116,7 +118,7 @@ Array * neighborhood (scalar newpid, int nextpid, FILE * fp)
       foreach_neighbor(1)
 	if (cell.neighbors && cell.pid != nextpid)
 	  foreach_child()
-	    if (cell.pid != nextpid && is_newpided()) {
+	    if (cell.pid != nextpid && is_newpid()) {
 	      if (fp)
 		fprintf (fp, "%g %g %g %d %d nextpid\n",
 			 x, y, z, NEWPID()->pid - 1, cell.pid);
@@ -292,30 +294,33 @@ bool balance (double imbalance)
     wait_tree (anext, rnext);
   array_free (anext);
 
-  foreach_cell() {
-    if (is_newpided() && NEWPID()->leaf && !is_leaf(cell)) {
-      assert (cell.pid >= 0);
-      assert (cell.neighbors);
-      coarsen_cell_recursive (point, NULL);
-    }
-    if (is_leaf(cell))
-      continue;
-  }
+  if (fp)
+    fflush (fp);
   
+  // set new pids
+  int pid_changed = false;
   foreach_cell_all() {
-    if (fp)
-      fprintf (fp, "%g %g %g %d %d %d %d nowpid\n",
-	       x, y, z, NEWPID()->pid - 1, cell.pid, is_leaf(cell),
-	       NEWPID()->leaf);
-    if (level < depth() && !cell.neighbors &&
-	point.i > 0 && point.i <= (1 << level) + 2 &&
-#if dimension >= 2
-	point.j > 0 && point.j <= (1 << level) + 2 &&
-#endif
-#if dimension >= 3
-	point.k > 0 && point.k <= (1 << level) + 2 &&
-#endif	
-	allocated_child(0)) {
+    if (cell.pid >= 0) {
+      if (is_newpid()) {
+	if (fp)
+	  fprintf (fp, "%g %g %g %d %d %d %d %d new\n",
+		   x, y, z, NEWPID()->pid - 1, cell.pid,
+		   is_leaf(cell), cell.neighbors, NEWPID()->leaf);
+	if (cell.pid != NEWPID()->pid - 1) {
+	  cell.pid = NEWPID()->pid - 1;
+	  cell.flags &= ~(active|border);
+	  if (is_local(cell))
+	    cell.flags |= active;
+	  pid_changed = true;
+	}
+	if (NEWPID()->leaf && !is_leaf(cell) && cell.neighbors)
+	  coarsen_cell_recursive (point, NULL);
+      }
+      else if (level > 0 && ((NewPid *)&coarse(newpid,0))->leaf)
+	cell.pid = aparent(0).pid;
+    }
+    // cleanup unused prolongations
+    if (!cell.neighbors && allocated_child(0)) {
       if (fp)
 	fprintf (fp, "%g %g %g %d %d freechildren\n",
 		 x, y, z, NEWPID()->pid - 1, cell.pid);
@@ -323,34 +328,10 @@ bool balance (double imbalance)
     }
   }
 
-  if (fp)
-    fflush (fp);
-  
-  // set new pids
-  int pid_changed = false;
-  foreach_cell() {
-    if (is_newpided()) {
-      if (fp)
-	fprintf (fp, "%g %g %g %d %d %d %d %d new\n",
-		 x, y, z, NEWPID()->pid - 1, cell.pid,
-		 is_leaf(cell), cell.neighbors, NEWPID()->leaf);
-      if (cell.pid != NEWPID()->pid - 1) {
-	cell.pid = NEWPID()->pid - 1;
-	cell.flags &= ~(active|border);
-	if (is_local(cell))
-	  cell.flags |= active;
-	pid_changed = true;
-      }
-    }
-    else if (level > 0 && ((NewPid *)&coarse(newpid,0))->leaf)
-      cell.pid = aparent(0).pid;
-  }
-
   if (quadtree->dirty || pid_changed) {
 #if 1
     // update active cells: fixme: can this be done above
-    static const unsigned short refined = 1 << user;
-    foreach_cell_post (!is_leaf (cell)) {
+    foreach_cell_post (!is_leaf (cell))
       if (!is_leaf(cell) && !is_local(cell)) {
 	unsigned short flags = cell.flags & ~active;
 	foreach_child()
@@ -358,9 +339,6 @@ bool balance (double imbalance)
 	    flags |= active, break;
 	cell.flags = flags;
       }
-      if (cell.flags & refined) // fixme: unused
-	cell.flags &= ~refined;
-    }
 #endif
     flag_border_cells(); // fixme: can this be done above?
     pid_changed = true;
