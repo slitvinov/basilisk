@@ -1198,13 +1198,13 @@ static void flag_border_cells()
   }
 }
 
-static int balanced_pid (long index, long nt)
-{  
-  long ne = max(1, nt/npe()), nr = nt % npe();
+static int balanced_pid (long index, long nt, int nproc)
+{
+  long ne = max(1, nt/nproc), nr = nt % nproc;
   int pid = index < nr*(ne + 1) ?
     index/(ne + 1) :
     nr + (index - nr*(ne + 1))/ne;
-  return min(npe() - 1, pid);
+  return min(nproc - 1, pid);
 }
 
 trace
@@ -1222,7 +1222,7 @@ void mpi_partitioning()
   foreach_cell_post (is_active (cell))
     if (is_active (cell)) {
       if (is_leaf (cell)) {
-	cell.pid = balanced_pid (i++, nt);
+	cell.pid = balanced_pid (i++, nt, npe());
 	if (cell.neighbors > 0) {
 	  int pid = cell.pid;
 	  foreach_child()

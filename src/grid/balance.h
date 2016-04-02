@@ -186,8 +186,15 @@ static void check_flags()
 #endif
 }
 
+struct {
+  int min; // minimum number of points per process
+  int npe; // number of active processes
+} mpi = {
+  10000
+};
+
 trace
-bool balance (double imbalance)
+bool balance()
 {
   if (npe() == 1)
     return false;
@@ -205,11 +212,15 @@ bool balance (double imbalance)
   mpi_all_reduce (nmax, MPI_LONG, MPI_MAX);
   mpi_all_reduce (nmin, MPI_LONG, MPI_MIN);
   long ne = max(1, nt/npe());
-  //  if (ne < 1000) ne = 1000; // fixme: this does not work
 
-  //  fprintf (stderr, "pid %d nl %ld nt %ld\n", pid(), nl, nt);
-  
-  if (nmax - nmin <= 1 || nmax - nmin <= ne*imbalance)
+  if (ne < mpi.min) {
+    mpi.npe = max(1, nt/mpi.min);
+    ne = max(1, nt/mpi.npe);
+  }
+  else
+    mpi.npe = npe();
+
+  if (nmax - nmin <= 1)
     return false;
   
   scalar newpid[];
@@ -228,7 +239,7 @@ bool balance (double imbalance)
   bool next = false, prev = false;
   foreach_cell_all() {
     if (is_local(cell)) {
-      int pid = balanced_pid (newpid[], nt);
+      int pid = balanced_pid (newpid[], nt, mpi.npe);
       pid = clamp (pid, cell.pid - 1, cell.pid + 1);
       if (pid == pid() + 1)
 	next = true;

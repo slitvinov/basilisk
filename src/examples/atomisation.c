@@ -50,8 +50,6 @@ uf.n[back]   = 0;
 
 #endif
 
-timer tt;
-
 int main (int argc, char * argv[]) {
   if (argc > 1)
     maxlevel = atoi (argv[1]);
@@ -72,7 +70,6 @@ int main (int argc, char * argv[]) {
   f.sigma = SIGMA;
   //  TOLERANCE = 1e-5;
   
-  tt = timer_start();
   run();
 }
 
@@ -127,16 +124,12 @@ We log the position of the center of mass of the bubble, its velocity
 and volume. */
 
 event logfile (i++) {
-  double xb = 0., vb = 0., sb = 0.;
-  foreach(reduction(+:xb) reduction(+:vb) reduction(+:sb)) {
-    double dv = (1. - f[])*dv();
-    xb += x*dv;
-    vb += u.x[]*dv;
-    sb += dv;
-  }
-  fprintf (ferr, "%g %g %g %g %g %g %d %d %d %d %g %g\n", 
-	   t, sb, -1., xb/sb, vb/sb, dt, mgp.i, mgpf.i, mgu.i,
-	   perf.nc, perf.t, perf.speed);
+  if (i == 0)
+    fprintf (ferr,
+	     "t dt mgp.i mgpf.i mgu.i perf.tn perf.t perf.speed mpi.mpe\n");
+  fprintf (ferr, "%g %g %d %d %d %ld %g %g %d\n", 
+	   t, dt, mgp.i, mgpf.i, mgu.i,
+	   perf.tn, perf.t, perf.speed, mpi.npe);
 }
 
 /**

@@ -13,6 +13,7 @@ int main (int argc, char * argv[])
     LEVEL = atoi (argv[1]);
   origin (-0.5, -0.5);
   init_grid (1 << LEVEL);
+  mpi.min = 1; // 1 element per process minimum
   run();
 }
 

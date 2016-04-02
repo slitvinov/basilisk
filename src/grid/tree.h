@@ -1709,10 +1709,6 @@ Point locate (struct _locate p)
   return point;
 }
 
-@if _MPI
-bool balance (double imbalance);
-@endif
-
 #include "quadtree-common.h"
 
 @if _MPI

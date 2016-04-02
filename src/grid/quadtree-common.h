@@ -136,7 +136,7 @@ void coarsen_cell_recursive (Point point, scalar * list)
 void mpi_boundary_refine  (scalar *, int);
 void mpi_boundary_coarsen (int, int);
 void mpi_boundary_update  (void);
-bool balance (double);
+bool balance();
 @else
 @ define mpi_boundary_refine(...)
 @ define mpi_boundary_coarsen(...)
@@ -287,7 +287,7 @@ astats adapt_wavelet (struct Adapt p)
   if (st.nc || st.nf) {
     mpi_boundary_update();
     boundary (p.listb ? p.listb : p.list);
-    while (balance (0));
+    while (balance());
   }
   free (listcm);
   
@@ -299,8 +299,8 @@ astats adapt_wavelet (struct Adapt p)
   do {									\
     refined = 0;							\
     quadtree->refined.n = 0;						\
-    foreach()								\
-      if (is_leaf(cell) && (cond)) {					\
+    foreach_leaf()							\
+      if (cond) {							\
 	refine_cell (point, list, 0, &quadtree->refined);		\
 	refined++;							\
       }									\
@@ -309,7 +309,7 @@ astats adapt_wavelet (struct Adapt p)
       mpi_boundary_refine (list, 0);					\
       mpi_boundary_update();						\
       boundary (list);							\
-      while (balance(0)); 						\
+      while (balance()); 						\
     }									\
   } while (refined);							\
 } while(0)
