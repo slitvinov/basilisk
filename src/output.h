@@ -251,6 +251,14 @@ void gray (double cmap[NCMAP][3])
       cmap[i][k] = i/(NCMAP - 1.);
 }
 
+void randomap (double cmap[NCMAP][3])
+{
+  srand(0);
+  for (int i = 0; i < NCMAP; i++)
+    for (int k = 0; k < 3; k++)
+      cmap[i][k] = (noise() + 1.)/2.;
+}
+
 /**
 Given a colormap and a minimum and maximum value, this function
 returns the red/green/blue triplet corresponding to *val*. */
