@@ -14,6 +14,7 @@ int main (int argc, char * argv[])
   origin (-0.5, -0.5);
   init_grid (1 << LEVEL);
   mpi.min = 1; // 1 element per process minimum
+  mpi.leaves = true; // balance leaves only
   run();
 }
 
@@ -56,20 +57,6 @@ event adapt (i++) {
   boundary ({s,u});
 #endif
   
-#if 0  
-  debug_iteration = i;
-
-  char name[80];
-  sprintf (name, "uf-%d-%d", i, pid());
-  FILE * fp = fopen(name, "w");
-  foreach_cell() {
-    fprintf (fp, "%g %g %g\n", x - Delta/2., y, u.x[]);
-    if (allocated(1))
-      fprintf (fp, "%g %g %g\n", x + Delta/2., y, u.x[1]);
-  }
-  fclose (fp);
-#endif
-  
   astats st = adapt_wavelet ({h}, (double[]){1e-2}, LEVEL);
   fprintf (ferr, "# refined %d cells, coarsened %d cells\n", st.nf, st.nc);
   restriction ({zb}); // fixme: why is it necessary with MPI?
@@ -77,14 +64,10 @@ event adapt (i++) {
 #if BGHOSTS == 2
   foreach()
     foreach_neighbor()
-    //      if (cell.pid >= 0) // fixme
-	assert (s[] == 1);
+      assert (s[] == 1);
   check_restriction (s);
-#if 1
   foreach_face()
     for (int i = -2; i <= 2; i++)
-      //      if (neighbor(0,i).pid >= 0)
-	assert (u.x[0,i] == 1);
-#endif
+      assert (u.x[0,i] == 1);
 #endif
 }

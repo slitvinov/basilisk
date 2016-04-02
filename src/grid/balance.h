@@ -187,10 +187,13 @@ static void check_flags()
 }
 
 struct {
-  int min; // minimum number of points per process
+  int  min;    // minimum number of points per process
+  bool leaves; // balance leaves only
+  
   int npe; // number of active processes
 } mpi = {
-  10000
+  10000,
+  true
 };
 
 trace
@@ -204,8 +207,18 @@ bool balance()
   check_flags();
 
   long nl = 0;
-  foreach()
-    nl++;
+
+  if (mpi.leaves)
+    foreach()
+      nl++;
+  else
+    foreach_cell() {
+      if (is_local(cell))
+	nl++;
+      if (is_leaf(cell))
+	continue;
+    }
+
   long nt = nl, nmin = nl, nmax = nl;
   // fixme: do all reductions in one go
   mpi_all_reduce (nt,   MPI_LONG, MPI_SUM);
@@ -224,8 +237,10 @@ bool balance()
     return false;
   
   scalar newpid[];
-  z_indexing (newpid, true);
-
+  double zn = z_indexing (newpid, mpi.leaves);
+  if (pid() == 0)
+    assert (zn + 1 == nt);
+  
   FILE * fp = NULL;
 #ifdef DEBUGCOND
   extern double t;
