@@ -19,6 +19,7 @@ The density and viscosity are defined using the arithmetic average. */
 #define mu(f)  (2.*radius/Re*rho(f))
 
 int maxlevel = 8;
+double uemax = 0.1;
 
 scalar f[], * interfaces = {f};
 face vector alphav[];
@@ -53,6 +54,8 @@ uf.n[back]   = 0;
 int main (int argc, char * argv[]) {
   if (argc > 1)
     maxlevel = atoi (argv[1]);
+  if (argc > 2)
+    uemax = atof (argv[2]);
   
   init_grid (64);
 
@@ -69,7 +72,8 @@ int main (int argc, char * argv[]) {
   mu = muv;
   f.sigma = SIGMA;
   //  TOLERANCE = 1e-5;
-  
+
+  mpi.min = 1;
   run();
 }
 
@@ -219,7 +223,7 @@ event adapt (i++) {
 #endif
   
   boundary ((scalar *){a});
-  adapt_wavelet ({f,u}, (double[]){0.01,0.1,0.1,0.1}, maxlevel);
+  adapt_wavelet ({f,u}, (double[]){0.01,uemax,uemax,uemax}, maxlevel);
   restriction ({f0}); // for boundary conditions on restricted f
   event ("properties");
   

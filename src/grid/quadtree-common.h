@@ -303,6 +303,7 @@ astats adapt_wavelet (struct Adapt p)
       if (cond) {							\
 	refine_cell (point, list, 0, &quadtree->refined);		\
 	refined++;							\
+	continue;							\
       }									\
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);				\
     if (refined) {							\
