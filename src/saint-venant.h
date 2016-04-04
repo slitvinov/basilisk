@@ -86,7 +86,7 @@ static void advance_saint_venant (scalar * output, scalar * input,
   foreach() {
     double hold = hi[];
     ho[] = hold + dt*dh[];
-    eta[] = ho[] + zb[];
+    eta[] = zb[] + ho[];
     if (ho[] > dry)
       foreach_dimension()
 	uo.x[] = (hold*ui.x[] + dt*dhu.x[])/ho[];
@@ -159,7 +159,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   The faces which are "wet" on at least one side are traversed. */
 
   foreach_face (reduction (min:dtmax)) {
-    double hi = h[], hn = h[-1,0];
+    double hi = h[], hn = h[-1];
     if (hi > dry || hn > dry) {
 
       /**
@@ -174,16 +174,16 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
       double dx = Delta/2.;
       double zi = eta[] - hi;
       double zl = zi - dx*(geta.x[] - gh.x[]);
-      double zn = eta[-1,0] - hn;
-      double zr = zn + dx*(geta.x[-1,0] - gh.x[-1,0]);
+      double zn = eta[-1] - hn;
+      double zr = zn + dx*(geta.x[-1] - gh.x[-1]);
       double zlr = max(zl, zr);
       
       double hl = hi - dx*gh.x[];
       double up = u.x[] - dx*gu.x.x[];
       double hp = max(0., hl + zl - zlr);
       
-      double hr = hn + dx*gh.x[-1,0];
-      double um = u.x[-1,0] + dx*gu.x.x[-1,0];
+      double hr = hn + dx*gh.x[-1];
+      double um = u.x[-1] + dx*gu.x.x[-1];
       double hm = max(0., hr + zr - zlr);
 
       /**
@@ -194,7 +194,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
 
       double fh, fu, fv;
       kurganov (hm, hp, um, up, Delta*cm[]/fm.x[], &fh, &fu, &dtmax);
-      fv = (fh > 0. ? u.y[-1,0] + dx*gu.y.x[-1,0] : u.y[] - dx*gu.y.x[])*fh;
+      fv = (fh > 0. ? u.y[-1] + dx*gu.y.x[-1] : u.y[] - dx*gu.y.x[])*fh;
       
       /**
       #### Topographic source term
@@ -204,12 +204,12 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
 
       #if QUADTREE
       if (is_prolongation(cell)) {
-	hi = coarse(h,0,0);
-	zi = coarse(zb,0,0);
+	hi = coarse(h,0);
+	zi = coarse(zb,0);
       }
-      if (is_prolongation(neighbor(-1,0))) {
-	hn = coarse(h,-1,0);
-	zn = coarse(zb,-1,0);
+      if (is_prolongation(neighbor(-1))) {
+	hn = coarse(h,-1);
+	zn = coarse(zb,-1);
       }
       #endif
 	
