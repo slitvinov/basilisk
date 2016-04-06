@@ -5,6 +5,11 @@
 
 static void gdb()
 {
+  if (last_point.level >= 0) {
+    debug (last_point);
+    fputc ('\n', stderr);
+    fflush (stderr);
+  }
   char command[80];
   sprintf (command, "exec xterm -e gdb -p %d", getpid());
   system (command);
@@ -13,10 +18,6 @@ static void gdb()
 static void caught_abort (int sig)
 {
   fprintf (stderr, "Caught signal %d (Aborted)\n", sig);
-  if (last_point.level >= 0) {
-    debug (last_point);
-    fputc ('\n', stderr);
-  }
   gdb();
 }
 
