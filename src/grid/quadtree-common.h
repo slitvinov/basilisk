@@ -133,7 +133,7 @@ void coarsen_cell_recursive (Point point, scalar * list)
 }
 
 @if _MPI
-void mpi_boundary_refine  (scalar *, int);
+void mpi_boundary_refine  (scalar *);
 void mpi_boundary_coarsen (int, int);
 void mpi_boundary_update  (void);
 bool balance();
@@ -251,7 +251,7 @@ astats adapt_wavelet (struct Adapt p)
     else // inactive cell
       continue;
   }
-  mpi_boundary_refine (listc, 1);
+  mpi_boundary_refine (listc);
   
   // coarsening
   // the loop below is only necessary to ensure symmetry of 2:1 constraint
@@ -307,7 +307,7 @@ astats adapt_wavelet (struct Adapt p)
       }									\
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);				\
     if (refined) {							\
-      mpi_boundary_refine (list, 0);					\
+      mpi_boundary_refine (list);					\
       mpi_boundary_update();						\
       boundary (list);							\
       while (balance()); 						\
@@ -321,21 +321,26 @@ static void refine_level (int depth)
 }
 
 #define unrefine(cond, list) do {					\
-  for (int _l = depth() - 1; _l >= 0; _l--) {				\
+  static const int too_fine = 1 << user;			        \
+  foreach_cell() {							\
+    if (is_leaf(cell))							\
+      continue;								\
+    if (is_local(cell) && (cond))					\
+      cell.flags |= too_fine;						\
+  }									\
+  for (int _l = depth(); _l >= 0; _l--) {				\
     foreach_cell() {							\
-      if (is_local (cell)) {						\
-	if (is_leaf (cell))						\
-	  continue;							\
-	else if (level == _l) {						\
-	  if (cond)							\
-	    coarsen_cell (point, list);					\
-	  continue;							\
-	}								\
-      }									\
-      else if (level == _l || is_leaf(cell))				\
+      if (is_leaf(cell))						\
 	continue;							\
+      if (level == _l) {						\
+	if (is_local(cell) && (cell.flags & too_fine)) {		\
+	  coarsen_cell (point, list);					\
+	  cell.flags &= ~too_fine;					\
+	}								\
+	continue;							\
+      }									\
     }									\
-    mpi_boundary_coarsen (_l);						\
+    mpi_boundary_coarsen (_l, too_fine);				\
   }									\
   mpi_boundary_update();						\
 } while (0)

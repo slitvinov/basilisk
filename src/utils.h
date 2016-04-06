@@ -261,7 +261,7 @@ struct {
   timer gt;
 } perf;
 
-static void update_perf() {
+void update_perf() {
   long tn = 0;
   perf.n = 0;
   foreach(reduction(+:tn))

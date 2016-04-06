@@ -8,7 +8,6 @@ int main (int argc, char * argv[])
   refine (level < depth - 2 ||
 	  level <= depth*(1. - sqrt(sq(x) + sq(y) + sq(z))),
 	  NULL);
-  mpi_partitioning();
   
   scalar s[];
   foreach()
@@ -21,10 +20,8 @@ int main (int argc, char * argv[])
 
   // check boundary conditions on leaves
   foreach()
-    for (int i = -2; i <= 2; i++)
-      for (int j = -2; j <= 2; j++)
-	for (int k = -2; k <= 2; k++)
-	  assert (s[i,j,k] == 1.);
+    foreach_neighbor()
+      assert (s[] == 1.);
 
   // check boundary conditions on levels
   scalar s1[];
@@ -33,10 +30,8 @@ int main (int argc, char * argv[])
       s1[] = 2;
     boundary_level ({s1}, l);
     foreach_level_or_leaf (l)
-      for (int i = -1; i <= 1; i++)
-	for (int j = -1; j <= 1; j++)
-	  for (int k = -1; k <= 1; k++)
-	    assert (s1[i,j,k] == 2.);
+      foreach_neighbor(1) // fixme: shoud work with foreach_neighbor()
+        assert (s1[] == 2.);
   }
   
   // check restriction 
@@ -47,7 +42,7 @@ int main (int argc, char * argv[])
 
   // check face traversal
   foreach_face() {
-    fprintf (stderr, "face %g %g %g %g\n", x, y, z, s[] - s[-1,0]);
+    fprintf (stderr, "face %g %g %g %g\n", x, y, z, s[] - s[-1]);
     assert (s[] == s[-1]);
   }
 }

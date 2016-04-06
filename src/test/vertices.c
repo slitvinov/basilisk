@@ -6,5 +6,4 @@ int main()
   output_cells (stdout);
   foreach_vertex()
     fprintf (stderr, "%g %g %d\n", x, y, level);
-  free_grid();
 }

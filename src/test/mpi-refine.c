@@ -1,11 +1,13 @@
+#include "refine_unbalanced.h"
+
 int main (int argc, char * argv[])
 {
   X0 = Y0 = -0.5;
   init_grid (2);
 
   int depth = argc > 1 ? atoi(argv[1]) : 6;
-  refine((level <= depth && x <= -0.25 && y < 0 && y >= -0.25) ||
-	 (level <= depth - 1 && y < 0), NULL);
+  refine_unbalanced ((level <= depth && x <= -0.25 && y < 0 && y >= -0.25) ||
+		     (level <= depth - 1 && y < 0), NULL);
   output_cells (stdout);
   
   scalar s[];

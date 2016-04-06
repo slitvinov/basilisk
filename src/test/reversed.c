@@ -112,7 +112,8 @@ final shape. We output the norms as functions of the maximum
 resolution `N`. */
 
 event field (t = T) {
-  scalar phi[], e[];
+  vertex scalar phi[];
+  scalar e[];
   foreach_vertex()
     phi[] = circle(x,y);
   fractions (phi, e);

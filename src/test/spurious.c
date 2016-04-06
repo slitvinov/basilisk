@@ -183,8 +183,7 @@ interface. */
 
 #if QUADTREE
 event adapt (i <= 10; i++) {
-  adapt_wavelet ({c}, (double[]){0}, maxlevel = LEVEL, minlevel = 0,
-		 list = {p,u,pf,uf,g,c,fm,cm}, listb = {u,pf,uf,g,c,fm,cm});
+  adapt_wavelet ({c}, (double[]){0}, maxlevel = LEVEL, minlevel = 0);
 }
 #endif
 

@@ -1,6 +1,8 @@
 /* tangential interpolation on face vector fields (in parallel) 
  see also: interpu.c */
 
+#include "refine_unbalanced.h"
+
 scalar h[];
 face vector u[];
 
@@ -14,12 +16,19 @@ int main (int argc, char ** argv)
   int minlevel = argc > 2 ? atoi(argv[2]) : 5;
   origin (-1, -1);
   init_grid (1);
-  refine (level <= minlevel*(1. - sqrt(sq((x + 0.5) - 0.1) +
-				       sq((y + 0.5)- 0.1))), NULL);
+
+  foreach_cell() {
+    cell.pid = pid();
+    cell.flags |= active;
+  }
+  quadtree->dirty = true;
+  
+  refine_unbalanced (level <= minlevel*(1. - sqrt(sq((x + 0.5) - 0.1) +
+						  sq((y + 0.5)- 0.1))), NULL);
   mpi_partitioning();
   
-  refine (level <= maxlevel*(1. - sqrt(sq((x + 0.5) - 0.1) +
-				       sq((y + 0.5) - 0.1))), NULL);
+  refine_unbalanced (level <= maxlevel*(1. - sqrt(sq((x + 0.5) - 0.1) +
+						  sq((y + 0.5) - 0.1))), NULL);
   
   foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));
@@ -50,5 +59,7 @@ int main (int argc, char ** argv)
 	      xv, yv, level, cell.neighbors, u.y[i,0], e);
     }
 
-  fprintf (stderr, "maximum error on halos: %g %g\n", max, maxv);
+  mpi_all_reduce (max, MPI_DOUBLE, MPI_MAX);
+  mpi_all_reduce (maxv, MPI_DOUBLE, MPI_MAX);
+  fprintf (ferr, "maximum error on halos: %g %g\n", max, maxv);  
 }

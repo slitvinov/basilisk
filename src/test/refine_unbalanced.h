@@ -5,7 +5,7 @@
     refined = 0;							\
     foreach_leaf()							\
       if (cond)	{							\
-        refine_cell (point, list, 0, &quadtree->refined, NULL);		\
+        refine_cell (point, list, 0, &quadtree->refined);		\
 	refined++;							\
       }									\
   } while (refined);							\

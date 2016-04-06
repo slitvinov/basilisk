@@ -35,7 +35,7 @@ int main (int argc, char * argv[])
     foreach()
       if (is_leaf(cell) && level <= maxlevel &&
 	  sq(x) + sq(y) + sq(z) < sq(0.05)) {
-	refine_cell (point, list, 0, &quadtree->refined, NULL);
+	refine_cell (point, list, 0, &quadtree->refined);
 	refined++;
       }
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);
@@ -43,6 +43,11 @@ int main (int argc, char * argv[])
       mpi_boundary_refine (list);
       mpi_boundary_update();
       boundary (list);
+      foreach()
+	foreach_neighbor()
+	assert (s[] == 1);
+      foreach_face()
+	assert (u.x[] == 1);
       while (balance(0)) {
 	foreach()
 	  foreach_neighbor()

@@ -192,7 +192,7 @@ struct {
   
   int npe; // number of active processes
 } mpi = {
-  10000,
+  1,
   true
 };
 

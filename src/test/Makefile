@@ -200,24 +200,11 @@ gfsi.tst: gfs.tst
 
 # load-balancing
 
-load-balancing: balance.tst balance1.tst balance2.tst balance3.tst \
-		balance4.tst balance5.tst balance6.tst balance7.tst \
-		balance8.tst bump2Dp.tst vortex.tst axiadvection.tst
+load-balancing: balance5.tst balance6.tst balance7.tst \
+		bump2Dp.tst vortex.tst axiadvection.tst
 
-balance.tst: CC = mpicc -D_MPI=3
-balance1.tst: CC = mpicc -D_MPI=3
-balance2.c: balance1.c
-	ln -s balance1.c balance2.c
-balance2.tst: CC = mpicc -D_MPI=4
-balance3.c: balance1.c
-	ln -s balance1.c balance3.c
-balance3.tst: CC = mpicc -D_MPI=8
-balance4.c: balance1.c
-	ln -s balance1.c balance4.c
-balance4.tst: CC = mpicc -D_MPI=9
 balance5.tst: CC = mpicc -D_MPI=9
 balance6.c: balance5.c
 	ln -s balance5.c balance6.c
 balance6.tst: CC = mpicc -D_MPI=17
 balance7.tst: CC = mpicc -D_MPI=17
-balance8.tst: CC = mpicc -D_MPI=7

@@ -1,12 +1,22 @@
 /* parallel Z-indexing */
 
+#include "refine_unbalanced.h"
+
 int main (int argc, char ** argv)
 {
   int depth = 4;
   origin (-0.5, -0.5, -0.5);
   init_grid (1);
-  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)),
-  	  NULL);
+
+  foreach_cell() {
+    cell.pid = pid();
+    cell.flags |= active;
+  }
+  quadtree->dirty = true;
+  
+  refine_unbalanced (level < depth - 2 ||
+		     level <= depth*(1. - sqrt(x*x + y*y + z*z)),
+		     NULL);
   
   scalar reference[];
   int i = 0;

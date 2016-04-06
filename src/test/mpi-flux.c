@@ -7,7 +7,6 @@ int main (int argc, char ** argv)
   init_grid (1);
   refine (level <= minlevel*(1. - sqrt(sq((y - 0.5) - 0.1) +
 				       sq((0.5 - x) - 0.1))), NULL);
-  mpi_partitioning();
 
   output_cells (stdout);
 

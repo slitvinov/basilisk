@@ -14,6 +14,18 @@ void image()
   output_ppm (pid, n = 128, min = 0, max = npe() - 1);
 }
 
+void set_unused_pids()
+{
+  scalar pid[];
+  foreach_cell()
+    pid[] = is_local(cell) ? pid() : -1;
+  for (int l = 0; l <= depth(); l++)
+    boundary_iterate (restriction, {pid}, l);
+  foreach_cell()
+    if (pid[] < 0)
+      cell.pid = npe();
+}
+
 void partition (const char * prog)
 {
   // generates reference solution (in ref)
@@ -30,6 +42,7 @@ void partition (const char * prog)
   refine_unbalanced (level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05), NULL);
   
   mpi_partitioning();
+  set_unused_pids();
 
   char name[80];
   sprintf (name, "ref-%d", pid());
@@ -64,14 +77,15 @@ int main (int argc, char * argv[])
   /** the loop below is the prototype for grid/quadtree-common.h:refine()
       Fixes made here must also be applied to refine() */
   
-  int refined;
+  int refined, n = 0;
   do {
     refined = 0;
     quadtree->refined.n = 0;
-    foreach()
-      if (is_leaf(cell) && level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05)) {
-	refine_cell (point, list, 0, &quadtree->refined, NULL);
+    foreach_leaf()
+      if (level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05)) {
+	refine_cell (point, list, 0, &quadtree->refined);
 	refined++;
+	continue;
       }
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);
     if (refined) {
@@ -79,18 +93,20 @@ int main (int argc, char * argv[])
       mpi_boundary_update();
       boundary (list);
       image();
-      while (balance(0)) {
+      while (balance()) {
 	foreach()
 	  foreach_neighbor()
-          assert (s[] == 1);
+            assert (s[] == 1);
 	foreach_face()
 	  for (int i = -2; i <= 2; i++)
 	    assert (u.x[0,i] == 1);
 	image();
       }
     }
+    n++;
   } while (refined);
-  
+
+  set_unused_pids();
   debug_mpi (stderr);
 
   check_restriction (s);

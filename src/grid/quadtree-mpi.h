@@ -980,7 +980,7 @@ void mpi_boundary_update()
 }
 
 trace
-void mpi_boundary_refine (scalar * list, int file)
+void mpi_boundary_refine (scalar * list)
 {
   prof_start ("mpi_boundary_refine");
 
@@ -1044,7 +1044,7 @@ void mpi_boundary_refine (scalar * list, int file)
      of recursive refinements induced by the 2:1 constraint */
   mpi_all_reduce (rerefined.n, MPI_INT, MPI_SUM);
   if (rerefined.n)
-    mpi_boundary_refine (list, 0);
+    mpi_boundary_refine (list);
 }
 
 static void check_depth()
