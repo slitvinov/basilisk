@@ -321,7 +321,7 @@ averaging. */
 
 event acceleration (i++,last)
 {
-  boundary_flux ({a});
+  boundary ((scalar *){a});
   foreach_face()
     uf.x[] += dt*fm.x[]*a.x[];
   boundary ((scalar *){uf});
