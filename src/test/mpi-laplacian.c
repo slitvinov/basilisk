@@ -60,7 +60,6 @@ static void mpi_print (timer t, int i, size_t tnc,
 int main (int argc, char * argv[])
 {
   int maxlevel = argc > 1 ? atoi(argv[1]) : (dimension == 2 ? 8 : 5);
-  int minlevel = argc > 2 ? atoi(argv[2]) : 1;
   timer t;
 
   double speed = 1e6; // approx speed in points/sec/core
@@ -75,8 +74,6 @@ int main (int argc, char * argv[])
     exit(1);
   }
 
-  init_grid (1 << minlevel);
-
   foreach()
     a[] = b[] = 0.;
   boundary ({a, b});
@@ -84,7 +81,7 @@ int main (int argc, char * argv[])
   
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
-  refine (level < maxlevel, NULL);
+  init_grid (1 << maxlevel);
   tnc = 0;
   foreach(reduction(+:tnc))
     tnc++;
@@ -218,27 +215,34 @@ qcc -grid=octree -source mpi-laplacian.c
 scp _mpi-laplacian.c popinet@occigen.cines.fr:
 ~~~
 
-On Occigen the following script (*run.sh*) is used to compile and run
-the code
+On Occigen one can then compile the code using
+
+~~~bash
+module load bullxmpi
+module load intel
+mpicc -Wall -std=c99 -O2 -D_MPI=1 -D_GNU_SOURCE=1 _mpi-laplacian.c -o mpi-laplacian -lm
+~~~
+
+The following script (*run.sh*) can then be used to run the code
 
 ~~~bash
 #!/bin/bash
 #SBATCH -J basilisk
-##SBATCH -d singleton
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
 #SBATCH --ntasks-per-node=2
 #SBATCH --threads-per-core=1
 #SBATCH --time=00:10:00
 #SBATCH --output basilisk.output
+#SBATCH --exclusive
 
 LEVEL=11
 
 module purge
-module load intel/15.0.0.090
-module load bullxmpi/1.2.8.3
-mpicc -Wall -std=c99 -O2 -D_MPI=1 -D_DARWIN_C_SOURCE=1 _mpi-laplacian.c -o mpi-laplacian -lm
-srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./mpi-laplacian $LEVEL 6 \
+module load bullxmpi
+module load intel
+
+srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./mpi-laplacian $LEVEL \
      2> log-$LEVEL-$SLURM_NTASKS > out-$LEVEL-$SLURM_NTASKS
 ~~~
 

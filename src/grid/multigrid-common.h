@@ -81,7 +81,7 @@ void restriction (scalar * list)
   if (listf)
     boundary_flux (listf);
   if (listf || listc) {
-    boundary_iterate (restriction, list, depth());
+    boundary_iterate (level, list, depth());
     for (int l = depth() - 1; l >= 0; l--) {
       foreach_coarse_level(l) {
 	// fixme: this ignores the s.coarsen() method...
@@ -90,7 +90,7 @@ void restriction (scalar * list)
 	for (vector v in listf)
 	  face_average (point, v);
       }
-      boundary_iterate (restriction, list, l);
+      boundary_iterate (level, list, l);
     }
   }
   free (listc);

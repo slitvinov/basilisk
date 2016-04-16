@@ -285,12 +285,12 @@ void init_grid (int n)
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
     box->d = d;
     Boundary * b = (Boundary *) box;
-    b->level = b->restriction = box_boundary_level;
+    b->level = box_boundary_level;
     add_boundary (b);
   }
   // periodic boundaries
   Boundary * b = calloc (1, sizeof (Boundary));
-  b->level = b->restriction = periodic_boundary_level_x;
+  b->level = periodic_boundary_level_x;
   add_boundary (b);
 }
 

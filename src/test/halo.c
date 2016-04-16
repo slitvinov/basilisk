@@ -19,8 +19,5 @@ int main (int argc, char ** argv)
   for (int l = 0; l < depth(); l++)
     foreach_halo (prolongation, l)
       fprintf (stderr, "%g %g %d %d halo\n", x, y, level, cell.neighbors);
-  for (int l = depth() - 1; l >= 0; l--)
-    foreach_halo (restriction, l)
-      fprintf (stderr, "%g %g %d %d res\n", x, y, level, cell.neighbors);
   output_cells (stdout);
 }

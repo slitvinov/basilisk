@@ -100,7 +100,6 @@ bool coarsen_cell (Point point, scalar * list)
 
   /* coarsen */
   cell.flags |= leaf;
-  cell.flags &= ~halo;
 
   /* update neighborhood */
   decrement_neighbors (point);
@@ -161,13 +160,10 @@ astats adapt_wavelet (struct Adapt p)
 {
   scalar * listcm = NULL;
 
-  if (is_constant(cm))
-    restriction (p.slist);
-  else {
+  if (!is_constant(cm)) {
     if (p.list == NULL)
       listcm = list_concat (NULL, {cm,fm});
     scalar * listr = list_concat (p.slist, {cm});
-    restriction (listr);
     free (listr);
   }
   if (p.list == NULL) {
@@ -345,7 +341,7 @@ static void refine_level (int depth)
   mpi_boundary_update();						\
 } while (0)
 
-static void halo_restriction_flux (vector * list)
+static void halo_flux (vector * list)
 {
   vector * listv = NULL;
   for (vector v in list)
@@ -521,15 +517,15 @@ static void quadtree_boundary_level (scalar * list, int l)
     }
 
   if (listdef || listc) {
-    boundary_iterate (halo_restriction, list2, depth);
-    for (int i = depth - 1; i >= 0; i--) {
-      foreach_halo (restriction, i) {
+    boundary_iterate (restriction, list2, depth);
+    for (int l = depth - 1; l >= 0; l--) {
+      foreach_coarse_level(l) {
 	for (scalar s in listdef)
 	  coarsen_average (point, s);
 	for (scalar s in listc)
 	  s.coarsen (point, s);
       }
-      boundary_iterate (halo_restriction, list2, i);
+      boundary_iterate (restriction, list2, l);
     }
     free (listdef);
     free (listc);
@@ -547,7 +543,7 @@ static void quadtree_boundary_level (scalar * list, int l)
     }
 
   if (listr || listf) {
-    boundary_iterate (halo_prolongation, list, 0, l);
+    boundary_iterate (level, list, 0);
     for (int i = 0; i < depth; i++) {
       foreach_halo (prolongation, i) {
 	for (scalar s in listr)
@@ -556,7 +552,7 @@ static void quadtree_boundary_level (scalar * list, int l)
 	  foreach_dimension()
 	    v.x.prolongation (point, v.x);
       }
-      boundary_iterate (halo_prolongation, list, i + 1, l);
+      boundary_iterate (level, list, i + 1);
     }
     free (listr);
     free (listf);
@@ -639,5 +635,5 @@ void quadtree_methods()
   init_scalar      = quadtree_init_scalar;
   init_face_vector = quadtree_init_face_vector;
   boundary_level   = quadtree_boundary_level;
-  boundary_flux    = halo_restriction_flux;
+  boundary_flux    = halo_flux;
 }

@@ -28,10 +28,9 @@ typedef struct {
 enum {
   active    = 1 << 0,
   leaf      = 1 << 1,
-  halo      = 1 << 2,
-  border    = 1 << 3,
-  vertex    = 1 << 4,
-  user      = 5,
+  border    = 1 << 2,
+  vertex    = 1 << 3,
+  user      = 4,
 
   face_x = 1 << 0
 #if dimension >= 2
@@ -221,7 +220,6 @@ typedef struct {
   Cache        refined;  /* refined cells */
   CacheLevel * active;   /* active cells indices for each level */
   CacheLevel * prolongation; /* halo prolongation indices for each level */
-  CacheLevel * restriction;  /* halo restriction indices for each level */
   CacheLevel * boundary;  /* boundary indices for each level */
   
   bool dirty;       /* whether caches should be updated */
@@ -619,8 +617,7 @@ static void update_cache_f (void)
   /* empty caches */
   q->leaves.n = q->faces.n = q->vertices.n = 0;
   for (int l = 0; l <= depth(); l++)
-    q->active[l].n = q->prolongation[l].n =
-      q->restriction[l].n = q->boundary[l].n = 0;
+    q->active[l].n = q->prolongation[l].n = q->boundary[l].n = 0;
 
   const unsigned short fboundary = 1 << user;
   foreach_cell() {
@@ -667,7 +664,6 @@ static void update_cache_f (void)
 	// halo prolongation
         if (cell.neighbors > 0)
 	  cache_level_append (&q->prolongation[level], point);
-	cell.flags &= ~halo;
       }
       else if (!is_boundary(cell) || is_local(aparent(0))) { // non-local
 	// faces
@@ -685,35 +681,6 @@ static void update_cache_f (void)
       }
       continue;
     }
-    else { // not a leaf
-@if _MPI
-      // halo flag is already set by mpi_boundary_update()
-      if (is_local(cell) && (cell.flags & halo))
-	cache_level_append (&q->restriction[level], point);
-@else // not _MPI
-      bool restriction = level > 0 && (aparent(0).flags & halo);
-      if (!restriction) {
-	// fixme: assert (is_active(cell));
-	if (is_active(cell)) {
-	  foreach_neighbor()
-	    if (allocated(0) && is_leaf(cell) && !is_boundary(cell))
-	      restriction = true, break;
-	}
-	else // this is necessary so that boundary cells are recognised
-	  foreach_neighbor()
-	    if (allocated(0) && is_leaf(cell) && is_local(cell))
-	      restriction = true, break;
-      }
-      if (restriction) {
-	// halo restriction
-	cell.flags |= halo;
-	if (is_local(cell))
-	  cache_level_append (&q->restriction[level], point);
-      }
-      else
-	cell.flags &= ~halo;
-@endif // not _MPI
-    }
   }
   
   /* optimize caches */
@@ -723,21 +690,14 @@ static void update_cache_f (void)
   for (int l = 0; l <= depth(); l++) {
     cache_level_shrink (&q->active[l]);
     cache_level_shrink (&q->prolongation[l]);
-    cache_level_shrink (&q->restriction[l]);
     cache_level_shrink (&q->boundary[l]);
   }
   
   q->dirty = false;
 
-  for (int l = depth(); l >= 0; l--) {
+  for (int l = depth(); l >= 0; l--)
     foreach_boundary (l)
-      cell.flags &= ~(fboundary|halo);
-    // we mark boundary cells which are required for halo restriction
-    foreach_halo (restriction, l)
-      foreach_child()
-        if (is_boundary(cell))
-	  cell.flags |= halo;
-  }
+      cell.flags &= ~fboundary;
 }
 
 @define foreach(clause) update_cache(); foreach_cache(quadtree->leaves, clause)
@@ -867,7 +827,6 @@ static void update_depth (int inc)
     q->L[q->depth] = new_layer (q->depth);
   cache_level_resize (active, inc);
   cache_level_resize (prolongation, inc);
-  cache_level_resize (restriction, inc);
   cache_level_resize (boundary, inc);
 }
 
@@ -1078,10 +1037,9 @@ void realloc_scalar (void)
 @define VT v.y
 
 #define is_neighbor(...) (allocated(__VA_ARGS__) && \
-			  !is_boundary(neighbor(__VA_ARGS__)) \
-			  && cond(neighborp(__VA_ARGS__)))
+			  !is_boundary(neighbor(__VA_ARGS__)))
 
-@if _MPI
+@if _MPI // fixme
 @ define disable_fpe_for_mpi() disable_fpe (FE_DIVBYZERO|FE_INVALID)
 @ define enable_fpe_for_mpi()  enable_fpe (FE_DIVBYZERO|FE_INVALID)
 @else
@@ -1091,8 +1049,7 @@ void realloc_scalar (void)
 
 static inline void no_coarsen (Point point, scalar s);
 
-static bool normal_neighbor (Point point, bool (cond)(Point),
-			     scalar * scalars, vector * vectors)
+static bool normal_neighbor (Point point, scalar * scalars, vector * vectors)
 {
   for (int k = 1; k <= BGHOSTS; k++)
     foreach_dimension()
@@ -1118,7 +1075,7 @@ static bool normal_neighbor (Point point, bool (cond)(Point),
   return false;
 }
 
-static bool diagonal_neighbor_2D (Point point, bool (cond)(Point),
+static bool diagonal_neighbor_2D (Point point,
 				  scalar * scalars, vector * vectors)
 {
 #if dimension >= 2
@@ -1157,7 +1114,7 @@ static bool diagonal_neighbor_2D (Point point, bool (cond)(Point),
   return false;
 }
 
-static bool diagonal_neighbor_3D (Point point, bool (cond)(Point),
+static bool diagonal_neighbor_3D (Point point,
 				  scalar * scalars, vector * vectors)
 {
 #if dimension == 3
@@ -1206,7 +1163,7 @@ static bool diagonal_neighbor_3D (Point point, bool (cond)(Point),
 
 #if dimension > 1
 foreach_dimension()
-static Point tangential_neighbor_x (Point point, bool (cond)(Point))
+static Point tangential_neighbor_x (Point point)
 {
   for (int k = 1; k <= BGHOSTS; k++)
     for (int j = -k; j <= k; j += 2*k) {
@@ -1222,9 +1179,7 @@ static Point tangential_neighbor_x (Point point, bool (cond)(Point))
 }
 #endif // dimension > 1
 
-void box_boundaries (int l,
-		     bool (cond1)(Point), bool (cond)(Point),
-		     scalar * list)
+void box_boundaries (int l, scalar * list)
 {
   scalar * scalars = NULL;
   vector * vectors = NULL, * faces = NULL;
@@ -1240,50 +1195,49 @@ void box_boundaries (int l,
 	scalars = list_add (scalars, s);
     }
   
-  foreach_boundary (l)
-    if (cond1 (point)) {
-      if (!normal_neighbor (point, cond, scalars, vectors) &&
-	  !diagonal_neighbor_2D (point, cond, scalars, vectors) &&
-	  !diagonal_neighbor_3D (point, cond, scalars, vectors)) {
-	// no neighbors
-	for (scalar s in scalars)
-	  s[] = undefined;
-	for (vector v in vectors)
-	  foreach_dimension()
-	    v.x[] = undefined;
-      }
-      if (faces) {
-	int id = bid(cell);
+  foreach_boundary (l) {
+    if (!normal_neighbor (point, scalars, vectors) &&
+	!diagonal_neighbor_2D (point, scalars, vectors) &&
+	!diagonal_neighbor_3D (point, scalars, vectors)) {
+      // no neighbors
+      for (scalar s in scalars)
+	s[] = undefined;
+      for (vector v in vectors)
 	foreach_dimension()
-	  for (int i = -1; i <= 1; i += 2) {
-	    // normal neighbor for faces
-	    if (is_neighbor(i)) {
-	      Point neighbor = neighborp(i);
-	      for (vector v in faces) {
-		scalar vn = VN;
-		if (vn.boundary[id])
-		  v.x[(i + 1)/2] = vn.boundary[id](neighbor, point, v.x);
-	      }
-	    }
-#if dimension > 1
-	    else if (i == -1) {
-	      // tangential neighbor
-	      Point neighbor = tangential_neighbor_x (point, cond);
-	      if (neighbor.level >= 0) {
-		for (vector v in faces) {
-		  scalar vt = VT;
-		  v.x[] = vt.boundary[id](neighbor, point, v.x);
-		}
-	      }
-	      else
-		// no neighbor
-		for (vector v in faces)
-		  v.x[] = 0.;
-	    }
-#endif // dimension > 1
-	  }
-      }
+	  v.x[] = undefined;
     }
+    if (faces) {
+      int id = bid(cell);
+      foreach_dimension()
+	for (int i = -1; i <= 1; i += 2) {
+	  // normal neighbor for faces
+	  if (is_neighbor(i)) {
+	    Point neighbor = neighborp(i);
+	    for (vector v in faces) {
+	      scalar vn = VN;
+	      if (vn.boundary[id])
+		v.x[(i + 1)/2] = vn.boundary[id](neighbor, point, v.x);
+	    }
+	  }
+#if dimension > 1
+	  else if (i == -1) {
+	    // tangential neighbor
+	    Point neighbor = tangential_neighbor_x (point);
+	    if (neighbor.level >= 0) {
+	      for (vector v in faces) {
+		scalar vt = VT;
+		v.x[] = vt.boundary[id](neighbor, point, v.x);
+	      }
+	    }
+	    else
+	      // no neighbor
+	      for (vector v in faces)
+		v.x[] = 0.;
+	  }
+#endif // dimension > 1
+	}
+    }
+  }
 
   free (scalars);
   free (vectors);
@@ -1297,59 +1251,10 @@ void box_boundaries (int l,
 @define VN _attribute[s.i].v.x
 @define VT _attribute[s.i].v.y
  
-static bool retrue (Point point) { return true; }
-
-static bool retleaf (Point point) { return is_leaf(cell); }
-
-static bool retleafhalo (Point point) {
-  // leaf or prolongation or restriction halo
-  return is_leaf(cell) || !cell.neighbors || (cell.flags & halo);
-}
-
-static bool retleafhalo1 (Point point) {
-  // leaf or restriction halo
-  return is_leaf(cell) || (cell.flags & halo);  
-}
-
-static bool rethalo (Point point) {
-  // restriction halo
-  return cell.flags & halo;
-}
- 
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
   disable_fpe_for_mpi();
-  if (l < 0)
-    for (l = 0; l <= depth(); l++)
-      box_boundaries (l, retrue, retleaf, list);
-  else
-    box_boundaries (l, retrue, retrue, list);
-  enable_fpe_for_mpi();
-}
-
-static void box_boundary_halo_restriction (const Boundary * b,
-					   scalar * list, int l)
-{
-  disable_fpe_for_mpi();
-  if (l == 0)
-    return;
-  box_boundaries (l, rethalo, retleafhalo1, list);
-  enable_fpe_for_mpi();
-}
-
-static void box_boundary_halo_prolongation (const Boundary * b,
-					    scalar * list, 
-					    int l, int depth)
-{
-  disable_fpe_for_mpi();
-@if _MPI // fixme: prolongation does not work with MPI yet
-    box_boundaries (l, retrue, retrue, list);
-@else
-  if (l == depth)
-    box_boundaries (l, retrue, retrue, list);
-  else
-    box_boundaries (l, retrue, retleafhalo, list);
-@endif
+  box_boundaries (l, list);
   enable_fpe_for_mpi();
 }
 
@@ -1438,14 +1343,6 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 @undef VN
 @undef VT
 
-foreach_dimension()
-static void periodic_boundary_halo_prolongation_x (const Boundary * b,
-						   scalar * list, 
-						   int l, int depth)
-{
-  periodic_boundary_level_x (b, list, l);
-}
-
 static void free_cache (CacheLevel * c)
 {
   Quadtree * q = grid;
@@ -1510,7 +1407,6 @@ void free_grid (void)
   free (q->L);
   free_cache (q->active);
   free_cache (q->prolongation);
-  free_cache (q->restriction);
   free_cache (q->boundary);
   free (q);
   grid = NULL;
@@ -1609,7 +1505,6 @@ void init_grid (int n)
 #endif // dimension == 3
   q->active = calloc (1, sizeof (CacheLevel));
   q->prolongation = calloc (1, sizeof (CacheLevel));
-  q->restriction = calloc (1, sizeof (CacheLevel));
   q->boundary = calloc (1, sizeof (CacheLevel));
   q->dirty = true;
   grid = q;
@@ -1621,15 +1516,12 @@ void init_grid (int n)
   update_cache();
   // boundaries
   Boundary * b = calloc (1, sizeof (Boundary));
-  b->level = b->restriction = box_boundary_level;
-  b->halo_restriction  = box_boundary_halo_restriction;
-  b->halo_prolongation = box_boundary_halo_prolongation;
+  b->level = box_boundary_level;
   add_boundary (b);
   // periodic boundaries
   foreach_dimension() {
     Boundary * b = calloc (1, sizeof (Boundary));
-    b->level = b->restriction = periodic_boundary_level_x;
-    b->halo_prolongation = periodic_boundary_halo_prolongation_x;
+    b->level = periodic_boundary_level_x;
     add_boundary (b);
   }
   refine_level (depth);

@@ -270,7 +270,7 @@ bool balance()
       newpid[] = 0;
   }
   for (int l = 0; l <= depth(); l++)
-    boundary_iterate (restriction, {newpid}, l);
+    boundary_iterate (level, {newpid}, l);
 
 #ifdef DEBUGCOND
   extern double t;

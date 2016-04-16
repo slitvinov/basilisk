@@ -52,12 +52,12 @@ int main (int argc, char ** argv)
   for (i = 0; i < 10000; i++) {
     scalar * list = {h};
     int l = depth();
-    boundary_iterate (halo_prolongation, list, 0, l);
+    boundary_iterate (level, list, 0);
     for (int i = 0; i < l; i++) {
       foreach_halo (prolongation, i)
 	for (scalar s in list)
 	  s.prolongation (point, s);
-      boundary_iterate (halo_prolongation, list, i + 1, l);
+      boundary_iterate (level, list, i + 1);
     }
   }
   end = clock ();

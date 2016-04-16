@@ -5,15 +5,9 @@ typedef struct _Boundary Boundary;
 struct _Boundary {
   void (* destroy) (Boundary * b);
   void (* level)   (const Boundary * b, scalar * list, int l);
-  // multigrid only
+  // only used with MPI
   void (* restriction) (const Boundary * b, scalar * list, int l);
-  // quadtree only
-  void (* halo_restriction)      (const Boundary * b, scalar * list, int l);
-  void (* halo_prolongation)     (const Boundary * b, scalar * list, 
-				  int l, int depth);
 };
-
-void no_halo_restriction (const Boundary * b, scalar * list, int l) {}
 
 static Boundary ** boundaries = NULL; // list of all boundaries
 

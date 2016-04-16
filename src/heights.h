@@ -405,7 +405,7 @@ void heights (scalar c, vector h)
       foreach_halo (prolongation, l - 1)
 	foreach_dimension()
 	  c.prolongation (point, cs.x);
-      boundary_iterate (halo_prolongation, (scalar *){cs}, l, l);
+      boundary_iterate (level, (scalar *){cs}, l);
 
       /**
       We can now sum the half-column at this level, downward or upward
