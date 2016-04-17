@@ -3,6 +3,7 @@ CFLAGS += -O2 -fopenmp
 
 all: check
 
+tsunami.s: LIBS="-L$(BASILISK)/kdt -lkdt"
 tsunami.tst: tsunami.s
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest tsunami.tst
 

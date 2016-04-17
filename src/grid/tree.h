@@ -1405,8 +1405,6 @@ void free_grid (void)
 
 static void refine_level (int depth);
 
-#define NOBALANCE 0
-
 trace
 void init_grid (int n)
 {
@@ -1445,18 +1443,14 @@ void init_grid (int n)
     CELL(L->m[GHOSTS+k]).pid =
       (k < 0 ? -1 - left :
        k > 0 ? -1 - right :
-       0;
+       0);
 #elif dimension == 2
   for (int i = 0; i < L->len; i++) {
     layer_add_row (L, i, 0);
     for (int j = 0; j < L->len; j++)
       L->m[i][j] = calloc (1, sizeof(Cell) + datasize);
   }
-  CELL(L->m[GHOSTS][GHOSTS]).flags |= leaf
-#if NOBALANCE
-       | active
-#endif
-       ;
+  CELL(L->m[GHOSTS][GHOSTS]).flags |= leaf;
   if (pid() == 0)
     CELL(L->m[GHOSTS][GHOSTS]).flags |= active;
   for (int k = -GHOSTS; k <= GHOSTS; k++)
@@ -1466,12 +1460,7 @@ void init_grid (int n)
 	 k > 0 ? -1 - right :
 	 l > 0 ? -1 - top :
 	 l < 0 ? -1 - bottom :
-#if NOBALANCE
-	 pid()
-#else	 
-	 0
-#endif
-	 );
+	 0);
 #else // dimension == 3
   for (int i = 0; i < L->len; i++)
     for (int j = 0; j < L->len; j++) {
@@ -1517,13 +1506,6 @@ void init_grid (int n)
   }
   refine_level (depth);
   trash (all);
-#if NOBALANCE
-@if _MPI
-  void mpi_partitioning();
-  if (N > 1)
-    mpi_partitioning();
-@endif
-#endif
 }
 
 #if dimension == 2

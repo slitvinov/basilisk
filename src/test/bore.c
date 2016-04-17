@@ -7,7 +7,7 @@ break problem described by the (dispersive) [Green-Naghdi
 equations](/src/green-naghdi.h) (rather than the non-dispersive
 Saint-Venant equations). */
 
-#include "grid/multigrid1D.h"
+#include "grid/bitree.h"
 #include "green-naghdi.h"
 
 /**

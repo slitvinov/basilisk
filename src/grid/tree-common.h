@@ -562,8 +562,13 @@ static void tree_boundary_level (scalar * list, int l)
 double treex (Point point) {
   if (level == 0)
     return 0;
+#if dimension == 2
   double i = 2*child.x - child.y;
   if (i <= 1 && i >= -1) i = -i;
+#else
+  assert (false); // not implemented
+  double i = 0;
+#endif
   return treex(parent) + i/(1 << 2*(level - 1));
 }
 
