@@ -67,10 +67,12 @@ conical-implicit.tst: conical-implicit.s
 
 conical.tst: conicalsv.tst conical-implicit.tst
 
+curvature.s: LIBS="-L$(HOME)/local/lib -lvofi"
 curvature.tst: curvature.s curvature.3D.tst
 	@LIBS="-L$(HOME)/local/lib -lvofi" \
 	$(BASILISK)/runtest curvature.tst
 
+curvature.3D.s: LIBS="-L$(HOME)/local/lib -lvofi"
 curvature.3D.tst: curvature.3D.s
 	@CFLAGS="$(CFLAGS) -grid=octree" \
 	LIBS="-L$(HOME)/local/lib -lvofi" \
@@ -98,16 +100,19 @@ lidmac.tst: lidmac.s
 
 lid.tst: lidmac.tst
 
+nonlinear.s: LIBS="-lgsl -lgslcblas"
 nonlinear.tst: nonlinear.s
 	@LIBS="-lgsl -lgslcblas" $(BASILISK)/runtest nonlinear.tst
 
 ponds-implicit.c: ponds.c
 	ln -s ponds.c ponds-implicit.c
 
+ponds-implicit.s: LIBS="-L$(BASILISK)/kdt -lkdt"
 ponds-implicit.tst: ponds-implicit.s
 	@LIBS="-L$(BASILISK)/kdt -lkdt" CFLAGS="$(CFLAGS) -DIMPLICIT=1" \
 		$(BASILISK)/runtest ponds-implicit.tst
 
+ponds.s: LIBS="-L$(BASILISK)/kdt -lkdt"
 ponds.tst: ponds.s ponds-implicit.tst
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest ponds.tst
 
@@ -131,6 +136,7 @@ taylor-green-all-mach.tst: taylor-green-all-mach.s
 
 taylor-green.tst: taylor-green-all-mach.tst
 
+terrain.s: LIBS="-L$(BASILISK)/kdt -lkdt"
 terrain.tst: terrain.s
 	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst
 

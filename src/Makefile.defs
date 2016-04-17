@@ -56,12 +56,12 @@ clean:
 %.3D.s: %.3D.c $(QCC) Makefile
 	@echo qcc $(CFLAGS) -grid=octree -o $*/$* $*.c $(LIBS) -lm
 	@rm -f $*/warn
-	@$(QCC) $(subst -g ,,$(subst -O2 ,,$(CFLAGS) -grid=octree)) -nolineno -S $< || (rm -f $@ && false)
+	@$(QCC) -nolineno $(STRIPFLAGS) $(subst -g ,,$(subst -O2 ,,$(CFLAGS) -grid=octree)) $< -o $@ $(LIBS) -lm
 
 %.s: %.c $(QCC) Makefile
 	@echo qcc $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm
 	@rm -f $*/warn
-	@$(QCC) $(subst -g ,,$(subst -O2 ,,$(CFLAGS))) -nolineno -S $< || (rm -f $@ && false)
+	@$(QCC) -nolineno $(STRIPFLAGS) $(subst -g ,,$(subst -O2 ,,$(CFLAGS))) $< -o $@ $(LIBS) -lm
 
 %.prof: %.c
 	$(QCC) $(subst -DTRASH=1,,$(CFLAGS)) -g -pg $< -o $*/$* -lm

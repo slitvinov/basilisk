@@ -3,6 +3,9 @@
 # how to launch the C99 compiler
 CC99 = $(CC) -std=c99 -pedantic -D_GNU_SOURCE=1
 
+# how to strip unused code
+STRIPFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections
+
 # other useful (non-standard) flags
 CFLAGS += -g -Wall
 
