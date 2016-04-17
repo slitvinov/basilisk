@@ -74,7 +74,7 @@ event output (t += 0.2; t <= 1.2)
 event velo (t = end)
   output_field ((scalar *){u}, fopen ("velo", "w"), n = 16, linear = true);
 
-#if QUADTREE
+#if TREE
 
 #if 0
 event gfsview (i++) {

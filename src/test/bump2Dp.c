@@ -49,7 +49,7 @@ event adapt (i++) {
 #if BGHOSTS == 2
   scalar s[];
   face vector u[];
-  quadtree_trash ({s,u});
+  tree_trash ({s,u});
   foreach()
     s[] = 1;
   foreach_face()

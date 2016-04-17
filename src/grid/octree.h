@@ -3,5 +3,5 @@
 #include "tree.h"
 
 void octree_methods() {
-  quadtree_methods();
+  tree_methods();
 }

@@ -11,7 +11,7 @@ so that the water surface elevation $\eta$ is conserved.
 
 We start with the reconstruction of fine "wet" cells: */
 
-#if QUADTREE
+#if TREE
 static void refine_elevation (Point point, scalar h)
 {
   // reconstruction of fine cells using elevation (rather than water depth)

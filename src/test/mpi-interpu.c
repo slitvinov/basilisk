@@ -21,7 +21,7 @@ int main (int argc, char ** argv)
     cell.pid = pid();
     cell.flags |= active;
   }
-  quadtree->dirty = true;
+  tree->dirty = true;
   
   refine_unbalanced (level <= minlevel*(1. - sqrt(sq((x + 0.5) - 0.1) +
 						  sq((y + 0.5)- 0.1))), NULL);

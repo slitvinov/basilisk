@@ -110,7 +110,7 @@ void terrain (scalar zb, ...)
   zb.dmin = dmin;
   zb.dmax = dmax;
 
-#if QUADTREE
+#if TREE
   zb.refine = refine_terrain;
   n.refine = no_coarsen;
   n.coarsen = no_coarsen;

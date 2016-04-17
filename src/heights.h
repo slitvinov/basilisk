@@ -236,7 +236,7 @@ static void column_propagation (vector h)
 The *heights()* function takes a volume fraction field *c* and returns
 the height function vector field *h*. */
 
-#if !QUADTREE
+#if !TREE
 trace
 void heights (scalar c, vector h)
 {
@@ -283,11 +283,11 @@ void heights (scalar c, vector h)
 }
 
 /**
-## Quadtree implementation 
+## Tree implementation 
 
 We first define the prolongation functions for heights. */
 
-#else // QUADTREE
+#else // TREE
 foreach_dimension()
 static void refine_h_x (Point point, scalar h)
 {
@@ -372,7 +372,7 @@ void heights (scalar c, vector h)
   for (int j = -1; j <= 1; j += 2)
 
     /**
-    We traverse the quadtree level by level, from coarse to fine. */
+    We traverse the tree level by level, from coarse to fine. */
     
     for (int l = 1; l <= depth(); l++) {
 
@@ -440,4 +440,4 @@ void heights (scalar c, vector h)
   column_propagation (h);
 }
 
-#endif // QUADTREE
+#endif // TREE

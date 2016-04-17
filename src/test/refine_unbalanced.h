@@ -1,11 +1,11 @@
 #define refine_unbalanced(cond, list) do {				\
-  quadtree->refined.n = 0;						\
+  tree->refined.n = 0;						\
   int refined;								\
   do {									\
     refined = 0;							\
     foreach_leaf()							\
       if (cond)	{							\
-        refine_cell (point, list, 0, &quadtree->refined);		\
+        refine_cell (point, list, 0, &tree->refined);		\
 	refined++;							\
       }									\
   } while (refined);							\

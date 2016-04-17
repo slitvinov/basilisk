@@ -9,7 +9,7 @@ int main()
   Y0 = -0.5 - 0.125;
   Z0 = -0.5 - 0.125;
   scalar c[];
-#if QUADTREE
+#if TREE
   refine (level == 4 && fabs (x) < 0.375 && fabs (y) < 0.375, NULL);
   refine (level <= 5 && fabs (x) < 0.31 && fabs (y) < 0.31, NULL);
   c.refine = c.prolongation = fraction_refine;

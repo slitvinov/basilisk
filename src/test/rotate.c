@@ -28,7 +28,7 @@ event init (i = 0)
 #define end 0.785398
 
 event velocity (i++) {
-#if QUADTREE
+#if TREE
   double cmax = 1e-2;
   adapt_wavelet ({c}, &cmax, MAXLEVEL, list = {c});
 #endif

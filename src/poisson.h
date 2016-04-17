@@ -231,7 +231,7 @@ static void relax (scalar * al, scalar * bl, int l, void * data)
   for the new field *c*. Jacobi is useful mostly as it gives results
   which are independent of the order in which the cells are
   traversed. This is not the case for the simple traversal, which
-  means for example that results will depend on whether a quadtree or
+  means for example that results will depend on whether a tree or
   a multigrid is used (because cells will be traversed in a different
   order). The same comment applies to OpenMP or MPI parallelism. In
   practice however Jacobi convergence tends to be slower than simple
@@ -276,7 +276,7 @@ static void relax (scalar * al, scalar * bl, int l, void * data)
 
 /**
 The equivalent residual function is obtained in a similar way in the
-case of a Cartesian grid, however the case of the quadtree mesh
+case of a Cartesian grid, however the case of the tree mesh
 requires more careful consideration... */
 
 static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
@@ -286,7 +286,7 @@ static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
   (const) face vector alpha = p->alpha;
   (const) scalar lambda = p->lambda;
   double maxres = 0.;
-#if QUADTREE
+#if TREE
   /* conservative coarse/fine discretisation (2nd order) */
   face vector g[];
   foreach_face()
@@ -300,7 +300,7 @@ static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
       maxres = fabs (res[]);
   }
 #else
-  /* "naive" discretisation (only 1st order on quadtrees) */
+  /* "naive" discretisation (only 1st order on trees) */
   foreach (reduction(max:maxres)) {
     res[] = b[] - lambda[]*a[];
     foreach_dimension()

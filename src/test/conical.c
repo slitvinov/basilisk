@@ -100,10 +100,10 @@ double island (double x, double y)
 }
 
 /**
-On the quadtree we need to make sure that refined cells are
+On the tree we need to make sure that refined cells are
 initialised with the correct topography. */
 
-#if QUADTREE
+#if TREE
 void refine_zb (Point point, scalar zb)
 {
   foreach_child()
@@ -113,7 +113,7 @@ void refine_zb (Point point, scalar zb)
 
 event init (i = 0)
 {
-#if QUADTREE
+#if TREE
   /**
   We setup the refinement function and choose to conserve surface
   elevation rather than volume. */
@@ -284,7 +284,7 @@ unset multiplot
 We adapt the mesh based on the wavelet-estimated error on the free
 surface elevation. */
 
-#if QUADTREE
+#if TREE
 event adapt (i++) {
   scalar eta[];
   foreach()

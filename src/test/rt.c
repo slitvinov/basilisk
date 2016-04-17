@@ -78,7 +78,7 @@ event gfsview (i += 10) {
 }
 #endif
 
-#if QUADTREE
+#if TREE
 event adapt (i++) {
   adapt_wavelet ({f}, (double[]){5e-3}, LEVEL);
 }

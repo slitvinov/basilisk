@@ -137,12 +137,12 @@ event output (t += 5) {
 }
 
 /**
-If we are using a quadtree grid, it is adapted using wavelet error
+If we are using a tree grid, it is adapted using wavelet error
 control on both components of the velocity field. Note that the error
 thresholds need to be specified twice (once for each component of
 vector $\mathbf{u}$). */
 
-#if QUADTREE
+#if TREE
 event adapt (i++) {
   adapt_wavelet ((scalar *){u}, (double[]){5e-5,5e-5}, MAXLEVEL);
 }

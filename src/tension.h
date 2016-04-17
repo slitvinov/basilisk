@@ -119,13 +119,13 @@ event acceleration (i++)
     }
 
   /**
-  On quadtrees we need to make sure that the volume fraction gradient
+  On trees we need to make sure that the volume fraction gradient
   is computed exactly like the pressure gradient. This is necessary to
   ensure well-balancing of the pressure gradient and surface tension
   term. To do so, we apply the same prolongation to the volume
   fraction field as applied to the pressure field. */
   
-#if QUADTREE
+#if TREE
   for (scalar c in list)
     c.prolongation = p.prolongation;
   boundary (list);
@@ -164,10 +164,10 @@ event acceleration (i++)
       }
 
   /**
-  On quadtrees, we need to restore the prolongation values for the
+  On trees, we need to restore the prolongation values for the
   volume fraction field. */
   
-#if QUADTREE
+#if TREE
   for (scalar c in list)
     c.prolongation = fraction_refine;
   boundary (list);

@@ -12,7 +12,7 @@ int main (int argc, char ** argv)
     cell.pid = pid();
     cell.flags |= active;
   }
-  quadtree->dirty = true;
+  tree->dirty = true;
   
   refine_unbalanced (level < depth - 2 ||
 		     level <= depth*(1. - sqrt(x*x + y*y + z*z)),

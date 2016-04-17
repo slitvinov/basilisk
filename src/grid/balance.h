@@ -13,7 +13,7 @@ typedef struct {
 @ define is_newpid() (NEWPID()->pid > 0)
 @endif
 
-Array * tree (size_t size, scalar newpid)
+Array * linear_tree (size_t size, scalar newpid)
 {
   const unsigned short sent = 1 << user, next = 1 << (user + 1);  
   Array * a = array_new();
@@ -129,7 +129,7 @@ Array * neighborhood (scalar newpid, int nextpid, FILE * fp)
       continue;
   }
 
-  return tree (sizeof(Cell) + datasize, newpid);
+  return linear_tree (sizeof(Cell) + datasize, newpid);
 }
 
 static void send_tree (Array * a, int to, MPI_Request * r)
@@ -137,7 +137,7 @@ static void send_tree (Array * a, int to, MPI_Request * r)
   MPI_Isend (&a->len, 1, MPI_LONG, to, MOVED_TAG(), MPI_COMM_WORLD, &r[0]);
   if (a->len > 0) {
     MPI_Isend (a->p, a->len, MPI_BYTE, to, MOVED_TAG(), MPI_COMM_WORLD, &r[1]);
-    quadtree->dirty = true;
+    tree->dirty = true;
   }
 }
 
@@ -164,7 +164,7 @@ static void receive_tree (int from, scalar newpid, FILE * fp)
 		 cell.flags & leaf, from, NEWPID()->leaf);
     }
     free (a.p);
-    quadtree->dirty = true;
+    tree->dirty = true;
   }
 }
 
@@ -357,7 +357,7 @@ bool balance()
     }
   }
 
-  if (quadtree->dirty || pid_changed) {
+  if (tree->dirty || pid_changed) {
 #if 1
     // update active cells: fixme: can this be done above
     foreach_cell_post (!is_leaf (cell))

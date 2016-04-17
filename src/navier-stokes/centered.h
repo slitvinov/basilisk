@@ -132,10 +132,10 @@ event defaults (i = 0)
   boundary ({p,pf,u,g,uf});
 
   /**
-  On quadtrees, refinement of the face-centered velocity field needs to
+  On trees, refinement of the face-centered velocity field needs to
   preserve the divergence-free condition. */
 
-#if QUADTREE
+#if TREE
   uf.x.refine = refine_face_solenoidal;
 #endif
 }

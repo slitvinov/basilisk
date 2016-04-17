@@ -14,7 +14,7 @@ int main (int argc, char * argv[])
 
   scalar s[];
   face vector u[];
-  quadtree_trash ({s,u});
+  tree_trash ({s,u});
   foreach()
     s[] = 1;
   foreach_face()
@@ -31,11 +31,11 @@ int main (int argc, char * argv[])
   int refined;
   do {
     refined = 0;
-    quadtree->refined.n = 0;
+    tree->refined.n = 0;
     foreach()
       if (is_leaf(cell) && level <= maxlevel &&
 	  sq(x) + sq(y) + sq(z) < sq(0.05)) {
-	refine_cell (point, list, 0, &quadtree->refined);
+	refine_cell (point, list, 0, &tree->refined);
 	refined++;
       }
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);

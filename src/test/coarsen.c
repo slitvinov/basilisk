@@ -6,7 +6,7 @@ int main()
   refine (level < 8, NULL);
   fprintf (stderr, "depth: %d mem: %ld\n", depth(), pmtrace.total);
   unrefine (level > 5, NULL);
-  quadtree_check();
+  tree_check();
   long tnc = 0;
   foreach()
     tnc++;

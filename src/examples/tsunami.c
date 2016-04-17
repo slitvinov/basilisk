@@ -55,11 +55,11 @@ int main()
   G = 9.81*sq(60.);
 
   /**
-  When using a quadtree (i.e. adaptive) discretisation, we want to start
+  When using a tree (i.e. adaptive) discretisation, we want to start
   with the coarsest grid, otherwise we directly refine to the maximum
   level. Note that *1 << n* is C for $2^n$. */
 
-#if QUADTREE
+#if TREE
   // 32^2 grid points to start with
   init_grid (1 << MINLEVEL);
 #else // Cartesian
@@ -98,7 +98,7 @@ u.n[bottom] = - radiation(0);
 
 Here we define an auxilliary function which we will use several times
 in what follows. Again we have two *#if...#else* branches selecting
-whether the simulation is being run on an (adaptive) quadtree or a
+whether the simulation is being run on an (adaptive) tree or a
 (static) Cartesian grid.
 
 We want to adapt according to two criteria: an estimate of the error
@@ -114,7 +114,7 @@ Saint-Venant solver) we would also refine the dry topography, which is
 not useful. */
 
 int adapt() {
-#if QUADTREE
+#if TREE
   scalar eta[];
   foreach()
     eta[] = h[] > dry ? h[] + zb[] : 0;

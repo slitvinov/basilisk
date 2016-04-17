@@ -20,7 +20,7 @@ map {
 }
 
 /**
-On quadtrees we need to define consistent refinement functions. The
+On trees we need to define consistent refinement functions. The
 default coarsening functions (averages) are already consistent
 (i.e. they preserve volume and length integrals).
 
@@ -46,7 +46,7 @@ $$
 $$
 */
 
-#if QUADTREE
+#if TREE
 static void refine_cm_lonlat (Point point, scalar cm)
 {
   double phi = y*pi/180., dphi = Delta/(2.*Radius);
@@ -95,9 +95,9 @@ event defaults (i = 0) {
     fm.y[] = cos(y*pi/180.);
 
   /**
-  We set our refinement/prolongation functions on quadtrees. */
+  We set our refinement/prolongation functions on trees. */
 
-#if QUADTREE
+#if TREE
   cm.refine = cm.prolongation = refine_cm_lonlat;
   fm.x.prolongation = refine_face_x_lonlat;
   fm.y.prolongation = refine_face_y_lonlat;

@@ -21,7 +21,7 @@ On adaptive meshes, tracers need to use linear interpolation (rather
 than the default bilinear interpolation) to ensure conservation when
 refining cells. */
 
-#if QUADTREE
+#if TREE
 event defaults (i = 0) {
   for (scalar s in tracers) {
     s.refine  = refine_linear;

@@ -1,4 +1,4 @@
-// checks that restriction works for face vectors on a non-trivial quadtree grid
+// checks that restriction works for face vectors on a non-trivial tree grid
 
 int main(int argc, char * argv[])
 {

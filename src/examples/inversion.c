@@ -46,7 +46,7 @@ int main (int argc, char * argv[]) {
   maxlevel = argc > 1 ? atoi(argv[1]) : 7;
   size (H);
   origin (-H/2., -H/2., -H/2.);
-#if !QUADTREE
+#if !TREE
   N = 1 << maxlevel;
 #endif
   a = av;
@@ -60,7 +60,7 @@ int main (int argc, char * argv[]) {
 }
 
 event init (i = 0) {
-#if QUADTREE
+#if TREE
   scalar f1[];
   foreach()
     f1[] = (x <= 0 && y <= 0 && z <= 0);
@@ -89,7 +89,7 @@ event acceleration (i++) {
 }
 
 event properties (i++) {
-#if QUADTREE
+#if TREE
   f.prolongation = refine_bilinear;
   boundary ({f});
 #endif
@@ -102,7 +102,7 @@ event properties (i++) {
   foreach()
     rhov[] = cm[]*rho(f[]);
 
-#if QUADTREE
+#if TREE
   f.prolongation = fraction_refine;
   boundary ({f});
 #endif
@@ -201,7 +201,7 @@ event gfsview (i += 10) {
 }
 #endif
 
-#if 0 //QUADTREE && !_MPI
+#if 0 //TREE && !_MPI
 event gfsview (t += 0.1*tc) {
 @if _MPI
   char name[80];
@@ -231,7 +231,7 @@ event snapshot (i = 100; i += 100) {
 }
 #endif
 
-#if QUADTREE // && !_MPI
+#if TREE
 event adapt (i++) {
   adapt_wavelet ({f,u}, (double[]){0.005,0.005,0.005,0.005}, maxlevel,
 		 list = {p,u,pf,uf,g,f,fm,cm}, listb = {u,pf,uf,g,f,fm,cm});

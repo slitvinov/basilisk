@@ -65,12 +65,12 @@ event velocity (i++) {
   /**
   This event defines the velocity field.
   
-  On quadtrees we first adapt the grid so that the estimated error on
+  On trees we first adapt the grid so that the estimated error on
   the volume fraction is smaller than $5\times 10^{-3}$. We limit the
   resolution at `MAXLEVEL` and we only refine the volume fraction field
   `f`. */
 
-#if QUADTREE
+#if TREE
   adapt_wavelet ({f}, (double[]){5e-3}, MAXLEVEL, list = {f});
 #endif
 
@@ -136,7 +136,7 @@ event shape (t += T/4.) {
 If we are using adaptivity, we also output the levels of refinement at
 maximum stretching. */
 
-#if QUADTREE
+#if TREE
 event levels (t = T/2) {
   if (N == 128) {
     scalar l[];

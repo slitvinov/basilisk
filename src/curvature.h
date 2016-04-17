@@ -4,11 +4,11 @@
 The curvature field is defined only in interfacial cells. In all the
 other cells it takes the value *nodata*. 
 
-On quadtrees, we need to redefine the restriction function to take
+On trees, we need to redefine the restriction function to take
 this into account i.e. the curvature of the parent cell is the average
 of the curvatures in the interfacial child cells. */
 
-#if QUADTREE
+#if TREE
 static void curvature_restriction (Point point, scalar kappa)
 {
   double k = 0., s = 0.;
@@ -40,7 +40,7 @@ static void curvature_prolongation (Point point, scalar kappa)
     kappa[] = s ? sk/s : nodata;
   }
 }
-#endif // QUADTREE
+#endif // TREE
 
 /**
 ## Height-function curvature
@@ -391,10 +391,10 @@ cstats curvature (scalar c, scalar kappa)
   heights (c, h);
 
   /**
-  On quadtrees we set the prolongation and restriction functions for
+  On trees we set the prolongation and restriction functions for
   the curvature. */
   
-#if QUADTREE
+#if TREE
   kappa.prolongation = curvature_prolongation;
   kappa.coarsen = curvature_restriction;
 #endif

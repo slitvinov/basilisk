@@ -12,7 +12,7 @@ int main (int argc, char * argv[])
     cell.pid = pid();
     cell.flags |= active;
   }
-  quadtree->dirty = true;
+  tree->dirty = true;
 
   refine_unbalanced (level < 4, NULL);
 

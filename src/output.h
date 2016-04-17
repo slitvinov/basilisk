@@ -862,7 +862,7 @@ bool restore (struct Dump p)
     exit (1);
   }
 
-#if QUADTREE
+#if TREE
   init_grid (1);
 #else
   init_grid (1 << header.depth);

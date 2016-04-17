@@ -181,7 +181,7 @@ event gfsview (i += 10) {
 We use an adaptive mesh with a constant (maximum) resolution along the
 interface. */
 
-#if QUADTREE
+#if TREE
 event adapt (i <= 10; i++) {
   adapt_wavelet ({c}, (double[]){0}, maxlevel = LEVEL, minlevel = 0);
 }

@@ -1,7 +1,7 @@
 /**
 # Speed of elementary operations on different grids
 
-This code is compiled using either the default quadtree implementation
+This code is compiled using either the default tree implementation
 or the 'multigrid' regular Cartesian grid implementation.
 
 We use a square, regular, Cartesian grid and vary the resolution from
@@ -83,17 +83,17 @@ int main (int argc, char * argv[])
 /**
 ## Results
 
-This graph shows the speed of the quadtree implementation for each
+This graph shows the speed of the tree implementation for each
 operation relative to the speed on the Cartesian mesh. As expected,
 the overhead is relatively larger for the simpler operations (e.g. sum
 of all elements). This graph is quite sensitive to the exact machine
 architecture (cache hierarchy etc...).
 
-![Relative speed of simple operations on a quadtree mesh](laplacian/plot.png)
+![Relative speed of simple operations on a tree mesh](laplacian/plot.png)
 
 The absolute speed for the Laplacian operator on both grid
 implementations is shown below. Note that Cartesian meshes are fast!
 (i.e. hundreds of million of grid points per second).
 
-![Absolute speed of the 5-points Laplacian on Cartesian and quadtree
+![Absolute speed of the 5-points Laplacian on Cartesian and tree
  meshes](laplacian/speed.png) */

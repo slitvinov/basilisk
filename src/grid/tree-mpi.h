@@ -593,7 +593,7 @@ void debug_mpi (FILE * fp1)
     fclose (fp);
 
   fp = fopen_prefix (fp1, "refined", prefix);
-  foreach_cache (quadtree->refined,)
+  foreach_cache (tree->refined,)
     fprintf (fp, "%s%g %g %g %d\n", prefix, x, y, z, level);
   if (!fp1)
     fclose (fp);
@@ -682,10 +682,10 @@ static int root_pids (Point point, Array * pids)
   return pids->len/sizeof(int);
 }
 
-// turns on quadtree_check() and co with outputs controlled by the condition
+// turns on tree_check() and co with outputs controlled by the condition
 // #define DEBUGCOND (pid() >= 300 && pid() <= 400 && t > 0.0784876)
 
-// turns on quadtree_check() and co without any outputs
+// turns on tree_check() and co without any outputs
 // #define DEBUGCOND false
 
 static void rcv_pid_row (RcvPid * m, int l, int * row)
@@ -922,7 +922,7 @@ void mpi_boundary_update()
   check_snd_rcv_matrix (restriction, "restriction");
   if (DEBUGCOND)
     debug_mpi (NULL);
-  quadtree_check();
+  tree_check();
 #endif
 }
 
@@ -938,11 +938,11 @@ void mpi_boundary_refine (scalar * list)
   MPI_Request r[2*snd->len/sizeof(int)];
   int nr = 0;
   for (int i = 0, * dest = snd->p; i < snd->len/sizeof(int); i++,dest++) {
-    int len = quadtree->refined.n;
-    MPI_Isend (&quadtree->refined.n, 1, MPI_INT, *dest,
+    int len = tree->refined.n;
+    MPI_Isend (&tree->refined.n, 1, MPI_INT, *dest,
 	       REFINE_TAG(), MPI_COMM_WORLD, &r[nr++]);
     if (len > 0)
-      MPI_Isend (quadtree->refined.p, sizeof(Index)/sizeof(int)*len,
+      MPI_Isend (tree->refined.p, sizeof(Index)/sizeof(int)*len,
 		 MPI_INT, *dest, REFINE_TAG(), MPI_COMM_WORLD, &r[nr++]);
   }
 
@@ -982,8 +982,8 @@ void mpi_boundary_refine (scalar * list)
     MPI_Waitall (nr, r, MPI_STATUSES_IGNORE);
 
   /* update the refinement cache with "re-refined" cells */
-  free (quadtree->refined.p);
-  quadtree->refined = rerefined;
+  free (tree->refined.p);
+  tree->refined = rerefined;
   
   prof_stop();
 
@@ -1005,7 +1005,7 @@ static void check_depth()
     FILE * fp = fopen ("layer", "w");
     fprintf (fp, "depth() = %d, max = %d\n", depth(), max);
     for (int l = 0; l <= depth(); l++) {
-      Layer * L = quadtree->L[l];
+      Layer * L = tree->L[l];
       fprintf (fp, "Layer level = %d, nc = %d, len = %d\n", l, L->nc, L->len);
       for (int i = 0; i < L->len; i++)
 	if (L->m[i]) {
@@ -1165,7 +1165,7 @@ void mpi_partitioning()
 
   /* set the pid of each cell */
   long i = 0;
-  quadtree->dirty = true;
+  tree->dirty = true;
   foreach_cell_post (is_active (cell))
     if (is_active (cell)) {
       if (is_leaf (cell)) {

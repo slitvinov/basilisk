@@ -50,9 +50,9 @@ event defaults (i = 0) {
   }
 
   /**
-  On quadtrees, we ensure that limiting is also applied to prolongation. */
+  On trees, we ensure that limiting is also applied to prolongation. */
   
-  #if QUADTREE
+  #if TREE
   for (scalar s in {q,h})
     s.prolongation = refine_linear;
   #endif
@@ -119,16 +119,16 @@ event properties (i++) {
 The acceleration due to the topography is $- g\nabla z_b$. On regular
 Cartesian grids we can simply do */
 
-#if !QUADTREE
+#if !TREE
 event acceleration (i++) {
   foreach_face()
     if (alpha.x[])
       av.x[] -= G*(zb[] - zb[-1])/Delta;
 }
-#else // QUADTREE
+#else // TREE
 
 /**
-On quadtrees things are a bit more complicated due to the necessity to
+On trees things are a bit more complicated due to the necessity to
 verify the "lake-at-rest" condition. For a lake, the pressure gradient
 must balance the topographic source term i.e.
 $$
@@ -145,7 +145,7 @@ $$
 This identity is obviously verified mathematically, however it is not
 necessarily verified by the discrete gradient operator. In the case of
 Cartesian meshes it is simple to show that the naive discrete gradient
-operator we used above verifies this identity. For quadtree meshes
+operator we used above verifies this identity. For tree meshes
 this is not generally the case due to the prolongation operator used
 to fill ghost cells at refinement boundaries. Rather than trying to
 redefine the prolongation operator, we discretise the topographic
@@ -241,7 +241,7 @@ event acceleration (i++) {
       av.x[] += G*(eta[-1] - eta[] + alpha.x[]/2.*(h2[] - h2[-1]))/Delta;
 }
 
-#endif // QUADTREE
+#endif // TREE
 
 /**
 The utility functions in *elevation.h* need to know which gradient we

@@ -66,11 +66,11 @@ event defaults (i = 0)
     CFL = 1./dimension;
   
   /**
-  On quadtrees we need to replace the default bilinear
+  On trees we need to replace the default bilinear
   refinement/prolongation with linear so that reconstructed values
   also use slope limiting. */
 
-  #if QUADTREE
+  #if TREE
   for (scalar s in evolving) {
     s.refine = s.prolongation = refine_linear;
     s.coarsen = coarsen_volume_average;
@@ -136,7 +136,7 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
     vector slope = new vector;
     foreach_dimension() {
       slope.x.gradient = zero;
-      #if QUADTREE
+      #if TREE
       slope.x.prolongation = refine_linear;
       #endif
     }

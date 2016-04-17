@@ -35,7 +35,7 @@ void partition (const char * prog)
     cell.pid = pid();
     cell.flags |= active;
   }
-  quadtree->dirty = true;
+  tree->dirty = true;
   
   refine_unbalanced (level < 5, NULL);
 
@@ -65,7 +65,7 @@ int main (int argc, char * argv[])
 
   scalar s[];
   face vector u[];
-  quadtree_trash ({s,u});
+  tree_trash ({s,u});
   foreach()
     s[] = 1;
   foreach_face()
@@ -74,16 +74,16 @@ int main (int argc, char * argv[])
   boundary ({s,u});
   scalar * list = {s,u};
 
-  /** the loop below is the prototype for grid/quadtree-common.h:refine()
+  /** the loop below is the prototype for grid/tree-common.h:refine()
       Fixes made here must also be applied to refine() */
   
   int refined, n = 0;
   do {
     refined = 0;
-    quadtree->refined.n = 0;
+    tree->refined.n = 0;
     foreach_leaf()
       if (level <= 9 && sq(x - 0.5) + sq(y - 0.5) < sq(0.05)) {
-	refine_cell (point, list, 0, &quadtree->refined);
+	refine_cell (point, list, 0, &tree->refined);
 	refined++;
 	continue;
       }

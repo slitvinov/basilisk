@@ -26,12 +26,12 @@ extern face vector uf;
 extern double dt;
 
 /**
-On quadtrees, we need to setup the appropriate prolongation and
+On trees, we need to setup the appropriate prolongation and
 refinement functions for the volume fraction fields. */
 
 event defaults (i = 0)
 {
-#if QUADTREE
+#if TREE
   for (scalar c in interfaces)
     c.refine = c.prolongation = fraction_refine;
 #endif
@@ -112,13 +112,13 @@ static void sweep_x (scalar c, scalar cc)
   }
 
   /**
-  On quadtree grids, we need to make sure that the fluxes match at
+  On tree grids, we need to make sure that the fluxes match at
   fine/coarse cell boundaries i.e. we need to *restrict* the fluxes from
   fine cells to coarse cells. This is what is usually done, for all
   dimensions, by the `boundary_flux()` function. Here, we only need to
   do it for a single dimension (x). */
 
-#if QUADTREE
+#if TREE
   for (int l = depth() - 1; l >= 0; l--)
     foreach_halo (prolongation, l) {
 #if dimension == 1

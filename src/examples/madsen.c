@@ -67,7 +67,7 @@ event plot (t = {35, 90, 700, 2000}) {
 /**
 We need a low error threshold for adaptation on $\eta$. */
 
-#if QUADTREE
+#if TREE
 event adapt (i++) {
   astats s = adapt_wavelet ({eta}, (double[]){1e-6}, MAXLEVEL);
   fprintf (stderr, "%g refined %d cells, coarsened %d cells\n",

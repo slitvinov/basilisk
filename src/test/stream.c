@@ -69,7 +69,7 @@ event output (t += 5) {
 If we are using a quadtree grid, it is adapted using wavelet error
 control on $\omega$. */
 
-#if QUADTREE
+#if TREE
 event adapt (i++) {
   adapt_wavelet ({omega}, (double[]){1e-2}, MAXLEVEL, list = {omega, psi});
 }

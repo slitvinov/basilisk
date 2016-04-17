@@ -91,7 +91,7 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
   double dt = p->dt;
   vector u = vector(a[0]), r = vector(b[0]), res = vector(resl[0]);
   double maxres = 0.;
-#if QUADTREE
+#if TREE
   /* conservative coarse/fine discretisation (2nd order) */
   foreach_dimension() {
     face vector taux[];
@@ -126,7 +126,7 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
     }
   }
 #else
-  /* "naive" discretisation (only 1st order on quadtrees) */
+  /* "naive" discretisation (only 1st order on trees) */
   foreach (reduction(max:maxres)) {
     foreach_dimension() {
       res.x[] = r.x[] - lambda.x*u.x[] +

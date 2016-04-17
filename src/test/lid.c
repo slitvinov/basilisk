@@ -1,7 +1,7 @@
 /**
 # Lid-driven cavity at Re=1000
 
-We use the multigrid implementation (rather than the default quadtree
+We use the multigrid implementation (rather than the default tree
 implementation) and either the MAC or the centered Navier--Stokes
 solver. */
 

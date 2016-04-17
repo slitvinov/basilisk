@@ -23,11 +23,11 @@ coord mycs (Point point, scalar c) {
 /**
 ## Coarsening and refinement of a volume fraction field 
 
-On quadtrees, we need to define how to coarsen (i.e. "restrict") or
+On trees, we need to define how to coarsen (i.e. "restrict") or
 refine (i.e. "prolongate") interface definitions (see [geometry.h]()
 for a basic explanation of how interfaces are defined). */
 
-#if QUADTREE
+#if TREE
 
 void fraction_refine (Point point, scalar c)
 {
@@ -91,7 +91,7 @@ static void alpha_refine (Point point, scalar alpha)
   }
 }
 
-#endif // QUADTREE
+#endif // TREE
 
 /**
 ## Computing volume fractions from a "levelset" function 
@@ -180,7 +180,7 @@ void fractions (struct Fractions a)
   computed for each face (in the z, x and y directions) and stored in
   the face field `s`. In 2D the surface fraction in the z-direction is
   the *volume fraction* `c`. The call to `boundary_flux()` defines
-  consistent line fractions on quadtrees. */
+  consistent line fractions on trees. */
 
 #if dimension == 3
   scalar s_x = s.x, s_y = s.y, s_z = s.z;
@@ -386,10 +386,10 @@ void reconstruction (const scalar c, vector n, scalar alpha)
     }
   }
 
-#if QUADTREE
+#if TREE
 
   /**
-  On a quadtree grid, for the normal to the interface, we don't use
+  On a tree grid, for the normal to the interface, we don't use
   any interpolation from coarse to fine i.e. we use straight
   "injection". */
 
@@ -406,7 +406,7 @@ void reconstruction (const scalar c, vector n, scalar alpha)
   /**
   Finally we apply the boundary conditions to define $\mathbf{n}$ and
   $\alpha$ everywhere (using the prolongation functions when necessary
-  on quadtree grids). */
+  on tree grids). */
 
   boundary ({n, alpha});
 }

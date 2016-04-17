@@ -78,10 +78,10 @@ event print (t = 0.25)
 }
 
 /**
-On quadtrees, we adapt the mesh by controlling the error on the density
+On trees, we adapt the mesh by controlling the error on the density
 field. */
 
-#if QUADTREE
+#if TREE
 event adapt (i++) {
   adapt_wavelet ({rho}, (double[]){1e-5}, LEVEL + 1);
 }

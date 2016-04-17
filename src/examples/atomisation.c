@@ -214,7 +214,7 @@ event adapt (i++) {
 #ifdef DEBUGCOND
   scalar ss[];
   face vector uu[];
-  quadtree_trash ({ss,uu});
+  tree_trash ({ss,uu});
   foreach()
     ss[] = 1;
   foreach_face()

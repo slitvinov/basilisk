@@ -208,7 +208,7 @@ event gfsview (i += 10) {
 }
 #endif
 
-#if QUADTREE
+#if TREE
 event adapt (i++) {
   adapt_wavelet ({c,u}, (double[]){5e-3,1e-3,1e-3}, LEVEL,
 		 list = {p,u,pf,uf,g,c}, listb = {u,pf,uf,g,c});

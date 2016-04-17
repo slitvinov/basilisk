@@ -208,7 +208,7 @@ static bool layer_remove_row (Layer * l, int i, int j)
 }
 #endif // dimension != 1
 
-// Quadtree
+// Tree
 
 typedef struct {
   Layer ** L; /* the grids at each level */
@@ -223,9 +223,9 @@ typedef struct {
   CacheLevel * boundary;  /* boundary indices for each level */
   
   bool dirty;       /* whether caches should be updated */
-} Quadtree;
+} Tree;
 
-#define quadtree ((Quadtree *)grid)
+#define tree ((Tree *)grid)
 
 struct _Point {
   /* the current cell index and level */
@@ -295,94 +295,94 @@ void cache_shrink (Cache * c)
 /* low-level memory management */
 #if dimension == 1
 # if BGHOSTS == 1
-@define allocated(k,l,n) (quadtree->L[point.level]->m[point.i+k])
+@define allocated(k,l,n) (tree->L[point.level]->m[point.i+k])
 # else
 @def allocated(k,l,n) (point.i+k >= 0 &&
 		       point.i+k < (1 << point.level) + 2*GHOSTS &&
-		       quadtree->L[point.level]->m[point.i+k])
+		       tree->L[point.level]->m[point.i+k])
 @
 # endif
-@define NEIGHBOR(k,l,n)	(quadtree->L[point.level]->m[point.i+k])
-@define PARENT(k,l,n) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k])
+@define NEIGHBOR(k,l,n)	(tree->L[point.level]->m[point.i+k])
+@define PARENT(k,l,n) (tree->L[point.level-1]->m[(point.i+GHOSTS)/2+k])
 @def allocated_child(k,l,n) (level < depth() &&
 			     point.i > 0 && point.i <= (1 << level) + 2 &&
-			     quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k])
+			     tree->L[point.level+1]->m[2*point.i-GHOSTS+k])
 @
-@define CHILD(k,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k])
+@define CHILD(k,l,n)  (tree->L[point.level+1]->m[2*point.i-GHOSTS+k])
 #elif dimension == 2
 # if BGHOSTS == 1
-@def allocated(k,l,n) (quadtree->L[point.level]->m[point.i+k] &&
-		       quadtree->L[point.level]->m[point.i+k][point.j+l])
+@def allocated(k,l,n) (tree->L[point.level]->m[point.i+k] &&
+		       tree->L[point.level]->m[point.i+k][point.j+l])
 @
 # else
 @def allocated(k,l,n) (point.i+k >= 0 &&
 		       point.i+k < (1 << point.level) + 2*GHOSTS &&
-		       quadtree->L[point.level]->m[point.i+k] &&
+		       tree->L[point.level]->m[point.i+k] &&
 		       point.j+l >= 0 &&
 		       point.j+l < (1 << point.level) + 2*GHOSTS &&
-		       quadtree->L[point.level]->m[point.i+k][point.j+l])
+		       tree->L[point.level]->m[point.i+k][point.j+l])
 @
 # endif
-@define NEIGHBOR(k,l,n)	(quadtree->L[point.level]->m[point.i+k][point.j+l])
-@def PARENT(k,l,n) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+k]
+@define NEIGHBOR(k,l,n)	(tree->L[point.level]->m[point.i+k][point.j+l])
+@def PARENT(k,l,n) (tree->L[point.level-1]->m[(point.i+GHOSTS)/2+k]
 		  [(point.j+GHOSTS)/2+l])
 @
 @def allocated_child(k,l,n)  (level < depth() &&
 			      point.i > 0 && point.i <= (1 << level) + 2 &&
 			      point.j > 0 && point.j <= (1 << level) + 2 &&
-			      quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
-   && quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k][2*point.j-GHOSTS+l])
+			      tree->L[point.level+1]->m[2*point.i-GHOSTS+k]
+   && tree->L[point.level+1]->m[2*point.i-GHOSTS+k][2*point.j-GHOSTS+l])
 @			   
-@def CHILD(k,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+k]
+@def CHILD(k,l,n)  (tree->L[point.level+1]->m[2*point.i-GHOSTS+k]
 		 [2*point.j-GHOSTS+l])
 @
 #else // dimension == 3
 # if BGHOSTS == 1
-@def allocated(a,l,n) (quadtree->L[point.level]->m[point.i+a] &&
-		       quadtree->L[point.level]->m[point.i+a][point.j+l] &&
-		       quadtree->L[point.level]->m[point.i+a][point.j+l]
+@def allocated(a,l,n) (tree->L[point.level]->m[point.i+a] &&
+		       tree->L[point.level]->m[point.i+a][point.j+l] &&
+		       tree->L[point.level]->m[point.i+a][point.j+l]
 		       [point.k+n])
 @
 #else     
 @def allocated(a,l,n) (point.i+a >= 0 &&
 		       point.i+a < (1 << point.level) + 2*GHOSTS &&
-		       quadtree->L[point.level]->m[point.i+a] &&
+		       tree->L[point.level]->m[point.i+a] &&
 		       point.j+l >= 0 &&
 		       point.j+l < (1 << point.level) + 2*GHOSTS &&
-		       quadtree->L[point.level]->m[point.i+a][point.j+l] &&
+		       tree->L[point.level]->m[point.i+a][point.j+l] &&
 		       point.k+n >= 0 &&
 		       point.k+n < (1 << point.level) + 2*GHOSTS &&
-		       quadtree->L[point.level]->m[point.i+a][point.j+l]
+		       tree->L[point.level]->m[point.i+a][point.j+l]
 		       [point.k+n])
 @
 #endif
-@def NEIGHBOR(a,l,n)	(quadtree->L[point.level]->m[point.i+a][point.j+l]
+@def NEIGHBOR(a,l,n)	(tree->L[point.level]->m[point.i+a][point.j+l]
 			                                       [point.k+n])
 @			
-@def PARENT(a,l,n) (quadtree->L[point.level-1]->m[(point.i+GHOSTS)/2+a]
+@def PARENT(a,l,n) (tree->L[point.level-1]->m[(point.i+GHOSTS)/2+a]
 		  [(point.j+GHOSTS)/2+l][(point.k+GHOSTS)/2+n])
 @
 @def allocated_child(a,l,n)  (level < depth() &&
 			      point.i > 0 && point.i <= (1 << level) + 2 &&
 			      point.j > 0 && point.j <= (1 << level) + 2 &&
 			      point.k > 0 && point.k <= (1 << level) + 2 &&
-			      quadtree->L[point.level+1]->m[2*point.i-GHOSTS+a]
-   && quadtree->L[point.level+1]->m[2*point.i-GHOSTS+a][2*point.j-GHOSTS+l]
-   && quadtree->L[point.level+1]->m[2*point.i-GHOSTS+a][2*point.j-GHOSTS+l]
+			      tree->L[point.level+1]->m[2*point.i-GHOSTS+a]
+   && tree->L[point.level+1]->m[2*point.i-GHOSTS+a][2*point.j-GHOSTS+l]
+   && tree->L[point.level+1]->m[2*point.i-GHOSTS+a][2*point.j-GHOSTS+l]
 			      [2*point.k-GHOSTS+n])
 @
-@def CHILD(a,l,n)  (quadtree->L[point.level+1]->m[2*point.i-GHOSTS+a]
+@def CHILD(a,l,n)  (tree->L[point.level+1]->m[2*point.i-GHOSTS+a]
 		    [2*point.j-GHOSTS+l][2*point.k-GHOSTS+n])
 @
 #endif
 @define CELL(m) (*((Cell *)(m)))
 
 /***** Multigrid macros *****/
-@define depth()        (quadtree->depth)
+@define depth()        (tree->depth)
 @define aparent(k,l,n) CELL(PARENT(k,l,n))
 @define child(k,l,n)   CELL(CHILD(k,l,n))
 
-/***** Quadtree macros ****/
+/***** Tree macros ****/
 @define cell		 CELL(NEIGHBOR(0,0,0))
 @define neighbor(k,l,n)	 CELL(NEIGHBOR(k,l,n))
 @def neighborp(l,m,n) (Point) {
@@ -485,7 +485,7 @@ void cache_shrink (Cache * c)
 @define foreach_child_break() _l = _m = _n = 2
 #endif // dimension == 3
   
-#define update_cache() { if (quadtree->dirty) update_cache_f(); }
+#define update_cache() { if (tree->dirty) update_cache_f(); }
 
 #define is_refined(cell)      (!is_leaf (cell) && cell.neighbors && cell.pid >= 0)
 #define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors && cell.pid >= 0)
@@ -557,7 +557,7 @@ void cache_shrink (Cache * c)
 @def foreach_boundary(_l) {
   if (_l <= depth()) {
     update_cache();
-    CacheLevel _boundary = quadtree->boundary[_l];
+    CacheLevel _boundary = tree->boundary[_l];
     foreach_cache_level (_boundary,_l,)
 @
 @define end_foreach_boundary() end_foreach_cache_level(); }}
@@ -565,7 +565,7 @@ void cache_shrink (Cache * c)
 @def foreach_halo(_name,_l) {
   if (_l <= depth()) {
     update_cache();
-    CacheLevel _cache = quadtree->_name[_l];
+    CacheLevel _cache = tree->_name[_l];
     foreach_cache_level (_cache, _l,)
 @
 @define end_foreach_halo() end_foreach_cache_level(); }}
@@ -582,7 +582,7 @@ static inline bool has_local_children (Point point)
 
 static inline void cache_append_face (Point point, unsigned short flags)
 {
-  Quadtree * q = grid;
+  Tree * q = grid;
   cache_append (&q->faces, point, flags);
 #if dimension == 2
   if (!(cell.flags & vertex)) {
@@ -608,7 +608,7 @@ static inline void cache_append_face (Point point, unsigned short flags)
 
 static void update_cache_f (void)
 {
-  Quadtree * q = grid;
+  Tree * q = grid;
 
   foreach_cache(q->vertices,)
     if (level <= depth() && allocated(0))
@@ -700,12 +700,12 @@ static void update_cache_f (void)
       cell.flags &= ~fboundary;
 }
 
-@define foreach(clause) update_cache(); foreach_cache(quadtree->leaves, clause)
+@define foreach(clause) update_cache(); foreach_cache(tree->leaves, clause)
 @define end_foreach()   end_foreach_cache()
 
 @def foreach_face_generic(clause)
   update_cache();
-  foreach_cache(quadtree->faces, clause) @
+  foreach_cache(tree->faces, clause) @
 @define end_foreach_face_generic() end_foreach_cache()
 
 @define is_face_x() (_flags & face_x)
@@ -718,7 +718,7 @@ static void update_cache_f (void)
 
 @def foreach_vertex(clause)
   update_cache();
-  foreach_cache(quadtree->vertices, clause) {
+  foreach_cache(tree->vertices, clause) {
     x -= Delta/2.;
 #if dimension >= 2
     y -= Delta/2.;
@@ -741,7 +741,7 @@ static void update_cache_f (void)
 @def foreach_level(l) {
   if (l <= depth()) {
     update_cache();
-    CacheLevel _active = quadtree->active[l];
+    CacheLevel _active = tree->active[l];
     foreach_cache_level (_active,l,)
 @
 @define end_foreach_level() end_foreach_cache_level(); }}
@@ -764,13 +764,13 @@ static void update_cache_f (void)
 
 @if TRASH
 @ undef trash
-@ define trash quadtree_trash
+@ define trash tree_trash
 @endif
 
-void quadtree_trash (void * alist)
+void tree_trash (void * alist)
 {
   scalar * list = alist;
-  Quadtree * q = grid;
+  Tree * q = grid;
   /* low-level memory management */
   for (int l = 0; l <= q->depth; l++) {
     Layer * L = q->L[l];
@@ -809,7 +809,7 @@ void quadtree_trash (void * alist)
 
 static void update_depth (int inc)
 {
-  Quadtree * q = quadtree;
+  Tree * q = tree;
   q->depth += inc;
   q->L = &(q->L[-1]);
   q->L = realloc(q->L, sizeof (Layer *)*(q->depth + 2));
@@ -823,14 +823,14 @@ static void update_depth (int inc)
 
 static void alloc_children (Point point)
 {
-  if (point.level == quadtree->depth)
+  if (point.level == tree->depth)
     update_depth (+1);
   else if (allocated_child(0,0,0))
     return;
   
 #if dimension == 1
   /* low-level memory management */
-  Layer * L = quadtree->L[point.level + 1];
+  Layer * L = tree->L[point.level + 1];
   size_t len = sizeof(Cell) + datasize;
   char * b = mempool_alloc0 (L->pool);
   for (int k = 0; k < 2; k++) {
@@ -841,7 +841,7 @@ static void alloc_children (Point point)
   }
 #elif dimension == 2
   /* low-level memory management */
-  Layer * L = quadtree->L[point.level + 1];
+  Layer * L = tree->L[point.level + 1];
   size_t len = sizeof(Cell) + datasize;
   char * b = mempool_alloc0 (L->pool);
   for (int k = 0; k < 2; k++) {
@@ -854,7 +854,7 @@ static void alloc_children (Point point)
   }
 #else // dimension == 3
   /* low-level memory management */
-  Layer * L = quadtree->L[point.level + 1];
+  Layer * L = tree->L[point.level + 1];
   size_t len = sizeof(Cell) + datasize;
   char * b = mempool_alloc0 (L->pool);
   for (int k = 0; k < 2; k++)
@@ -882,13 +882,13 @@ static void alloc_children (Point point)
 static void free_children (Point point)
 {
   /* low-level memory management */
-  Layer * L = quadtree->L[point.level + 1];
+  Layer * L = tree->L[point.level + 1];
   assert (CHILD(0,0,0));
   mempool_free (L->pool, CHILD(0,0,0));
   for (int k = 0; k < 2; k++) {
     CHILD(k,0,0) = NULL;
     if (layer_remove_row (L, 2*point.i - GHOSTS + k)) {
-      assert (point.level + 1 == quadtree->depth);
+      assert (point.level + 1 == tree->depth);
       update_depth (-1);
     }
   }
@@ -897,14 +897,14 @@ static void free_children (Point point)
 static void free_children (Point point)
 {
   /* low-level memory management */
-  Layer * L = quadtree->L[point.level + 1];
+  Layer * L = tree->L[point.level + 1];
   assert (CHILD(0,0,0));
   mempool_free (L->pool, CHILD(0,0,0));
   for (int k = 0; k < 2; k++) {
     for (int l = 0; l < 2; l++)
       CHILD(k,l,0) = NULL;
     if (layer_remove_row (L, 2*point.i - GHOSTS + k, 0)) {
-      assert (point.level + 1 == quadtree->depth);
+      assert (point.level + 1 == tree->depth);
       update_depth (-1);
     }
   }
@@ -913,7 +913,7 @@ static void free_children (Point point)
 static void free_children (Point point)
 {
   /* low-level memory management */
-  Layer * L = quadtree->L[point.level + 1];
+  Layer * L = tree->L[point.level + 1];
   assert (CHILD(0,0,0));
   mempool_free (L->pool, CHILD(0,0,0));
   for (int k = 0; k < 2; k++)
@@ -921,7 +921,7 @@ static void free_children (Point point)
       for (int n = 0; n < 2; n++)
 	CHILD(k,l,n) = NULL;
       if (layer_remove_row (L, 2*point.i - GHOSTS + k, 2*point.j - GHOSTS + l)) {
-	assert (point.level + 1 == quadtree->depth);
+	assert (point.level + 1 == tree->depth);
 	update_depth (-1);
       }
     }
@@ -930,7 +930,7 @@ static void free_children (Point point)
 
 void increment_neighbors (Point point)
 {
-  quadtree->dirty = true;
+  tree->dirty = true;
   foreach_neighbor (GHOSTS/2)
     if (cell.neighbors++ == 0)
       alloc_children (point);
@@ -938,7 +938,7 @@ void increment_neighbors (Point point)
 
 void decrement_neighbors (Point point)
 {
-  quadtree->dirty = true;
+  tree->dirty = true;
   foreach_neighbor (GHOSTS/2)
     if (allocated(0)) {
       cell.neighbors--;
@@ -957,7 +957,7 @@ void decrement_neighbors (Point point)
 void realloc_scalar (void)
 {
   /* low-level memory management */
-  Quadtree * q = grid;
+  Tree * q = grid;
   size_t newlen = sizeof(Cell) + datasize;
   size_t oldlen = newlen - sizeof(double);
   /* the root level is allocated differently */
@@ -1269,7 +1269,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
       }							\
     }							\
   }							\
-  quadtree->dirty = true;				\
+  tree->dirty = true;				\
 }
 
 /* Periodic boundaries */
@@ -1336,7 +1336,7 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 
 static void free_cache (CacheLevel * c)
 {
-  Quadtree * q = grid;
+  Tree * q = grid;
   for (int l = 0; l <= q->depth; l++)
     free (c[l].p);
   free (c);
@@ -1347,7 +1347,7 @@ void free_grid (void)
   if (!grid)
     return;
   free_boundaries();
-  Quadtree * q = grid;
+  Tree * q = grid;
   free (q->leaves.p);
   free (q->faces.p);
   free (q->vertices.p);
@@ -1417,13 +1417,13 @@ void init_grid (int n)
   int depth = 0;
   while (n > 1) {
     if (n % 2) {
-      fprintf (stderr, "quadtree: N must be a power-of-two\n");
+      fprintf (stderr, "tree: N must be a power-of-two\n");
       exit (1);
     }
     n /= 2;
     depth++;
   }
-  Quadtree * q = calloc (1, sizeof (Quadtree));
+  Tree * q = calloc (1, sizeof (Tree));
   q->depth = 0;
 
   /* low-level memory management */
@@ -1592,9 +1592,9 @@ Point locate (struct _locate p)
   return point;
 }
 
-#include "quadtree-common.h"
+#include "tree-common.h"
 
 @if _MPI
-#include "quadtree-mpi.h"
+#include "tree-mpi.h"
 #include "balance.h"
 @endif

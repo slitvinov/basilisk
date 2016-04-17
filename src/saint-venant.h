@@ -98,11 +98,11 @@ static void advance_saint_venant (scalar * output, scalar * input,
 }
 
 /**
-When using an adaptive discretisation (i.e. a quadtree)., we need
+When using an adaptive discretisation (i.e. a tree)., we need
 to make sure that $\eta$ is maintained as $z_b + h$ whenever cells are
 refined or coarsened. */
 
-#if QUADTREE
+#if TREE
 static void refine_eta (Point point, scalar eta)
 {
   foreach_child()
@@ -149,7 +149,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   tensor gu[];
   for (scalar s in {gh, geta, gu}) {
     s.gradient = zero;
-    #if QUADTREE
+    #if TREE
       s.prolongation = refine_linear;
     #endif
   }
@@ -202,7 +202,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
       In the case of adaptive refinement, care must be taken to ensure
       well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
 
-      #if QUADTREE
+      #if TREE
       if (is_prolongation(cell)) {
 	hi = coarse(h,0);
 	zi = coarse(zb,0);
@@ -282,11 +282,11 @@ event defaults (i = 0)
   /**
   We overload the default 'advance' and 'update' functions of the
   predictor-corrector scheme and setup the refinement and coarsening
-  methods on quadtrees. */
+  methods on trees. */
 
   advance = advance_saint_venant;
   update = update_saint_venant;
-#if QUADTREE
+#if TREE
   for (scalar s in {h,zb,u,eta}) {
     s.refine = s.prolongation = refine_linear;
     s.coarsen = coarsen_volume_average;

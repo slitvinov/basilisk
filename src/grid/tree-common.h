@@ -1,4 +1,5 @@
-#define QUADTREE 1
+#define QUADTREE 1 // OBSOLETE: for backward-compatibility
+#define TREE 1
 
 #include "multigrid-common.h"
 
@@ -8,7 +9,7 @@ attribute {
   void (* refine) (Point, scalar);
 }
 
-// Quadtree methods
+// Tree methods
 
 /*
   A cache of refined cells is maintained (if not NULL).
@@ -29,7 +30,7 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
 	  if (aparent(k,l,m).pid >= 0 && is_leaf(aparent(k,l,m))) {
 	    Point p = point;
 	    /* fixme: this should be made
-	       independent from the quadtree implementation */
+	       independent from the tree implementation */
 	    p.level = point.level - 1;
 	    p.i = (point.i + GHOSTS)/2 + k;
             #if dimension > 1
@@ -181,7 +182,7 @@ astats adapt_wavelet (struct Adapt p)
   // refinement
   if (p.minlevel < 1)
     p.minlevel = 1;
-  quadtree->refined.n = 0;
+  tree->refined.n = 0;
   static const int refined = 1 << user, too_fine = 1 << (user + 1);
   foreach_cell() {
     if (is_active(cell)) {
@@ -189,7 +190,7 @@ astats adapt_wavelet (struct Adapt p)
       if (is_leaf (cell)) {
 	if (cell.flags & too_coarse) {
 	  cell.flags &= ~too_coarse;
-	  refine_cell (point, listc, refined, &quadtree->refined);
+	  refine_cell (point, listc, refined, &tree->refined);
 	  st.nf++;
 	}
 	continue;
@@ -294,10 +295,10 @@ astats adapt_wavelet (struct Adapt p)
   int refined;								\
   do {									\
     refined = 0;							\
-    quadtree->refined.n = 0;						\
+    tree->refined.n = 0;						\
     foreach_leaf()							\
       if (cond) {							\
-	refine_cell (point, list, 0, &quadtree->refined);		\
+	refine_cell (point, list, 0, &tree->refined);		\
 	refined++;							\
 	continue;							\
       }									\
@@ -383,7 +384,7 @@ static void halo_flux (vector * list)
 
 // Cartesian methods
 
-static scalar quadtree_init_scalar (scalar s, const char * name)
+static scalar tree_init_scalar (scalar s, const char * name)
 {
   s = multigrid_init_scalar (s, name);
   s.refine = s.prolongation;
@@ -482,7 +483,7 @@ void refine_face_solenoidal (Point point, scalar s)
 #endif // dimension > 1
 }
 
-vector quadtree_init_face_vector (vector v, const char * name)
+vector tree_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_face_vector (v, name);
   foreach_dimension()
@@ -494,7 +495,7 @@ vector quadtree_init_face_vector (vector v, const char * name)
   return v;
 }
 
-static void quadtree_boundary_level (scalar * list, int l)
+static void tree_boundary_level (scalar * list, int l)
 {
   int depth = l < 0 ? depth() : l;
 
@@ -582,9 +583,9 @@ void output_tree (FILE * fp)
 		   treex(parent), treey(parent), treex(point), treey(point));
 }
 
-void quadtree_check()
+void tree_check()
 {
-  // checks the consistency of the quadtree
+  // checks the consistency of the tree
 
   long nleaves = 0, nactive = 0;
   foreach_cell_all() {
@@ -629,15 +630,15 @@ void quadtree_check()
 }
 
 static void no_restriction (scalar * list) {
-  // nothing to be done, this is handled by quadtree_boundary_level() above.
+  // nothing to be done, this is handled by tree_boundary_level() above.
 }
 
-void quadtree_methods()
+void tree_methods()
 {
   multigrid_methods();
-  init_scalar      = quadtree_init_scalar;
-  init_face_vector = quadtree_init_face_vector;
-  boundary_level   = quadtree_boundary_level;
+  init_scalar      = tree_init_scalar;
+  init_face_vector = tree_init_face_vector;
+  boundary_level   = tree_boundary_level;
   boundary_flux    = halo_flux;
   restriction      = no_restriction;
 }

@@ -3,5 +3,5 @@
 #include "tree.h"
 
 void bitree_methods() {
-  quadtree_methods();
+  tree_methods();
 }

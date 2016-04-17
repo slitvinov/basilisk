@@ -109,7 +109,7 @@ static size_t _size (size_t l)
   assert (0);
 } while (0)
 @
-@define quadtree multigrid
+@define tree multigrid
 #include "foreach_cell.h"
 
 @def foreach_face_generic(clause)

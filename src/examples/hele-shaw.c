@@ -52,7 +52,7 @@ event output (t += 10; t <= 50)
   output_field ({p,f,u}, stdout, N);
 }
 
-#if QUADTREE
+#if TREE
 event adapt (i++) {
   double tolerance = 0.02;
   adapt_wavelet ({f}, &tolerance, MAXLEVEL, list = {f});

@@ -1,5 +1,5 @@
 /* ===============================================================
- *                    Quadtree traversal
+ *                    Tree traversal
  * recursive() below is for reference only. The macro
  * foreach_cell() is a stack-based implementation of
  * recursive(). It is about 12% slower than the recursive
@@ -20,7 +20,7 @@
 #if 0
 void recursive (Point point)
 {
-  if (point.level == quadtree->depth) {
+  if (point.level == tree->depth) {
     /* do something */
   }
   else {
@@ -88,7 +88,7 @@ void recursive (Point point)
 	/* do something */
 @
 @def end_foreach_cell_root()
-        if (point.level < quadtree->depth) {
+        if (point.level < tree->depth) {
 	  _push (point.level, point.i, point.j, point.k, 1);
           _push (point.level + 1, _LEFT, _BOTTOM, _BACK, 0);
         }
@@ -169,7 +169,7 @@ void recursive (Point point)
       switch (stage) {
       case 0: {
         POINT_VARIABLES;
-	if (point.level == quadtree->depth) {
+	if (point.level == tree->depth) {
 	  _push (point.level, point.i, point.j, point.k, 8);
 	}
 	else {

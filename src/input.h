@@ -258,7 +258,7 @@ void input_gfs (struct OutputGfs p)
   scalar * listr = !is_constant(cm) ? listm : NULL;
   NOT_UNUSED (listr);
 
-  #if QUADTREE
+  #if TREE
   init_grid (1);
   #endif
   foreach_cell() {
