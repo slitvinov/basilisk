@@ -36,7 +36,6 @@ script()
 	    pass=false
 	    if test "$EXEC" = " " -a -f core -a -n `which gdb`; then
 		cat $log
-		grep "^  " $log > plot
 		xterm -e "gnuplot plot -" &
 		gdb -q ./$test core
 	    fi

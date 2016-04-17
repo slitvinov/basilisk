@@ -11,7 +11,8 @@ static void gdb()
     fflush (stderr);
   }
   char command[80];
-  sprintf (command, "exec xterm -e gdb -p %d", getpid());
+  sprintf (command, "exec xterm -e 'gdb -p %d' & xterm -e 'gnuplot plot -'",
+	   getpid());
   system (command);
 }
 
@@ -25,14 +26,14 @@ static void caught_fpe (int sig)
 {
   fprintf (stderr, "Caught signal %d (Floating Point Exception)\n", sig);
   gdb();
-  abort();
+  exit (1);
 }
 
 static void caught_segfault (int sig)
 {
   fprintf (stderr, "Caught signal %d (Segmentation Fault)\n", sig);
   gdb();
-  abort();
+  exit (2);
 }
 
 void catch_fpe (void)

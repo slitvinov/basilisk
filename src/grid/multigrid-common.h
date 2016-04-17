@@ -190,7 +190,8 @@ static vector multigrid_init_face_vector (vector v, const char * name)
 void multigrid_debug (Point point)
 {
   cartesian_debug (point);
-
+  
+  FILE * plot = fopen ("plot", "a");
   if (point.level > 0) {
     char name[80] = "coarse";
     if (pid() > 0)
@@ -205,6 +206,7 @@ void multigrid_debug (Point point)
 		   coarse(v,k*child.x));
       fputc ('\n', fp);
       fprintf (stderr, ", '%s' u 1+2*v:(0):2+2*v w labels tc lt 3 t ''", name);
+      fprintf (plot,   ", '%s' u 1+2*v:(0):2+2*v w labels tc lt 3 t ''", name);
     #elif dimension == 2
       double xc = x - child.x*Delta/2., yc = y - child.y*Delta/2.;
       for (int k = 0; k <= 1; k++)
@@ -217,6 +219,7 @@ void multigrid_debug (Point point)
 	  fputc ('\n', fp);
 	}
       fprintf (stderr, ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 3 t ''", name);
+      fprintf (plot,   ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 3 t ''", name);
     #elif dimension == 3
       double xc = x - child.x*Delta/2., yc = y - child.y*Delta/2.;
       double zc = z - child.z*Delta/2.;
@@ -232,6 +235,8 @@ void multigrid_debug (Point point)
 	    fputc ('\n', fp);
 	  }
       fprintf (stderr, ", '%s' u 1+4*v:2+4*v:3+4*v:4+4*v w labels tc lt 3 t ''",
+	       name);
+      fprintf (plot,   ", '%s' u 1+4*v:2+4*v:3+4*v:4+4*v w labels tc lt 3 t ''",
 	       name);
     #endif
     fclose (fp);
@@ -254,6 +259,7 @@ void multigrid_debug (Point point)
 	}
       fputc ('\n', fp);
       fprintf (stderr, ", '%s' u 1+2*v:(0):2+2*v w labels tc lt 2 t ''", name);
+      fprintf (plot,   ", '%s' u 1+2*v:(0):2+2*v w labels tc lt 2 t ''", name);
     #elif dimension == 2
       double xf = x - Delta/4., yf = y - Delta/4.;
       for (int k = -2; k <= 3; k++)
@@ -270,6 +276,7 @@ void multigrid_debug (Point point)
 	  fputc ('\n', fp);
 	}
       fprintf (stderr, ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 2 t ''", name);
+      fprintf (plot,   ", '%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 2 t ''", name);
     #elif dimension == 3
       double xf = x - Delta/4., yf = y - Delta/4., zf = z - Delta/4.;
       for (int k = -2; k <= 3; k++)
@@ -289,10 +296,13 @@ void multigrid_debug (Point point)
 	  }
       fprintf (stderr, ", '%s' u 1+4*v:2+4*v:3+4*v:4+4*v w labels tc lt 2 t ''",
 	       name);
+      fprintf (plot,   ", '%s' u 1+4*v:2+4*v:3+4*v:4+4*v w labels tc lt 2 t ''",
+	       name);
     #endif
     fclose (fp);
   }
   fflush (stderr);
+  fclose (plot);
 }
 
 static void multigrid_restriction (scalar * list)

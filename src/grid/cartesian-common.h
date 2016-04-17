@@ -422,6 +422,39 @@ void output_cells (FILE * fp)
   fflush (fp);
 }
 
+static char * replace_ (const char * vname)
+{
+  char * name = strdup (vname), * c = name;
+  while (*c != '\0') {
+    if (*c == '.')
+      *c = '_';
+    c++;
+  }
+  return name;
+}
+
+static void debug_plot (FILE * fp, const char * name, const char * cells,
+			const char * stencil)
+{
+  char * vname = replace_ (name);
+  fprintf (fp, 
+	   "  load 'debug.plot'\n"
+	   "  v=%s\n"
+#if dimension == 1   
+	   "  plot '%s' w l lc 0, "
+	   "'%s' u 1+2*v:(0):2+2*v w labels tc lt 1 title columnhead(2+2*v)",
+#elif dimension == 2
+	   "  plot '%s' w l lc 0, "
+	   "'%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 1 title columnhead(3+3*v)",
+#elif dimension == 3
+	   "  splot '%s' w l lc 0, "
+	   "'%s' u 1+4*v:2+4*v:3+4*v:4+4*v w labels tc lt 1"
+           " title columnhead(4+4*v)",
+#endif
+	   vname, cells, stencil);
+  free (vname);
+}
+
 void cartesian_debug (Point point)
 {
   char name[80] = "cells";
@@ -494,34 +527,19 @@ void cartesian_debug (Point point)
 	   "set size ratio -1\n"
 	   "set key outside\n");
   for (scalar s in all) {
-    char * name = strdup (s.name), * c = name;
-    while (*c != '\0') {
-      if (*c == '.')
-	*c = '_';
-      c++;
-    }
+    char * name = replace_ (s.name);
     fprintf (fp, "%s = %d\n", name, s.i);
     free (name);
   }
   fclose (fp);
-  
-  fprintf (stderr, 
-	   "Last point stencils can be displayed using (in gnuplot)\n"
-	   "  load 'debug.plot'\n"
-	   "  v=%s\n"
-#if dimension == 1   
-	   "  plot '%s' w l lc 0, "
-	   "'%s' u 1+2*v:(0):2+2*v w labels tc lt 1 title columnhead(2+2*v)",
-#elif dimension == 2
-	   "  plot '%s' w l lc 0, "
-	   "'%s' u 1+3*v:2+3*v:3+3*v w labels tc lt 1 title columnhead(3+3*v)",
-#elif dimension == 3
-	   "  splot '%s' w l lc 0, "
-	   "'%s' u 1+4*v:2+4*v:3+4*v:4+4*v w labels tc lt 1"
-           " title columnhead(4+4*v)",
-#endif
-	   _attribute[0].name, name, stencil);
+
+  fprintf (stderr, "Last point stencils can be displayed using (in gnuplot)\n");
+  debug_plot (stderr, _attribute[0].name, name, stencil);
   fflush (stderr);
+
+  fp = fopen ("plot", "w");
+  debug_plot (fp, _attribute[0].name, name, stencil);
+  fclose (fp);
 }
 
 void cartesian_methods()
