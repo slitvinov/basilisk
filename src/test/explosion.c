@@ -1,11 +1,17 @@
 /**
-# Two-dimensional explosion
+# Two- and three-dimensional explosions
 
-We solve the Euler equations for a compressible gas. */
+We solve the Euler equations for a compressible gas. We also need to
+compute volume fractions for the initial condition. */
 
 #include "compressible.h"
+#include "fractions.h"
 
-#define LEVEL 7
+#if dimension == 2
+# define LEVEL 7
+#else // 3D
+# define LEVEL 6
+#endif
 
 int main() {
 
@@ -18,9 +24,9 @@ int main() {
   }
   
   /**
-  The domain spans $[-1:1]\times[-1:1]$. */
+  The domain spans $[-1:1]\times[-1:1]\times[-1:1]$. */
 
-  origin (-1, -1);
+  origin (-1, -1, -1);
   size (2.);
   init_grid (1 << LEVEL);
   run(); 
@@ -38,18 +44,24 @@ event init (t = 0)
   double R = 0.4 ;
   double rhoL = 1., rhoR = 0.125 ;
   double pL = 1.0,  pR = 0.1 ;
+  
+  /**
+  To define an accurate (i.e. symmetrical) initial sphere of rayon
+  $R$, we compute the volume fraction corresponding to the spherical
+  interface. */
 
+  scalar f[];
+  fraction (f, sq(x) + sq(y) + sq(z) - sq(R));
+  
   /**
   Left and right initial states for $\rho$, $\mathbf{w}$ and energy
   $E = \rho \mathbf{u}^2/2 + p/(\gamma-1)$. */
-
+  
   foreach() {
-    double r = sqrt(sq(x) + sq(y));
-    double p = r <= R ? pL : pR;
-    rho[] = r <= R ? rhoL : rhoR;
+    rho[] = rhoR*f[] + rhoL*(1. - f[]);
     foreach_dimension()
       w.x[] = 0.;
-    E[] = p/(gammao - 1.);
+    E[] = (pR*f[] + pL*(1. - f[]))/(gammao - 1.);
   }
 }
 
@@ -61,8 +73,8 @@ event print (t = 0.25)
   $\mathbf{u}_n$ as functions of the radial coordinate. */
 
   foreach() {
-    double r = sqrt(sq(x) + sq(y));
-    double wn = (w.x[]*x + w.y[]*y)/r;
+    double r = sqrt(sq(x) + sq(y) + sq(z));
+    double wn = (w.x[]*x + w.y[]*y + w.z[]*z)/r;
     printf ("%g %g %g\n", r, rho[], wn/rho[]);
   }
 
@@ -81,7 +93,7 @@ field. */
 
 #if TREE
 event adapt (i++) {
-  adapt_wavelet ({rho}, (double[]){1e-5}, LEVEL + 1);
+  adapt_wavelet ({rho}, (double[]){5e-3}, LEVEL + 1);
 }
 #endif
 
@@ -89,8 +101,9 @@ event adapt (i++) {
 ## Results
 
 Results are presented in terms of $\rho$ and normal velocity $u_n$ for
-Cartesian (7 levels) and adaptive (8 levels) computations. The
-numerical results compare very well with Toro's numerical experiments.
+Cartesian (7 levels in 2D and 6 levels in 3D) and adaptive (8 levels
+in 2D and 7 levels in 3D) computations. The numerical results compare
+very well with Toro's numerical experiments.
 
 ~~~gnuplot Radial density profile
 set xrange [0:1]
@@ -98,18 +111,19 @@ set xlabel 'r'
 
 set output 'rho.png'
 set ylabel 'rho'
-plot './out' u 1:2 w p pt 7 ps 0.2 t 'Adaptive', \
-     './cout' u 1:2 w p pt 7 ps 0.2 t 'Cartesian'
+plot './cout' u 1:2 w p pt 7 ps 0.2 t '2D Cartesian', \
+     './out' u 1:2 w p pt 7 ps 0.2 t '2D Adaptive', \
+     '../explosion3D/out' u 1:2 w p pt 7 ps 0.2 t '3D Cartesian', \
+     '../explosion.3D/out' u 1:2 w p pt 7 ps 0.2 t '3D Adaptive'
 ~~~
 
 ~~~gnuplot Normal velocity
 set output 'velocity.png'
 set ylabel 'Normal velocity'
-plot './out' u 1:3 w p pt 7 ps 0.2 t 'Adaptive', \
-     './cout' u 1:3 w p pt 7 ps 0.2 t 'Cartesian'
+plot './cout' u 1:3 w p pt 7 ps 0.2 t '2D Cartesian',		  \
+     './out' u 1:3 w p pt 7 ps 0.2 t '2D Adaptive',		  \
+     '../explosion3D/out' u 1:3 w p pt 7 ps 0.2 t '3D Cartesian', \
+     '../explosion.3D/out' u 1:3 w p pt 7 ps 0.2 t '3D Adaptive'
 ~~~
 
-## See also
-
-* [Three-dimensional explosion](explosion3D.c)
 */

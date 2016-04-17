@@ -88,7 +88,12 @@ implicit.tst: explicit.tst
 
 bore.tst: bore1.tst
 
-explosion.tst: explosion.ctst
+explosion3D.tst: CFLAGS=-grid=multigrid3D
+
+explosion3D.c: explosion.c
+	ln -s explosion.c explosion3D.c
+
+explosion.tst: explosion.ctst explosion.3D.tst explosion3D.tst
 
 laplacian.tst: laplacian.ctst
 
