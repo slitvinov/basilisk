@@ -45,11 +45,8 @@ pf[top]  = dirichlet(0);
 event init (i = 0) {
   foreach()
     u.x[] = 1.;
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = - ellipse (0, 0.3, 0.1, 0.1);
-  fractions (phi, f);
-  fractions (phi, f1);
+  fraction (f, - ellipse (0, 0.3, 0.1, 0.1));
+  fraction (f1, - ellipse (0, 0.3, 0.1, 0.1));
 }
 
 event logfile (i++; t <= 0.8) {

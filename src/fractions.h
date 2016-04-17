@@ -321,6 +321,17 @@ void fractions (struct Fractions a)
 }
 
 /**
+The convenience macro below can be used to define a volume fraction
+field directly from a function. */
+
+#define fraction(f,func) do {			\
+    vertex scalar phi[];			\
+    foreach_vertex()				\
+      phi[] = func;				\
+    fractions (phi, f);				\
+  } while(0);
+
+/**
 ## Interface reconstruction from volume fractions
 
 The reconstruction of the interface geometry from the volume fraction

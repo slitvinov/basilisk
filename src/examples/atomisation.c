@@ -88,10 +88,7 @@ event init (t = 0) {
   refine (x < 1.2*length && sq(y) + sq(z) < 2.*sq(radius) && level < maxlevel,
 	  all);
   
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = sq(radius) - sq(y) - sq(z);
-  fractions (phi, f0);
+  fraction (f0, sq(radius) - sq(y) - sq(z));
   
   f0.refine = f0.prolongation = fraction_refine;
   restriction ({f0}); // for boundary conditions on restricted f

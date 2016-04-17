@@ -91,10 +91,7 @@ event init (i = 0) {
   /**
   We initialise the shape of the interface, a slightly elliptic droplet. */
 
-  scalar phi[];
-  foreach_vertex()
-    phi[] = D/2.*(1. + 0.05*cos(2.*atan2(y,x))) - sqrt(sq(x) + sq(y));
-  fractions (phi, c);
+  fraction (c, D/2.*(1. + 0.05*cos(2.*atan2(y,x))) - sqrt(sq(x) + sq(y)));
 #ifndef cf
   foreach()
     cf[] = c[];

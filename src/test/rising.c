@@ -96,10 +96,7 @@ event init (t = 0) {
   /**
   The bubble is centered on (0.5,0) and has a radius of 0.25. */
 
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = sq(x - 0.5) + sq(y) - sq(0.25);
-  fractions (phi, f);
+  fraction (f, sq(x - 0.5) + sq(y) - sq(0.25));
 }
 
 /**

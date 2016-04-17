@@ -14,10 +14,7 @@ int main()
   refine (level <= 5 && fabs (x) < 0.31 && fabs (y) < 0.31, NULL);
   c.refine = c.prolongation = fraction_refine;
 #endif
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = - (0.2 - sqrt(sq(x+0.2) + sq(y+0.2)));
-  fractions (phi, c);
+  fraction (c, - (0.2 - sqrt(sq(x+0.2) + sq(y+0.2))));
   output_cells (stdout);
 #if dimension == 2
   output_facets (c, stdout);

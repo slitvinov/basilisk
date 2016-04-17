@@ -34,10 +34,7 @@ event init (t = 0) {
   alpha = alphav;
   rho = rhov;
 
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = 0.05*cos (2.*pi*x) + y;
-  fractions (phi, f);
+  fraction (f, 0.05*cos (2.*pi*x) + y);
 }
 
 #define rho(f) ((f)*1.225 + (1. - (f))*0.1694)

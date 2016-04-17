@@ -35,10 +35,7 @@ event init (i = 0)
   distance](http://en.wikipedia.org/wiki/Great-circle_distance) from
   the origin. */
 
-  scalar phi[];
-  foreach_vertex()
-    phi[] = 0.2 - acos(cos(x*pi/180.)*cos(y*pi/180.));
-  fractions (phi, h);
+  fraction (h, 0.2 - acos(cos(x*pi/180.)*cos(y*pi/180.)));
   foreach()
     h[] = 0.2 + 1.8*h[];
 }

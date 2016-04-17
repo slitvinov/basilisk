@@ -7,11 +7,8 @@ int main()
   origin (-0.5, -0.5);
   init_grid (16);
   scalar c[];
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = min(sq(x + 0.1) + sq(y + 0.22) - sq(0.18),
-		sq(x - 0.1) + sq(y - 0.22) - sq(0.18));
-  fractions (phi, c);
+  fraction (c, min(sq(x + 0.1) + sq(y + 0.22) - sq(0.18),
+		   sq(x - 0.1) + sq(y - 0.22) - sq(0.18)));
   output_cells (stdout);
   output_facets (c, stdout);
   vector h[];

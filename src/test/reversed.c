@@ -54,10 +54,7 @@ We define the levelset function $\phi$ on each vertex of the grid and
 compute the corresponding volume fraction field. */
 
 event init (i = 0) {
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = circle(x,y);
-  fractions (phi, f);
+  fraction (f, circle(x,y));
 }
 
 event velocity (i++) {
@@ -112,11 +109,8 @@ final shape. We output the norms as functions of the maximum
 resolution `N`. */
 
 event field (t = T) {
-  vertex scalar phi[];
   scalar e[];
-  foreach_vertex()
-    phi[] = circle(x,y);
-  fractions (phi, e);
+  fraction (e, circle(x,y));
   foreach()
     e[] -= f[];
   norm n = normf (e);

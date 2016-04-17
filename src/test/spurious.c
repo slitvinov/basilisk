@@ -96,10 +96,7 @@ event init (i = 0) {
   ... and initialise the shape of the interface and the initial volume
   fraction field. */
   
-  scalar phi[];
-  foreach_vertex()
-    phi[] = sq(DIAMETER/2) - sq(x) - sq(y);
-  fractions (phi, c);
+  fraction (c, sq(DIAMETER/2) - sq(x) - sq(y));
   foreach()
     cn[] = c[];
   boundary ({cn});
@@ -136,11 +133,8 @@ event error (t = end) {
   /**
   We recompute the reference solution. */
   
-  vertex scalar phi[];
   scalar cref[];
-  foreach_vertex()
-    phi[] = sq(DIAMETER/2) - sq(x) - sq(y);
-  fractions (phi, cref);
+  fraction (cref, sq(DIAMETER/2) - sq(x) - sq(y));
   
   /**
   And compute the maximum error on the curvature *ekmax*, the norm of

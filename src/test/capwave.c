@@ -61,10 +61,7 @@ The initial condition is a small amplitude plane wave of wavelength
 unity. */
 
 event init (t = 0) {
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = y - 0.01*cos (2.*pi*x);
-  fractions (phi, c);
+  fraction (c, y - 0.01*cos (2.*pi*x));
 }
 
 /**
