@@ -351,24 +351,24 @@ typedef struct {
 } Trace;
 
 Trace trace_func     = {
-  {NULL, sizeof(char *), 0, 0}, {NULL, sizeof(int), 0, 0},
+  {NULL, 0, 0}, {NULL, 0, 0},
   60000010,
 };
 
 Trace trace_mpi_func = {
-  {NULL, sizeof(char *), 0, 0}, {NULL, sizeof(int), 0, 0},
+  {NULL, 0, 0}, {NULL, 0, 0},
   60000011,
 };
 
 static int lookup_func (Array * a, const char * func)
 {
-  for (int i = 0; i < a->len; i++) {
+  for (int i = 0; i < a->len/sizeof(char *); i++) {
     char * s = ((char **)a->p)[i];
     if (!strcmp (func, s))
       return i + 1;
   }
   char * s = strdup (func);
-  array_append (a, &s);
+  array_append (a, &s, sizeof(char *));
   return a->len;
 }
 
@@ -376,26 +376,28 @@ static void trace_push (Trace * t, const char * func)
 {
   int value = lookup_func (&t->index, func);
   Extrae_eventandcounters (t->type, value);
-  array_append (&t->stack, &value);
+  array_append (&t->stack, &value, sizeof(int));
 }
 
 static void trace_pop (Trace * t, const char * func)
 {
   assert (t->stack.len > 0);
-  t->stack.len--;
-  int value = t->stack.len > 0 ? ((int *)t->stack.p)[t->stack.len - 1] : 0;
+  t->stack.len -= sizeof(int);
+  int value = t->stack.len > 0 ?
+    ((int *)t->stack.p)[t->stack.len/sizeof(int) - 1] : 0;
   Extrae_eventandcounters (t->type, value);
 }
 
 static void trace_define (Trace * t, char * description)
 {
   if (t->index.len > 0) {
-    extrae_value_t values[t->index.len + 1];
-    char * names[t->index.len + 1], ** func = (char **) t->index.p;
+    extrae_value_t values[t->index.len/sizeof(char *) + 1];
+    char * names[t->index.len/sizeof(char *) + 1],
+      ** func = (char **) t->index.p;
     names[0] = "OTHER";
     values[0] = 0;
     unsigned len = 1;
-    for (int i = 0; i < t->index.len; i++, func++) {
+    for (int i = 0; i < t->index.len/sizeof(char *); i++, func++) {
       names[len] = *func;
       values[len++] = i + 1;
     }
@@ -406,7 +408,7 @@ static void trace_define (Trace * t, char * description)
 static void trace_free (Trace * t)
 {
   char ** func = (char **) t->index.p;
-  for (int i = 0; i < t->index.len; i++, func++)
+  for (int i = 0; i < t->index.len/sizeof(char *); i++, func++)
     free (*func);
   free (t->index.p);
   free (t->stack.p);
