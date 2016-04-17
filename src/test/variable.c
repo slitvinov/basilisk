@@ -39,6 +39,7 @@ int main (int argc, char ** argv)
 
   foreach_face()
     c.x[] = x + y + 2.;
+  boundary ((scalar *){c});
   restriction ((scalar *){c});
   const scalar lambda[] = 0.;
   struct Poisson p;

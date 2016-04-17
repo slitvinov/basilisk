@@ -14,8 +14,6 @@ int main (int argc, char * argv[])
     s[] = 1;
   boundary ({s});
 
-  restriction ({s});
-
   output_cells (stdout);
 
   // check boundary conditions on leaves
@@ -34,11 +32,12 @@ int main (int argc, char * argv[])
         assert (s1[] == 2.);
   }
   
-  // check restriction 
-  foreach_fine_to_coarse() {
-    fprintf (stderr, "res %g %g %g %g %d\n", x, y, z, s[], level);
-    assert (s[] == 1.);
-  }
+  // check restriction
+  for (int l = 0; l < depth; l++)
+    foreach_coarse_level (l) {
+      fprintf (stderr, "res %g %g %g %g %d\n", x, y, z, s[], level);
+      assert (s[] == 1.);
+    }
 
   // check face traversal
   foreach_face() {

@@ -41,7 +41,7 @@ void solve (int depth)
 
   foreach_face()
     c.x[] = x + y + 2.;
-  restriction ((scalar *){c});
+  boundary ((scalar *){c});
 
   const scalar lambda[] = 0.;
   struct Poisson p;

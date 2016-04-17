@@ -110,21 +110,6 @@ foreach_face_generic() {
 
 @define is_coarse() (point.level < depth())
 
-@def foreach_fine_to_coarse() {
-  int ig = 0; NOT_UNUSED(ig);
-  Point _p;
-  _p.level = multigrid->depth - 1; _p.n = 1 << _p.level;
-  for (; _p.level >= 0; _p.n /= 2, _p.level--)
-    OMP_PARALLEL()
-    Point point = _p;
-    int _k;
-    OMP(omp for schedule(static))
-    for (_k = GHOSTS; _k < point.n + GHOSTS; _k++) {
-      point.i = _k;
-      POINT_VARIABLES
-@
-@define end_foreach_fine_to_coarse() } OMP_END_PARALLEL() }
-
 @def foreach_child() {
   int _i = 2*point.i - GHOSTS;
   point.level++;

@@ -1239,7 +1239,7 @@ double z_indexing (scalar index, bool leaves)
 
   boundary_iterate (restriction, {size}, depth());
   for (int l = depth() - 1; l >= 0; l--) {
-    foreach_coarse_level(l) { // fixme: we could use restriction()
+    foreach_coarse_level(l) {
       double sum = !leaves;
       foreach_child()
 	sum += size[];

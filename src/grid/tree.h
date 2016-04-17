@@ -738,15 +738,6 @@ static void update_cache_f (void)
 # define foreach_edge() foreach_face(y,x)
 #endif
 
-@def foreach_fine_to_coarse(clause)     {
-  update_cache();
-  for (int _l = depth() - 1; _l >= 0; _l--) {
-    CacheLevel _active = quadtree->active[_l];
-    foreach_cache_level (_active,_l,clause)
-      if (!is_leaf (cell)) {
-@
-@define end_foreach_fine_to_coarse() } end_foreach_cache_level(); } }
-
 @def foreach_level(l) {
   if (l <= depth()) {
     update_cache();

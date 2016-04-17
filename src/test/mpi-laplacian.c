@@ -154,6 +154,7 @@ int main (int argc, char * argv[])
   i = 0;
   t = timer_start();
   while (i < nloops) {
+    boundary ({b});
     restriction ({b});
     i++;
   }

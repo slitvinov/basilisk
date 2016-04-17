@@ -126,22 +126,6 @@ foreach_face_generic() {
 
 @define is_coarse() (point.level < depth())
 
-@def foreach_fine_to_coarse() {
-  int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point _p;
-  _p.level = multigrid->depth - 1; _p.n = 1 << _p.level;
-  for (; _p.level >= 0; _p.n /= 2, _p.level--)
-    OMP_PARALLEL()
-    Point point = _p;
-    int _k;
-    OMP(omp for schedule(static))
-    for (_k = GHOSTS; _k < point.n + GHOSTS; _k++) {
-      point.i = _k;
-      for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++) {
-        POINT_VARIABLES
-@
-@define end_foreach_fine_to_coarse() }} OMP_END_PARALLEL() }
-
 @def foreach_child() {
   int _i = 2*point.i - GHOSTS, _j = 2*point.j - GHOSTS;
   point.level++;
@@ -231,11 +215,15 @@ static void box_boundary_level_tangent (const Boundary * b,
       scalar b = s.v.y;
       val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
 #if GHOSTS == 2
-      point.i -= ig; point.j -= jg;
-      neighbor.i += ig; neighbor.j += jg;
-      double vb = b.boundary[d] (point, neighbor, s);
-      point.i += ig; point.j += jg;
-      val(s,2*ig,2*jg) = vb;
+      if (level > 0) {
+	point.i -= ig; point.j -= jg;
+	neighbor.i += ig; neighbor.j += jg;
+	double vb = b.boundary[d] (point, neighbor, s);
+	point.i += ig; point.j += jg;
+	val(s,2*ig,2*jg) = vb;
+      }
+      else
+	val(s,2*ig,2*jg) = 0.;
 #endif
     }
   }

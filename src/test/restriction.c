@@ -12,7 +12,7 @@ int main(int argc, char * argv[])
   face vector u[];
   foreach_face()
     u.x[] = 1.;
-  restriction ((scalar *){u});
+  boundary ((scalar *){u});
 
   output_cells (stdout);
 

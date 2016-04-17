@@ -150,23 +150,6 @@ foreach_vertex() {
 
 @define is_coarse() (point.level < depth())
 
-@def foreach_fine_to_coarse() {
-  int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
-  Point _p;
-  _p.level = multigrid->depth - 1; _p.n = 1 << _p.level;
-  for (; _p.level >= 0; _p.n /= 2, _p.level--)
-    OMP_PARALLEL()
-    Point point = _p;
-    int _k;
-    OMP(omp for schedule(static))
-    for (_k = GHOSTS; _k < point.n + GHOSTS; _k++) {
-      point.i = _k;
-      for (point.j = GHOSTS; point.j < point.n + GHOSTS; point.j++)
-	for (point.k = GHOSTS; point.k < point.n + GHOSTS; point.k++) {
-	  POINT_VARIABLES
-@
-@define end_foreach_fine_to_coarse() }} OMP_END_PARALLEL() }
-
 @def foreach_child() {
   int _i = 2*point.i - GHOSTS;
   int _j = 2*point.j - GHOSTS;

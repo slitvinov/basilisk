@@ -21,6 +21,8 @@ attribute {
 
 // Multigrid methods
 
+void (* restriction) (scalar *);
+
 static inline void coarsen_average (Point point, scalar s)
 {
   double sum = 0.;
@@ -67,52 +69,23 @@ static inline void no_data (Point point, scalar s) {
     s[] = nodata;
 }
 
-void restriction (scalar * list)
-{
-  scalar * listc = NULL;
-  vector * listf = NULL;
-  for (scalar s in list) 
-    if (!is_constant(s)) {
-      if (s.face)
-	listf = vectors_add (listf, s.v);
-      else
-	listc = list_add (listc, s);
-    }
-  if (listf)
-    boundary_flux (listf);
-  if (listf || listc) {
-    boundary_iterate (level, list, depth());
-    for (int l = depth() - 1; l >= 0; l--) {
-      foreach_coarse_level(l) {
-	// fixme: this ignores the s.coarsen() method...
-	for (scalar s in listc)
-	  coarsen_average (point, s);
-	for (vector v in listf)
-	  face_average (point, v);
-      }
-      boundary_iterate (level, list, l);
-    }
-  }
-  free (listc);
-  free (listf);
-}
-
 void wavelet (scalar s, scalar w)
 {
   restriction ({s});
-  foreach_fine_to_coarse() {
-    double sc[1 << dimension];
-    int c = 0;
-    foreach_child()
-      sc[c++] = s[];
-    s.prolongation (point, s);
-    c = 0;
-    foreach_child() {
-      /* difference between fine value and its prolongation */
-      w[] = sc[c] - s[];
-      s[] = sc[c++];
+  for (int l = depth() - 1; l >= 0; l--)
+    foreach_coarse_level (l) {
+      double sc[1 << dimension];
+      int c = 0;
+      foreach_child()
+	sc[c++] = s[];
+      s.prolongation (point, s);
+      c = 0;
+      foreach_child() {
+	/* difference between fine value and its prolongation */
+	w[] = sc[c] - s[];
+	s[] = sc[c++];
+      }
     }
-  }
   /* root cell */
   foreach_level(0) w[] = 0.;
 }
@@ -197,7 +170,15 @@ static inline void refine_injection (Point point, scalar v)
     v[] = val;
 }
 
-vector multigrid_init_face_vector (vector v, const char * name)
+static scalar multigrid_init_scalar (scalar s, const char * name)
+{
+  s = cartesian_init_scalar (s, name);
+  s.prolongation = refine_bilinear;
+  s.coarsen = coarsen_average;
+  return s;
+}
+
+static vector multigrid_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_face_vector (v, name);
   foreach_dimension()
@@ -314,9 +295,46 @@ void multigrid_debug (Point point)
   fflush (stderr);
 }
 
+static void multigrid_restriction (scalar * list)
+{
+  scalar * listdef = NULL, * listc = NULL, * list2 = NULL;
+  for (scalar s in list) 
+    if (!is_constant (s)) {
+      if (s.coarsen == coarsen_average) {
+	listdef = list_add (listdef, s);
+	list2 = list_add (list2, s);
+      }
+      else if (s.coarsen != no_coarsen) {
+	listc = list_add (listc, s);
+	if (s.face)
+	  foreach_dimension()
+	    list2 = list_add (list2, s.v.x);
+	else
+	  list2 = list_add (list2, s);
+      }
+    }
+
+  if (listdef || listc) {
+    for (int l = depth() - 1; l >= 0; l--) {
+      foreach_coarse_level(l) {
+	for (scalar s in listdef)
+	  coarsen_average (point, s);
+	for (scalar s in listc)
+	  s.coarsen (point, s);
+      }
+      boundary_iterate (level, list2, l);      
+    }
+    free (listdef);
+    free (listc);
+    free (list2);
+  }
+}
+
 void multigrid_methods()
 {
   cartesian_methods();
-  debug                = multigrid_debug;
-  init_face_vector     = multigrid_init_face_vector;
+  debug            = multigrid_debug;
+  init_scalar      = multigrid_init_scalar;
+  init_face_vector = multigrid_init_face_vector;
+  restriction      = multigrid_restriction;
 }

@@ -39,8 +39,8 @@ velocity field $\mathbf{u}_f$. */
 vector q[];
 scalar p[];
 face vector uf[];
-(const) scalar rho = unity;
 (const) face vector alpha = unityf;
+(const) scalar rho = unity;
 
 /**
 The equation of state is defined by the pressure field *ps* and $\rho
@@ -64,11 +64,16 @@ We initialise default values for the primitive fields. */
 
 event defaults (i = 0) {
   foreach() {
-    p[] = 0.;
     foreach_dimension()
       q.x[] = g.x[] = 0.;
+    p[] = ps[] = 0.;
   }
-  boundary ({q,p,g});
+  foreach_face()
+    uf.x[] = 0.;
+  
+  boundary ({p,ps,q,g,uf});
+  event ("properties");
+  boundary ((scalar *){a});
 }
 
 event init (i = 0) {
@@ -116,7 +121,7 @@ The equation of state (i.e. fields $\alpha$, $\rho$, $\rho c^2$ and
 
 event properties (i++,last)
 {
-  boundary_flux ({alpha});
+  boundary ({rho, rhoc2, ps, alpha});
   
   /**
   If the acceleration is not constant, we reset it to zero. */
@@ -133,7 +138,7 @@ This event can be overloaded to add acceleration terms. */
 
 event acceleration (i++, last)
 {
-  boundary_flux ({a});
+  boundary ((scalar *){a});
 }
 
 /**
@@ -208,6 +213,7 @@ event pressure (i++, last)
       div += uf.x[1] - uf.x[];
     rhs[] += div/(dt*Delta);
   }
+  boundary ({lambda, rhs});
   
   /**
   The Poisson--Helmholtz solver is called with a [definition of the

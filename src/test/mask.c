@@ -1,6 +1,6 @@
 /**
 Checks that "half-mapped" fine/coarse cells do not cause trouble with
-restriction of face values. 
+boundary conditions on face values. 
 
 This only works when two layers of ghost cells are used on the
 boundaries. */
@@ -15,5 +15,4 @@ int main() {
   foreach_face()
     v.x[] = 1.;
   boundary ((scalar *){v});
-  restriction ((scalar *){v});  
 }

@@ -385,9 +385,8 @@ static void halo_flux (vector * list)
 
 static scalar quadtree_init_scalar (scalar s, const char * name)
 {
-  s = cartesian_init_scalar (s, name);
-  s.refine = s.prolongation = refine_bilinear;
-  s.coarsen = coarsen_average;
+  s = multigrid_init_scalar (s, name);
+  s.refine = s.prolongation;
   return s;
 }
 
@@ -629,6 +628,10 @@ void quadtree_check()
   assert (nleaves == reachable);
 }
 
+static void no_restriction (scalar * list) {
+  // nothing to be done, this is handled by quadtree_boundary_level() above.
+}
+
 void quadtree_methods()
 {
   multigrid_methods();
@@ -636,4 +639,5 @@ void quadtree_methods()
   init_face_vector = quadtree_init_face_vector;
   boundary_level   = quadtree_boundary_level;
   boundary_flux    = halo_flux;
+  restriction      = no_restriction;
 }

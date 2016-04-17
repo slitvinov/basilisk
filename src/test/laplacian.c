@@ -70,8 +70,10 @@ int main (int argc, char * argv[])
 
     nloops = i = (1 << 25) >> 2*l;
     start = clock();
-    while (i--)
+    while (i--) {
+      boundary ({b});
       restriction ({b});
+    }
     end = clock();
     printf ("res %d %g %g\n", l, 
 	    1e9*(end - start)/(double)CLOCKS_PER_SEC/(nloops*(1 << 2*l)), sum);

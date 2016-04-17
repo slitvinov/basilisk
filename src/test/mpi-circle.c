@@ -126,8 +126,10 @@ int main (int argc, char * argv[])
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
   i = nloops = 1;
-  while (i--)
+  while (i--) {
+    boundary ({b});
     restriction ({b});
+  }
   mpi_print (t, nloops, tnc*nloops, "restriction");
 
   /**

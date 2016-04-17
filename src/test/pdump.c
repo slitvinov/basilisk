@@ -14,7 +14,6 @@ int main()
   foreach()
     s[] = sin(x)*cos(y);
   boundary ({s});
-  restriction ({s});
   
   dump (file = "dump", list = {s});
 }

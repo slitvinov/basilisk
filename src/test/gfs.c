@@ -13,7 +13,6 @@ int main()
   foreach()
     u.x[] = u.y[] = a[] = sin(2.*pi*x)*cos(2.*pi*y);
   boundary ({a,u});
-  restriction ({a,u});
 
   FILE * fp = fopen ("test.gfs", "w");
   output_gfs (fp);

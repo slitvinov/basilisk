@@ -198,7 +198,7 @@ static void relax_GN (scalar * a, scalar * r, int l, void * data)
   vector D = vector(a[0]), b = vector(r[0]);
   foreach_level_or_leaf (l)
     foreach_dimension() {
-      if (wet[-1] == 1 && wet[] == 1 && wet[1] == 1) {
+      if (h[] > dry && wet[-1] == 1 && wet[] == 1 && wet[1] == 1) {
 	double hc = h[], dxh = dx(h), dxzb = dx(zb), dxeta = dxzb + dxh;
 	double hl3 = (hc + h[-1])/2.; hl3 = cube(hl3);
 	double hr3 = (hc + h[1])/2.;  hr3 = cube(hr3);
@@ -287,10 +287,10 @@ static double update_green_naghdi (scalar * current, scalar * updates,
   boundary ({wet});
 
   /**
-  Finally we solve the linear problem with the multigrid
-  solver using the relaxation and residual functions defined above. 
-  We need to restrict $h$ and $z_b$ as their values will be required 
-  for relaxation on coarse grids. */
+  Finally we solve the linear problem with the multigrid solver using
+  the relaxation and residual functions defined above. We need to
+  restrict $h$ and $z_b$ as their values will be required for
+  relaxation on coarse grids. */
 
   scalar * list = {h, zb, wet};
   restriction (list);
@@ -301,20 +301,18 @@ static double update_green_naghdi (scalar * current, scalar * updates,
 
   vector dhu = vector(updates[1]);
 
-  foreach() {
+  /**
+  We only apply the Green-Naghdi source term when the slope of the
+  free surface is smaller than *breaking*. The idea is to turn off
+  dispersion in areas where the wave is "breaking" (i.e. in
+  hydraulic jumps). We also turn off dispersive terms close to shore
+  so that lake-at-rest balance is maintained. */
 
-    /**
-    We only apply the Green-Naghdi source term when the slope of the
-    free surface is smaller than *breaking*. The idea is to turn off
-    dispersion in areas where the wave is "breaking" (i.e. in
-    hydraulic jumps). We also turn off dispersive terms close to shore
-    so that lake-at-rest balance is maintained. */
-
+  foreach()
     if (fabs(dx(eta)) < breaking && fabs(dy(eta)) < breaking)
       foreach_dimension()
 	if (wet[-1] == 1 && wet[] == 1 && wet[1] == 1)
 	  dhu.x[] += h[]*(G/alpha_d*dx(eta) - D.x[]);
-  }
 
   return dt;
 }
