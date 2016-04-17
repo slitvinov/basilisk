@@ -509,9 +509,9 @@ static void trace_off()
   for (i = 0, t = (TraceIndex *) Trace.index.p; i < len; i++, t++)
     total += t->self;
   qsort (Trace.index.p, len, sizeof(TraceIndex), compar_self);
-  fprintf (stderr, "   calls    total     self   %% total   function\n");  
+  fprintf (stdout, "   calls    total     self   %% total   function\n");
   for (i = 0, t = (TraceIndex *) Trace.index.p; i < len; i++, t++) {
-    fprintf (stderr, "%8d   %6.2f   %6.2f     %4.1f%%   %s():%s:%d\n",
+    fprintf (stdout, "%8d   %6.2f   %6.2f     %4.1f%%   %s():%s:%d\n",
 	     t->calls, t->total, t->self, t->self*100./total,
 	     t->func, t->file, t->line);
     free (t->func); free (t->file);

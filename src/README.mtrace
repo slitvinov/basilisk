@@ -177,3 +177,7 @@ struct {
   char * fname;                  // trace file name
 } pmtrace;
 ~~~
+
+# See also
+
+* [Built-in profiling](README.trace)

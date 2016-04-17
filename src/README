@@ -295,5 +295,6 @@ program (i.e. `a[]` in this example), accordingly `ga.x[]` and
 
 # See also
 
-* [Performance profiling with Paraver](README.paraver)
+* [Built-in profiling](README.trace)
 * [Built-in memory profiling](README.mtrace)
+* [Performance profiling with Paraver](README.paraver)
