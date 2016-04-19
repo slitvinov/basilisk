@@ -206,22 +206,26 @@ bool balance()
 
   check_flags();
 
-  long nl = 0;
-
-  if (mpi.leaves)
-    foreach()
-      nl++;
-  else
-    foreach_cell() {
-      if (is_local(cell))
-	nl++;
+  long nl = 0, nt = 0;
+  foreach_cell() {
+    if (is_local(cell)) {
+      nt++;
       if (is_leaf(cell))
-	continue;
+	nl++;
     }
+    if (is_leaf(cell))
+      continue;
+  }
 
-  long nt = nl, nmin = nl, nmax = nl;
+  grid->n = grid->tn = nl;
+  mpi_all_reduce (grid->tn, MPI_LONG, MPI_SUM);  
+  if (mpi.leaves)
+    nt = grid->tn;
+  else
+    mpi_all_reduce (nt, MPI_LONG, MPI_SUM);
+    
+  long nmin = nl, nmax = nl;
   // fixme: do all reductions in one go
-  mpi_all_reduce (nt,   MPI_LONG, MPI_SUM);
   mpi_all_reduce (nmax, MPI_LONG, MPI_MAX);
   mpi_all_reduce (nmin, MPI_LONG, MPI_MIN);
   long ne = max(1, nt/npe());
@@ -378,7 +382,14 @@ bool balance()
 
   mpi_all_reduce (pid_changed, MPI_INT, MPI_MAX);
   if (pid_changed)
-    mpi_boundary_update();
+    mpi_boundary_update_buffers();
   
   return pid_changed;
+}
+
+void mpi_boundary_update (scalar * list)
+{
+  mpi_boundary_update_buffers();
+  boundary (list);
+  while (balance());
 }

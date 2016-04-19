@@ -772,12 +772,12 @@ static bool has_local_child (Point point)
 }
 
 trace
-void mpi_boundary_update()
+void mpi_boundary_update_buffers()
 {
   if (npe() == 1)
     return;
 
-  prof_start ("mpi_boundary_update");
+  prof_start ("mpi_boundary_update_buffers");
 
   MpiBoundary * m = (MpiBoundary *) mpi_boundary;
   SndRcv * mpi_level = &m->mpi_level;
@@ -1154,6 +1154,7 @@ static int balanced_pid (long index, long nt, int nproc)
   return min(nproc - 1, pid);
 }
 
+// static partitioning: only used for tests
 trace
 void mpi_partitioning()
 {
@@ -1193,7 +1194,7 @@ void mpi_partitioning()
   
   prof_stop();
   
-  mpi_boundary_update();
+  mpi_boundary_update_buffers();
 }
 
 /**

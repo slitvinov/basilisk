@@ -740,7 +740,11 @@ static void set_fpe (void) {}
 @endif
 
 // the grid
-void * grid = NULL;
+typedef struct {
+  long n;  // number of (leaf) cells for this process
+  long tn; // number of (leaf) cells for all processes
+} Grid;
+Grid * grid = NULL;
 // coordinates of the lower-left corner of the box
 double X0 = 0., Y0 = 0., Z0 = 0.;
 // size of the box

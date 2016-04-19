@@ -8,6 +8,7 @@
 #define DELTA  (1./(1 << point.level))
 
 typedef struct {
+  Grid g;
   char ** d;
   int depth;
 } Multigrid;
@@ -418,7 +419,7 @@ void free_grid (void)
   if (!grid)
     return;
   free_boundaries();
-  Multigrid * m = grid;
+  Multigrid * m = multigrid;
   for (int l = 0; l <= m->depth; l++)
     free (m->d[l]);
   free (m->d);
@@ -428,7 +429,7 @@ void free_grid (void)
 
 void init_grid (int n)
 {
-  Multigrid * m = grid;
+  Multigrid * m = multigrid;
   if (m && n == 1 << m->depth)
     return;
   free_grid();
@@ -454,7 +455,7 @@ void init_grid (int n)
     for (int i = 0; i < len/sizeof(double); i++)
       v[i] = undefined;
   }
-  grid = m;
+  grid = (Grid *) m;
   trash (all);
   // periodic boundaries: fixme: before or after?
   foreach_dimension() {
@@ -470,11 +471,13 @@ void init_grid (int n)
     b->level = box_boundary_level;
     add_boundary (b);
   }
+  // mesh size
+  grid->n = grid->tn = 1 << dimension*depth();
 }
 
 void realloc_scalar (void)
 {
-  Multigrid * p = grid;
+  Multigrid * p = multigrid;
   size_t oldatasize = datasize - sizeof(double);
   for (int l = 0; l <= p->depth; l++) {
     size_t len = _size(l);

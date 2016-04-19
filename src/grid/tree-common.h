@@ -135,13 +135,11 @@ void coarsen_cell_recursive (Point point, scalar * list)
 @if _MPI
 void mpi_boundary_refine  (scalar *);
 void mpi_boundary_coarsen (int, int);
-void mpi_boundary_update  (void);
-bool balance();
+void mpi_boundary_update  (scalar *);
 @else
 @ define mpi_boundary_refine(...)
 @ define mpi_boundary_coarsen(...)
-@ define mpi_boundary_update()
-@ define balance(...) false
+@ define mpi_boundary_update(list) boundary(list)
 @endif
 
 typedef struct {
@@ -281,11 +279,8 @@ astats adapt_wavelet (struct Adapt p)
 
   mpi_all_reduce (st.nf, MPI_INT, MPI_SUM);
   mpi_all_reduce (st.nc, MPI_INT, MPI_SUM);
-  if (st.nc || st.nf) {
-    mpi_boundary_update();
-    boundary (p.listb ? p.listb : p.list);
-    while (balance());
-  }
+  if (st.nc || st.nf)
+    mpi_boundary_update (p.listb ? p.listb : p.list);
   free (listcm);
   
   return st;
@@ -298,16 +293,14 @@ astats adapt_wavelet (struct Adapt p)
     tree->refined.n = 0;						\
     foreach_leaf()							\
       if (cond) {							\
-	refine_cell (point, list, 0, &tree->refined);		\
+	refine_cell (point, list, 0, &tree->refined);			\
 	refined++;							\
 	continue;							\
       }									\
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);				\
     if (refined) {							\
       mpi_boundary_refine (list);					\
-      mpi_boundary_update();						\
-      boundary (list);							\
-      while (balance()); 						\
+      mpi_boundary_update (list);					\
     }									\
   } while (refined);							\
 } while(0)
@@ -339,7 +332,7 @@ static void refine_level (int depth)
     }									\
     mpi_boundary_coarsen (_l, too_fine);				\
   }									\
-  mpi_boundary_update();						\
+  mpi_boundary_update (list);						\
 } while (0)
 
 static void halo_flux (vector * list)

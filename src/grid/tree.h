@@ -21,8 +21,9 @@
 
 typedef struct {
   unsigned short flags;
-  unsigned short neighbors; // number of refined neighbors in a 3x3 neighborhood
-  int pid;         // process id
+  // number of refined neighbors in a 3^dimension neighborhood
+  unsigned short neighbors;
+  int pid; // process id
 } Cell;
 
 enum {
@@ -211,6 +212,7 @@ static bool layer_remove_row (Layer * l, int i, int j)
 // Tree
 
 typedef struct {
+  Grid g;
   Layer ** L; /* the grids at each level */
   int depth;  /* the maximum depth of the tree */
 
@@ -582,7 +584,7 @@ static inline bool has_local_children (Point point)
 
 static inline void cache_append_face (Point point, unsigned short flags)
 {
-  Tree * q = grid;
+  Tree * q = tree;
   cache_append (&q->faces, point, flags);
 #if dimension == 2
   if (!(cell.flags & vertex)) {
@@ -608,7 +610,7 @@ static inline void cache_append_face (Point point, unsigned short flags)
 
 static void update_cache_f (void)
 {
-  Tree * q = grid;
+  Tree * q = tree;
 
   foreach_cache(q->vertices,)
     if (level <= depth() && allocated(0))
@@ -698,6 +700,11 @@ static void update_cache_f (void)
   for (int l = depth(); l >= 0; l--)
     foreach_boundary (l)
       cell.flags &= ~fboundary;
+
+@if !_MPI // for MPI this is done by balance()
+  // mesh size
+  grid->n = grid->tn = q->leaves.n;
+@endif
 }
 
 @define foreach(clause) update_cache(); foreach_cache(tree->leaves, clause)
@@ -770,7 +777,7 @@ static void update_cache_f (void)
 void tree_trash (void * alist)
 {
   scalar * list = alist;
-  Tree * q = grid;
+  Tree * q = tree;
   /* low-level memory management */
   for (int l = 0; l <= q->depth; l++) {
     Layer * L = q->L[l];
@@ -957,7 +964,7 @@ void decrement_neighbors (Point point)
 void realloc_scalar (void)
 {
   /* low-level memory management */
-  Tree * q = grid;
+  Tree * q = tree;
   size_t newlen = sizeof(Cell) + datasize;
   size_t oldlen = newlen - sizeof(double);
   /* the root level is allocated differently */
@@ -1336,7 +1343,7 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 
 static void free_cache (CacheLevel * c)
 {
-  Tree * q = grid;
+  Tree * q = tree;
   for (int l = 0; l <= q->depth; l++)
     free (c[l].p);
   free (c);
@@ -1347,7 +1354,7 @@ void free_grid (void)
   if (!grid)
     return;
   free_boundaries();
-  Tree * q = grid;
+  Tree * q = tree;
   free (q->leaves.p);
   free (q->faces.p);
   free (q->vertices.p);
@@ -1487,7 +1494,7 @@ void init_grid (int n)
   q->prolongation = calloc (1, sizeof (CacheLevel));
   q->boundary = calloc (1, sizeof (CacheLevel));
   q->dirty = true;
-  grid = q;
+  grid = (Grid *) q;
   N = 1 << depth;
 @if _MPI
   void mpi_boundary_new();

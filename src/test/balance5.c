@@ -90,7 +90,7 @@ int main (int argc, char * argv[])
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);
     if (refined) {
       mpi_boundary_refine (list);
-      mpi_boundary_update();
+      mpi_boundary_update_buffers();
       boundary (list);
       image();
       while (balance()) {

@@ -369,11 +369,16 @@ void heights (scalar c, vector h)
   fraction on all levels. */
   
   restriction ({c});
-  for (int j = -1; j <= 1; j += 2)
+  for (int j = -1; j <= 1; j += 2) {
 
     /**
-    We traverse the tree level by level, from coarse to fine. */
-    
+    We traverse the tree level by level, from coarse to fine.
+    On the root cell the height function is undefined. */
+  
+    foreach_level(0)
+      foreach_dimension()
+        h.x[] = nodata;
+  
     for (int l = 1; l <= depth(); l++) {
 
       /**
@@ -414,7 +419,8 @@ void heights (scalar c, vector h)
       foreach_level (l)
         half_column (point, c, h, cs, j);
     }
-
+  }
+    
   /**
   We fill the prolongation cells with "nodata". The restriction
   function does nothing as we have already defined *h* on all

@@ -245,13 +245,9 @@ void vorticity (const vector u, scalar omega)
 Performance statistics are stored in this structure. */
 
 struct {
-  // number of leaf cells for this process and this iteration
-  long n;
-  // number of leaf cells for all processes
-  long tn;
-  // total number of leaf cells for this process
+  // total number of (leaf) cells advanced for this process
   long nc;
-  // total number of leaf cells for all processes
+  // total number of (leaf) cells advanced for all processes
   long tnc;
   // real time elapsed since the start
   double t;
@@ -262,13 +258,8 @@ struct {
 } perf;
 
 void update_perf() {
-  long tn = 0;
-  perf.n = 0;
-  foreach(reduction(+:tn))
-    perf.n++, tn++;
-  perf.tn = tn;
-  perf.nc += perf.n;
-  perf.tnc += perf.tn;
+  perf.nc += grid->n;
+  perf.tnc += grid->tn;
   perf.t = timer_elapsed (perf.gt);
   perf.speed = perf.tnc/perf.t;
 }

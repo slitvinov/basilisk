@@ -10,5 +10,5 @@
       }									\
   } while (refined);							\
   mpi_boundary_refine (list);						\
-  mpi_boundary_update();						\
+  mpi_boundary_update_buffers();					\
 } while (0)

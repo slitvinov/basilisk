@@ -5,15 +5,20 @@
 #define I     (point.i - 1)
 #define DELTA (1./point.n)
 
-struct _Point {
-  int i;
-  int level; // only to return level in locate()
+typedef struct {
+  Grid g;
+  char * d;
   int n;
-  char * data;
+} Cartesian;
+
+struct _Point {
+  int i, j, level, n;
 };
 static Point last_point;
 
-@define data(k,l,m) ((double *)&point.data[(point.i + k)*datasize])
+#define cartesian ((Cartesian *)grid)
+
+@define data(k,l,m) ((double *)&cartesian->d[(point.i + k)*datasize])
 @define allocated(...) true
 
 @define POINT_VARIABLES VARIABLES
@@ -21,7 +26,8 @@ static Point last_point;
 @def foreach(clause)
   OMP_PARALLEL()
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point point = *((Point *)grid);
+  Point point;
+  point.n = cartesian->n;
   int _k;
   OMP(omp for schedule(static) clause)
   for (_k = 1; _k <= point.n; _k++) {
@@ -33,7 +39,8 @@ static Point last_point;
 @def foreach_face_generic(clause)
   OMP_PARALLEL()
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
-  Point point = *((Point *)grid);
+  Point point;
+  point.n = cartesian->n;
   int _k;
   OMP(omp for schedule(static) clause)
   for (_k = 1; _k <= point.n + 1; _k++) {
@@ -63,7 +70,8 @@ static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
   
   int d = ((BoxBoundary *)b)->d;
 
-  Point point = *((Point *)grid);
+  Point point;
+  point.n = cartesian->n;
   ig = _ig[d];
   assert (d <= left);
   point.i = d == right ? point.n + GHOSTS : GHOSTS;
@@ -96,7 +104,8 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
     }
 
   if (centered) {
-    Point point = *((Point *)grid);
+    Point point;
+    point.n = cartesian->n;
     ig = _ig[d];
     point.i = d == right ? point.n + GHOSTS - 1 : GHOSTS;
     Point neighbor = {point.i + ig};
@@ -137,28 +146,26 @@ void free_grid (void)
   if (!grid)
     return;
   free_boundaries();
-  Point * p = grid;
-  free (p->data);
-  free (p);
+  free (cartesian->d);
+  free (cartesian);
   grid = NULL;
 }
 
 void init_grid (int n)
 {
-  Point * p = grid;
-  if (p && p->n == n)
+  if (cartesian && n == cartesian->n)
     return;
   free_grid();
-  p = malloc(sizeof(Point));
+  Cartesian * p = malloc(sizeof(Cartesian));
   size_t len = (n + 2)*datasize;
   p->n = N = n;
-  p->data = malloc (len);
+  p->d = malloc (len);
   /* trash the data just to make sure it's either explicitly
      initialised or never touched */
-  double * v = (double *) p->data;
+  double * v = (double *) p->d;
   for (int i = 0; i < len/sizeof(double); i++)
     v[i] = undefined;
-  grid = p;
+  grid = (Grid *) p;
   trash (all);
   // box boundaries
   for (int d = 0; d < 2; d++) {
@@ -172,15 +179,17 @@ void init_grid (int n)
   Boundary * b = calloc (1, sizeof (Boundary));
   b->level = periodic_boundary_level_x;
   add_boundary (b);
+  // mesh size
+  grid->n = grid->tn = n;
 }
 
 void realloc_scalar (void)
 {
-  Point * p = grid;
+  Cartesian * p = cartesian;
   size_t len = (p->n + 2)*datasize;
-  p->data = realloc (p->data, len);
+  p->d = realloc (p->d, len);
   int oldatasize = datasize - sizeof(double);
-  char * data = p->data + (p->n + 1)*oldatasize;
+  char * data = p->d + (p->n + 1)*oldatasize;
   for (int i = p->n + 1; i > 0; i--, data -= oldatasize)
     memmove (data + i*sizeof(double), data, oldatasize);
 }
@@ -193,9 +202,8 @@ void realloc_scalar (void)
 void cartesian1D_trash (void * alist)
 {
   scalar * list = alist;
-  Point * p = grid;
-  char * data = p->data;
-  for (int i = 0; i < p->n + 2; i++, data += datasize) {
+  char * data = cartesian->d;
+  for (int i = 0; i < cartesian->n + 2; i++, data += datasize) {
     double * v = (double *) data;
     for (scalar s in list)
       if (!is_constant(s))
@@ -207,7 +215,8 @@ struct _locate { double x, y, z; };
 
 Point locate (struct _locate p)
 {
-  Point point = *((Point *)grid);
+  Point point;
+  point.n = cartesian->n;
   double a = (p.x - X0)/L0*point.n;
   point.i = a + 1;
   point.level = (a > -0.5 && a < point.n + 0.5) ? 0 : - 1;
