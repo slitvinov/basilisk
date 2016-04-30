@@ -132,15 +132,9 @@ void coarsen_cell_recursive (Point point, scalar * list)
   assert (coarsen_cell (point, list));
 }
 
-@if _MPI
 void mpi_boundary_refine  (scalar *);
 void mpi_boundary_coarsen (int, int);
 void mpi_boundary_update  (scalar *);
-@else
-@ define mpi_boundary_refine(...)
-@ define mpi_boundary_coarsen(...)
-@ define mpi_boundary_update(list) boundary(list)
-@endif
 
 typedef struct {
   int nc, nf;
@@ -159,16 +153,21 @@ astats adapt_wavelet (struct Adapt p)
 {
   scalar * listcm = NULL;
 
-  if (!is_constant(cm)) {
+  if (is_constant(cm)) {
     if (p.list == NULL)
-      listcm = list_concat (NULL, {cm,fm});
-    scalar * listr = list_concat (p.slist, {cm});
-    free (listr);
+      p.list = all;
+    restriction (p.slist);
   }
-  if (p.list == NULL) {
-    for (scalar s in all)
-      listcm = list_add (listcm, s);
-    p.list = listcm;
+  else {
+    if (p.list == NULL) {
+      listcm = list_concat (NULL, {cm,fm});
+      for (scalar s in all)
+	listcm = list_add (listcm, s);
+      p.list = listcm;
+    }
+    scalar * listr = list_concat (p.slist, {cm});
+    restriction (listr);
+    free (listr);
   }
 
   astats st = {0, 0};
@@ -492,6 +491,11 @@ static void tree_boundary_level (scalar * list, int l)
 {
   int depth = l < 0 ? depth() : l;
 
+  if (tree_is_full()) {
+    boundary_iterate (level, list, depth);
+    return;
+  }
+
   scalar * listdef = NULL, * listc = NULL, * list2 = NULL;
   for (scalar s in list) 
     if (!is_constant (s)) {
@@ -627,8 +631,10 @@ void tree_check()
   assert (nleaves == reachable);
 }
 
-static void no_restriction (scalar * list) {
-  // nothing to be done, this is handled by tree_boundary_level() above.
+static void tree_restriction (scalar * list) {
+  if (tree_is_full())
+    multigrid_restriction (list);
+  // otherwise the restriction has already been done by tree_boundary_level()
 }
 
 void tree_methods()
@@ -638,5 +644,5 @@ void tree_methods()
   init_face_vector = tree_init_face_vector;
   boundary_level   = tree_boundary_level;
   boundary_flux    = halo_flux;
-  restriction      = no_restriction;
+  restriction      = tree_restriction;
 }

@@ -214,7 +214,6 @@ static bool layer_remove_row (Layer * l, int i, int j)
 typedef struct {
   Grid g;
   Layer ** L; /* the grids at each level */
-  int depth;  /* the maximum depth of the tree */
 
   Cache        leaves;   /* leaf indices */
   Cache        faces;    /* face indices */
@@ -380,7 +379,7 @@ void cache_shrink (Cache * c)
 @define CELL(m) (*((Cell *)(m)))
 
 /***** Multigrid macros *****/
-@define depth()        (tree->depth)
+@define depth()        (grid->depth)
 @define aparent(k,l,n) CELL(PARENT(k,l,n))
 @define child(k,l,n)   CELL(CHILD(k,l,n))
 
@@ -701,9 +700,12 @@ static void update_cache_f (void)
     foreach_boundary (l)
       cell.flags &= ~fboundary;
 
-@if !_MPI // for MPI this is done by balance()
   // mesh size
-  grid->n = grid->tn = q->leaves.n;
+  grid->n = q->leaves.n;
+  // for MPI the reduction operation over all processes is done by balance()
+@if !_MPI
+  grid->tn = grid->n;
+  grid->maxdepth = grid->depth;
 @endif
 }
 
@@ -779,7 +781,7 @@ void tree_trash (void * alist)
   scalar * list = alist;
   Tree * q = tree;
   /* low-level memory management */
-  for (int l = 0; l <= q->depth; l++) {
+  for (int l = 0; l <= depth(); l++) {
     Layer * L = q->L[l];
     for (int i = 0; i < L->len; i++)
       if (L->m[i])
@@ -807,22 +809,22 @@ void tree_trash (void * alist)
 
 @def cache_level_resize(name, a)
 {
-  for (int i = 0; i <= q->depth - a; i++)
+  for (int i = 0; i <= depth() - a; i++)
     free (q->name[i].p);
   free (q->name);
-  q->name = calloc (q->depth + 1, sizeof (CacheLevel));
+  q->name = calloc (depth() + 1, sizeof (CacheLevel));
 }
 @
 
 static void update_depth (int inc)
 {
   Tree * q = tree;
-  q->depth += inc;
+  grid->depth += inc;
   q->L = &(q->L[-1]);
-  q->L = realloc(q->L, sizeof (Layer *)*(q->depth + 2));
+  q->L = realloc(q->L, sizeof (Layer *)*(grid->depth + 2));
   q->L = &(q->L[1]);
   if (inc > 0)
-    q->L[q->depth] = new_layer (q->depth);
+    q->L[grid->depth] = new_layer (grid->depth);
   cache_level_resize (active, inc);
   cache_level_resize (prolongation, inc);
   cache_level_resize (boundary, inc);
@@ -830,7 +832,7 @@ static void update_depth (int inc)
 
 static void alloc_children (Point point)
 {
-  if (point.level == tree->depth)
+  if (point.level == grid->depth)
     update_depth (+1);
   else if (allocated_child(0,0,0))
     return;
@@ -895,7 +897,7 @@ static void free_children (Point point)
   for (int k = 0; k < 2; k++) {
     CHILD(k,0,0) = NULL;
     if (layer_remove_row (L, 2*point.i - GHOSTS + k)) {
-      assert (point.level + 1 == tree->depth);
+      assert (point.level + 1 == grid->depth);
       update_depth (-1);
     }
   }
@@ -911,7 +913,7 @@ static void free_children (Point point)
     for (int l = 0; l < 2; l++)
       CHILD(k,l,0) = NULL;
     if (layer_remove_row (L, 2*point.i - GHOSTS + k, 0)) {
-      assert (point.level + 1 == tree->depth);
+      assert (point.level + 1 == grid->depth);
       update_depth (-1);
     }
   }
@@ -928,7 +930,7 @@ static void free_children (Point point)
       for (int n = 0; n < 2; n++)
 	CHILD(k,l,n) = NULL;
       if (layer_remove_row (L, 2*point.i - GHOSTS + k, 2*point.j - GHOSTS + l)) {
-	assert (point.level + 1 == tree->depth);
+	assert (point.level + 1 == grid->depth);
 	update_depth (-1);
       }
     }
@@ -982,7 +984,7 @@ void realloc_scalar (void)
 #endif
 #endif
   /* all other levels */
-  for (int l = 1; l <= q->depth; l++) {
+  for (int l = 1; l <= depth(); l++) {
     Layer * L = q->L[l];
     size_t len = L->len;
     Mempool * oldpool = L->pool;
@@ -1343,8 +1345,7 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 
 static void free_cache (CacheLevel * c)
 {
-  Tree * q = tree;
-  for (int l = 0; l <= q->depth; l++)
+  for (int l = 0; l <= depth(); l++)
     free (c[l].p);
   free (c);
 }
@@ -1372,7 +1373,7 @@ void free_grid (void)
     free (L->m[i]);
   }
   /* all other levels */
-  for (int l = 1; l <= q->depth; l++) {
+  for (int l = 1; l <= depth(); l++) {
     Layer * L = q->L[l];
     for (int i = 0; i < L->len; i++)
       if (L->m[i])
@@ -1388,7 +1389,7 @@ void free_grid (void)
     free (L->m[i]);
   }
   /* all other levels */
-  for (int l = 1; l <= q->depth; l++) {
+  for (int l = 1; l <= depth(); l++) {
     Layer * L = q->L[l];
     for (int i = 0; i < L->len; i++)
       if (L->m[i]) {
@@ -1399,7 +1400,7 @@ void free_grid (void)
       }
   }
 #endif // dimension == 3
-  for (int l = 0; l <= q->depth; l++)
+  for (int l = 0; l <= depth(); l++)
     destroy_layer (q->L[l]);
   q->L = &(q->L[-1]);
   free (q->L);
@@ -1429,7 +1430,8 @@ void init_grid (int n)
     depth++;
   }
   Tree * q = calloc (1, sizeof (Tree));
-  q->depth = 0;
+  grid = (Grid *) q;
+  grid->depth = 0;
 
   /* low-level memory management */
   q->L = malloc(sizeof (Layer *)*2);
@@ -1494,7 +1496,6 @@ void init_grid (int n)
   q->prolongation = calloc (1, sizeof (CacheLevel));
   q->boundary = calloc (1, sizeof (CacheLevel));
   q->dirty = true;
-  grid = (Grid *) q;
   N = 1 << depth;
 @if _MPI
   void mpi_boundary_new();
@@ -1581,9 +1582,23 @@ Point locate (struct _locate p)
   return point;
 }
 
+// return true if the tree is "full" i.e. all the leaves are at the
+// same level
+bool tree_is_full()
+{
+  update_cache();
+  return (grid->tn == 1L << grid->maxdepth*dimension);
+}
+
 #include "tree-common.h"
 
 @if _MPI
 #include "tree-mpi.h"
 #include "balance.h"
-@endif
+@else // !_MPI
+void mpi_boundary_refine  (scalar * list){}
+void mpi_boundary_coarsen (int a, int b){}
+void mpi_boundary_update  (scalar * list) {
+  boundary (list);
+}
+@endif // !_MPI

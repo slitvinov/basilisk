@@ -87,6 +87,8 @@ int main (int argc, char * argv[])
     tnc++;
   mpi_print (t, 1, tnc, "refine");
 
+  assert (tree_is_full());
+  
   /**
   We fill `a` with a simple function. */
 

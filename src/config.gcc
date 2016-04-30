@@ -7,7 +7,7 @@ CC99 = $(CC) -std=c99 -pedantic -D_GNU_SOURCE=1
 STRIPFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections
 
 # other useful (non-standard) flags
-CFLAGS += -g -Wall
+CFLAGS += -g -Wall -pipe
 
 # if you have valgrind, otherwise comment this out
 VALGRIND = valgrind -q --tool=memcheck --suppressions=$(BASILISK)/openmpi.supp \

@@ -1,5 +1,7 @@
 #include "refine_unbalanced.h"
 
+#define BGHOSTS 2
+
 int main (int argc, char * argv[])
 {
   X0 = Y0 = -0.5;
@@ -17,17 +19,9 @@ int main (int argc, char * argv[])
 
   // check boundary conditions on leaves
   foreach()
-    for (int i = -1; i <= 1; i++)
-      for (int j = -1; j <= 1; j++)
-	for (int k = -1; k <= 1; k++) {
-#if 1
-	  assert (s[i,j,k] == 1.);
-#else
-	  fprintf (stderr, "%g %g %g %g\n",
-		   x + i*Delta, y + j*Delta, z + k*Delta, s[i,j,k]);
-#endif
-	}
-  
+    foreach_neighbor()
+      assert (s[] == 1.);
+    
   // rebalancing
   int nf = 0;
   foreach(reduction(+:nf))

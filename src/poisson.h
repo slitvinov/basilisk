@@ -157,18 +157,12 @@ mgstats mg_solve (scalar * a, scalar * b,
   s.resb = s.resa = residual (a, b, res, data);
 
   /**
-  For parallelism with MPI, we need the global depth. */
-
-  int maxlevel = depth();
-  mpi_all_reduce (maxlevel, MPI_INT, MPI_MAX);
-  
-  /**
   We then iterate until convergence or until *NITERMAX* is reached. Note
   also that we force the solver to apply at least one cycle, even if the
   initial residual is lower than *TOLERANCE*. */
 
   for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.resa > TOLERANCE); s.i++) {
-    mg_cycle (a, res, da, relax, data, 4, 0, maxlevel);
+    mg_cycle (a, res, da, relax, data, 4, 0, grid->maxdepth);
     s.resa = residual (a, b, res, data);
   }
 

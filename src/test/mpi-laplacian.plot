@@ -28,22 +28,22 @@ set output 'poisson.png'
 plot [][0.01:100] for [i=minlevel:maxlevel] \
      '< sh time.sh poisson '.i u 1:2 t ''.i.' levels' w lp, \
      'weak' u 1:2 w lp t 'weak scaling', \
-     500/x**0.9
+     600/x**0.95
      
 set output 'poisson-mpi.png'
 plot [][1e-2:10] for [i=minlevel:maxlevel] \
      '< sh time.sh poisson '.i u 1:3 w lp t ''.i.' levels', \
-     2./x**0.5
+     4.5/x**0.65
 
 set output 'laplacian.png'
-plot [][1e-3:10] for [i=minlevel:maxlevel] \
+plot [][1e-4:10] for [i=minlevel:maxlevel] \
      '< sh time.sh laplacian '.i u 1:2 w lp t ''.i.' levels', \
      50/x**0.93
 
 set output 'laplacian-mpi.png'
-plot [][1e-4:] for [i=minlevel:maxlevel] \
+plot [][1e-4:1] for [i=minlevel:maxlevel] \
      '< sh time.sh laplacian '.i u 1:3 w lp t ''.i.' levels', \
-     1./x**0.6
+     2./x**0.7
 
 set output 'restriction.png'
 plot [][:1] for [i=minlevel:maxlevel] \
@@ -53,4 +53,4 @@ plot [][:1] for [i=minlevel:maxlevel] \
 set output 'restriction-mpi.png'
 plot [][1e-3:1] for [i=minlevel:maxlevel] \
      '< sh time.sh restriction '.i u 1:3 w lp t ''.i.' levels', \
-     1.8/x**0.6
+     2.8/x**0.66

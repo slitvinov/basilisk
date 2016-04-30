@@ -42,6 +42,7 @@ int main (int argc, char * argv[])
     if (refined) {
       mpi_boundary_refine (list);
       mpi_boundary_update_buffers();
+      grid->tn = 0; // so that tree is not "full"
       boundary (list);
       foreach()
 	foreach_neighbor()

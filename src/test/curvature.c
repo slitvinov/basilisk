@@ -73,6 +73,7 @@ void sample_circles (int nr, double R, int levelmax, norm * n, cstats * sc)
     curvature on coarser and coarser grids (thus saving on the
     expensive initial condition). */
 
+    restriction ({c});
     for (int l = levelmax; l >= 3; l--) {
       unrefine (level >= l || c[] <= 0. || c[] >= 1., {c});
       

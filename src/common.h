@@ -741,8 +741,10 @@ static void set_fpe (void) {}
 
 // the grid
 typedef struct {
-  long n;  // number of (leaf) cells for this process
-  long tn; // number of (leaf) cells for all processes
+  long n;       // number of (leaf) cells for this process
+  long tn;      // number of (leaf) cells for all processes
+  int depth;    // the depth for this process
+  int maxdepth; // the maximum depth for all processes
 } Grid;
 Grid * grid = NULL;
 // coordinates of the lower-left corner of the box

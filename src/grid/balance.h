@@ -218,16 +218,18 @@ bool balance()
   }
 
   grid->n = grid->tn = nl;
-  mpi_all_reduce (grid->tn, MPI_LONG, MPI_SUM);  
+  grid->maxdepth = depth();
+  long nmin = nl, nmax = nl;
+  // fixme: do all reductions in one go
+  mpi_all_reduce (nmax, MPI_LONG, MPI_MAX);
+  mpi_all_reduce (nmin, MPI_LONG, MPI_MIN);
+  mpi_all_reduce (grid->tn, MPI_LONG, MPI_SUM);
+  mpi_all_reduce (grid->maxdepth, MPI_INT, MPI_MAX);
   if (mpi.leaves)
     nt = grid->tn;
   else
     mpi_all_reduce (nt, MPI_LONG, MPI_SUM);
     
-  long nmin = nl, nmax = nl;
-  // fixme: do all reductions in one go
-  mpi_all_reduce (nmax, MPI_LONG, MPI_MAX);
-  mpi_all_reduce (nmin, MPI_LONG, MPI_MIN);
   long ne = max(1, nt/npe());
 
   if (ne < mpi.min) {
@@ -390,6 +392,7 @@ bool balance()
 void mpi_boundary_update (scalar * list)
 {
   mpi_boundary_update_buffers();
+  grid->tn = 0; // so that tree is not "full" for the call below
   boundary (list);
   while (balance());
 }

@@ -256,6 +256,8 @@ void (* boundary_flux)  (vector *);
 trace
 void boundary (scalar * list)
 {
+  if (list == NULL)
+    return;
   vector * listf = NULL;
   for (scalar s in list)
     if (!is_constant(s) && s.face)

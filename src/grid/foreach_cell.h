@@ -20,7 +20,7 @@
 #if 0
 void recursive (Point point)
 {
-  if (point.level == tree->depth) {
+  if (point.level == grid->depth) {
     /* do something */
   }
   else {
@@ -88,7 +88,7 @@ void recursive (Point point)
 	/* do something */
 @
 @def end_foreach_cell_root()
-        if (point.level < tree->depth) {
+        if (point.level < grid->depth) {
 	  _push (point.level, point.i, point.j, point.k, 1);
           _push (point.level + 1, _LEFT, _BOTTOM, _BACK, 0);
         }
@@ -169,7 +169,7 @@ void recursive (Point point)
       switch (stage) {
       case 0: {
         POINT_VARIABLES;
-	if (point.level == tree->depth) {
+	if (point.level == grid->depth) {
 	  _push (point.level, point.i, point.j, point.k, 8);
 	}
 	else {
