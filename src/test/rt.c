@@ -3,7 +3,6 @@
 #include "vof.h"
 
 #define LEVEL 8
-#define BGHOSTS 2 // fixme: need this to avoid FPEs when using -catch
 
 scalar f[], * interfaces = {f};
 face vector alphav[];

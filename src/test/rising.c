@@ -12,7 +12,7 @@ equations with interfaces and surface tension. We can solve either the
 axisymmetric or planar version. */
 
 #if AXIS
-# include "axi.h"
+# include "axi.h" // fixme: does not run with -catch
 #endif
 #include "navier-stokes/centered.h"
 #include "vof.h"

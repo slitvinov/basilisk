@@ -222,6 +222,8 @@ typedef struct {
   CacheLevel * active;   /* active cells indices for each level */
   CacheLevel * prolongation; /* halo prolongation indices for each level */
   CacheLevel * boundary;  /* boundary indices for each level */
+  /* indices of boundary cells with non-boundary parents */
+  CacheLevel * restriction;
   
   bool dirty;       /* whether caches should be updated */
 } Tree;
@@ -607,6 +609,8 @@ static inline void cache_append_face (Point point, unsigned short flags)
 #endif
 }
 
+#define FBOUNDARY 1 // fixme: this should work with zero
+
 static void update_cache_f (void)
 {
   Tree * q = tree;
@@ -618,23 +622,46 @@ static void update_cache_f (void)
   /* empty caches */
   q->leaves.n = q->faces.n = q->vertices.n = 0;
   for (int l = 0; l <= depth(); l++)
-    q->active[l].n = q->prolongation[l].n = q->boundary[l].n = 0;
-
+    q->active[l].n = q->prolongation[l].n =
+      q->boundary[l].n = q->restriction[l].n = 0;
+#if FBOUNDARY
   const unsigned short fboundary = 1 << user;
   foreach_cell() {
-    if (is_local(cell)) {
+#else    
+  foreach_cell_all() {
+#endif
+    if (is_local(cell) && is_active(cell)) {
       // active cells
-      assert (is_active(cell));
+      //      assert (is_active(cell));
       cache_level_append (&q->active[level], point);
     }
+#if !FBOUNDARY
+    if (is_boundary(cell)) {
+      // boundary conditions
+      bool has_neighbors = false;
+      foreach_neighbor (BGHOSTS)
+	if (allocated(0) && !is_boundary(cell))
+	  has_neighbors = true, break;
+      if (has_neighbors)
+	cache_level_append (&q->boundary[level], point);
+      // restriction for masked cells
+      if (level > 0 && is_local(aparent(0)))
+	cache_level_append (&q->restriction[level], point);
+    }
+#else
     // boundaries
-    if (!is_boundary(cell))
+    if (!is_boundary(cell)) {
       // look in a 5x5 neighborhood for boundary cells
       foreach_neighbor (BGHOSTS)
 	if (allocated(0) && is_boundary(cell) && !(cell.flags & fboundary)) {
 	  cache_level_append (&q->boundary[level], point);
 	  cell.flags |= fboundary;
 	}
+    }
+    // restriction for masked cells
+    else if (level > 0 && is_local(aparent(0)))
+      cache_level_append (&q->restriction[level], point);
+#endif
     if (is_leaf (cell)) {
       if (is_local(cell)) {
 	cache_append (&q->leaves, point, 0);
@@ -680,10 +707,12 @@ static void update_cache_f (void)
 	      is_prolongation(neighbor(1)))
 	    cache_append_face (neighborp(1), face_x);
       }
-      continue;
+#if FBOUNDARY // fixme: this should always be included
+      continue; 
+#endif
     }
   }
-  
+
   /* optimize caches */
   cache_shrink (&q->leaves);
   cache_shrink (&q->faces);
@@ -692,14 +721,17 @@ static void update_cache_f (void)
     cache_level_shrink (&q->active[l]);
     cache_level_shrink (&q->prolongation[l]);
     cache_level_shrink (&q->boundary[l]);
-  }
+    cache_level_shrink (&q->restriction[l]);
+}
   
   q->dirty = false;
 
+#if FBOUNDARY
   for (int l = depth(); l >= 0; l--)
     foreach_boundary (l)
       cell.flags &= ~fboundary;
-
+#endif
+  
   // mesh size
   grid->n = q->leaves.n;
   // for MPI the reduction operation over all processes is done by balance()
@@ -828,6 +860,7 @@ static void update_depth (int inc)
   cache_level_resize (active, inc);
   cache_level_resize (prolongation, inc);
   cache_level_resize (boundary, inc);
+  cache_level_resize (restriction, inc);
 }
 
 static void alloc_children (Point point)
@@ -1179,8 +1212,9 @@ static Point tangential_neighbor_x (Point point)
 }
 #endif // dimension > 1
 
-void box_boundaries (int l, scalar * list)
+static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
+  disable_fpe_for_mpi();
   scalar * scalars = NULL;
   vector * vectors = NULL, * faces = NULL;
   for (scalar s in list)
@@ -1242,6 +1276,7 @@ void box_boundaries (int l, scalar * list)
   free (scalars);
   free (vectors);
   free (faces);
+  enable_fpe_for_mpi();
 }
 
 #undef is_neighbor
@@ -1250,12 +1285,54 @@ void box_boundaries (int l, scalar * list)
 @undef VT
 @define VN _attribute[s.i].v.x
 @define VT _attribute[s.i].v.y
- 
-static void box_boundary_level (const Boundary * b, scalar * list, int l)
+
+static double masked_average (Point point, scalar s)
 {
-  disable_fpe_for_mpi();
-  box_boundaries (l, list);
-  enable_fpe_for_mpi();
+  double sum = 0., n = 0.;
+  foreach_child()
+    if (!is_boundary(cell))
+      sum += s[], n++;
+  return sum/n;
+}
+
+foreach_dimension()
+static double masked_average_x (Point point, scalar s)
+{
+  double sum = 0., n = 0.;
+  foreach_child()
+    if (child.x < 0 && (!is_boundary(cell) || !is_boundary(neighbor(1))))
+      sum += s[1], n++;
+  return sum/n;
+}
+
+static void masked_boundary_restriction (const Boundary * b,
+					 scalar * list, int l)
+{
+  scalar * scalars = NULL;
+  vector * faces = NULL;
+  for (scalar s in list)
+    if (!is_constant(s) && s.refine != no_coarsen) {
+      if (s.v.x.i == s.i && s.face)
+	faces = vectors_add (faces, s.v);
+      else
+	scalars = list_add (scalars, s);
+    }
+  
+  foreach_halo (restriction, l) {
+    for (scalar s in scalars)
+      s[] = masked_average (parent, s);
+    for (vector v in faces)
+      foreach_dimension() {
+	double average = masked_average_x (parent, v.x);
+	if (is_boundary(neighbor(-1)))
+	  v.x[] = average;
+	if (is_boundary(neighbor(1)))
+	  v.x[1] = average;
+      }
+  }
+
+  free (scalars);
+  free (faces);  
 }
 
 #define mask(func) {					\
@@ -1278,7 +1355,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
       }							\
     }							\
   }							\
-  tree->dirty = true;				\
+  tree->dirty = true;					\
 }
 
 /* Periodic boundaries */
@@ -1407,6 +1484,7 @@ void free_grid (void)
   free_cache (q->active);
   free_cache (q->prolongation);
   free_cache (q->boundary);
+  free_cache (q->restriction);
   free (q);
   grid = NULL;
 }
@@ -1495,6 +1573,7 @@ void init_grid (int n)
   q->active = calloc (1, sizeof (CacheLevel));
   q->prolongation = calloc (1, sizeof (CacheLevel));
   q->boundary = calloc (1, sizeof (CacheLevel));
+  q->restriction = calloc (1, sizeof (CacheLevel));
   q->dirty = true;
   N = 1 << depth;
 @if _MPI
@@ -1505,6 +1584,7 @@ void init_grid (int n)
   // boundaries
   Boundary * b = calloc (1, sizeof (Boundary));
   b->level = box_boundary_level;
+  b->restriction = masked_boundary_restriction;
   add_boundary (b);
   // periodic boundaries
   foreach_dimension() {
