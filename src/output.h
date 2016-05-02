@@ -693,14 +693,14 @@ void output_gfs (struct OutputGfs p)
 	child.x == -1 && child.y ==  1 ? 1 :
 	child.x ==  1 && child.y == -1 ? 2 : 
 	3;
-#else // dimension == 3 fixme: this may not work
-      child.x == -1 && child.y == -1 && child.z == 1  ? 0 :
-	child.x == -1 && child.y ==  1 && child.z == 1  ? 1 :
-	child.x ==  1 && child.y == -1 && child.z == 1  ? 2 : 
-	child.x ==  1 && child.y ==  1 && child.z == 1  ? 3 : 
-	child.x == -1 && child.y == -1 && child.z == -1 ? 4 :
-	child.x == -1 && child.y ==  1 && child.z == -1 ? 5 :
-	child.x ==  1 && child.y == -1 && child.z == -1 ? 6 : 
+#else // dimension == 3
+      child.x == -1 && child.y == -1 && child.z == -1  ? 0 :
+	child.x == -1 && child.y == -1 && child.z ==  1  ? 1 :
+	child.x == -1 && child.y ==  1 && child.z == -1  ? 2 : 
+	child.x == -1 && child.y ==  1 && child.z ==  1  ? 3 : 
+	child.x ==  1 && child.y == -1 && child.z == -1 ? 4 :
+	child.x ==  1 && child.y == -1 && child.z ==  1 ? 5 :
+	child.x ==  1 && child.y ==  1 && child.z == -1 ? 6 : 
 	7;
 #endif
       if (is_leaf(cell))
@@ -710,7 +710,27 @@ void output_gfs (struct OutputGfs p)
       fwrite (&a, sizeof (double), 1, p.fp);
       for (scalar s in list)
 	if (s.name) {
-	  a = is_local(cell) && !isnan(s[]) && s[] != nodata ? s[] : DBL_MAX;
+	  if (s.v.x.i >= 0) {
+	    // this is a vector component, we need to rotate from
+	    // N-ordering (Basilisk) to Z-ordering (Gerris)
+#if dimension >= 2
+	    if (s.v.x.i == s.i) {
+	      s = s.v.y;
+	      a = is_local(cell) && !isnan(s[]) && s[] != nodata ? s[] : DBL_MAX;
+	    }
+	    else if (s.v.y.i == s.i) {
+	      s = s.v.x;
+	      a = is_local(cell) && !isnan(s[]) && s[] != nodata ?
+		- s[] : DBL_MAX;
+	    }
+#endif
+#if dimension >= 3
+	    else
+	      a = is_local(cell) && !isnan(s[]) && s[] != nodata ? s[] : DBL_MAX;
+#endif
+	  }
+	  else
+	    a = is_local(cell) && !isnan(s[]) && s[] != nodata ? s[] : DBL_MAX;
 	  fwrite (&a, sizeof (double), 1, p.fp);
 	}
     }
@@ -864,6 +884,12 @@ bool restore (struct Dump p)
 
 #if TREE
   init_grid (1);
+
+  foreach_cell() {
+    cell.pid = pid();
+    cell.flags |= active;
+  }
+  tree->dirty = true;
 #else
   init_grid (1 << header.depth);
 #endif
