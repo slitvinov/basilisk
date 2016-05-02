@@ -58,7 +58,7 @@ event movie (i += 5; i < 1000)
   foreach()
     m[] = age[] ? 1 : -1;
 
-  static FILE * fp = popen ("ppm2gif --delay 1", "w");
+  static FILE * fp = popen ("ppm2gif --delay 1 > age.gif", "w");
   output_ppm (age, fp, n = 512, mask = m, linear = false );
 }
 

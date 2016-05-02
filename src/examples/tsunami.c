@@ -247,7 +247,7 @@ event logfile (i++) {
   if (i == 0)
     fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt speed tn\n");
   fprintf (stderr, "%g %d %g %g %g %g %g %g %g %ld\n",
-	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, perf.speed, perf.tn);
+	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, perf.speed, grid->tn);
 
   /**
   We also use a simple implicit scheme to implement quadratic bottom
