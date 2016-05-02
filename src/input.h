@@ -279,8 +279,28 @@ void input_gfs (struct OutputGfs p)
 	fprintf (stderr, "input_gfs(): error: expecting a scalar\n");
 	exit (1);
       }
-      if (s.i != INT_MAX)
-	s[] = a;
+      if (s.i != INT_MAX) {
+	if (s.v.x.i >= 0) {
+	  // this is a vector component, we need to rotate from
+	  // Z-ordering (Gerris) to N-ordering (Basilisk)
+#if dimension >= 2
+	  if (s.v.x.i == s.i) {
+	    s = s.v.y;
+	    s[] = a;
+	  }
+	  else if (s.v.y.i == s.i) {
+	    s = s.v.x;
+	    s[] = - a;
+	  }
+#endif
+#if dimension >= 3
+	  else
+	    s[] = a;
+#endif
+	}
+	else	
+	  s[] = a;
+      }
     }
     if (is_leaf(cell))
       continue;
