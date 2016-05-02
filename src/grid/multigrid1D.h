@@ -1,6 +1,6 @@
 #define GRIDNAME "Multigrid 1D"
 #define dimension 1
-#define GHOSTS 1
+#define GHOSTS 2
 
 #define I      (point.i - GHOSTS)
 #define DELTA  (1./(1 << point.level))

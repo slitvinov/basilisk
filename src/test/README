@@ -78,6 +78,10 @@ Note that only the documented test cases appear in the list below
 
 * [Speed of elementary operations on different grids](laplacian.c)
 
+## Other
+
+* [Kuramoto--Sivashinsky equation](kuramoto.c)
+
 ## [All tests](/src/test)
 
 # Running and creating test cases (and examples)
