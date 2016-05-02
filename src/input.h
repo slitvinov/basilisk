@@ -158,7 +158,7 @@ function of [*output_gfs()*](output.h#...).
 The arguments and their default values are:
 
 *fp*
-: a file pointer. Default is *name* or stdin.
+: a file pointer. Default is *file* or stdin.
 
 *list*
 : a list of scalar fields to read. Default is *all*.
@@ -299,3 +299,129 @@ void input_gfs (struct OutputGfs p)
 }
 
 #endif // MULTIGRID
+
+/**
+# *input_grd()*: Raster format (Esri grid)
+
+This function reads a scalar field from a [Raster
+file](https://en.wikipedia.org/wiki/Esri_grid). This is the reciprocal
+function of [*output_grd()*](output.h#...).
+
+The arguments and their default values are:
+
+*s* 
+: the scalar where the data will be stored. No default value. You
+must specify this parameter
+
+*fp*
+: a file pointer. Default is *file* or stdin.
+
+*file*
+: the name of the file to read from (mutually exclusive with *fp*).
+
+*nodatavalue*
+: the value of the NoDataValue. Default is the same as that defined in
+the raster file. 
+
+*linear*
+: if true, the raster data is bilinearly interpolated. Default is false.
+*/
+
+struct InputGRD {
+  scalar s;
+  FILE * fp;
+  char * file;
+  double nodatavalue;
+  bool linear;
+};
+
+void input_grd (struct InputGRD p)
+{
+  scalar input = p.s;
+
+  bool opened = false;
+  if (p.fp == NULL) {
+    if (p.file == NULL)
+      p.fp = stdin;
+    else if (!(p.fp = fopen (p.file, "r"))) {
+      perror (p.file);
+      exit (1);
+    }
+    else
+      opened = true;
+  }
+  
+  // Variables for the Raster data
+  double DeltaGRD;
+  int nx, ny;
+  double XG0, YG0, ndv;
+
+  // header
+  char waste[100];
+  fscanf (p.fp, "%s %d", waste, &nx);
+  fscanf (p.fp, "%s %d", waste, &ny);
+  fscanf (p.fp, "%s %lf", waste, &XG0);
+  fscanf (p.fp, "%s %lf", waste, &YG0);
+  fscanf (p.fp, "%s %lf", waste, &DeltaGRD);
+  fscanf (p.fp, "%s %lf", waste, &ndv);
+
+  //default value of NoData value
+  if (!p.nodatavalue)
+    p.nodatavalue = ndv;
+
+  // read the data
+  double * value = malloc (sizeof(double)*nx*ny);
+  for (int i = 0; i < ny; i++)
+    for (int j = 0 ; j < nx; j++)
+      fscanf (p.fp, "%lf ", &value[j + i*nx]);
+
+  double LGx0 = nx*DeltaGRD;
+  double LGy0 = ny*DeltaGRD;
+  bool warning = false;
+  
+  foreach() {
+    // Test if the point in the Basilisk area is included in the raster area
+    bool incl = (x >= XG0 - DeltaGRD/2. &&
+		 x <= XG0 + LGx0 + DeltaGRD/2. &&
+		 y >= YG0 - DeltaGRD/2. &&
+		 y <= YG0 + LGy0 + DeltaGRD/2.);
+    if (incl) {
+      double val;
+      // Test if we are on the ring of data around the raster grid
+      bool ring = (x >= XG0 &&
+		   x <= XG0 + LGx0 &&
+		   y >= YG0 &&
+		   y <= YG0 + LGy0);      
+      if (p.linear && ring ) { // bi-linear interpolation
+	int j = (x - XG0)/DeltaGRD; int i = (y - YG0)/DeltaGRD;
+	double dx = x -(j*DeltaGRD + XG0); double dy = y - (i*DeltaGRD + YG0);
+	val = value[j + i*nx]
+	  + dx*(value[j + 1 + i*nx] - value[j + i*nx])/DeltaGRD
+	  + dy*(value[j + (i + 1)*nx] - value[j + i*nx])/DeltaGRD
+	  + dx*dy*(value[j + i*nx] + value[j +1 + (i+1)*nx]
+		   - value[j + (i + 1)*nx]-value[j + 1 + i*nx])/sq(DeltaGRD);
+      }
+      else { 
+	int j = (x - XG0 + DeltaGRD/2.)/DeltaGRD;
+	int i = (y - YG0 + DeltaGRD/2.)/DeltaGRD;
+	val = value[j + i*nx];
+      }
+      input[] = val;
+      if (val == ndv)
+	input[] = p.nodatavalue;
+    }
+    else {
+      input[] = p.nodatavalue;
+      warning = true;
+    }
+  }
+  
+  if (warning)
+    fprintf (stderr,
+	     "input_grd(): Warning: Raster data is not covering all"
+	     " the simulation area\n");
+
+  free (value);
+  if (opened)
+    fclose (p.fp);
+}
