@@ -5,9 +5,10 @@ showfiles()
     if ! darcs show files > /dev/null 2>&1; then
 	ls *.$1 2> /dev/null | sed 's/\(.*\)/	\1 \\/g'
     else
-	DIR=`basename $PWD`
-	darcs show files | grep '/'$DIR'/[^/]*\.'$1'$' | \
-	    sed 's/.*\/'$DIR'\/\(.*\)/	\1 \\/g'
+	ROOT=`darcs show repo | grep Root | awk '{print $2}'`
+	DIR=`echo $PWD | sed "s|$ROOT|.|"`
+	darcs show files | grep $DIR'/[^/]*\.'$1'$' | \
+	    sed 's|'$DIR'/\(.*\)|	\1 \\|g'
     fi
 }
 
