@@ -7,6 +7,8 @@ discussed in [Popinet, 2009](/src/references.bib#popinet2009).
 We use the Navier--Stokes solver with VOF interface tracking and
 surface tension. */
 
+#define JACOBI 1
+
 #include "navier-stokes/centered.h"
 #include "vof.h"
 #include "tension.h"
@@ -118,7 +120,8 @@ event logfile (i++; t <= TMAX)
   scalar un[];
   foreach()
     un[] = norm(u);
-  fprintf (fp, "%g %g\n", MU*t/sq(DIAMETER), normf(un).max*sqrt(DIAMETER));
+  fprintf (fp, "%g %g %g\n",
+	   MU*t/sq(DIAMETER), normf(un).max*sqrt(DIAMETER), dc);
 }
 
 event error (t = end) {
