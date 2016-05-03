@@ -146,7 +146,6 @@ struct Adapt {
   int maxlevel;   // maximum level of refinement
   int minlevel;   // minimum level of refinement (default 1)
   scalar * list;  // list of fields to update (default all)
-  scalar * listb; // fields which need BCs (default list): fixme obsolete
 };
 
 astats adapt_wavelet (struct Adapt p)
@@ -279,7 +278,7 @@ astats adapt_wavelet (struct Adapt p)
   mpi_all_reduce (st.nf, MPI_INT, MPI_SUM);
   mpi_all_reduce (st.nc, MPI_INT, MPI_SUM);
   if (st.nc || st.nf)
-    mpi_boundary_update (p.listb ? p.listb : p.list);
+    mpi_boundary_update (p.list);
   free (listcm);
   
   return st;

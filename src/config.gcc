@@ -1,7 +1,7 @@
 # -*-Makefile-*-
 
 # how to launch the C99 compiler
-CC99 = $(CC) -std=c99 -pedantic -D_GNU_SOURCE=1
+CC99 = $(CC) -std=c99 -pedantic -D_GNU_SOURCE=1 -Wno-unused-result
 
 # how to strip unused code
 STRIPFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections

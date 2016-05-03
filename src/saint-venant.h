@@ -94,6 +94,8 @@ static void advance_saint_venant (scalar * output, scalar * input,
       foreach_dimension()
 	uo.x[] = 0.;
   }
+  // fixme: on trees eta is defined as eta = zb + h and not zb +
+  // ho in the refine_eta() and coarsen_eta() functions below
   boundary ({ho, eta, uo});
 }
 
