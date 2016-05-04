@@ -43,10 +43,12 @@ qcc.c: qcc.lex
 
 alltags:
 	cd navier-stokes && make tags
+	cd ehd && make tags
 	cd examples && make tags
 	cd test && make tags
 	make tags
 	cd navier-stokes && make itags
+	cd ehd && make itags
 	cd examples && make itags
 	cd test && make itags
 	make itags

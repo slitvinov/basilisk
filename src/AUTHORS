@@ -6,5 +6,6 @@
   multiple rivers](test/multiriverinflow.c)
 * [Pierre-Yves Lagrée](/sandbox/M1EMN/README): [SAG equation](test/sag.c)
 * Emily Lane: GRD export
-* Jose Lopez-Herrera: [Electrokinetics](pnp.h), [Electrohydrodynamics](ehd_implicit.h)
+* Jose Lopez-Herrera: [Electrokinetics](ehd/pnp.h),
+  [Electrohydrodynamics](ehd/implicit.h)
 * [Stéphane Popinet](http://gfs.sourceforge.net/wiki/index.php/User:Popinet)

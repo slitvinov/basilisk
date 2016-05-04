@@ -81,16 +81,20 @@ $$
 
 ## Electrohydrodynamics
 
-* [Electrohydrodynamics ohmic conduction](ehd_implicit.h)
+* [Ohmic conduction](ehd/implicit.h)
 $$
 \partial_t\rho_e = \nabla \cdot(K \nabla \phi)
 $$
 $$
 \nabla \cdot (\epsilon \nabla \phi) = - \rho_e
 $$
-* [Ohmic conduction flux of charged species](pnp.h)
+* [Ohmic conduction of charged species](ehd/pnp.h)
 $$
 \partial_tc_i = \nabla \cdot( K_i c_i \nabla \phi)
+$$
+* [Electrohydrodynamic stresses](ehd/stress.h)
+$$
+M_{ij} = \varepsilon (E_i E_j - \frac{E^2}{2}\delta_{ij})
 $$
 
 ## Other equations

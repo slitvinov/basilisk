@@ -1,5 +1,5 @@
 /**
-# Electrohydrodynamics ohmic conduction
+# Ohmic conduction
 
 This function approximates implicitly the EHD equation set given by
 the electric Poisson equation and the ohmic conduction term of the
@@ -10,13 +10,14 @@ $$
 \quad (\rho_e^{n+1}-\rho_e^n) = \Delta t\nabla \cdot (K\nabla \phi^{n+1})
 $$ 
 where $\rho_e$ is the charge density, and $\phi$ is the electric potential.
-$K$ and $\epsilon$ are the conductivity and permittivity, respectively.
+$K$ and $\epsilon$ are the conductivity and permittivity respectively.
 
 Substituting the Poisson equation into the conservation equation gives
 the following time-implicit scheme,
 $$
 \nabla \cdot [(K \, \Delta t + \epsilon) \nabla \phi^{n+1}] = -\rho_e^{n}
 $$
+
 We need the Poisson solver and the timestep *dt*. */
 
 #include "poisson.h"
@@ -32,11 +33,8 @@ scalar phi[], rhoe[];
 face vector epsilon[], K[];
 mgstats mgphi;
 
-/**
-In case the variables were not initialized, the event default set the
-initial values. */
-
-event defaults (i = 0) {
+event defaults (i = 0)
+{
 
   /**
   The coarsen/refine attributes of the charge density are those of a tracer
@@ -48,44 +46,46 @@ event defaults (i = 0) {
 #endif
 
   /**
-  By default, both the conductivity and permittivity are unity and the
-  charge density and electric fields are zero. */
-  
+  By default, the conductivity is zero and the permittivity is unity
+  and the charge density and electric fields are zero. */
+
   foreach_face()
     epsilon.x[] = K.x[] = fm.x[];
   foreach()
     phi[] = rhoe[] = 0.;
-  boundary ({phi,rhoe});
+  boundary ({phi, rhoe, epsilon, K});
 }
 
-event ohmic_conduction (i++) {
+event tracer_diffusion (i++)
+{
   scalar rhs[];
   
   /**
-  The r.h.s of the poisson equation has to to be set to $-\rho_e^n$, */ 
+  The r.h.s of the poisson equation is set to $-\rho_e^n$, */ 
   
   foreach()
     rhs[] = - rhoe[]*cm[];
+
   if (K.x.i) {
     
     /**
-    The face vector $(K dt +\epsilon)$ is constructed first, */
+    We compute the coefficients of the Laplacian: $(K dt +\epsilon)$. */
 
     face vector f[];
     foreach_face()
       f.x[] = K.x[]*dt + epsilon.x[];
-    boundary_flux ({f});
+    boundary ((scalar *){f});
 
     /**
-    The poisson equation is solved to obtain $\phi^{n+1}$, */
+    The poisson equation is solved to obtain $\phi^{n+1}$. */
 
     mgphi = poisson (phi, rhs, f);
 
     /**
-    Finally, $\rho_e^{n+1}$ is calculated by computing 
+    Finally $\rho_e^{n+1}$ is computed as
     $\rho_e^{n+1} = -\nabla \cdot (\epsilon \nabla \phi^{n+1})$. */
 
-#if QUADTREE
+#if TREE
     foreach_face()
       f.x[] = epsilon.x[]*(phi[] - phi[-1])/Delta;
     boundary_flux ({f});

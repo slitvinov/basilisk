@@ -35,7 +35,7 @@ $$
 #include "grid/multigrid.h"
 #include "diffusion.h"
 #include "run.h"
-#include "pnp.h"
+#include "ehd/pnp.h"
 
 #define Volt 1.0
 #define DT 0.01

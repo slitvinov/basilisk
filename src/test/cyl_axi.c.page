@@ -84,11 +84,6 @@ event init (t = 0) {
   i.e electrical permittivity and conductivity, are multiplied by the 
   face metric factors. */
 
-#if EPSILONC
-  foreach()
-    epsilonc[] = f[]*beta + (1. - f[]);
-  boundary ({epsilonc});
-#endif
   foreach_face(){
     double ff = (f[] + f[-1])/2.;
     epsilon.x[] = (ff*beta + (1. - ff))*fm.x[];

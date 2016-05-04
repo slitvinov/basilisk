@@ -12,16 +12,16 @@ We use the implicit electrodynamic solver. The explicit solver
 *ehd.h*, which is fully conservative, gives similar results. We also
 need the *run()* loop. */
 
-#include "ehd_implicit.h"
+#include "ehd/implicit.h"
 #include "run.h"
 
 /**
 Variable $ic$ controls the type of electrical configuration tested.
 The analytical values used for comparison are stored in E1 and E2.
 Finally, *tfinal* controls the instant at which results are
-written. Note that for configuration (a) to reach the stationary
-situation requires just one iteration while for the rest of
-configurations about 15 are required. */
+written. Note that for configuration (a) to reach a stationary state
+requires just one iteration while for the other configurations about
+15 are required. */
 
 int ic;
 double tfinal, E1, E2;
@@ -81,8 +81,8 @@ event init (t = 0) {
      permittivity the exact values of the electric field are
      recovered. */
 
-    // epsilon.x[] = 1./(T/beta + (1. - T)); //Exact for the diel-diel
-    epsilon.x[] = T*beta + (1. - T); // Non exact 
+    epsilon.x[] = 1./(T/beta + (1. - T)); //Exact for the diel-diel
+    // epsilon.x[] = T*beta + (1. - T); // Non exact 
     K.x[] = (ic == 0 ? 0. : (ic == 1 ? T*eta+(1. - T) : eta*T));
   }
   boundary ((scalar *){epsilon, K});
