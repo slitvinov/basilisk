@@ -58,6 +58,7 @@ Note that only the documented test cases appear in the list below
 
 * [Gouy-Chapman Debye layer](debye.c)
 * [Electrostatic in planar layers](planar.c)
+* [Convergence of axisymmetric EHD stresses](ehd_axi_stress.c)
 * [Charge relaxation in an axisymmetric insulated conducting column](cyl_axi.c)
 * [Charge relaxation in a planar cross-section](cyl_planar.c)
 
