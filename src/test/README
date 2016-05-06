@@ -61,6 +61,7 @@ Note that only the documented test cases appear in the list below
 * [Convergence of axisymmetric EHD stresses](ehd_axi_stress.c)
 * [Charge relaxation in an axisymmetric insulated conducting column](cyl_axi.c)
 * [Charge relaxation in a planar cross-section](cyl_planar.c)
+* [Equilibrium of a droplet suspended in an electric field](taylor.c)
 
 ## Reaction--Diffusion
 
