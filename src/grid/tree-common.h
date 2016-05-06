@@ -215,11 +215,12 @@ astats adapt_wavelet (struct Adapt p)
 	    c = 0;
 	    foreach_child() {
 	      double e = fabs(sc[c] - s[]);
-	      if (e > max) {
+	      if (e > max && level < p.maxlevel) {
 		cell.flags &= ~too_fine;
 		cell.flags |= too_coarse;
 	      }
-	      else if (e <= max/1.5 && !(cell.flags & (too_coarse|just_fine))) {
+	      else if ((e <= max/1.5 || level > p.maxlevel) &&
+		       !(cell.flags & (too_coarse|just_fine))) {
 		if (level >= p.minlevel)
 		  cell.flags |= too_fine;
 	      }
@@ -232,13 +233,15 @@ astats adapt_wavelet (struct Adapt p)
 	  }
 	  foreach_child() {
 	    cell.flags &= ~just_fine;
-	    if (!is_leaf(cell) || !is_active(cell) || level == p.maxlevel)
+	    if (!is_leaf(cell)) {
+	      cell.flags &= ~too_coarse;
+	      if (level >= p.maxlevel)
+		cell.flags |= too_fine;
+	    }
+	    else if (!is_active(cell))
 	      cell.flags &= ~too_coarse;
 	  }
 	}
-	// cell is too fine, its children cannot be refined
-	if (level == p.maxlevel - 1)
-	  continue;
       }
     }
     else // inactive cell
