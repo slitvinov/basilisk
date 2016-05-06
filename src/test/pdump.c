@@ -15,5 +15,5 @@ int main()
     s[] = sin(x)*cos(y);
   boundary ({s});
   
-  dump (file = "dump", list = {s});
+  dump (file = "restore.dump", list = {s});
 }

@@ -202,12 +202,16 @@ hf1.tst:	  CC = mpicc -D_MPI=7
 # parallel dump()
 
 pdump.tst: CC = mpicc -D_MPI=7
-restore.tst: pdump.tst
+restore.dump: pdump.tst
+	rm -f restore.dump; ln -s pdump/restore.dump
+restore.tst: restore.dump
 
 # parallel output_gfs()
 
 gfs.tst: CC = mpicc -D_MPI=7
-gfsi.tst: gfs.tst
+gfsi.gfs: gfs.tst
+	rm -f gfsi.gfs; ln -s gfs/gfsi.gfs
+gfsi.tst: gfsi.gfs
 
 # load-balancing
 

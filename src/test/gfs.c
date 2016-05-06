@@ -14,7 +14,7 @@ int main()
     u.x[] = u.y[] = a[] = sin(2.*pi*x)*cos(2.*pi*y);
   boundary ({a,u});
 
-  FILE * fp = fopen ("test.gfs", "w");
+  FILE * fp = fopen ("gfsi.gfs", "w");
   output_gfs (fp);
   fclose (fp);
 }
