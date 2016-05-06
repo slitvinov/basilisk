@@ -5,7 +5,7 @@ This is the same problem as in [cyl_axi.c]() but in a planar
 cross-section of the column. */
 
 #define NAVIER 1
-int LEVEL = 6;
+int LEVEL;
 
 #include "grid/multigrid.h"
 #include "ehd/implicit.h"
@@ -24,9 +24,13 @@ phi[right]  = dirichlet(0);
 phi[left]   = dirichlet(0);
 #if NAVIER
 p[top]      = dirichlet(0);
+u.n[top]    = neumann(0);
 p[bottom]   = dirichlet(0);
+u.n[bottom] = neumann(0);
 p[left]     = dirichlet(0);
+u.n[left]   = neumann(0);
 p[right]    = dirichlet(0);
+u.n[right]  = neumann(0);
 #endif
 
 #define beta 3.

@@ -3,12 +3,12 @@
 
 A conducting rigid cylinder of radius $R_o=0.1$ is immersed in an
 insulating medium. Initially an uniform charge volume density is set
-in the cylinder ($\rho_e ({\bf x},0)=0.5$).  As time passes the
+in the cylinder ($\rho_e (\mathbf{x},0)=0.5$).  As time passes the
 charge migrates from the bulk to the interface of the cylinder but
 the total charge in the cylinder section is preserved.
 $$
-Q(t)= \int_{\Sigma} \rho_e({\bf x},t) \, 
-d \Sigma = Q_o= \pi R_o^2 \, \rho_e({\bf x},0).
+Q(t)= \int_{\Sigma} \rho_e(\mathbf{x},t) \, 
+d \Sigma = Q_o= \pi R_o^2 \, \rho_e(\mathbf{x},0).
 $$
 The outer electric field reaches a steady-state.
 
@@ -27,8 +27,9 @@ calculated implicitly although the conservative explicit scheme could
 also be used. */
 
 #define NAVIER 1
-int LEVEL = 6;
+int LEVEL;
 
+#include "grid/multigrid.h"
 #include "axi.h"
 #include "ehd/implicit.h"
 #if NAVIER
@@ -40,13 +41,10 @@ int LEVEL = 6;
 /**
 Far away from the conducting column the electric potential is zero. */
 
-phi[top]    = dirichlet(0);
-phi[right]  = neumann(0);
-phi[left]   = neumann(0);
+phi[top]   = dirichlet(0);
 #if NAVIER
-p[top]      = dirichlet(0);
-p[left]     = neumann(0);
-p[right]    = neumann(0);
+p[top]     = dirichlet(0);
+u.n[top]   = neumann(0);
 #endif
 
 #define beta 3.
@@ -131,17 +129,10 @@ event epfield (t = 10) {
   fclose (fp);
 
   /**
-  We also log the error norms on the norm of the electric field. */
+  We also log the error on the norm of the electric field. */
 
   norm n = normf (ee);
   fprintf (stderr, "%d %g %g %g\n", LEVEL, n.avg, n.rms, n.max);
-}
-
-event adapt (i++) {
-  double Qb = statsf(rhoe).sum;
-  adapt_wavelet ({f}, (double []){1e-6}, maxlevel = LEVEL + 1, minlevel = LEVEL);
-  double Qa = statsf(rhoe).sum;
-  assert (fabs(Qa - Qb) < 1e-10);
 }
 
 int main() {
