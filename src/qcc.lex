@@ -484,7 +484,7 @@
 
   void endtrace() {
     fprintf (yyout, " end_trace(\"%s\", \"%s\", %d); ",
-	     tracefunc, fname, line);
+	     tracefunc, fname, nolineno ? 0 : line);
   }
 
   void endevent() {
@@ -1037,7 +1037,7 @@ SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyz])*
   if (para < 0)
     return yyerror ("mismatched ')'");
   if (para == mallocpara - 1) {
-    fputs (",__func__,__FILE__,__LINE__", yyout);
+    fprintf (yyout, ",__func__,__FILE__,%s", nolineno ? "0" : "__LINE__");
     mallocpara = 0;
   }
   if (inforeach == 1 && scope == foreachscope && para == foreachpara) {
@@ -1112,7 +1112,7 @@ SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyz])*
 	     "static int %s (const int i, const double t, Event * _ev) { "
 	     "trace (\"%s\", \"%s\", %d); ",
 	     eventfunc[nevents],
-	     eventfunc[nevents], fname, line);
+	     eventfunc[nevents], fname, nolineno ? 0 : line);
     free (tracefunc);
     tracefunc = strdup (eventfunc[nevents]);
     intrace = 2; traceon = 0;
@@ -1149,7 +1149,7 @@ SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyz])*
   }
   if (intrace == 1 && scope == 0) {
     fprintf (yyout, " trace (\"%s\", \"%s\", %d);",
-	     tracefunc, fname, line - 1);
+	     tracefunc, fname, nolineno ? 0 : line - 1);
     intrace = 2;
   }
   scope++;
@@ -2543,8 +2543,9 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	 "  void init_solver();\n"
 	 "  init_solver();\n", fout);
   /* events */
-  fputs ("  Events = pmalloc (sizeof (Event), __func__, __FILE__, __LINE__);\n"
-	 "  Events[0].last = 1;\n", fout);
+  fprintf (fout,
+	   "  Events = pmalloc (sizeof (Event), __func__, __FILE__, %s);\n"
+	   "  Events[0].last = 1;\n", nolineno ? "0" : "__LINE__");
   int last;
   for (last = 0; last <= 1; last++)
     for (i = 0; i < nevents; i++)
@@ -2556,17 +2557,17 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	}
       }
   /* scalar attributes */
-  fputs ("  _attribute = pcalloc (datasize/sizeof(double), "
-	 "sizeof (_Attributes), __func__, __FILE__, __LINE__);\n", 
-	 fout);
+  fprintf (fout, "  _attribute = pcalloc (datasize/sizeof(double), "
+	   "sizeof (_Attributes), __func__, __FILE__, %s);\n",
+	   nolineno ? "0" : "__LINE__");
   /* list of all scalars */
   fprintf (fout, 
-	   "  all = pmalloc (sizeof (scalar)*%d,__func__, __FILE__, __LINE__);\n"
+	   "  all = pmalloc (sizeof (scalar)*%d,__func__, __FILE__, %s);\n"
 	   "  for (int i = 0; i < %d; i++)\n"
 	   "    all[i].i = i;\n"
 	   "  all[%d].i = -1;\n"
 	   "  set_fpe();\n",
-	   nvar + 1, nvar, nvar);
+	   nvar + 1, nolineno ? "0" : "__LINE__", nvar, nvar);
   if (catch)
     fputs ("  catch_fpe();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);
