@@ -57,9 +57,9 @@ static void refine_cm_lonlat (Point point, scalar cm)
 
 static void refine_face_x_lonlat (Point point, scalar fm)
 {
-  if (!is_refined(neighbor(-1,0)))
+  if (!is_refined(neighbor(-1)))
     fine(fm,0,0) = fine(fm,0,1) = 1.;
-  if (!is_refined(neighbor(1,0)) && neighbor(1,0).neighbors)
+  if (!is_refined(neighbor(1)) && neighbor(1).neighbors)
     fine(fm,2,0) = fine(fm,2,1) = 1.;
   fine(fm,1,0) = fine(fm,1,1) = 1.;
 }

@@ -41,7 +41,9 @@ event defaults (i = 0) {
   if (is_constant(fm.x))
     fm = new face vector;
   foreach_face()
-    fm.x[] = max(y,1e-20);
+    fm.x[] = max(y, 1e-20);
+  fm.t[top] = dirichlet(y);
+  fm.t[bottom] = dirichlet(y);
 
   boundary ({cm, fm});
 }

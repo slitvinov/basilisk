@@ -1212,6 +1212,10 @@ static Point tangential_neighbor_x (Point point)
 }
 #endif // dimension > 1
 
+static inline bool is_boundary_point (Point point) {
+  return is_boundary (cell);
+}
+ 
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
   disable_fpe_for_mpi();
@@ -1258,6 +1262,8 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 	    // tangential neighbor
 	    Point neighbor = tangential_neighbor_x (point);
 	    if (neighbor.level >= 0) {
+	      int id = is_boundary_point (neighbor) ?
+		bid(neighbor(-1)) : bid(cell);
 	      for (vector v in faces) {
 		scalar vt = VT;
 		v.x[] = vt.boundary[id](neighbor, point, v.x);

@@ -40,23 +40,27 @@ int main (int argc, char ** argv)
   //  output_cells (stdout);
 
   double max = 0;
-  foreach_face (x)
+  foreach_face(x, reduction(max:max))
     for (int i = -1; i <= 1; i++) {
       double xu = x, yu = y + i*Delta;
       double e = exp(-(xu*xu+yu*yu)/(R0*R0)) - u.x[0,i];
       if (fabs(e) > max)
 	max = fabs(e);
+      if (fabs(e) > 1e-6)
+	fprintf (stdout, "u %g %g %d %d %g %g\n", 
+		 xu, yu, level, cell.neighbors, u.x[0,i], e);
     }
 
   double maxv = 0;
-  foreach_face (y)
+  foreach_face (y, reduction(max:maxv))
     for (int i = -1; i <= 1; i++) {
       double xv = x + i*Delta, yv = y;
       double e = exp(-(xv*xv+yv*yv)/(R0*R0)) - u.y[i,0];
       if (fabs(e) > maxv)
 	maxv = fabs(e);
-      printf ("%g %g %d %d %g %g\n", 
-	      xv, yv, level, cell.neighbors, u.y[i,0], e);
+      if (fabs(e) > 1e-6)
+	fprintf (stdout, "v %g %g %d %d %g %g\n", 
+		 xv, yv, level, cell.neighbors, u.y[i,0], e);
     }
 
   mpi_all_reduce (max, MPI_DOUBLE, MPI_MAX);
