@@ -25,6 +25,15 @@ the unit sphere is not too close to boundaries. */
 int main() {
   L0 = 16.;
   origin (-2, -L0/2., -L0/2.);
+
+  /**
+  The viscosity is just $1/Re$, because we chose a sphere of diameter
+  unity and an unit inflow velocity. */
+  
+  const face vector muc[] = {1./300,1./300,1./300};
+  mu = muc;
+
+  init_grid (64);
   run();
 }
 
@@ -50,14 +59,8 @@ u.t[sphere] = dirichlet(0.);
 event init (t = 0) {
 
   /**
-  The viscosity is just $1/Re$, because we chose a sphere of diameter
-  unity and an unit inflow velocity. */
-  
-  const face vector muc[] = {1./300,1./300,1./300};
-  mu = muc;
-
-  /**
-  We initially refine only in a sphere, slightly larger than our sphere. */
+  We initially refine only in a sphere, slightly larger than the solid
+  sphere. */
 
   refine (x*x + y*y + z*z < sq(0.6) && level < maxlevel, all);
 
@@ -86,7 +89,7 @@ $\lambda_2$ for $30 <= t <= 60$. */
 
 event movies (t = 30; t += 0.25; t <= 60) {
   static FILE * fp =
-    popen ("gfsview-batch3D ../sphere.gfv | ppm2gif > sphere.gif", "w");
+    popen ("gfsview-batch3D sphere.gfv | ppm2gif > sphere.gif", "w");
 
   /**
   Here we compute two new fields, $\lambda_2$ and the vorticity
