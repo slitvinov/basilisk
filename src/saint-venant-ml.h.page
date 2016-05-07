@@ -1,0 +1,451 @@
+/**
+# Multilayer Saint-Venant system with mass exchanges
+
+The multilayer Saint-Venant system is an extension of the classical [Saint-Venant system](http://en.wikipedia.org/wiki/Shallow_water_equations). It consist in dividing the domain in horizontal layers and in solving the Saint-Venant system in each layers. In this version of the method there are also the friction between the layers and the mass transfer in the vertical direction (see [1] for derivation). The equations we solve are: 
+
+$$
+\frac{\partial h}{\partial t} + \sum_{\alpha = 1}^{nl} \frac{\partial (l_{\alpha}hu_{\alpha})}{\partial x} = 0, 
+$$
+
+$$
+\frac{\partial (l_{\alpha}hu_{\alpha})}{\partial t} + \frac{\partial}{\partial x} \left( l_{\alpha}hu_{\alpha}^{2} + \frac{g}{2}l_{\alpha}h^2 \right) = -gl_{\alpha}h\frac{\partial z_b}{\partial x} + u_{\alpha+1/2}G_{\alpha+1/2}- u_{\alpha-1/2}G_{\alpha-1/2}+\frac{2\nu_{\alpha}}{l_{\alpha+1}+l_{\alpha}}\frac{u_{\alpha+1}-u_{\alpha}}{h}-\frac{2\nu_{\alpha-1}}{l_{\alpha}+l_{\alpha-1}}\frac{u_{\alpha}-u_{\alpha-1}}{h}
+$$
+
+where $h$ is the total water depth, $l_{\alpha}$ the thickness of the layer $\alpha$, $u_{\alpha}$ the mean velocity in the layer $\alpha$, $z_b$ the topography term, $G_{\alpha+1/2}$ the mass transfer between layers $\alpha$ and $\alpha+1$, $u_{\alpha+1/2}$ the velocity of the interface between layers $\alpha$ and $\alpha + 1$, $\nu$ the viscosity coefficient. 
+
+## Variables and paramters
+
+The primary fields are the water depth *h*, the bathymetry *z~b~* and $\eta$ the water level i.e. *z~b~ + h*. The variable *nl* is the number of layer (default is 1), *layer* is a vector containing the thickness of the layers (by default *layer = [1]*) and *listu* is the vector list containing the velocity in each layer. The scalar list *evolving* contains all the field that we advance in time which are the velocities $u_{\alpha}$ and *h*. The structure of *evolving* is: *evolving = {listu, h}* (see the default event).*/
+
+scalar zb[], h[], eta[];
+int l;
+int nl = 1;                       
+double *layer;
+double *a,*b,*c,*v,*xx,*uia,*ula,*Ga,*sea;               
+vector * listu = NULL;
+scalar * evolving;
+
+/**
+The physical parameter are the acceleration of gravity *G* and the viscosity. The variable $\nu$ is the viscosity coefficient (default is 0) while the filed "visc" is used to create a variable viscosity. Cells are considered "dry" when the water depth is less than the *dry* parameter. */
+
+double G = 1.;
+double dry = 1e-10;
+double nu = 0.;
+scalar visc[];
+
+/**
+## Time integration
+For the time integration we use the [predictor-corrector](predictor-corrector.h) scheme. */ 
+
+#include "predictor-corrector.h"
+
+/**
+Inside the function *advance_saint_venant* we advance all the evolving quantities. */
+
+trace
+static void advance_saint_venant (scalar * output, scalar * input, 
+				  scalar * updates, double dt)
+{
+  int d = 1;
+  #if dimension > 1
+    d = 2;
+  #endif
+  
+  // Recover the filed from the lists.
+  scalar hi = input[d*nl], ho = output[d*nl], dh = updates[d*nl];
+  
+  // Store hi in the field hold
+  scalar hold[];
+  foreach() {
+    hold[] = hi[];
+  }
+  
+  // Advance h
+  foreach() {
+    ho[] = hi[] + dt*dh[];
+    eta[] = ho[] + zb[];
+  }
+  
+  // Advance u
+  for (l = 0; l < nl; l++) {
+    double la = layer[l];
+    vector ui = vector(input[d*l]), uo = vector(output[d*l]), dhu = vector(updates[d*l]);
+    foreach() {
+      double hli = la*hold[], hlo = la*ho[];
+      if (ho[] > dry)  
+	foreach_dimension() 
+	  uo.x[] = (hli*ui.x[] + dt*dhu.x[])/hlo;     
+      else 
+	foreach_dimension() 
+	  uo.x[] = 0.;
+    }
+  }
+  
+  /**
+  ## Viscous Step 
+     For the viscous step we need to solve a tridiagonal system. The vectors *a*, *b* and *c* contains thelower, principal and upper diagonals, *v* contains the RHS of the system. The RHS term is equal to: $q_{\alpha} = h_{\alpha}u_{\alpha}$. */
+
+  if (nu != 0) {
+    
+    foreach() {
+
+      l = 0;
+      for (scalar ul in output) {
+  	if (l < nl) {
+  	  v[l] = ul[]*ho[]*layer[l];
+  	  l++;
+  	}
+      }
+      
+      /**
+	 We compute all the coefficients. For the first layer we impose the *no-slip* condition: */
+      a[0] = 0.;
+      c[0] = -2*dt*visc[]/(ho[]*(layer[1]+layer[0]));
+      b[0] = layer[0]*ho[] - c[0] + 4*dt*visc[]/(ho[]*2*layer[0]);
+      
+#if 0 // Set to 1 if you want to use the Strickler coefficient for the bottom friction
+      b[0] = 0.;
+      double umean = 0.;   // mean vertical velocity
+      double S = 25.;
+      l = 0;
+      for (scalar ul in output) {
+	if (l<nl) 
+	  umean += ul[]*layer[l++];
+      }
+      b[0] = layer[0]*ho[] - c[0] + dt*G*fabs(umean)/(S*S*pow(ho[],1./3.));
+#endif
+  
+      // intermediate layers
+      for (l = 1; l < nl-1; l++) {
+  	a[l] = -2*dt*visc[]/(ho[]*(layer[l]+layer[l-1]));
+  	c[l] = -2*dt*visc[]/(ho[]*(layer[l+1]+layer[l]));
+  	b[l] = layer[l]*ho[] - a[l] - c[l];
+      }
+      
+      // last layer
+      a[nl-1] = -2*dt*visc[]/(ho[]*(layer[nl-2]+layer[nl-1]));
+      c[nl-1] = 0.;
+      b[nl-1] = layer[nl-1]*ho[] - a[l];
+
+
+      /**
+	 We can now apply the Thomas Algoritm: */
+
+      for (l = 1; l < nl; l++) {
+  	b[l] -= a[l]*c[l-1]/b[l-1];
+  	v[l] -= a[l]*v[l-1]/b[l-1];
+      }
+      
+      xx[nl-1] = v[nl-1] / b[nl-1];
+      
+      for (l = nl - 2; l >= 0; l--) {
+  	xx[l] = (v[l] - c[l]*xx[l+1])/b[l];
+      }
+      
+      /**
+	 Finally we update the list output with the new velocities and apply the boundary conditions: */
+      l = 0;
+      for (scalar ul in output) {
+  	if (l < nl) {
+  	  ul[] = xx[l];
+  	  l++;
+  	}
+      }
+
+    }
+  }
+  
+  boundary ({eta});
+  boundary (output);
+}
+
+/**## Compute Flux 
+   The file riemann-ml.h contains the flux solvers for the mulilayer system. */ 
+#include "riemann-ml.h"
+
+/**
+   Insied the *update_saint_venant* function we compute the quantities needed to advance the variables. */
+
+trace
+double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
+{
+  int d = 1;
+  #if dimension > 1
+    d = 2;
+  #endif
+  
+  // Recovre h form the evolving list
+  scalar h = evolving[d*nl];
+  
+  // Compute gradient for h and eta
+  vector gh[], geta[];
+  gradients ({h, eta}, {gh, geta});
+  
+  /**
+    We put in the list $slopes$ the gradient of the velocities. */
+
+  vector * slopes = NULL;
+  for (scalar s in evolving) {
+    vector slope = new vector;
+    slopes = vectors_append (slopes, slope);  
+  }
+
+  // Compute the gradients 
+  gradients (evolving, slopes);
+
+  /**
+     *lFh* is the list of the flux of *h*, *lFq* is the list of the flux of *hu*, *lSb* is the list of the source term, *Se* is the list containing the net mass trasnfer. */
+
+  vector * lFh  = NULL;
+  tensor * lFq  = NULL;
+  vector * lSb  = NULL;
+  scalar * lSe  = NULL;
+
+  // Allocate memory for fluxes
+
+  for (l = 0; l < nl; l++) {
+    face vector sl = new vector;
+    tensor ql = new tensor;
+    vector sbl = new vector;
+    scalar se = new scalar;
+    lFh = vectors_append (lFh, sl);
+    lFq = tensors_append (lFq, ql);
+    lSb = vectors_append (lSb,sbl);
+    lSe = list_append (lSe, se);
+  }
+
+  // Get the vector velocity from the evolving list
+  vector * copy = vectors_copy (slopes);
+  copy[d*nl] = (vector){{-1}};
+  tensor * tensor_slopes = tensors_from_vectors (copy);
+
+  /**
+     We now compute the flux of *h* and *hu* that are *fh* and *fu*.*/
+  
+  vector ul; 
+  face vector  Fh, Sb;
+  tensor Fq, gul;
+
+  for (l = 0; l < nl; l++) {
+  
+    ul = vector(evolving[d*l]);
+    gul = tensor_slopes[l];
+    Fh = lFh[l], Fq = lFq[l];
+    Sb = lSb[l];
+    double la = layer[l];
+
+    foreach_face (reduction (min:dtmax)) {
+
+      double hi = h[], hn = h[-1,0];
+
+      if (hi > dry || hn > dry) {
+
+	/** ##Left/right state reconstruction 
+        Using the gradient we reconstruct the left and right states of *h*, *u* and *z~b~*. For the topography we use the hydrostatic reconstruction of [Audusse et al, 2004](/src/references.bib#audusse2004). */
+        double dx = Delta/2.;
+	double zi = eta[] - hi;
+	double zl = zi - dx*(geta.x[] - gh.x[]);
+	double zn = eta[-1,0] - hn;
+	double zr = zn + dx*(geta.x[-1,0] - gh.x[-1,0]);
+	double zlr = max(zl, zr);
+	double hl = hi - dx*gh.x[];
+	double up = ul.x[] - dx*gul.x.x[];
+	double hp = max(0., hl + zl - zlr);
+	double hr = hn + dx*gh.x[-1,0];
+	double um = ul.x[-1,0] + dx*gul.x.x[-1,0];
+	double hm = max(0., hr + zr - zlr);
+
+        /**
+        We call the Riemann solver to compute the fluxes. */
+        double fh,fu,fv;
+	kurganov (hm, hp, um, up, Delta*cm[]/fm.x[], la, &fh, &fu, &dtmax);
+	fv = (fh > 0. ? ul.y[-1,0] + dx*gul.y.x[-1,0] : ul.y[] - dx*gul.y.x[])*fh;
+
+        /**
+	   Then we compute the source term */
+	double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
+	double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
+	
+        /**
+	and we update the flux. */
+	Fh.x[]   = fm.x[]*fh;
+	Fq.x.x[] = fm.x[]*(fu - la*sl);
+	Sb.x[]   = fm.x[]*(fu - la*sr);
+	Fq.y.x[] = fm.x[]*fv;
+      }
+      else // dry
+	Fh.x[] = Fq.x.x[] = Sb.x[] = Fq.y.x[] = 0.;
+    }
+  }
+  
+  boundary_flux (lFh);
+  boundary_flux ((vector *)lFq);
+  boundary_flux (lSb);
+
+    /**
+    ## Vertical mass fluxes
+    We now compute the mass exchanges term $G_{\alpha+1/2}$ and the interface velocity $u_{\alpha+1/2}$. We store the fluxes *fh* in the vector *Ga* and put the sum in *fH*. */
+
+  foreach() {
+    
+    double fH = 0.;
+    l = 0;
+    for (vector fh in lFh) {
+      Ga[l++] = (fh.x[1,0] - fh.x[])/(cm[]*Delta);
+      fH += (fh.x[1,0] - fh.x[])/(cm[]*Delta); 
+    }
+
+    /**
+       We store the velocity of the layers in the vector ula: */
+
+    l = 0;
+    for (scalar v in evolving) {
+      if (l < nl) 
+	ula[l++] = v[];
+    }
+
+
+  /**
+     Now we compute the term $G_{\alpha+1/2}$ (eq 2.22 of [1]):  
+     $$ 
+     G_{\alpha+1/2} = \sum_{j=1}^{\alpha} ( \frac{\partial h_ju_j}{\partial x} - l_j \sum_{p=1}^{nl}  \frac{\partial h_pu_p}{\partial x}) 
+     $$  
+     the interface velocity upwinding (eq. 2.23 of [1]) and store it in *uia* and then we combine this terms to get the term $Se_{\alpha}$ that is the net mass flux in the layer $\alpha$:
+     $$
+     Se_{\alpha} = u_{\alpha+1/2}G_{\alpha+1/2} - u_{\alpha-1/2}G_{\alpha-1/2}
+     $$ */
+    
+    Ga[0] -= layer[0]*fH;
+    if (Ga[0] >= 0.) 
+      uia[0] = ula[0];
+    else
+      uia[0] = ula[1];
+    
+    sea[0] = Ga[0]*uia[0];
+    
+    for (l = 1; l < nl-1; l++) {
+      Ga[l] += Ga[l-1] - layer[l]*fH;
+      if (Ga[l] >= 0)
+	uia[l] = ula[l];
+      else
+	uia[l] = ula[l+1];
+      sea[l] = Ga[l]*uia[l]-Ga[l-1]*uia[l-1];
+    }
+    sea[nl-1] = - Ga[nl-2]*uia[nl-2];
+
+    /**
+       We store the terms in the list lSe: */
+    
+    l = 0;
+    for (scalar s in lSe) {
+      s[] = sea[l++];
+    }
+    
+  }
+
+  boundary (lSe);
+
+  /**## Compute updates
+  Finally we compute the updates of the evolving quantities. */
+
+  scalar dh = updates[d*nl];
+  foreach() {
+    dh[] = 0.;
+  }
+
+  for (l = 0; l < nl; l++) {
+    vector dhu = vector(updates[d*l]); 
+    Fh = lFh[l], Fq = lFq[l], Sb = lSb[l];
+    scalar Se = lSe[l];
+    foreach() {
+      dh[] += (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/(cm[]*Delta);
+      foreach_dimension() 
+        dhu.x[] = (Fq.x.x[] + Fq.x.y[] - Sb.x[1,0] - Fq.x.y[0,1])/(cm[]*Delta) + Se[];
+    }
+  }
+
+  // Free memory
+  free (copy);
+  delete ((scalar *) slopes);
+  free (slopes);
+  delete ((scalar *) lFh);
+  free (lFh);
+  delete ((scalar *) lFq);
+  free (lFq);
+  delete ((scalar *) lSb);
+  free (lSb);
+  delete ((scalar *) tensor_slopes);
+  free (tensor_slopes);
+  delete (lSe);
+  free (lSe);
+
+  return dtmax;
+}
+
+/**
+   We clean the memory: */
+event cleanup (i = end) { 
+  free (evolving);
+  free (layer);
+  free (a);
+  free (b);
+  free (c);
+  free (v);
+  free (xx);
+  free (sea);
+  free (Ga);
+  free (uia);
+  free (ula);
+  free (listu);
+}
+
+/**## Default and init event
+Inside these events we create the *evolving* list, we overlad the default *advance* and *update* function of the predicto-corrector scheme */
+
+event defaults (i = 0)
+{
+  for (int l = 0; l < nl; l++) {
+    vector uu = new vector;
+    listu = vectors_append (listu, uu);
+  }
+  
+  evolving = list_concat ((scalar *)listu, {h});
+  advance = advance_saint_venant;
+  update = update_saint_venant;
+
+  /**
+     We set the layers thickness: */
+  layer = (double*)malloc(nl*sizeof(double));
+  for (l = 0; l < nl; l++)
+    layer[l] = 1./nl;
+
+  /**
+     we allocate the memory: */
+  a = (double*)calloc(nl,sizeof(double));
+  b = (double*)calloc(nl,sizeof(double));
+  c = (double*)calloc(nl,sizeof(double));
+  v = (double*)calloc(nl,sizeof(double));
+  xx = (double*)calloc(nl,sizeof(double));
+  Ga = (double*)calloc(nl,sizeof(double));
+  uia = (double*)calloc(nl,sizeof(double));
+  ula = (double*)calloc(nl,sizeof(double));
+  sea = (double*)calloc(nl,sizeof(double));
+}
+
+event init (i = 0)
+{
+  foreach()
+    eta[] = zb[] + h[];
+  boundary (all);
+
+  /**
+  and set the field *visc* equal to the given viscosity coefficient */
+  foreach() {
+    visc[] = nu;
+  }
+}
+
+#include "elevation.h"
+
+/** ## Bibliography
+**[1]** E. Audusse, F. M. Bristeau, B. Perthame and J. Saint-Marie, *A Multilayer Saint-Venant System with mass excjanges for shallow water flows. Derivation and Numerical Validation*, ESAIM: Mathematical Modelling and Numerical Analysis, Vol 45, 169-200, 2011. */
