@@ -11,7 +11,7 @@ int main() {
   L0 = 1. - X0;
   G  = 1.;
   N  = 128;
-  nl = 15; 
+  nl = 15;
   nu = 1.;
   run();
 }
@@ -37,9 +37,9 @@ event init (i = 0) {
   /**
   We set a constant velocity at the inlet and a free outlet. */
 
-  for (vector ul in listu) {
-    ul.n[left] = 5.5;
-    ul.n[right] = neumann(0.);
+  for (vector u in ul) {
+    u.n[left] = 5.5;
+    u.n[right] = neumann(0.);
   }
   
   /**
@@ -65,9 +65,9 @@ event logfile (t += 0.1; i <= 10000) {
 We print the elevation and the stress. */
 
 event output (t = end) {
-  vector u1 = listu[0];
+  vector u0 = ul[0];
   foreach()
-    fprintf (stderr, "%g %g %g\n", x, eta[], 2.*u1.x[]/(h[]/nl));
+    fprintf (stderr, "%g %g %g\n", x, eta[], 2.*u0.x[]/(h[]/nl));
 }
 
 /**
