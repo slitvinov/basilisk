@@ -9,8 +9,8 @@ $$
 where $E_i$ is the $i$-component of the electric field,
 $\mathbf{E}=-\nabla \phi$ and $\delta_{ij}$ is the Kronecker delta.
 
-We need to add the corresponding acceleration to the Navier--Stokes
-[solver](/src/navier-stokes/centered.h).
+We need to add the corresponding acceleration to the 
+[Navier--Stokes solver](/src/navier-stokes/centered.h).
 
 If the acceleration vector *a* (defined by the Navier--Stokes solver)
 is constant, we make it variable. */
@@ -21,10 +21,13 @@ event defaults (i = 0) {
 }
 
 /**
-We overload the [acceleration event](/src/navier-stokes/centered.h##acceleration-term) of the Navier--Stokes solver to add the electrohydrodynamics acceleration
+We overload the 
+[acceleration event](/src/navier-stokes/centered.h##acceleration-term) 
+of the Navier--Stokes solver to add the electrohydrodynamics acceleration
 term. */
 
 event acceleration (i++) {
+  assert (dimension <= 2); // not 3D yet
   vector f[];
   foreach_dimension() {
     face vector Mx[];
@@ -47,8 +50,8 @@ event acceleration (i++) {
   }
 
   /**
-  If axisymmetric cylindrical coordinates are used an additional term
-  has to be added. */
+  If [axisymmetric cylindrical coordinates](/src/axi.h) are used an 
+  additional term must be added. */
 
 #if AXI
   foreach()

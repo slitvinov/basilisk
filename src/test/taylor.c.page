@@ -82,7 +82,7 @@ int LEVEL = 8;
 #define A (-9./10.*(R - Q)/sq(R + 2.)/(1. + LAM))
 
 /**
-F is the conductivity of the outer medium. F has no influence in the
+F is the conductivity of the outer medium. F has no influence on the
 steady solution but decreases the characteristic electrical relaxation
 time and consequently the electrical transient. */
 
@@ -125,14 +125,14 @@ event init (t = 0) {
   boundary ({phi});
 }
 
+
+/**
+Permittivity and electrical conductivity are face values and also
+incorporate the metric factors. The viscosity is constant but the
+viscosity coefficients need to incorporate the metric factors. */
+
 event properties (i++)
 {
-
-  /**
-  Permittivity and electrical conductivity are face values and also
-  incorporate the metric factors. The viscosity is constant but the
-  viscosity coefficients need to incorporate the metric factors. */
-
   foreach_face() {
     double ff = (f[] + f[-1])/2.;
     epsilon.x[] = perm(ff)*fm.x[];
@@ -172,7 +172,7 @@ event error (i += 20; t <= 10.) {
   stop the simulation. */
   
   if (i > 0 && du < 1e-5)
-    return (LEVEL++ >= 10); /* stop */
+    return (LEVEL++ == 10); /* stop */
 }
 
 /**
@@ -191,7 +191,7 @@ event result (t = end) {
     double x = i*h, y = i*h, r = sqrt(sq(x) + sq(y))/R0;
     double ux = interpolate (u.x, x, y)/VC; // dimensionless velocities
     double uy = interpolate (u.y, x, y)/VC;
-    double vrt, vtt; // theoretical radial azimuthal velocities;
+    double vrt, vtt; // theoretical radial and azimuthal velocities;
     if (r < 1.) {
       vrt = A*r*(1. - sq(r))*(3.*sq(sin(theta)) - 1.);
       vtt = 3*A/2*r*(1. - 5./3.*sq(r))*sin(2.*theta);
@@ -220,7 +220,7 @@ event adapt (i += 20) {
 }
 
 /**
-Set to one below to see the simulation on-fly.*/
+Set to one below to see the simulation on-the-fly.*/
 
 #if 0
 event gfsview (i += 20) {
@@ -241,7 +241,7 @@ plot 'log' u 1:2 notitle, 'log' u 1:3 w l t "v_r",\
 
 ## Bibliography
 
-* Chester T. O'Konski, Henry C. Thacher Jr."The Distortion of Aerosol
+* Chester T. O'Konski, Henry C. Thacher Jr. "The Distortion of Aerosol
 Droplets by an Electric Field" J. Phys. Chem., 1953, 57 (9), pp
 955–958.
 
