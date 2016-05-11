@@ -220,7 +220,7 @@ event logfile (i++) {
   
   if (i == 0)
     fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt mgD.i\n");
-  fprintf (stderr, "%g %d %g %g %.8f %g %.4g %g %d\n", 
+  fprintf (stderr, "%g %d %.8f %g %.8f %g %.4g %g %d\n", 
 	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, MGD);
 
   /**

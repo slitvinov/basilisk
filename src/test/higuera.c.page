@@ -4,7 +4,7 @@
 We want to reproduce the hydraulic jump of Higuera (1994). */
 
 #include "grid/cartesian1D.h"
-#include "saint-venant-ml.h"
+#include "saint-venant.h"
 
 int main() {
   X0 = 0.14;
@@ -86,6 +86,7 @@ plot [0:][0:605] 'higuera.png' binary filetype=png with rgbimage not, \
 
 ## Bibliography
 
-* Higuera, F. 1994 The hydraulic jump in a viscous laminar
-flow. J. Fluid Mech. 274, 69–92.
+* Higuera, F. 1994. [The hydraulic jump in a viscous laminar
+flow](http://dx.doi.org/10.1017/S0022112094002041). J. Fluid
+Mech. 274, 69–92.
 */

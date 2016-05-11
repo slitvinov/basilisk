@@ -33,6 +33,7 @@ Note that only the documented test cases appear in the list below
 * [Shock reflection by a circular cylinder](shock.c)
 * [Flow rates for multiple rivers](multiriverinflow.c)
 * [Implicit Saint-Venant solutions for waves](implicit.c)
+* [Viscous hydraulic jump](higuera.c)
 
 ## Volume-Of-Fluid
 

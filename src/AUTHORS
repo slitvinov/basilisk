@@ -1,3 +1,4 @@
+* Francesco De Vita: [multi-layer Saint-Venant](multilayer.h)
 * Jose-Maria Fullana: [Conway's game of life](examples/life.c),
   [Brusselator](examples/brusselator.c),
   [reaction--diffusion](diffusion.h), [1D arterial

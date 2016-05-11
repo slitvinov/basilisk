@@ -22,6 +22,17 @@ $$
 $$
 
 * [Semi-implicit scheme](saint-venant-implicit.h)
+* [Multiple layers](multilayer.h)
+$$
+\partial_th + \partial_x\sum_{l=0}^{nl-1}h_lu_l = 0
+$$
+
+$$
+\partial_t(h\mathbf{u}_l) + \nabla\cdot\left(h\mathbf{u}_l\otimes\mathbf{u}_l + 
+\frac{gh^2}{2}\mathbf{I}\right) = 
+- gh\nabla z_b - \partial_z(h\mathbf{u}w) + \nu h\partial_{z^2}\mathbf{u}
+$$
+
 * [Green-Naghdi](green-naghdi.h)
 $$
   \partial_t \int_{\Omega} \mathbf{q} d \Omega =

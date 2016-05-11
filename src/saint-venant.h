@@ -45,12 +45,21 @@ scalar zb[], h[], eta[];
 vector u[];
 
 /**
-The only physical parameter is the acceleration of gravity *G*. Cells are 
-considered "dry" when the water depth is less than the *dry* parameter (this 
-should not require tweaking). */
+The only physical parameter is the acceleration of gravity *G*. Cells
+are considered "dry" when the water depth is less than the *dry*
+parameter (this should not require tweaking). */
 
 double G = 1.;
 double dry = 1e-10;
+
+/**
+By default there is only a single layer i.e. this is the classical
+Saint-Venant system above. This can be changed by setting *nl* to a
+different value. The extension of the Saint-Venant system to multiple
+layers is implemented in [multilayer.h](). */
+
+int nl = 1;
+#include "multilayer.h"
 
 /**
 ## Time-integration
@@ -63,10 +72,11 @@ Time integration will be done with a generic
 #include "predictor-corrector.h"
 
 /**
-The generic time-integration scheme in predictor-corrector.h needs
-to know which fields are updated. */
+The generic time-integration scheme in *predictor-corrector.h* needs to
+know which fields are updated. The list will be constructed in the
+*defaults* event below. */
 
-scalar * evolving = {h, u};
+scalar * evolving = NULL;
 
 /**
 We need to overload the default *advance* function of the
@@ -80,23 +90,43 @@ static void advance_saint_venant (scalar * output, scalar * input,
 {
   // recover scalar and vector fields from lists
   scalar hi = input[0], ho = output[0], dh = updates[0];
-  vector ui = vector(input[1]), uo = vector(output[1]), dhu = vector(updates[1]);
+  vector * uol = (vector *) &output[1];
 
   // new fields in ho[], uo[]
   foreach() {
     double hold = hi[];
     ho[] = hold + dt*dh[];
     eta[] = zb[] + ho[];
-    if (ho[] > dry)
-      foreach_dimension()
-	uo.x[] = (hold*ui.x[] + dt*dhu.x[])/ho[];
-    else
-      foreach_dimension()
-	uo.x[] = 0.;
+    if (ho[] > dry) {
+      for (int l = 0; l < nl; l++) {
+        vector uo = vector(output[1 + dimension*l]);
+      	vector ui = vector(input[1 + dimension*l]),
+	  dhu = vector(updates[1 + dimension*l]);
+	foreach_dimension()
+	  uo.x[] = (hold*ui.x[] + dt*dhu.x[])/ho[];
+      }
+
+      /**
+      In the case of [multiple
+      layers](multilayer.h#viscous-friction-between-layers) we add the
+      viscous friction between layers. */
+    
+      if (nl > 1)
+	vertical_viscosity (point, ho[], uol, dt);
+    }
+    else // dry
+      for (int l = 0; l < nl; l++) {
+        vector uo = vector(output[1 + dimension*l]);
+        foreach_dimension()
+	  uo.x[] = 0.;
+      }
   }
+    
   // fixme: on trees eta is defined as eta = zb + h and not zb +
   // ho in the refine_eta() and coarsen_eta() functions below
-  boundary ({ho, eta, uo});
+  scalar * list = list_concat ({ho, eta}, (scalar *) uol);
+  boundary (list);
+  free (list);
 }
 
 /**
@@ -129,12 +159,12 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
 {
 
   /**
-  We first recover the currently evolving fields (as set by the
-  predictor-corrector scheme). */
+  We first recover the currently evolving height and velocity (as set
+  by the predictor-corrector scheme). */
 
-  scalar h = evolving[0];
+  scalar h = evolving[0], dh = updates[0];
   vector u = vector(evolving[1]);
-
+  
   /**
   *Fh* and *Fq* will contain the fluxes for $h$ and $h\mathbf{u}$
   respectively and *S* is necessary to store the asymmetric topographic
@@ -143,6 +173,16 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   face vector Fh[], S[];
   tensor Fq[];
 
+  /**
+  For [multiple layers](multilayer.h#fluxes-between-layers) we
+  need to store the divergence in each layer. */
+
+  scalar * divl = NULL;
+  for (int l = 0; l < nl - 1; l++) {
+    scalar div = new scalar;
+    divl = list_append (divl, div);
+  }
+  
   /**
   The gradients are stored in locally-allocated fields. First-order
   reconstruction is used for the gradient fields. */
@@ -158,129 +198,177 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   gradients ({h, eta, u}, {gh, geta, gu});
 
   /**
-  The faces which are "wet" on at least one side are traversed. */
-
-  foreach_face (reduction (min:dtmax)) {
-    double hi = h[], hn = h[-1];
-    if (hi > dry || hn > dry) {
-
-      /**
-      #### Left/right state reconstruction
-      
-      The gradients computed above are used to reconstruct the left
-      and right states of the primary fields $h$, $\mathbf{u}$,
-      $z_b$. The "interface" topography $z_{lr}$ is reconstructed
-      using the hydrostatic reconstruction of [Audusse et al,
-      2004](/src/references.bib#audusse2004) */
-      
-      double dx = Delta/2.;
-      double zi = eta[] - hi;
-      double zl = zi - dx*(geta.x[] - gh.x[]);
-      double zn = eta[-1] - hn;
-      double zr = zn + dx*(geta.x[-1] - gh.x[-1]);
-      double zlr = max(zl, zr);
-      
-      double hl = hi - dx*gh.x[];
-      double up = u.x[] - dx*gu.x.x[];
-      double hp = max(0., hl + zl - zlr);
-      
-      double hr = hn + dx*gh.x[-1];
-      double um = u.x[-1] + dx*gu.x.x[-1];
-      double hm = max(0., hr + zr - zlr);
-
-      /**
-      #### Riemann solver
-      
-      We can now call one of the approximate Riemann solvers to get
-      the fluxes. */
-
-      double fh, fu, fv;
-      kurganov (hm, hp, um, up, Delta*cm[]/fm.x[], &fh, &fu, &dtmax);
-      fv = (fh > 0. ? u.y[-1] + dx*gu.y.x[-1] : u.y[] - dx*gu.y.x[])*fh;
-      
-      /**
-      #### Topographic source term
-      
-      In the case of adaptive refinement, care must be taken to ensure
-      well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
-
-      #if TREE
-      if (is_prolongation(cell)) {
-	hi = coarse(h,0);
-	zi = coarse(zb,0);
-      }
-      if (is_prolongation(neighbor(-1))) {
-	hn = coarse(h,-1);
-	zn = coarse(zb,-1);
-      }
-      #endif
-	
-      double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
-      double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
-      
-      /**
-      #### Flux update */
-      
-      Fh.x[]   = fm.x[]*fh;
-      Fq.x.x[] = fm.x[]*(fu - sl);
-      S.x[]    = fm.x[]*(fu - sr);
-      Fq.y.x[] = fm.x[]*fv;
-    }
-    else // dry
-      Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
-  }
-
-  boundary_flux ({Fh, S, Fq});
-
-  /**
-  #### Updates for evolving quantities
+  We go through each layer. */
   
-  We store the divergence of the fluxes in the update fields. Note that
-  these are updates for $h$ and $h\mathbf{u}$ (not $\mathbf{u}$). */
-  
-  scalar dh = updates[0];
-  vector dhu = vector(updates[1]);
-
-  foreach() {
-    dh[] = (Fh.x[] + Fh.y[] - Fh.x[1,0] - Fh.y[0,1])/(cm[]*Delta);
-    foreach_dimension()
-      dhu.x[] = (Fq.x.x[] + Fq.x.y[] - S.x[1,0] - Fq.x.y[0,1])/(cm[]*Delta);
+  for (int l = 0; l < nl; l++) {
 
     /**
-    We also need to add the metric terms. They can be written (see
-    eq. (8) of [Popinet, 2011](references.bib#popinet2011)) 
-    $$
-    S_g = h \left(\begin{array}{c}
-    0\								\
-    \frac{g}{2} h \partial_{\lambda} m_{\theta} + f_G u_y\	\
-    \frac{g}{2} h \partial_{\theta} m_{\lambda} - f_G u_x
-    \end{array}\right)
-    $$
-    with
-    $$
-    f_G = u_y \partial_{\lambda} m_{\theta} - u_x \partial_{\theta} m_{\lambda}
-    $$
-    */
+    We recover the velocity field for the current layer and compute
+    its gradient (for the first layer the gradient has already been
+    computed above). */
+    
+    vector u = vector (evolving[1 + dimension*l]);
+    if (l > 0)
+      gradients ((scalar *) {u}, (vector *) {gu});
+    
+    /**
+    The faces which are "wet" on at least one side are traversed. */
 
-    double dmdl = (fm.x[1,0] - fm.x[])/(cm[]*Delta);
-    double dmdt = (fm.y[0,1] - fm.y[])/(cm[]*Delta);
-    double fG = u.y[]*dmdl - u.x[]*dmdt;
-    dhu.x[] += h[]*(G*h[]/2.*dmdl + fG*u.y[]);
-    dhu.y[] += h[]*(G*h[]/2.*dmdt - fG*u.x[]);
+    foreach_face (reduction (min:dtmax)) {
+      double hi = h[], hn = h[-1];
+      if (hi > dry || hn > dry) {
+
+	/**
+	#### Left/right state reconstruction
+      
+	The gradients computed above are used to reconstruct the left
+	and right states of the primary fields $h$, $\mathbf{u}$,
+	$z_b$. The "interface" topography $z_{lr}$ is reconstructed
+	using the hydrostatic reconstruction of [Audusse et al,
+	2004](/src/references.bib#audusse2004) */
+      
+	double dx = Delta/2.;
+	double zi = eta[] - hi;
+	double zl = zi - dx*(geta.x[] - gh.x[]);
+	double zn = eta[-1] - hn;
+	double zr = zn + dx*(geta.x[-1] - gh.x[-1]);
+	double zlr = max(zl, zr);
+	
+	double hl = hi - dx*gh.x[];
+	double up = u.x[] - dx*gu.x.x[];
+	double hp = max(0., hl + zl - zlr);
+	
+	double hr = hn + dx*gh.x[-1];
+	double um = u.x[-1] + dx*gu.x.x[-1];
+	double hm = max(0., hr + zr - zlr);
+	
+	/**
+	#### Riemann solver
+	
+	We can now call one of the approximate Riemann solvers to get
+	the fluxes. */
+	
+	double fh, fu, fv;
+	kurganov (hm, hp, um, up, Delta*cm[]/fm.x[], &fh, &fu, &dtmax);
+	fv = (fh > 0. ? u.y[-1] + dx*gu.y.x[-1] : u.y[] - dx*gu.y.x[])*fh;
+	
+	/**
+	#### Topographic source term
+      
+	In the case of adaptive refinement, care must be taken to ensure
+	well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
+	
+        #if TREE
+	if (is_prolongation(cell)) {
+	  hi = coarse(h,0);
+	  zi = coarse(zb,0);
+	}
+	if (is_prolongation(neighbor(-1))) {
+	  hn = coarse(h,-1);
+	  zn = coarse(zb,-1);
+	}
+        #endif
+	
+	double sl = G/2.*(sq(hp) - sq(hl) + (hl + hi)*(zi - zl));
+	double sr = G/2.*(sq(hm) - sq(hr) + (hr + hn)*(zn - zr));
+	
+	/**
+	#### Flux update */
+      
+	Fh.x[]   = fm.x[]*fh;
+	Fq.x.x[] = fm.x[]*(fu - sl);
+	S.x[]    = fm.x[]*(fu - sr);
+	Fq.y.x[] = fm.x[]*fv;
+      }
+      else // dry
+	Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
+    }
+
+    boundary_flux ({Fh, S, Fq});
+
+    /**
+    #### Updates for evolving quantities
+  
+    We store the divergence of the fluxes in the update fields. Note that
+    these are updates for $h$ and $h\mathbf{u}$ (not $\mathbf{u}$). */
+  
+    vector dhu = vector(updates[1 + dimension*l]);
+    foreach() {
+      double dhl =
+	layer[l]*(Fh.x[1,0] - Fh.x[] + Fh.y[0,1] - Fh.y[])/(cm[]*Delta);
+      dh[] = - dhl + (l > 0 ? dh[] : 0.);
+      foreach_dimension()
+	dhu.x[] = (Fq.x.x[] + Fq.x.y[] - S.x[1,0] - Fq.x.y[0,1])/(cm[]*Delta);
+
+      /**
+      For [multiple layers](multilayer.h#fluxes-between-layers) we
+      need to store the divergence in each layer. */
+      
+      if (l < nl - 1) {
+	scalar div = divl[l];
+	div[] = dhl;
+      }
+
+      /**
+      We also need to add the metric terms. They can be written (see
+      eq. (8) of [Popinet, 2011](references.bib#popinet2011)) 
+      $$
+      S_g = h \left(\begin{array}{c}
+      0\\
+      \frac{g}{2} h \partial_{\lambda} m_{\theta} + f_G u_y\\
+      \frac{g}{2} h \partial_{\theta} m_{\lambda} - f_G u_x
+      \end{array}\right)
+      $$
+      with
+      $$
+      f_G = u_y \partial_{\lambda} m_{\theta} - u_x \partial_{\theta} m_{\lambda}
+      $$
+      */
+
+      double dmdl = (fm.x[1,0] - fm.x[])/(cm[]*Delta);
+      double dmdt = (fm.y[0,1] - fm.y[])/(cm[]*Delta);
+      double fG = u.y[]*dmdl - u.x[]*dmdt;
+      dhu.x[] += h[]*(G*h[]/2.*dmdl + fG*u.y[]);
+      dhu.y[] += h[]*(G*h[]/2.*dmdt - fG*u.x[]);
+    }
   }
 
+  /**
+  For [multiple layers](multilayer.h#fluxes-between-layers) we need to
+  add fluxes between layers. */
+
+  if (nl > 1) {
+    vertical_fluxes ((vector *) &evolving[1], (vector *) &updates[1], divl, dh);
+    delete (divl), free (divl);
+  }
+    
   return dtmax;
 }
 
 /**
-## Initialisation
+## Initialisation and cleanup
 
 We use the main time loop (in the predictor-corrector scheme) to setup
 the initial defaults. */
 
 event defaults (i = 0)
 {
+  assert (ul == NULL);
+  assert (nl > 0);
+  ul = vectors_append (ul, u);
+  for (int l = 1; l < nl; l++) {
+    vector u = new vector;
+    ul = vectors_append (ul, u);
+  }
+  evolving = list_concat ({h}, (scalar *) ul);
 
+  /**
+  By default, all the layers have the same relative thickness. */
+
+  layer = malloc (nl*sizeof(double));
+  for (int l = 0; l < nl; l++)
+    layer[l] = 1./nl;
+  
   /**
   We overload the default 'advance' and 'update' functions of the
   predictor-corrector scheme and setup the refinement and coarsening
@@ -307,6 +395,16 @@ event init (i = 0)
   foreach()
     eta[] = zb[] + h[];
   boundary (all);
+}
+
+/**
+At the end of the simulation, we free the memory allocated in the
+*defaults* event. */
+
+event cleanup (i = end, last) {
+  free (evolving);
+  free (layer);
+  free (ul), ul = NULL;
 }
 
 #include "elevation.h"
