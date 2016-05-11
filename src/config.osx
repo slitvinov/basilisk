@@ -3,8 +3,11 @@
 # how to launch the C99 compiler
 CC99 = gcc -std=c99
 
+# how to strip unused code
+STRIPFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections -w
+
 # other useful (non-standard) flags
-CFLAGS += -g -Wall
+CFLAGS += -g -Wall -pipe
 
 # if you have valgrind, otherwise comment this out
 # VALGRIND = valgrind -q --tool=memcheck \
