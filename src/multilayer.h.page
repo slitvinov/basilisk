@@ -85,7 +85,7 @@ void vertical_viscosity (Point point, double h, vector * ul, double dt)
       rhs[l] = h*layer[l]*u.x[], l++;
 
     /**
-    The lower, principal and upper diagonals $a$, $b$ and $c$ given by
+    The lower, principal and upper diagonals $a$, $b$ and $c$ are given by
     $$
     a_{l > 0} = - \left( \frac{\nu \Delta t}{h_{l - 1 / 2}} \right)_{n + 1}
     $$
