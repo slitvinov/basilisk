@@ -93,7 +93,7 @@ clean:
 
 %.itags: %.tags $(subst .page,.tags,$(ALLPAGES)) $(BASILISK)/includedin.sh
 	sh $(BASILISK)/includedin.sh $(subst .tags,,$<) > $@
-	rm -f $(subst src,cache/src,$(PWD))/$(subst .tags,.page,$<)
+	rm -f $(subst $(BASILISK_ROOT),$(BASILISK_ROOT)/cache,$(PWD))/$(subst .tags,.page,$<)
 
 # lists external symbols of executables
 extern = nm -u $(1) | sed -n 's/^[ ]*U \(.*\)/\1/p' | sort | uniq
