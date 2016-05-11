@@ -275,9 +275,6 @@ elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
     fi
 fi
 
-if test -f $test/warn; then
-    cat $test/warn
-fi
 if test -f $test/fail; then
     cat $test/fail
     rm -f $test.$ext
