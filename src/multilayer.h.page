@@ -51,7 +51,7 @@ boundary and no-slip on the bottom boundary i.e. $\dot{u}_t = 0$,
 $\lambda_b = 0$, $u_b = 0$. */
 
 double nu = 0.;
-double dut = 0., lambda_b = 0., ub = 0.;
+(const) scalar lambda_b = zeroc, dut = zeroc, u_b = zeroc;
 
 /**
 For stability, we discretise the viscous friction term implicitly as
@@ -123,7 +123,7 @@ void vertical_viscosity (Point point, double h, vector * ul, double dt)
 
     a[nl-1] = - 2.*nu*dt/(h*(layer[nl-2] + layer[nl-1]));
     b[nl-1] = layer[nl-1]*h - a[nl-1];
-    rhs[nl-1] += nu*dt*dut;
+    rhs[nl-1] += nu*dt*dut[];
 
     /**
     For the bottom layer, the boundary conditions give the (ghost)
@@ -144,8 +144,8 @@ void vertical_viscosity (Point point, double h, vector * ul, double dt)
     */
 
     c[0] = - 2.*dt*nu/(h*(layer[0] + layer[1]));
-    b[0] = layer[0]*h - c[0] + 2.*nu*dt/(2.*lambda_b + h*layer[0]);
-    rhs[0] += 2.*nu*dt/(2.*lambda_b + h*layer[0])*ub;
+    b[0] = layer[0]*h - c[0] + 2.*nu*dt/(2.*lambda_b[] + h*layer[0]);
+    rhs[0] += 2.*nu*dt/(2.*lambda_b[] + h*layer[0])*u_b[];
     
     /**
     We can now solve the tridiagonal system using the [Thomas
