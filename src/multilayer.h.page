@@ -168,7 +168,7 @@ void vertical_viscosity (Point point, double h, vector * ul, double dt)
 ## Fluxes between layers
 
 The relative vertical velocity between layers $l$ and $l+1$ is defined
-as (eq. 2.22 of [Audusse et al, 2011](references.bib#audusse2011))
+as (eq. (2.22) of [Audusse et al, 2011](references.bib#audusse2011))
 $$
 G_{l+1/2} = \sum_{j=1}^{l}(\mathrm{div}_j + \mathrm{layer}_j\mathrm{dh})
 $$
@@ -194,21 +194,25 @@ void vertical_fluxes (vector * evolving, vector * updates,
 	/**
 	To compute the vertical advection term, we need an estimate of
 	the velocity at $l+1/2$. This is obtained using simple
-	upwinding according to the sign of the interface velocity 
-	$\mathrm{Gi} = G_{l+1/2}$ and the values of the velocity in the 
-	$l$ and $l+1$ layers. */
-	
+	upwinding according to the sign of the interface velocity
+	$\mathrm{Gi} = G_{l+1/2}$ and the values of the velocity in
+	the $l$ and $l+1$ layers. Note that the inequality of
+	upwinding is consistent with equs. (5.110) of [Audusse et al,
+	2011](references.bib#audusse2011) and (77) of [Audusse et al,
+	2011b](references.bib#audusse2011b) but not with eq. (2.23) of
+	[Audusse et al, 2011](references.bib#audusse2011). */
+
 	scalar ub = evolving[l].x, ut = evolving[l + 1].x;
-	double ui = Gi >= 0 ? ub[] : ut[];
+	double ui = Gi < 0. ? ub[] : ut[];
 	
 	/**
-	The flux at $l+1/2$ is then substracted from the updates of
-	the bottom layer and added to the updates of the top layer. */
+	The flux at $l+1/2$ is then added to the updates of the bottom
+	layer and substracted from the updates of the top layer. */
 	
 	double flux = Gi*ui;
-	scalar dub = updates[l].x, dut = updates[l + 1].x;
-	dub[] -= flux/layer[l];
-	dut[] += flux/layer[l + 1];
+	scalar du_b = updates[l].x, du_t = updates[l + 1].x;
+	du_b[] += flux/layer[l];
+	du_t[] -= flux/layer[l + 1];
       }
     }
   }
