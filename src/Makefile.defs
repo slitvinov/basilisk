@@ -22,6 +22,9 @@ tags: $(subst .page,.tags,$(ALLPAGES))
 
 itags: $(subst .h.page,.h.itags,$(ALLPAGES))
 
+links:
+	sh $(BASILISK)/links.sh
+
 clean:
 	rm -f *.o *.s *.*tst *.d *.prof Makefile.deps
 

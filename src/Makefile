@@ -3,7 +3,7 @@ CFLAGS += -O2
 # these are not tests
 EXCLUDE = qcc.c include.c rotate.c qplot.c
 
-all: qcc qplot libkdt
+all: links qcc qplot libkdt
 	@chmod +x ppm2mpeg ppm2gif runtest
 	@test -f xyz2kdt || ln -s kdt/xyz2kdt
 
