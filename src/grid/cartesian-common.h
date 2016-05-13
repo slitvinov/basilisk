@@ -631,6 +631,24 @@ static double periodic_bc (Point point, Point neighbor, scalar s)
   return HUGE; // should not be used
 }
 
+static void periodic_boundary (int d)
+{
+  /* We change the conditions for existing scalars. */
+  for (scalar s in all)
+    s.boundary[d] = s.boundary_homogeneous[d] = periodic_bc;
+  /* Normal components of face vector fields should remain NULL. */
+  for (scalar s in all)
+    if (s.face) {
+      vector v = s.v;
+      v.x.boundary[d] = v.x.boundary_homogeneous[d] = NULL;
+    }
+  /* We also change the default boundary conditions (for new fields). */
+  default_scalar_bc[d] = periodic_bc;
+  default_vector_bc[d] = periodic_bc;
+}
+
+int Periods[dimension];
+
 void periodic (int dir)
 {
   #if dimension < 2
@@ -642,19 +660,7 @@ void periodic (int dir)
   #endif
   // This is the component in the given direction i.e. 0 for x and 1 for y
   int c = dir/2;
-  /* We change the conditions for existing scalars. */
-  for (scalar s in all)
-    s.boundary[2*c] = s.boundary[2*c + 1] =
-      s.boundary_homogeneous[2*c] = s.boundary_homogeneous[2*c + 1] =
-      periodic_bc;
-  /* Normal components of face vector fields should remain NULL. */
-  for (scalar s in all)
-    if (s.face) {
-      vector v = s.v;
-      v.x.boundary[2*c] = v.x.boundary[2*c + 1] =
-	v.x.boundary_homogeneous[2*c] = v.x.boundary_homogeneous[2*c + 1] = NULL;
-    }
-  /* We also change the default boundary conditions (for new fields). */
-  default_scalar_bc[2*c] = default_scalar_bc[2*c + 1] = periodic_bc;
-  default_vector_bc[2*c] = default_vector_bc[2*c + 1] = periodic_bc;
+  periodic_boundary (2*c);
+  periodic_boundary (2*c + 1);
+  Periods[c] = true;
 }

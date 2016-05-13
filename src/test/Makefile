@@ -172,7 +172,8 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
 	hf1.tst pdump.tst restore.tst \
 	gfsi.tst gfs.tst \
-	load-balancing
+	load-balancing \
+	mpi-grid.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3
@@ -223,3 +224,7 @@ balance6.c: balance5.c
 	ln -s balance5.c balance6.c
 balance6.tst: CC = mpicc -D_MPI=17
 balance7.tst: CC = mpicc -D_MPI=17
+
+# MPI-parallel multigrid
+
+mpi-grid.tst: CC = mpicc -D_MPI=4

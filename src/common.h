@@ -567,8 +567,8 @@ static double prof_start, _prof;
 @define mpi_all_reduce_double(v,op)
 @else // !FAKE_MPI
 trace
-static int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
-			    MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
+int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
+		     MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
 {
   return MPI_Allreduce (sendbuf, recvbuf, count, datatype, op, comm);
 }

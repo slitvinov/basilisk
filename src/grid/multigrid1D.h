@@ -201,6 +201,8 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 
 // periodic boundaries
 
+@if !_MPI
+
 static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 {
   scalar * list1 = NULL;
@@ -221,6 +223,8 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 
   free (list1);
 }
+
+@endif // !_MPI
 
 void free_grid (void)
 {
@@ -273,10 +277,15 @@ void init_grid (int n)
     b->level = box_boundary_level;
     add_boundary (b);
   }
+@if _MPI
+  Boundary * mpi_boundary_new();
+  mpi_boundary_new();
+@else
   // periodic boundaries
   Boundary * b = calloc (1, sizeof (Boundary));
   b->level = periodic_boundary_level_x;
   add_boundary (b);
+@endif
   // mesh size
   grid->n = grid->tn = 1 << dimension*depth();
 }
@@ -313,3 +322,15 @@ void multigrid1D_methods()
 {
   multigrid_methods();
 }
+
+@if _MPI
+
+@def foreach_slice_x(start, end, l) {
+  Point point;
+  point.level = l; point.n = 1 << point.level;
+  for (point.i = start; point.i < end; point.i++)
+@
+@define end_foreach_slice_x() }
+
+#include "multigrid-mpi.h"
+@endif

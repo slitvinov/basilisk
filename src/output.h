@@ -555,7 +555,7 @@ void output_grd (struct OutputGRD p)
   fflush (p.fp);
 }
 
-#if MULTIGRID
+#if MULTIGRID && !MULTIGRID_MPI
 
 /**
 ## *output_gfs()*: Gerris simulation format
