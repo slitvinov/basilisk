@@ -2684,6 +2684,8 @@ int main (int argc, char ** argv)
       catch = 1;
     else if (!strcmp (argv[i], "-source"))
       source = 1;
+    else if (!strncmp (argv[i], "-Ddimension=", 12))
+      dimension = 1 + argv[i][12] - '1';
     else if (catch && !strncmp (argv[i], "-O", 2))
       ;
     else if (!strcmp (argv[i], "-nolineno")) {

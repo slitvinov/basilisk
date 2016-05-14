@@ -39,7 +39,7 @@
   static char * fname;
   
   static char * paths[100] = { LIBDIR }, grid[80] = "quadtree";
-  static int npath = 1, hasgrid = 0, debug = 0, dimension = 2, bghosts = 0;
+  static int npath = 1, hasgrid = 0, debug = 0, dimension = 0, bghosts = 0;
   static int incode;   // are we in a code block?
   static int somecode; // any code blocks in this file?
 
@@ -628,7 +628,8 @@ int includes (int argc, char ** argv, char ** out,
     fclose (swigfp);
   *grid1 = grid;
   *default_grid = !hasgrid;
-  *dim = dimension;
+  if (dimension > 0)
+    *dim = dimension;
   *bg = bghosts;
   return nout;
 }
