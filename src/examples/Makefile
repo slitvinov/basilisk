@@ -3,17 +3,15 @@ CFLAGS += -O2 -fopenmp
 
 all: check
 
-tsunami.s: LIBS="-L$(BASILISK)/kdt -lkdt"
-tsunami.tst: tsunami.s
-	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest tsunami.tst
+tsunami.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
+tsunami.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
 
 madsen-sv.c: madsen.c
 	ln -s madsen.c madsen-sv.c 
+madsen-sv.tst: madsen.s
+madsen-sv.tst: CFLAGS = -O2 -DSAINT_VENANT=1
 
-madsen-sv.tst: madsen-sv.s
-	@CFLAGS="-O2 -DSAINT_VENANT=1" $(BASILISK)/runtest madsen-sv.tst
-
-madsen.tst: madsen.s madsen-sv.tst
-	@CFLAGS="-O2" $(BASILISK)/runtest madsen.tst
+madsen.tst: madsen-sv.tst
+madsen.tst: CFLAGS = -O2 -DSAINT_VENANT=1
 
 include $(BASILISK)/Makefile.defs

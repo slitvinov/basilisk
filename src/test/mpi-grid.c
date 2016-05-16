@@ -12,12 +12,16 @@ int main()
 
   scalar s[];
   foreach()
-    s[] = sin(x)*cos(y);
+    s[] = sin(x)*cos(y)*cos(z);
   boundary ({s});
 
   foreach()
-    foreach_neighbor() {
-      // fprintf (stderr, "%g %g %g %g\n", x, y, s[], s[] - sin(x)*cos(y));
-      assert (fabs (s[] - sin(x)*cos(y)) < 1e-14);
+    foreach_neighbor(1) {
+#if 0   
+      fprintf (stderr, "%g %g %g %g %g\n", x, y, z, s[],
+	       s[] - sin(x)*cos(y)*cos(z));
+#else
+      assert (fabs (s[] - sin(x)*cos(y)*cos(z)) < 1e-14);
+#endif
     }
 }

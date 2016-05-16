@@ -5,11 +5,6 @@ typedef struct {
   MPI_Comm cartcomm;
 } MpiBoundary;
 
-static double mpi_L0 = nodata;
-static coord mpi_o = {nodata, nodata, nodata};
-
-int mpi_dims[dimension];
-
 @define BUF void * // workaround for bug in qcc
 
 foreach_dimension()
@@ -93,6 +88,7 @@ Boundary * mpi_boundary_new()
   MPI_Dims_create (npe(), dimension, mpi_dims);
   MPI_Cart_create (MPI_COMM_WORLD, dimension,
 		   mpi_dims, Periods, 0, &m->cartcomm);
+  MPI_Cart_coords (m->cartcomm, pid(), dimension, mpi_coords);
 
   // make sure other boundary conditions are not applied
   struct { int x, y, z; } dir = {0,1,2};
@@ -105,24 +101,16 @@ Boundary * mpi_boundary_new()
       periodic_boundary (right);
   }
 
-  // rescale the x-axis and shift the origin
-  int dims[dimension], periods[dimension], coords[dimension];
-  MPI_Cart_get (m->cartcomm, dimension, dims, periods, coords);
+  // rescale the resolution
+  N /= mpi_dims[0];
+  int r = 0;
+  while (N > 1)
+    N /= 2, r++;
+  grid->depth = grid->maxdepth = r;
+  N = mpi_dims[0]*(1 << r);
+  grid->n = 1 << dimension*depth();
+  grid->tn = npe()*grid->n;
   
-  if (L0 != mpi_L0)
-    L0 /= dims[0];
-  
-  struct { double * x, * y, * z; } o = {&X0, &Y0, &Z0};
-  foreach_dimension() {
-    if (*o.x != mpi_o.x)
-      *o.x += L0*coords[dir.x];
-    else if (L0 != mpi_L0)
-      *o.x += (L0 - mpi_L0)*coords[dir.x];
-    mpi_o.x = *o.x;
-  }
-
-  mpi_L0 = L0;
-
   // setup boundary methods and add to list of boundary conditions
   Boundary * b = (Boundary *) m;
   b->level = mpi_boundary_level;

@@ -5,11 +5,17 @@ int main()
 {
   scalar a[], b[], e[];
 
+#if 0
+  // this does not work with multigrid MPI
   foreach_dimension() {
     a[right] = periodic();
   }
-  
-  for (int n = 8; n <= 128; n *= 2) {
+#else
+  foreach_dimension()
+    periodic (right);
+#endif
+
+  for (int n = 8; n <= 64; n *= 2) {
     init_grid (n);
     foreach() {
       a[] = 0.;
@@ -23,7 +29,7 @@ int main()
     stats s = statsf(e);
     foreach()
       e[] -= s.sum/s.volume;
-    fprintf (stderr, "%d %g\n", n, statsf(e).max);
+    fprintf (ferr, "%d %g\n", n, statsf(e).max);
   }
   foreach()
     printf ("%g %g %g %g %g\n", x, y, z, a[], e[]);

@@ -36,16 +36,18 @@ clean:
 	ln -s $*.c $*.3D.c
 
 %.3D.tst: %.3D.s %.3D.c
-	@CFLAGS="$(CFLAGS) -grid=octree" $(BASILISK)/runtest $*.3D.tst
+	@CFLAGS="$(CFLAGS) -grid=octree" LIBS=$(LIBS) \
+		$(BASILISK)/runtest $*.3D.tst
 
 %.tst: %.s %.c
-	@PNG=$(PNG) $(BASILISK)/runtest $@
+	@PNG=$(PNG) LIBS=$(LIBS) $(BASILISK)/runtest $@
 
 %.ctst: %.s %.c
-	@CFLAGS="-grid=multigrid $(CFLAGS)" PNG=$(PNG) $(BASILISK)/runtest $@
+	@CFLAGS="-grid=multigrid $(CFLAGS)" PNG=$(PNG) LIBS=$(LIBS) \
+		$(BASILISK)/runtest $@
 
 %.vtst: %.s %.c
-	@PNG=$(PNG) EXEC="$(VALGRIND)" $(BASILISK)/runtest $@
+	@PNG=$(PNG) LIBS=$(LIBS) EXEC="$(VALGRIND)" $(BASILISK)/runtest $@
 
 %.h: %.h.page
 	ln -s $< $@

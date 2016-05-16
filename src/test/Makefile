@@ -12,77 +12,64 @@ check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst
 
 dry-explicit.c: dry.c
 	ln -s dry.c dry-explicit.c 
-
-dry-explicit.tst: dry-explicit.s
-	@CFLAGS="$(CFLAGS) -DEXPLICIT=1" $(BASILISK)/runtest dry-explicit.tst
+dry-explicit.tst: dry.s
+dry-explicit.tst: CFLAGS += -DEXPLICIT=1
 
 dry.tst: dry-explicit.tst
 
 drybump-explicit.c: drybump.c
 	ln -s drybump.c drybump-explicit.c 
-
-drybump-explicit.tst: drybump-explicit.s
-	@CFLAGS="$(CFLAGS) -DEXPLICIT=1" $(BASILISK)/runtest drybump-explicit.tst
+drybump-explicit.tst: drybump.s
+drybump-explicit.tst: CFLAGS += -DEXPLICIT=1
 
 drybump.tst: drybump-explicit.tst
 
 drybump2D-implicit.c: drybump2D.c
 	ln -s drybump2D.c drybump2D-implicit.c 
-
-drybump2D-implicit.tst: drybump2D-implicit.s
-	@CFLAGS="$(CFLAGS) -DIMPLICIT=1" \
-		$(BASILISK)/runtest drybump2D-implicit.tst
+drybump2D-implicit.tst: drybump2D.s
+drybump2D-implicit.tst: CFLAGS += -DIMPLICIT=1
 
 drybump2D.tst: drybump2D-implicit.tst
 
 parabola-explicit.c: parabola.c
 	ln -s parabola.c parabola-explicit.c 
-
-parabola-explicit.tst: parabola-explicit.s
-	@CFLAGS="$(CFLAGS) -DEXPLICIT=1" $(BASILISK)/runtest \
-		parabola-explicit.tst
+parabola-explicit.tst: parabola.s
+parabola-explicit.tst: CFLAGS += -DEXPLICIT=1
 
 parabola.tst: parabola-explicit.tst
 
 seawallsv.c: seawall.c
 	ln -s seawall.c seawallsv.c 
-
-seawallsv.tst: seawallsv.s
-	@CFLAGS="$(CFLAGS) -DSAINT_VENANT=1" $(BASILISK)/runtest seawallsv.tst
+seawallsv.tst: seawall.s
+seawallsv.tst: CFLAGS += -DSAINT_VENANT=1
 
 seawall.tst: seawallsv.tst
 
 conicalsv.c: conical.c
 	ln -s conical.c conicalsv.c 
-
-conicalsv.tst: conicalsv.s
-	@CFLAGS="$(CFLAGS) -DSAINT_VENANT=1" $(BASILISK)/runtest conicalsv.tst
+conicalsv.tst: conical.s
+conicalsv.tst: CFLAGS += -DSAINT_VENANT=1
 
 conical-implicit.c: conical.c
 	ln -s conical.c conical-implicit.c 
-
-conical-implicit.tst: conical-implicit.s
-	@CFLAGS="$(CFLAGS) -DSAINT_VENANT=1 -DIMPLICIT=1" \
-		$(BASILISK)/runtest conical-implicit.tst
+conical-implicit.tst: conical.s
+conical-implicit.tst: CFLAGS += -DSAINT_VENANT=1 -DIMPLICIT=1
 
 conical.tst: conicalsv.tst conical-implicit.tst
 
-curvature.s: LIBS="-L$(HOME)/local/lib -lvofi"
-curvature.tst: curvature.s curvature.3D.tst
-	@LIBS="-L$(HOME)/local/lib -lvofi" \
-	$(BASILISK)/runtest curvature.tst
+curvature.s: LIBS = "-L$(HOME)/local/lib -lvofi"
+curvature.tst: curvature.3D.tst
+curvature.tst: LIBS = "-L$(HOME)/local/lib -lvofi"
 
-curvature.3D.s: LIBS="-L$(HOME)/local/lib -lvofi"
+curvature.3D.s: LIBS = "-L$(HOME)/local/lib -lvofi"
 curvature.3D.tst: curvature.3D.s
-	@CFLAGS="$(CFLAGS) -grid=octree" \
-	LIBS="-L$(HOME)/local/lib -lvofi" \
-	$(BASILISK)/runtest curvature.3D.tst
+curvature.3D.tst: LIBS = "-L$(HOME)/local/lib -lvofi"
+curvature.3D.tst: CFLAGS += -grid=octree
 
 explicit.c: implicit.c
 	ln -s implicit.c explicit.c 
-
-explicit.tst: explicit.s
-	@CFLAGS="$(CFLAGS) -DEXPLICIT=1" $(BASILISK)/runtest explicit.tst
+explicit.tst: implicit.s
+explicit.tst: CFLAGS += -DEXPLICIT=1
 
 implicit.tst: explicit.tst
 
@@ -99,35 +86,31 @@ laplacian.tst: laplacian.ctst
 
 lidmac.c: lid.c
 	ln -s lid.c lidmac.c
-
-lidmac.tst: lidmac.s
-	@CFLAGS="$(CFLAGS) -DMAC=1" $(BASILISK)/runtest lidmac.tst
+lidmac.tst: lid.s
+lidmac.tst: CFLAGS += -DMAC=1
 
 lid.tst: lidmac.tst
 
-nonlinear.s: LIBS="-lgsl -lgslcblas"
-nonlinear.tst: nonlinear.s
-	@LIBS="-lgsl -lgslcblas" $(BASILISK)/runtest nonlinear.tst
+nonlinear.s: LIBS = "-lgsl -lgslcblas"
+nonlinear.tst: LIBS = "-lgsl -lgslcblas"
 
 ponds-implicit.c: ponds.c
 	ln -s ponds.c ponds-implicit.c
+ponds-implicit.s: ponds.s
+ponds-implicit.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
+ponds-implicit.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
+ponds-implicit.tst: CFLAGS += -DIMPLICIT=1
 
-ponds-implicit.s: LIBS="-L$(BASILISK)/kdt -lkdt"
-ponds-implicit.tst: ponds-implicit.s
-	@LIBS="-L$(BASILISK)/kdt -lkdt" CFLAGS="$(CFLAGS) -DIMPLICIT=1" \
-		$(BASILISK)/runtest ponds-implicit.tst
-
-ponds.s: LIBS="-L$(BASILISK)/kdt -lkdt"
-ponds.tst: ponds.s ponds-implicit.tst
-	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest ponds.tst
+ponds.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
+ponds.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
+ponds.tst: ponds-implicit.tst
 
 poisson.tst: poisson.ctst
 
 rising-axi.c: rising.c
 	ln -s rising.c rising-axi.c
-
-rising-axi.tst: rising-axi.s rising.s
-	@CFLAGS="$(CFLAGS) -DAXIS=1" $(BASILISK)/runtest rising-axi.tst
+rising-axi.tst: rising.s
+rising-axi.tst: CFLAGS += -DAXIS=1
 
 reversed.tst: reversed.ctst
 
@@ -135,15 +118,13 @@ rotate.tst: rotate.ctst
 
 taylor-green-all-mach.c: taylor-green.c
 	ln -s taylor-green.c taylor-green-all-mach.c 
-
 taylor-green-all-mach.tst: taylor-green-all-mach.s
-	@CFLAGS="$(CFLAGS) -DALL_MACH=1" $(BASILISK)/runtest taylor-green-all-mach.tst
+taylor-green-all-mach.tst: CFLAGS += -DALL_MACH=1
 
 taylor-green.tst: taylor-green-all-mach.tst
 
-terrain.s: LIBS="-L$(BASILISK)/kdt -lkdt"
-terrain.tst: terrain.s
-	@LIBS="-L$(BASILISK)/kdt -lkdt" $(BASILISK)/runtest terrain.tst
+terrain.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
+terrain.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
 
 coarsen.tst: CFLAGS=-DMTRACE=3
 
@@ -173,7 +154,7 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	hf1.tst pdump.tst restore.tst \
 	gfsi.tst gfs.tst \
 	load-balancing \
-	mpi-grid.tst
+	mpi-grid.tst mpi-periodic-3D.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3
@@ -228,3 +209,8 @@ balance7.tst: CC = mpicc -D_MPI=17
 # MPI-parallel multigrid
 
 mpi-grid.tst: CC = mpicc -D_MPI=4
+mpi-periodic-3D.c: periodic.c
+	ln -s periodic.c mpi-periodic-3D.c
+mpi-periodic-3D.s: periodic.s $(BASILISK)/grid/multigrid-mpi.h
+mpi-periodic-3D.tst: CC = mpicc -D_MPI=8
+mpi-periodic-3D.tst: CFLAGS += -grid=multigrid3D

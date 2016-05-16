@@ -13,8 +13,8 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define I (quad_x(point.i))
-#define J (quad_y(point.i))
+#define _I (quad_x(point.i))
+#define _J (quad_y(point.i))
 
 typedef struct {
   Data * d;

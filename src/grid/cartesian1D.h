@@ -2,8 +2,8 @@
 #define dimension 1
 #define GHOSTS 1
 
-#define I     (point.i - 1)
-#define DELTA (1./point.n)
+#define _I     (point.i - 1)
+#define _DELTA (1./point.n)
 
 typedef struct {
   Grid g;

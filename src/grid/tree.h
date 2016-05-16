@@ -10,14 +10,14 @@
 @ define BGHOSTS 1
 #endif
 
-#define I     (point.i - GHOSTS)
+#define _I     (point.i - GHOSTS)
 #if dimension >= 2
-# define J    (point.j - GHOSTS)
+# define _J    (point.j - GHOSTS)
 #endif
 #if dimension >= 3
-# define K    (point.k - GHOSTS)
+# define _K    (point.k - GHOSTS)
 #endif
-#define DELTA (1./(1 << point.level))
+#define _DELTA (1./(1 << point.level))
 
 typedef struct {
   unsigned short flags;
@@ -1612,8 +1612,8 @@ void check_two_one (void)
 	  /* fixme: all this mess is just to ignore ghost cells */
 	  int i = (point.i + GHOSTS)/2 + k;
 	  int j = (point.j + GHOSTS)/2 + l;
-	  double x = ((i - GHOSTS + 0.5)*DELTA*2. - 0.5);
-	  double y = ((j - GHOSTS + 0.5)*DELTA*2. - 0.5);
+	  double x = ((i - GHOSTS + 0.5)*_DELTA*2. - 0.5);
+	  double y = ((j - GHOSTS + 0.5)*_DELTA*2. - 0.5);
 	  if (x > -0.5 && x < 0.5 && y > -0.5 && y < 0.5 && 
 	      !(aparent(k,l).flags & active)) {
 	    FILE * fp = fopen("check_two_one_loc", "w");
@@ -1621,8 +1621,8 @@ void check_two_one (void)
 		     "# %d %d\n"
 		     "%g %g\n%g %g\n",
 		     k, l,
-		     ((I + 0.5)*DELTA - 0.5),
-		     ((J + 0.5)*DELTA - 0.5),
+		     ((_I + 0.5)*_DELTA - 0.5),
+		     ((_J + 0.5)*_DELTA - 0.5),
 		     x, y);
 	    fclose (fp);
 #if 0
