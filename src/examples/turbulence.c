@@ -8,11 +8,10 @@ vorticity--streamfunction formulation. */
 #include "navier-stokes/stream.h"
 
 /**
-The domain is square, of size unity and centered on the origin. The
-resolution is constant at $256^2$. */
+The domain is square of size unity by default. The resolution is
+constant at $256^2$. */
 
 int main() {
-  origin (-0.5, -0.5);
   init_grid (256);
   run();
 }

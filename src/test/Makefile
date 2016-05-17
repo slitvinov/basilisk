@@ -58,13 +58,11 @@ conical-implicit.tst: CFLAGS += -DSAINT_VENANT=1 -DIMPLICIT=1
 conical.tst: conicalsv.tst conical-implicit.tst
 
 curvature.s: LIBS = "-L$(HOME)/local/lib -lvofi"
-curvature.tst: curvature.3D.tst
 curvature.tst: LIBS = "-L$(HOME)/local/lib -lvofi"
+curvature.tst: curvature.3D.tst
 
 curvature.3D.s: LIBS = "-L$(HOME)/local/lib -lvofi"
-curvature.3D.tst: curvature.3D.s
 curvature.3D.tst: LIBS = "-L$(HOME)/local/lib -lvofi"
-curvature.3D.tst: CFLAGS += -grid=octree
 
 explicit.c: implicit.c
 	ln -s implicit.c explicit.c 
