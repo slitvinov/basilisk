@@ -222,13 +222,13 @@ void vertical_fluxes (vector * evolving, vector * updates,
 	du_t[] -= flux/layer[l + 1];
 
 	/**
-	To compute the vertical velocty we use the definition of the
+	To compute the vertical velocity we use the definition of the
 	mass flux term (eq. 2.13 of [Audusse et
-	al,2011](references.bib#audusse2011)):
+	al, 2011](references.bib#audusse2011)):
 	$$
 	\mathrm{w}(\mathbf{x},z_{l+1/2}) = 
-          \partial_t z_{l+1/2} + \mathbf{u}_{l+1/2}
-	  \cdot \nabla z_{l+1/2} - G_{l+1/2}
+          \partial_t z_{l+1/2} - G_{l+1/2} + \mathbf{u}_{l+1/2}
+	  \cdot \nabla z_{l+1/2}
 	$$
 	We can write the vertical position of the interface as:
 	$$

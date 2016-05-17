@@ -1,5 +1,5 @@
 /**
-## Wind-driven lake
+# Wind-driven lake
 
 This is a simple test case of a wind-driven lake where we can compare
 results with an analytical solution. For the bottom of the domain we
