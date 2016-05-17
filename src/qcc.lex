@@ -817,7 +817,7 @@
       s = strtok (NULL, " \t\v\n\f,)");
     }
     free (text);
-    char end[20];
+    char end[80]; // size should be OK at least up to dimension == 3
     switch (listtype) {
     case scalar: strcpy (end, "{-1}})"); break;
     case vector: {
