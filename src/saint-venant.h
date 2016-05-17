@@ -174,16 +174,6 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   tensor Fq[];
 
   /**
-  For [multiple layers](multilayer.h#fluxes-between-layers) we
-  need to store the divergence in each layer. */
-
-  scalar * divl = NULL;
-  for (int l = 0; l < nl - 1; l++) {
-    scalar div = new scalar;
-    divl = list_append (divl, div);
-  }
-  
-  /**
   The gradients are stored in locally-allocated fields. First-order
   reconstruction is used for the gradient fields. */
 
@@ -305,7 +295,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
       need to store the divergence in each layer. */
       
       if (l < nl - 1) {
-	scalar div = divl[l];
+	scalar div = wl[l];
 	div[] = dhl;
       }
 
@@ -337,10 +327,8 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
   For [multiple layers](multilayer.h#fluxes-between-layers) we need to
   add fluxes between layers. */
 
-  if (nl > 1) {
-    vertical_fluxes ((vector *) &evolving[1], (vector *) &updates[1], divl, dh);
-    delete (divl), free (divl);
-  }
+  if (nl > 1)
+    vertical_fluxes ((vector *) &evolving[1], (vector *) &updates[1], wl, dh);
     
   return dtmax;
 }
@@ -353,12 +341,14 @@ the initial defaults. */
 
 event defaults (i = 0)
 {
-  assert (ul == NULL);
+  assert (ul == NULL && wl == NULL);
   assert (nl > 0);
   ul = vectors_append (ul, u);
   for (int l = 1; l < nl; l++) {
+    scalar w = new scalar;
     vector u = new vector;
     ul = vectors_append (ul, u);
+    wl = list_append (wl, w);
   }
   evolving = list_concat ({h}, (scalar *) ul);
 
@@ -405,6 +395,7 @@ event cleanup (i = end, last) {
   free (evolving);
   free (layer);
   free (ul), ul = NULL;
+  free (wl), wl = NULL;
 }
 
 #include "elevation.h"

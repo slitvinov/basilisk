@@ -28,9 +28,13 @@ layers and the second term corresponds to viscous friction between
 layers.
 
 These last two terms are the only difference with the [one layer
-system](saint-venant.h). */
+system](saint-venant.h). 
+
+The horizontal velocity in each layer is stored in *ul* and the
+vertical velocity between layers in *wl*. */
 
 vector * ul = NULL;
+scalar * wl = NULL;
 double * layer;
 
 /**
@@ -170,7 +174,7 @@ void vertical_viscosity (Point point, double h, vector * ul, double dt)
 The relative vertical velocity between layers $l$ and $l+1$ is defined
 as (eq. (2.22) of [Audusse et al, 2011](references.bib#audusse2011))
 $$
-G_{l+1/2} = \sum_{j=1}^{l}(\mathrm{div}_j + \mathrm{layer}_j\mathrm{dh})
+G_{l+1/2} = \sum_{j=0}^{l}(\mathrm{div}_j + \mathrm{layer}_j\mathrm{dh})
 $$
 with
 $$
@@ -185,10 +189,13 @@ void vertical_fluxes (vector * evolving, vector * updates,
 		      scalar * divl, scalar dh)
 {
   foreach() {
-    double Gi = 0.;
+    double Gi = 0., sumjl = 0.;
     for (int l = 0; l < nl - 1; l++) {
       scalar div = divl[l];
       Gi += div[] + layer[l]*dh[];
+      sumjl += layer[l];
+      scalar w = div;
+      w[] = dh[]*sumjl - Gi;
       foreach_dimension() {
 
 	/**
@@ -213,6 +220,30 @@ void vertical_fluxes (vector * evolving, vector * updates,
 	scalar du_b = updates[l].x, du_t = updates[l + 1].x;
 	du_b[] += flux/layer[l];
 	du_t[] -= flux/layer[l + 1];
+
+	/**
+	To compute the vertical velocty we use the definition of the
+	mass flux term (eq. 2.13 of [Audusse et
+	al,2011](references.bib#audusse2011)):
+	$$
+	\mathrm{w}(\mathbf{x},z_{l+1/2}) = 
+          \partial_t z_{l+1/2} + \mathbf{u}_{l+1/2}
+	  \cdot \nabla z_{l+1/2} - G_{l+1/2}
+	$$
+	We can write the vertical position of the interface as:
+	$$
+	z_{l+1/2} = z_{b} + \sum_{j=0}^{l} h_{j}
+	$$
+        so that the vertical velocity is:
+	$$
+	\mathrm{w}(\mathbf{x},z_{l+1/2}) = 
+          \mathrm{dh}\sum_{j=0}^{l}\mathrm{layer}_{j} - G_{l+1/2} + 
+          \mathbf{u}_{l+1/2} \cdot \left[\nabla z_{b} + \nabla h 
+				   \sum_{j=0}^{l}\mathrm{layer}_{j}\right]
+	$$
+	*/
+	
+	w[] += ui*((zb[1] - zb[-1]) + (h[1] - h[-1])*sumjl)/(2.*Delta);
       }
     }
   }
