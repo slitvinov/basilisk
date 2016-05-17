@@ -35,6 +35,7 @@ Note that only the documented test cases appear in the list below
 * [Implicit Saint-Venant solutions for waves](implicit.c)
 * [Viscous hydraulic jump](higuera.c)
 * [Transcritical flow over a bump with multiple layers](layered.c)
+* [Wind-driven lake](wind-driven.c)
 
 ## Volume-Of-Fluid
 
