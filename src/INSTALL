@@ -28,6 +28,9 @@ If later you want to update the source code, you just need to do
 ~~~bash
 cd basilisk
 darcs pull
+cd src
+make -k
+make
 ~~~
 
 and recompile.
@@ -60,6 +63,7 @@ cd basilisk/src
 export BASILISK=$PWD
 export PATH=$PATH:$PWD
 ln -s config.gcc config
+make -k
 make
 ~~~
 
