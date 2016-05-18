@@ -35,7 +35,7 @@ generate a portable (ISO C99) source code on a machine where *qcc* is
 installed i.e.
 
 ~~~bash
-%localmachine: qcc -source example.c
+%localmachine: qcc -source -D_MPI=1 example.c
 ~~~
 
 Then copy the portable source code *_example.c* on the supercomputer
@@ -53,5 +53,8 @@ valid for *gcc* or *icc*, the Intel compiler).
 
 You will then need to use the job submission system of the
 supercomputer to set the number of processes and run the
-executable. See also [this complete
-example](test/mpi-laplacian.c#how-to-run-on-occigen).
+executable. See also the following examples:
+
+* [Parallel scalability](test/mpi-laplacian.c#how-to-run-on-occigen)
+* [Atomisation of a pulsed liquid jet](src/examples/atomisation.c#running-in-parallel)
+* [Forced isotropic turbulence in a triply-periodic box](src/examples/isotropic.c#running-with-mpi-on-occigen)

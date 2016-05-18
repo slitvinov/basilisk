@@ -1,4 +1,3 @@
-rm -f _plot*.png
 if ! gnuplot -e "batch=1; PNG=\"$PNG\"; set term $PNG enhanced font \",10\"; set macros;" \
     plots > /dev/null 2> gnuplot.log; then
     gawk -v test=`basename $PWD` '
