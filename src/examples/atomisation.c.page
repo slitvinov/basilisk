@@ -239,6 +239,7 @@ below as well as the computational speed (in points.timesteps/sec).
 ~~~gnuplot Compression ratio and computational speed
 set xlabel 'Time'
 set logscale y
+set key bottom left
 plot '../atomisation.ref' u 1:(4096**3/$6) w l t 'compression ratio', \
      '' u 1:8 w l t 'speed'
 ~~~
