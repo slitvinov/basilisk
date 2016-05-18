@@ -1,0 +1,219 @@
+/**
+# Forced isotropic turbulence in a triply-periodic box
+
+We compute the evolution of forced isotropic turbulence (see [Rosales
+& Meneveau, 2005](/src/references.bib#rosales2005)) and compare the
+solution to that of the [hit3d](http://code.google.com/p/hit3d/)
+pseudo-spectral code. The initial condition is an unstable solution to
+the incompressible Euler equations. Numerical noise in the solution
+eventually leads to the destabilisation of the base solution into a
+fully turbulent flow where turbulent dissipation balances the linear
+input of energy.
+
+For the moment we can only use the "multigrid" regular Cartesian grid
+implementation, as octrees do not support periodic boundaries yet. */
+
+#include "grid/multigrid3D.h"
+#include "navier-stokes/centered.h"
+
+#define MU 0.01
+
+/**
+We need to store the variable forcing term. */
+
+face vector av[];
+
+/**
+The code takes the level of refinement as optional command-line argument. */
+
+int maxlevel = 7;
+
+int main (int argc, char * argv[]) {
+  if (argc > 1)
+    maxlevel = atoi(argv[1]);
+
+  /**
+  The domain is $(2\pi)^3$ and triply-periodic. */
+  
+  L0 = 2.*pi;
+  foreach_dimension()
+    periodic (right);
+
+  /**
+  The viscosity is constant. The acceleration is defined below. The
+  level of refinement is *maxlevel*. */
+
+  const face vector muc[] = {MU,MU,MU};
+  mu = muc;
+  a = av;
+  N = 1 << maxlevel;
+  run();
+}
+
+/**
+## Initial conditions
+
+The initial condition is "ABC" flow. This is a laminar base flow that 
+is easy to implement in both Basilisk and a spectral code. 
+
+For the moment *dump()* and *restore()* do not work with MPI. */
+
+event init (i = 0) {
+#if !MULTIGRID_MPI
+  if (!restore (file = "snapshot"))
+#endif
+    foreach() {
+      u.x[] = cos(y) + sin(z);
+      u.y[] = sin(x) + cos(z);
+      u.z[] = cos(x) + sin(y);
+    }
+  boundary ((scalar *){u});
+}
+
+/**
+## Linear forcing term
+
+We compute the average velocity and add the corresponding linear
+forcing term. */
+
+event acceleration (i++) {
+  coord ubar;
+  foreach_dimension() {
+    stats s = statsf(u.x);
+    ubar.x = s.sum/s.volume;
+  }
+  foreach_face()
+    av.x[] += 0.1*((u.x[] + u.x[-1])/2. - ubar.x);
+}
+
+/**
+## Outputs
+
+We log the evolution of viscous dissipation, kinetic energy,
+microscale Reynolds number and some performance statistics. */
+
+event logfile (i++; t <= 300) {
+  coord ubar;
+  foreach_dimension() {
+    stats s = statsf(u.x);
+    ubar.x = s.sum/s.volume;
+  }
+  
+  double ke = 0., vd = 0., vol = 0.;
+  foreach(reduction(+:ke) reduction(+:vd) reduction(+:vol)) {
+    vol += dv();
+    foreach_dimension() {
+      // mean fluctuating kinetic energy
+      ke += dv()*sq(u.x[] - ubar.x);
+      // viscous dissipation
+      vd += dv()*(sq(u.x[1] - u.x[-1]) +
+		  sq(u.x[0,1] - u.x[0,-1]) +
+		  sq(u.x[0,0,1] - u.x[0,0,-1]))/sq(2.*Delta);
+    }
+  }
+  ke /= 2.*vol;
+  vd *= MU/vol;
+
+  if (i == 0)
+    fprintf (ferr,
+	     "t dissipation energy Reynolds grid->tn perf.t perf.speed\n");
+  fprintf (ferr, "%g %g %g %g %ld %g %g\n",
+	   t, vd, ke, 2./3.*ke/MU*sqrt(15.*MU/vd), grid->tn, perf.t, perf.speed);
+}
+
+/**
+For the moment *dump()* and *output_gfs()* do not work with MPI. */
+
+#if !MULTIGRID_MPI
+event gfsview (t += 0.5; t <= 150) {
+  static FILE * fp =
+    popen ("gfsview-batch3D isotropic.gfv | ppm2mpeg > isotropic.mpg", "w");
+  output_gfs (fp, t = t, translate = true);
+}
+
+event snapshot (i += 100)
+  dump (file = "snapshot", t = t);
+#endif // !MULTIGRID_MPI
+
+/**
+## Running with MPI on occigen
+
+On the local machine
+
+~~~bash
+%local qcc -source -D_MPI=1 isotropic.c
+%local scp _isotropic.c occigen.cines.fr:
+~~~
+
+On occigen (using 512 cores)
+
+~~~bash
+sbatch run.sh
+~~~
+
+with the `run.sh` script
+
+~~~bash
+#!/bin/bash
+#SBATCH -J basilisk
+#SBATCH --nodes=32
+#SBATCH --ntasks-per-node=16
+#SBATCH --threads-per-core=1
+#SBATCH --time=5:00
+#SBATCH --output basilisk.output
+#SBATCH --exclusive
+
+LEVEL=7
+
+module purge
+module load bullxmpi
+module load intel
+
+mpicc -Wall -std=c99 -O2 -D_GNU_SOURCE=1 _isotropic.c -o isotropic -lm
+srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./isotropic $LEVEL \
+     2> log-$LEVEL-$SLURM_NTASKS > out-$LEVEL-$SLURM_NTASKS
+~~~
+
+## Results
+
+The two codes agree at early time, or until the solution transitions
+to a turbulent state. This happens earlier in Basilisk as the symmetry
+of the base state is not preserved with the same accuracy as in the
+pseudo-spectral code (the main reason being the tolerance on
+non-divergence of the incompressible velocity field). Note however
+that the statistics produced by the two codes agree well after
+transition to turbulence.
+
+~~~gnuplot Evolution of kinetic energy
+set xlabel 'Time'
+set ylabel 'Kinetic energy'
+set logscale  y
+plot '../isotropic.ref' u 1:3 w l t 'Basilisk', \
+     '../isotropic.hit3d' u 1:($3*3./2.) w l t 'Spectral'
+~~~
+
+~~~gnuplot Evolution of microscale Reynolds number
+set ylabel 'Microscale Reynolds number'
+plot '../isotropic.ref' u 1:4 w l t 'Basilisk', \
+     '../isotropic.hit3d' u 1:4 w l t 'Spectral'
+~~~
+
+~~~gnuplot Evolution of dissipation
+set ylabel 'Dissipation function'
+plot '../isotropic.ref' u 1:2 w l t 'Basilisk', \
+     '../isotropic.hit3d' u 1:2 w l t 'Spectral'
+~~~
+
+The computational speed is respectable (for a relatively small 128^3^
+problem on 512 cores).
+
+~~~gnuplot Computational speed in points.timesteps/sec/core
+set ylabel 'Speed'
+unset logscale
+plot '../isotropic.ref' u 1:($7/512) w l t ''
+~~~
+
+## See also
+
+* [Same example with Gerris](http://gerris.dalembert.upmc.fr/gerris/examples/examples/forcedturbulence.html)
+*/
