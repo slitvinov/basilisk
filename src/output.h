@@ -614,17 +614,31 @@ static char * replace (const char * input, int target, int with,
 trace
 void output_gfs (struct OutputGfs p)
 {
+  char * fname = p.file;
+  
+@if _MPI
+  FILE * fp = p.fp;
+  if (p.file == NULL) {
+    long pid = getpid();
+    MPI_Bcast (&pid, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    fname = malloc (80);
+    snprintf (fname, 80, ".output-%ld", pid);
+    p.fp = NULL;
+  }
+@endif // _MPI
+  
   bool opened = false;
   if (p.fp == NULL) {
-    if (p.file == NULL)
+    if (fname == NULL)
       p.fp = stdout;
-    else if (!(p.fp = fopen (p.file, "w"))) {
-      perror (p.file);
+    else if (!(p.fp = fopen (fname, "w"))) {
+      perror (fname);
       exit (1);
     }
     else
       opened = true;
   }
+  
   scalar * list = p.list ? p.list : list_copy (all);
 
   fprintf (p.fp, 
@@ -755,6 +769,24 @@ void output_gfs (struct OutputGfs p)
     free (list);
   if (opened)
     fclose (p.fp);
+
+@if _MPI
+  if (p.file == NULL) {
+    MPI_Barrier (MPI_COMM_WORLD);
+    if (pid() == 0) {
+      if (fp == NULL)
+	fp = stdout;
+      p.fp = fopen (fname, "r");
+      size_t l;
+      unsigned char buffer[8192];
+      while ((l = fread (buffer, 1, 8192, p.fp)) > 0)
+	fwrite (buffer, 1, l, fp);
+      fflush (fp);
+      remove (fname);
+    }
+    free (fname);
+  }
+@endif // _MPI
 }
 
 /**
