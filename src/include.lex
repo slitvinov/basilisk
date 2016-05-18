@@ -14,6 +14,7 @@
 
   Tag * tagsa = NULL;
   int ntags = 0, target = 1, keywords_only = 0, scope = 0, intypedef = 0;
+  int warninclude = 0;
   FILE * swigfp = NULL;
 
   static void append_tag (Tag t) {
@@ -221,9 +222,10 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
       fclose (fp);
     }
     else {
-      fprintf (stderr, "%s:%d: error: %s: No such file or directory\n", 
-	       fname, yylineno - 1, s);
-      return 1;
+      fprintf (stderr, "%s:%d: %s: %s: No such file or directory\n", 
+	       fname, yylineno - 1, warninclude ? "warning" : "error", s);
+      if (!warninclude)
+	return 1;
     }
   }
 }
@@ -491,13 +493,14 @@ int includes (int argc, char ** argv, char ** out,
   int depend = 0, nout = 0, tags = 0, swig = 0;
   char * file = NULL, * output = NULL;
   int i;
+  warninclude = 0;
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
       strcpy (grid, &argv[i][6]);
     else if (!strcmp (argv[i], "-MD"))
-      depend = 1;
+      depend = warninclude = 1;
     else if (!strcmp (argv[i], "-tags"))
-      tags = 1;
+      tags = warninclude = 1;
     else if (!strcmp (argv[i], "-python"))
       swig = 1;
     else if (!strcmp (argv[i], "-debug"))
