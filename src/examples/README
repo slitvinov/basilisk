@@ -14,6 +14,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [Bénard–von Kármán Vortex Street for flow around a cylinder at
   Re=160](karman.c)
 * [Vortex shedding behind a sphere at Re=300](sphere.c)
+* [Atomisation of a pulsed liquid jet](atomisation.c)
 
 ## Python interface
 

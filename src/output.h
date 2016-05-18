@@ -655,6 +655,7 @@ void output_gfs (struct OutputGfs p)
     fprintf (p.fp, "  Time { t = %g }\n", p.t);
   if (L0 != 1.)
     fprintf (p.fp, "  PhysicalParams { L = %g }\n", L0);
+  fprintf (p.fp, "  VariableTracerVOF f\n");
   fprintf (p.fp, "}\nGfsBox { x = 0 y = 0 z = 0 } {\n");
 
 @if _MPI
@@ -713,6 +714,7 @@ void output_gfs (struct OutputGfs p)
 	  if (s.v.x.i >= 0) {
 	    // this is a vector component, we need to rotate from
 	    // N-ordering (Basilisk) to Z-ordering (Gerris)
+	    // fixme: this does not work for tensors
 #if dimension >= 2
 	    if (s.v.x.i == s.i) {
 	      s = s.v.y;

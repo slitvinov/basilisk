@@ -90,6 +90,8 @@ $$
 \nabla\cdot\mathbf{u} = 0
 $$
 
+*[Two-phase interfacial flows](two-phase.h)
+
 ## Electrohydrodynamics
 
 * [Ohmic conduction](ehd/implicit.h)
