@@ -210,7 +210,7 @@ problem on 512 cores).
 ~~~gnuplot Computational speed in points.timesteps/sec/core
 set ylabel 'Speed'
 unset logscale
-plot '../isotropic.ref' u 1:($7/512) w l t ''
+plot 'isotropic.occigen' u 1:($7/512) w l t ''
 ~~~
 
 ## See also
