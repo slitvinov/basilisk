@@ -20,9 +20,8 @@ Auxilliary fields are necessary to define the (variable) specific
 volume $\alpha=1/\rho$ and average viscosity $\mu$ (on faces) as well
 as the cell-centered density. */
 
-face vector alphav[];
+face vector alphav[], muv[];
 scalar rhov[];
-face vector muv[];
 
 event defaults (i = 0) {
   alpha = alphav;

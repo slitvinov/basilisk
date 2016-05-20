@@ -56,5 +56,5 @@ supercomputer to set the number of processes and run the
 executable. See also the following examples:
 
 * [Parallel scalability](test/mpi-laplacian.c#how-to-run-on-occigen)
-* [Atomisation of a pulsed liquid jet](src/examples/atomisation.c#running-in-parallel)
-* [Forced isotropic turbulence in a triply-periodic box](src/examples/isotropic.c#running-with-mpi-on-occigen)
+* [Atomisation of a pulsed liquid jet](examples/atomisation.c#running-in-parallel)
+* [Forced isotropic turbulence in a triply-periodic box](examples/isotropic.c#running-with-mpi-on-occigen)

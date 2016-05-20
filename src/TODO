@@ -1,2 +1,2 @@
-- depth() needs to be globalised in parallel
-- MPI load-balancing
+- Periodic boundaries on trees
+
