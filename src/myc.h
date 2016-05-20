@@ -1,5 +1,3 @@
-#define NOT_ZERO 1.e-30
-
 /*-----------------------------------------------------* 
  *MYC - Mixed Youngs and Central Scheme                *
  *-----------------------------------------------------*/
@@ -105,7 +103,7 @@ coord mycs (Point point, scalar c)
   m2 = c[1,-1,-1] + c[1,1,-1] + c[1,-1,1] + c[1,1,1] +
        2.*(c[1,-1,0] + c[1,1,0] + c[1,0,-1] + c[1,0,1]) +
        4.*c[1,0,0];
-  m[3][0] = m1 - m2 + NOT_ZERO;
+  m[3][0] = m1 - m2;
 
   m1 = c[-1,-1,-1] + c[-1,-1,1] + c[1,-1,-1] + c[1,-1,1] +
        2.*( c[-1,-1,0] + c[1,-1,0] + c[0,-1,-1] + c[0,-1,1]) +
@@ -113,7 +111,7 @@ coord mycs (Point point, scalar c)
   m2 = c[-1,1,-1] + c[-1,1,1] + c[1,1,-1] + c[1,1,1] +
        2.*(c[-1,1,0] + c[1,1,0] + c[0,1,-1] + c[0,1,1]) +
        4.*c[0,1,0];
-  m[3][1] = m1 - m2 + NOT_ZERO;
+  m[3][1] = m1 - m2;
 
   m1 = c[-1,-1,-1] + c[-1,1,-1] + c[1,-1,-1] + c[1,1,-1] +
        2.*(c[-1,0,-1] + c[1,0,-1] + c[0,-1,-1] + c[0,1,-1]) +
@@ -121,10 +119,15 @@ coord mycs (Point point, scalar c)
   m2 = c[-1,-1,1] + c[-1,1,1] + c[1,-1,1] + c[1,1,1] +
        2.*(c[-1,0,1] + c[1,0,1] + c[0,-1,1] + c[0,1,1]) +
        4.*c[0,0,1];
-  m[3][2] = m1 - m2 + NOT_ZERO;
+  m[3][2] = m1 - m2;
 
   /* normalize the set (mx,my,mz): |mx|+|my|+|mz| = 1 */
-  t0 = fabs(m[3][0]) + fabs(m[3][1]) + fabs(m[3][2]);
+  t0 = fabs(m[3][0]) + fabs(m[3][1]) + fabs(m[3][2]);  
+  if (t0 < 1e-30) {
+    coord mxyz = {1., 0., 0.};
+    return mxyz;
+  }
+    
   m[3][0] /= t0;
   m[3][1] /= t0;
   m[3][2] /= t0;
@@ -142,10 +145,6 @@ coord mycs (Point point, scalar c)
     cn = 3;
 
   /* components of the normal vector */
-  coord mxyz;
-  mxyz.x = m[cn][0];
-  mxyz.y = m[cn][1];
-  mxyz.z = m[cn][2];
-
+  coord mxyz = {m[cn][0], m[cn][1], m[cn][2]};
   return mxyz; 
 }
