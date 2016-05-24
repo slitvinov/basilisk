@@ -347,283 +347,178 @@ void multigrid_trash (void * alist)
 	  ((double *)(&multigrid->d[p.level][i*datasize]))[s.i] = undefined;
 }
 
-// ghost cell coordinates for each direction
-static int _ig[] = {1,-1,0,0,0,0};
- #if dimension > 1
- static int  _jg[] = {0,0,1,-1,0,0};
- #endif
- #if dimension > 2
- static int _kg[] = {0,0,0,0,1,-1};
- #endif
-
-static double periodic_bc (Point, Point, scalar);
+// Boundaries
 
 #if dimension == 1
-
-static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
-{
-  int d = ((BoxBoundary *)b)->d;
-
-  Point point = *((Point *)grid);
-  ig = d % 2 ? 0 : _ig[d];
-  point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
-  assert (d <= left);
-  point.i = d == right ? point.n + GHOSTS : GHOSTS;
-  Point neighbor = {point.i + ig, point.level};
-  for (scalar s in list) {
-    scalar b = s.v.x;
-    val(s,ig) = b.boundary[d] (point, neighbor, s);
+@def foreach_boundary_dir(l,d)
+  int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
+  Point point;
+  point.level = l < 0 ? depth() : l;
+  point.n = 1 << point.level;
+  if (d == left) {
+    point.i = GHOSTS;
+    ig = -1;
   }
-}
+  else if (d == right) {
+    point.i = point.n + 2.*GHOSTS - 3;
+    ig = 1;
+  }
+  {
+    POINT_VARIABLES
+@
+@define end_foreach_boundary_dir() }
 
-static void box_boundary_level (const Boundary * b, scalar * list, int l)
-{
-  int d = ((BoxBoundary *)b)->d;
-  scalar * centered = NULL, * normal = NULL;
-
-  int component = d/2;
-  for (scalar s in list)
-    if (!is_constant(s) && s.boundary[d] != periodic_bc) {
-      if (s.face) {
-	if ((&s.d.x)[component]) {
-	  scalar b = s.v.x;
-	  if (b.boundary[d])
-	    normal = list_add (normal, s);
-	}
-      }	
-      else if (s.boundary[d])
-	centered = list_add (centered, s);
+@define neighbor(o,p,q) ((Point){point.i+o, point.level, point.n})
+			
+#elif dimension == 2
+@def foreach_boundary_dir(l,d)
+  OMP_PARALLEL()
+  int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
+  Point point;
+  point.level = l < 0 ? depth() : l;
+  point.n = 1 << point.level;
+  int * _i = &point.j;
+  if (d == left) {
+    point.i = GHOSTS;
+    ig = -1;
+  }
+  else if (d == right) {
+    point.i = point.n + 2.*GHOSTS - 3;
+    ig = 1;
+  }
+  else if (d == bottom) {
+    point.j = GHOSTS;
+    _i = &point.i;
+    jg = -1;
+  }
+  else if (d == top) {
+    point.j = point.n + 2.*GHOSTS - 3;
+    _i = &point.i;
+    jg = 1;
+  }
+  int _l;
+  OMP(omp for schedule(static))
+  for (_l = 0; _l < point.n + 2.*GHOSTS; _l++) {
+    *_i = _l;
+    {
+      POINT_VARIABLES
+@
+@def end_foreach_boundary_dir()
     }
-
-  if (centered) {
-    Point point = *((Point *)grid);
-    ig = _ig[d];
-    point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
-    assert (d <= left);
-    point.i = d == right ? point.n + GHOSTS - 1 : GHOSTS;
-    Point neighbor = {point.i + ig, point.level};
-    for (scalar s in centered)
-      val(s,ig) = s.boundary[d] (point, neighbor, s);
-    free (centered);
   }
+  OMP_END_PARALLEL()
+@
+
+@define neighbor(o,p,q) ((Point){point.i+o, point.j+p, point.level, point.n})
   
-  box_boundary_level_normal (b, normal, l);
-  free (normal);
-}
-
-#else // dimension != 1
-
-#if dimension == 3
-static void point_bc (Point * p, int d, int i, int j) {
-  switch(d) {
-  case right:
-    p->i = p->n + GHOSTS - 1;
-    p->j = i; p->k = j;
-    break;
-  case left:
-    p->i = GHOSTS;
-    p->j = i; p->k = j;
-    break;
-  case top:
-    p->j = p->n + GHOSTS - 1;
-    p->i = i; p->k = j;
-    break;
-  case bottom:
-    p->j = GHOSTS;
-    p->i = i; p->k = j;
-    break;
-  case front:
-    p->k = p->n + GHOSTS - 1;
-    p->i = i; p->j = j;
-    break;
-  case back:
-    p->k = GHOSTS;
-    p->i = i; p->j = j;
-    break;
-  default:
-    assert (false);
+#elif dimension == 3
+@def foreach_boundary_dir(l,d)
+  OMP_PARALLEL()
+  int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
+  Point point;
+  point.level = l < 0 ? depth() : l;
+  point.n = 1 << point.level;
+  int * _i = &point.j, * _j = &point.k;
+  if (d == left) {
+    point.i = GHOSTS;
+    ig = -1;
   }
-}
+  else if (d == right) {
+    point.i = point.n + 2.*GHOSTS - 3;
+    ig = 1;
+  }
+  else if (d == bottom) {
+    point.j = GHOSTS;
+    _i = &point.i;
+    jg = -1;
+  }
+  else if (d == top) {
+    point.j = point.n + 2.*GHOSTS - 3;
+    _i = &point.i;
+    jg = 1;
+  }
+  else if (d == back) {
+    point.k = GHOSTS;
+    _i = &point.i; _j = &point.j;
+    kg = -1;
+  }
+  else if (d == front) {
+    point.k = point.n + 2.*GHOSTS - 3;
+    _i = &point.i; _j = &point.j;
+    kg = 1;
+  }
+  int _l;
+  OMP(omp for schedule(static))
+  for (_l = 0; _l < point.n + 2.*GHOSTS; _l++) {
+    *_i = _l;
+    for (int _m = 0; _m < point.n + 2.*GHOSTS; _m++) {
+      *_j = _m;
+      POINT_VARIABLES
+@
+@def end_foreach_boundary_dir()
+    }
+  }
+  OMP_END_PARALLEL()
+@
+
+@define neighbor(o,p,q) ((Point){point.i+o, point.j+p, point.k+q, point.level, point.n})
+
 #endif // dimension == 3
+			
+@define neighborp(k,l,o) neighbor(k,l,o)
 
-static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
+static double periodic_bc (Point point, Point neighbor, scalar s);
+			
+static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 {
-  if (!list)
+  scalar * list = NULL;
+  for (scalar s in scalars)
+    if (!is_constant(s))
+      list = list_add (list, s);
+  if (list == NULL)
     return;
 
-#if dimension == 2
-  int d = ((BoxBoundary *)b)->d;
-  OMP_PARALLEL();
-  Point point;
-  point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
-  if (d % 2)
-    ig = jg = 0;
-  else {
-    ig = _ig[d]; jg = _jg[d];
-  }
-  int _start = GHOSTS, _end = point.n + GHOSTS, _k;  
-  OMP(omp for schedule(static))
-  for (_k = _start; _k < _end; _k++) {
-    point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
-    point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-    Point neighbor = {point.i + ig, point.j + jg, point.level};
-    for (scalar s in list) {
-      scalar b = s.v.x;
-      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
-    }
-  }
-  OMP_END_PARALLEL();
-#else // dimension != 2
-  assert (false);
+  disable_fpe (FE_DIVBYZERO|FE_INVALID);
+  // first pass to fill first ghost layer
+  for (int d = 0; d < 2*dimension; d++)
+    foreach_boundary_dir (l, d)
+      for (scalar s in list) {
+	scalar sb = s;
+#if dimension > 1
+	if (s.v.x.i >= 0)
+	  // vector component
+	  sb = (&s.v.x)[d/2].i == s.i ? s.v.x : s.v.y;
 #endif
-}
-
-static void box_boundary_level_tangent (const Boundary * b, 
-					scalar * list, int l)
-{
-  if (!list)
-    return;
-  int d = ((BoxBoundary *)b)->d;
-
-  OMP_PARALLEL();
-  Point point;
-  point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
-  ig = _ig[d]; jg = _jg[d];
-  int _start = GHOSTS, _end = point.n + GHOSTS, _k;  
-  OMP(omp for schedule(static))
-  for (_k = _start; _k <= _end; _k++) {
-    point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
-    point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-    Point neighbor = {point.i + ig, point.j + jg, point.level};
-    for (scalar s in list) {
-      scalar b = s.v.y;
-      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
-#if GHOSTS == 2
-      if (level > 0) {
-	point.i -= ig; point.j -= jg;
-	neighbor.i += ig; neighbor.j += jg;
-	double vb = b.boundary[d] (point, neighbor, s);
-	point.i += ig; point.j += jg;
-	val(s,2*ig,2*jg) = vb;
-      }
-      else
-	val(s,2*ig,2*jg) = 0.;
-#endif
-    }
-  }
-  OMP_END_PARALLEL();
-}
-
-static void box_boundary_level (const Boundary * b, scalar * list, int l)
-{
-  int d = ((BoxBoundary *)b)->d;
-  scalar * centered = NULL, * normal = NULL, * tangent = NULL;
-
-  int component = d/2;
-  for (scalar s in list)
-    if (!is_constant(s) && s.boundary[d] != periodic_bc) {
-      if (s.face) {
-	if ((&s.d.x)[component]) {
-	  scalar b = s.v.x;
-	  if (b.boundary[d])
-	    normal = list_add (normal, s);
-	}
-	else {
-	  scalar b = s.v.y;
-	  if (b.boundary[d] && b.boundary[d] != periodic_bc)
-	    tangent = list_add (tangent, s);
-	}
-      }	
-      else if (s.boundary[d])
-	centered = list_add (centered, s);
-    }
-
-  if (centered) {
-    OMP_PARALLEL();
-    /* we disable floating-point-exceptions to avoid having to deal with
-       undefined operations in non-trivial boundary conditions. */
-    disable_fpe (FE_DIVBYZERO|FE_INVALID);
-    Point point;
-    point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
-    ig = _ig[d]; jg = _jg[d];
-    int _start = GHOSTS, _end = point.n + GHOSTS;
-#if dimension == 2
-    /* traverse corners only for top and bottom */
-    if (d > left) { _start--; _end++; }
-#else // dimension == 3
-    kg = _kg[d];
-    int _startl = GHOSTS, _endl = point.n + GHOSTS;
-    if (d >= front) {
-      _start--; _end++;
-      _startl--; _endl++;
-    }
-    else if (d >= top) {
-      _start--; _end++;
-    }
-#endif
-    int _k;
-    OMP(omp for schedule(static))
-      for (_k = _start; _k < _end; _k++)
-#if dimension == 2
-	{
-	  point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
-	  point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-	  Point neighbor = {point.i + ig, point.j + jg, point.level};
-	  for (scalar s in centered) {
-	    scalar b = s;
-	    if (s.v.x.i >= 0) {
-	      if ((d/2 == 0 && s.i != s.v.x.i) ||
-		  (d/2 == 1 && s.i != s.v.y.i))
-		b = s.v.y; // tangential BC
-	      else
-		b = s.v.x; // normal BC
-	    }
-	    val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
-#if GHOSTS == 2
-	    point.i -= ig; point.j -= jg;
-	    neighbor.i += ig; neighbor.j += jg;
-	    double vb = b.boundary[d] (point, neighbor, s);
-	    point.i += ig; point.j += jg;
-	    val(s,2*ig,2*jg) = vb;
-#endif
-#else
-	  for (int _l = _startl; _l < _endl; _l++) {
-	    point_bc (&point, d, _k, _l);
-	    Point neighbor = {point.i + ig, point.j + jg, point.k + kg,
-			      point.level};
-	    	  for (scalar s in centered) {
-	    scalar b = s;
-	    if (s.v.x.i >= 0) {
-	      if ((d/2 == 0 && s.i != s.v.x.i) ||
-		  (d/2 == 1 && s.i != s.v.y.i) ||
-		  (d/2 == 2 && s.i != s.v.z.i))
-		b = s.v.y; // tangential BC
-	      else
-		b = s.v.x; // normal BC
-	    }
-	    val(s,ig,jg,kg) = b.boundary[d] (point, neighbor, s);
-#if GHOSTS == 2
-	    point.i -= ig; point.j -= jg; point.k -= kg;
-	    neighbor.i += ig; neighbor.j += jg; neighbor.k += kg;
-	    double vb = b.boundary[d] (point, neighbor, s);
-	    point.i += ig; point.j += jg; point.k += kg;
-	    val(s,2*ig,2*jg,2*kg) = vb;
-#endif
-#endif
+	if (sb.boundary[d] && sb.boundary[d] != periodic_bc) {
+	  if (s.face && sb.i == s.v.x.i) {
+	    // normal component of face vector
+	    s[(ig + 1)/2,(jg + 1)/2,(kg + 1)/2] =
+	      sb.boundary[d] (point, neighborp(ghost), s);
+	  } else
+	    // tangential component of face vector or centered
+	    s[ig,jg,kg] = sb.boundary[d] (point, neighborp(ig,jg,kg), s);
 	}
       }
-    enable_fpe (FE_DIVBYZERO|FE_INVALID);
-    OMP_END_PARALLEL();
-    free (centered);
-  }
-
-  box_boundary_level_normal (b, normal, l);
-  free (normal);
-  box_boundary_level_tangent (b, tangent, l);
-  free (tangent);
+  // second-pass to fill second ghost layer
+  for (int d = 0; d < 2*dimension; d++)
+    foreach_boundary_dir (l, d)
+      for (scalar s in list) {
+	scalar sb = s;
+#if dimension > 1
+	if (s.v.x.i >= 0)
+	  // vector component
+	  sb = (&s.v.x)[d/2].i == s.i ? s.v.x : s.v.y;
+#endif
+	if ((sb.boundary[d] && sb.boundary[d] != periodic_bc) &&
+	    (!s.face || sb.i != s.v.x.i))
+	  // tangential component of face vector or centered
+	  s[2*ig,2*jg,2*kg] = sb.boundary[d] (neighborp(-ig,-jg,-kg),
+					      neighborp(2*ig,2*jg,2*kg), s);
+      }
+  enable_fpe (FE_DIVBYZERO|FE_INVALID);
+  free (list);
 }
-#endif // dimension != 1
- 
+
 /* Periodic boundaries */
 
 #if !_MPI
@@ -748,13 +643,9 @@ void init_grid (int n)
   // mesh size
   grid->n = grid->tn = 1 << dimension*depth();
   // box boundaries
-  for (int d = 0; d < nboundary; d++) {
-    BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
-    box->d = d;
-    Boundary * b = (Boundary *) box;
-    b->level = box_boundary_level;
-    add_boundary (b);
-  }
+  Boundary * b = calloc (1, sizeof (Boundary));
+  b->level = box_boundary_level;
+  add_boundary (b);
 #if _MPI
   Boundary * mpi_boundary_new();
   mpi_boundary_new();
