@@ -628,8 +628,7 @@ bid new_bid()
 
 static double periodic_bc (Point point, Point neighbor, scalar s)
 {
-  assert (false); // should not be used
-  return nodata;
+  return nodata; // should not be used
 }
 
 static void periodic_boundary (int d)

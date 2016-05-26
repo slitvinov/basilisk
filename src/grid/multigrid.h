@@ -1,6 +1,13 @@
 #define GRIDNAME "Multigrid"
 #define GHOSTS 2
 
+/* By default only one layer of ghost cells is used on the boundary to
+   optimise the cost of boundary conditions. */
+
+#ifndef BGHOSTS
+@ define BGHOSTS 1
+#endif
+
 #define _I     (point.i - GHOSTS)
 #define _J     (point.j - GHOSTS)
 #define _K     (point.k - GHOSTS)
@@ -360,7 +367,7 @@ void multigrid_trash (void * alist)
     ig = -1;
   }
   else if (d == right) {
-    point.i = point.n + 2.*GHOSTS - 3;
+    point.i = point.n + 2*GHOSTS - 3;
     ig = 1;
   }
   {
@@ -383,7 +390,7 @@ void multigrid_trash (void * alist)
     ig = -1;
   }
   else if (d == right) {
-    point.i = point.n + 2.*GHOSTS - 3;
+    point.i = point.n + 2*GHOSTS - 3;
     ig = 1;
   }
   else if (d == bottom) {
@@ -392,13 +399,13 @@ void multigrid_trash (void * alist)
     jg = -1;
   }
   else if (d == top) {
-    point.j = point.n + 2.*GHOSTS - 3;
+    point.j = point.n + 2*GHOSTS - 3;
     _i = &point.i;
     jg = 1;
   }
   int _l;
   OMP(omp for schedule(static))
-  for (_l = 0; _l < point.n + 2.*GHOSTS; _l++) {
+  for (_l = 0; _l < point.n + 2*GHOSTS; _l++) {
     *_i = _l;
     {
       POINT_VARIABLES
@@ -424,7 +431,7 @@ void multigrid_trash (void * alist)
     ig = -1;
   }
   else if (d == right) {
-    point.i = point.n + 2.*GHOSTS - 3;
+    point.i = point.n + 2*GHOSTS - 3;
     ig = 1;
   }
   else if (d == bottom) {
@@ -433,7 +440,7 @@ void multigrid_trash (void * alist)
     jg = -1;
   }
   else if (d == top) {
-    point.j = point.n + 2.*GHOSTS - 3;
+    point.j = point.n + 2*GHOSTS - 3;
     _i = &point.i;
     jg = 1;
   }
@@ -443,15 +450,15 @@ void multigrid_trash (void * alist)
     kg = -1;
   }
   else if (d == front) {
-    point.k = point.n + 2.*GHOSTS - 3;
+    point.k = point.n + 2*GHOSTS - 3;
     _i = &point.i; _j = &point.j;
     kg = 1;
   }
   int _l;
   OMP(omp for schedule(static))
-  for (_l = 0; _l < point.n + 2.*GHOSTS; _l++) {
+  for (_l = 0; _l < point.n + 2*GHOSTS; _l++) {
     *_i = _l;
-    for (int _m = 0; _m < point.n + 2.*GHOSTS; _m++) {
+    for (int _m = 0; _m < point.n + 2*GHOSTS; _m++) {
       *_j = _m;
       POINT_VARIABLES
 @
@@ -461,7 +468,9 @@ void multigrid_trash (void * alist)
   OMP_END_PARALLEL()
 @
 
-@define neighbor(o,p,q) ((Point){point.i+o, point.j+p, point.k+q, point.level, point.n})
+@def neighbor(o,p,q)
+  ((Point){point.i+o, point.j+p, point.k+q, point.level, point.n})
+@
 
 #endif // dimension == 3
 			
@@ -471,52 +480,49 @@ static double periodic_bc (Point point, Point neighbor, scalar s);
 			
 static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 {
-  scalar * list = NULL;
-  for (scalar s in scalars)
-    if (!is_constant(s))
-      list = list_add (list, s);
-  if (list == NULL)
-    return;
-
   disable_fpe (FE_DIVBYZERO|FE_INVALID);
-  // first pass to fill first ghost layer
-  for (int d = 0; d < 2*dimension; d++)
-    foreach_boundary_dir (l, d)
-      for (scalar s in list) {
-	scalar sb = s;
+  for (int layer = 1; layer <= BGHOSTS; layer++)
+    for (int d = 0; d < 2*dimension; d++) {
+
+      scalar * list = NULL, * listb = NULL;
+      for (scalar s in scalars)
+	if (!is_constant(s)) {
+	  scalar sb = s;
 #if dimension > 1
-	if (s.v.x.i >= 0)
-	  // vector component
-	  sb = (&s.v.x)[d/2].i == s.i ? s.v.x : s.v.y;
+	  if (s.v.x.i >= 0)
+	    // vector component
+	    sb = (&s.v.x)[d/2].i == s.i ? s.v.x : s.v.y;
 #endif
-	if (sb.boundary[d] && sb.boundary[d] != periodic_bc) {
-	  if (s.face && sb.i == s.v.x.i) {
-	    // normal component of face vector
-	    s[(ig + 1)/2,(jg + 1)/2,(kg + 1)/2] =
-	      sb.boundary[d] (point, neighborp(ghost), s);
-	  } else
-	    // tangential component of face vector or centered
-	    s[ig,jg,kg] = sb.boundary[d] (point, neighborp(ig,jg,kg), s);
+	  if (sb.boundary[d] && sb.boundary[d] != periodic_bc) {
+	    list = list_append (list, s);
+	    listb = list_append (listb, sb);
+	  }
 	}
+      
+      if (list) {
+	foreach_boundary_dir (l, d) {
+	  scalar s, sb;
+	  for (s,sb in list,listb) {
+	    if (s.face && sb.i == s.v.x.i) {
+	      // normal component of face vector
+	      if (layer == 1)
+		s[(ig + 1)/2,(jg + 1)/2,(kg + 1)/2] =
+		  sb.boundary[d] (point, neighborp(ghost), s);
+	    }
+	    else
+	      // tangential component of face vector or centered
+	      s[layer*ig,layer*jg,layer*kg] =
+		sb.boundary[d] (neighborp((1 - layer)*ig,
+					  (1 - layer)*jg,
+					  (1 - layer)*kg),
+				neighborp(layer*ig,layer*jg,layer*kg), s);
+	  }
+	}
+	free (list);
+	free (listb);
       }
-  // second-pass to fill second ghost layer
-  for (int d = 0; d < 2*dimension; d++)
-    foreach_boundary_dir (l, d)
-      for (scalar s in list) {
-	scalar sb = s;
-#if dimension > 1
-	if (s.v.x.i >= 0)
-	  // vector component
-	  sb = (&s.v.x)[d/2].i == s.i ? s.v.x : s.v.y;
-#endif
-	if ((sb.boundary[d] && sb.boundary[d] != periodic_bc) &&
-	    (!s.face || sb.i != s.v.x.i))
-	  // tangential component of face vector or centered
-	  s[2*ig,2*jg,2*kg] = sb.boundary[d] (neighborp(-ig,-jg,-kg),
-					      neighborp(2*ig,2*jg,2*kg), s);
-      }
+    }
   enable_fpe (FE_DIVBYZERO|FE_INVALID);
-  free (list);
 }
 
 /* Periodic boundaries */

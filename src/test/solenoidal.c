@@ -1,4 +1,4 @@
-// test solenoidal recondtruction of face velocity field
+// test solenoidal reconstruction of face velocity field
 // i.e. refine_face_solenoidal()
 
 #include "poisson.h"

@@ -1,3 +1,4 @@
+#define BGHOSTS 2
 #include "grid/multigrid.h"
 
 int main()
