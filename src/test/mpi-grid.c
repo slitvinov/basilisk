@@ -10,18 +10,21 @@ int main()
   init_grid (4);
   output_cells (stdout);
 
+  vector u[];
   scalar s[];
   foreach()
-    s[] = sin(x)*cos(y)*cos(z);
-  boundary ({s});
+    u.x[] = u.y[] = s[] = sin(x)*cos(y)*cos(z);
+  boundary ({s,u});
 
   foreach()
-    foreach_neighbor(1) {
-#if 0   
-      fprintf (stderr, "%g %g %g %g %g\n", x, y, z, s[],
-	       s[] - sin(x)*cos(y)*cos(z));
+    foreach_neighbor(2) {
+#if 0
+      fprintf (stderr, "%g %g %g %g %g %g\n", x, y, z, s[],
+	       s[] - sin(x)*cos(y)*cos(z), u.y[]);
 #else
       assert (fabs (s[] - sin(x)*cos(y)*cos(z)) < 1e-14);
+      assert (fabs (u.x[] - sin(x)*cos(y)*cos(z)) < 1e-14);
+      assert (fabs (u.y[] - sin(x)*cos(y)*cos(z)) < 1e-14);
 #endif
     }
 }

@@ -95,8 +95,8 @@ void advection (struct Advection p)
     foreach()
       foreach_dimension()
         f[] += p.dt*(flux.x[] - flux.x[1])/(Delta*cm[]);
-    boundary ({f});
   }
+  boundary (p.tracers);
 
   if (!p.src)
     free (lsrc);

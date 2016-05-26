@@ -107,7 +107,7 @@ event advance (i++,last)
   
   ![Staggering of $\mathbf{u}$ and $\mathbf{S}$](/src/figures/Sxx.svg) */
   
-  symmetric tensor S[];
+  symmetric tensor S[]; // fixme: this does not work on trees
 
   /**
   We average the velocity components at the center to compute the
