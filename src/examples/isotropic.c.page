@@ -169,7 +169,7 @@ module purge
 module load bullxmpi
 module load intel
 
-mpicc -Wall -std=c99 -O2 -D_GNU_SOURCE=1 _isotropic.c -o isotropic -lm
+mpicc -Wall -std=c99 -O2 -D_GNU_SOURCE=1 -D_MPI=1 _isotropic.c -o isotropic -lm
 srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./isotropic $LEVEL \
      2> log-$LEVEL-$SLURM_NTASKS > out-$LEVEL-$SLURM_NTASKS
 ~~~

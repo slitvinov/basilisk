@@ -3,7 +3,7 @@
 To compile with MPI parallelism enabled, you need to use something like:
 
 ~~~bash
-CC='mpicc -D_MPI=1' qcc example.c -o example -lm
+CC99='mpicc -std=c99' qcc -Wall -O2 -D_MPI=1 example.c -o example -lm
 ~~~
 
 where *mpicc* calls the MPI compiler on your system. The resulting
@@ -38,8 +38,8 @@ installed i.e.
 %localmachine: qcc -source -D_MPI=1 example.c
 ~~~
 
-Then copy the portable source code *_example.c* on the supercomputer
-and compile it:
+Then copy the portable source code *_example.c* (don't forget the
+underscore!) on the supercomputer and compile it:
 
 ~~~bash
 %localmachine: scp _example.c login@supercomputer.org:
