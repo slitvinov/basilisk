@@ -1,9 +1,8 @@
 /**
 # Flow rates for multiple rivers
 
-In this example, we use the discharge() function in order to impose
-different flow rates on different rivers situated on the same boundary of
-a Saint-Venant simulation. */
+In this example, we impose different flow rates on different rivers
+situated on the same boundary of a Saint-Venant simulation. */
 
 #include "grid/cartesian.h"
 #include "saint-venant.h"
@@ -156,4 +155,8 @@ set term gif animate
 set output 'movie.gif'
 load './out'
 ~~~
+
+## See also
+
+* [Source of a river](source.c)
 */
