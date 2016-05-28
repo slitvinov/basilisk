@@ -156,6 +156,8 @@ points along each axis, on 8 = 2^3^ or 64 = 4^3^ or 512 = 8^3^ or 4096
 #include "grid/multigrid3D.h"
 ...
 int main() {
+  size (1.5);
+  origin (-0.75, -0.75, -0.75);
   foreach_dimension()
     periodic (right);
   init_grid (512);
