@@ -4,7 +4,6 @@
 In this example, we impose different flow rates on different rivers
 situated on the same boundary of a Saint-Venant simulation. */
 
-#include "grid/cartesian.h"
 #include "saint-venant.h"
 #include "discharge.h"
 
@@ -16,9 +15,8 @@ seconds. */
 
 int main()
 {
-  L0 = 10.;
-  X0 = - L0/2.;
-  Y0 = - L0/2.;
+  size (10.);
+  origin (- L0/2., - L0/2.);
   G = 9.81;
   N = 1 << LEVEL;
   run();
@@ -74,8 +72,8 @@ and 2 respectively. */
 double eta1, eta2;
 
 event inflow (i++) {
-  eta1 = discharge (4, top, river, 1);
-  eta2 = discharge (2, top, river, 2);
+  eta1 = eta_b (4, top, river, 1);
+  eta2 = eta_b (2, top, river, 2);
 
   /**
   Once we have the required values for the water surface elevations at
@@ -93,7 +91,7 @@ We compute the evolution of the water volumes in both riverbeds. */
 
 event volume (i += 10) {
   double volume1 = 0, volume2 = 0;
-  foreach() {
+  foreach(reduction(+:volume1) reduction(+:volume2)) {
     double dv = h[]*sq(Delta);
     if (x < 0) volume1 += dv;
     else volume2 += dv;
