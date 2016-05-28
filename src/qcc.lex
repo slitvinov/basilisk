@@ -2096,10 +2096,12 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
 }
 
 ,?{WS}*reduction{WS}*[(](min|max|\+):{ID}+[)] {
-  if (yytext[0] == ',')
-    yytext[0] = ' ';
+  if (debug)
+    fprintf (stderr, "%s:%d: '%s'\n", fname, line, yytext);	   
   if (strchr(yytext, '+'))
     ECHO;
+  if (yytext[0] == ',')
+    yytext[0] = ' ';
   char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':');
   *s1 = '\0'; s1++;
   assert (nreduct < REDUCTMAX);

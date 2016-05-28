@@ -357,7 +357,7 @@ void multigrid_trash (void * alist)
 // Boundaries
 
 #if dimension == 1
-@def foreach_boundary_dir(l,d)
+  @def foreach_boundary_dir(l,d,clause)
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
   point.level = l < 0 ? depth() : l;
@@ -367,7 +367,7 @@ void multigrid_trash (void * alist)
     ig = -1;
   }
   else if (d == right) {
-    point.i = point.n + 2*GHOSTS - 3;
+    point.i = point.n + GHOSTS - 1;
     ig = 1;
   }
   {
@@ -376,9 +376,10 @@ void multigrid_trash (void * alist)
 @define end_foreach_boundary_dir() }
 
 @define neighbor(o,p,q) ((Point){point.i+o, point.level, point.n})
-			
+@define is_boundary(point) (point.i < GHOSTS || point.i >= point.n + GHOSTS)
+
 #elif dimension == 2
-@def foreach_boundary_dir(l,d)
+@def foreach_boundary_dir(l,d,clause)
   OMP_PARALLEL()
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
@@ -390,7 +391,7 @@ void multigrid_trash (void * alist)
     ig = -1;
   }
   else if (d == right) {
-    point.i = point.n + 2*GHOSTS - 3;
+    point.i = point.n + GHOSTS - 1;
     ig = 1;
   }
   else if (d == bottom) {
@@ -399,12 +400,12 @@ void multigrid_trash (void * alist)
     jg = -1;
   }
   else if (d == top) {
-    point.j = point.n + 2*GHOSTS - 3;
+    point.j = point.n + GHOSTS - 1;
     _i = &point.i;
     jg = 1;
   }
   int _l;
-  OMP(omp for schedule(static))
+  OMP(omp for schedule(static) clause)
   for (_l = 0; _l < point.n + 2*GHOSTS; _l++) {
     *_i = _l;
     {
@@ -417,9 +418,12 @@ void multigrid_trash (void * alist)
 @
 
 @define neighbor(o,p,q) ((Point){point.i+o, point.j+p, point.level, point.n})
-  
+@def is_boundary(point) (point.i < GHOSTS || point.i >= point.n + GHOSTS ||
+			 point.j < GHOSTS || point.j >= point.n + GHOSTS)
+@
+
 #elif dimension == 3
-@def foreach_boundary_dir(l,d)
+@def foreach_boundary_dir(l,d,clause)
   OMP_PARALLEL()
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
@@ -431,7 +435,7 @@ void multigrid_trash (void * alist)
     ig = -1;
   }
   else if (d == right) {
-    point.i = point.n + 2*GHOSTS - 3;
+    point.i = point.n + GHOSTS - 1;
     ig = 1;
   }
   else if (d == bottom) {
@@ -440,7 +444,7 @@ void multigrid_trash (void * alist)
     jg = -1;
   }
   else if (d == top) {
-    point.j = point.n + 2*GHOSTS - 3;
+    point.j = point.n + GHOSTS - 1;
     _i = &point.i;
     jg = 1;
   }
@@ -450,12 +454,12 @@ void multigrid_trash (void * alist)
     kg = -1;
   }
   else if (d == front) {
-    point.k = point.n + 2*GHOSTS - 3;
+    point.k = point.n + GHOSTS - 1;
     _i = &point.i; _j = &point.j;
     kg = 1;
   }
   int _l;
-  OMP(omp for schedule(static))
+  OMP(omp for schedule(static) clause)
   for (_l = 0; _l < point.n + 2*GHOSTS; _l++) {
     *_i = _l;
     for (int _m = 0; _m < point.n + 2*GHOSTS; _m++) {
@@ -471,9 +475,19 @@ void multigrid_trash (void * alist)
 @def neighbor(o,p,q)
   ((Point){point.i+o, point.j+p, point.k+q, point.level, point.n})
 @
+@def is_boundary(point) (point.i < GHOSTS || point.i >= point.n + GHOSTS ||
+			 point.j < GHOSTS || point.j >= point.n + GHOSTS ||
+			 point.k < GHOSTS || point.k >= point.n + GHOSTS)
+@
 
 #endif // dimension == 3
-			
+
+@def foreach_boundary(b, clause)
+  foreach_boundary_dir (depth(), b, clause)
+    if (!is_boundary(point)) {
+@
+@define end_foreach_boundary() } end_foreach_boundary_dir()
+  
 @define neighborp(k,l,o) neighbor(k,l,o)
 
 static double periodic_bc (Point point, Point neighbor, scalar s);
@@ -500,14 +514,14 @@ static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 	}
       
       if (list) {
-	foreach_boundary_dir (l, d) {
+	foreach_boundary_dir (l, d,) {
 	  scalar s, sb;
 	  for (s,sb in list,listb) {
 	    if (s.face && sb.i == s.v.x.i) {
 	      // normal component of face vector
 	      if (layer == 1)
 		s[(ig + 1)/2,(jg + 1)/2,(kg + 1)/2] =
-		  sb.boundary[d] (point, neighborp(ghost), s);
+		  sb.boundary[d] (point, neighborp(ig,jg,kg), s);
 	    }
 	    else
 	      // tangential component of face vector or centered

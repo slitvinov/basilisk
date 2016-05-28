@@ -495,14 +495,8 @@ void cache_shrink (Cache * c)
 #define is_boundary(cell)     (cell.pid < 0)
 
 @def foreach_cache(_cache,clause) {
-  int ig = 0; NOT_UNUSED(ig);
-#if dimension >= 2
-  int jg = 0; NOT_UNUSED(jg);
-#endif
-#if dimension >= 3
-  int kg = 0; NOT_UNUSED(kg);
-#endif
   OMP_PARALLEL()
+  int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
 #if dimension == 1
   Point point = {GHOSTS,0};
 #elif dimension == 2
@@ -527,14 +521,8 @@ void cache_shrink (Cache * c)
 @define end_foreach_cache() } OMP_END_PARALLEL() }
 
 @def foreach_cache_level(_cache,_l,clause) {
-  int ig = 0; NOT_UNUSED(ig);
-#if dimension >= 2
-  int jg = 0; NOT_UNUSED(jg);
-#endif
-#if dimension >= 3
-  int kg = 0; NOT_UNUSED(kg);
-#endif
   OMP_PARALLEL()
+  int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
 #if dimension == 1
   Point point = {GHOSTS,0};
 #elif dimension == 2
@@ -557,14 +545,49 @@ void cache_shrink (Cache * c)
 @
 @define end_foreach_cache_level() } OMP_END_PARALLEL() }
 
-@def foreach_boundary(_l) {
+@def foreach_boundary_level(_l,clause) {
   if (_l <= depth()) {
     update_cache();
     CacheLevel _boundary = tree->boundary[_l];
-    foreach_cache_level (_boundary,_l,)
+    foreach_cache_level (_boundary,_l,clause)
 @
-@define end_foreach_boundary() end_foreach_cache_level(); }}
+@define end_foreach_boundary_level() end_foreach_cache_level(); }}
 
+#define bid(cell) (- cell.pid - 1)
+
+@def foreach_boundary(_b, clause) {
+  for (int _l = depth(); _l >= 0; _l--)
+    foreach_boundary_level(_l, clause) {
+      if (bid(cell) == _b)
+	for (int _d = 0; _d < dimension; _d++) {
+	  for (int _i = -1; _i <= 1; _i += 2) {
+	    if (_d == 0) ig = _i; else if (_d == 1) jg = _i; else kg = _i;
+	    if (is_leaf (neighbor(-ig,-jg,-kg)) &&
+		!is_boundary(neighbor(-ig,-jg,-kg)) &&
+		is_local(neighbor(-ig,-jg,-kg))) {
+	      point.i -= ig; x -= ig*Delta/2.; 
+#if dimension >= 2
+	      point.j -= jg; y -= jg*Delta/2.; 
+#endif
+#if dimension >= 3
+	      point.k -= kg; z -= kg*Delta/2.;
+#endif
+@
+@def end_foreach_boundary()
+	      point.i += ig; x += ig*Delta/2.;   
+#if dimension >= 2
+	      point.j += jg; y += jg*Delta/2.; 
+#endif
+#if dimension >= 3
+	      point.k += kg; z += kg*Delta/2.;
+#endif
+            }
+	  }
+	  ig = jg = kg = 0;
+	}
+    } end_foreach_boundary_level(); }
+@
+  
 @def foreach_halo(_name,_l) {
   if (_l <= depth()) {
     update_cache();
@@ -728,7 +751,7 @@ static void update_cache_f (void)
 
 #if FBOUNDARY
   for (int l = depth(); l >= 0; l--)
-    foreach_boundary (l)
+    foreach_boundary_level (l,)
       cell.flags &= ~fboundary;
 #endif
   
@@ -1064,8 +1087,6 @@ void realloc_scalar (void)
 
 /* Boundaries */
 
-#define bid(cell) (- cell.pid - 1)
-
 @define VN v.x
 @define VT v.y
 
@@ -1233,7 +1254,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 	scalars = list_add (scalars, s);
     }
   
-  foreach_boundary (l) {
+  foreach_boundary_level (l,) {
     if (!normal_neighbor (point, scalars, vectors) &&
 	!diagonal_neighbor_2D (point, scalars, vectors) &&
 	!diagonal_neighbor_3D (point, scalars, vectors)) {

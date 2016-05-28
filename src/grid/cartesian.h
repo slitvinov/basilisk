@@ -80,6 +80,56 @@ void cartesian_trash (void * alist)
 	((double *)(&cartesian->d[i*datasize]))[s.i] = undefined;
 }
 
+// Boundaries
+
+@def foreach_boundary_dir(l,d,clause)
+  OMP_PARALLEL()
+  int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
+  Point point;
+  point.n = cartesian->n;
+  int * _i = &point.j;
+  if (d == left) {
+    point.i = GHOSTS;
+    ig = -1;
+  }
+  else if (d == right) {
+    point.i = point.n + GHOSTS - 1;
+    ig = 1;
+  }
+  else if (d == bottom) {
+    point.j = GHOSTS;
+    _i = &point.i;
+    jg = -1;
+  }
+  else if (d == top) {
+    point.j = point.n + GHOSTS - 1;
+    _i = &point.i;
+    jg = 1;
+  }
+  int _l;
+  OMP(omp for schedule(static) clause)
+  for (_l = 0; _l < point.n + 2*GHOSTS; _l++) {
+    *_i = _l;
+    {
+      POINT_VARIABLES
+@
+@def end_foreach_boundary_dir()
+    }
+  }
+  OMP_END_PARALLEL()
+@
+
+@define neighbor(o,p,q) ((Point){point.i+o, point.j+p, point.level, point.n})
+@def is_boundary(point) (point.i < GHOSTS || point.i >= point.n + GHOSTS ||
+			 point.j < GHOSTS || point.j >= point.n + GHOSTS)
+@
+
+@def foreach_boundary(b, clause)
+  foreach_boundary_dir (depth(), b, clause)
+    if (!is_boundary(point)) {
+@
+@define end_foreach_boundary() } end_foreach_boundary_dir()
+
 // ghost cell coordinates for each direction
 static int _ig[] = {1,-1,0,0}, _jg[] = {0,0,1,-1};
 
