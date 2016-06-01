@@ -52,18 +52,19 @@ event output (t += 10; t <= 50)
   output_field ({p,f,u}, stdout, N);
 }
 
-#if TREE
-event adapt (i++) {
-  double tolerance = 0.02;
-  adapt_wavelet ({f}, &tolerance, MAXLEVEL, list = {f});
-}
-#endif
-
 event coefficients (i++)
 {
   foreach_face() {
-    double ff = (f[] + f[-1,0])/2.;
+    double ff = (f[] + f[-1])/2.;
     beta.x[] = - k/(mu1 + clamp(ff,0,1)*(mu2 - mu1));
   }
+  boundary ((scalar *){beta});
 }
 
+#if TREE
+event adapt (i++) {
+  double tolerance = 0.02;
+  adapt_wavelet ({f}, &tolerance, MAXLEVEL);
+  event ("coefficients");
+}
+#endif
