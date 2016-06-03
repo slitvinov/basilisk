@@ -129,3 +129,21 @@ void dimensions (struct Dimensions p)
   for (int i = 0; i < dimension; i++)
     mpi_dims[i] = (&p.nx)[i];
 }
+
+trace
+double z_indexing (scalar index, bool leaves)
+{
+  long i;
+  if (leaves)
+    i = pid()*(1 << dimension*depth());
+  else
+    i = pid()*((1 << dimension*(depth() + 1)) - 1)/((1 << dimension) - 1);
+  foreach_cell() {
+    if (!leaves || is_leaf(cell))
+      index[] = i++;
+    if (is_leaf(cell))
+      continue;
+  }
+  boundary ({index});
+  return pid() == 0 ? i*npe() - 1 : -1;
+}

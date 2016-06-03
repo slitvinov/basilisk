@@ -555,7 +555,9 @@ void output_grd (struct OutputGRD p)
   fflush (p.fp);
 }
 
-#if MULTIGRID && !MULTIGRID_MPI
+#if MULTIGRID
+
+#if !MULTIGRID_MPI
 
 /**
 ## *output_gfs()*: Gerris simulation format
@@ -789,6 +791,8 @@ void output_gfs (struct OutputGfs p)
 @endif // _MPI
 }
 
+#endif // !MULTIGRID_MPI
+
 /**
 ## *dump()*: Basilisk snapshots
 
@@ -820,9 +824,11 @@ struct Dump {
 struct DumpHeader {
   double t;
   long len;
-  int depth;
+  int depth, npe;
+  coord n;
 };
 
+@if !_MPI
 trace
 void dump (struct Dump p)
 {
@@ -839,43 +845,80 @@ void dump (struct Dump p)
     exit (1);
   }
   assert (fp);
-
-  struct DumpHeader header = { p.t, list_len(list), depth() };
-
+  
+  struct DumpHeader header = { p.t, list_len(list), depth(), npe() };
   if (pid() == 0 && fwrite (&header, sizeof(header), 1, fp) < 1) {
     perror ("dump(): error while writing header");
     exit (1);
   }
+  
+  foreach_cell() {
+    unsigned flags = is_leaf(cell) ? leaf : 0;
+    if (fwrite (&flags, sizeof(unsigned), 1, fp) < 1) {
+      perror ("dump(): error while writing flags");
+      exit (1);
+    }
+    for (scalar s in list)
+      if (fwrite (&s[], sizeof(double), 1, fp) < 1) {
+	perror ("dump(): error while writing scalars");
+	exit (1);
+      }
+    if (is_leaf(cell))
+      continue;
+  }
+  
+  free (list);
+  if (file)
+    fclose (fp);
+}
+@else // _MPI
+trace
+void dump (struct Dump p)
+{
+  FILE * fp = p.fp;
+  scalar * lista = p.list ? p.list : all, * list = NULL;
+  char * file = p.file;
 
+  if (fp != NULL || file == NULL) {
+    fprintf (stderr, "dump(): must specify a file name when using MPI\n");
+    exit(1);
+  }
+
+  for (scalar s in lista)
+    if (!s.face && s.i != cm.i)
+      list = list_add (list, s);
+
+  MPI_File fh;
+  MPI_File_open (MPI_COMM_WORLD, file, MPI_MODE_CREATE|MPI_MODE_WRONLY,
+		 MPI_INFO_NULL, &fh);  
+  
+  struct DumpHeader header = { p.t, list_len(list), depth(), npe() };
+
+#if MULTIGRID_MPI
+  for (int i = 0; i < dimension; i++)
+    (&header.n.x)[i] = mpi_dims[i];
+#endif
+
+  MPI_Status status;
+  if (pid() == 0)
+    MPI_File_write_at (fh, 0, &header, sizeof(header), MPI_BYTE, &status);
+  
   scalar index = {-1};
   
-@if _MPI // Parallel
   index = new scalar;
   z_indexing (index, false);
   int cell_size = sizeof(unsigned) + header.len*sizeof(double);
-@endif
-  
+
   foreach_cell() {
-@if _MPI // fixme: this won't work when combining MPI and mask()
-    if (is_local(cell))
-@endif
-    {
-@if _MPI
-      if (fseek (fp, sizeof(header) + index[]*cell_size, SEEK_SET) < 0) {
-	perror ("dump(): error while seeking");
-	exit (1);
-      }
-@endif
+    // fixme: this won't work when combining MPI and mask()
+    if (is_local(cell)) {
+      long offset = sizeof(header) + index[]*cell_size;
       unsigned flags = is_leaf(cell) ? leaf : 0;
-      if (fwrite (&flags, sizeof(unsigned), 1, fp) < 1) {
-	perror ("dump(): error while writing flags");
-	exit (1);
-      }
+      MPI_File_write_at (fh, offset, &flags, sizeof(unsigned), MPI_BYTE,
+			 &status), offset += sizeof(unsigned);
       for (scalar s in list)
-	if (fwrite (&s[], sizeof(double), 1, fp) < 1) {
-	  perror ("dump(): error while writing scalars");
-	  exit (1);
-	}
+	MPI_File_write_at (fh, offset, &s[], sizeof(double), MPI_BYTE,
+			   &status), offset += sizeof(double);
     }
     if (is_leaf(cell))
       continue;
@@ -884,9 +927,9 @@ void dump (struct Dump p)
   delete ({index});
   
   free (list);
-  if (file)
-    fclose (fp);
+  MPI_File_close (&fh);
 }
+@endif // _MPI
 
 trace
 bool restore (struct Dump p)
@@ -924,9 +967,30 @@ bool restore (struct Dump p)
     cell.flags |= active;
   }
   tree->dirty = true;
-#else
+#else // multigrid
+#if MULTIGRID_MPI
+  if (header.npe != npe()) {
+    fprintf (stderr,
+	     "restore(): error: the number of processes don't match:"
+	     " %d != %d\n",
+	     header.npe, npe());
+    exit (1);
+  }
+  dimensions (header.n.x, header.n.y, header.n.z);
+  int cell_size = sizeof(unsigned) + header.len*sizeof(double);
+  long offset = pid()*((1 << dimension*(header.depth + 1)) - 1)/
+    ((1 << dimension) - 1)*cell_size;
+  if (fseek (fp, offset, SEEK_CUR) < 0) {
+    perror ("restore(): error while seeking");
+    exit (1);
+  }
+  int n = header.n.x;
+  while (n > 1)
+    header.depth++, n /= 2;
+#endif // MULTIGRID_MPI
   init_grid (1 << header.depth);
-#endif
+#endif // multigrid
+
   foreach_cell() {
     unsigned flags;
     if (fread (&flags, sizeof(unsigned), 1, fp) != 1) {

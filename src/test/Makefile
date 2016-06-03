@@ -31,9 +31,9 @@ drybump2D-implicit.tst: CFLAGS += -DIMPLICIT=1
 
 drybump2D.tst: drybump2D-implicit.tst
 
-multiriverinflow.tst: multiriverinflow.ctst
-multiriverinflow.tst: CFLAGS += -fopenmp
-multiriverinflow.ctst: CFLAGS += -fopenmp
+# multiriverinflow.tst: multiriverinflow.ctst
+# multiriverinflow.tst: CFLAGS += -fopenmp
+# multiriverinflow.ctst: CFLAGS += -fopenmp
 
 parabola-explicit.c: parabola.c
 	ln -s parabola.c parabola-explicit.c 
@@ -154,6 +154,7 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-circle.tst mpi-circle1.tst mpi-flux.tst \
 	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
 	hf1.tst pdump.tst restore.tst \
+	pdump-multigrid.tst restore-multigrid.tst \
 	gfsi.tst gfs.tst \
 	load-balancing \
 	mpi-grid.tst mpi-periodic-3D.tst
@@ -189,6 +190,21 @@ pdump.tst: CC = mpicc -D_MPI=7
 restore.dump: pdump.tst
 	rm -f restore.dump; ln -s pdump/restore.dump
 restore.tst: restore.dump
+
+pdump-multigrid.c: pdump.c
+	ln -s pdump.c pdump-multigrid.c
+pdump-multigrid.tst: pdump.c
+pdump-multigrid.tst: CFLAGS = -grid=multigrid
+pdump-multigrid.tst: CC = mpicc -D_MPI=16
+
+restore-multigrid.c: restore.c
+	ln -s restore.c restore-multigrid.c
+restore-multigrid.dump: pdump-multigrid.tst
+	rm -f restore-multigrid.dump; ln -s pdump-multigrid/restore.dump \
+		restore-multigrid.dump
+restore-multigrid.tst: restore-multigrid.dump
+restore-multigrid.tst: CFLAGS = -grid=multigrid
+restore-multigrid.tst: CC = mpicc -D_MPI=16
 
 # parallel output_gfs()
 
