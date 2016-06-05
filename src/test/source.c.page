@@ -25,11 +25,23 @@ int main()
 /**
 ## Boundary conditions
 
-We create a new boundary for the source, with a neumann condition for
+We create a new boundary for the source, with a Neumann condition for
 the normal velocity (i.e. an inflow). */
 
 bid source;
 u.n[source] = neumann(0);
+
+/**
+The flow rate varies in time and is set by computing the the elevation
+$\eta_s$ of the water surface necessary to match this flow rate. */
+
+double etas;
+
+event inflow (i++) {
+  etas = eta_b (0.1*(1. - cos(4.*pi*t)), source);
+  h[source] = max (etas - zb[], 0);
+  eta[source] = max (etas - zb[], 0) + zb[];
+}
 
 /**
 ## Initial conditions
@@ -52,18 +64,6 @@ event init (i = 0)
   foreach()
     zb[] = (- cos(x) + y)/2.;
   boundary ({zb});
-}
-
-/**
-The flow rate varies in time and is set by computing the the elevation
-$\eta_s$ of the water surface necessary to match this flow rate. */
-
-double etas;
-
-event inflow (i++) {
-  etas = eta_b (0.1*(1. - cos(4.*pi*t)), source);
-  h[source] = max (etas - zb[], 0);
-  eta[source] = max (etas - zb[], 0) + zb[];
 }
 
 /**

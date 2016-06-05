@@ -4,7 +4,7 @@
 CC99 = gcc -std=c99
 
 # how to strip unused code
-STRIPFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections -w
+# STRIPFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections -w
 
 # other useful (non-standard) flags
 CFLAGS += -g -Wall -pipe

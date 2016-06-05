@@ -78,7 +78,7 @@ timing timer_timing (timer t, int i, size_t tnc, double * mpi)
   }
   else
     s.tnc = tnc;
-@if (_GNU_SOURCE || _DARWIN_C_SOURCE)
+@if _GNU_SOURCE
   struct rusage usage;
   getrusage (RUSAGE_SELF, &usage);
   s.mem = usage.ru_maxrss;

@@ -103,7 +103,7 @@ static void pmfunc_trace (pmfunc * f, char c)
   if (pmtrace.fp)
     fprintf (pmtrace.fp, "%c %d %ld %ld %ld",
 	     c, f->id, pmtrace.nr, pmtrace.total, f->total);
-@if (_GNU_SOURCE || _DARWIN_C_SOURCE)
+@if _GNU_SOURCE
   if (pmtrace.nr % 1 == 0) {
     struct rusage usage;
     getrusage (RUSAGE_SELF, &usage);
