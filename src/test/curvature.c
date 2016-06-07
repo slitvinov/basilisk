@@ -104,7 +104,8 @@ void sample_circles (int nr, double R, int levelmax, norm * n, cstats * sc)
 int main()
 {
   origin (-0.5, -0.5, -0.5);
- 
+  init_grid (N);
+  
   /**
   We try a wide enough range of radii. */
 

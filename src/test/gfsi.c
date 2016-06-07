@@ -5,6 +5,7 @@ double t = 0;
 
 int main()
 {
+  init_grid (N);
   scalar a[];
   vector u[];
   

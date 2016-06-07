@@ -3,6 +3,7 @@
 
 int main()
 {
+  init_grid (N);
   scalar a[], b[], e[];
 
 #if 0

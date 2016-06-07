@@ -120,16 +120,6 @@ Boundary * mpi_boundary_new()
   return b;
 }
 
-struct Dimensions {
-  int nx, ny, nz;
-};
- 
-void dimensions (struct Dimensions p)
-{
-  for (int i = 0; i < dimension; i++)
-    mpi_dims[i] = (&p.nx)[i];
-}
-
 trace
 double z_indexing (scalar index, bool leaves)
 {

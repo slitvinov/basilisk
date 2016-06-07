@@ -74,6 +74,7 @@ int main (int argc, char * argv[])
     exit(1);
   }
 
+  init_grid (N);
   foreach()
     a[] = b[] = 0.;
   boundary ({a, b});

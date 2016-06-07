@@ -4,17 +4,18 @@
 #include "navier-stokes/centered.h"
 
 int main() {
-  origin (0, -0.5);
-  periodic (right);
+  origin (-0.5, 0);
+  periodic (top);
+  dimensions (nx = 1);
   
   stokes = true;
   TOLERANCE = 1e-5;
-
-  u.t[top] = dirichlet(0);
-  u.t[bottom] = dirichlet(0);
+  
+  u.t[left] = dirichlet(0);
+  u.t[right] = dirichlet(0);
   
   for (N = 8; N <= 64; N *= 2)
-    run(); 
+    run();
 }
 
 scalar un[];
@@ -26,11 +27,11 @@ event init (t = 0) {
   const face vector muc[] = {1.,1.};
   mu = muc;
   foreach()
-    un[] = u.x[];
+    un[] = u.y[];
 }
 
 event logfile (t += 0.1; i <= 100) {
-  double du = change (u.x, un);
+  double du = change (u.y, un);
   if (i > 0 && du < 1e-6)
     return 0; /* stop */
 }
@@ -38,10 +39,10 @@ event logfile (t += 0.1; i <= 100) {
 event profile (t = end) {
   printf ("\n");
   foreach()
-    printf ("%g %g %g %g %g\n", x, y, u.x[], u.y[], p[]);
+    fprintf (stdout, "%g %g %g %g %g\n", x, y, u.x[], u.y[], p[]);
   scalar e[];
   foreach()
-    e[] = u.x[] - 0.5*(0.25 - y*y);
+    e[] = u.y[] - 0.5*(0.25 - x*x);
   norm n = normf (e);
-  fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
+  fprintf (ferr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
 }

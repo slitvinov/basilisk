@@ -641,17 +641,11 @@ void free_grid (void)
 }
 
 int log_base2 (int n) {
-  int r = 0;
-  while (n > 1) {
-    if (n % 2) {
-      fprintf (ferr, "multigrid: N must be a power-of-two\n");
-      exit (1);
-    }
-    n /= 2;
-    r++;
-  }
-  return r;
-}   
+  int m = n, r = 0;
+  while (m > 1)
+    m /= 2, r++;
+  return (1 << r) < n ? r + 1 : r;
+}
  
 void init_grid (int n)
 {
@@ -741,6 +735,18 @@ Point locate (struct _locate p)
 }
  
 #include "multigrid-common.h"
+
+struct Dimensions {
+  int nx, ny, nz;
+};
+ 
+void dimensions (struct Dimensions p)
+{
+#if _MPI
+  for (int i = 0; i < dimension; i++)
+    mpi_dims[i] = (&p.nx)[i];
+#endif
+}
 
 #if _MPI
 

@@ -6,6 +6,8 @@ boundary conditions. */
 #include "grid/quadtree.h"
 
 int main() {
+  init_grid (N);
+  
   scalar s[];  
   face vector v[];
   // mask (y >  L0/4. ? top : none);
