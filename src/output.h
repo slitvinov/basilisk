@@ -381,38 +381,38 @@ void output_ppm (struct OutputPPM p)
   color ** ppm = matrix_new (ny, p.n, sizeof(color));
   double cmap[NCMAP][3];
   p.map (cmap);
-  OMP_PARALLEL()
-  OMP(omp for schedule(static))
-  for (int j = 0; j < ny; j++) {
-    double yp = Delta*j + p.box[0][1] + Delta/2.;
-    for (int i = 0; i < p.n; i++) {
-      double xp = Delta*i + p.box[0][0] + Delta/2., v;
-      if (p.mask.i) { // masking
-	if (p.linear) {
-	  double m = interpolate (p.mask, xp, yp, p.z);
-	  if (m < 0.)
-	    v = nodata;
-	  else
+  OMP_PARALLEL() {
+    OMP(omp for schedule(static))
+      for (int j = 0; j < ny; j++) {
+	double yp = Delta*j + p.box[0][1] + Delta/2.;
+	for (int i = 0; i < p.n; i++) {
+	  double xp = Delta*i + p.box[0][0] + Delta/2., v;
+	  if (p.mask.i) { // masking
+	    if (p.linear) {
+	      double m = interpolate (p.mask, xp, yp, p.z);
+	      if (m < 0.)
+		v = nodata;
+	      else
+		v = interpolate (p.f, xp, yp, p.z);
+	    }
+	    else {
+	      Point point = locate (xp, yp, p.z);
+	      if (point.level < 0 || val(p.mask) < 0.)
+		v = nodata;
+	      else
+		v = val(p.f);
+	    }
+	  }
+	  else if (p.linear)
 	    v = interpolate (p.f, xp, yp, p.z);
-	}
-	else {
-	  Point point = locate (xp, yp, p.z);
-	  if (point.level < 0 || val(p.mask) < 0.)
-	    v = nodata;
-	  else
-	    v = val(p.f);
+	  else {
+	    Point point = locate (xp, yp, p.z);
+	    v = point.level >= 0 ? val(p.f) : nodata;
+	  }
+	  ppm[ny - 1 - j][i] = colormap_color (cmap, v, p.min, p.max);
 	}
       }
-      else if (p.linear)
-	v = interpolate (p.f, xp, yp, p.z);
-      else {
-	Point point = locate (xp, yp, p.z);
-	v = point.level >= 0 ? val(p.f) : nodata;
-      }
-      ppm[ny - 1 - j][i] = colormap_color (cmap, v, p.min, p.max);
-    }
   }
-  OMP_END_PARALLEL()
   
   if (pid() == 0) { // master
 @if _MPI

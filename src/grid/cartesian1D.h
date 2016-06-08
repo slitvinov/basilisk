@@ -23,31 +23,31 @@ static Point last_point;
 
 @define POINT_VARIABLES VARIABLES
 
-@def foreach(clause)
-  OMP_PARALLEL()
+@def foreach()
+  OMP_PARALLEL() {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point;
   point.n = cartesian->n;
   int _k;
-  OMP(omp for schedule(static) clause)
+  OMP(omp for schedule(static))
   for (_k = 1; _k <= point.n; _k++) {
     point.i = _k;
     POINT_VARIABLES
 @
-@define end_foreach() } OMP_END_PARALLEL()
+@define end_foreach() }}
 
-@def foreach_face_generic(clause)
-  OMP_PARALLEL()
+@def foreach_face_generic()
+  OMP_PARALLEL() {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point;
   point.n = cartesian->n;
   int _k;
-  OMP(omp for schedule(static) clause)
+  OMP(omp for schedule(static))
   for (_k = 1; _k <= point.n + 1; _k++) {
     point.i = _k;
     POINT_VARIABLES
 @
-@define end_foreach_face_generic() } OMP_END_PARALLEL()
+@define end_foreach_face_generic() }}
 
 @def foreach_vertex()
 foreach_face_generic() {

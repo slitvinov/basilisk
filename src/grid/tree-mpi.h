@@ -52,7 +52,7 @@ void rcv_print (Rcv * rcv, FILE * fp, const char * prefix)
 {
   for (int l = 0; l <= rcv->depth; l++)
     if (rcv->halo[l].n > 0)
-      foreach_cache_level(rcv->halo[l], l,)
+      foreach_cache_level(rcv->halo[l], l)
 	fprintf (fp, "%s%g %g %g %d %d\n", prefix, x, y, z, rcv->pid, level);
 }
 
@@ -162,7 +162,7 @@ static void apply_bc (Rcv * rcv, scalar * list, vector * listf, int l,
 		      MPI_Status s)
 {
   double * b = rcv->buf;
-  foreach_cache_level(rcv->halo[l], l,) {
+  foreach_cache_level(rcv->halo[l], l) {
     for (scalar s in list)
       s[] = *b++;
     for (vector v in listf) {
@@ -343,7 +343,7 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
       assert (!rcv->buf);
       rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
       double * b = rcv->buf;
-      foreach_cache_level(rcv->halo[l], l,) {
+      foreach_cache_level(rcv->halo[l], l) {
 	for (scalar s in list)
 	  *b++ = s[];
 	for (vector v in listf)
@@ -593,7 +593,7 @@ void debug_mpi (FILE * fp1)
     fclose (fp);
 
   fp = fopen_prefix (fp1, "refined", prefix);
-  foreach_cache (tree->refined,)
+  foreach_cache (tree->refined)
     fprintf (fp, "%s%g %g %g %d\n", prefix, x, y, z, level);
   if (!fp1)
     fclose (fp);
@@ -962,7 +962,7 @@ void mpi_boundary_refine (scalar * list)
 		      MPI_COMM_WORLD, MPI_STATUS_IGNORE,
 		      "mpi_boundary_refine (p)");
       Cache refined = {p, len, len};
-      foreach_cache (refined,)
+      foreach_cache (refined)
 	if (level <= depth() && allocated(0)) {
 	  if (is_leaf(cell)) {
 	    bool neighbors = false;

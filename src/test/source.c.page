@@ -38,7 +38,7 @@ $\eta_s$ of the water surface necessary to match this flow rate. */
 double etas;
 
 event inflow (i++) {
-  etas = eta_b (0.1*(1. - cos(4.*pi*t)), source);
+  etas = eta_b (0.1*(1.1 - cos(4.*pi*t)), source);
   h[source] = max (etas - zb[], 0);
   eta[source] = max (etas - zb[], 0) + zb[];
 }
@@ -76,7 +76,7 @@ event logfile (i++; t <= 2.) {
   static double volo = 0., to = 0.;
   double vol = statsf(h).sum;
   if (i > 0)
-    fprintf (stderr, "%g %g %g %g\n", t, (vol - volo)/(t - to), vol, etas);
+    fprintf (ferr, "%g %.6f %g %g\n", t, (vol - volo)/(t - to), vol, etas);
   volo = vol, to = t;
 }
 
@@ -92,7 +92,7 @@ event output (i += 5) {
 set key top left
 set xlabel 'Time'
 set ylabel 'Flow rate'
-plot './log' u 1:2 w l t 'obtained', 0.1*(1.-cos(4.*pi*x)) w l t 'imposed'
+plot './log' u 1:2 w l t 'obtained', 0.1*(1.1-cos(4.*pi*x)) w l t 'imposed'
 ~~~
 
 ![Evolution of the water level](source/source.gif)

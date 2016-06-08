@@ -158,7 +158,8 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	poiseuille-periodic.tst \
 	gfsi.tst gfs.tst \
 	load-balancing \
-	mpi-grid.tst mpi-periodic-3D.tst
+	mpi-grid.tst mpi-periodic-3D.tst \
+	source.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3
@@ -185,6 +186,7 @@ vortex.tst:	  CC = mpicc -D_MPI=7 -DJACOBI=1
 axiadvection.tst: CC = mpicc -D_MPI=7 -DJACOBI=1
 hf1.tst:	  CC = mpicc -D_MPI=7
 poiseuille-periodic.tst: CC = mpicc -D_MPI=4
+source.tst: CC = mpicc -D_MPI=7
 
 # parallel dump()
 

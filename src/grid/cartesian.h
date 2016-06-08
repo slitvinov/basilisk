@@ -25,33 +25,33 @@ static Point last_point;
 
 @define POINT_VARIABLES VARIABLES
 
-@def foreach(clause)
-  OMP_PARALLEL()
+@def foreach()
+  OMP_PARALLEL() {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point;
   point.n = cartesian->n;
   int _k;
-  OMP(omp for schedule(static) clause)
+  OMP(omp for schedule(static))
   for (_k = 1; _k <= point.n; _k++) {
     point.i = _k;
     for (point.j = 1; point.j <= point.n; point.j++) {
       POINT_VARIABLES
 @
-@define end_foreach() }} OMP_END_PARALLEL()
+@define end_foreach() }}}
 
-@def foreach_face_generic(clause)
-  OMP_PARALLEL()
+@def foreach_face_generic()
+  OMP_PARALLEL() {
   int ig = 0, jg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg);
   Point point;
   point.n = cartesian->n;
   int _k;
-  OMP(omp for schedule(static) clause)
+  OMP(omp for schedule(static))
   for (_k = 1; _k <= point.n + 1; _k++) {
     point.i = _k;
     for (point.j = 1; point.j <= point.n + 1; point.j++) {
       POINT_VARIABLES
 @
-@define end_foreach_face_generic() }} OMP_END_PARALLEL()
+@define end_foreach_face_generic() }}}
 
 @def foreach_vertex()
 foreach_face_generic() {
@@ -82,8 +82,8 @@ void cartesian_trash (void * alist)
 
 // Boundaries
 
-@def foreach_boundary_dir(l,d,clause)
-  OMP_PARALLEL()
+@def foreach_boundary_dir(l,d)
+  OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
   point.n = cartesian->n;
@@ -107,7 +107,7 @@ void cartesian_trash (void * alist)
     jg = 1;
   }
   int _l;
-  OMP(omp for schedule(static) clause)
+  OMP(omp for schedule(static))
   for (_l = 0; _l < point.n + 2*GHOSTS; _l++) {
     *_i = _l;
     {
@@ -116,7 +116,7 @@ void cartesian_trash (void * alist)
 @def end_foreach_boundary_dir()
     }
   }
-  OMP_END_PARALLEL()
+  }
 @
 
 @define neighbor(o,p,q) ((Point){point.i+o, point.j+p, point.level, point.n})
@@ -124,8 +124,8 @@ void cartesian_trash (void * alist)
 			 point.j < GHOSTS || point.j >= point.n + GHOSTS)
 @
 
-@def foreach_boundary(b, clause)
-  foreach_boundary_dir (depth(), b, clause)
+@def foreach_boundary(b)
+  foreach_boundary_dir (depth(), b)
     if (!is_boundary(point)) {
 @
 @define end_foreach_boundary() } end_foreach_boundary_dir()
@@ -137,26 +137,26 @@ static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
 {
   int d = ((BoxBoundary *)b)->d;
 
-  OMP_PARALLEL();
-  Point point;
-  point.n = cartesian->n;
-  if (d % 2)
-    ig = jg = 0;
-  else {
-    ig = _ig[d]; jg = _jg[d];
-  }
-  int _start = GHOSTS, _end = point.n + GHOSTS, _k;  
-  OMP(omp for schedule(static))
-  for (_k = _start; _k < _end; _k++) {
-    point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
-    point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-    Point neighbor = {point.i + ig, point.j + jg};
-    for (scalar s in list) {
-      scalar b = s.v.x;
-      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+  OMP_PARALLEL() {
+    Point point;
+    point.n = cartesian->n;
+    if (d % 2)
+      ig = jg = 0;
+    else {
+      ig = _ig[d]; jg = _jg[d];
     }
+    int _start = GHOSTS, _end = point.n + GHOSTS, _k;  
+    OMP(omp for schedule(static))
+      for (_k = _start; _k < _end; _k++) {
+	point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
+	point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
+	Point neighbor = {point.i + ig, point.j + jg};
+	for (scalar s in list) {
+	  scalar b = s.v.x;
+	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+	}
+      }
   }
-  OMP_END_PARALLEL();
 }
 
 static void box_boundary_level_tangent (const Boundary * b, 
@@ -164,23 +164,23 @@ static void box_boundary_level_tangent (const Boundary * b,
 {
   int d = ((BoxBoundary *)b)->d;
 
-  OMP_PARALLEL();
-  Point point;
-  point.n = cartesian->n;
-  ig = _ig[d]; jg = _jg[d];
-  int _start = GHOSTS, _end = point.n + 2*GHOSTS, _k;
+  OMP_PARALLEL() {
+    Point point;
+    point.n = cartesian->n;
+    ig = _ig[d]; jg = _jg[d];
+    int _start = GHOSTS, _end = point.n + 2*GHOSTS, _k;
   
-  OMP(omp for schedule(static))
-  for (_k = _start; _k < _end; _k++) {
-    point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
-    point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
-    Point neighbor = {point.i + ig, point.j + jg};
-    for (scalar s in list) {
-      scalar b = s.v.y;
-      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
-    }
+    OMP(omp for schedule(static))
+      for (_k = _start; _k < _end; _k++) {
+	point.i = d > left ? _k : d == right ? point.n + GHOSTS - 1 : GHOSTS;
+	point.j = d < top  ? _k : d == top   ? point.n + GHOSTS - 1 : GHOSTS;
+	Point neighbor = {point.i + ig, point.j + jg};
+	for (scalar s in list) {
+	  scalar b = s.v.y;
+	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+	}
+      }
   }
-  OMP_END_PARALLEL();
 }
 
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
@@ -207,27 +207,27 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 	centered = list_add (centered, s);
     }
 
-  OMP_PARALLEL();
-  Point point;
-  point.n = cartesian->n;
-  ig = _ig[d]; jg = _jg[d];
-  int _start = 1, _end = point.n, _k;
-  /* traverse corners only for top and bottom */
-  if (d > left) { _start--; _end++; }
-  OMP(omp for schedule(static))
-  for (_k = _start; _k <= _end; _k++) {
-    point.i = d > left ? _k : d == right ? point.n : 1;
-    point.j = d < top  ? _k : d == top   ? point.n : 1;
-    Point neighbor = {point.i + ig, point.j + jg};
-    for (scalar s in centered) {
-      scalar b = (s.v.x.i < 0 ? s :
-		  s.i == s.v.x.i && d < top ? s.v.x :
-		  s.i == s.v.y.i && d >= top ? s.v.x :
-		  s.v.y);
-      val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
-    }
+  OMP_PARALLEL() {
+    Point point;
+    point.n = cartesian->n;
+    ig = _ig[d]; jg = _jg[d];
+    int _start = 1, _end = point.n, _k;
+    /* traverse corners only for top and bottom */
+    if (d > left) { _start--; _end++; }
+    OMP(omp for schedule(static))
+      for (_k = _start; _k <= _end; _k++) {
+	point.i = d > left ? _k : d == right ? point.n : 1;
+	point.j = d < top  ? _k : d == top   ? point.n : 1;
+	Point neighbor = {point.i + ig, point.j + jg};
+	for (scalar s in centered) {
+	  scalar b = (s.v.x.i < 0 ? s :
+		      s.i == s.v.x.i && d < top ? s.v.x :
+		      s.i == s.v.y.i && d >= top ? s.v.x :
+		      s.v.y);
+	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+	}
+      }
   }
-  OMP_END_PARALLEL();
   free (centered);
 
   box_boundary_level_normal (b, normal, l);

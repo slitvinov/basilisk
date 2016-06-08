@@ -696,12 +696,7 @@ void init_solver()
 @endif
 }
 
-// fixme: _OMPSTART and _OMPEND are only used for working around the
-// lack of min|max reduction operations in OpenMP < 3.1
-@define OMP_PARALLEL()     OMP(omp parallel) { _OMPSTART
-@define OMP_END_PARALLEL() _OMPEND }
-@define _OMPSTART
-@define _OMPEND
+@define OMP_PARALLEL() OMP(omp parallel)
 
 @define NOT_UNUSED(x) (void)(x)
 

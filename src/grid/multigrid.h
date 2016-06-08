@@ -145,7 +145,7 @@ static size_t _size (size_t l)
 #endif
 
 @def foreach_level(l)
-  OMP_PARALLEL()
+OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
   point.level = l; point.n = 1 << point.level;
@@ -167,16 +167,16 @@ static size_t _size (size_t l)
 	}
 #endif
   }
-OMP_END_PARALLEL()
+}
 @
 
-@def foreach(clause)
-  OMP_PARALLEL()
+@def foreach()
+  OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
   point.level = depth(); point.n = 1 << point.level;
   int _k;
-  OMP(omp for schedule(static) clause)
+  OMP(omp for schedule(static))
   for (_k = GHOSTS; _k < point.n + GHOSTS; _k++) {
     point.i = _k;
 #if dimension > 1
@@ -193,7 +193,7 @@ OMP_END_PARALLEL()
 	}
 #endif
   }
-OMP_END_PARALLEL()
+}
 @	    
 
 @define is_active(cell) (true)
@@ -208,13 +208,13 @@ OMP_END_PARALLEL()
 @define tree multigrid
 #include "foreach_cell.h"
 
-@def foreach_face_generic(clause)
-  OMP_PARALLEL()
+@def foreach_face_generic()
+  OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
   point.level = depth(); point.n = 1 << point.level;
   int _k;
-  OMP(omp for schedule(static) clause)
+  OMP(omp for schedule(static))
   for (_k = GHOSTS; _k <= point.n + GHOSTS; _k++) {
     point.i = _k;
 #if dimension > 1
@@ -231,7 +231,7 @@ OMP_END_PARALLEL()
 	}
 #endif
   }
-OMP_END_PARALLEL()
+}
 @ 
 
 @def foreach_vertex()
@@ -357,7 +357,7 @@ void multigrid_trash (void * alist)
 // Boundaries
 
 #if dimension == 1
-  @def foreach_boundary_dir(l,d,clause)
+  @def foreach_boundary_dir(l,d)
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
   point.level = l < 0 ? depth() : l;
@@ -379,8 +379,8 @@ void multigrid_trash (void * alist)
 @define is_boundary(point) (point.i < GHOSTS || point.i >= point.n + GHOSTS)
 
 #elif dimension == 2
-@def foreach_boundary_dir(l,d,clause)
-  OMP_PARALLEL()
+@def foreach_boundary_dir(l,d)
+  OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
   point.level = l < 0 ? depth() : l;
@@ -405,7 +405,7 @@ void multigrid_trash (void * alist)
     jg = 1;
   }
   int _l;
-  OMP(omp for schedule(static) clause)
+  OMP(omp for schedule(static))
   for (_l = 0; _l < point.n + 2*GHOSTS; _l++) {
     *_i = _l;
     {
@@ -414,7 +414,7 @@ void multigrid_trash (void * alist)
 @def end_foreach_boundary_dir()
     }
   }
-  OMP_END_PARALLEL()
+}
 @
 
 @define neighbor(o,p,q) ((Point){point.i+o, point.j+p, point.level, point.n})
@@ -423,8 +423,8 @@ void multigrid_trash (void * alist)
 @
 
 #elif dimension == 3
-@def foreach_boundary_dir(l,d,clause)
-  OMP_PARALLEL()
+@def foreach_boundary_dir(l,d)
+  OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
   Point point;
   point.level = l < 0 ? depth() : l;
@@ -459,7 +459,7 @@ void multigrid_trash (void * alist)
     kg = 1;
   }
   int _l;
-  OMP(omp for schedule(static) clause)
+  OMP(omp for schedule(static))
   for (_l = 0; _l < point.n + 2*GHOSTS; _l++) {
     *_i = _l;
     for (int _m = 0; _m < point.n + 2*GHOSTS; _m++) {
@@ -469,7 +469,7 @@ void multigrid_trash (void * alist)
 @def end_foreach_boundary_dir()
     }
   }
-  OMP_END_PARALLEL()
+}
 @
 
 @def neighbor(o,p,q)
@@ -482,8 +482,8 @@ void multigrid_trash (void * alist)
 
 #endif // dimension == 3
 
-@def foreach_boundary(b, clause)
-  foreach_boundary_dir (depth(), b, clause)
+@def foreach_boundary(b)
+  foreach_boundary_dir (depth(), b)
     if (!is_boundary(point)) {
 @
 @define end_foreach_boundary() } end_foreach_boundary_dir()
@@ -514,7 +514,7 @@ static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 	}
       
       if (list) {
-	foreach_boundary_dir (l, d,) {
+	foreach_boundary_dir (l, d) {
 	  scalar s, sb;
 	  for (s,sb in list,listb) {
 	    if (s.face && sb.i == s.v.x.i) {
@@ -587,37 +587,36 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   if (!list1)
     return;
 
-  OMP_PARALLEL();
-  Point point;
-  point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
+  OMP_PARALLEL() {
+    Point point;
+    point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
 #if dimension == 2  
-  point.i = point.j = 0;
-  int j;
-  OMP(omp for schedule(static))
-  for (j = 0; j < point.n + 2*GHOSTS; j++) {
-    for (int i = 0; i < GHOSTS; i++)
-      for (scalar s in list1)
-	s[i,j] = s[i + point.n,j];
-    for (int i = point.n + GHOSTS; i < point.n + 2*GHOSTS; i++)
-      for (scalar s in list1)
-	s[i,j] = s[i - point.n,j];
-  }
-  OMP_END_PARALLEL();
+    point.i = point.j = 0;
+    int j;
+    OMP(omp for schedule(static))
+      for (j = 0; j < point.n + 2*GHOSTS; j++) {
+	for (int i = 0; i < GHOSTS; i++)
+	  for (scalar s in list1)
+	    s[i,j] = s[i + point.n,j];
+	for (int i = point.n + GHOSTS; i < point.n + 2*GHOSTS; i++)
+	  for (scalar s in list1)
+	    s[i,j] = s[i - point.n,j];
+      }
 #else // dimension == 3
-  point.i = point.j = point.k = 0;
-  int j;
-  OMP(omp for schedule(static))
-  for (j = 0; j < point.n + 2*GHOSTS; j++)
-    for (int k = 0; k < point.n + 2*GHOSTS; k++) {
-      for (int i = 0; i < GHOSTS; i++)
-	for (scalar s in list1)
-	  s[i,j,k] = s[i + point.n,j,k];
-      for (int i = point.n + GHOSTS; i < point.n + 2*GHOSTS; i++)
-	for (scalar s in list1)
-	  s[i,j,k] = s[i - point.n,j,k];
-    }
-  OMP_END_PARALLEL();
+    point.i = point.j = point.k = 0;
+    int j;
+    OMP(omp for schedule(static))
+      for (j = 0; j < point.n + 2*GHOSTS; j++)
+	for (int k = 0; k < point.n + 2*GHOSTS; k++) {
+	  for (int i = 0; i < GHOSTS; i++)
+	    for (scalar s in list1)
+	      s[i,j,k] = s[i + point.n,j,k];
+	  for (int i = point.n + GHOSTS; i < point.n + 2*GHOSTS; i++)
+	    for (scalar s in list1)
+	      s[i,j,k] = s[i - point.n,j,k];
+	}
 #endif
+  }
   free (list1);
 }
 

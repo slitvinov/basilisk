@@ -32,7 +32,7 @@ int main()
   boundary ({a,v,f});
 
   output_cells (stdout);
-  foreach_boundary_level (depth(),) {
+  foreach_boundary_level (depth()) {
     fprintf (stderr, "%g %g %g %g %g %g %g\n",
 	     x, y, z, a[], v.x[], v.y[], v.x[]);
     assert (a[] == x + y + z);
