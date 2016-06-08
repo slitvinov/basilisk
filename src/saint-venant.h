@@ -250,8 +250,8 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
 	
         #if TREE
 	if (is_prolongation(cell)) {
-	  hi = coarse(h,0);
-	  zi = coarse(zb,0);
+	  hi = coarse(h);
+	  zi = coarse(zb);
 	}
 	if (is_prolongation(neighbor(-1))) {
 	  hn = coarse(h,-1);

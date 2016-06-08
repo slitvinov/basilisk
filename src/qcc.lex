@@ -1764,18 +1764,18 @@ val{WS}*[(]    {
     REJECT;
 }
 
-(fine|coarse){WS}*\({WS}*{SCALAR}{WS}*, {
-  /* fine(v,... */
+(fine|coarse){WS}*\({WS}*{SCALAR}{WS}* {
+  /* fine(v... */
   var_t * var = NULL;
   if ((inforeach || infunction) && !inval) {
     char * s = strchr (yytext, '('); s++;
     while (strchr(" \t\v\n\f", *s)) s++;
     char * id = s;
-    while (!strchr(" \t\v\n\f,.", *s)) s++;
+    while (!strchr(" \t\v\n\f.", *s)) s++;
     if ((var = varlookup (id, s - id))) {
       para++;
       s = id;
-      while (!strchr(" \t\v\n\f,", *s)) s++;
+      while (!strchr(" \t\v\n\f", *s)) s++;
       *s = '\0';
       char * op = yytext[0] == 'f' ? "fine" : "coarse";
       if (debug)
@@ -1784,9 +1784,8 @@ val{WS}*[(]    {
 	maybeconst_macro (var, op, id);
       else
 	fprintf (yyout, "%s(%s", op, boundaryrep(id));
-      fputc (',', yyout);
       infine = para;
-      inarrayargs = 1;
+      inarrayargs = 0;
     }
   }
   if (!var)

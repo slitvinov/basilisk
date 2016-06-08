@@ -351,7 +351,7 @@ bool balance()
 	if (NEWPID()->leaf && !is_leaf(cell) && cell.neighbors)
 	  coarsen_cell_recursive (point, NULL);
       }
-      else if (level > 0 && ((NewPid *)&coarse(newpid,0))->leaf)
+      else if (level > 0 && ((NewPid *)&coarse(newpid))->leaf)
 	cell.pid = aparent(0).pid;
     }
     // cleanup unused prolongations
