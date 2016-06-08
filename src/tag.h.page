@@ -1,0 +1,110 @@
+/**
+# Tagging connected neighborhoods
+
+The goal is to associate a unique (strictly positive) index ("tag")
+*t* to cells which belong to the same "neighborhood". All cells in a
+neighborhood have an initial tag value (given by the user) which is
+non-zero and are separated from cells in other neighborhoods by cells
+which have an initial (and final) tag value of zero.
+
+We first define the restriction function for tag values. The parent
+tag is just the minimum of its children's tags. */
+
+static void coarsen_tag (Point point, scalar t)
+{
+  double min = HUGE;
+  foreach_child()
+    if (t[] < min)
+      min = t[];
+  t[] = min;
+}
+
+/**
+The function just takes the scalar field *t* which holds the initial
+and final tag values. */
+
+void tag (scalar t)
+{
+
+  /**
+  We first set the restriction and prolongation functions (on trees). */
+
+  t.coarsen = coarsen_tag;
+#if TREE  
+  t.refine = t.prolongation = refine_injection;
+#endif
+
+  /**
+  As an initial guess, we set all the (leaf) cells which have a
+  non-zero initial tag value to the Z- (or Morton-) index. We thus
+  have a different "neighborhood" for each cell which has a non-zero
+  initial tag, and a single neighborhood (tagged zero) for all the
+  cells which have a zero initial tag. */
+  
+#if _MPI
+  scalar index[];
+  z_indexing (index, true);
+  foreach()
+    t[] = (t[] != 0)*(index[] + 1);
+#else // !_MPI
+  long i = 1;
+  foreach_cell()
+    if (is_leaf(cell)) {
+      t[] = (t[] != 0)*i++;
+      continue;
+    }
+#endif // !_MPI
+  boundary ({t});
+
+  /**
+  To gather cells which belong to the same neighborhood, we repeat
+  multigrid iterations until none of the tag values changes. */
+  
+  bool changed = false;
+  do {
+
+    /**
+    We first do a restriction from the finest to the coarsest level of
+    the multigrid hierarchy, using the `coarsen_tag()` function
+    above. */
+    
+    restriction ({t});
+
+    /**
+    We then go from the coarsest to the finest level and update the
+    tag values. */
+
+    for (int l = 1; l <= grid->maxdepth; l++) {
+
+      /**
+      If the parent tag is non-zero, we set the child tag to the value
+      of its parent (i.e. to the minimum tag value of its
+      siblings). */
+      
+      foreach_level(l)
+	if (coarse(t))
+	  t[] = coarse(t);
+      boundary_level ({t}, l);
+
+      /**
+      For cells which verify the threshold condition (i.e. for which
+      `t[] != 0`), we refine this initial guess by taking the minimum
+      (non-zero) tag value of its closest neighbors. We also track
+      whether this update changes any of the tag values. */
+      
+      changed = false;
+      foreach_level (l, reduction(max:changed))
+        if (t[]) {
+	  double min = t[];
+	  foreach_neighbor(1)
+	    if (t[] && t[] < min)
+	      min = t[];
+	  if (t[] != min) {
+	    changed = true;
+	    t[] = min;
+	  }
+	}
+      boundary_level ({t}, l);
+    }
+  } while (changed);
+}
