@@ -391,7 +391,7 @@ void input_grd (struct InputGRD p)
 
   // read the data
   double * value = malloc (sizeof(double)*nx*ny);
-  for (int i = 0; i < ny; i++)
+  for (int i = ny - 1; i >= 0; i--)
     for (int j = 0 ; j < nx; j++)
       fscanf (p.fp, "%lf ", &value[j + i*nx]);
 
