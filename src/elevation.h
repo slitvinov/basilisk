@@ -136,21 +136,43 @@ typedef struct {
 
 void output_gauges (Gauge * gauges, scalar * list)
 {
-  for (Gauge * g = gauges; g->name; g++) {
-    if (!g->fp) {
-      g->fp = fopen (g->name, "w");
-      if (g->desc)
-	fprintf (g->fp, "%s\n", g->desc);
-    }
+  scalar * list1 = list_append (NULL, h);
+  for (scalar s in list)
+    list1 = list_append (list1, s);
+
+  int n = 0;
+  for (Gauge * g = gauges; g->name; g++, n++);
+  coord a[n];
+  n = 0;
+  for (Gauge * g = gauges; g->name; g++, n++) {
     double xp = g->x, yp = g->y;
     unmap (&xp, &yp);
-    Point point = locate (xp, yp);
-    if (point.level >= 0 && h[] > dry) {
-      fprintf (g->fp, "%g", t);
-      for (scalar s in list)
-	fprintf (g->fp, " %g", s[]);
-      fputc ('\n', g->fp);
-      fflush (g->fp);
+    a[n].x = xp, a[n].y = yp;
+  }
+  int len = list_len(list1);
+  double v[n*len];
+  interpolate_array (list1, a, n, v, false);
+
+  if (pid() == 0) {
+    n = 0;
+    for (Gauge * g = gauges; g->name; g++) {
+      if (!g->fp) {
+	g->fp = fopen (g->name, "w");
+	if (g->desc)
+	  fprintf (g->fp, "%s\n", g->desc);
+      }
+      if (v[n] != nodata && v[n] > dry) {
+	fprintf (g->fp, "%g", t);
+	n++;
+	for (scalar s in list)
+	  fprintf (g->fp, " %g", v[n++]);
+	fputc ('\n', g->fp);
+	fflush (g->fp);
+      }
+      else
+	n += len;
     }
   }
+
+  free (list1);
 }

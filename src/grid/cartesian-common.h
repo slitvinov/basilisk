@@ -563,39 +563,70 @@ struct _interpolate {
   double x, y, z;
 };
 
+static double interpolate_linear (Point point, struct _interpolate p)
+{
+  scalar v = p.v;
+#if dimension == 1
+  x = (p.x - x)/Delta - v.d.x/2.;
+  int i = sign(x);
+  x = fabs(x);
+  /* linear interpolation */
+  return v[]*(1. - x) + v[i]*x;
+#elif dimension == 2
+  x = (p.x - x)/Delta - v.d.x/2.;
+  y = (p.y - y)/Delta - v.d.y/2.;
+  int i = sign(x), j = sign(y);
+  x = fabs(x); y = fabs(y);
+  /* bilinear interpolation */
+  return ((v[]*(1. - x) + v[i]*x)*(1. - y) + 
+	  (v[0,j]*(1. - x) + v[i,j]*x)*y);
+#else // dimension == 3
+  x = (p.x - x)/Delta - v.d.x/2.;
+  y = (p.y - y)/Delta - v.d.y/2.;
+  z = (p.z - z)/Delta - v.d.z/2.;
+  int i = sign(x), j = sign(y), k = sign(z);
+  x = fabs(x); y = fabs(y); z = fabs(z);
+  /* trilinear interpolation */
+  return (((v[]*(1. - x) + v[i]*x)*(1. - y) + 
+	   (v[0,j]*(1. - x) + v[i,j]*x)*y)*(1. - z) +
+	  ((v[0,0,k]*(1. - x) + v[i,0,k]*x)*(1. - y) + 
+	   (v[0,j,k]*(1. - x) + v[i,j,k]*x)*y)*z);
+#endif  
+}
+
 trace
 double interpolate (struct _interpolate p)
 {
   Point point = locate (p.x, p.y, p.z);
   if (point.level < 0)
     return nodata;
-  scalar v = p.v;
-  #if dimension == 1
-    x = (p.x - x)/Delta - v.d.x/2.;
-    int i = sign(x);
-    x = fabs(x);
-    /* linear interpolation */
-    return v[]*(1. - x) + v[i]*x;
-  #elif dimension == 2
-    x = (p.x - x)/Delta - v.d.x/2.;
-    y = (p.y - y)/Delta - v.d.y/2.;
-    int i = sign(x), j = sign(y);
-    x = fabs(x); y = fabs(y);
-    /* bilinear interpolation */
-    return ((v[]*(1. - x) + v[i]*x)*(1. - y) + 
-	    (v[0,j]*(1. - x) + v[i,j]*x)*y);
-  #else // dimension == 3
-    x = (p.x - x)/Delta - v.d.x/2.;
-    y = (p.y - y)/Delta - v.d.y/2.;
-    z = (p.z - z)/Delta - v.d.z/2.;
-    int i = sign(x), j = sign(y), k = sign(z);
-    x = fabs(x); y = fabs(y); z = fabs(z);
-    /* trilinear interpolation */
-    return (((v[]*(1. - x) + v[i]*x)*(1. - y) + 
-	     (v[0,j]*(1. - x) + v[i,j]*x)*y)*(1. - z) +
-	    ((v[0,0,k]*(1. - x) + v[i,0,k]*x)*(1. - y) + 
-	     (v[0,j,k]*(1. - x) + v[i,j,k]*x)*y)*z);
-  #endif
+  return interpolate_linear (point, p);
+}
+
+trace
+void interpolate_array (scalar * list, coord * a, int n, double * v, bool linear)
+{
+  int j = 0;
+  for (int i = 0; i < n; i++) {
+    Point point = locate (a[i].x, a[i].y, a[i].z);
+    if (point.level >= 0) {
+      for (scalar s in list)
+	v[j++] = !linear ? s[] :
+	  interpolate_linear (point,
+			      (struct _interpolate){s, a[i].x, a[i].y, a[i].z});
+    }
+    else
+      for (scalar s in list)
+	v[j++] = nodata;
+  }
+@if _MPI
+  if (pid() == 0)
+    MPI_Reduce (MPI_IN_PLACE, v, n*list_len(list), MPI_DOUBLE,
+		MPI_MIN, 0, MPI_COMM_WORLD);
+  else
+    MPI_Reduce (v, v, n*list_len(list), MPI_DOUBLE,
+		MPI_MIN, 0, MPI_COMM_WORLD);
+@endif
 }
 
 // Boundaries
