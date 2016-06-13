@@ -421,8 +421,9 @@ void output_ppm (struct OutputPPM p)
 @endif
     if (!p.fp) p.fp = stdout;
     if (p.file) {
-      char * command = malloc (strlen ("convert ppm:- ") + strlen (p.file) + 1);
-      strcpy (command, "convert ppm:- ");
+      char * command = malloc (strlen ("convert ppm:- -transparent black ") +
+			       strlen (p.file) + 1);
+      strcpy (command, "convert ppm:- -transparent black ");
       strcat (command, p.file);
       p.fp = popen (command, "w");
       free (command);
