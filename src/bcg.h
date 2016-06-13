@@ -35,8 +35,7 @@ void tracer_fluxes (scalar f,
 
     double un = dt*uf.x[]/(fm.x[]*Delta), s = sign(un);
     int i = -(s + 1.)/2.;
-    double f2 = f[i] + (src[] + src[-1])*dt/4. +
-      s*min(1., 1. - s*un)*g.x[i]*Delta/2.;
+    double f2 = f[i] + (src[] + src[-1])*dt/4. + s*(1. - s*un)*g.x[i]*Delta/2.;
 
     /**
     and tangential components... */

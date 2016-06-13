@@ -228,14 +228,13 @@ void prediction()
   foreach_face() {
     double un = dt*(u.x[] + u.x[-1])/(2.*Delta), s = sign(un);
     int i = -(s + 1.)/2.;
-    uf.x[] = u.x[i] + (g.x[] + g.x[-1])*dt/4. +
-      s*min(1., 1. - s*un)*du.x[i]*Delta/2.;
+    uf.x[] = u.x[i] + (g.x[] + g.x[-1])*dt/4. + s*(1. - s*un)*du.x[i]*Delta/2.;
     #if dimension > 1
       double fyy = u.y[i] < 0. ? u.x[i,1] - u.x[i] : u.x[i] - u.x[i,-1];
       uf.x[] -= dt*u.y[i]*fyy/(2.*Delta);
     #endif
     #if dimension > 2
-      double fzz = u.z[i] < 0. ? u.z[i,0,1] - u.z[i] : u.z[i] - u.z[i,0,-1];
+      double fzz = u.z[i] < 0. ? u.x[i,0,1] - u.x[i] : u.x[i] - u.x[i,0,-1];
       uf.x[] -= dt*u.z[i]*fzz/(2.*Delta);
     #endif
     uf.x[] *= fm.x[];
