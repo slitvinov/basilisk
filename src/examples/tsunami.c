@@ -409,8 +409,58 @@ As before gnuplot (via [tsunami.plot]()) processes these files to
 produce this image:
 
 ![Comparison between observed and simulated timeseries (hours) of wave
- elevations (metres) for a selection of tide gauges.](tsunami/gauges.png)
+ elevations (metres) for a selection of tide gauges.](tsunami/gauges.png) 
 
+### Google Earth KML file
+
+We also generate images and a [Keyhole Markup Language]() file which
+can be imported into [Google Earth](https://www.google.com/earth/) to
+superpose the evolving wave height field on top of Google Earth
+data. */
+
+event kml (t += 15)
+{
+  static FILE * fp = fopen ("eta.kml", "w");
+  if (t == 0)
+    fprintf (fp,
+	     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+	     "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n"
+	     "  <Folder>\n");
+  fprintf (fp,
+	   "    <GroundOverlay>\n"
+	   "      <TimeSpan>\n"
+	   "        <begin>2004-12-26T%02d:%02d:00</begin>\n"
+	   "        <end>2004-12-26T%02d:%02d:00</end>\n"
+	   "      </TimeSpan>\n"
+	   "      <Icon>\n"
+	   "	    <href>eta-%g.png</href>\n"
+	   "      </Icon>\n"
+	   "      <LatLonBox>\n"
+	   "	    <north>35</north>\n"
+	   "	    <south>-19</south>\n"
+	   "	    <east>121</east>\n"
+	   "	    <west>67</west>\n"
+	   "      </LatLonBox>\n"
+	   "    </GroundOverlay>\n",
+	   8 + ((int)t)/60, ((int)t)%60,
+	   8 + ((int)t + 15)/60, ((int)t + 15)%60,
+	   t);
+  fflush (fp);
+  scalar m[], etam[];
+  foreach() {
+    etam[] = eta[]*(h[] > dry);
+    m[] = etam[] - zb[];
+  }
+  boundary ({m, etam});
+  char name[80];
+  sprintf (name, "eta-%g.png", t);
+  output_ppm (etam, file = name, mask = m,
+	      min = -2, max = 2, n = 1 << maxlevel, linear = true);
+  if (t == 600)
+    fprintf (fp, "</Folder></kml>\n");
+}
+
+/**
 ## Adaptivity
 
 And finally we apply our *adapt()* function at every timestep. */
