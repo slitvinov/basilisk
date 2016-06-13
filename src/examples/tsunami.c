@@ -25,13 +25,20 @@ when restarting a simulation from a snapshot. */
 /**
 We then define a few useful macros and constants. */
 
-#define MAXLEVEL 10
+int maxlevel = 10;
 #define MINLEVEL 5
 #define ETAE     1e-2 // error on free surface elevation (1 cm)
 #define HMAXE    5e-2 // error on maximum free surface elevation (5 cm)
 
-int main()
+/**
+The maximum number of levels to use can be set as an argument to the
+program. */
+
+int main (int argc, char * argv[])
 {
+  if (argc > 1)
+    maxlevel = atoi(argv[1]);
+
   /**
   Here we setup the domain geometry. We choose to use metre as length
   unit, so we set the radius of the Earth (required for the [spherical
@@ -64,7 +71,7 @@ int main()
   init_grid (1 << MINLEVEL);
 #else // Cartesian
   // 1024^2 grid points
-  init_grid (1 << MAXLEVEL);
+  init_grid (1 << maxlevel);
 #endif
 
   /**
@@ -130,7 +137,7 @@ int adapt() {
   The function then returns the number of cells refined. */
 
   astats s = adapt_wavelet ({eta, hmax}, (double[]){ETAE,HMAXE},
-			    MAXLEVEL, MINLEVEL);
+			    maxlevel, MINLEVEL);
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
   return s.nf;
 #else // Cartesian
@@ -282,13 +289,14 @@ event snapshots (t += 60; t <= 600) {
 
 #if !_MPI
   printf ("file: t-%g\n", t);
-  output_field ({h, zb, hmax}, stdout, n = 1 << MAXLEVEL, linear = true);
-#endif
+  output_field ({h, zb, hmax}, stdout, n = 1 << maxlevel, linear = true);
   
   /**
   We also save a snapshot file we can restart from. */
 
   output_gfs (file = "snapshot.gfs", t = t);
+#endif
+
 }
 
 /**
@@ -336,7 +344,7 @@ event movies (t++) {
   
   static FILE * fp2 = popen ("ppm2mpeg > eta-zoom.mpg", "w");
   output_ppm (etam, fp2, mask = m, min = -2, max = 2, n = 512, linear = true,
-	      box = {{89,8},{98,16}});
+	      box = {{91,6},{100,14}});
 
   /**
   ![[Animation](tsunami/eta-zoom.mpg) of the wave elevation. Dark blue is 
@@ -348,7 +356,7 @@ event movies (t++) {
   scalar l = etam;
   foreach()
     l[] = level;
-  output_ppm (l, fp1, min = MINLEVEL, max = MAXLEVEL, n = 512);
+  output_ppm (l, fp1, min = MINLEVEL, max = maxlevel, n = 512);
 
   /**
   ![[Animation](tsunami/level.mpg) of the level of refinement. Dark blue is 5
