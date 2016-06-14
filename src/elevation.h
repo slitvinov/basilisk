@@ -21,10 +21,10 @@ static void refine_elevation (Point point, scalar h)
     coord g; // gradient of eta
     if (gradient)
       foreach_dimension()
-	g.x = gradient (zb[-1,0] + h[-1,0], eta, zb[1,0] + h[1,0])/4.;
+	g.x = gradient (zb[-1] + h[-1], eta, zb[1] + h[1])/4.;
     else
       foreach_dimension()
-	g.x = (zb[1,0] - zb[-1,0])/(2.*Delta);
+	g.x = (zb[1] - zb[-1])/(2.*Delta);
     // reconstruct water depth h from eta and zb
     foreach_child() {
       double etac = eta;
@@ -44,12 +44,11 @@ static void refine_elevation (Point point, scalar h)
 
     double v = 0., eta = 0.; // water surface elevation
     // 3x3 neighbourhood
-    for (int i = -1; i <= 1; i++)
-      for (int j = -1; j <= 1; j++)
-	if (h[i,j] >= dry) {
-	  eta += h[i,j]*(zb[i,j] + h[i,j]);
-	  v += h[i,j];
-	}
+    foreach_neighbor(1)
+      if (h[] >= dry) {
+	eta += h[]*(zb[] + h[]);
+	v += h[];
+      }
     if (v > 0.)
       eta /= v; // volume-averaged eta of neighbouring wet cells
     else
@@ -95,12 +94,36 @@ static void coarsen_elevation (Point point, scalar h)
 }
 
 /**
+We also need to define a consistent prolongation function. For cells
+which are entirely surrounded by wet cells, we can use the standard
+linear refinement function, otherwise we use straight injection from
+the parent cell. */
+
+static void prolongation_elevation (Point point, scalar h)
+{
+  bool wet = true;
+  foreach_neighbor(1)
+    if (h[] <= dry)
+      wet = false, break;
+  if (wet)
+    refine_linear (point, h);
+  else {
+    double hc = h[], zc = zb[];
+    foreach_child() {
+      h[] = hc;
+      zb[] = zc;
+    }
+  }
+}
+
+/**
 Finally we define a function which will be called by the user to apply
 these reconstructions.  */
 
 void conserve_elevation (void)
 {
   h.refine  = refine_elevation;
+  h.prolongation = prolongation_elevation;
   h.coarsen = coarsen_elevation;
 }
 #else // Cartesian

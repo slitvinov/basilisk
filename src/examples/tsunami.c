@@ -138,7 +138,7 @@ int adapt() {
 
   astats s = adapt_wavelet ({eta, hmax}, (double[]){ETAE,HMAXE},
 			    maxlevel, MINLEVEL);
-  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
+  fprintf (ferr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
   return s.nf;
 #else // Cartesian
   return 0;
@@ -252,8 +252,8 @@ event logfile (i++) {
   stats s = statsf (h);
   norm n = normf (u.x);
   if (i == 0)
-    fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt speed tn\n");
-  fprintf (stderr, "%g %d %g %g %g %g %g %g %g %ld\n",
+    fprintf (ferr, "t i h.min h.max h.sum u.x.rms u.x.max dt speed tn\n");
+  fprintf (ferr, "%g %d %g %g %g %g %g %g %g %ld\n",
 	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, perf.speed, grid->tn);
 
   /**
@@ -364,13 +364,13 @@ event movies (t++) {
   
   ...and for the process id for parallel runs. */
   
-#if _OPENMP
+#if _OPENMP || _MPI
   static FILE * fp3 = fopen ("pid.ppm", "w");
   foreach()
     etam[] = tid();
-  double tmax = omp_get_max_threads() - 1;
+  double tmax = npe() - 1;
   output_ppm (etam, fp3, max = tmax, n = 512);
-#endif // _OPENMP
+#endif // _OPENMP || _MPI
 }
 
 /**
