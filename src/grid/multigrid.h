@@ -713,24 +713,38 @@ struct _locate { double x, y, z; };
 
 Point locate (struct _locate p)
 {
-  Point r;
-  r.n = 1 << depth();
-  double o[] = {X0,Y0,Z0};
-  int * q = &r.i, c = 0;
-  foreach_dimension() {
+  Point point = { .level = -1, .n = 1 << depth() };
 #if _MPI
-    double a = ((p.x - o[c])/L0*mpi_dims[c] - mpi_coords[c])*r.n;
-#else
-    double a = (p.x - o[c])/L0*r.n;
-#endif   
-    if (a < 0.5 - GHOSTS || a >= r.n + GHOSTS - 0.5) {
-      r.level = -1;
-      return r;
-    }
-    q[c++] = a + GHOSTS;
-  }
-  r.level = depth();
-  return r;
+  point.i = (p.x - X0)/L0*point.n*mpi_dims[0] + GHOSTS - mpi_coords[0]*point.n;
+  if (point.i < GHOSTS || point.i >= point.n + GHOSTS)
+    return point;
+#if dimension >= 2
+  point.j = (p.y - Y0)/L0*point.n*mpi_dims[0] + GHOSTS - mpi_coords[1]*point.n;
+  if (point.j < GHOSTS || point.j >= point.n + GHOSTS)
+    return point;
+#endif
+#if dimension >= 3
+  point.k = (p.z - Z0)/L0*point.n*mpi_dims[0] + GHOSTS - mpi_coords[2]*point.n;
+  if (point.k < GHOSTS || point.k >= point.n + GHOSTS)
+    return point;
+#endif  
+#else // !_MPI
+  point.i = (p.x - X0)/L0*point.n + GHOSTS;
+  if (point.i < GHOSTS || point.i >= point.n + GHOSTS)
+    return point;
+#if dimension >= 2
+  point.j = (p.y - Y0)/L0*point.n + GHOSTS;
+  if (point.j < GHOSTS || point.j >= point.n + GHOSTS)
+    return point;
+#endif
+#if dimension >= 3
+  point.k = (p.z - Z0)/L0*point.n + GHOSTS;
+  if (point.k < GHOSTS || point.k >= point.n + GHOSTS)
+    return point;
+#endif  
+#endif // !_MPI
+  point.level = depth();
+  return point;
 }
  
 #include "multigrid-common.h"

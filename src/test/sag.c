@@ -132,7 +132,7 @@ event profiles (i += 10) {
     flux[] = (c[0,0] - c[0,-1])/Delta;
   boundary ({flux});
   
-  for (double x = -L0/2 ; x <= L0/2; x += L0/N) {
+  for (double x = -L0/2 ; x < L0/2; x += L0/N) {
     double y = x + L0/2;
     fprintf (fpx, "%g %g %g\n", 
 	     x, interpolate (c, x, 0) , interpolate (flux, x, 0));

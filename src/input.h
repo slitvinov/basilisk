@@ -104,7 +104,7 @@ void input_pgm (struct InputPGM p)
   }
 }
 
-#if MULTIGRID
+#if MULTIGRID && !MULTIGRID_MPI
 
 static void next_char (FILE * fp, int target)
 {
@@ -318,7 +318,7 @@ void input_gfs (struct OutputGfs p)
     t1 = tnext;
 }
 
-#endif // MULTIGRID
+#endif // MULTIGRID && !MULTIGRID_MPI
 
 /**
 # *input_grd()*: Raster format (Esri grid)

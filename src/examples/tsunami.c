@@ -365,7 +365,7 @@ event movies (t++) {
   ...and for the process id for parallel runs. */
   
 #if _OPENMP
-  static FILE * fp3 = popen ("ppm2mpeg > pid.mpg", "w");
+  static FILE * fp3 = fopen ("pid.ppm", "w");
   foreach()
     etam[] = tid();
   double tmax = omp_get_max_threads() - 1;
