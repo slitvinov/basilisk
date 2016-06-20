@@ -37,6 +37,7 @@ Note that only the documented test cases appear in the list below
 * [Viscous hydraulic jump](higuera.c)
 * [Transcritical flow over a bump with multiple layers](layered.c)
 * [Wind-driven lake](wind-driven.c)
+* [Lake flowing into itself](lake-tr.c)
 
 ## Volume-Of-Fluid
 

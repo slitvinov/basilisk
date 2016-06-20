@@ -31,9 +31,16 @@ drybump2D-implicit.tst: CFLAGS += -DIMPLICIT=1
 
 drybump2D.tst: drybump2D-implicit.tst
 
-# multiriverinflow.tst: multiriverinflow.ctst
-# multiriverinflow.tst: CFLAGS += -fopenmp
-# multiriverinflow.ctst: CFLAGS += -fopenmp
+lake-tr.tst: lake-tr-explicit.tst
+
+lake-tr-explicit.c: lake-tr.c
+	ln -s lake-tr.c lake-tr-explicit.c
+lake-tr-explicit.tst: lake-tr.s
+lake-tr-explicit.tst: CFLAGS += -DEXPLICIT=1
+
+multiriverinflow.tst: multiriverinflow.ctst
+multiriverinflow.tst: CFLAGS += -fopenmp
+multiriverinflow.ctst: CFLAGS += -fopenmp
 
 parabola-explicit.c: parabola.c
 	ln -s parabola.c parabola-explicit.c 
