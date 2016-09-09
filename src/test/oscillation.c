@@ -44,10 +44,12 @@ int LEVEL;
 int main() {
   
   /**
-  The surface tension is unity. We cleanup existing files and vary the
-  level of refinement. */
+  The surface tension is unity. Decreasing the tolerance on the
+  Poisson solve improves the results. We cleanup existing files and
+  vary the level of refinement. */
 
   c.sigma = 1.;
+  TOLERANCE = 1e-4;
   remove ("error");
   remove ("laplace");
   for (LEVEL = 5; LEVEL <= 8; LEVEL++) {
