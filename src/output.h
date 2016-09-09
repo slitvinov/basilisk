@@ -889,20 +889,18 @@ void dump (struct Dump p)
     if (!s.face && s.i != cm.i)
       list = list_add (list, s);
 
-  MPI_File fh;
-  MPI_File_open (MPI_COMM_WORLD, file, MPI_MODE_CREATE|MPI_MODE_WRONLY,
-		 MPI_INFO_NULL, &fh);  
+  FILE * fh = fopen (file, "w");
   
   struct DumpHeader header = { p.t, list_len(list), depth(), npe() };
 
 #if MULTIGRID_MPI
   for (int i = 0; i < dimension; i++)
     (&header.n.x)[i] = mpi_dims[i];
+  MPI_Barrier (MPI_COMM_WORLD);
 #endif
 
-  MPI_Status status;
   if (pid() == 0)
-    MPI_File_write_at (fh, 0, &header, sizeof(header), MPI_BYTE, &status);
+    fwrite (&header, 1, sizeof(header), fh);
   
   scalar index = {-1};
   
@@ -914,12 +912,11 @@ void dump (struct Dump p)
     // fixme: this won't work when combining MPI and mask()
     if (is_local(cell)) {
       long offset = sizeof(header) + index[]*cell_size;
+      fseek (fh, offset, SEEK_SET);
       unsigned flags = is_leaf(cell) ? leaf : 0;
-      MPI_File_write_at (fh, offset, &flags, sizeof(unsigned), MPI_BYTE,
-			 &status), offset += sizeof(unsigned);
+      fwrite (&flags, 1, sizeof(unsigned), fh);
       for (scalar s in list)
-	MPI_File_write_at (fh, offset, &s[], sizeof(double), MPI_BYTE,
-			   &status), offset += sizeof(double);
+	fwrite (&s[], 1, sizeof(double), fh);
     }
     if (is_leaf(cell))
       continue;
@@ -928,7 +925,7 @@ void dump (struct Dump p)
   delete ({index});
   
   free (list);
-  MPI_File_close (&fh);
+  fclose (fh);
 }
 @endif // _MPI
 
