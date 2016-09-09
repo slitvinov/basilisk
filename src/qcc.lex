@@ -683,8 +683,9 @@
     while (s) {
       char * dot = strchr (s, '.');
       var_t * var = varlookup (s, strlen(s) - (dot ? strlen(dot) : 0));
-      int vtype = var->type;
+      int vtype = var->type, si = 0;
       while (dot) {
+	si += (dot[1] - 'x')*(vtype == 2 ? dimension : 1);
 	vtype--;
 	dot = strchr (dot+1, '.');
       }
@@ -791,13 +792,13 @@
 	for (i = 0; i < nd; i++) {
 	  switch (listtype) {
 	  case scalar:
-	    sprintf (coord, "{%s%d},", constant, var->i[i]); break;
+	    sprintf (coord, "{%s%d},", constant, var->i[si+i]); break;
 	  case vector: {
-	    sprintf (coord, "{{%s%d}", constant, var->i[dimension*i]);
+	    sprintf (coord, "{{%s%d}", constant, var->i[si+dimension*i]);
 	    int j;
 	    for (j = 1; j < dimension; j++) {
 	      char s[80];
-	      sprintf (s, ",{%s%d}", constant, var->i[dimension*i+j]);
+	      sprintf (s, ",{%s%d}", constant, var->i[si+dimension*i+j]);
 	      strcat (coord, s);
 	    }
 	    strcat (coord, "},");
@@ -968,7 +969,8 @@
 	v->i[0] = 1;
     }
     if (debug)
-      fprintf (stderr, "%s:%d: declaration: %s\n", fname, line, var);
+      fprintf (stderr, "%s:%d: declaration: %s type: %d\n",
+	       fname, line, var, vartype);
   }
 
   static int homogeneize (FILE * in, FILE * fp)
