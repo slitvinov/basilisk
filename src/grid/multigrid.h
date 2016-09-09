@@ -554,6 +554,17 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   if (!list1)
     return;
 
+  if (l == 0) {
+    foreach_level(0)
+      for (scalar s in list1) {
+	double v = s[];
+	foreach_neighbor()
+	  s[] = v;
+      }
+    free (list1);
+    return;
+  }
+
   Point point = {0};
   point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
   for (int i = 0; i < GHOSTS; i++)
@@ -587,6 +598,17 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   if (!list1)
     return;
 
+  if (l == 0) {
+    foreach_level(0)
+      for (scalar s in list1) {
+	double v = s[];
+	foreach_neighbor()
+	  s[] = v;
+      }
+    free (list1);
+    return;
+  }
+  
   OMP_PARALLEL() {
     Point point;
     point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
