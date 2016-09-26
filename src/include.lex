@@ -68,7 +68,7 @@
 
   static FILE * openpath (const char * name, const char * mode, char ** path) {
     int i;
-    for (i = 0; i <= npath; i++) {
+    for (i = npath; i >= 0; i--) {
       char * p = malloc (strlen (paths[i]) + strlen (name) + 3);
       strcpy (p, paths[i]); strcat (p, "//"); strcat (p, name);
       FILE * fp = fopen (p, mode);
