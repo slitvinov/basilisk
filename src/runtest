@@ -31,10 +31,10 @@ script()
 
     pass=true
     rm -f log-* stencil stencil-* fine fine-* coarse coarse-*
-    if test -n "$EXEC" -o -z `which gdb`; then
+    if test -n "$EXEC" -o -z "`which gdb`"; then
 	if ! $EXEC ./$test 2> $log > $out; then
 	    pass=false
-	    if test "$EXEC" = " " -a -f core -a -n `which gdb`; then
+	    if test "$EXEC" = " " -a -f core -a -n "`which gdb`"; then
 		cat $log
 		xterm -e "gnuplot plot -" &
 		gdb -q ./$test core
@@ -120,7 +120,7 @@ if ! test -f fail; then
   test -s warn || rm -f warn
 
   pass=true
-  if test -n "$EXEC" -o -z `which gdb`; then
+  if test -n "$EXEC" -o -z "`which gdb`"; then
     if ! timeout 1h $EXEC ./$test 2> $log > $out; then
        pass=false
     fi
