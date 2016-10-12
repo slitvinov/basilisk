@@ -15,6 +15,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
   Re=160](karman.c)
 * [Vortex shedding behind a sphere at Re=300](sphere.c)
 * [Atomisation of a pulsed liquid jet](atomisation.c)
+* [Bubble rising in a large tank](bubble.c)
 * [Forced isotropic turbulence in a triply-periodic box](isotropic.c)
 
 ## Python interface

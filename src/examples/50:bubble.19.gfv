@@ -1,0 +1,89 @@
+# GfsView 3D
+View {
+  tx = 0.00114071 ty = 0.141824
+  sx = 1 sy = 1 sz = 1
+  q0 = -0.896987 q1 = -0.0516663 q2 = 0.426427 q3 = -0.104441
+  fov = 6.0601
+  r = 0.3 g = 0.4 b = 0.6
+  res = 1
+  lc = 0.001
+  reactivity = 0.1
+}
+VOF {
+  r = 0.131151 g = 0.475273 b = 0.774304
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+  line_width = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} P {
+  amin = 1
+  amax = 1
+  cmap = Jet
+} f {
+  reversed = 1
+  use_scalar = 0
+  draw_edges = 0
+  interpolate = 0
+}
+Isosurface {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+  line_width = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} P {
+  amin = 1
+  amax = 1
+  cmap = Jet
+} l2*10+0.002 {
+  level = -0
+  reversed = 0
+  use_scalar = 0
+}
+VOF {
+  r = 0.131151 g = 0.475273 b = 0.774304
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+  line_width = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} P {
+  amin = 1
+  amax = 1
+  cmap = Jet
+} f {
+  reversed = 1
+  use_scalar = 0
+  draw_edges = 0
+  interpolate = 0
+}
+Isosurface {
+  r = 1 g = 1 b = 1
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+  line_width = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
+} P {
+  amin = 1
+  amax = 1
+  cmap = Jet
+} l2*10+0.002 {
+  level = -0
+  reversed = 0
+  use_scalar = 0
+}
