@@ -37,8 +37,11 @@ done
     echo "# DO NOT EDIT, edit 'Makefile' instead"
     DIR=`basename $PWD`
     echo "ALLTESTS = \\"
-    showfiles c
-    showfiles 'c\.page' | sed 's/\.page / /g'
+    (showfiles c
+     showfiles 'c\.page' | sed 's/\.page / /g'
+     grep '^[a-zA-Z_0-9-]*\.*tst[ ]*:' Makefile | \
+	 sed -n 's/\(^[a-zA-Z_0-9-]*\)\.*tst[ ]*:.*/	\1.c \\/p'
+    ) | sort | uniq
     echo ""
     echo "plots: \\"
     showfiles plot | sed 's/\(.*\)\.plot/\1\/plot.png/g'
@@ -46,15 +49,15 @@ done
     echo "TESTS = \\"
     singleline < Makefile | 		                   \
 	grep '^check:' | tr ' ' '\n' |                     \
-	sed -n 's/[ 	]*\([a-zA-Z_0-9]*\..tst\)[ 	]*/\1/p' |  \
+	sed -n 's/[ 	]*\([a-zA-Z_0-9-]*\..tst\)[ 	]*/\1/p' |  \
 	sed 's/\(.*\)\..tst/	\1.c \\/g'
     singleline < Makefile | 		                   \
 	grep -v '^check:' | grep '^[^.]*:.*' | tr ' ' '\n' |     \
-	sed -n 's/[ 	]*\([a-zA-Z_0-9]*\.tst\)[ 	]*/\1/p' |    \
+	sed -n 's/[ 	]*\([a-zA-Z_0-9-]*\.tst\)[ 	]*/\1/p' |    \
 	sed 's/\(.*\)\.tst/	\1.c \\/g'
     echo ""
     echo "SPECIAL_TESTS = \\"
-    sed -n 's/.*:[ 	]*\([a-zA-Z_0-9]*\.ctst\)/\1/p' Makefile | \
+    sed -n 's/.*:[ 	]*\([a-zA-Z_0-9-]*\.ctst\)/\1/p' Makefile | \
 	sort | uniq | sed 's/\(.*\)/	\1 \\/g'
     echo ""
     echo "ALLPAGES = \\"
