@@ -1,6 +1,5 @@
 // reads the output of gfs.c
 
-double t = 0;
 #include "input.h"
 
 int main()

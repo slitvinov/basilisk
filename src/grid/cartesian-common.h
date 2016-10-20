@@ -238,6 +238,9 @@ void free_solver()
 {
   delete (all);
   free (all); all = NULL;
+  for (Event * ev = Events; !ev->last; ev++)
+    for (Event * e = ev->next; e; e = e->next)
+      free (e);
   free (Events); Events = NULL;
   free (_attribute); _attribute = NULL;
   free (_constant); _constant = NULL;

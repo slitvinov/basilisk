@@ -1,4 +1,5 @@
 // very close to bump2D.c but with additional checks for MPI parallelism
+// also used to test parallel dump/restore
 
 #include "saint-venant.h"
 #include "check_restriction.h"
@@ -20,8 +21,9 @@ int main (int argc, char * argv[])
 
 event init (i = 0)
 {
-  foreach()
-    h[] = 0.1 + 1.*exp(-200.*(x*x + y*y));
+  if (!restore (file = "bump2Dp-restore.dump"))
+    foreach()
+      h[] = 0.1 + 1.*exp(-200.*(x*x + y*y));
 }
 
 event logfile (i++) {
@@ -70,4 +72,8 @@ event adapt (i++) {
     for (int i = -2; i <= 2; i++)
       assert (u.x[0,i] == 1);
 #endif
+}
+
+event snapshot (t = 2.5/2.) {
+  dump (file = "dump");
 }

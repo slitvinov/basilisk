@@ -76,7 +76,7 @@ event velo (t = end)
 #if 0
 event gfsview (i++) {
   static FILE * fp = popen ("gfsview2D -s test.gfv", "w");
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 }
 #endif
 

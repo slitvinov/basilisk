@@ -795,7 +795,7 @@ void mpi_boundary_update_buffers()
 	 Note that this can be commented out in case of suspicion that
 	 something is wrong with border cell tagging. */
       continue;
-
+    
     if (cell.neighbors) {
       // sending
       Array pids = {NULL, 0, 0};
@@ -866,11 +866,13 @@ void mpi_boundary_update_buffers()
       }
     }
 
-    // restriction (remote siblings)
+    // restriction (remote siblings/children)
     if (level > 0) {
       if (is_local(cell)) {
 	// sending
 	Array pids = {NULL, 0, 0};
+	if (is_remote(aparent(0)))
+	  append_pid (&pids, aparent(0).pid);
 	int n = root_pids (parent, &pids);
 	if (n) {
 	  for (int i = 0, * p = (int *) pids.p; i < n; i++, p++)
@@ -880,7 +882,7 @@ void mpi_boundary_update_buffers()
       }
       else if (is_remote(cell)) {
 	// receiving
-	if (has_local_child (parent))
+	if (is_local(aparent(0)) || has_local_child (parent))
 	  rcv_pid_append (restriction->rcv, cell.pid, point);
       }
     }
@@ -916,7 +918,7 @@ void mpi_boundary_update_buffers()
 #endif
 
 #ifdef DEBUGCOND
-  extern double t;
+  extern double t; NOT_UNUSED(t);
   check_snd_rcv_matrix (mpi_level, "mpi_level");
   check_snd_rcv_matrix (mpi_level_root, "mpi_level_root");
   check_snd_rcv_matrix (restriction, "restriction");
@@ -1197,6 +1199,116 @@ void mpi_partitioning()
   mpi_boundary_update_buffers();
 }
 
+void restore_mpi (FILE * fp, scalar * list1)
+{
+  long index = 0, nt = 0, start = ftell (fp);
+  scalar size[], * list = list_concat ({size}, list1);;
+  long offset = sizeof(double)*list_len(list);
+  
+  // read local cells
+  static const unsigned short set = 1 << user;
+  scalar * listm = is_constant(cm) ? NULL : (scalar *){fm};
+  foreach_cell()
+    if (balanced_pid (index, nt, npe()) <= pid()) {
+      unsigned flags;
+      if (fread (&flags, sizeof(unsigned), 1, fp) != 1) {
+	fprintf (stderr, "restore(): error: expecting 'flags'\n");
+	exit (1);
+      }
+      for (scalar s in list)
+	if (fread (&s[], sizeof(double), 1, fp) != 1) {
+	  fprintf (stderr, "restore(): error: expecting '%s'\n", s.name);
+	  exit (1);
+	}
+      if (level == 0)
+	nt = size[];
+      cell.pid = balanced_pid (index, nt, npe());
+      cell.flags |= set;
+      if (!(flags & leaf) && is_leaf(cell)) {
+	if (balanced_pid (index + size[] - 1, nt, npe()) < pid()) {
+	  fseek (fp, (sizeof(unsigned) + offset)*(size[] - 1), SEEK_CUR);
+	  index += size[];
+	  continue;
+	}
+	refine_cell (point, listm, 0, NULL);
+      }
+      index++;
+      if (is_leaf(cell))
+	continue;
+    }
+
+  // read non-local neighbors
+  fseek (fp, start, SEEK_SET);
+  index = 0;
+  foreach_cell() {
+    unsigned flags;
+    if (fread (&flags, sizeof(unsigned), 1, fp) != 1) {
+      fprintf (stderr, "restore(): error: expecting 'flags'\n");
+      exit (1);
+    }
+    if (cell.flags & set)
+      fseek (fp, offset, SEEK_CUR);
+    else {
+      for (scalar s in list)
+	if (fread (&s[], sizeof(double), 1, fp) != 1) {
+	  fprintf (stderr, "restore(): error: expecting '%s'\n", s.name);
+	  exit (1);
+	}
+      cell.pid = balanced_pid (index, nt, npe());
+      if (is_leaf(cell) && cell.neighbors) {
+	int pid = cell.pid;
+	foreach_child()
+	  cell.pid = pid;
+      }
+    }
+    if (!(flags & leaf) && is_leaf(cell)) {
+      bool locals = false;
+      foreach_neighbor(1)
+	if ((cell.flags & set) && (is_local(cell) || is_root(point)))
+	  locals = true, break;
+      if (locals)
+	refine_cell (point, listm, 0, NULL);
+      else {
+	fseek (fp, (sizeof(unsigned) + offset)*(size[] - 1), SEEK_CUR);
+	index += size[];
+	continue;
+      }
+    }
+    index++;
+    if (is_leaf(cell))
+      continue;
+  }
+
+  /* set active flags */
+  foreach_cell_post (is_active (cell)) {
+    cell.flags &= ~set;
+    if (is_active (cell)) {
+      if (is_leaf (cell)) {
+	if (cell.neighbors > 0) {
+	  int pid = cell.pid;
+	  foreach_child()
+	    cell.pid = pid;
+	}
+	if (!is_local(cell))
+	  cell.flags &= ~active;
+      }
+      else if (!is_local(cell)) {
+	bool inactive = true;
+	foreach_child()
+	  if (is_active(cell))
+	    inactive = false, break;
+	if (inactive)
+	  cell.flags &= ~active;
+      }
+    }
+  }
+
+  flag_border_cells();
+
+  mpi_boundary_update (list);
+  free (list);
+}
+
 /**
 # *z_indexing()*: fills *index* with the Z-ordering index.
    
@@ -1221,33 +1333,10 @@ trace
 double z_indexing (scalar index, bool leaves)
 {
   /**
-  ## Size of subtrees
-
-  We first compute the size of each subtree. We use *index* to store
-  this. */
+  We first compute the size of each subtree. */
   
   scalar size[];
-
-  /**
-  The size of leaf "subtrees" is one. */
-
-  foreach()
-    size[] = 1;
-  
-  /**
-  We do a (parallel) restriction to compute the size of non-leaf
-  subtrees. */
-
-  boundary_iterate (restriction, {size}, depth());
-  for (int l = depth() - 1; l >= 0; l--) {
-    foreach_coarse_level(l) {
-      double sum = !leaves;
-      foreach_child()
-	sum += size[];
-      size[] = sum;
-    }
-    boundary_iterate (restriction, {size}, l);
-  }
+  subtree_size (size, leaves);
 
   /**
   The maximum index value is the size of the entire tree (i.e. the

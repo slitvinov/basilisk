@@ -846,7 +846,7 @@ attribute {
 #endif
   } d; // staggering
   vector v;
-  bool   face;
+  bool   face, nodump;
 }
 
 // lists
@@ -1022,11 +1022,13 @@ struct _Event {
   double t;
   int i, a;
   void * data;
+  Event * next;
 };
 
 static Event * Events = NULL; // all events
 
-double tnext = 0; // time of next event
+int iter = 0, inext = 0; // current step and step of next event
+double t = 0, tnext = 0; // current time and time of next event
 void init_events (void);
 void event_register (Event event);
 void _init_solver (void);

@@ -205,7 +205,7 @@ event result (t = end) {
   }
 
   FILE * fp = popen ("gfsview-batch2D taylor.gfv", "w");
-  output_gfs (fp, t = t);
+  output_gfs (fp);
   fprintf (fp, "Save vectors.svg { format = SVG }\n");
   pclose (fp);
 }
@@ -225,7 +225,7 @@ Set to one below to see the simulation on-the-fly.*/
 #if 0
 event gfsview (i += 20) {
   static FILE * fp = popen ("gfsview2D taylor.gfv", "w");
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 }
 #endif
 

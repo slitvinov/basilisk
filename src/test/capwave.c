@@ -119,7 +119,7 @@ event error (t = end)
 #if 0
 event gfsview (i += 1) {
   static FILE * fp = popen ("gfsview2D -s ../capwave.gfv", "w");
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 }
 #endif
 

@@ -575,9 +575,6 @@ The arguments and their default values are:
 *list*
 : a list of scalar fields to write. Default is *all*. 
 
-*t*
-: the physical time. Default is zero. 
-
 *file*
 : the name of the file to write to (mutually exclusive with *fp*).
 
@@ -589,7 +586,7 @@ equivalents.
 struct OutputGfs {
   FILE * fp;
   scalar * list;
-  double t;
+  double t; // fixme: obsolete
   char * file;
   bool translate;
 };
@@ -643,7 +640,7 @@ void output_gfs (struct OutputGfs p)
   }
   
   scalar * list = p.list ? p.list : list_copy (all);
-
+  
   fprintf (p.fp, 
 	   "1 0 GfsSimulation GfsBox GfsGEdge { binary = 1"
 	   " x = %g y = %g ",
@@ -668,8 +665,7 @@ void output_gfs (struct OutputGfs p)
     fprintf (p.fp, " ");
   }
   fprintf (p.fp, "} {\n");
-  if (p.t > 0.)
-    fprintf (p.fp, "  Time { t = %g }\n", p.t);
+  fprintf (p.fp, "  Time { t = %g }\n", t);
   if (L0 != 1.)
     fprintf (p.fp, "  PhysicalParams { L = %g }\n", L0);
   fprintf (p.fp, "  VariableTracerVOF f\n");
@@ -808,9 +804,6 @@ The arguments and their default values are:
 *list*
 : a list of scalar fields to write. Default is *all*. 
 
-*t*
-: the physical time. Default is zero. 
-
 *file*
 : the name of the file to write to (mutually exclusive with *fp*).
 */
@@ -818,40 +811,51 @@ The arguments and their default values are:
 struct Dump {
   FILE * fp;
   scalar * list;
-  double t;
   char * file;
 };
 
 struct DumpHeader {
   double t;
   long len;
-  int depth, npe;
+  int i, depth, npe, version;
   coord n;
 };
+
+static const int dump_version = 161020;
+
+static scalar * dump_list (scalar * lista)
+{
+  scalar * list = is_constant(cm) ? NULL : list_concat ({cm}, NULL);
+  for (scalar s in lista)
+    if (!s.face && !s.nodump && s.i != cm.i)
+      list = list_add (list, s);
+  return list;
+}
 
 @if !_MPI
 trace
 void dump (struct Dump p)
 {
   FILE * fp = p.fp;
-  scalar * lista = p.list ? p.list : all, * list = NULL;
   char * file = p.file;
 
-  for (scalar s in lista)
-    if (!s.face && s.i != cm.i)
-      list = list_add (list, s);
-  
   if (file && (fp = fopen (file, "w")) == NULL) {
     perror (file);
     exit (1);
   }
   assert (fp);
   
-  struct DumpHeader header = { p.t, list_len(list), depth(), npe() };
+  scalar * dlist = dump_list (p.list ? p.list : all);
+  scalar size[];
+  scalar * list = list_concat ({size}, dlist); free (dlist);
+  struct DumpHeader header = { t, list_len(list), iter, depth(), npe(),
+			       dump_version };
   if (pid() == 0 && fwrite (&header, sizeof(header), 1, fp) < 1) {
     perror ("dump(): error while writing header");
     exit (1);
   }
+
+  subtree_size (size, false);
   
   foreach_cell() {
     unsigned flags = is_leaf(cell) ? leaf : 0;
@@ -877,7 +881,6 @@ trace
 void dump (struct Dump p)
 {
   FILE * fp = p.fp;
-  scalar * lista = p.list ? p.list : all, * list = NULL;
   char * file = p.file;
 
   if (fp != NULL || file == NULL) {
@@ -885,13 +888,13 @@ void dump (struct Dump p)
     exit(1);
   }
 
-  for (scalar s in lista)
-    if (!s.face && s.i != cm.i)
-      list = list_add (list, s);
-
   FILE * fh = fopen (file, "w");
-  
-  struct DumpHeader header = { p.t, list_len(list), depth(), npe() };
+   
+  scalar * dlist = dump_list (p.list ? p.list : all);
+  scalar size[];
+  scalar * list = list_concat ({size}, dlist); free (dlist);
+  struct DumpHeader header = { t, list_len(list), iter, depth(), npe(),
+			       dump_version };
 
 #if MULTIGRID_MPI
   for (int i = 0; i < dimension; i++)
@@ -908,6 +911,8 @@ void dump (struct Dump p)
   z_indexing (index, false);
   int cell_size = sizeof(unsigned) + header.len*sizeof(double);
 
+  subtree_size (size, false);
+  
   foreach_cell() {
     // fixme: this won't work when combining MPI and mask()
     if (is_local(cell)) {
@@ -933,33 +938,33 @@ trace
 bool restore (struct Dump p)
 {
   FILE * fp = p.fp;
-  scalar * lista = p.list ? p.list : all, * list = NULL;
   char * file = p.file;
   if (file && (fp = fopen (file, "r")) == NULL)
     return false;
   assert (fp);
 
-  for (scalar s in lista)
-    if (!s.face && s.i != cm.i)
-      list = list_add (list, s);
-
+  scalar * list = dump_list (p.list ? p.list : all);
   struct DumpHeader header;
   
-  double t = 0.;
   if (fread (&header, sizeof(header), 1, fp) < 1) {
     fprintf (stderr, "restore(): error: expecting header\n");
     exit (1);
   }
-  if (header.len != list_len (list)) {
+  if (header.version != dump_version) {
+    fprintf (stderr,
+	     "restore(): error: file version mismatch: %d != %d\n",
+	     header.version, dump_version);
+    exit (1);
+  }
+  if (header.len - 1 != list_len (list)) {
     fprintf (stderr,
 	     "restore(): error: the list lengths don't match: %ld != %d\n",
-	     header.len, list_len (list));
+	     header.len - 1, list_len (list));
     exit (1);
   }
 
 #if TREE
   init_grid (1);
-
   foreach_cell() {
     cell.pid = pid();
     cell.flags |= active;
@@ -989,32 +994,44 @@ bool restore (struct Dump p)
   init_grid (1 << header.depth);
 #endif // multigrid
 
+#if TREE && _MPI
+  restore_mpi (fp, list);
+#else
+  scalar * listm = is_constant(cm) ? NULL : (scalar *){fm}; NOT_UNUSED(listm);
   foreach_cell() {
     unsigned flags;
     if (fread (&flags, sizeof(unsigned), 1, fp) != 1) {
       fprintf (stderr, "restore(): error: expecting 'flags'\n");
       exit (1);
     }
+    // skip subtree size
+    fseek (fp, sizeof(double), SEEK_CUR);
     for (scalar s in list)
       if (fread (&s[], sizeof(double), 1, fp) != 1) {
 	fprintf (stderr, "restore(): error: expecting '%s'\n", s.name);
 	exit (1);
       }
     if (!(flags & leaf) && is_leaf(cell))
-      refine_cell (point, NULL, 0, NULL);
+      refine_cell (point, listm, 0, NULL);
     if (is_leaf(cell))
       continue;
   }
   boundary (list);
+#endif
+  
+  free (list);
   if (file)
     fclose (fp);
 
-  // the events are advanced to catch up with the time
-  double t1 = 0.;
-  while (t1 < t && events (0, t1, false))
-    t1 = tnext;
-
-  free (list);
+  // the events are advanced to catch up with the time  
+  while (iter < header.i && events (false))
+    iter = inext;
+  events (false);
+  while (t < header.t && events (false))
+    t = tnext;
+  t = header.t;
+  events (false);
+  
   return true;
 }
 

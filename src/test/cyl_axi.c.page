@@ -31,10 +31,12 @@ int LEVEL;
 
 #include "grid/multigrid.h"
 #include "axi.h"
-#include "ehd/implicit.h"
 #if NAVIER
 # include "navier-stokes/centered.h"
+# include "ehd/implicit.h"
 # include "ehd/stress.h"
+#else
+# include "ehd/implicit.h"
 #endif
 #include "fractions.h"
 

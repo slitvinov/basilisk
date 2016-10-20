@@ -61,7 +61,7 @@ criterion. The integration itself is performed in the events of
 [tracer.h](). */
 
 event velocity (i++,last) {
-  dt = dtnext (t, timestep (u, DT));
+  dt = dtnext (timestep (u, DT));
 }
 
 #include "tracer.h"

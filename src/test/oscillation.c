@@ -203,14 +203,13 @@ event fit (t = end) {
 #if 0
 event gfsview (i += 10) {
   static FILE * fp = popen ("gfsview2D oscillation.gfv", "w");
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 }
 #endif
 
 #if TREE
 event adapt (i++) {
   adapt_wavelet ({c,u}, (double[]){5e-3,1e-3,1e-3}, LEVEL);
-  event ("properties");
 }
 #endif
 

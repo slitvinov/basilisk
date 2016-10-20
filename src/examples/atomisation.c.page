@@ -126,7 +126,7 @@ simulation as it proceeds. */
 #if 0
 event gfsview (i += 10) {
   static FILE * fp = popen ("gfsview3D atomisation.gfv", "w");
-  output_gfs (fp, t = t, list = {u,p,f});
+  output_gfs (fp, list = {u,p,f});
 }
 #endif
 
@@ -143,7 +143,7 @@ event movie (t += 2e-2)
     ff[] = f[] < 1e-4 ? 0 : f[] > 1. - 1e-4 ? 1. : f[];
   }
   boundary ({pid,ff});
-  output_gfs (fout, t = t);
+  output_gfs (fout);
   fprintf (fout, "Save stdout { format = PPM width = 1600 height = 1200 }\n");
 }
 #endif
@@ -161,7 +161,7 @@ event snapshot (t = 0.1; t += 0.1; t <= 1.8) {
     ff[] = f[] < 1e-4 ? 0 : f[] > 1. - 1e-4 ? 1. : f[];
   }
   boundary ({pid,ff});
-  output_gfs (file = name, t = t);
+  output_gfs (file = name);
 }
 
 /**
@@ -172,7 +172,6 @@ and the velocity. */
 
 event adapt (i++) {
   adapt_wavelet ({f,u}, (double[]){0.01,uemax,uemax,uemax}, maxlevel);
-  event ("properties");
 }
 
 /**

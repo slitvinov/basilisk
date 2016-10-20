@@ -93,7 +93,7 @@ double dtmax;
 event set_dtmax (i++,last) dtmax = DT;
 
 event stability (i++,last) {
-  dt = dtnext (t, timestep (u, dtmax));
+  dt = dtnext (timestep (u, dtmax));
 }
 
 event advance (i++,last)

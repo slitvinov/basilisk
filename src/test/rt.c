@@ -70,7 +70,7 @@ event interface (t = 0.7) {
 #if 0
 event gfsview (i += 10) {
   static FILE * fp = popen("gfsview2D -s rt.gfv", "w");
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 }
 #endif
 

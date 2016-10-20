@@ -2,38 +2,36 @@
 # Generic time loop
 
 The `run()` function below implements a generic time loop which
-executes events until termination. */
+executes events until termination.
+
+The timestep `dt` can be accessed as a global variable. */
+
+double dt = 1.;
 
 #include "utils.h"
-
-/**
-The time `t` and timestep `dt` can be accessed as global variables. */
-
-double t = 0., dt = 1.;
 
 trace
 void run (void)
 {
-  t = 0.; dt = 1.;
+  iter = 0, t = 0., dt = 1.;
   init_grid (N);
 
-  int i = 0;
   perf.nc = perf.tnc = 0;
   perf.gt = timer_start();
-  while (events (i, t, true)) {
+  while (events (true)) {
 
     /**
     We store the total number of cells advanced in time for computing
     speed statistics. */
 
     update_perf();
-    i++; t = tnext;
+    iter = inext, t = tnext;
   }
 
   /**
   Time/speed statistics are written out on standard output. */
 
-  timer_print (perf.gt, i, perf.tnc);
+  timer_print (perf.gt, iter, perf.tnc);
 
   free_grid();
 }

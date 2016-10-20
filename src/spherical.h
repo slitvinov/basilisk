@@ -66,11 +66,12 @@ static void refine_face_x_lonlat (Point point, scalar fm)
 
 static void refine_face_y_lonlat (Point point, scalar fm)
 {
+  double phi = y*pi/180., dphi = Delta/(2.*Radius);
   if (!is_refined(neighbor(0,-1)))
-    fine(fm,0,0) = fine(fm,1,0) = fm[];  
+    fine(fm,0,0) = fine(fm,1,0) = cos(phi - dphi);
   if (!is_refined(neighbor(0,1)) && neighbor(0,1).neighbors)
-    fine(fm,0,2) = fine(fm,1,2) = fm[0,1];
-  fine(fm,0,1) = fine(fm,1,1) = cos(y*pi/180.);
+    fine(fm,0,2) = fine(fm,1,2) = cos(phi + dphi);
+  fine(fm,0,1) = fine(fm,1,1) = cos(phi);
 }
 #endif
 

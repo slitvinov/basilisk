@@ -232,12 +232,12 @@ void input_gfs (struct OutputGfs p)
   free (s);
 
   next_char (p.fp, '{');
-  double t = 0.;
+  double t1 = 0.;
   if (next_string (p.fp, "Time") >= 0) {
     next_char (p.fp, '{');
     next_char (p.fp, 't');
     next_char (p.fp, '=');
-    if (fscanf (p.fp, "%lf", &t) != 1) {
+    if (fscanf (p.fp, "%lf", &t1) != 1) {
       fprintf (stderr, "input_gfs(): error: expecting 't'\n");
       exit (1);
     }
@@ -313,9 +313,9 @@ void input_gfs (struct OutputGfs p)
     fclose (p.fp);
 
   // the events are advanced to catch up with the time
-  double t1 = 0.;
-  while (t1 <= t && events (0, t1, false))
-    t1 = tnext;
+  while (t < t1 && events (false))
+    t = tnext;
+  events (false);
 }
 
 #endif // MULTIGRID && !MULTIGRID_MPI

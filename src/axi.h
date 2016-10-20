@@ -13,6 +13,40 @@ code (e.g. [curvature computation](curvature.h)). */
 
 #define AXI 1
 
+/**
+On trees we need refinement functions. */
+
+#if TREE
+static void refine_cm_axi (Point point, scalar cm)
+{
+  fine(cm,0,0) = fine(cm,1,0) = y - Delta/4.;
+  fine(cm,0,1) = fine(cm,1,1) = y + Delta/4.;
+}
+
+static void refine_face_x_axi (Point point, scalar fm)
+{
+  if (!is_refined(neighbor(-1))) {
+    fine(fm,0,0) = y - Delta/4.;
+    fine(fm,0,1) = y + Delta/4.;
+  }
+  if (!is_refined(neighbor(1)) && neighbor(1).neighbors) {
+    fine(fm,2,0) = y - Delta/4.;
+    fine(fm,2,1) = y + Delta/4.;
+  }
+  fine(fm,1,0) = y - Delta/4.;
+  fine(fm,1,1) = y + Delta/4.;
+}
+
+static void refine_face_y_axi (Point point, scalar fm)
+{
+  if (!is_refined(neighbor(0,-1)))
+    fine(fm,0,0) = fine(fm,1,0) = max(y - Delta/2., 1e-20);
+  if (!is_refined(neighbor(0,1)) && neighbor(0,1).neighbors)
+    fine(fm,0,2) = fine(fm,1,2) = y + Delta/2.;
+  fine(fm,0,1) = fine(fm,1,1) = y;
+}
+#endif
+
 event defaults (i = 0) {
 
   /**
@@ -44,6 +78,15 @@ event defaults (i = 0) {
     fm.x[] = max(y, 1e-20);
   fm.t[top] = dirichlet(y);
   fm.t[bottom] = dirichlet(y);
+  
+  /**
+  We set our refinement/prolongation functions on trees. */
 
+#if TREE
+  cm.refine = cm.prolongation = refine_cm_axi;
+  fm.x.prolongation = refine_face_x_axi;
+  fm.y.prolongation = refine_face_y_axi;
+#endif
+  
   boundary ({cm, fm});
 }

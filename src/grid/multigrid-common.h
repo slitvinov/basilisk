@@ -348,3 +348,34 @@ void multigrid_methods()
   init_face_vector = multigrid_init_face_vector;
   restriction      = multigrid_restriction;
 }
+
+/**
+## Size of subtrees
+
+The function below store in *size* the number of cells (or leaves if
+*leaves* is set to *true*) of each subtree. */
+
+void subtree_size (scalar size, bool leaves)
+{
+
+  /**
+  The size of leaf "subtrees" is one. */
+
+  foreach()
+    size[] = 1;
+  
+  /**
+  We do a (parallel) restriction to compute the size of non-leaf
+  subtrees. */
+
+  boundary_iterate (restriction, {size}, depth());
+  for (int l = depth() - 1; l >= 0; l--) {
+    foreach_coarse_level(l) {
+      double sum = !leaves;
+      foreach_child()
+	sum += size[];
+      size[] = sum;
+    }
+    boundary_iterate (restriction, {size}, l);
+  }
+}

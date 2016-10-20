@@ -74,15 +74,19 @@ maximum time for the simulation comparable to the domain size. */
 #define Z0 3.5
 int LEVEL = 12;
 #define MAXTIME WIDTH
+double maxruntime = HUGE;
 
 /**
-The main function can take an optional parameter which is the maximum
-level of adaptive refinement. */
+The main function can take two optional parameters: the maximum level
+of adaptive refinement and a maximum runtime in minutes (see
+below). */
 
 int main (int argc, char * argv[]) {
   if (argc > 1)
     LEVEL = atoi (argv[1]);
-
+  if (argc > 2)
+    maxruntime = atoi (argv[2]);
+  
   /**
   We set the domain geometry and initial refinement. */
   
@@ -110,15 +114,18 @@ int main (int argc, char * argv[]) {
 }
 
 /**
-For the initial conditions, we first refine the mesh locally to the
-maximum level, in a sphere of diameter 1.5 around the bubble. We then
-initialise the volume fraction for a bubble initially at (0,Z0,0) of
-diameter unity. */
+For the initial conditions, we first try to restore the simulation
+from a previous "dump" (see *snapshot()* below), if this fails we
+refine the mesh locally to the maximum level, in a sphere of diameter
+1.5 around the bubble. We then initialise the volume fraction for a
+bubble initially at (0,Z0,0) of diameter unity. */
 
 event init (t = 0) {
-  refine (sq(x) + sq(y - Z0) + sq(z) - sq(0.75) < 0
-	  && level < LEVEL, all);
-  fraction (f, sq(x) + sq(y - Z0) + sq(z) - sq(.5));
+  if (!restore (file = "dump")) {
+    refine (sq(x) + sq(y - Z0) + sq(z) - sq(0.75) < 0
+	    && level < LEVEL, all);
+    fraction (f, sq(x) + sq(y - Z0) + sq(z) - sq(.5));
+  }
 }
 
 /**
@@ -129,6 +136,15 @@ event acceleration (i++) {
   face vector av = a;
   foreach_face(y)
     av.y[] -= 1.;
+}
+
+/**
+We adapt the mesh by controlling the error on the volume fraction and
+velocity field. */
+
+event adapt (i++) {
+  double uemax = 1e-2;
+  adapt_wavelet ({f,u}, (double[]){0.01,uemax,uemax,uemax}, LEVEL, 5);
 }
 
 /**
@@ -162,20 +178,28 @@ event logfile (i += 10) {
 }
 
 /**
-Every time unit, we output a full snapshot of the simulation. In three
-dimensions, we compute the value of the $\lambda_2$ field which will
-be used for visualisation of vortices. */
+Every time unit, we output a full snapshot of the simulation, to be
+able to restart (with *dump()*) and for visualisation (with
+*output_gfs()*). In three dimensions, we compute the value of the
+$\lambda_2$ field which will be used for visualisation of vortices, as
+well as the streamwise vorticity $\omega_y = \partial_x u_z -
+\partial_z u_x$. */
 
 event snapshot (t = 1; t <= MAXTIME; t++)
 {
-  scalar l2[];
+  dump (file = "dump");
+    
+  scalar l2[], omegay[];
   #if dimension == 3
   lambda2 (u, l2);
+  foreach()
+    omegay[] = (u.z[1] - u.z[-1] - u.x[0,0,1] + u.x[0,0,-1])/(2.*Delta);
+  boundary ({omegay});
   #endif
   
   char name[80];
   sprintf (name, "snapshot-%03d.gfs", (int) t);
-  output_gfs (file = name, t = t, list = {f,u,p,l2});
+  output_gfs (file = name, t = t, list = {f,u,p,l2,omegay});
 }
 
 /**
@@ -190,16 +214,6 @@ event gfsview (i += 10) {
 
 }
 #endif
-
-/**
-We adapt the mesh by controlling the error on the volume fraction and
-velocity field. */
-
-event adapt (i++) {
-  double uemax = 1e-2;
-  adapt_wavelet ({f,u}, (double[]){0.01,uemax,uemax,uemax}, LEVEL, 5);
-  event ("properties");
-}
 
 /**
 ## Parallel runs
@@ -219,6 +233,19 @@ local% scp _bubble.c occigen.cines.fr:
 and see the [atomisation example](atomisation.c#running-in-parallel)
 for details.
 
+On parallel machines, runs are not allowed to exceed a maximum
+duration (typically 24 hours). To avoid having the job terminated
+brutally by the queueing system, we add the option to exit gracefully
+after a given runtime. */
+
+event runtime (i++) {
+  if (perf.t/60 >= maxruntime) {
+    dump (file = "dump"); // so that we can restart
+    return 1; // exit
+  }
+}
+
+/**
 ## Results
 
 The evolution of the bubble Reynols number for bubble 19 and 26 can be

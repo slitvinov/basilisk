@@ -121,19 +121,14 @@ event logfile (i++; t <= 300) {
 	   t, vd, ke, 2./3.*ke/MU*sqrt(15.*MU/vd), grid->tn, perf.t, perf.speed);
 }
 
-/**
-For the moment *dump()* and *output_gfs()* do not work with MPI. */
-
-#if !MULTIGRID_MPI
 event gfsview (t += 0.5; t <= 150) {
   static FILE * fp =
     popen ("gfsview-batch3D isotropic.gfv | ppm2mpeg > isotropic.mpg", "w");
-  output_gfs (fp, t = t, translate = true);
+  output_gfs (fp, translate = true);
 }
 
 event snapshot (i += 100)
-  dump (file = "snapshot", t = t);
-#endif // !MULTIGRID_MPI
+  dump (file = "snapshot");
 
 /**
 ## Running with MPI on occigen

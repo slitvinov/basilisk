@@ -280,6 +280,7 @@ bool balance()
 
 #ifdef DEBUGCOND
   extern double t;
+  NOT_UNUSED(t);
   if (DEBUGCOND) {
     char name[80];
     sprintf (name, "colls-before-%d", pid());

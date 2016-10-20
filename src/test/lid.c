@@ -91,7 +91,14 @@ auxilliary variable `un`. */
 
 scalar un[];
 
-event init_un (i = 0) {
+/**
+We add an option to restore the simulation from a previous dump and
+initialise the reference velocity field. */
+
+event init (i = 0) {
+#if !MAC
+  restore (file = "lid-restore.dump");
+#endif
   foreach()
     un[] = u.x[];
 }
@@ -114,6 +121,14 @@ Every 100 timesteps we output a binary representation of `u.x`
 bilinearly-interpolated on an N x N grid. */
 
 event outputfile (i += 100) output_matrix (u.x, stdout, N, linear = true);
+
+/**
+We dump a snapshot which can be used to restart the simulation. */
+
+#if !MAC
+event snapshot (i = 1700)
+  dump (file = "dump");
+#endif
 
 /**
 This event will happen after completion of the simulation. We write

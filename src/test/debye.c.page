@@ -94,7 +94,7 @@ event init (i = 0)
 }
 
 event integration (i++) {
-  dt = dtnext (t, DT);
+  dt = dtnext (DT);
 
   /**
   At each instant, the concentration of each species is updated taking into

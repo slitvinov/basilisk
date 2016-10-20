@@ -41,7 +41,7 @@ event defaults (i = 0)
 We need to make sure that the CFL is smaller than 0.5 to ensure
 stability of the VOF scheme. */
 
-event stability (i = 0) {
+event stability (i++) {
   if (CFL > 0.5)
     CFL = 0.5;
 }

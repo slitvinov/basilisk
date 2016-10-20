@@ -154,7 +154,7 @@ simulation as it proceeds. */
 #if 0
 event gfsview (i += 10) {
   static FILE * fp = popen("gfsview2D ../rising.gfv", "w");
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 }
 #endif
 

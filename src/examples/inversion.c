@@ -197,7 +197,7 @@ event gfsview (i += 10) {
 #else
   static FILE * fp = popen ("gfsview2D inversion2D.gfv", "w");
 #endif
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 }
 #endif
 
@@ -211,7 +211,7 @@ event gfsview (t += 0.1*tc) {
   static FILE * fp =
     popen ("gfsview3D ../inversion.gfv", "w");
 @endif
-  output_gfs (fp, t = t, translate = true);
+  output_gfs (fp, translate = true);
 @if _MPI
   fclose (fp);
 @endif
@@ -227,14 +227,12 @@ event snapshot (i = 100; i += 100) {
   scalar pid[];
   foreach()
     pid[] = tid();
-  output_gfs (file = name, t = t);
+  output_gfs (file = name);
 }
 #endif
 
 #if TREE
 event adapt (i++) {
-  adapt_wavelet ({f,u}, (double[]){0.005,0.005,0.005,0.005}, maxlevel,
-		 list = {p,u,pf,uf,g,f,fm,cm}, listb = {u,pf,uf,g,f,fm,cm});
-  event ("properties");
+  adapt_wavelet ({f,u}, (double[]){0.005,0.005,0.005,0.005}, maxlevel);
 }
 #endif

@@ -12,7 +12,8 @@ double (* update) (scalar * evolving, scalar * updates, double dtmax) = NULL;
 // gradient
 double (* gradient)  (double, double, double) = minmod2;
 
-double t = 0., dt = 0.;
+// the timestep
+double dt = 0.;
 
 trace
 static void advance_generic (scalar * output, scalar * input, scalar * updates,
@@ -47,17 +48,16 @@ event defaults (i = 0)
 trace
 void run()
 {
-  t = 0.;
+  t = 0., iter = 0;
   init_grid (N);
 
   // main loop
-  int i = 0;
   perf.nc = perf.tnc = 0;
   perf.gt = timer_start();
-  while (events (i, t, true)) {
+  while (events (true)) {
     // list of updates
     scalar * updates = list_clone (evolving);
-    dt = dtnext (t, update (evolving, updates, DT));
+    dt = dtnext (update (evolving, updates, DT));
     if (gradient != zero) {
       /* 2nd-order time-integration */
       scalar * predictor = list_clone (evolving);
@@ -72,9 +72,9 @@ void run()
     delete (updates);
     free (updates);
     update_perf();
-    i++; t = tnext;
+    iter = inext, t = tnext;
   }
-  timer_print (perf.gt, i, perf.tnc);
+  timer_print (perf.gt, iter, perf.tnc);
 
   free_grid();
 }

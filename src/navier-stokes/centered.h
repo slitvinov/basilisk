@@ -60,8 +60,7 @@ $\nabla\cdot(\mathbf{u}\otimes\mathbf{u})$ is omitted. This is a
 reference to [Stokes flows](http://en.wikipedia.org/wiki/Stokes_flow)
 for which inertia is negligible compared to viscosity. */
 
-(const) face vector mu = zerof, a = zerof;
-(const) face vector alpha = unityf;
+(const) face vector mu = zerof, a = zerof, alpha = unityf;
 (const) scalar rho = unity;
 mgstats mgp, mgpf, mgu;
 bool stokes = false;
@@ -98,39 +97,19 @@ event defaults (i = 0)
 {
 
   /**
-  The default velocity and pressure are zero. */
+  The default velocity and pressure gradient are zero. */
   
   CFL = 0.8;
-  foreach() {
+  foreach()
     foreach_dimension()
       u.x[] = g.x[] = 0.;
-    p[] = pf[] = 0.;
-  }
-  foreach_face()
-    uf.x[] = 0.;
+  boundary ((scalar *){u,g});
 
   /**
-  The default density is one. */
-  
-  if (!is_constant(alpha.x)) {
-    face vector alphav = alpha;
-    foreach_face()
-      alphav.x[] = 1.;
-    boundary ((scalar *){alpha});
-  }
+  The pressures are never dumped. */
 
-  /**
-  The default acceleration is zero. */
+  p.nodump = pf.nodump = true;
   
-  if (!is_constant(a.x)) {
-    face vector av = a;
-    foreach_face()
-      av.x[] = 0.;
-    boundary ((scalar *){av});
-  }
-  
-  boundary ({p,pf,u,g,uf});
-
   /**
   On trees, refinement of the face-centered velocity field needs to
   preserve the divergence-free condition. */
@@ -141,8 +120,10 @@ event defaults (i = 0)
 }
 
 /**
-We initialise the face velocity field and apply boundary conditions
-after user initialisation. We also define fluid properties. */
+After user initialisation, we initialise the face velocity, fluid
+properties and pressure fields. */
+
+double dtmax;
 
 event init (i = 0)
 {
@@ -159,8 +140,31 @@ event init (i = 0)
     alpha = fm;
     rho = cm;
   }
-    
+
+  /**
+  The initial acceleration is zero. */
+  
+  if (!is_constant(a.x)) {
+    face vector av = a;
+    foreach_face()
+      av.x[] = 0.;
+    boundary ((scalar *){av});
+  }
+  
+  /**
+  We update fluid properties and set the initial pressure fields. */
+
   event ("properties");
+  foreach()
+    p[] = pf[] = 0.;
+  boundary ({p,pf});
+
+  /**
+  We set the initial timestep (this is useful only when restoring from
+  a previous run). */
+
+  dtmax = DT;
+  event ("stability");
 }
 
 /**
@@ -170,12 +174,10 @@ The timestep for this iteration is controlled by the CFL condition,
 applied to the face centered velocity field $\mathbf{u}_f$; and the
 timing of upcoming events. */
 
-double dtmax;
-
 event set_dtmax (i++,last) dtmax = DT;
 
 event stability (i++,last) {
-  dt = dtnext (t, timestep (uf, dtmax));
+  dt = dtnext (timestep (uf, dtmax));
 }
 
 /**
@@ -186,6 +188,7 @@ velocity/pressure fields by half a timestep. */
 
 event vof (i++,last);
 event tracer_advection (i++,last);
+event tracer_diffusion (i++,last);
 
 /**
 The fluid properties such as specific volume (fields $\alpha$ and
@@ -362,3 +365,14 @@ event projection (i++,last)
 
   correction (dt);
 }
+
+/**
+## Adaptivity
+
+After mesh adaptation fluid properties need to be updated. */
+
+#if TREE
+event adapt (i++,last) {
+  event ("properties");
+}
+#endif

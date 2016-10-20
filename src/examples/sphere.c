@@ -7,8 +7,8 @@ We solve the Navier--Stokes equations on an adaptive octree. */
 #include "navier-stokes/centered.h"
 
 /**
-We will use the $\lambda_2$ criterion of Jeong and Hussain, 1995 for
-vortex detection. */
+We will use the $\lambda_2$ criterion of [Jeong and Hussain,
+1995](/src/references.bib#jeong1995) for vortex detection. */
 
 #include "lambda2.h"
 
@@ -100,7 +100,7 @@ event movies (t = 30; t += 0.25; t <= 60) {
     vyz[] = ((u.y[0,0,1] - u.y[0,0,-1]) - (u.z[0,1] - u.z[0,-1]))/(2.*Delta);
   boundary ({vyz});
   lambda2 (u, l2);
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 
   /**
   We tell *gfsview-batch3D* to save the images. */

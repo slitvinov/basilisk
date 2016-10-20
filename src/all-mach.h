@@ -106,7 +106,7 @@ double dtmax;
 event set_dtmax (i++,last) dtmax = DT;
 
 event stability (i++,last) {
-  dt = dtnext (t, timestep (uf, dtmax));
+  dt = dtnext (timestep (uf, dtmax));
 }
 
 /**
@@ -249,3 +249,12 @@ event pressure (i++, last)
     }
   boundary ((scalar *){q,g,uf});
 }
+
+/**
+After mesh adaptation fluid properties need to be updated. */
+
+#if TREE
+event adapt (i++,last) {
+  event ("properties");
+}
+#endif

@@ -108,7 +108,7 @@ the simulation as it runs. */
 #if 0
 event gfsview (i += 10) {
   static FILE * fp = popen ("gfsview2D -s ../karman.gfv", "w");
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 }
 #endif
 

@@ -68,7 +68,7 @@ void plot_profile (double t, FILE * fp)
   fflush (fp);
 }
 
-event gnuplot (t += 0.05) {
+event profiles (t += 0.05) {
   static FILE * fp = popen ("gnuplot", "w");
   plot_profile (t, fp);
   fprintf (stderr, "%g %f\n", t, interpolate (eta, 17.3, 0.));

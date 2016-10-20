@@ -116,10 +116,9 @@ void run (void)
   init_grid (N);
 
   timer start = timer_start();
-  double t = 0;
-  int i = 0;
-  while (events (i, t, true)) {
-    double dt = dtnext (t, timestep ());
+  iter = 0, t = 0;
+  while (events (true)) {
+    double dt = dtnext (timestep ());
 #if 1
     advection_centered (h, u, hn);
     foreach()
@@ -135,9 +134,9 @@ void run (void)
 		       { un1, vn1, hn1 }};
     runge_kutta (2, t, dt, 3, f, df, advance, update);
 #endif
-    i++; t = tnext;
+    iter = inext, t = tnext;
   }
-  timer_print (start, i, 0);
+  timer_print (start, iter, 0);
 
   free_grid ();
 }

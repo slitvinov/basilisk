@@ -89,7 +89,7 @@ event init (t = 0) {
 }
 
 event set_dt (i++)
-   dt = dtnext (t, DT);
+   dt = dtnext (DT);
 
 /**
 In the last step the relative error of the electric field, $E=-\nabla \phi$, 

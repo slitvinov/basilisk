@@ -5,8 +5,9 @@ include $(BASILISK)/Makefile.defs
 # the default CFLAGS are set in $(BASILISK)/config
 CFLAGS += -O2 -DMTRACE=3
 
-# list only non-default (!.tst) tests
-check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst
+# list only non-default tests
+check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst \
+	lid-restore.tst
 
 # these tests have special depencies/compilation requirements
 
@@ -100,6 +101,12 @@ lidmac.tst: CFLAGS += -DMAC=1
 
 lid.tst: lidmac.tst
 
+lid-restore.c: lid.c
+	ln -s lid.c lid-restore.c
+lid-restore.dump: lid.tst
+	rm -f lid-restore.dump; ln -s lid/dump lid-restore.dump
+lid-restore.tst: lid-restore.dump
+
 nonlinear.s: LIBS = "-lgsl -lgslcblas"
 nonlinear.tst: LIBS = "-lgsl -lgslcblas"
 
@@ -162,6 +169,7 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-interpu.tst mpi-coarsen.tst mpi-coarsen1.tst \
 	hf1.tst pdump.tst restore.tst \
 	pdump-multigrid.tst restore-multigrid.tst \
+	restore-tree.tst \
 	poiseuille-periodic.tst \
 	gfsi.tst gfs.tst \
 	load-balancing \
@@ -195,7 +203,7 @@ hf1.tst:	  CC = mpicc -D_MPI=7
 poiseuille-periodic.tst: CC = mpicc -D_MPI=4
 source.tst: CC = mpicc -D_MPI=7
 
-# parallel dump()
+# parallel dump()/restore()
 
 pdump.tst: CC = mpicc -D_MPI=7
 restore.dump: pdump.tst
@@ -217,6 +225,21 @@ restore-multigrid.tst: restore-multigrid.dump
 restore-multigrid.tst: CFLAGS = -grid=multigrid
 restore-multigrid.tst: CC = mpicc -D_MPI=16
 
+restore-tree.c: restore.c
+	ln -s restore.c restore-tree.c
+restore-tree.dump: pdump.tst
+	rm -f restore-tree.dump; ln -s pdump/restore.dump restore-tree.dump
+restore-tree.tst: restore-tree.dump
+restore-tree.tst: CFLAGS = -DDEBUGCOND=false
+restore-tree.tst: CC = mpicc -D_MPI=23
+
+bump2Dp-restore.c: bump2Dp.c
+	ln -s bump2Dp.c bump2Dp-restore.c
+bump2Dp-restore.dump: bump2Dp.tst
+	rm -f bump2Dp-restore.dump; ln -s bump2Dp/dump bump2Dp-restore.dump
+bump2Dp-restore.tst: bump2Dp-restore.dump
+bump2Dp-restore.tst: CC = mpicc -D_MPI=15
+
 # parallel output_gfs()
 
 gfs.tst: CC = mpicc -D_MPI=7
@@ -227,7 +250,7 @@ gfsi.tst: gfsi.gfs
 # load-balancing
 
 load-balancing: balance5.tst balance6.tst balance7.tst \
-		bump2Dp.tst vortex.tst axiadvection.tst
+		bump2Dp.tst bump2Dp-restore.tst vortex.tst axiadvection.tst
 
 balance5.tst: CC = mpicc -D_MPI=9
 balance6.c: balance5.c

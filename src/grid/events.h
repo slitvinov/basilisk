@@ -84,19 +84,28 @@ static int event_finished (Event * ev)
 void event_register (Event event) {
   assert (Events);
   assert (!event.last);
-  int n = 0, found = -1;
+  int n = 0, parent = -1;
   for (Event * ev = Events; !ev->last; ev++) {
-    if (found < 0 && !strcmp (event.name, ev->name))
-      found = n;
+    if (!strcmp (event.name, ev->name)) {
+      assert (parent < 0);
+      parent = n;
+    }
     n++;
   }
-  Events = realloc (Events, (n + 2)*sizeof (Event));
-  Events[n + 1].last = true;
-  if (found >= 0)
-    for (; n > found; n--)
-      Events[n] = Events[n-1];
-  Events[n] = event;
-  init_event (&Events[n]);
+  if (parent < 0) {
+    Events = realloc (Events, (n + 2)*sizeof (Event));
+    Events[n] = event;
+    Events[n].next = NULL;
+    Events[n + 1].last = true;
+    init_event (&Events[n]);
+  }
+  else {
+    Event * ev = calloc (1, sizeof(Event));
+    *ev = Events[parent];
+    Events[parent] = event;
+    Events[parent].next = ev;
+    init_event (&Events[parent]);
+  }
 }
 
 static int event_cond (Event * ev, int i, double t)
@@ -117,18 +126,24 @@ static void event_print (Event * ev, FILE * fp)
 }
 #endif
 
-static int event_do (Event * ev, int i, double t, bool action)
+static int event_do (Event * ev, bool action)
 {
-  if ((i > ev->i && t > ev->t) || !event_cond (ev, i, t))
+  if ((iter > ev->i && t > ev->t) || !event_cond (ev, iter, t))
     return event_finished (ev);
-  if (i == ev->i || fabs (t - ev->t) <= 1e-9) {
+  if (iter == ev->i || fabs (t - ev->t) <= 1e-9) {
+    if (action) {
+      bool finished = false;
+      for (Event * e = ev; e; e = e->next) {
 #if DEBUG_EVENTS
-    if (action)
-      event_print (ev, stderr);
+	event_print (e, stderr);
 #endif
-    if (action && (* ev->action) (i, t, ev)) {
-      event_finished (ev);
-      return event_stop;
+	if ((* e->action) (iter, t, e))
+	  finished = true;
+      }
+      if (finished) {
+	event_finished (ev);
+	return event_stop;
+      }
     }
     if (ev->arrayi) { /* i = {...} */
       ev->i = ev->arrayi[ev->a++];
@@ -144,8 +159,8 @@ static int event_do (Event * ev, int i, double t, bool action)
       int i0 = ev->i;
       (* INC) (&ev->i, &ev->t, ev);
       if (i0 == -1 && ev->i != i0)
-	ev->i += i + 1;
-      if (!event_cond (ev, i + 1, ev->t))
+	ev->i += iter + 1;
+      if (!event_cond (ev, iter + 1, ev->t))
 	return event_finished (ev);
     }
     return event_alive;
@@ -153,42 +168,43 @@ static int event_do (Event * ev, int i, double t, bool action)
   return event_alive;
 }
 
-static void end_event_do (int i, double t, bool action)
+static void end_event_do (bool action)
 {
 #if DEBUG_EVENTS
-  if (1/*action*/)
-    fprintf (stderr, "\nend events (i = %d, t = %g)\n", i, t);
+  if (action)
+    fprintf (stderr, "\nend events (i = %d, t = %g)\n", iter, t);
 #endif
   for (Event * ev = Events; !ev->last; ev++)
-    if (ev->i == END_EVENT && action) {
+    if (ev->i == END_EVENT && action)
+      for (Event * e = ev; e; e = e->next) {
 #if DEBUG_EVENTS
-      event_print (ev, stderr);
+	event_print (e, stderr);
 #endif
-      ev->action (i, t, ev);
-    }
+	e->action (iter, t, e);
+      }
 }
 
-int events (int i, double t, bool action)
+int events (bool action)
 {
 #if DEBUG_EVENTS
-  if (1/*action*/)
-    fprintf (stderr, "\nevents (i = %d, t = %g)\n", i, t);
+  if (action)
+    fprintf (stderr, "\nevents (i = %d, t = %g)\n", iter, t);
 #endif
 
-  if (i == 0)
+  if (iter == 0)
     for (Event * ev = Events; !ev->last; ev++)    
       init_event (ev);
 
-  int inext = 0, cond = 0, cond1 = 0;
-  tnext = HUGE;
+  int cond = 0, cond1 = 0;
+  inext = END_EVENT; tnext = HUGE;
   for (Event * ev = Events; !ev->last && !cond; ev++)
     if (ev->i != END_EVENT && 
 	(COND || (INIT && !COND && !INC) || ev->arrayi || ev->arrayt))
       cond = 1;
   for (Event * ev = Events; !ev->last; ev++) {
-    int status = event_do (ev, i, t, action);
+    int status = event_do (ev, action);
     if (status == event_stop) {
-      end_event_do (i, t, action);
+      end_event_do (action);
       return 0;
     }
     if (status == event_alive && ev->i != END_EVENT &&
@@ -196,31 +212,30 @@ int events (int i, double t, bool action)
       cond1 = 1;
     if (ev->t > t && ev->t < tnext)
       tnext = ev->t;
-    if (ev->i > i)
-      inext = 1;
+    if (ev->i > iter && ev->i < inext)
+      inext = ev->i;
   }
-  if ((!cond || cond1) && (tnext != HUGE || inext))
+  if ((!cond || cond1) && (tnext != HUGE || inext != END_EVENT)) {
+    inext = iter + 1;
     return 1;
-  end_event_do (i, t, action);
+  }
+  end_event_do (action);
   return 0;
 }
 
 void event (const char * name)
 {
   for (Event * ev = Events; !ev->last; ev++)
-    if (!strcmp (ev->name, name)) {
+    if (!strcmp (ev->name, name))
+      for (Event * e = ev; e; e = e->next) {
 #if DEBUG_EVENTS
-      char * root = strstr (ev->file, BASILISK);
-      fprintf (stderr, "  %-25s %s%s:%d\n", ev->name, 
-	       root ? "src" : "",
-	       root ? &ev->file[strlen(BASILISK)] : ev->file, 
-	       ev->line);
+	event_print (e, stderr);
 #endif     
-      (* ev->action) (0, 0, ev);
-    }
+	(* e->action) (0, 0, e);
+      }
 }
 
-double dtnext (double t, double dt)
+double dtnext (double dt)
 {
   if (tnext != HUGE && tnext > t) {
     unsigned int n = (tnext - t)/dt;

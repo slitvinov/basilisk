@@ -78,7 +78,7 @@ event integration (i++) {
   events. We choose a maximum timestep of 0.05 which ensures the stability
   of the reactive terms for this example. */
 
-  dt = dtnext (t, 0.05);
+  dt = dtnext (0.05);
 
   /**
   We compute $|A|^2$. */

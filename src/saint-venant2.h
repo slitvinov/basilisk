@@ -128,7 +128,7 @@ void run (void)
       dt = flux (point, 0, dt);
     foreach_boundary(right,true)
       dt = flux (point, 1, dt);
-    dt = dtnext (t, dt);
+    dt = dtnext (dt);
 
     update (hu, hu1, w, w1, dt/2.);
     swap (scalar, hu, hu1);

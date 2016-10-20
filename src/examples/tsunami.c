@@ -154,11 +154,7 @@ topography $z_b$. This KDT database needs to be built beforehand. See the
 for explanations on how to do this.
 
 We then consider two cases, either we restart from an existing
-snapshot or we start from scratch. To restart, we could use for example
-
-~~~bash
-CFLAGS=-DRESTART make tsunami.tst
-~~~
+snapshot or we start from scratch.
 
 The next line tells the Saint-Venant solver to conserve water surface
 elevation rather than volume when adapting the mesh. This is important
@@ -168,33 +164,33 @@ balance. */
 event init (i = 0)
 {
   terrain (zb, "/home/popinet/terrain/etopo2", NULL);
-#ifdef RESTART
-  input_gfs (file = "snapshot.gfs");
-  conserve_elevation();
-#else // not RESTART
-  conserve_elevation();
 
-  /**
-  The initial still water surface is at $z=0$ so that the water depth
-  $h$ is... */
-
-  foreach()
-    h[] = max(0., - zb[]);
-  boundary ({h});
-
-  /**
-  The initial deformation is given by an Okada fault model with the
-  following parameters. The *iterate = adapt* option will iterate this
-  initialisation until our *adapt()* function above returns zero
-  i.e. until the deformations are resolved properly. */
+  if (restore (file = "dump"))
+    conserve_elevation();
+  else {
+    conserve_elevation();
+    
+    /**
+    The initial still water surface is at $z=0$ so that the water depth
+    $h$ is... */
+    
+    foreach()
+      h[] = max(0., - zb[]);
+    boundary ({h});
+    
+    /**
+    The initial deformation is given by an Okada fault model with the
+    following parameters. The *iterate = adapt* option will iterate this
+    initialisation until our *adapt()* function above returns zero
+    i.e. until the deformations are resolved properly. */
   
-  fault (x = 94.57, y = 3.83,
-	 depth = 11.4857e3,
-	 strike = 323, dip = 12, rake = 90,
-	 length = 220e3, width = 130e3,
-	 U = 18,
-	 iterate = adapt);
-#endif // not RESTART
+    fault (x = 94.57, y = 3.83,
+	   depth = 11.4857e3,
+	   strike = 323, dip = 12, rake = 90,
+	   length = 220e3, width = 130e3,
+	   U = 18,
+	   iterate = adapt);
+  }
 }
 
 /**
@@ -290,13 +286,12 @@ event snapshots (t += 60; t <= 600) {
 #if !_MPI
   printf ("file: t-%g\n", t);
   output_field ({h, zb, hmax}, stdout, n = 1 << maxlevel, linear = true);
+#endif
   
   /**
   We also save a snapshot file we can restart from. */
 
-  output_gfs (file = "snapshot.gfs", t = t);
-#endif
-
+  dump (file = "dump");
 }
 
 /**

@@ -3,10 +3,10 @@
 echo "checkmpi" > /dev/stderr
 
 t=""
-npe=`ls mpi-prolongation-rcv-$t* | wc -l | awk '{print $1 - 1}'`
+npe=`ls mpi-level-rcv-$t* | wc -l | awk '{print $1 - 1}'`
 for i in `seq 0 1 $npe`; do
     for j in `seq 0 1 $npe`; do
-	for op in prolongation restriction restriction-root halo-restriction; do
+	for op in level level-root restriction; do
 	    awk -v j=$j '{if ($4 == j) print $1,$2,$3;}' \
 		< mpi-$op-rcv-$t$i > rcv-$op-$i-$j
 	    awk -v i=$i '{if ($4 == i) print $1,$2,$3;}' \

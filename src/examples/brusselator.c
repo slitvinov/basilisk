@@ -121,7 +121,7 @@ event integration (i++)
   events. We choose a maximum timestep of 1 which ensures the stability
   of the reactive terms for this example. */
 
-  dt = dtnext (t, 1.);
+  dt = dtnext (1.);
 
   /**
   We can rewrite the evolution equations as

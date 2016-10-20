@@ -170,7 +170,7 @@ event error (t = end) {
 #if 0
 event gfsview (i += 10) {
   static FILE * fp = popen ("gfsview2D spurious.gfv", "w");
-  output_gfs (fp, t = t);
+  output_gfs (fp);
 }
 #endif
 
