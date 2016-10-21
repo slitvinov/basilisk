@@ -274,3 +274,9 @@ void recursive (Point point)
 	foreach_cell_post_root (condition, root)
 @
 @define end_foreach_cell_post_all() end_foreach_cell_post_root() }
+
+@def foreach_leaf() foreach_cell()
+  if (is_leaf (cell)) {
+    if (is_active(cell) && is_local(cell)) {
+@
+@define end_foreach_leaf() } continue; } end_foreach_cell()
