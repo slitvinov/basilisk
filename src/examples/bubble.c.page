@@ -236,9 +236,10 @@ for details.
 On parallel machines, runs are not allowed to exceed a maximum
 duration (typically 24 hours). To avoid having the job terminated
 brutally by the queueing system, we add the option to exit gracefully
-after a given runtime. */
+after a given runtime (given in minutes). */
 
-event runtime (i++) {
+event runtime (i += 10) {
+  mpi_all_reduce (perf.t, MPI_DOUBLE, MPI_MAX);
   if (perf.t/60 >= maxruntime) {
     dump (file = "dump"); // so that we can restart
     return 1; // exit
