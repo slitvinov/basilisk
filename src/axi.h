@@ -47,7 +47,7 @@ static void refine_face_y_axi (Point point, scalar fm)
 }
 #endif
 
-event defaults (i = 0) {
+event metric (i = 0) {
 
   /**
   By default *cm* is a constant scalar field. To make it variable, we

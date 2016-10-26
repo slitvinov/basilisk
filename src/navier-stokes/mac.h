@@ -40,18 +40,6 @@ double nu = 0.;
 mgstats mgp;
 
 /**
-The default velocity and pressure are zero. */
-
-event defaults (i = 0)
-{
-  foreach_face()
-    u.x[] = 0.;
-  foreach()
-    p[] = 0.;
-  boundary ({p,u});
-}
-
-/**
 We need to explicitly set the zero normal velocity condition. */
 
 u.n[left]   = 0;
@@ -60,7 +48,7 @@ u.n[top]    = 0;
 u.n[bottom] = 0;
 
 /**
-We apply boundary conditions again after user initialisation. */
+We apply boundary conditions after user initialisation. */
 
 event init (i = 0)
 {

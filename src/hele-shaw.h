@@ -39,16 +39,12 @@ face vector beta[];
 mgstats mgp;
 
 /**
-We set the default values for these new fields, once at the start of
-the simulation. We also change the default gradient function (used for
-advection) to minmod-limited (rather than the centered default). */
+We change the default gradient function (used for advection) to
+minmod-limited (rather than the centered default). */
 
 event defaults (i = 0)
 {
   gradient = minmod2;
-  foreach()
-    p[] = zeta[] = 0.;
-  boundary ({p});
 }
 
 /**

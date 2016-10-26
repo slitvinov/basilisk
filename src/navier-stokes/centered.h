@@ -96,20 +96,27 @@ p[back]   = neumann(-a.z[]*fm.z[]/alpha.z[]);
 event defaults (i = 0)
 {
 
-  /**
-  The default velocity and pressure gradient are zero. */
-  
   CFL = 0.8;
-  foreach()
-    foreach_dimension()
-      u.x[] = g.x[] = 0.;
-  boundary ((scalar *){u,g});
 
   /**
   The pressures are never dumped. */
 
   p.nodump = pf.nodump = true;
   
+  /**
+  The default density field is set to unity (times the metric). */
+
+  if (alpha.x.i == unityf.x.i) {
+    alpha = fm;
+    rho = cm;
+  }
+  else if (!is_constant(alpha.x)) {
+    face vector alphav = alpha;
+    foreach_face()
+      alphav.x[] = fm.x[];
+    boundary ((scalar *){alpha});
+  }
+
   /**
   On trees, refinement of the face-centered velocity field needs to
   preserve the divergence-free condition. */
@@ -120,8 +127,8 @@ event defaults (i = 0)
 }
 
 /**
-After user initialisation, we initialise the face velocity, fluid
-properties and pressure fields. */
+After user initialisation, we initialise the face velocity and fluid
+properties. */
 
 double dtmax;
 
@@ -134,30 +141,9 @@ event init (i = 0)
   boundary ((scalar *){uf});
 
   /**
-  The default density field is set to unity (times the metric). */
-
-  if (alpha.x.i == unityf.x.i) {
-    alpha = fm;
-    rho = cm;
-  }
-
-  /**
-  The initial acceleration is zero. */
-  
-  if (!is_constant(a.x)) {
-    face vector av = a;
-    foreach_face()
-      av.x[] = 0.;
-    boundary ((scalar *){av});
-  }
-  
-  /**
-  We update fluid properties and set the initial pressure fields. */
+  We update fluid properties. */
 
   event ("properties");
-  foreach()
-    p[] = pf[] = 0.;
-  boundary ({p,pf});
 
   /**
   We set the initial timestep (this is useful only when restoring from
@@ -338,7 +324,6 @@ next timestep). */
 
 event projection (i++,last)
 {
-  boundary ({p});
   mgp = project (uf, p, alpha, dt);
 
   /**

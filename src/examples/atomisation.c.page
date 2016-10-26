@@ -81,30 +81,32 @@ int main (int argc, char * argv[])
 ## Initial conditions */
 
 event init (t = 0) {
+  if (!restore (file = "dump")) {
 
-  /**
-  We use a static refinement down to *maxlevel* in a cylinder 1.2
-  times longer than the initial jet and twice the radius. */
+    /**
+    We use a static refinement down to *maxlevel* in a cylinder 1.2
+    times longer than the initial jet and twice the radius. */
+    
+    refine (x < 1.2*length && sq(y) + sq(z) < 2.*sq(radius) && level < maxlevel,
+	    all);
+    
+    /**
+    We initialise the auxilliary volume fraction field for a cylinder of
+    constant radius. */
+    
+    fraction (f0, sq(radius) - sq(y) - sq(z));
+    f0.refine = f0.prolongation = fraction_refine;
+    restriction ({f0}); // for boundary conditions on levels
+    
+    /**
+    We then use this to define the initial jet and its velocity. */
 
-  refine (x < 1.2*length && sq(y) + sq(z) < 2.*sq(radius) && level < maxlevel,
-	  all);
-
-  /**
-  We initialise the auxilliary volume fraction field for a cylinder of
-  constant radius. */
-
-  fraction (f0, sq(radius) - sq(y) - sq(z));
-  f0.refine = f0.prolongation = fraction_refine;
-  restriction ({f0}); // for boundary conditions on levels
-
-  /**
-  We then use this to define the initial jet and its velocity. */
-
-  foreach() {
-    f[] = f0[]*(x < length);
-    u.x[] = f[];
+    foreach() {
+      f[] = f0[]*(x < length);
+      u.x[] = f[];
+    }
+    boundary ({f,u.x});
   }
-  boundary ({f,u.x});
 }
 
 /**
@@ -155,6 +157,12 @@ We save snapshots of the simulation at regular intervals to
 post-process with gfsview. */
 
 event snapshot (t = 0.1; t += 0.1; t <= 1.8) {
+
+  /**
+  We also dump the entire simulation to be able to restart. */
+
+  dump (file = "dump");
+
   char name[80];
   sprintf (name, "snapshot-%g.gfs", t);
   scalar pid[], ff[];
@@ -164,11 +172,6 @@ event snapshot (t = 0.1; t += 0.1; t <= 1.8) {
   }
   boundary ({pid,ff});
   output_gfs (file = name);
-
-  /**
-  We also dump the entire simulation to be able to restart. */
-
-  dump (file = "dump");
 }
 
 /**

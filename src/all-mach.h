@@ -59,22 +59,18 @@ We store the combined pressure gradient and acceleration field in
 
 vector g[];
 
-/**
-We initialise default values for the primitive fields. */
-
 event defaults (i = 0) {
-  foreach() {
-    foreach_dimension()
-      q.x[] = g.x[] = 0.;
-    p[] = ps[] = 0.;
-  }
-  foreach_face()
-    uf.x[] = 0.;
-  
-  boundary ({p,ps,q,g,uf});
-  event ("properties");
-  boundary ((scalar *){a});
+
+  /**
+  The default density field is set to unity (times the metric). */
+
+  if (alpha.x.i == unityf.x.i)
+    alpha = fm;
 }
+
+/**
+We apply boundary conditions and define the face velocity field after
+user initialisation. */
 
 event init (i = 0) {
   boundary ({q,p,rho});
@@ -89,12 +85,6 @@ event init (i = 0) {
   foreach_face()
     uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2.;
   boundary ((scalar *){uf});
-
-  /**
-  The default density field is set to unity (times the metric). */
-
-  if (alpha.x.i == unityf.x.i)
-    alpha = fm;
 }
 
 /**

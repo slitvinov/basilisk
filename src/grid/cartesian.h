@@ -66,18 +66,18 @@ foreach_face_generic() {
 
 @if TRASH
 @ undef trash
-@ define trash cartesian_trash
+@ define trash(list) reset(list, undefined)
 @endif
 
 #include "neighbors.h"
 
-void cartesian_trash (void * alist)
+void reset (void * alist, double val)
 {
   scalar * list = alist;
   for (int i = 0; i < sq(cartesian->n + 2); i++)
     for (scalar s in list)
       if (!is_constant(s))
-	((double *)(&cartesian->d[i*datasize]))[s.i] = undefined;
+	((double *)(&cartesian->d[i*datasize]))[s.i] = val;
 }
 
 // Boundaries
@@ -261,7 +261,7 @@ void init_grid (int n)
   for (int i = 0; i < len/sizeof(double); i++)
     v[i] = undefined;
   grid = (Grid *) p;
-  trash (all);
+  reset (all, 0.);
   for (int d = 0; d < nboundary; d++) {
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
     box->d = d;

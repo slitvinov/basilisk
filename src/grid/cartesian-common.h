@@ -41,9 +41,9 @@ scalar new_scalar (const char * name)
   scalar s;
   for (s.i = 0; s.i < nvar; s.i++)
     if (!list_lookup (all, s)) { // found a previously freed slot
-      all = list_append (all, s);
       init_scalar (s, name);
       trash (((scalar []){s, {-1}}));
+      all = list_append (all, s);
       return s;
     }
   
@@ -52,13 +52,11 @@ scalar new_scalar (const char * name)
   datasize += sizeof(double); nvar++;
   _attribute = realloc (_attribute, nvar*sizeof (_Attributes));
   memset (&_attribute[nvar-1], 0, sizeof (_Attributes));
-  all = realloc (all, sizeof (scalar)*(nvar + 1));
   s = (scalar){nvar - 1};
-  all[nvar - 1] = s;
-  all[nvar].i = -1;
   realloc_scalar(); // allocate extra space on the grid
   init_scalar (s, name);
   trash (((scalar []){s, {-1}}));
+  all = list_append (all, s);
   return s;
 }
 

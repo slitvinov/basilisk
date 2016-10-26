@@ -994,10 +994,10 @@ bool restore (struct Dump p)
   init_grid (1 << header.depth);
 #endif // multigrid
 
+  scalar * listm = is_constant(cm) ? NULL : (scalar *){fm}; NOT_UNUSED(listm);
 #if TREE && _MPI
   restore_mpi (fp, list);
 #else
-  scalar * listm = is_constant(cm) ? NULL : (scalar *){fm}; NOT_UNUSED(listm);
   foreach_cell() {
     unsigned flags;
     if (fread (&flags, sizeof(unsigned), 1, fp) != 1) {
@@ -1018,6 +1018,13 @@ bool restore (struct Dump p)
   }
   boundary (list);
 #endif
+
+  scalar * other = NULL;
+  for (scalar s in all)
+    if (!list_lookup (list, s) && !list_lookup (listm, s))
+      other = list_append (other, s);
+  reset (other, 0.);
+  free (other);
   
   free (list);
   if (file)

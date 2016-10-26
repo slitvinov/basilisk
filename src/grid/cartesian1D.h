@@ -151,6 +151,23 @@ void free_grid (void)
   grid = NULL;
 }
 
+@if TRASH
+@ undef trash
+@ define trash(list) reset(list, undefined)
+@endif
+
+void reset (void * alist, double val)
+{
+  scalar * list = alist;
+  char * data = cartesian->d;
+  for (int i = 0; i < cartesian->n + 2; i++, data += datasize) {
+    double * v = (double *) data;
+    for (scalar s in list)
+      if (!is_constant(s))
+	v[s.i] = val;
+  }
+}
+
 void init_grid (int n)
 {
   if (cartesian && n == cartesian->n)
@@ -166,7 +183,7 @@ void init_grid (int n)
   for (int i = 0; i < len/sizeof(double); i++)
     v[i] = undefined;
   grid = (Grid *) p;
-  trash (all);
+  reset (all, 0.);
   // box boundaries
   for (int d = 0; d < 2; d++) {
     BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
@@ -192,23 +209,6 @@ void realloc_scalar (void)
   char * data = p->d + (p->n + 1)*oldatasize;
   for (int i = p->n + 1; i > 0; i--, data -= oldatasize)
     memmove (data + i*sizeof(double), data, oldatasize);
-}
-
-@if TRASH
-@ undef trash
-@ define trash cartesian1D_trash
-@endif
-
-void cartesian1D_trash (void * alist)
-{
-  scalar * list = alist;
-  char * data = cartesian->d;
-  for (int i = 0; i < cartesian->n + 2; i++, data += datasize) {
-    double * v = (double *) data;
-    for (scalar s in list)
-      if (!is_constant(s))
-	v[s.i] = undefined;
-  }
 }
 
 struct _locate { double x, y, z; };

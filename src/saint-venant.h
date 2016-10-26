@@ -350,8 +350,13 @@ event defaults (i = 0)
     ul = vectors_append (ul, u);
     wl = list_append (wl, w);
   }
-  evolving = list_concat ({h}, (scalar *) ul);
 
+  evolving = list_concat ({h}, (scalar *) ul);
+  foreach()
+    for (scalar s in evolving)
+      s[] = 0.;
+  boundary (evolving);
+  
   /**
   By default, all the layers have the same relative thickness. */
 

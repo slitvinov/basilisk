@@ -85,23 +85,20 @@ static double energy()
 }
 
 /**
-We want the simulation to stop when we are close to steady state. To
-do this we store the `u.x` field of the previous timestep in an
-auxilliary variable `un`. */
-
-scalar un[];
-
-/**
-We add an option to restore the simulation from a previous dump and
-initialise the reference velocity field. */
+We add an option to restore the simulation from a previous dump. */
 
 event init (i = 0) {
 #if !MAC
   restore (file = "lid-restore.dump");
 #endif
-  foreach()
-    un[] = u.x[];
 }
+
+/**
+We want the simulation to stop when we are close to steady state. To
+do this we store the `u.x` field of the previous timestep in an
+auxilliary variable `un`. */
+
+scalar un[];
 
 /**
 Every 0.1 time units we check whether $u$ has changed by more than

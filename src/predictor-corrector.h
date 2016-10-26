@@ -37,12 +37,6 @@ event defaults (i = 0)
   // limiting
   for (scalar s in all)
     s.gradient = gradient;
-
-  // default values
-  foreach()
-    for (scalar s in all)
-      s[] = 0.;
-  boundary (all);
 }
 
 trace

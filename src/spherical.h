@@ -75,7 +75,7 @@ static void refine_face_y_lonlat (Point point, scalar fm)
 }
 #endif
 
-event defaults (i = 0) {
+event metric (i = 0) {
 
   /**
   We initialise the scale factors, taking care to first allocate the

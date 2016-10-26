@@ -333,16 +333,15 @@ foreach_vertex() {
 @
 @define foreach_child_break() _l = _m = _n = 2
 #endif
-
   
 @if TRASH
 @ undef trash
-@ define trash multigrid_trash
+@ define trash(list) reset(list, undefined)
 @endif
 
 #include "neighbors.h"
 
-void multigrid_trash (void * alist)
+void reset (void * alist, double val)
 {
   scalar * list = alist;
   Point p;
@@ -351,7 +350,7 @@ void multigrid_trash (void * alist)
     for (int i = 0; i < dimpower(p.n + 2*GHOSTS); i++)
       for (scalar s in list)
 	if (!is_constant(s))
-	  ((double *)(&multigrid->d[p.level][i*datasize]))[s.i] = undefined;
+	  ((double *)(&multigrid->d[p.level][i*datasize]))[s.i] = val;
 }
 
 // Boundaries
@@ -703,7 +702,7 @@ void init_grid (int n)
     for (int i = 0; i < len/sizeof(double); i++)
       v[i] = undefined;
   }
-  trash (all);
+  reset (all, 0.);
 }
 
 void realloc_scalar (void)

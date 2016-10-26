@@ -44,10 +44,8 @@ event defaults (i = 0) {
   /**
   As well as default values. */
 
-  foreach() {
+  foreach()
     h[] = 1.;
-    zb[] = 0.;
-  }
 
   /**
   On trees, we ensure that limiting is also applied to prolongation. */
@@ -57,7 +55,7 @@ event defaults (i = 0) {
     s.prolongation = refine_linear;
   #endif
 
-  boundary ({h,zb});
+  boundary ({h});
 }
 
 /**

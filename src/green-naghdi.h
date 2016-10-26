@@ -316,13 +316,3 @@ static double update_green_naghdi (scalar * current, scalar * updates,
 
   return dt;
 }
-
-/**
-We need an initial guess for the dispersive term. */
-
-event defaults (i = 0) {
-  foreach()
-    foreach_dimension()
-      D.x[] = 0.;
-  boundary ((scalar *){D});
-}

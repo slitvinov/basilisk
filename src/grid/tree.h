@@ -822,10 +822,10 @@ static void update_cache_f (void)
 
 @if TRASH
 @ undef trash
-@ define trash tree_trash
+@ define trash(list) reset(list, undefined)
 @endif
 
-void tree_trash (void * alist)
+void reset (void * alist, double val)
 {
   scalar * list = alist;
   Tree * q = tree;
@@ -837,20 +837,20 @@ void tree_trash (void * alist)
 #if dimension == 1
 	for (scalar s in list)
 	  if (!is_constant(s))
-	    ((double *)(L->m[i] + sizeof(Cell)))[s.i] = undefined;	
+	    ((double *)(L->m[i] + sizeof(Cell)))[s.i] = val;
 #else // dimension >= 2
 	for (int j = 0; j < L->len; j++)
 	  if (L->m[i][j])
 #if dimension == 2
 	    for (scalar s in list)
 	      if (!is_constant(s))
-		((double *)(L->m[i][j] + sizeof(Cell)))[s.i] = undefined;
+		((double *)(L->m[i][j] + sizeof(Cell)))[s.i] = val;
 #else // dimension == 3
           for (int k = 0; k < L->len; k++)
 	    if (L->m[i][j][k])
 	      for (scalar s in list)
   	        if (!is_constant(s))
-		  ((double *)(L->m[i][j][k] + sizeof(Cell)))[s.i] = undefined;
+		  ((double *)(L->m[i][j][k] + sizeof(Cell)))[s.i] = val;
 #endif
 #endif // dimension >= 2
   }
@@ -1614,7 +1614,7 @@ void init_grid (int n)
     add_boundary (b);
   }
   refine_level (depth);
-  trash (all);
+  reset (all, 0.);
 }
 
 #if dimension == 2

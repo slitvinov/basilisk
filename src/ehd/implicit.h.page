@@ -40,20 +40,17 @@ event defaults (i = 0)
   The coarsen/refine attributes of the charge density are those of a tracer
   otherwise the conservation is not guaranteed. */
 
-#if QUADTREE
+#if TREE
   rhoe.coarsen = coarsen_volume_average;
   rhoe.refine = refine_linear;
 #endif
 
   /**
-  By default, the conductivity is zero and the permittivity is unity
-  and the charge density and electric fields are zero. */
+  By default the permittivity is unity and other quantities are zero. */
 
   foreach_face()
     epsilon.x[] = K.x[] = fm.x[];
-  foreach()
-    phi[] = rhoe[] = 0.;
-  boundary ({phi, rhoe, epsilon, K});
+  boundary ((scalar *){epsilon, K});
 }
 
 event tracer_diffusion (i++)

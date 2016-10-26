@@ -14,7 +14,7 @@ int main (int argc, char * argv[])
 
   scalar s[];
   face vector u[];
-  tree_trash ({s,u});
+  reset ({s,u}, undefined);
   foreach()
     s[] = 1;
   foreach_face()

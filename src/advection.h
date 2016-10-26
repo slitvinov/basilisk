@@ -30,21 +30,13 @@ double (* gradient) (double, double, double) = NULL;
 
 /**
 Here we set the gradient functions for each tracer (as defined in the
-user-provided `tracers` list). We also set default values (zero) for
-the tracer and velocity fields. */
+user-provided `tracers` list). */
 
 extern scalar * tracers;
 
 event defaults (i = 0) {
   for (scalar f in tracers)
     f.gradient = gradient;
-  foreach()
-    for (scalar f in tracers)
-      f[] = 0.;
-  boundary (tracers);
-  foreach_face()
-    u.x[] = 0.;
-  boundary ((scalar *){u});
 }
 
 /**

@@ -51,7 +51,7 @@ event adapt (i++) {
 #if BGHOSTS == 2
   scalar s[];
   face vector u[];
-  tree_trash ({s,u});
+  reset ({s,u}, undefined);
   foreach()
     s[] = 1;
   foreach_face()

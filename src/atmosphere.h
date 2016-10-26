@@ -99,11 +99,9 @@ void update (double t, scalar * f)
 
 event defaults (i = 0)
 {
-  foreach() {
-    b[] = u.x[] = u.y[] = 0.;
+  foreach()
     h[] = 1.;
-  }
-  boundary ({b,h,u});
+  boundary ({h});
 }
 
 event init (i = 0)
