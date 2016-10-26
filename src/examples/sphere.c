@@ -62,7 +62,7 @@ event init (t = 0) {
   We initially refine only in a sphere, slightly larger than the solid
   sphere. */
 
-  refine (x*x + y*y + z*z < sq(0.6) && level < maxlevel, all);
+  refine (x*x + y*y + z*z < sq(0.6) && level < maxlevel);
 
   /**
   We define the unit sphere by masking. */

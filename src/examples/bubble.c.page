@@ -122,8 +122,7 @@ bubble initially at (0,Z0,0) of diameter unity. */
 
 event init (t = 0) {
   if (!restore (file = "dump")) {
-    refine (sq(x) + sq(y - Z0) + sq(z) - sq(0.75) < 0
-	    && level < LEVEL, all);
+    refine (sq(x) + sq(y - Z0) + sq(z) - sq(0.75) < 0 && level < LEVEL);
     fraction (f, sq(x) + sq(y - Z0) + sq(z) - sq(.5));
   }
 }

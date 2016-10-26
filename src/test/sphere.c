@@ -16,8 +16,7 @@ int main()
   int depth = 6;
   init_grid(1);
 
-  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)),
-	  NULL);
+  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)));
   
   scalar a[], b[];
 

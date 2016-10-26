@@ -20,7 +20,7 @@ int main (int argc, char * argv[])
 #endif
   refine_unbalanced (level < 5 && y < 0.315 && (1. - x) < 0.438 && y > 0.25 &&
 		     (1. - x) > 0.375, NULL);
-  unrefine (y < 0.25 && (1. - x) > 0.5, NULL);
+  unrefine (y < 0.25 && (1. - x) > 0.5);
   refine_unbalanced (level < 5 && y < 0.315 && (1. - x) < 0.5 && y > 0.25 &&
 		     (1. - x) > 0.438, NULL);
 

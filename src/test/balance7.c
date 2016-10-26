@@ -26,7 +26,7 @@ int main (int argc, char * argv[])
   timer t = timer_start();
 
 #if 0  
-  refine (level <= maxlevel && sq(x) + sq(y) + sq(z) < sq(0.05), list);
+  refine (level <= maxlevel && sq(x) + sq(y) + sq(z) < sq(0.05));
 #else
   int refined;
   do {

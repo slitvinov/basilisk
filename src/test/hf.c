@@ -2,17 +2,18 @@
 #include "curvature.h"
 #include "utils.h"
 
+scalar c[];
+
 int main()
 {
   init_grid (16);
   X0 = -0.5 - 0.125;
   Y0 = -0.5 - 0.125;
   Z0 = -0.5 - 0.125;
-  scalar c[];
 #if TREE
-  refine (level == 4 && fabs (x) < 0.375 && fabs (y) < 0.375, NULL);
-  refine (level <= 5 && fabs (x) < 0.31 && fabs (y) < 0.31, NULL);
   c.refine = c.prolongation = fraction_refine;
+  refine (level == 4 && fabs (x) < 0.375 && fabs (y) < 0.375);
+  refine (level <= 5 && fabs (x) < 0.31 && fabs (y) < 0.31);
 #endif
   fraction (c, - (0.2 - sqrt(sq(x+0.2) + sq(y+0.2))));
   output_cells (stdout);

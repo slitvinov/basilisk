@@ -45,7 +45,7 @@ int main (int argc, char * argv[])
 
   init_grid (1);
   refine (level <= minlevel*(1. - sqrt(sq((x - 0.5) - 0.1) +
-				       sq((y - 0.5)- 0.1))), NULL);
+				       sq((y - 0.5)- 0.1))));
   
   foreach()
     a[] = b[] = 0.;
@@ -55,7 +55,7 @@ int main (int argc, char * argv[])
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
   refine (level <= maxlevel*(1. - sqrt(sq((x - 0.5) - 0.1) +
-				       sq((y - 0.5) - 0.1))), NULL);
+				       sq((y - 0.5) - 0.1))));
   check_restriction (a);
   
   size_t tnc = 0;

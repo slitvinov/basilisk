@@ -287,31 +287,46 @@ astats adapt_wavelet (struct Adapt p)
   return st;
 }
 
-#define refine(cond, list) do {			                        \
+#define refine(cond) do {			                        \
   int refined;								\
   do {									\
     refined = 0;							\
     tree->refined.n = 0;						\
     foreach_leaf()							\
       if (cond) {							\
-	refine_cell (point, list, 0, &tree->refined);			\
+	refine_cell (point, all, 0, &tree->refined);			\
 	refined++;							\
 	continue;							\
       }									\
     mpi_all_reduce (refined, MPI_INT, MPI_SUM);				\
     if (refined) {							\
-      mpi_boundary_refine (list);					\
-      mpi_boundary_update (list);					\
+      mpi_boundary_refine (all);					\
+      mpi_boundary_update (all);					\
     }									\
   } while (refined);							\
 } while(0)
 
 static void refine_level (int depth)
 {
-  refine (level < depth, NULL);
+  int refined;
+  do {
+    refined = 0;
+    tree->refined.n = 0;
+    foreach_leaf()
+      if (level < depth) {
+	refine_cell (point, NULL, 0, &tree->refined);
+	refined++;
+	continue;
+      }
+    mpi_all_reduce (refined, MPI_INT, MPI_SUM);
+    if (refined) {
+      mpi_boundary_refine (NULL);
+      mpi_boundary_update (NULL);
+    }
+  } while (refined);
 }
 
-#define unrefine(cond, list) do {					\
+#define unrefine(cond) do {						\
   static const int too_fine = 1 << user;			        \
   foreach_cell() {							\
     if (is_leaf(cell))							\
@@ -325,7 +340,7 @@ static void refine_level (int depth)
 	continue;							\
       if (level == _l) {						\
 	if (is_local(cell) && (cell.flags & too_fine)) {		\
-	  coarsen_cell (point, list);					\
+	  coarsen_cell (point, all);					\
 	  cell.flags &= ~too_fine;					\
 	}								\
 	continue;							\
@@ -333,7 +348,7 @@ static void refine_level (int depth)
     }									\
     mpi_boundary_coarsen (_l, too_fine);				\
   }									\
-  mpi_boundary_update (list);						\
+  mpi_boundary_update (all);						\
 } while (0)
 
 static void halo_flux (vector * list)

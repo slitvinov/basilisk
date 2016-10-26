@@ -5,8 +5,7 @@ int main()
   int depth = 6;
   origin (-0.5, -0.5, -0.5);
   init_grid (8);
-  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)),
-  	  NULL);
+  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)));
   
   scalar a[];
   vector u[];

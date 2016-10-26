@@ -3,14 +3,15 @@
 #include "curvature.h"
 #include "utils.h"
 
+scalar f[];
+
 int main()
 {
   init_grid (16);
   origin (-0.5 - 0.125, -0.5 - 0.125, -0.5 - 0.125);
-  scalar f[];
 #if TREE
-  refine (level == 4 && fabs (x) < 0.375 && fabs (y) < 0.375, NULL);
-  refine (level <= 5 && fabs (x) < 0.31 && fabs (y) < 0.31, NULL);
+  refine (level == 4 && fabs (x) < 0.375 && fabs (y) < 0.375);
+  refine (level <= 5 && fabs (x) < 0.31 && fabs (y) < 0.31);
   f.refine = f.prolongation = fraction_refine;
 #endif
   fraction (f, - (0.2 - sqrt(sq(x+0.2) + sq(y+0.2) + sq(z))));

@@ -6,8 +6,7 @@ int main (int argc, char * argv[])
   init_grid (1);
   int depth = argc > 1 ? atoi(argv[1]) : 4;
   refine (level < depth - 2 ||
-	  level <= depth*(1. - sqrt(sq(x) + sq(y) + sq(z))),
-	  NULL);
+	  level <= depth*(1. - sqrt(sq(x) + sq(y) + sq(z))));
   
   scalar s[];
   foreach()

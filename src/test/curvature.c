@@ -64,7 +64,7 @@ void sample_circles (int nr, double R, int levelmax, norm * n, cstats * sc)
     xc = noise()/8., yc = noise()/8., zc = noise()/8., Rc = R;
     vofi (c, 5);
     for (int l = 6; l <= levelmax; l++) {
-      refine (c[] > 0. && c[] < 1. && level < l, {c});
+      refine (c[] > 0. && c[] < 1. && level < l);
       vofi (c, l);
     }
     
@@ -75,7 +75,7 @@ void sample_circles (int nr, double R, int levelmax, norm * n, cstats * sc)
 
     restriction ({c});
     for (int l = levelmax; l >= 3; l--) {
-      unrefine (level >= l || c[] <= 0. || c[] >= 1., {c});
+      unrefine (level >= l || c[] <= 0. || c[] >= 1.);
       
       cstats s = curvature (c, kappa);
       

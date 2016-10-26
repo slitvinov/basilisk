@@ -9,8 +9,7 @@ int main()
 
 #if TREE
   init_grid (1);
-  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)),
-  	  NULL);
+  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y + z*z)));
 #else
   init_grid (1 << depth);
 #endif

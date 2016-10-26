@@ -14,7 +14,7 @@ int main()
   origin (-0.5, -0.5);
   init_grid (16);
 
-  refine (level == 4 && fabs (x) < 0.25, all);
+  refine (level == 4 && fabs (x) < 0.25);
 
   /**
   We use a circle of radius 0.3 and initialise the fractions. */

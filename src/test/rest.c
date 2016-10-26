@@ -10,7 +10,7 @@ int main()
 
 event init (i = 0)
 {
-  refine (level == 4 && x < -0.1 && y < -0.1, all);
+  refine (level == 4 && x < -0.1 && y < -0.1);
 
   foreach() {
     zb[] = 0.2*exp(-100*(x*x + y*y));

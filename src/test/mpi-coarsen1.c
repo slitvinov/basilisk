@@ -4,7 +4,7 @@ int main (int argc, char * argv[])
 {
   init_grid (64);
   
-  unrefine ((x < 0.75 || y < 0.75) && level > 2, NULL);
+  unrefine ((x < 0.75 || y < 0.75) && level > 2);
   
   output_cells (stdout);
   

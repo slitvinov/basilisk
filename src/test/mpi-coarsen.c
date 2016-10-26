@@ -5,7 +5,7 @@ int main (int argc, char * argv[])
   X0 = Y0 = -0.5;
   init_grid (argc > 1 ? atoi(argv[1]) : 32);
 
-  unrefine (sq(x - 0.1) + sq(y - 0.1) > sq(0.1), NULL);
+  unrefine (sq(x - 0.1) + sq(y - 0.1) > sq(0.1));
   
   output_cells (stdout);
   

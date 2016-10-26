@@ -6,8 +6,7 @@ int main(int argc, char * argv[])
   init_grid (1);
   int depth = argc > 1 ? atoi(argv[1]) : 4;
   refine (level < depth - 2 ||
-	  level <= depth*(1. - sqrt(sq(x - 0.1) + sq(y - 0.1))),
-	  NULL);
+	  level <= depth*(1. - sqrt(sq(x - 0.1) + sq(y - 0.1))));
 
   face vector u[];
   foreach_face()

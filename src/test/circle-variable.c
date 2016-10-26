@@ -29,7 +29,7 @@ void solve (int depth)
   int nrelax = 4;
   init_grid(1);
 
-  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)), NULL);
+  refine (level < depth - 2 || level <= depth*(1. - sqrt(x*x + y*y)));
 
   foreach() {
     b[] =  -18.*sq(pi)*sin(3.*pi*x)*sin(3.*pi*y)*(x + y + 2.) +

@@ -52,7 +52,7 @@ int main()
   fprintf (stderr, "div max before: %.9f\n", divmax(uf));
     
   uf.x.refine = refine_face_solenoidal;
-  refine (x*x + y*y + z*z < sq(0.25) && level < 4, (scalar *){uf});
+  refine (x*x + y*y + z*z < sq(0.25) && level < 4);
 
 #if 0  
   output_gfs (stdout);
