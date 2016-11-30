@@ -52,6 +52,13 @@ y = np.linspace(0, 1, N)
 X,Y = np.meshgrid(x,y)
 
 """
+We define a function which sets initial conditions for the vorticity
+$\omega$: a white noise."""
+
+def init(i,t):
+    bas.omega.f = bas.noise
+
+"""
 We define a function which uses *matplotlib* to generate a graph
 of the $\omega$ field."""
 
@@ -68,14 +75,10 @@ We setup Basilisk's resolution to match that of our *numpy* grid."""
 bas.init_grid(N)
 
 """
-We set initial conditions for the vorticity $\omega$: a white
-noise."""
+We register the initial condition (at *t=0*) and graph function
+(at *t = 0,10,20,...,1000*)."""
 
-bas.omega.f = bas.noise
-
-"""
-We register the graph function which happens at *t = 0,10,20,...,1000*."""
-
+bas.event(init, t = 0.)
 bas.event(graph, t = range(0,1000,10))
 
 """

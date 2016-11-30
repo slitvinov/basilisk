@@ -26,7 +26,7 @@
   void _interpolate1D (scalar v, double * x, int len1, double * val, int len) {
     int i;
     for (i = 0; i < len; i++) {
-      struct _interpolate p = {v, x[i]};
+      struct _interpolate p = {v, 0.9999999999*x[i]};
       val[i] = interpolate (p);
     }
   }
@@ -46,7 +46,7 @@
                        double * val, int len1, int len2) {
     int i;
     for (i = 0; i < len1*len2; i++) {
-      struct _interpolate p = {v, x[i], y[i]};
+      struct _interpolate p = {v, 0.9999999999*x[i], 0.9999999999*y[i]};
       val[i] = interpolate (p);
     }
   }
