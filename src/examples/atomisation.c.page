@@ -275,7 +275,7 @@ module purge
 module load bullxmpi
 module load intel
 
-mpicc -Wall -std=c99 -O2 -D_MPI=1 _atomisation.c -o atomisation -lm
+mpicc -Wall -std=c99 -O2 _atomisation.c -o atomisation -lm
 srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./atomisation $LEVEL \
      2> log-$LEVEL-$SLURM_NTASKS | \
      sed 's/VariableTracerVOF f/VariableTracerVOF ff/g' | \
