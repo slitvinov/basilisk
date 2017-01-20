@@ -6,6 +6,7 @@ EXCLUDE = qcc.c include.c rotate.c qplot.c
 all: links qcc qplot libkdt
 	@chmod +x ppm2mpeg ppm2gif runtest sequence
 	@test -f xyz2kdt || ln -s kdt/xyz2kdt
+	@test -f kdtquery || ln -s kdt/kdtquery
 
 libkdt:
 	cd kdt && make
