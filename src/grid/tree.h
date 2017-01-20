@@ -1407,31 +1407,51 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   if (!list1)
     return;
 
-  OMP_PARALLEL() {
-#if dimension == 1
-  Point point = {0,0};
-#else
-  Point point = {0,0,0};
-#endif
-  point.level = l < 0 ? depth() : l;
-  int n = 1 << point.level;
+  if (l == 0) {
+    Point point = {0};
+    int n = 1 << point.level;
 #if dimension >= 2
-  int j;
-  OMP(omp for schedule(static))
-  for (j = 0; j < n + 2*GHOSTS; j++)
+    for (int j = 0; j < n + 2*GHOSTS; j++)
 #endif
 #if dimension >= 3
-    for (int k = 0; k < n + 2*GHOSTS; k++)
+      for (int k = 0; k < n + 2*GHOSTS; k++)
 #endif
-    {
-      for (int i = 0; i < GHOSTS; i++)
-	if (allocated(i + n,j,k))
-	  for (scalar s in list1)
-	    s[i,j,k] = s[i + n,j,k];
-      for (int i = n + GHOSTS; i < n + 2*GHOSTS; i++)
-	if (allocated(i - n,j,k))
-	  for (scalar s in list1)
-	    s[i,j,k] = s[i - n,j,k];
+	{
+	  for (int i = 0; i < GHOSTS; i++)
+	    for (scalar s in list1)
+	      s[i,j,k] = s[GHOSTS,GHOSTS,GHOSTS];
+	  for (int i = n + GHOSTS; i < n + 2*GHOSTS; i++)
+	    for (scalar s in list1)
+	      s[i,j,k] = s[GHOSTS,GHOSTS,GHOSTS];
+	}
+  }
+  else { // l != 0
+    OMP_PARALLEL() {
+#if dimension == 1
+      Point point = {0,0};
+#else
+      Point point = {0,0,0};
+#endif
+      point.level = l < 0 ? depth() : l;
+      int n = 1 << point.level;
+#if dimension >= 2
+      int j;
+      OMP(omp for schedule(static))
+	for (j = 0; j < n + 2*GHOSTS; j++)
+#endif
+#if dimension >= 3
+	  for (int k = 0; k < n + 2*GHOSTS; k++)
+#endif
+	    {
+	      for (int i = 0; i < GHOSTS; i++)
+		if (allocated(i + n,j,k))
+		  for (scalar s in list1)
+		    s[i,j,k] = s[i + n,j,k];
+	      for (int i = n + GHOSTS; i < n + 2*GHOSTS; i++)
+		if (allocated(i - n,j,k))
+		  for (scalar s in list1)
+		    s[i,j,k] = s[i - n,j,k];
+	    }
     }
   }
   
