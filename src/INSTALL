@@ -1,4 +1,4 @@
-## Installation
+## Getting the source code
 
 You have two ways of getting the most recent source code:
 
@@ -28,9 +28,6 @@ If later you want to update the source code, you just need to do
 ~~~bash
 cd basilisk
 darcs pull
-cd src
-make -k
-make
 ~~~
 
 and recompile.
@@ -50,7 +47,7 @@ If you don't have `wget`, just follow the
 [link](/basilisk/basilisk.tar.gz), save the file or
 extract the archive where you want to install it.
 
-### Compilation
+## Compilation
 
 For compilation, the only requirement is a C99-compliant compiler and
 the `make` utility (a version of `make` compatible with GNU make is
@@ -105,7 +102,7 @@ echo "export PATH=$PATH:$PWD" >> ~/.bashrc
 
 and also
 [gprof2dot](http://code.google.com/p/jrfonseca/wiki/Gprof2Dot). On a
-Debian-like system you just need to do
+Debian-like system (i.e. Debian, Ubuntu, Mint etc...) you just need to do
 
 ~~~bash
 sudo apt-get install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle
