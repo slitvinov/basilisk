@@ -1532,10 +1532,18 @@ const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}
   char * text = var;
   var = &var[7];
   nonspace (var);
-  char * cst = strchr (var, ']'); *++cst = '\0';
-  cst = strchr (cst + 1, '=') + 1;
+  char * cst = strchr (var, ']'); cst++;
+  if (*cst == '=')
+    *cst++ = '\0';
+  else {
+    *cst++ = '\0';
+    cst = strchr (cst, '=') + 1;
+  }
   if (para != 0)
     return yyerror ("constant fields can only appear in declarations");
+  if (debug)
+    fprintf (stderr, "%s:%d: const '%s' '%s' '%s'\n",
+	     fname, line, var, cst, text);
   varconst = cst;
   varsymmetric = varface = varvertex = 0;
   declaration (var, text);
