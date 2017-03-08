@@ -111,20 +111,15 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
     #endif
     boundary_flux ({taux});
     foreach (reduction(max:maxres)) {
-      // fixme: imbricated foreach_dimension() loops do not work
       double d = 0.;
-      d += taux.x[1] - taux.x[];
-      #if dimension > 1
-        d += taux.y[0,1] - taux.y[];
-      #endif
-      #if dimension > 2
-        d += taux.z[0,0,1] - taux.z[];
-      #endif
+      foreach_dimension()
+	d += taux.x[1] - taux.x[];
       res.x[] = r.x[] - lambda.x*u.x[] + dt/rho[]*d/Delta;
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
     }
   }
+  boundary (resl);
 #else
   /* "naive" discretisation (only 1st order on trees) */
   foreach (reduction(max:maxres)) {
@@ -154,7 +149,6 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
     }
   }
 #endif
-  boundary (resl);
   return maxres;
 }
 
