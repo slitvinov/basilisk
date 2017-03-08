@@ -96,7 +96,7 @@ reached.
 The maximum number of iterations is controlled by *NITERMAX* and the
 tolerance by *TOLERANCE* with the default values below. */
 
-int NITERMAX = 100;
+int NITERMAX = 100, NITERMIN = 1;
 double TOLERANCE = 1e-3;
 
 /**
@@ -161,7 +161,9 @@ mgstats mg_solve (scalar * a, scalar * b,
   also that we force the solver to apply at least one cycle, even if the
   initial residual is lower than *TOLERANCE*. */
 
-  for (s.i = 0; s.i < NITERMAX && (s.i < 1 || s.resa > TOLERANCE); s.i++) {
+  for (s.i = 0;
+       s.i < NITERMAX && (s.i < NITERMIN || s.resa > TOLERANCE);
+       s.i++) {
     mg_cycle (a, res, da, relax, data, 4, 0, grid->maxdepth);
     s.resa = residual (a, b, res, data);
   }
