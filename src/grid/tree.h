@@ -1083,6 +1083,7 @@ void realloc_scalar (void)
 
 @define VN v.x
 @define VT v.y
+@define VR v.z
 
 #define is_neighbor(...) (allocated(__VA_ARGS__) && \
 			  !is_boundary(neighbor(__VA_ARGS__)))
@@ -1115,7 +1116,8 @@ static bool normal_neighbor (Point point, scalar * scalars, vector * vectors)
 	    v.y[] = vt.boundary[id](neighbor, point, v.y);
 #endif
 #if dimension >= 3
-	    v.z[] = vt.boundary[id](neighbor, point, v.z);
+	    scalar vr = VR;
+	    v.z[] = vr.boundary[id](neighbor, point, v.z);
 #endif
 	  }
 	  return true;
@@ -1151,8 +1153,9 @@ static bool diagonal_neighbor_2D (Point point,
 		       vt.boundary[id2](n,n2,v.y) -
 		       v.y[i,j]);
 #if dimension == 3
-	      v.z[] = (vt.boundary[id1](n,n1,v.z) +
-		       vt.boundary[id2](n,n2,v.z) -
+	      scalar vr = VR;
+	      v.z[] = (vr.boundary[id1](n,n1,v.z) +
+		       vr.boundary[id2](n,n2,v.z) -
 		       v.z[i,j]);
 #endif
 	    }
@@ -1189,7 +1192,7 @@ static bool diagonal_neighbor_3D (Point point,
 		     s.boundary[id3](n0,n3,s) -
 		     2.*s[i,j,k]);
 	    for (vector v in vectors) {
-	      scalar vt = VT, vn = VN;
+	      scalar vt = VT, vn = VN, vr = VR;
 	      v.x[] = (vt.boundary[id1](n0,n1,v.x) +
 		       vt.boundary[id2](n0,n2,v.x) +
 		       vn.boundary[id3](n0,n3,v.x) -
@@ -1199,8 +1202,8 @@ static bool diagonal_neighbor_3D (Point point,
 		       vt.boundary[id3](n0,n3,v.y) -
 		       2.*v.y[i,j,k]);
 	      v.z[] = (vn.boundary[id1](n0,n1,v.z) +
-		       vt.boundary[id2](n0,n2,v.z) +
-		       vt.boundary[id3](n0,n3,v.z) -
+		       vr.boundary[id2](n0,n2,v.z) +
+		       vr.boundary[id3](n0,n3,v.z) -
 		       2.*v.z[i,j,k]);
 	    }
 	    return true;
@@ -1211,16 +1214,20 @@ static bool diagonal_neighbor_3D (Point point,
 
 #if dimension > 1
 foreach_dimension()
-static Point tangential_neighbor_x (Point point)
+static Point tangential_neighbor_x (Point point, bool * zn)
 {
   for (int k = 1; k <= BGHOSTS; k++)
     for (int j = -k; j <= k; j += 2*k) {
-      if (is_neighbor(0,j) || is_neighbor(-1,j))
+      if (is_neighbor(0,j) || is_neighbor(-1,j)) {
+	*zn = false;
 	return neighborp(0,j);
+      }
 #if dimension == 3
       // fixme: what about diagonals?
-      if (is_neighbor(0,0,j) || is_neighbor(-1,0,j))
+      if (is_neighbor(0,0,j) || is_neighbor(-1,0,j)) {
+	*zn = true;
 	return neighborp(0,0,j);
+      }
 #endif // dimension == 3
     }
   return (Point){.level = -1};
@@ -1275,12 +1282,17 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 #if dimension > 1
 	  else if (i == -1) {
 	    // tangential neighbor
-	    Point neighbor = tangential_neighbor_x (point);
+	    bool zn;
+	    Point neighbor = tangential_neighbor_x (point, &zn);
 	    if (neighbor.level >= 0) {
 	      int id = is_boundary_point (neighbor) ?
 		bid(neighbor(-1)) : bid(cell);
 	      for (vector v in faces) {
+#if dimension == 2
 		scalar vt = VT;
+#else // dimension == 3
+		scalar vt = zn ? VT : VR;
+#endif
 		v.x[] = vt.boundary[id](neighbor, point, v.x);
 	      }
 	    }

@@ -43,15 +43,15 @@ ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 \{ { scope++; ECHO; }
 \} { scope--; ECHO; }
 
-_attribute\[{ID}+.[nt].i\] {
+_attribute\[{ID}+.[ntr].i\] {
   // replace tangential and normal components
   char * s = strstr (yytext, ".n");
   if (s)
     s[1] = 'x';
-  else {
-    s = strstr (yytext, ".t");
+  else if ((s = strstr (yytext, ".t")))
     s[1] = 'y';
-  }
+  else if ((s = strstr (yytext, ".r")))
+    s[1] = 'z';
   ECHO;
 }
 

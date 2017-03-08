@@ -608,8 +608,8 @@
     while (*s1 != '\0') {
       if (*s1 == '.') {
 	s1++;
-	if (!dim)
-	  *s1 = *s1 == 'n' ? 'x' : 'y'; // replace .n, .t with .x, .y
+	if (!dim) // replace .n, .t, .r with .x, .y, .z
+	  *s1 = (*s1 == 'n' ? 'x' : *s1 == 't' ? 'y' : 'z');
 	component = *s1;
       }
       else
@@ -1661,7 +1661,7 @@ val{WS}*[(]    {
     REJECT;
 }
 
-[a-zA-Z_0-9]+[.nt]*{WS}*\[{WS}*{ID}+{WS}*\]{WS}*= {
+[a-zA-Z_0-9]+[.ntr]*{WS}*\[{WS}*{ID}+{WS}*\]{WS}*= {
   /* v[top] = ..., u.n[left] = ..., u.t[left] = ... */
   char * s = yytext;
   while (!strchr(" \t\v\n\f[.", *s)) s++;
@@ -1713,7 +1713,7 @@ val{WS}*[(]    {
     REJECT;
 }
 
-[a-zA-Z_0-9]+[.nt]*{WS}*\[{WS}*(right|left|top|bottom|front|back){WS}*\]{WS}*={WS}*periodic{WS}*\({WS}*\){WS}*; {
+[a-zA-Z_0-9]+[.ntr]*{WS}*\[{WS}*(right|left|top|bottom|front|back){WS}*\]{WS}*={WS}*periodic{WS}*\({WS}*\){WS}*; {
   /* v[top] = periodic(); */
   char * s = yytext;
   while (!strchr(" \t\v\n\f[.", *s)) s++;

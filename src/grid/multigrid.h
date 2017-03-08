@@ -502,9 +502,12 @@ static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 	if (!is_constant(s)) {
 	  scalar sb = s;
 #if dimension > 1
-	  if (s.v.x.i >= 0)
+	  if (s.v.x.i >= 0) {
 	    // vector component
-	    sb = (&s.v.x)[d/2].i == s.i ? s.v.x : s.v.y;
+	    int j = 0;
+	    while ((&s.v.x)[j].i != s.i) j++;
+	    sb = (&s.v.x)[(j - d/2 + dimension) % dimension];
+	  }
 #endif
 	  if (sb.boundary[d] && sb.boundary[d] != periodic_bc) {
 	    list = list_append (list, s);

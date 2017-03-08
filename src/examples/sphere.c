@@ -55,6 +55,7 @@ for the tangential velocity *u.t*) for the sphere. */
 
 bid sphere;
 u.t[sphere] = dirichlet(0.);
+u.r[sphere] = dirichlet(0.);
 
 event init (t = 0) {
 

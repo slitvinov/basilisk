@@ -18,6 +18,7 @@ int main()
   a[right] = dirichlet(x + y + z);
   v.n[right] = dirichlet(x + y + z);
   v.t[right] = dirichlet(x + y + z);
+  v.r[right] = dirichlet(x + y + z);
   f.n[right] = 0.;
   
   foreach() {

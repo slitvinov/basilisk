@@ -72,6 +72,10 @@ int main (int argc, char ** argv)
   foreach_dimension() {
     u.t[right] = dirichlet(solution(x,y,z));
     u.t[left]  = dirichlet(solution(x,y,z));
+#if dimension > 2    
+    u.r[right] = dirichlet(solution(x,y,z));
+    u.r[left]  = dirichlet(solution(x,y,z));
+#endif
   }
 
   origin (-0.5, -0.5, -0.5);
