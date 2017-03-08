@@ -33,7 +33,7 @@ event init (t = 0) {
 event logfile (t += 0.1; i <= 100) {
   double du = change (u.y, un);
   if (i > 0 && du < 1e-6)
-    return 0; /* stop */
+    return 1; /* stop */
 }
 
 event profile (t = end) {

@@ -14,8 +14,6 @@ int main()
 }
 
 event init (t = 0) {
-  scalar * list = {cm,fm};
-
   refine (level < LEVEL && sq(x - 2.) + sq(y) < sq(1.5*R0));
 
   output_cells (stdout);
