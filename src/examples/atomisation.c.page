@@ -275,11 +275,12 @@ module purge
 module load bullxmpi
 module load intel
 
-mpicc -Wall -std=c99 -O2 _atomisation.c -o atomisation -lm
-srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./atomisation $LEVEL \
+NAME=atomisation
+mpicc -Wall -std=c99 -O2 _$NAME.c -o $NAME -lm
+srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./$NAME $LEVEL \
      2> log-$LEVEL-$SLURM_NTASKS | \
      sed 's/VariableTracerVOF f/VariableTracerVOF ff/g' | \
-     $HOME/local/bin/gfsview-batch3D atomisation.gfv \
+     $HOME/local/bin/gfsview-batch3D $NAME.gfv \
      > out-$LEVEL-$SLURM_NTASKS.ppm
 ~~~
 
