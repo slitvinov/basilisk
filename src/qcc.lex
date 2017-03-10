@@ -969,8 +969,8 @@
 	v->i[0] = 1;
     }
     if (debug)
-      fprintf (stderr, "%s:%d: declaration: %s type: %d\n",
-	       fname, line, var, vartype);
+      fprintf (stderr, "%s:%d: declaration: %s type: %d face: %d\n",
+	       fname, line, var, vartype, varface);
   }
 
   static int homogeneize (FILE * in, FILE * fp)
@@ -1463,9 +1463,9 @@ face{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
 vertex{WS}+scalar{WS}+[a-zA-Z0-9_\[\]]+ |
 (scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ |
 bid{WS}+{ID}+ {
-  varsymmetric = (strstr(yytext, "symmetric") != NULL);
-  varface = (strstr(yytext, "face") != NULL);
-  varvertex = (strstr(yytext, "vertex") != NULL);
+  varsymmetric = (strstr(yytext, "symmetric") == yytext);
+  varface = (strstr(yytext, "face") == yytext);
+  varvertex = (strstr(yytext, "vertex") == yytext);
   varconst = NULL;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
