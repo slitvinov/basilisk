@@ -135,6 +135,7 @@ $$
 $$
 \nabla\cdot (\alpha\nabla a) + \lambda a = b
 $$
+* [Signed distance field](distance.h)
 
 # General orthogonal coordinates
 

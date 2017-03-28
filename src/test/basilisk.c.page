@@ -1,0 +1,133 @@
+/**
+# Computation of a levelset field from a contour
+
+This test case illustrates how to import a contour, represented using
+a [vector graphics](https://en.wikipedia.org/wiki/Vector_graphics)
+file format, here an [encapsulated
+Postscript](https://en.wikipedia.org/wiki/Encapsulated_PostScript)
+file and represent it within Basilisk as a distance (i.e. levelset)
+field.
+
+We will also use this distance function to compute a VOF
+representation of the contour, and test the *tag()* function. */
+
+#include "utils.h"
+#include "distance.h"
+#include "fractions.h"
+#include "tag.h"
+
+int main()
+{
+
+  /**
+  The *.eps* file was created using *inkscape* (or any other vector
+  graphics editor). The *.gnu* file is the obtained from the *.eps*
+  file using
+  ~~~bash
+  pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
+  ~~~
+  This gives the following curve
+  ~~~gnuplot
+  set size ratio -1
+  plot 'basilisk.gnu' w l t ''
+  ~~~
+  The pairs of coordinates defining the (oriented) segments are then
+  read using: */
+
+  coord * p = input_xy (fopen ("basilisk.gnu", "r"));
+
+  /**
+  We can optionally add noise to the representation, to check the
+  robustness of the reconstruction for self-intersecting, non-closed
+  curves. */
+
+#if 0
+  double amp = .0;
+  coord * i = p;
+  while (i->x != nodata) {
+    i->x += amp*noise(), i->y += amp*noise();
+    printf ("%g %g\n", i->x, i->y);
+    i++;
+    i->x += amp*noise(), i->y += amp*noise();
+    printf ("%g %g\n\n", i->x, i->y);
+    i++;
+  }
+  fflush (stdout);
+#endif
+
+  init_grid (8);
+  size (105);
+  origin (-5, -5);
+
+  /**
+  We initialise the distance field *d* and refine the mesh according
+  to the error on this field. */
+  
+  scalar d[];
+  distance (d, p);
+  while (adapt_wavelet ({d}, (double[]){1e-2}, 12).nf);
+
+#if 1 
+  scalar tt[];
+  foreach()
+    tt[] = d[] < 0;
+  boundary ({tt});
+  tag (tt); // fixme bug!!!
+#endif
+
+  /**
+  We initialise a vertex distance field by interpolating the centered
+  distance field, and use this to compute VOF fractions and facets. */
+  
+  vertex scalar phi[];
+  scalar f[];
+  foreach_vertex()
+    phi[] = (d[] + d[-1] + d[0,-1] + d[-1,-1])/4.;
+  face vector s[];
+  fractions (phi, f, s);
+  output_facets (f, stderr, s);
+
+  /**
+  Here we compute the number of segments intersected by the
+  neighborhood (a sphere of diameter $3\Delta$) of each cell. */
+  
+  scalar nt[], surface = d.surface;
+  foreach() {
+    nt[] = 0;
+    if (surface[]) {
+      coord ** p = double_to_pointer (surface[]);
+      while (*p)
+	nt[]++, p++;
+    }
+  }
+  boundary ({nt});
+
+  /**
+  We display the resulting curves and meshes. */
+
+  FILE * fp =
+    popen ("gfsview-batch2D basilisk.gfv | "
+	   "convert ppm:- -resize 640x240 mesh.png", "w");
+  output_gfs (fp);
+  fprintf (fp, "Save stdout { format = PPM width = 1600 height = 600 }\n");
+  pclose (fp);
+
+  output_gfs (stdout);
+ 
+  FILE * fp1 =
+    popen ("gfsview-batch2D basilisk.self.gfv | "
+	   "convert ppm:- -resize 320x240 self.png", "w");
+  output_gfs (fp1);
+  fprintf (fp1, "Save stdout { format = PPM width = 640 height = 480 }\n");
+  pclose (fp1);
+
+  /**
+  ![Adaptive mesh and isolines of distance function.](basilisk/mesh.png)
+
+  Note that the input curve is self-intersecting. The algorithm used
+  to compute the distance function is robust but gives the artefact
+  illustrated below.
+
+  ![The input curve is self-intersecting. The input curve is represented through its VOF discretisation.](basilisk/self.png)
+  */
+}

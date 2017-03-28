@@ -340,6 +340,13 @@ void array_append (Array * a, void * elem, size_t size)
   a->len += size;
 }
 
+void * array_shrink (Array * a)
+{
+  void * p = realloc (a->p, a->len);
+  free (a);
+  return p;
+}
+
 // Function tracing
 
 @if TRACE == 1 // with Extrae library

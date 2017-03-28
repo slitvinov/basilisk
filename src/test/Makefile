@@ -9,7 +9,10 @@ CFLAGS += -O2 -DMTRACE=3
 check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst \
 	lid-restore.tst
 
-# these tests have special depencies/compilation requirements
+# these tests have special dependencies/compilation requirements
+
+basilisk.tst: basilisk.gnu
+basilisk.tst: CFLAGS += -DDEBUG=1
 
 dry-explicit.c: dry.c
 	ln -s dry.c dry-explicit.c 

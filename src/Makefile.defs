@@ -86,6 +86,9 @@ clean:
 	cd $* && awk -f $(BASILISK)/gnuplot.awk < ../$*.c > plots && \
 	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh || rm -f plots
 
+%.gnu: %.eps
+	pstoedit -f gnuplot -flat 0.1 $< $@
+
 %.pdf: %.h
 	pandoc -o $@ $<
 

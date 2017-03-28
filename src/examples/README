@@ -17,6 +17,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [Atomisation of a pulsed liquid jet](atomisation.c)
 * [Bubble rising in a large tank](bubble.c)
 * [Forced isotropic turbulence in a triply-periodic box](isotropic.c)
+* [Distance field computation from a 3D model](distance.c)
 
 ## Python interface
 
