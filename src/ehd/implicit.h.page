@@ -37,11 +37,11 @@ event defaults (i = 0)
 {
 
   /**
-  The coarsen/refine attributes of the charge density are those of a tracer
+  The restriction/refine attributes of the charge density are those of a tracer
   otherwise the conservation is not guaranteed. */
 
 #if TREE
-  rhoe.coarsen = coarsen_volume_average;
+  rhoe.restriction = restriction_volume_average;
   rhoe.refine = refine_linear;
 #endif
 

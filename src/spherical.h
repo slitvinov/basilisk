@@ -21,7 +21,7 @@ map {
 
 /**
 On trees we need to define consistent refinement functions. The
-default coarsening functions (averages) are already consistent
+default restriction functions (averages) are already consistent
 (i.e. they preserve volume and length integrals).
 
 Mathematically we have

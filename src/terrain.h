@@ -112,12 +112,12 @@ void terrain (scalar zb, ...)
 
 #if TREE
   zb.refine = refine_terrain;
-  n.refine = no_coarsen;
-  n.coarsen = no_coarsen;
-  dmin.refine = no_coarsen;
-  dmin.coarsen = no_coarsen;
-  dmax.refine = no_coarsen;
-  dmax.coarsen = no_coarsen;
+  n.refine = no_restriction;
+  n.restriction = no_restriction;
+  dmin.refine = no_restriction;
+  dmin.restriction = no_restriction;
+  dmax.refine = no_restriction;
+  dmax.restriction = no_restriction;
 #endif
 
   trash ({zb});

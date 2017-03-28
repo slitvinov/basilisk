@@ -119,6 +119,7 @@ struct Fractions {
   face vector s;     // optional
 };
 
+trace
 void fractions (struct Fractions a)
 {
   vertex scalar Phi = a.Phi;
@@ -369,6 +370,7 @@ The reconstruction function takes a volume fraction field `c` and
 returns the corresponding normal vector field `n` and intercept field
 $\alpha$. */
 
+trace
 void reconstruction (const scalar c, vector n, scalar alpha)
 {
   foreach() {
@@ -446,6 +448,7 @@ struct OutputFacets {
   face vector s; // optional: default is none
 };
 
+trace
 void output_facets (struct OutputFacets p)
 {
   assert (dimension == 2);

@@ -10,7 +10,7 @@ which have an initial (and final) tag value of zero.
 We first define the restriction function for tag values. The parent
 tag is just the minimum of its children's tags. */
 
-static void coarsen_tag (Point point, scalar t)
+static void restriction_tag (Point point, scalar t)
 {
   double min = HUGE;
   foreach_child()
@@ -64,7 +64,7 @@ int tag (scalar t)
   /**
   We first set the restriction and prolongation functions (on trees). */
 
-  t.coarsen = coarsen_tag;
+  t.restriction = restriction_tag;
 #if TREE  
   t.refine = t.prolongation = refine_injection;
 #endif
@@ -100,7 +100,7 @@ int tag (scalar t)
 
     /**
     We first do a restriction from the finest to the coarsest level of
-    the multigrid hierarchy, using the `coarsen_tag()` function
+    the multigrid hierarchy, using the `restriction_tag()` function
     above. */
     
     restriction ({t});

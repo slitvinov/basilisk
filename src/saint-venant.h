@@ -123,7 +123,7 @@ static void advance_saint_venant (scalar * output, scalar * input,
   }
     
   // fixme: on trees eta is defined as eta = zb + h and not zb +
-  // ho in the refine_eta() and coarsen_eta() functions below
+  // ho in the refine_eta() and restriction_eta() functions below
   scalar * list = list_concat ({ho, eta}, (scalar *) uol);
   boundary (list);
   free (list);
@@ -132,7 +132,7 @@ static void advance_saint_venant (scalar * output, scalar * input,
 /**
 When using an adaptive discretisation (i.e. a tree)., we need
 to make sure that $\eta$ is maintained as $z_b + h$ whenever cells are
-refined or coarsened. */
+refined or restrictioned. */
 
 #if TREE
 static void refine_eta (Point point, scalar eta)
@@ -141,7 +141,7 @@ static void refine_eta (Point point, scalar eta)
     eta[] = zb[] + h[];
 }
 
-static void coarsen_eta (Point point, scalar eta)
+static void restriction_eta (Point point, scalar eta)
 {
   eta[] = zb[] + h[];
 }
@@ -366,7 +366,7 @@ event defaults (i = 0)
   
   /**
   We overload the default 'advance' and 'update' functions of the
-  predictor-corrector scheme and setup the refinement and coarsening
+  predictor-corrector scheme and setup the prolongation and restriction
   methods on trees. */
 
   advance = advance_saint_venant;
@@ -374,10 +374,10 @@ event defaults (i = 0)
 #if TREE
   for (scalar s in {h,zb,u,eta}) {
     s.refine = s.prolongation = refine_linear;
-    s.coarsen = coarsen_volume_average;
+    s.restriction = restriction_volume_average;
   }
   eta.refine  = refine_eta;
-  eta.coarsen = coarsen_eta;
+  eta.restriction = restriction_eta;
 #endif
 }
 

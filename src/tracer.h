@@ -25,7 +25,7 @@ refining cells. */
 event defaults (i = 0) {
   for (scalar s in tracers) {
     s.refine  = refine_linear;
-    s.coarsen = coarsen_volume_average;
+    s.restriction = restriction_volume_average;
   }
 }
 #endif

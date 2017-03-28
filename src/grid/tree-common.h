@@ -84,6 +84,10 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
   return nr;
 }
 
+attribute {
+  void (* coarsen) (Point, scalar);
+}
+
 bool coarsen_cell (Point point, scalar * list)
 {
 #if TWO_ONE
@@ -95,10 +99,13 @@ bool coarsen_cell (Point point, scalar * list)
       return false; // cannot coarsen
 #endif
 
-  /* restriction */
-  for (scalar s in list)
-    s.coarsen (point, s);
-
+  /* restriction/coarsening */
+  for (scalar s in list) {
+    s.restriction (point, s);
+    if (s.coarsen)
+      s.coarsen (point, s);
+  }
+    
   /* coarsen */
   cell.flags |= leaf;
 
@@ -148,6 +155,7 @@ struct Adapt {
   scalar * list;  // list of fields to update (default all)
 };
 
+trace
 astats adapt_wavelet (struct Adapt p)
 {
   scalar * listcm = NULL;
@@ -172,7 +180,7 @@ astats adapt_wavelet (struct Adapt p)
   astats st = {0, 0};
   scalar * listc = NULL;
   for (scalar s in p.list)
-    if (!is_constant(s) && s.coarsen != no_coarsen)
+    if (!is_constant(s) && s.restriction != no_restriction)
       listc = list_add (listc, s);
 
   // refinement
@@ -496,8 +504,8 @@ vector tree_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_face_vector (v, name);
   foreach_dimension()
-    v.x.coarsen = v.x.refine = no_coarsen;
-  v.x.coarsen = coarsen_face;
+    v.x.restriction = v.x.refine = no_restriction;
+  v.x.restriction = restriction_face;
   v.x.refine  = refine_face;
   foreach_dimension()
     v.x.prolongation = refine_face_x;
@@ -516,11 +524,11 @@ static void tree_boundary_level (scalar * list, int l)
   scalar * listdef = NULL, * listc = NULL, * list2 = NULL;
   for (scalar s in list) 
     if (!is_constant (s)) {
-      if (s.coarsen == coarsen_average) {
+      if (s.restriction == restriction_average) {
 	listdef = list_add (listdef, s);
 	list2 = list_add (list2, s);
       }
-      else if (s.coarsen != no_coarsen) {
+      else if (s.restriction != no_restriction) {
 	listc = list_add (listc, s);
 	if (s.face)
 	  foreach_dimension()
@@ -535,9 +543,9 @@ static void tree_boundary_level (scalar * list, int l)
     for (int l = depth - 1; l >= 0; l--) {
       foreach_coarse_level(l) {
 	for (scalar s in listdef)
-	  coarsen_average (point, s);
+	  restriction_average (point, s);
 	for (scalar s in listc)
-	  s.coarsen (point, s);
+	  s.restriction (point, s);
       }
       boundary_iterate (restriction, list2, l);
     }
@@ -549,7 +557,7 @@ static void tree_boundary_level (scalar * list, int l)
   scalar * listr = NULL;
   vector * listf = NULL;
   for (scalar s in list)
-    if (!is_constant (s) && s.refine != no_coarsen) {
+    if (!is_constant (s) && s.refine != no_restriction) {
       if (s.face)
 	listf = vectors_add (listf, s.v);
       else

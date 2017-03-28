@@ -46,6 +46,7 @@ struct Diffusion {
   scalar theta;   // default 1
 };
 
+trace
 mgstats diffusion (struct Diffusion p)
 {
 

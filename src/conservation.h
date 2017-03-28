@@ -73,7 +73,7 @@ event defaults (i = 0)
   #if TREE
   for (scalar s in evolving) {
     s.refine = s.prolongation = refine_linear;
-    s.coarsen = coarsen_volume_average;
+    s.restriction = restriction_volume_average;
   }
   #endif
 }

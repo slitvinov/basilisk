@@ -16,14 +16,14 @@
 
 attribute {
   void (* prolongation) (Point, scalar);
-  void (* coarsen)      (Point, scalar);
+  void (* restriction)  (Point, scalar);
 }
 
 // Multigrid methods
 
 void (* restriction) (scalar *);
 
-static inline void coarsen_average (Point point, scalar s)
+static inline void restriction_average (Point point, scalar s)
 {
   double sum = 0.;
   foreach_child()
@@ -31,7 +31,7 @@ static inline void coarsen_average (Point point, scalar s)
   s[] = sum/(1 << dimension);
 }
 
-static inline void coarsen_volume_average (Point point, scalar s)
+static inline void restriction_volume_average (Point point, scalar s)
 {
   double sum = 0.;
   foreach_child()
@@ -57,12 +57,12 @@ static inline void face_average (Point point, vector v)
   }
 }
   
-static inline void coarsen_face (Point point, scalar s)
+static inline void restriction_face (Point point, scalar s)
 {
   face_average (point, s.v);
 }
 
-static inline void no_coarsen (Point point, scalar s) {}
+static inline void no_restriction (Point point, scalar s) {}
 
 static inline void no_data (Point point, scalar s) {
   foreach_child()
@@ -114,20 +114,42 @@ static inline void refine_bilinear (Point point, scalar s)
     s[] = bilinear (point, s);
 }
 
+static inline double quadratic (double a, double b, double c)
+{
+  return (30.*a + 5.*b - 3.*c)/32.;
+}
+
 static inline double biquadratic (Point point, scalar s)
 {
 #if dimension == 1
-  assert (false);
-  return 0.;
+  return quadratic (coarse(s,0), coarse(s,child.x), coarse(s,-child.x));
 #elif dimension == 2
-  return (900.*coarse(s,0,0) + 25.*coarse(s,child.x,child.y) +
-	  150.*(coarse(s,child.x,0) + coarse(s,0,child.y)) +
-	  9.*coarse(s,-child.x,-child.y) -
-	  90.*(coarse(s,-child.x, 0) + coarse(s,0,-child.y)) -
-	  15.*(coarse(s,child.x,-child.y) + coarse(s,-child.x,child.y)))/1024.;
+  return
+    quadratic (quadratic (coarse(s,0,0),
+			  coarse(s,child.x,0),
+			  coarse(s,-child.x,0)),
+	       quadratic (coarse(s,0,child.y),
+			  coarse(s,child.x,child.y),
+			  coarse(s,-child.x,child.y)),
+	       quadratic (coarse(s,0,-child.y),
+			  coarse(s,child.x,-child.y),
+			  coarse(s,-child.x,-child.y)));
 #else // dimension == 3
   assert (false);
   return 0.;
+#endif
+}
+
+static inline double biquadratic_vertex (Point point, scalar s)
+{
+#if dimension == 1
+  return (6.*s[] + 3.*s[-1] - s[1])/8.;
+#elif dimension == 2
+  return (36.*s[] + 18.*(s[-1] + s[0,-1]) - 6.*(s[1] + s[0,1]) +
+	  9.*s[-1,-1] - 3.*(s[1,-1] + s[-1,1]) + s[1,1])/64.;  
+#elif dimension == 3
+  assert (false);
+  return 0.;  
 #endif
 }
 
@@ -174,7 +196,7 @@ static scalar multigrid_init_scalar (scalar s, const char * name)
 {
   s = cartesian_init_scalar (s, name);
   s.prolongation = refine_bilinear;
-  s.coarsen = coarsen_average;
+  s.restriction = restriction_average;
   return s;
 }
 
@@ -182,8 +204,8 @@ static vector multigrid_init_face_vector (vector v, const char * name)
 {
   v = cartesian_init_face_vector (v, name);
   foreach_dimension()
-    v.y.coarsen = no_coarsen;
-  v.x.coarsen = coarsen_face;
+    v.y.restriction = no_restriction;
+  v.x.restriction = restriction_face;
   return v;
 }
 
@@ -310,11 +332,11 @@ static void multigrid_restriction (scalar * list)
   scalar * listdef = NULL, * listc = NULL, * list2 = NULL;
   for (scalar s in list) 
     if (!is_constant (s)) {
-      if (s.coarsen == coarsen_average) {
+      if (s.restriction == restriction_average) {
 	listdef = list_add (listdef, s);
 	list2 = list_add (list2, s);
       }
-      else if (s.coarsen != no_coarsen) {
+      else if (s.restriction != no_restriction) {
 	listc = list_add (listc, s);
 	if (s.face)
 	  foreach_dimension()
@@ -328,9 +350,9 @@ static void multigrid_restriction (scalar * list)
     for (int l = depth() - 1; l >= 0; l--) {
       foreach_coarse_level(l) {
 	for (scalar s in listdef)
-	  coarsen_average (point, s);
+	  restriction_average (point, s);
 	for (scalar s in listc)
-	  s.coarsen (point, s);
+	  s.restriction (point, s);
       }
       boundary_iterate (level, list2, l);      
     }

@@ -6,8 +6,8 @@ When using the default adaptive reconstruction of variables, the
 when cells are refined or coarsened. However, this will not
 necessarily ensure that the "lake-at-rest" condition (i.e. a constant
 water surface elevation) is also preserved. In what follows, we
-redefine the *refine()* and *coarsen()* methods of the water depth $h$
-so that the water surface elevation $\eta$ is conserved.
+redefine the *prolongation()* and *restriction()* methods of the water
+depth $h$ so that the water surface elevation $\eta$ is conserved.
 
 We start with the reconstruction of fine "wet" cells: */
 
@@ -71,10 +71,10 @@ static void refine_elevation (Point point, scalar h)
 }
 
 /**
-Cell coarsening is simpler. We first compute the depth-weighted
+Cell restriction is simpler. We first compute the depth-weighted
 average of $\eta$ over all the children... */
 
-static void coarsen_elevation (Point point, scalar h)
+static void restriction_elevation (Point point, scalar h)
 {
   double eta = 0., v = 0.;
   foreach_child()
@@ -124,7 +124,7 @@ void conserve_elevation (void)
 {
   h.refine  = refine_elevation;
   h.prolongation = prolongation_elevation;
-  h.coarsen = coarsen_elevation;
+  h.restriction = restriction_elevation;
 }
 #else // Cartesian
 void conserve_elevation (void) {}

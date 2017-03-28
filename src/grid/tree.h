@@ -1096,7 +1096,7 @@ void realloc_scalar (void)
 @ define enable_fpe_for_mpi()
 @endif
 
-static inline void no_coarsen (Point point, scalar s);
+static inline void no_restriction (Point point, scalar s);
 
 static bool normal_neighbor (Point point, scalar * scalars, vector * vectors)
 {
@@ -1244,7 +1244,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
   scalar * scalars = NULL;
   vector * vectors = NULL, * faces = NULL;
   for (scalar s in list)
-    if (!is_constant(s) && s.refine != no_coarsen) {
+    if (!is_constant(s) && s.refine != no_restriction) {
       if (s.v.x.i == s.i) {
 	if (s.face)
 	  faces = vectors_add (faces, s.v);
@@ -1344,7 +1344,7 @@ static void masked_boundary_restriction (const Boundary * b,
   scalar * scalars = NULL;
   vector * faces = NULL;
   for (scalar s in list)
-    if (!is_constant(s) && s.refine != no_coarsen) {
+    if (!is_constant(s) && s.refine != no_restriction) {
       if (s.v.x.i == s.i && s.face)
 	faces = vectors_add (faces, s.v);
       else

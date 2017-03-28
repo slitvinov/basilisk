@@ -224,7 +224,7 @@ event acceleration (i++) {
   default. */
   
   eta.prolongation = eta_prolongation;
-  eta.coarsen = eta_restriction;
+  eta.restriction = eta_restriction;
   boundary ({eta,h2});
 
   /**
