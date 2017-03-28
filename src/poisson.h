@@ -96,7 +96,7 @@ reached.
 The maximum number of iterations is controlled by *NITERMAX* and the
 tolerance by *TOLERANCE* with the default values below. */
 
-int NITERMAX = 100, NITERMIN = 1;
+int NITERMAX = 100, NITERMIN = 1, MINLEVEL = 0;
 double TOLERANCE = 1e-3;
 
 /**
@@ -164,18 +164,18 @@ mgstats mg_solve (scalar * a, scalar * b,
   for (s.i = 0;
        s.i < NITERMAX && (s.i < NITERMIN || s.resa > TOLERANCE);
        s.i++) {
-    mg_cycle (a, res, da, relax, data, 4, 0, grid->maxdepth);
+    mg_cycle (a, res, da, relax, data, 4, MINLEVEL, grid->maxdepth);
     s.resa = residual (a, b, res, data);
   }
 
   /**
-  If we have reached the maximum number of iterations, we warn the user. */
+  If we have not satisfied the tolerance, we warn the user. */
 
-  if (s.i == NITERMAX)
+  if (s.resa > TOLERANCE)
     fprintf (ferr, 
 	     "WARNING: convergence not reached after %d iterations\n"
 	     "  res: %g sum: %g\n", 
-	     NITERMAX, s.resa, s.sum), fflush (ferr);
+	     s.i, s.resa, s.sum), fflush (ferr);
 
   /**
   We deallocate the residual and correction fields and free the lists. */
