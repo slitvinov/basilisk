@@ -22,6 +22,15 @@ int main() {
   L0 = 8.;
   origin (-0.5, -L0/2.);
   N = 512;
+
+  /**
+  We set a constant viscosity corresponding to a Reynolds number of
+  160, based on the cylinder diameter (0.125) and the inflow velocity
+  (1). We also set the initial velocity field and tracer
+  concentration. */
+  
+  const face vector muc[] = {0.00078125,0.00078125};
+  mu = muc;
   run(); 
 }
 
@@ -59,18 +68,10 @@ event init (t = 0) {
 	none);
 
   /**
-  We set a constant viscosity corresponding to a Reynolds number of
-  160, based on the cylinder diameter (0.125) and the inflow velocity
-  (1). We also set the initial velocity field and tracer
-  concentration. */
+  We set the initial velocity field. */
   
-  const face vector muc[] = {0.00078125,0.00078125};
-  mu = muc;
-  foreach() {
+  foreach()
     u.x[] = 1.;
-    f[] = 0.;
-  }
-  boundary ({f});
 }
 
 /**

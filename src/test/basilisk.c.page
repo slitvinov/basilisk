@@ -21,16 +21,20 @@ int main()
 
   /**
   The *.eps* file was created using *inkscape* (or any other vector
-  graphics editor). The *.gnu* file is the obtained from the *.eps*
+  graphics editor). The *.gnu* file is obtained from the *.eps*
   file using
-  ~~~bash
-  pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
-  ~~~
+  
+~~~bash
+pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
+~~~
+  
   This gives the following curve
+  
   ~~~gnuplot
   set size ratio -1
   plot 'basilisk.gnu' w l t ''
   ~~~
+  
   The pairs of coordinates defining the (oriented) segments are then
   read using: */
 
@@ -120,14 +124,14 @@ int main()
   output_gfs (fp1);
   fprintf (fp1, "Save stdout { format = PPM width = 640 height = 480 }\n");
   pclose (fp1);
-
-  /**
-  ![Adaptive mesh and isolines of distance function.](basilisk/mesh.png)
-
-  Note that the input curve is self-intersecting. The algorithm used
-  to compute the distance function is robust but gives the artefact
-  illustrated below.
-
-  ![The input curve is self-intersecting. The input curve is represented through its VOF discretisation.](basilisk/self.png)
-  */
 }
+
+/**
+![Adaptive mesh and isolines of distance function.](basilisk/mesh.png)
+
+Note that the input curve is self-intersecting. The algorithm used
+to compute the distance function is robust but gives the artefact
+illustrated below.
+
+![The input curve represented through its VOF discretisation.](basilisk/self.png)
+*/

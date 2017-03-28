@@ -3,8 +3,10 @@
 BEGIN { nplots = 0 }
 
 /^[ \t]*~~~/ {
-    if (gnuplot)
+    if (gnuplot) {
 	gnuplot = 0;
+	print "! mogrify -trim _plot" nplots++ ".png";
+    }
 }
 
 {
@@ -16,5 +18,5 @@ BEGIN { nplots = 0 }
 
 /^[ \t]*~~~gnuplot/ {
     gnuplot = 1;
-    print "set output '_plot" nplots++ ".png'";
+    print "set output '_plot" nplots ".png'";
 }

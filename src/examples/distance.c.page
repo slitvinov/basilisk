@@ -21,7 +21,9 @@ int main()
   [meshlab](http://www.meshlab.net/). */
   
   system ("test -f distance.stl || "
-	  "(wget http://www-static.cc.gatech.edu/data_files/large_models/horse.ply.gz && gunzip -f horse.ply.gz && meshlabserver -i horse.ply -o distance.stl)");
+	  "(wget http://www-static.cc.gatech.edu/data_files/large_models/horse.ply.gz && "
+	  "gunzip -f horse.ply.gz && "
+	  "meshlabserver -i horse.ply -o distance.stl)");
 
   /**
   We read the STL file, compute the bounding box of the model and set
@@ -80,6 +82,11 @@ int main()
 	 "convert ppm:- -resize 640x480 vof.png", "w");
   output_gfs (fp1);
   fprintf (fp1, "Save stdout { format = PPM width = 1280 height = 960 }\n");
+
+#if 0
+  FILE * fp2 = popen ("gfsview3D -s distance.gfv", "w");
+  output_gfs (fp2);
+#endif
 }
 
 /**
