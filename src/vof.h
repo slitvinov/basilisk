@@ -10,6 +10,25 @@ where $c_i$ are volume fraction fields describing sharp interfaces.
 This can be done using a conservative, non-diffusive geometric VOF
 scheme.
 
+We also add the option to transport diffusive tracers confined to one
+side of the interface i.e. solve the equations
+$$
+\partial_tt_{i,j} + \nabla\cdot(\mathbf{u}_ft_{i,j}) = 0
+$$
+with $t_{i,j} = c_if_j$ (or $t_{i,j} = (1 - c_i)f_j$) and $f_j$ is a
+volumetric tracer concentration.
+
+The list of tracers associated with the volume fraction is stored in
+the *tracers* attribute. For each tracer, the "side" of the interface
+(i.e. either $c$ or $1 - c$) is controlled by the *inverse*
+attribute). */
+
+attribute {
+  scalar * tracers;
+  bool inverse;
+}
+
+/**
 We will need basic functions for volume fraction computations. */
 
 #include "fractions.h"
@@ -41,7 +60,7 @@ event defaults (i = 0)
 We need to make sure that the CFL is smaller than 0.5 to ensure
 stability of the VOF scheme. */
 
-event stability (i++) {
+event stability (i = 0) {
   if (CFL > 0.5)
     CFL = 0.5;
 }
@@ -66,9 +85,57 @@ static void sweep_x (scalar c, scalar cc)
   double cfl = 0.;
 
   /**
-  We first reconstruct the interface normal $\mathbf{n}$ and the
-  intercept $\alpha$ for each cell. Then we go through each (vertical)
-  face of the grid. */
+  If we are also transporting tracers associated with $c$, we need to
+  compute their gradient i.e. $\partial_xf_j = \partial_x(t_j/c)$ or
+  $\partial_xf_j = \partial_x(t_j/(1 - c))$ (for higher-order
+  upwinding) and we need to store the computed fluxes. We first
+  allocate the corresponding lists. */
+
+  scalar * tracers = c.tracers, * gfl = NULL, * tfluxl = NULL;
+  if (tracers) {
+    for (scalar t in tracers) {
+      scalar gf = new scalar, flux = new scalar;
+      gfl = list_append (gfl, gf);
+      tfluxl = list_append (tfluxl, flux);
+    }
+
+    /**
+    The gradient is computed using a standard three-point scheme if we
+    are far enough from the interface (as controlled by *cmin*),
+    otherwise a two-point scheme biased away from the interface is
+    used. */
+    
+    foreach() {
+      scalar t, gf;
+      for (t,gf in tracers,gfl) {
+	double cl = c[-1], cc = c[], cr = c[1];
+	if (t.inverse)
+	  cl = 1. - cl, cc = 1. - cc, cr = 1. - cr;
+	gf[] = 0.;
+	static const double cmin = 0.5;
+	if (cc >= cmin) {
+	  if (cr >= cmin) {
+	    if (cl >= cmin) {
+	      if (t.gradient)
+		gf[] = t.gradient (t[-1]/cl, t[]/cc, t[1]/cr)/Delta;
+	      else
+		gf[] = (t[1]/cr - t[-1]/cl)/(2.*Delta);
+	    }
+	    else
+	       gf[] = (t[1]/cr - t[]/cc)/Delta;
+	  }
+	  else if (cl >= cmin)
+	    gf[] = (t[]/cc - t[-1]/cl)/Delta;
+	}
+      }
+    }
+    boundary (gfl);
+  }
+  
+  /**
+  We reconstruct the interface normal $\mathbf{n}$ and the intercept
+  $\alpha$ for each cell. Then we go through each (vertical) face of
+  the grid. */
 
   reconstruction (c, n, alpha);
 
@@ -109,8 +176,27 @@ static void sweep_x (scalar c, scalar cc)
     flux through the face is simply: */
 
     flux[] = cf*uf.x[];
-  }
 
+    /**
+    If we are transporting tracers, we compute their flux using the
+    upwind volume fraction *cf* and a tracer value upwinded using the
+    Bell--Collela--Glaz scheme and the gradient computed above. */
+    
+    scalar t, gf, tflux;
+    for (t,gf,tflux in tracers,gfl,tfluxl) {
+      double cf1 = cf, ci = c[i];
+      if (t.inverse)
+	cf1 = 1. - cf1, ci = 1. - ci;
+      if (cf1 > 0.) {
+	double ff = t[i]/ci + s*min(1., 1. - s*un)*gf[i]*Delta/2.;
+	tflux[] = ff*cf1*uf.x[];
+      }
+      else
+	tflux[] = 0.;
+    }
+  }
+  delete (gfl); free (gfl);
+  
   /**
   On tree grids, we need to make sure that the fluxes match at
   fine/coarse cell boundaries i.e. we need to *restrict* the fluxes from
@@ -119,27 +205,36 @@ static void sweep_x (scalar c, scalar cc)
   do it for a single dimension (x). */
 
 #if TREE
+  scalar * fluxl = list_concat (NULL, tfluxl);
+  fluxl = list_append (fluxl, flux);
   for (int l = depth() - 1; l >= 0; l--)
     foreach_halo (prolongation, l) {
 #if dimension == 1
       if (is_refined (neighbor(-1)))
-	flux[] = fine(flux,0);
+	for (scalar fl in fluxl)
+	  fl[] = fine(fl);
       if (is_refined (neighbor(1)))
-	flux[1] = fine(flux,2);
+	for (scalar fl in fluxl)
+	  fl[1] = fine(fl,2);
 #elif dimension == 2
       if (is_refined (neighbor(-1)))
-	flux[] = (fine(flux,0,0) + fine(flux,0,1))/2.;
+	for (scalar fl in fluxl)
+	  fl[] = (fine(fl,0,0) + fine(fl,0,1))/2.;
       if (is_refined (neighbor(1)))
-	flux[1] = (fine(flux,2,0) + fine(flux,2,1))/2.;
+	for (scalar fl in fluxl)
+	  fl[1] = (fine(fl,2,0) + fine(fl,2,1))/2.;
 #else // dimension == 3
       if (is_refined (neighbor(-1)))
-	flux[] = (fine(flux,0,0,0) + fine(flux,0,1,0) +
-		  fine(flux,0,0,1) + fine(flux,0,1,1))/4.;
+	for (scalar fl in fluxl)
+	  fl[] = (fine(fl,0,0,0) + fine(fl,0,1,0) +
+		  fine(fl,0,0,1) + fine(fl,0,1,1))/4.;
       if (is_refined (neighbor(1)))
-	flux[1] = (fine(flux,2,0,0) + fine(flux,2,1,0) +
-		   fine(flux,2,0,1) + fine(flux,2,1,1))/4.;
+	for (scalar fl in fluxl)
+	  fl[1] = (fine(fl,2,0,0) + fine(fl,2,1,0) +
+		   fine(fl,2,0,1) + fine(fl,2,1,1))/4.;
 #endif
     }
+  free (fluxl);
 #endif
 
   /**
@@ -159,11 +254,24 @@ static void sweep_x (scalar c, scalar cc)
   $$
   The first term is computed using the fluxes. The second term -- which is
   non-zero for the one-dimensional velocity field -- is approximated using
-  a centered volume fraction field `cc` which will be defined below. */
+  a centered volume fraction field `cc` which will be defined below. 
 
-  foreach()
+  For tracers, the one-dimensional update is simply
+  $$
+  \partial_tt_j = -\nabla_x\cdot(\mathbf{u}_f t_j)
+  $$
+  */
+
+  foreach() {
     c[] += dt*(flux[] - flux[1] + cc[]*(uf.x[1] - uf.x[]))/(cm[]*Delta);
+    scalar t, tflux;
+    for (t, tflux in tracers, tfluxl)
+      t[] += dt*(tflux[] - tflux[1])/(cm[]*Delta);
+  }
   boundary ({c});
+  boundary (tracers);
+
+  delete (tfluxl); free (tfluxl);
 }
 
 /**
@@ -171,7 +279,7 @@ static void sweep_x (scalar c, scalar cc)
 
 The multi-dimensional advection is performed by the event below. */
 
-event vof (i++)
+void vof_advection (scalar * interfaces, int i)
 {
   for (scalar c in interfaces) {
 
@@ -201,3 +309,6 @@ event vof (i++)
       sweep[(i + d) % dimension] (c, cc);
   }
 }
+
+event vof (i++)
+  vof_advection (interfaces, i);
