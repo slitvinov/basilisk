@@ -15,52 +15,18 @@ axisymmetric or planar version. */
 # include "axi.h" // fixme: does not run with -catch
 #endif
 #include "navier-stokes/centered.h"
-#include "vof.h"
+// #define mu(f)  (1./(clamp(f,0,1)*(1./mu1 - 1./mu2) + 1./mu2))
+#include "two-phase.h"
 #include "tension.h"
-
-/**
-Hysing et al. consider two cases (1 and 2), with the densities, dynamic
-viscosities and surface tension of fluid 1 and 2 given below. */
-
-#define rho1 1000.
-#define mu1 10.
-
-#if 1
-# define rho2 100.
-# define mu2 1.
-# define SIGMA 24.5
-#else
-# define rho2 1.
-# define mu2 0.1
-# define SIGMA 1.96
-#endif
 
 #define LEVEL 8
 
 /**
-The interface between the two-phases will be tracked with the volume
-fraction field *f*. We allocate the fields for the variable density
-and viscosity (*alphav*, *alphacv* and *muv* respectively). */
+The boundary conditions are slip lateral walls (the default) and
+no-slip on the right and left walls. */
 
-scalar f[];
-scalar * interfaces = {f};
-face vector alphav[];
-scalar rhov[];
-face vector muv[];
-
-/**
-The boundary conditions are slip lateral walls and no-slip on the right
-and left walls. */
-
-u.t[right]  = dirichlet(0);
-uf.t[right] = dirichlet(0);
-u.t[left]   = dirichlet(0);
-uf.t[left]  = dirichlet(0);
-
-uf.n[top]    = 0;
-uf.n[bottom] = 0;
-p[top]       = neumann(0);
-p[bottom]    = neumann(0);
+u.t[right] = dirichlet(0);
+u.t[left]  = dirichlet(0);
 
 int main() {
 
@@ -72,17 +38,21 @@ int main() {
   init_grid (1 << LEVEL);
   
   /**
-  The density and viscosity are defined by the variable fields we
-  allocated above. We also set the surface tension for interface *f*.
+  Hysing et al. consider two cases (1 and 2), with the densities, dynamic
+  viscosities and surface tension of fluid 1 and 2 given below. */
+
+  rho1 = 1000., mu1 = 10.;
+#if 1
+  rho2 = 100., mu2 = 1., f.sigma = 24.5;
+#else
+  rho2 = 1., mu2 = 0.1, f.sigma = 1.96;
+#endif
+
+  /**
   We reduce the tolerance on the Poisson and viscous solvers to
   improve the accuracy. */
   
-  alpha = alphav;
-  rho = rhov;
-  mu = muv;
-  f.sigma = SIGMA;
   TOLERANCE = 1e-4;
-
   run();
 }
 
@@ -106,22 +76,6 @@ event acceleration (i++) {
   face vector av = a;
   foreach_face(x)
     av.x[] -= 0.98;
-}
-
-/**
-The density and viscosity are defined using the arithmetic average. */
-
-#define rho(f) ((f)*rho1 + (1. - (f))*rho2)
-#define mu(f)  ((f)*mu1 + (1. - (f))*mu2)
-
-event properties (i++) {
-  foreach_face() {
-    double ff = (f[] + f[-1])/2.;
-    alphav.x[] = fm.x[]/rho(ff);
-    muv.x[] = fm.x[]*mu(ff);
-  }
-  foreach()
-    rhov[] = cm[]*rho(f[]);
 }
 
 /**
@@ -153,7 +107,7 @@ simulation as it proceeds. */
 
 #if 0
 event gfsview (i += 10) {
-  static FILE * fp = popen("gfsview2D ../rising.gfv", "w");
+  static FILE * fp = popen("gfsview2D rising.gfv", "w");
   output_gfs (fp);
 }
 #endif
@@ -185,7 +139,7 @@ set xlabel 'Time'
 set key bottom right
 plot [0:3][0:]'../c1g3l4.txt' u 1:5 w l t 'MooNMD', \
                  'out' u 1:5 w l t 'Basilisk', \
-                 '../rising-axi/out' u 1:5 w l t 'Basilisk (axisymmetric)' \
+                 '../rising-axi/out' u 1:5 w l t 'Basilisk (axisymmetric)'
 ~~~
 
 */
