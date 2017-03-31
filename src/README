@@ -91,6 +91,7 @@ $$
 $$
 
 * [Two-phase interfacial flows](two-phase.h)
+* [Momentum-conserving two-phase interfacial flows](momentum.h)
 
 ## Electrohydrodynamics
 

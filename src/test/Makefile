@@ -113,6 +113,13 @@ lid-restore.tst: lid-restore.dump
 nonlinear.s: LIBS = "-lgsl -lgslcblas"
 nonlinear.tst: LIBS = "-lgsl -lgslcblas"
 
+oscillation-momentum.c: oscillation.c
+	ln -s oscillation.c oscillation-momentum.c 
+oscillation-momentum.s: oscillation.s
+oscillation-momentum.tst: CFLAGS += -DMOMENTUM=1
+
+oscillation.tst: oscillation-momentum.tst
+
 ponds-implicit.c: ponds.c
 	ln -s ponds.c ponds-implicit.c
 ponds-implicit.s: ponds.s
