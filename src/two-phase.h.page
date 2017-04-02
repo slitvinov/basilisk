@@ -41,23 +41,55 @@ averages (i.e. harmonic). */
 # define mu(f)  (clamp(f,0,1)*(mu1 - mu2) + mu2)
 #endif
 
+/**
+We have the option of using some "smearing" of the density/viscosity
+jump. */
+
+#ifdef FILTERED
+scalar sf[];
+#else
+# define sf f
+#endif
+
 event properties (i++) {
 
-#if TREE  
-  f.prolongation = refine_bilinear;
-  boundary ({f});
+  /**
+  When using smearing of the density jump, we initialise *sf* with the
+  vertex-average of *f*. */
+
+#ifndef sf
+#if dimension <= 2
+  foreach()
+    sf[] = (4.*f[] + 
+	    2.*(f[0,1] + f[0,-1] + f[1,0] + f[-1,0]) +
+	    f[-1,-1] + f[1,-1] + f[1,1] + f[-1,1])/16.;
+#else // dimension == 3
+  foreach()
+    sf[] = (8.*f[] +
+	    4.*(f[-1] + f[1] + f[0,1] + f[0,-1] + f[0,0,1] + f[0,0,-1]) +
+	    2.*(f[-1,1] + f[-1,0,1] + f[-1,0,-1] + f[-1,-1] + 
+		f[0,1,1] + f[0,1,-1] + f[0,-1,1] + f[0,-1,-1] +
+		f[1,1] + f[1,0,1] + f[1,-1] + f[1,0,-1]) +
+	    f[1,-1,1] + f[-1,1,1] + f[-1,1,-1] + f[1,1,1] +
+	    f[1,1,-1] + f[-1,-1,-1] + f[1,-1,-1] + f[-1,-1,1])/64.;
+#endif
+#endif 
+
+#if TREE
+  sf.prolongation = refine_bilinear;
+  boundary ({sf});
 #endif
   
   foreach_face() {
-    double ff = (f[] + f[-1])/2.;
+    double ff = (sf[] + sf[-1])/2.;
     alphav.x[] = fm.x[]/rho(ff);
     muv.x[] = fm.x[]*mu(ff);
   }
   foreach()
-    rhov[] = cm[]*rho(f[]);
+    rhov[] = cm[]*rho(sf[]);
 
 #if TREE  
-  f.prolongation = fraction_refine;
-  boundary ({f});
+  sf.prolongation = fraction_refine;
+  boundary ({sf});
 #endif
 }
