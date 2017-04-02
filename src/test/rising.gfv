@@ -1,9 +1,9 @@
 # GfsView 2D
 View {
-  tx = 0.210289 ty = 0.00649271
+  tx = 0.422757 ty = -0.149391
   sx = 1 sy = 1 sz = 1
   q0 = 0 q1 = 0 q2 = 0 q3 = 1
-  fov = 26.5041
+  fov = 9.21271
   r = 0.3 g = 0.4 b = 0.6
   res = 1
   lc = 0.001
@@ -19,12 +19,12 @@ Squares {
 } {
   n.x = 0 n.y = 0 n.z = 1
   pos = 0
-} u_y {
+} pfr {
   amin = 1
   amax = 1
   cmap = Jet
 }
-Isoline {
+Squares {
   r = 0 g = 0 b = 0
   shading = Constant
   maxlevel = -1
@@ -34,13 +34,8 @@ Isoline {
 } {
   n.x = 0 n.y = 0 n.z = 1
   pos = 0
-} f {
+} Level {
   amin = 1
   amax = 1
   cmap = Jet
-} 0 {
-  reversed = 0
-  use_scalar = 1
-} {
-  n = 1
 }

@@ -131,6 +131,13 @@ rising-axi.c: rising.c
 rising-axi.tst: rising.s
 rising-axi.tst: CFLAGS += -DAXIS=1
 
+rising2.c: rising.c
+	ln -s rising.c rising2.c
+rising2.tst: rising.s
+rising2.tst: CFLAGS += -DCASE2=1
+
+rising.tst: rising2.tst
+
 reversed.tst: reversed.ctst
 
 rotate.tst: rotate.ctst

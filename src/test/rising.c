@@ -15,11 +15,12 @@ axisymmetric or planar version. */
 # include "axi.h" // fixme: does not run with -catch
 #endif
 #include "navier-stokes/centered.h"
-// #define mu(f)  (1./(clamp(f,0,1)*(1./mu1 - 1./mu2) + 1./mu2))
 #include "two-phase.h"
 #include "tension.h"
 
-#define LEVEL 8
+#ifndef LEVEL
+# define LEVEL 8
+#endif
 
 /**
 The boundary conditions are slip lateral walls (the default) and
@@ -27,6 +28,14 @@ no-slip on the right and left walls. */
 
 u.t[right] = dirichlet(0);
 u.t[left]  = dirichlet(0);
+
+/**
+We make sure there is no flow through the top and bottom boundary,
+otherwise the compatibility condition for the Poisson equation can be
+violated. */
+
+uf.n[bottom] = 0.;
+uf.n[top] = 0.;
 
 int main() {
 
@@ -42,10 +51,10 @@ int main() {
   viscosities and surface tension of fluid 1 and 2 given below. */
 
   rho1 = 1000., mu1 = 10.;
-#if 1
-  rho2 = 100., mu2 = 1., f.sigma = 24.5;
-#else
+#if CASE2
   rho2 = 1., mu2 = 0.1, f.sigma = 1.96;
+#else
+  rho2 = 100., mu2 = 1., f.sigma = 24.5;
 #endif
 
   /**
@@ -79,8 +88,21 @@ event acceleration (i++) {
 }
 
 /**
+A utility function to check the convergence of the multigrid
+solvers. */
+
+void mg_print (mgstats mg)
+{
+  if (mg.i > 0 && mg.resa > 0.)
+    printf ("%d %g %g %g %d ", mg.i, mg.resb, mg.resa,
+	    mg.resb > 0 ? exp (log (mg.resb/mg.resa)/mg.i) : 0,
+	    mg.nrelax);
+}
+
+/**
 We log the position of the center of mass of the bubble, its velocity
-and volume. */
+and volume as well as convergence statistics for the multigrid
+solvers. */
 
 event logfile (i++) {
   double xb = 0., vb = 0., sb = 0.;
@@ -90,8 +112,13 @@ event logfile (i++) {
     vb += u.x[]*dv;
     sb += dv;
   }
-  printf ("%g %g %g %g %g %g %d %d %d\n", 
-	  t, sb, -1., xb/sb, vb/sb, dt, mgp.i, mgpf.i, mgu.i);
+  printf ("%g %g %g %g %g %g %g %g ", 
+	  t, sb, -1., xb/sb, vb/sb, dt, perf.t, perf.speed);
+  mg_print (mgp);
+  mg_print (mgpf);
+  mg_print (mgu);
+  putchar ('\n');
+  fflush (stdout);
 }
 
 /**
@@ -108,7 +135,15 @@ simulation as it proceeds. */
 #if 0
 event gfsview (i += 10) {
   static FILE * fp = popen("gfsview2D rising.gfv", "w");
+  scalar vort[];
+  vorticity (u, vort);
   output_gfs (fp);
+}
+#endif
+
+#if ADAPT
+event adapt (i++) {
+  adapt_wavelet ({f,u}, (double[]){5e-4,1e-3,1e-3}, LEVEL);
 }
 #endif
 
@@ -130,16 +165,35 @@ plot [][0:0.4]'../c1g3l4s.txt' u 2:($1-0.5) w l t 'MooNMD', \
               '../rising-axi/log' u 1:2 w l t 'Basilisk (axisymmetric)'
 ~~~
 
+For test case 2, the mesh in Basilisk is too coarse to accurately
+resolve the skirt.
+
+~~~gnuplot Bubble shapes at the final time ($t=3$) for test case 2.
+set size ratio -1
+set grid
+plot [][0:0.4]'../c2g3l4s.txt' u 2:($1-0.5) w l t 'MooNMD', \
+              '../rising2/log' u 1:2 w l t 'Basilisk'
+~~~
+
 The agreement for the bubble rise velocity with time is also good.
 
-~~~gnuplot Rise velocity as a function of time.
+~~~gnuplot Rise velocity as a function of time for test case 1.
 reset
 set grid
 set xlabel 'Time'
 set key bottom right
 plot [0:3][0:]'../c1g3l4.txt' u 1:5 w l t 'MooNMD', \
-                 'out' u 1:5 w l t 'Basilisk', \
-                 '../rising-axi/out' u 1:5 w l t 'Basilisk (axisymmetric)'
+              'out' u 1:5 w l t 'Basilisk', \
+              '../rising-axi/out' u 1:5 w l t 'Basilisk (axisymmetric)'
+~~~
+
+~~~gnuplot Rise velocity as a function of time for test case 2.
+reset
+set grid
+set xlabel 'Time'
+set key bottom right
+plot [0:3][0:]'../c2g3l4.txt' u 1:5 w l t 'MooNMD', \
+              '../rising2/out' u 1:5 w l t 'Basilisk'
 ~~~
 
 */
