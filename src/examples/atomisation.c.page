@@ -155,7 +155,7 @@ event movie (t += 2e-2)
 We save snapshots of the simulation at regular intervals to
 post-process with gfsview. */
 
-event snapshot (t = 0.1; t += 0.1; t <= 1.8) {
+event snapshot (t = 0.1; t += 0.1; t <= 2.5) {
 
   /**
   We also dump the entire simulation to be able to restart. */
@@ -263,6 +263,7 @@ with the following `run.sh` script
 #!/bin/bash
 #SBATCH -J basilisk
 #SBATCH --nodes=1
+#SBATCH --constraint=HSW24
 #SBATCH --ntasks-per-node=24
 #SBATCH --threads-per-core=1
 #SBATCH --time=10:00
@@ -272,7 +273,7 @@ with the following `run.sh` script
 LEVEL=12
 
 module purge
-module load bullxmpi
+module load openmpi
 module load intel
 
 NAME=atomisation
