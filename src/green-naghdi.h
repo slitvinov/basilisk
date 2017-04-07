@@ -294,7 +294,8 @@ static double update_green_naghdi (scalar * current, scalar * updates,
 
   scalar * list = {h, zb, wet};
   restriction (list);
-  mgD = mg_solve ((scalar *){D}, (scalar *){b}, residual_GN, relax_GN, list);
+  mgD = mg_solve ((scalar *){D}, (scalar *){b},
+		  residual_GN, relax_GN, list, mgD.nrelax);
 
   /**
   We can then compute the updates for $hu$. */

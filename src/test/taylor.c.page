@@ -97,6 +97,15 @@ phi[left]  = dirichlet(Ef*x);
 phi[right] = dirichlet(Ef*x);
 
 /**
+We make sure there is no flow through the boundaries, otherwise the
+compatibility condition for the Poisson equation can be violated. */
+
+uf.n[left] = 0.;
+uf.n[right] = 0.;
+uf.n[top] = 0.;
+uf.n[bottom] = 0.;
+
+/**
 The domain spans [0:2]. We will compute only a quarter of the droplet,
 making use of axisymmetry and right-left symmetry. The surface tension
 coefficient is unity. The viscosity coefficients are variable. */
@@ -159,10 +168,12 @@ event error (i += 20; t <= 10.) {
 
   /**
   We monitor the variation in the horizontal component of the velocity
-  every 20 timesteps. */
+  and the convergence of the multigrid solvers every 20 timesteps. */
 
   double du = change (u.x, un);
-  fprintf (stdout, "%g %g\n", t, du);
+  fprintf (stdout, "%g %g %d %d %d %d %d %d %d %d\n", t, du,
+	   mgp.i, mgp.nrelax, mgpf.i, mgpf.nrelax, mgu.i, mgu.nrelax,
+	   mgphi.i, mgphi.nrelax);
   fflush (stdout);
 
   /**

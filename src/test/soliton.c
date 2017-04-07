@@ -98,7 +98,7 @@ set ylabel 'max|e|/a'
 set xtics 128,2,1024
 set grid
 fit [5:] a*x+b 'log' u (log($1)):(log($2)) via a,b
-plot [100:1250]'log' u 1:($2) pt 7 t '', \
+plot [100:1250]'log' u 1:2 pt 7 t '', \
      exp(b)*x**a t sprintf("%.0f/N^{%4.2f}", exp(b), -a)
 ~~~
 */

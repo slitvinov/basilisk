@@ -149,5 +149,5 @@ event projection (i++,last)
 {
   boundary ((scalar *){u});
   const face vector unity[] = {1.,1.};
-  mgp = project (u, p, unity, dt);
+  mgp = project (u, p, unity, dt, mgp.nrelax);
 }

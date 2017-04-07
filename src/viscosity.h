@@ -5,6 +5,8 @@ struct Viscosity {
   face vector mu;
   scalar rho;
   double dt;
+  int nrelax;
+  scalar * res;
 };
 
 #if AXI
@@ -122,7 +124,7 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
   boundary (resl);
 #else
   /* "naive" discretisation (only 1st order on trees) */
-  foreach (reduction(max:maxres)) {
+  foreach (reduction(max:maxres))
     foreach_dimension() {
       res.x[] = r.x[] - lambda.x*u.x[] +
         dt/rho[]*(2.*mu.x[1,0]*(u.x[1] - u.x[])
@@ -147,7 +149,6 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
     }
-  }
 #endif
   return maxres;
 }
@@ -166,5 +167,5 @@ mgstats viscosity (struct Viscosity p)
   restriction ({mu,rho});
   
   return mg_solve ((scalar *){u}, (scalar *){r},
-		   residual_viscosity, relax_viscosity, &p);
+		   residual_viscosity, relax_viscosity, &p, p.nrelax, p.res);
 }

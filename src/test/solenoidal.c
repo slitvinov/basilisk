@@ -46,7 +46,7 @@ int main()
   foreach()
     p[] = 0.;
   boundary ({p});
-  project (uf, p, unityf, 1.);
+  project (uf, p);
 #endif
 
   fprintf (stderr, "div max before: %.9f\n", divmax(uf));

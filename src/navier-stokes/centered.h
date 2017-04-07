@@ -246,7 +246,7 @@ event advection_term (i++,last)
 {
   if (!stokes) {
     prediction();
-    mgpf = project (uf, pf, alpha, dt/2.);
+    mgpf = project (uf, pf, alpha, dt/2., mgpf.nrelax);
     advection ((scalar *){u}, uf, dt, (scalar *){g});
   }
 }
@@ -276,7 +276,7 @@ event viscous_term (i++,last)
 {
   if (constant(mu.x) != 0.) {
     correction (dt);
-    mgu = viscosity (u, mu, rho, dt);
+    mgu = viscosity (u, mu, rho, dt, mgu.nrelax);
     correction (-dt);
   }
 
@@ -324,7 +324,7 @@ next timestep). */
 
 event projection (i++,last)
 {
-  mgp = project (uf, p, alpha, dt);
+  mgp = project (uf, p, alpha, dt, mgp.nrelax);
 
   /**
   We then compute a face field $\mathbf{g}_f$ combining both

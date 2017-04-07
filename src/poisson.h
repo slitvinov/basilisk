@@ -96,7 +96,7 @@ reached.
 The maximum number of iterations is controlled by *NITERMAX* and the
 tolerance by *TOLERANCE* with the default values below. */
 
-int NITERMAX = 100, NITERMIN = 1, MINLEVEL = 0;
+int NITERMAX = 100, NITERMIN = 1;
 double TOLERANCE = 1e-3;
 
 /**
@@ -106,31 +106,42 @@ typedef struct {
   int i;              // number of iterations
   double resb, resa;  // maximum residual before and after the iterations
   double sum;         // sum of r.h.s.
+  int nrelax;         // number of relaxations
 } mgstats;
 
 /**
 The user needs to provide a function which computes the residual field
 (and returns its maximum) as well as the relaxation function. The
 user-defined pointer *data* can be used to pass arguments to these
-functions. */
+functions. The optional number of relaxations is *nrelax* (default is
+one) and *res* is an optional list of fields used to store the
+residuals. */
 
-mgstats mg_solve (scalar * a, scalar * b,
-		  double (* residual) (scalar * a, scalar * b, scalar * res,
-				       void * data),
-		  void (* relax) (scalar * da, scalar * res, int depth, 
-				  void * data),
-		  void * data)
+struct MGSolve {
+  scalar * a, * b;
+  double (* residual) (scalar * a, scalar * b, scalar * res,
+		       void * data);
+  void (* relax) (scalar * da, scalar * res, int depth, 
+		  void * data);
+  void * data;
+  
+  int nrelax;
+  scalar * res;
+};
+
+mgstats mg_solve (struct MGSolve p)
 {
 
   /**
   We allocate a new correction and residual field for each of the scalars
   in *a*. */
 
-  scalar * da = list_clone (a), * res = NULL;
-  for (scalar s in a) {
-    scalar r = new scalar;
-    res = list_append (res, r);
-  }
+  scalar * da = list_clone (p.a), * res = p.res;
+  if (!res)
+    for (scalar s in p.a) {
+      scalar r = new scalar;
+      res = list_append (res, r);
+    }
 
   /**
   The boundary conditions for the correction fields are the
@@ -144,17 +155,19 @@ mgstats mg_solve (scalar * a, scalar * b,
   /**
   We initialise the structure storing convergence statistics. */
 
-  mgstats s = {0, 0., 0.};
+  mgstats s = {0};
   double sum = 0.;
   foreach (reduction(+:sum))
-    for (scalar s in b)
+    for (scalar s in p.b)
       sum += s[];
   s.sum = sum;
-
+  s.nrelax = p.nrelax > 0 ? p.nrelax : 4;
+  
   /**
   Here we compute the initial residual field and its maximum. */
 
-  s.resb = s.resa = residual (a, b, res, data);
+  double resb;
+  resb = s.resb = s.resa = p.residual (p.a, p.b, res, p.data);
 
   /**
   We then iterate until convergence or until *NITERMAX* is reached. Note
@@ -164,8 +177,22 @@ mgstats mg_solve (scalar * a, scalar * b,
   for (s.i = 0;
        s.i < NITERMAX && (s.i < NITERMIN || s.resa > TOLERANCE);
        s.i++) {
-    mg_cycle (a, res, da, relax, data, 4, MINLEVEL, grid->maxdepth);
-    s.resa = residual (a, b, res, data);
+    mg_cycle (p.a, res, da, p.relax, p.data, s.nrelax, 0, grid->maxdepth);
+    s.resa = p.residual (p.a, p.b, res, p.data);
+
+    /**
+    We tune the number of relaxations so that the residual is reduced
+    by between 2 and 20 for each cycle. This is particularly useful
+    for stiff systems which may require a larger number of relaxations
+    on the finest grid. */
+    
+    if (s.resa > TOLERANCE) {
+      if (resb/s.resa < 2 && s.nrelax < 100)
+	s.nrelax++;
+      else if (resb/s.resa > 20 && s.nrelax > 1)
+	s.nrelax--;
+    }
+    resb = s.resa;
   }
 
   /**
@@ -174,15 +201,16 @@ mgstats mg_solve (scalar * a, scalar * b,
   if (s.resa > TOLERANCE)
     fprintf (ferr, 
 	     "WARNING: convergence not reached after %d iterations\n"
-	     "  res: %g sum: %g\n", 
-	     s.i, s.resa, s.sum), fflush (ferr);
+	     "  res: %g sum: %g nrelax: %d\n", 
+	     s.i, s.resa, s.sum, s.nrelax), fflush (ferr);
 
   /**
   We deallocate the residual and correction fields and free the lists. */
 
-  delete (res); free (res);
-  delete (da);  free (da);
-  
+  if (!p.res)
+    delete (res), free (res);
+  delete (da), free (da);
+
   return s;
 }
 
@@ -201,13 +229,18 @@ corresponding to the face gradients of field $a$.
 *alpha* and *lambda* are declared as *(const)* to indicate that the
 function works also when *alpha* and *lambda* are constant vector
 (resp. scalar) fields. If *tolerance* is set, it supersedes the
-default *TOLERANCE* of the multigrid solver. */
+default *TOLERANCE* of the multigrid solver, *nrelax* controls the
+initial number of relaxations (default is one) and *res* is an optional
+list of fields used to store the final residual (which can be useful
+to monitor convergence). */
 
 struct Poisson {
   scalar a, b;
   (const) face vector alpha;
   (const) scalar lambda;
   double tolerance;
+  int nrelax;
+  scalar * res;
 };
 
 /**
@@ -352,7 +385,7 @@ mgstats poisson (struct Poisson p)
     TOLERANCE = p.tolerance;
 
   scalar a = p.a, b = p.b;
-  mgstats s = mg_solve ({a}, {b}, residual, relax, &p);
+  mgstats s = mg_solve ({a}, {b}, residual, relax, &p, p.nrelax, p.res);
 
   /**
   We restore the default. */
@@ -380,10 +413,23 @@ $$
 \nabla\cdot(\alpha\nabla p) = \frac{\nabla\cdot\mathbf{u}_*}{\Delta t}
 $$ */
 
-trace
-mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
-{
+struct Project {
+  face vector u;
+  scalar p;
+  face vector alpha; // optional: default unityf
+  double dt;         // optional: default one
+  int nrelax;        // optional: default four
+};
 
+trace
+mgstats project (struct Project q)
+{
+  face vector u = q.u;
+  scalar p = q.p;
+  (const) face vector alpha = q.alpha.x.i ? q.alpha : unityf;
+  double dt = q.dt ? q.dt : 1.;
+  int nrelax = q.nrelax ? q.nrelax : 4;
+  
   /**
   We allocate a local scalar field and compute the divergence of
   $\mathbf{u}_*$. The divergence is scaled by *dt* so that the
@@ -406,7 +452,8 @@ mgstats project (face vector u, scalar p, (const) face vector alpha, double dt)
   $$ 
   Given the scaling of the divergence above, this gives */
 
-  mgstats mgp = poisson (p, div, alpha, tolerance = TOLERANCE/sq(dt));
+  mgstats mgp = poisson (p, div, alpha,
+			 tolerance = TOLERANCE/sq(dt), nrelax = nrelax);
 
   /**
   And compute $\mathbf{u}_{n+1}$ using $\mathbf{u}_*$ and $p$. */

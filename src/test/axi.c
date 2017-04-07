@@ -126,7 +126,8 @@ event error (i = 20)
     e[] = u.x[] - pow(y,a)*cos(x)*sin(y);
   }
   norm n = normf (e);
-  fprintf (stderr, "%d %g %g %g %d\n", N, n.avg, n.rms, n.max, mg.i);
+  fprintf (stderr, "%d %g %g %g %d %d\n",
+	   N, n.avg, n.rms, n.max, mg.i, mg.nrelax);
 }
 
 /**
