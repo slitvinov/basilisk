@@ -260,11 +260,12 @@ void fractions (struct Fractions a)
 	  }
 
       /**
-      Once we have $\mathbf{n}$ and $\alpha$, the (linear) interface is
-      fully defined and we can compute the surface fraction using our
-      pre-defined function. */
+      Once we have $\mathbf{n}$ and $\alpha$, the (linear) interface
+      is fully defined and we can compute the surface fraction using
+      our pre-defined function. For marginal cases, the cell is full
+      or empty (*ni == 0*) and we are reduced to the case above. */
 
-      s_z[] = line_area (n.x, n.y, alpha/ni);
+      s_z[] = ni ? line_area (n.x, n.y, alpha/ni) : p.x[];
     }
   }
 
