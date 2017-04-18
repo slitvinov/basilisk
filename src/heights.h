@@ -298,7 +298,8 @@ static void refine_h_x (Point point, scalar h)
   bool complete = true;
   foreach_child() {
     for (int i = -2; i <= 2; i++)
-      if (allocated(i) && !is_prolongation(neighbor(i)) &&
+      if (allocated(i) &&
+	  !is_prolongation(neighbor(i)) && !is_boundary(neighbor(i)) &&
 	  fabs(height(h[i])) <= 3.5 &&
 	  fabs(height(h[i]) + i) < fabs(height(h[])))
 	h[] = h[i] + i;

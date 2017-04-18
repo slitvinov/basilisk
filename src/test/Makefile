@@ -173,8 +173,10 @@ axi-tests: axiadvection.tst axi.tst poiseuille-axi.tst \
 
 # Curvature tests
 
-curvature-tests: hf.tst hf3D.tst hf.ctst hf.3D.tst hf1.tst \
+curvature-tests: hf.tst hf3D.tst hf.ctst hf.3D.tst hf1.tst hf-mask.tst \
 	curvature.tst curvature.3D.tst
+
+hf-mask.tst: CFLAGS = -DTRASH=1
 
 ## MPI tests
 

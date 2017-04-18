@@ -1323,9 +1323,9 @@ static double masked_average (Point point, scalar s)
 {
   double sum = 0., n = 0.;
   foreach_child()
-    if (!is_boundary(cell))
+    if (!is_boundary(cell) && s[] != nodata)
       sum += s[], n++;
-  return sum/n;
+  return n ? sum/n : nodata;
 }
 
 foreach_dimension()
@@ -1333,9 +1333,10 @@ static double masked_average_x (Point point, scalar s)
 {
   double sum = 0., n = 0.;
   foreach_child()
-    if (child.x < 0 && (!is_boundary(cell) || !is_boundary(neighbor(1))))
+    if (child.x < 0 && (!is_boundary(cell) || !is_boundary(neighbor(1))) &&
+	s[1] != nodata)
       sum += s[1], n++;
-  return sum/n;
+  return n ? sum/n : nodata;
 }
 
 static void masked_boundary_restriction (const Boundary * b,

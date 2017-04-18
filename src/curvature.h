@@ -395,7 +395,7 @@ cstats curvature (scalar c, scalar kappa)
   the curvature. */
   
 #if TREE
-  kappa.prolongation = curvature_prolongation;
+  kappa.refine = kappa.prolongation = curvature_prolongation;
   kappa.restriction = curvature_restriction;
 #endif
 
