@@ -15,6 +15,7 @@ We need a few utility function such as computation of the minimal
 distance between a point and a segment or a point and a triangle.
 */
 
+#include <stdint.h>
 #include "PointTriangle.h"
 
 /**
