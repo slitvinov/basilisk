@@ -4,10 +4,11 @@
 We wish to solve the generic momentum equation
 $$
 \partial_t\mathbf{q} + \nabla\cdot(\mathbf{q}\mathbf{u}) = 
-- \nabla p + \rho\mathbf{a}
+- \nabla p + \nabla\cdot(\mu\nabla\mathbf{u}) + \rho\mathbf{a}
 $$
 with $\mathbf{q}=\rho\mathbf{u}$ the momentum, $\mathbf{u}$ the
-velocity, $\rho$ the density, $p$ the pressure and $\mathbf{a}$ an
+velocity, $\rho$ the density, $\mu$ the dynamic viscosity, $p$ the
+pressure and $\mathbf{a}$ an
 acceleration. The pressure is defined through an equation of state and
 verifies the evolution equation
 $$
@@ -24,22 +25,24 @@ different schemes can be used) i.e. in the end, by default, we solve
 the incompressible (linearised) Euler equations with a projection
 method.
 
-We build the solver using the generic time loop and the multigrid
-Poisson--Helmholtz solver. */
+We build the solver using the generic time loop and the implicit
+viscous solver (which includes the multigrid Poisson--Helmholtz
+solver). */
 
 #include "run.h"
 #include "timestep.h"
-#include "poisson.h"
+#include "viscosity.h"
 
 /**
 The primitive variables are the momentum $\mathbf{q}$, pressure $p$,
-density $\rho$, (face) specific volume $\alpha=1/\rho$ and (face)
-velocity field $\mathbf{u}_f$. */
+density $\rho$, (face) specific volume $\alpha=1/\rho$, (face) dynamic
+viscosity $\mu$ (which is zero by default) and (face) velocity field
+$\mathbf{u}_f$. */
 
 vector q[];
 scalar p[];
 face vector uf[];
-(const) face vector alpha = unityf;
+(const) face vector alpha = unityf, mu = zerof;
 (const) scalar rho = unity;
 
 /**
@@ -111,7 +114,7 @@ The equation of state (i.e. fields $\alpha$, $\rho$, $\rho c^2$ and
 
 event properties (i++,last)
 {
-  boundary ({rho, rhoc2, ps, alpha});
+  boundary ({rho, rhoc2, ps, alpha, mu});
   
   /**
   If the acceleration is not constant, we reset it to zero. */
@@ -134,13 +137,33 @@ event acceleration (i++, last)
 /**
 The equation for the pressure is a Poisson--Helmoltz problem which we
 will solve with the [multigrid solver](poisson.h). The statistics for
-the solver will be stored in *mgp*. */
+the solver will be stored in *mgp* (resp. *mgu* for the viscosity
+solver). */
 
-mgstats mgp;
+mgstats mgp, mgu;
 
 event pressure (i++, last)
 {
 
+  /**
+  If the viscosity is not zero, we use the implicit viscosity solver
+  to obtain the velocity field at time $t + \Delta t$. The pressure
+  term is taken into account using the pressure gradient at time
+  $t$. A provisionary momentum (without the pressure gradient) is then
+  built from the velocity field. */
+  
+  if (constant(mu.x) != 0.) {
+    foreach()
+      foreach_dimension()
+        q.x[] = (q.x[] + dt*g.x[])/rho[];
+    boundary ((scalar *){q});
+    mgu = viscosity (q, mu, rho, dt, mgu.nrelax);
+    foreach()
+      foreach_dimension()
+        q.x[] = q.x[]*rho[] - dt*g.x[];
+    boundary ((scalar *){q});
+  }  
+  
   /**
   We first define a temporary face velocity field $\mathbf{u}_\star$
   using simple averaging from $\mathbf{q}_{\star}$, $\alpha_{n+1}$ and

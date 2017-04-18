@@ -3,37 +3,52 @@
 
 The interface between the fluids is tracked with a Volume-Of-Fluid
 method. The volume fraction in fluid 1 is $f=1$ and $f=0$ in fluid
-2. The densities for fluid 1 and 2 are *rho1*, *rho2* respectively. */
+2. The densities and dynamic viscosities for fluid 1 and 2 are *rho1*,
+*mu1*, *rho2*, *mu2*, respectively. */
 
 #include "all-mach.h"
 #include "vof.h"
 
 scalar f[], * interfaces = {f};
-double rho1 = 1., rho2 = 1.;
+double rho1 = 1., mu1 = 0., rho2 = 1., mu2 = 0.;
 
 /**
 Auxilliary fields are necessary to define the (variable) specific
-volume $\alpha=1/\rho$ and the cell-centered density $\rho$. */
+volume $\alpha=1/\rho$ and average viscosity $\mu$ (on faces) as well
+as the cell-centered density. */
 
-face vector alphav[];
+face vector alphav[], muv[];
 scalar rhov[];
 
 event defaults (i = 0) {
   alpha = alphav;
   rho = rhov;
+  mu = muv;
 }
 
 /**
-The density is defined using arithmetic average by default. */
+The density and viscosity are defined using arithmetic averages by
+default. The user can overload these definitions to use other types of
+averages (i.e. harmonic). */
 
-#define rho(f) (clamp(f,0,1)*(rho1 - rho2) + rho2)
+#ifndef rho
+# define rho(f) (clamp(f,0,1)*(rho1 - rho2) + rho2)
+#endif
+#ifndef mu
+# define mu(f)  (clamp(f,0,1)*(mu1 - mu2) + mu2)
+#endif
 
 event properties (i++) {
+  // fixme: metric
   foreach()
     rhov[] = rho(f[]);
   boundary ({rhov});
-  foreach_face ()
+  foreach_face () {
     alphav.x[] = 2./(rhov[] + rhov[-1]);
+    double ff = (f[] + f[-1])/2.;
+    muv.x[] = fm.x[]*mu(ff);
+  }
+  boundary ((scalar *){muv});
 }
 
 /**
