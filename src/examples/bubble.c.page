@@ -14,7 +14,7 @@ ratios, the harmonic mean for the viscosity tends to work better than
 the default arithmetic mean. We "overload" the default by defining the
 *mu()* macro before including the code for two phases. */
 
-#define mu(f)  (1./((f)/mu1 + (1. - (f))/mu2))
+#define mu(f)  (1./(clamp(f,0,1)*(1./mu1 - 1./mu2) + 1./mu2))
 #include "two-phase.h"
 
 /**
