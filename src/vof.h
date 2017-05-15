@@ -187,7 +187,7 @@ static void sweep_x (scalar c, scalar cc)
       double cf1 = cf, ci = c[i];
       if (t.inverse)
 	cf1 = 1. - cf1, ci = 1. - ci;
-      if (cf1 > 0.) {
+      if (ci > 1e-10) {
 	double ff = t[i]/ci + s*min(1., 1. - s*un)*gf[i]*Delta/2.;
 	tflux[] = ff*cf1*uf.x[];
       }
