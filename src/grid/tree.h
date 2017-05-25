@@ -562,7 +562,8 @@ void cache_shrink (Cache * c)
 	for (int _d = 0; _d < dimension; _d++) {
 	  for (int _i = -1; _i <= 1; _i += 2) {
 	    if (_d == 0) ig = _i; else if (_d == 1) jg = _i; else kg = _i;
-	    if (is_leaf (neighbor(-ig,-jg,-kg)) &&
+	    if (allocated(-ig,-jg,-kg) &&
+		is_leaf (neighbor(-ig,-jg,-kg)) &&
 		!is_boundary(neighbor(-ig,-jg,-kg)) &&
 		is_local(neighbor(-ig,-jg,-kg))) {
 	      point.i -= ig; x -= ig*Delta/2.; 
