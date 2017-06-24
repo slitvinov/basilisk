@@ -259,7 +259,7 @@ astats adapt_wavelet (struct Adapt p)
   
   // coarsening
   // the loop below is only necessary to ensure symmetry of 2:1 constraint
-  for (int l = depth(); l >= p.minlevel; l--) {
+  for (int l = depth(); l >= 0; l--) {
     foreach_cell()
       if (!is_boundary(cell)) {
 	if (level == l) {
@@ -275,7 +275,7 @@ astats adapt_wavelet (struct Adapt p)
 	  }
 	  if (cell.flags & too_fine)
 	    cell.flags &= ~too_fine;
-	  else if (aparent(0).flags & too_fine)
+	  else if (level > 0 && (aparent(0).flags & too_fine))
 	    aparent(0).flags &= ~too_fine;
 	  continue;
 	}
