@@ -595,10 +595,40 @@
   }
 
   char * boundaryrep (char * name) {
-    if (!inboundary || strcmp(name, boundaryvar))
+    if (!inboundary)
       return name;
-    static char s[] = "_s";
-    return s;
+    if (!strcmp(name, boundaryvar)) {
+      static char s[] = "_s";
+      return s;
+    }
+    if (!strcmp (boundarydir, "left") || !strcmp (boundarydir, "right")) {
+      char * s;
+      if ((s = strstr (name, ".n")))
+	strcpy (s, ".x");
+      else if ((s = strstr (name, ".t")))
+	strcpy (s, ".y");
+      else if ((s = strstr (name, ".r")))
+	strcpy (s, ".z");
+    }
+    else if (!strcmp (boundarydir, "top") || !strcmp (boundarydir, "bottom")) {
+      char * s;
+      if ((s = strstr (name, ".n")))
+	strcpy (s, ".y");
+      else if ((s = strstr (name, ".t")))
+	strcpy (s, dimension > 2 ? ".z" : ".x");
+      else if ((s = strstr (name, ".r")))
+	strcpy (s, ".x");
+    }
+    else if (!strcmp (boundarydir, "front") || !strcmp (boundarydir, "back")) {
+      char * s;
+      if ((s = strstr (name, ".n")))
+	strcpy (s, ".z");
+      else if ((s = strstr (name, ".t")))
+	strcpy (s, ".x");
+      else if ((s = strstr (name, ".r")))
+	strcpy (s, ".y");
+    }
+    return name;
   }
 
   int boundary_component (char * boundaryvar) {
@@ -1043,7 +1073,7 @@ ID  [a-zA-Z_0-9]
 SP  [ \t]
 ES  (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 WS  [ \t\v\n\f]
-SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyz])*
+SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyzntr])*
 
 %%
 
@@ -1594,8 +1624,10 @@ val{WS}*[(]    {
       s = yytext;
       while (*s != '[') s++;
       *s = '\0';
-      if ((dimension < 2 && component (yytext, 'y')) ||
-	  (dimension < 3 && component (yytext, 'z'))) {
+      if ((dimension < 2 && (component (yytext, 'y') ||
+			     component (yytext, 't'))) ||
+	  (dimension < 3 && (component (yytext, 'z')||
+			     component (yytext, 'r')))) {
 	if (debug)
 	  fprintf (stderr, "%s:%d: the dimension of '%s' is too high\n",
 		   fname, line, yytext);
@@ -1604,7 +1636,7 @@ val{WS}*[(]    {
       else if (var->constant)
 	fprintf (yyout, "_val_constant(%s", boundaryrep(yytext));
       else if (var->maybeconst)
-	maybeconst_macro (var, "val", yytext);
+	maybeconst_macro (var, "val", boundaryrep(yytext));
       else
 	fprintf (yyout, "val(%s", boundaryrep(yytext));
       if (yytext[yyleng-1] == ']')

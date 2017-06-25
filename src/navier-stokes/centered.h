@@ -74,19 +74,19 @@ means that, at the boundary, the acceleration $\mathbf{a}$ must be
 balanced by the pressure gradient. Taking care of boundary orientation
 and staggering of $\mathbf{a}$, this can be written */
 
-p[right] = neumann(a.x[ghost]*fm.x[ghost]/alpha.x[ghost]);
-p[left]  = neumann(-a.x[]*fm.x[]/alpha.x[]);
+p[right] = neumann(a.n[ghost]*fm.n[ghost]/alpha.n[ghost]);
+p[left]  = neumann(-a.n[]*fm.n[]/alpha.n[]);
 
 #if AXI
 uf.n[bottom] = 0.;
 #else // !AXI
 #  if dimension > 1
-p[top]    = neumann(a.y[ghost]*fm.y[ghost]/alpha.y[ghost]);
-p[bottom] = neumann(-a.y[]*fm.y[]/alpha.y[]);
+p[top]    = neumann(a.n[ghost]*fm.n[ghost]/alpha.n[ghost]);
+p[bottom] = neumann(-a.n[]*fm.n[]/alpha.n[]);
 #  endif
 #  if dimension > 2
-p[front]  = neumann(a.z[ghost]*fm.z[ghost]/alpha.z[ghost]);
-p[back]   = neumann(-a.z[]*fm.z[]/alpha.z[]);
+p[front]  = neumann(a.n[ghost]*fm.n[ghost]/alpha.n[ghost]);
+p[back]   = neumann(-a.n[]*fm.n[]/alpha.n[]);
 #  endif
 #endif
 
