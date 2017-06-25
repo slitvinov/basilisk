@@ -3,6 +3,8 @@
 #define INC  ev->expr[2]
 #define END_EVENT 1234567890
 
+#define TEPS 1e-9
+
 static void event_error (Event * ev, const char * s)
 {
   fprintf (stderr, "%s:%d: error: %s\n", ev->file, ev->line, s);
@@ -130,7 +132,7 @@ static int event_do (Event * ev, bool action)
 {
   if ((iter > ev->i && t > ev->t) || !event_cond (ev, iter, t))
     return event_finished (ev);
-  if (iter == ev->i || fabs (t - ev->t) <= 1e-9) {
+  if (iter == ev->i || fabs (t - ev->t) <= TEPS) {
     if (action) {
       bool finished = false;
       for (Event * e = ev; e; e = e->next) {
@@ -163,7 +165,8 @@ static int event_do (Event * ev, bool action)
       if (!event_cond (ev, iter + 1, ev->t))
 	return event_finished (ev);
     }
-    return event_alive;
+    else if (INIT && !COND)
+      return event_finished (ev);
   }
   return event_alive;
 }
@@ -244,7 +247,7 @@ double dtnext (double dt)
       dt = tnext - t;
     else {
       double dt1 = (tnext - t)/n;
-      if (dt1 > dt + 1e-9)
+      if (dt1 > dt + TEPS)
 	dt = (tnext - t)/(n + 1);
       else if (dt1 < dt)
 	dt = dt1;
