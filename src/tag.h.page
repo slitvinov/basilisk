@@ -95,7 +95,7 @@ int tag (scalar t)
   To gather cells which belong to the same neighborhood, we repeat
   multigrid iterations until none of the tag values changes. */
   
-  bool changed = false;
+  bool changed;
   do {
 
     /**
@@ -109,6 +109,7 @@ int tag (scalar t)
     We then go from the coarsest to the finest level and update the
     tag values. */
 
+    changed = false;
     for (int l = 1; l <= grid->maxdepth; l++) {
 
       /**
@@ -127,7 +128,6 @@ int tag (scalar t)
       (non-zero) tag value of its closest neighbors. We also track
       whether this update changes any of the tag values. */
       
-      changed = false;
       foreach_level (l, reduction(max:changed))
         if (t[]) {
 	  double min = t[];

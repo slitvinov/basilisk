@@ -71,13 +71,17 @@ pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
   distance (d, p);
   while (adapt_wavelet ({d}, (double[]){1e-2}, 12).nf);
 
-#if 1 
+  /**
+  We tag each letter (counting the dots on the i's). 
+
+  ![Tagged regions.](basilisk/tag.png) */
+  
   scalar tt[];
   foreach()
     tt[] = d[] < 0;
   boundary ({tt});
-  tag (tt); // fixme bug!!!
-#endif
+  assert (tag (tt) == 8);
+  output_ppm (tt, file = "tag.png", n = 512, box = {{-5,-5},{100,30}});
 
   /**
   We initialise a vertex distance field by interpolating the centered
