@@ -331,7 +331,7 @@ field directly from a function. */
     foreach_vertex()				\
       phi[] = func;				\
     fractions (phi, f);				\
-  } while(0);
+  } while(0)
 
 /**
 ## Interface reconstruction from volume fractions
