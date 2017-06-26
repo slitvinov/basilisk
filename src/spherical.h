@@ -81,15 +81,27 @@ event metric (i = 0) {
   We initialise the scale factors, taking care to first allocate the
   fields if they are still constant. */
 
-  if (is_constant(cm))
+  if (is_constant(cm)) {
+    scalar * l = list_copy (all);
     cm = new scalar;
+    free (all);
+    all = list_concat ({cm}, l);
+    free (l);
+  }
+  scalar cmv = cm;
   foreach() {
     double phi = y*pi/180., dphi = Delta/(2.*Radius);
-    cm[] = (sin(phi + dphi) - sin(phi - dphi))/(2.*dphi);
+    cmv[] = (sin(phi + dphi) - sin(phi - dphi))/(2.*dphi);
   }
 
-  if (is_constant(fm.x))
+  if (is_constant(fm.x)) {
+    scalar * l = list_copy (all);
     fm = new face vector;
+    free (all);
+    all = list_concat ((scalar *){fm}, l);
+    free (l);
+  }
+  face vector fmv = fm;
   foreach_face(x)
     fm.x[] = 1.;
   foreach_face(y)

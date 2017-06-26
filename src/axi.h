@@ -51,18 +51,26 @@ event metric (i = 0) {
 
   /**
   By default *cm* is a constant scalar field. To make it variable, we
-  need to allocate a new field. */
+  need to allocate a new field. We also move it at the begining of the
+  list of variables: this is important to ensure the metric is defined
+  before other fields. */
 
-  if (is_constant(cm))
+  if (is_constant(cm)) {
+    scalar * l = list_copy (all);
     cm = new scalar;
+    free (all);
+    all = list_concat ({cm}, l);
+    free (l);
+  }
 
   /**
   The volume/area of a cell is proportional to $r$ (i.e. $y$). We need
   to set boundary conditions at the top and bottom so that *cm* is
   interpolated properly when refining/coarsening the mesh. */
 
+  scalar cmv = cm;
   foreach()
-    cm[] = y;
+    cmv[] = y;
   cm[top] = dirichlet(y);
   cm[bottom] = dirichlet(y);
 
@@ -72,10 +80,16 @@ event metric (i = 0) {
   division by zero we set it to epsilon (note that mathematically the
   limit is well posed). */
 
-  if (is_constant(fm.x))
+  if (is_constant(fm.x)) {
+    scalar * l = list_copy (all);
     fm = new face vector;
+    free (all);
+    all = list_concat ((scalar *){fm}, l);
+    free (l);
+  }
+  face vector fmv = fm;
   foreach_face()
-    fm.x[] = max(y, 1e-20);
+    fmv.x[] = max(y, 1e-20);
   fm.t[top] = dirichlet(y);
   fm.t[bottom] = dirichlet(y);
   

@@ -158,21 +158,12 @@ struct Adapt {
 trace
 astats adapt_wavelet (struct Adapt p)
 {
-  scalar * listcm = NULL;
-
-  if (is_constant(cm)) {
-    if (p.list == NULL)
-      p.list = all;
+  if (p.list == NULL)
+    p.list = all;
+  if (is_constant(cm))
     restriction (p.slist);
-  }
   else {
-    if (p.list == NULL) {
-      listcm = list_concat (NULL, {cm,fm});
-      for (scalar s in all)
-	listcm = list_add (listcm, s);
-      p.list = listcm;
-    }
-    scalar * listr = list_concat (p.slist, {cm});
+    scalar * listr = list_concat ({cm}, p.slist);
     restriction (listr);
     free (listr);
   }
@@ -290,7 +281,6 @@ astats adapt_wavelet (struct Adapt p)
   mpi_all_reduce (st.nc, MPI_INT, MPI_SUM);
   if (st.nc || st.nf)
     mpi_boundary_update (p.list);
-  free (listcm);
   
   return st;
 }
