@@ -58,6 +58,7 @@ Note that only the documented test cases appear in the list below
 
 * [Circular dam break on a sphere](lonlat.c)
 * [Axisymmetric mass conservation](axiadvection.c)
+* [Axisymmetric Poiseuille flow](poiseuille-axi.c)
 * [Convergence of axisymmetric viscous terms](axi.c)
 
 ## Electrohydrodynamics
