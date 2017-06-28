@@ -7,7 +7,6 @@ case $ext in
     ctst) log=clog; out=cout; ref=cref; ;;
     *)    log=log;  out=out; ref=ref; ;;
 esac
-BASILISK_WIKI=`echo $BASILISK | sed 's:/src$::'`
 dir=`echo $PWD | sed "s:$BASILISK_WIKI/::"`
 
 case $CC in
