@@ -103,9 +103,9 @@ event metric (i = 0) {
   }
   face vector fmv = fm;
   foreach_face(x)
-    fm.x[] = 1.;
+    fmv.x[] = 1.;
   foreach_face(y)
-    fm.y[] = cos(y*pi/180.);
+    fmv.y[] = cos(y*pi/180.);
 
   /**
   We set our refinement/prolongation functions on trees. */
