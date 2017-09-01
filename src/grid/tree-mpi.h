@@ -1204,7 +1204,7 @@ void restore_mpi (FILE * fp, scalar * list1)
   long index = 0, nt = 0, start = ftell (fp);
   scalar size[], * list = list_concat ({size}, list1);;
   long offset = sizeof(double)*list_len(list);
-  
+
   // read local cells
   static const unsigned short set = 1 << user;
   scalar * listm = is_constant(cm) ? NULL : (scalar *){fm};
@@ -1215,11 +1215,15 @@ void restore_mpi (FILE * fp, scalar * list1)
 	fprintf (stderr, "restore(): error: expecting 'flags'\n");
 	exit (1);
       }
-      for (scalar s in list)
-	if (fread (&s[], sizeof(double), 1, fp) != 1) {
-	  fprintf (stderr, "restore(): error: expecting '%s'\n", s.name);
+      for (scalar s in list) {
+	double val;
+	if (fread (&val, sizeof(double), 1, fp) != 1) {
+	  fprintf (stderr, "restore(): error: expecting scalar\n");
 	  exit (1);
 	}
+	if (s.i != INT_MAX)
+	  s[] = val;
+      }
       if (level == 0)
 	nt = size[];
       cell.pid = balanced_pid (index, nt, npe());
@@ -1249,11 +1253,15 @@ void restore_mpi (FILE * fp, scalar * list1)
     if (cell.flags & set)
       fseek (fp, offset, SEEK_CUR);
     else {
-      for (scalar s in list)
-	if (fread (&s[], sizeof(double), 1, fp) != 1) {
-	  fprintf (stderr, "restore(): error: expecting '%s'\n", s.name);
+      for (scalar s in list) {
+	double val;
+	if (fread (&val, sizeof(double), 1, fp) != 1) {
+	  fprintf (stderr, "restore(): error: expecting a scalar\n");
 	  exit (1);
 	}
+	if (s.i != INT_MAX)
+	  s[] = val;
+      }
       cell.pid = balanced_pid (index, nt, npe());
       if (is_leaf(cell) && cell.neighbors) {
 	int pid = cell.pid;
@@ -1306,7 +1314,6 @@ void restore_mpi (FILE * fp, scalar * list1)
   flag_border_cells();
 
   mpi_boundary_update (list);
-  free (list);
 }
 
 /**

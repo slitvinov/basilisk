@@ -821,7 +821,9 @@ struct DumpHeader {
   coord n;
 };
 
-static const int dump_version = 161020;
+static const int dump_version =
+  // 161020
+  170901;
 
 static scalar * dump_list (scalar * lista)
 {
@@ -830,6 +832,30 @@ static scalar * dump_list (scalar * lista)
     if (!s.face && !s.nodump && s.i != cm.i)
       list = list_add (list, s);
   return list;
+}
+
+static void dump_header (FILE * fp, struct DumpHeader * header, scalar * list)
+{
+  if (fwrite (header, sizeof(struct DumpHeader), 1, fp) < 1) {
+    perror ("dump(): error while writing header");
+    exit (1);
+  }
+  for (scalar s in list) {
+    unsigned len = strlen(s.name);
+    if (fwrite (&len, sizeof(unsigned), 1, fp) < 1) {
+      perror ("dump(): error while writing len");
+      exit (1);
+    }
+    if (fwrite (s.name, sizeof(char), len, fp) < len) {
+      perror ("dump(): error while writing s.name");
+      exit (1);
+    }
+  }
+  double o[4] = {X0,Y0,Z0,L0};
+  if (fwrite (o, sizeof(double), 4, fp) < 4) {
+    perror ("dump(): error while writing coordinates");
+    exit (1);
+  }
 }
 
 @if !_MPI
@@ -850,11 +876,8 @@ void dump (struct Dump p)
   scalar * list = list_concat ({size}, dlist); free (dlist);
   struct DumpHeader header = { t, list_len(list), iter, depth(), npe(),
 			       dump_version };
-  if (pid() == 0 && fwrite (&header, sizeof(header), 1, fp) < 1) {
-    perror ("dump(): error while writing header");
-    exit (1);
-  }
-
+  dump_header (fp, &header, list);
+  
   subtree_size (size, false);
   
   foreach_cell() {
@@ -903,20 +926,23 @@ void dump (struct Dump p)
 #endif
 
   if (pid() == 0)
-    fwrite (&header, 1, sizeof(header), fh);
+    dump_header (fh, &header, list);
   
   scalar index = {-1};
   
   index = new scalar;
   z_indexing (index, false);
   int cell_size = sizeof(unsigned) + header.len*sizeof(double);
-
+  int sizeofheader = sizeof(header) + 4*sizeof(double);
+  for (scalar s in list)
+    sizeofheader += sizeof(unsigned) + sizeof(char)*strlen(s.name);
+  
   subtree_size (size, false);
   
   foreach_cell() {
     // fixme: this won't work when combining MPI and mask()
     if (is_local(cell)) {
-      long offset = sizeof(header) + index[]*cell_size;
+      long offset = sizeofheader + index[]*cell_size;
       fseek (fh, offset, SEEK_SET);
       unsigned flags = is_leaf(cell) ? leaf : 0;
       fwrite (&flags, 1, sizeof(unsigned), fh);
@@ -950,17 +976,59 @@ bool restore (struct Dump p)
     fprintf (stderr, "restore(): error: expecting header\n");
     exit (1);
   }
-  if (header.version != dump_version) {
-    fprintf (stderr,
-	     "restore(): error: file version mismatch: %d != %d\n",
-	     header.version, dump_version);
-    exit (1);
+  if (header.version == 161020) {
+    if (header.len - 1 != list_len (list)) {
+      fprintf (stderr,
+	       "restore(): error: the list lengths don't match: "
+	       "%ld (file) != %d (code)\n",
+	       header.len - 1, list_len (list));
+      exit (1);
+    }
   }
-  if (header.len - 1 != list_len (list)) {
-    fprintf (stderr,
-	     "restore(): error: the list lengths don't match: %ld != %d\n",
-	     header.len - 1, list_len (list));
-    exit (1);
+  else { // header.version != 161020
+    if (header.version != dump_version) {
+      fprintf (stderr,
+	       "restore(): error: file version mismatch: "
+	       "%d (file) != %d (code)\n",
+	       header.version, dump_version);
+      exit (1);
+    }
+    
+    scalar * input = NULL;
+    for (int i = 0; i < header.len; i++) {
+      unsigned len;
+      if (fread (&len, sizeof(unsigned), 1, fp) < 1) {
+	fprintf (stderr, "restore(): error: expecting len\n");
+	exit (1);
+      }
+      char name[len + 1];
+      if (fread (name, sizeof(char), len, fp) < 1) {
+	fprintf (stderr, "restore(): error: expecting s.name\n");
+	exit (1);
+      }
+      name[len] = '\0';
+
+      if (i > 0) { // skip subtree size
+	bool found = false;
+	for (scalar s in list)
+	  if (!strcmp (s.name, name)) {
+	    input = list_append (input, s);
+	    found = true; break;
+	  }
+	if (!found)
+	  input = list_append (input, (scalar){INT_MAX});
+      }
+    }
+    free (list);
+    list = input;
+
+    double o[4];
+    if (fread (o, sizeof(double), 4, fp) < 4) {
+      fprintf (stderr, "restore(): error: expecting coordinates\n");
+      exit (1);
+    }
+    origin (o[0], o[1], o[2]);
+    size (o[3]);
   }
 
 #if TREE
@@ -1006,11 +1074,15 @@ bool restore (struct Dump p)
     }
     // skip subtree size
     fseek (fp, sizeof(double), SEEK_CUR);
-    for (scalar s in list)
-      if (fread (&s[], sizeof(double), 1, fp) != 1) {
-	fprintf (stderr, "restore(): error: expecting '%s'\n", s.name);
+    for (scalar s in list) {
+      double val;
+      if (fread (&val, sizeof(double), 1, fp) != 1) {
+	fprintf (stderr, "restore(): error: expecting a scalar\n");
 	exit (1);
       }
+      if (s.i != INT_MAX)
+	s[] = val;
+    }
     if (!(flags & leaf) && is_leaf(cell))
       refine_cell (point, listm, 0, NULL);
     if (is_leaf(cell))
