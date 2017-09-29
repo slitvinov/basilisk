@@ -59,6 +59,12 @@ event defaults (i = 0)
   update = update_conservation;
 
   /**
+  We switch to a pure minmod limiter by default for increased
+  robustness. */
+  
+  theta = 1.;
+
+  /**
   With the MUSCL scheme we use the CFL depends on the dimension of the
   problem. */
 
