@@ -63,6 +63,8 @@ event init (t = 0)
       w.x[] = 0.;
     E[] = (pR*f[] + pL*(1. - f[]))/(gammao - 1.);
   }
+
+  theta = 1.3; // tune limiting from the default minmod
 }
 
 event print (t = 0.25)
