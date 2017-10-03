@@ -28,7 +28,7 @@ else
 	esac
 	shift
     done
-    command="$AVCONV -f image2pipe -vcodec ppm $rate -i - -c:v libx264 -preset slow -crf 18 -movflags +faststart -vf format=yuv420p -y -f mp4"
+    command="$AVCONV -f image2pipe -vcodec ppm $rate -i - -c:v libx264 -preset slow -crf 18 -vf format=yuv420p -y -f mp4"
     while test $# -gt 0; do
 	case $1 in
 	    -r) shift ;;
