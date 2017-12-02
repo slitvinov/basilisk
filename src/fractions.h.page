@@ -452,8 +452,6 @@ struct OutputFacets {
 trace
 void output_facets (struct OutputFacets p)
 {
-  assert (dimension == 2);
-  
   scalar c = p.c;
   face vector s = p.s;
   if (!p.fp) p.fp = stdout;
@@ -476,12 +474,41 @@ void output_facets (struct OutputFacets p)
 	  n.x /= nn;
       }
       double alpha = plane_alpha (c[], n);
+#if dimension == 2      
       coord segment[2];
-      if (facets (c[], n, alpha, segment) == 2)
+      if (facets (n, alpha, segment) == 2)
 	fprintf (p.fp, "%g %g\n%g %g\n\n", 
 		 x + segment[0].x*Delta, y + segment[0].y*Delta, 
 		 x + segment[1].x*Delta, y + segment[1].y*Delta);
+#else // dimension == 3
+      coord v[12];
+      int m = facets (n, alpha, v, 1.);
+      for (int i = 0; i < m; i++)
+	fprintf (p.fp, "%g %g %g\n",
+		 x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+      if (m > 0)
+	fputc ('\n', p.fp);
+#endif
     }
 
   fflush (p.fp);
+}
+
+/**
+## Interfacial area
+
+This function returns the surface area of the interface as estimated
+using its VOF reconstruction. */
+
+trace
+double interface_area (scalar c)
+{
+  double area = 0.;
+  foreach()
+    if (c[] > 1e-6 && c[] < 1. - 1e-6) {
+      coord n = mycs (point, c), p;
+      double alpha = plane_alpha (c[], n);
+      area += pow(Delta, dimension - 1)*plane_area_center (n, alpha, &p);
+    }
+  return area;
 }

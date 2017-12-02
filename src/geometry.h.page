@@ -244,33 +244,104 @@ double rectangle_fraction (coord n, double alpha, coord a, coord b)
 
 /**
 From the interface definition, it is also possible to compute the
-coordinates of the segment representing the interface in the unit
-cell.
+coordinates of the segment in 2D, or facet in 3D, representing the
+interface in the unit cell.
 
-The function below returns the 0,1 or 2 coordinates (stored in the `p`
-array provided by the user) of the corresponding interface
-segments. The case where only 1 coordinate is returned corresponds to
-the degenerate case where the interface intersects the cell exactly on
-a vertex. */
+In two dimensions, the function below returns the 0,1 or 2 coordinates
+(stored in the `p` array provided by the user) of the corresponding
+interface segments. The case where only 1 coordinate is returned
+corresponds to the degenerate case where the interface intersects the
+cell exactly on a vertex. 
 
-int facets (double c, coord n, double alpha,
-	    coord p[2])
+In three dimensions, the function returns up to 12 coordinates of the
+planar fragment. */
+
+#if dimension <= 2
+int facets (coord n, double alpha, coord p[2])
 {
-  assert (dimension == 2);
   int i = 0;
-  if (c > 0. && c < 1.) {
-    for (double s = -0.5; s <= 0.5; s += 1.)
-      foreach_dimension()
-	if (fabs (n.y) > 1e-4 && i < 2) {
-	  double a = (alpha - s*n.x)/n.y;
-	  if (a >= -0.5 && a <= 0.5) {
-	    p[i].x   = s;
-	    p[i++].y = a;
-	  }
+  for (double s = -0.5; s <= 0.5; s += 1.)
+    foreach_dimension()
+      if (fabs (n.y) > 1e-4 && i < 2) {
+	double a = (alpha - s*n.x)/n.y;
+	if (a >= -0.5 && a <= 0.5) {
+	  p[i].x   = s;
+	  p[i++].y = a;
 	}
-  }
+      }
   return i;
 }
+#else
+static coord cube_edge[12][2] = {
+  {{0.,0.,0.},{1.,0.,0.}},{{0.,0.,1.},{1.,0.,1.}},
+  {{0.,1.,1.},{1.,1.,1.}},{{0.,1.,0.},{1.,1.,0.}},
+  {{0.,0.,0.},{0.,1.,0.}},{{0.,0.,1.},{0.,1.,1.}},
+  {{1.,0.,1.},{1.,1.,1.}},{{1.,0.,0.},{1.,1.,0.}},
+  {{0.,0.,0.},{0.,0.,1.}},{{1.,0.,0.},{1.,0.,1.}},
+  {{1.,1.,0.},{1.,1.,1.}},{{0.,1.,0.},{0.,1.,1.}}
+};
+
+/* first index is the edge number, second index is the edge
+   orientation (0 or 1), third index are the edges which this edge may
+   connect to in order */
+static int cube_connect[12][2][4] = {
+  {{9, 1, 8}, {4, 3, 7}},   /* 0 */
+  {{6, 2, 5},  {8, 0, 9}}, /* 1 */
+  {{10, 3, 11},  {5, 1, 6}},  /* 2 */
+  {{7, 0, 4},   {11, 2, 10}},  /* 3 */
+  {{3, 7, 0},   {8, 5, 11}},  /* 4 */
+  {{11, 4, 8},  {1, 6, 2}},  /* 5 */
+  {{2, 5, 1},  {9, 7, 10}}, /* 6 */
+  {{10, 6, 9}, {0, 4, 3}},   /* 7 */
+  {{5, 11, 4},  {0, 9, 1}}, /* 8 */
+  {{1, 8, 0}, {7, 10, 6}}, /* 9 */
+  {{6, 9, 7},  {3, 11, 2}},   /* 10 */
+  {{2, 10, 3},   {4, 8, 5}}    /* 11 */
+};
+
+int facets (coord n, double alpha, coord v[12], double h)
+{
+  coord a[12];
+  int orient[12];
+
+  for (int i = 0; i < 12; i++) {
+    coord e, d;
+    double den = 0., t = alpha;
+    foreach_dimension() {
+      d.x = h*(cube_edge[i][0].x - 0.5);
+      e.x = h*(cube_edge[i][1].x - 0.5);
+      den += n.x*(e.x - d.x);
+      t -= n.x*d.x;
+    }
+    orient[i] = -1;
+    if (fabs (den) > 1e-10) {
+      t /= den;
+      if (t >= 0. && t < 1.) {
+	double s = - alpha;
+	foreach_dimension() {
+	  a[i].x = d.x + t*(e.x - d.x);
+	  s += n.x*e.x;
+	}
+	orient[i] = (s > 0.);
+      }
+    }
+  }
+
+  for (int i = 0; i < 12; i++) {
+    int nv = 0, e = i;
+    while (orient[e] >= 0) {
+      int m = 0, * ne = cube_connect[e][orient[e]];
+      v[nv++] = a[e];
+      orient[e] = -1;
+      while (m < 3 && orient[e] < 0)
+	e = ne[m++];
+    }
+    if (nv > 2)
+      return nv;
+  }
+  return 0;
+}
+#endif // dimension == 3
 
 /**
 This function fills the coordinates *p* of the centroid of the
@@ -291,17 +362,17 @@ double line_length_center (coord m, double alpha, coord * p)
   }
 
   p->x = p->y = 0.;
-  
-  if (alpha <= 0. || alpha >= n.x + n.y)
-    return 0.;
 
+  if (alpha < 0. || alpha > n.x + n.y)
+    return 0.;
+  
   foreach_dimension(2)
     if (n.x < 1e-4) {
       p->x = 0.;
       p->y = (m.y < 0. ? 1. - alpha : alpha) - 0.5;
       return 1.;
     }
-
+  
   if (alpha >= n.x) {
     p->x += 1.;
     p->y += (alpha - n.x)/n.y;
@@ -372,7 +443,7 @@ double plane_area_center (coord m, double alpha, coord * p)
     }
 
   double amax = n.x + n.y + n.z;
-  if (alpha <= 0. || alpha >= amax) {
+  if (alpha < 0. || alpha > amax) {
     p->x = p->y = p->z = 0.;
     return 0.;
   }
@@ -403,8 +474,12 @@ double plane_area_center (coord m, double alpha, coord * p)
 
   area *= 3.;
   foreach_dimension() {
-    p->x /= area*n.x;
-    p->x = clamp (p->x, 0., 1.);
+    if (area) {
+      p->x /= area*n.x;
+      p->x = clamp (p->x, 0., 1.);
+    }
+    else
+      p->x = 0.;
     if (m.x < 0.) p->x = 1. - p->x;
     p->x -= 0.5;
   }
