@@ -798,20 +798,20 @@ entire simulations.
 
 The arguments and their default values are:
 
-*fp*
-: a file pointer. Default is *name* or stdout.
+*file*
+: the name of the file to write to (mutually exclusive with *fp*).
 
 *list*
 : a list of scalar fields to write. Default is *all*. 
 
-*file*
-: the name of the file to write to (mutually exclusive with *fp*).
+*fp*
+: a file pointer. Default is *name* or stdout.
 */
 
 struct Dump {
-  FILE * fp;
-  scalar * list;
   char * file;
+  scalar * list;
+  FILE * fp;
 };
 
 struct DumpHeader {
@@ -969,13 +969,45 @@ bool restore (struct Dump p)
     return false;
   assert (fp);
 
-  scalar * list = dump_list (p.list ? p.list : all);
-  struct DumpHeader header;
-  
+  struct DumpHeader header;  
   if (fread (&header, sizeof(header), 1, fp) < 1) {
     fprintf (stderr, "restore(): error: expecting header\n");
     exit (1);
   }
+
+#if TREE
+  init_grid (1);
+  foreach_cell() {
+    cell.pid = pid();
+    cell.flags |= active;
+  }
+  tree->dirty = true;
+#else // multigrid
+#if MULTIGRID_MPI
+  if (header.npe != npe()) {
+    fprintf (stderr,
+	     "restore(): error: the number of processes don't match:"
+	     " %d != %d\n",
+	     header.npe, npe());
+    exit (1);
+  }
+  dimensions (header.n.x, header.n.y, header.n.z);
+  int cell_size = sizeof(unsigned) + header.len*sizeof(double);
+  long offset = pid()*((1 << dimension*(header.depth + 1)) - 1)/
+    ((1 << dimension) - 1)*cell_size;
+  if (fseek (fp, offset, SEEK_CUR) < 0) {
+    perror ("restore(): error while seeking");
+    exit (1);
+  }
+  int n = header.n.x;
+  while (n > 1)
+    header.depth++, n /= 2;
+#endif // MULTIGRID_MPI
+  init_grid (1 << header.depth);
+#endif // multigrid
+
+  bool restore_all = (p.list == all);
+  scalar * list = dump_list (p.list ? p.list : all);
   if (header.version == 161020) {
     if (header.len - 1 != list_len (list)) {
       fprintf (stderr,
@@ -1015,8 +1047,16 @@ bool restore (struct Dump p)
 	    input = list_append (input, s);
 	    found = true; break;
 	  }
-	if (!found)
-	  input = list_append (input, (scalar){INT_MAX});
+	if (!found) {
+	  if (restore_all) {
+	    scalar s = new scalar;
+	    free (s.name);
+	    s.name = strdup (name);
+	    input = list_append (input, s);
+	  }
+	  else
+	    input = list_append (input, (scalar){INT_MAX});
+	}
       }
     }
     free (list);
@@ -1031,38 +1071,7 @@ bool restore (struct Dump p)
     size (o[3]);
   }
 
-#if TREE
-  init_grid (1);
-  foreach_cell() {
-    cell.pid = pid();
-    cell.flags |= active;
-  }
-  tree->dirty = true;
-#else // multigrid
-#if MULTIGRID_MPI
-  if (header.npe != npe()) {
-    fprintf (stderr,
-	     "restore(): error: the number of processes don't match:"
-	     " %d != %d\n",
-	     header.npe, npe());
-    exit (1);
-  }
-  dimensions (header.n.x, header.n.y, header.n.z);
-  int cell_size = sizeof(unsigned) + header.len*sizeof(double);
-  long offset = pid()*((1 << dimension*(header.depth + 1)) - 1)/
-    ((1 << dimension) - 1)*cell_size;
-  if (fseek (fp, offset, SEEK_CUR) < 0) {
-    perror ("restore(): error while seeking");
-    exit (1);
-  }
-  int n = header.n.x;
-  while (n > 1)
-    header.depth++, n /= 2;
-#endif // MULTIGRID_MPI
-  init_grid (1 << header.depth);
-#endif // multigrid
-
-  scalar * listm = is_constant(cm) ? NULL : (scalar *){fm}; NOT_UNUSED(listm);
+  scalar * listm = is_constant(cm) ? NULL : (scalar *){fm};
 #if TREE && _MPI
   restore_mpi (fp, list);
 #else
@@ -1090,7 +1099,8 @@ bool restore (struct Dump p)
   }
   boundary (list);
 #endif
-
+  boundary (listm);
+  
   scalar * other = NULL;
   for (scalar s in all)
     if (!list_lookup (list, s) && !list_lookup (listm, s))
