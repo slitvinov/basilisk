@@ -232,8 +232,26 @@ void delete (scalar * list)
   }
 }
 
+typedef void (* free_solver_func) (void);
+
+static Array * free_solver_funcs = NULL;
+
+void free_solver_func_add (free_solver_func func)
+{
+  if (!free_solver_funcs)
+    free_solver_funcs = array_new();
+  array_append (free_solver_funcs, &func, sizeof(free_solver_func));
+}
+
 void free_solver()
 {
+  if (free_solver_funcs) {
+    free_solver_func * a = free_solver_funcs->p;
+    for (int i = 0; i < free_solver_funcs->len/sizeof(free_solver_func); i++)
+      a[i] ();
+    array_free (free_solver_funcs);
+  }
+  
   delete (all);
   free (all); all = NULL;
   for (Event * ev = Events; !ev->last; ev++)

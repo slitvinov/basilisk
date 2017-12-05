@@ -1,0 +1,297 @@
+"""# A Graphical User Interface for Basilisk View
+
+The interactive version of [Basilisk View](view.h) relies on a
+[client/server
+model](https://en.wikipedia.org/wiki/Client-server_model). The
+[Basilisk View server](bview-server.c) can run on a distant system
+(for example the large parallel machine on which the Basilisk runs are
+done), or on the local system.
+
+A Basilisk View client running on the local system then sends
+"commands" to the server and receives in return a stream of PPM images
+containing the updated views.
+
+The commands are just function calls, sent as a stream of text by the
+client, using the same syntax as for the
+[*load()*](view.h#load-read-drawing-commands-from-a-file-or-buffer)
+function.
+
+The following Python code implements a simple Graphical User Interface
+(GUI) client using this model.
+
+The client standard input should be connected (typically through [Unix
+pipes](https://en.wikipedia.org/wiki/Pipeline_(Unix)) or [named
+pipes](https://en.wikipedia.org/wiki/Named_pipe)) to the standard
+output of the server. Conversely, the client standard output should be
+connected to the server's standard input. For convenience, this is
+typically done using the [bview]() shell script.
+
+The client then creates a
+[Tkinter](https://wiki.python.org/moin/TkInter) window and waits both
+for user interaction (using the mouse or keyboard) and for images sent
+by the server on input. This is done concurrently using two threads.
+
+User interaction is converted to Basilisk View commands which are
+written to standard output, and thus sent to the server, which in turn
+responds with images which are used to refresh the Tkinter window.
+
+## Summary of controls
+
+* Left-mouse button + drag: rotate camera.
+* Right-mouse button + drag: translate camera.
+* Center-mouse button + drag: zoom.
+* Mouse wheel: zoom.
+* '+' or '-' keys: zoom.
+* 'B' key: calls [*box()*](draw.h#displays-box-boundaries-and-axis-coordinates).
+* 'c' key: calls [*clear()*](draw.h#clear-removes-all-objects-previously-drawn).
+* 'l', 'r', 't', 'b', 'f', 'z', 'i' keys: changes view to 'left', 'right',
+  'top', 'bottom', 'front', 'back', 'iso' respectively.
+* Right/left arrow keys: rotates right/left by 3 degrees.
+* Up/down arrow keys: rotates up/down by 3 degrees.
+* 'q' key: quits.
+* '<' or '>' keys: decrease or increase minimum delay between screen refreshes.
+
+"""
+
+from Tkinter import *
+from PIL import Image, ImageTk
+from threading import Thread, Lock
+from sys import stdin, stdout
+from os import fdopen, devnull
+from time import sleep, time
+from StringIO import StringIO
+from math import pi
+
+class BCanvas (Canvas):
+
+    def draw(self, s):
+        try:
+            self.pipe.write (s)
+            self.changed = True
+        except IOError, e:
+            if e.errno == 32: # Broken pipe
+                self.root.destroy()
+            else:
+                raise
+
+    def button1 (self, event):
+        self.beginx, self.beginy = event.x, event.y
+        self.motion = True
+
+    def button_release (self, event):
+        self.motion = False
+        if self.res > 1:
+            self.redrawing = False
+            self.root.after (1000, self.redraw)
+
+    def zoom (self, event):
+        self.draw ("view (fov = %g, relative = 1);\n" %
+                   ((event.y - self.beginy)/float(self.winfo_height())))
+        self.beginx, self.beginy = event.x, event.y
+
+    def zoomin (self, event):
+        self.draw ("view (fov = -0.01, relative = 1);\n")
+
+    def zoomout (self, event):
+        self.draw ("view (fov = +0.01, relative = 1);\n")
+
+    def zoom_wheel (self, event):
+        print event.delta
+
+    def move (self, event):
+        self.draw ("view (tx = %g, ty = %g, relative = 1);\n" %
+                   ((event.x - self.beginx)/float(self.winfo_width()),
+                    (self.beginy - event.y)/float(self.winfo_height())))
+        self.beginx, self.beginy = event.x, event.y
+
+    def trackball (self, event):
+        width, height = self.winfo_reqwidth(), self.winfo_reqheight()
+        self.draw ("view (p1x = %g, p1y = %g, p2x = %g, p2y = %g);\n" %
+                   ((2.*self.beginx - width)/width,
+                    (height - 2.*self.beginy)/height,
+                    (2.*event.x - width)/width,
+                    (height - 2.*event.y)/height))
+        self.beginx, self.beginy = event.x, event.y
+
+    def quit (self):
+        try:
+            self.pipe.write ("quit();\n")
+        except IOError, e:
+            if e.errno != 32: # Broken pipe
+                raise
+        self.root.destroy()
+
+    def key (self, event):
+        c = repr (event.char)
+        if c == "'<'":
+            if self.refresh > 1:
+                self.refresh = self.refresh - 1
+                print self.refresh
+        elif c == "'>'":
+            self.refresh = self.refresh + 1
+            print self.refresh
+        elif c == "'-'":
+            self.draw ("view (fov =  0.02, relative = 1);\n")
+        elif c == "'+'" or c == "'='":
+            self.draw ("view (fov = -0.02, relative = 1);\n")
+        elif c == "'B'":
+            self.draw ('box();\n')
+        elif c == "'c'":
+            self.draw ('clear();\n')
+        elif c == "'l'":
+            self.draw ('view (camera = "left");\n')
+        elif c == "'r'":
+            self.draw ('view (camera = "right");\n')
+        elif c == "'t'":
+            self.draw ('view (camera = "top");\n')
+        elif c == "'b'":
+            self.draw ('view (camera = "bottom");\n')
+        elif c == "'f'":
+            self.draw ('view (camera = "front");\n')
+        elif c == "'z'":
+            self.draw ('view (camera = "back");\n')
+        elif c == "'i'":
+            self.draw ('view (camera = "iso");\n')
+        elif event.keysym == 'Right':
+            self.draw ("view (theta = %g, phi = %g, relative = 1);\n" %
+                  (2.*pi/120., 0.))
+        elif event.keysym == 'Left':
+            self.draw ("view (theta = %g, phi = %g, relative = 1);\n" %
+                  (-2.*pi/120., 0.))
+        elif event.keysym == 'Up':
+            self.draw ("view (theta = %g, phi = %g, relative = 1);\n" %
+                  (0, 2.*pi/120.))
+        elif event.keysym == 'Down':
+            self.draw ("view (theta = %g, phi = %g, relative = 1);\n" %
+                  (0, -2.*pi/120.))
+        elif c == "'q'":
+            self.quit()
+#        else:
+#            print c, event.keysym, event.keycode
+
+    def resize_canvas (self):
+        self.draw ('view (width = %d, height = %d);\n' %
+              (self.winfo_width(), self.winfo_height()))
+        self.resize = False
+
+    def configure (self, event):
+        if not self.resize:
+            self.resize = True
+            self.root.after (1000, self.resize_canvas)
+
+    def listen_stdin (self):
+        condition = True;
+        while condition:
+            input = sys.stdin.readline().split(' ')
+            condition = input[0] == "P6"
+            if condition:
+                width = int(input[1])
+                height = int(input[2])
+                colors = int(input[3])
+                data = sys.stdin.read(width*height*3)
+
+                buf = StringIO()
+                buf.write ("P6 %d %d %d\n" % (width, height, colors))
+                buf.write (data)
+                buf.seek (0)
+
+                with self.new_image_lock:
+                    self.new_image = Image.open (buf)
+
+                sleep (self.refresh/1000.) # let the GUI catch up
+
+    def redraw (self):
+        if not self.redrawing:
+            if self.motion:
+                if self.dt > self.reactivity:
+                    self.res *= 2
+                    if self.res > 500:
+                        self.res = 500
+                elif self.dt < self.reactivity/2. and self.res > 1:
+                    self.res /= 2
+                    if self.res < 1:
+                        self.res = 1
+                self.pipe.write ("view (res = %d);\n" % self.res)
+            else:
+                self.pipe.write ("view (res = 1);\n")
+            self.redrawing = True
+            self.start = time()
+            self.draw ("display();\n")
+            self.changed = False
+
+    def check_new_image (self):
+        with self.new_image_lock:
+            if self.new_image is not None:
+                img = ImageTk.PhotoImage (self.new_image)
+                self.config (width = img.width(), height = img.height())
+                self.itemconfig (self.image, image = img)
+                self.image_tk = img
+                self.redrawing = False
+                self.root.deiconify()
+                t = time()
+                self.dt = t - self.start
+                self.start = t
+#                print "redrawn in", self.dt, "sec"
+                self.new_image = None
+            else:
+                if self.changed:
+                    self.redraw()
+        self.root.after (self.refresh, self.check_new_image)
+
+    def __init__(self, root, out):
+        Canvas.__init__(self, root, bd = 0, highlightthickness = 0)
+        self.root = root
+        self.refresh = 10
+        self.new_image = None
+        self.new_image_lock = Lock()
+
+        if out.isatty():
+            self.pipe = open (devnull, "w")
+        else:
+            self.pipe = fdopen (out.fileno(), 'w', 1)
+
+        self.beginx = 0
+        self.beginy = 0
+        self.changed = False
+        self.resize = False
+        self.redrawing = False
+        self.motion = False
+        self.image = self.create_image (0, 0, anchor = NW)
+        self.start = time()
+        self.dt = 0
+        self.res = 10
+        self.reactivity = 0.3
+        self.focus_set()
+        self.bind ("<Key>", self.key)
+        self.bind ("<Button-1>", self.button1)
+        self.bind ("<Button-2>", self.button1)
+        self.bind ("<Button-3>", self.button1)
+        self.bind ("<ButtonRelease-1>", self.button_release)
+        self.bind ("<ButtonRelease-2>", self.button_release)
+        self.bind ("<ButtonRelease-3>", self.button_release)
+        self.bind ("<B1-Motion>", self.trackball)
+        self.bind ("<B2-Motion>", self.zoom)
+        self.bind ("<B3-Motion>", self.move)
+        self.bind ("<MouseWheel>", self.zoom_wheel)
+        self.bind ("<Button-4>", self.zoomin)
+        self.bind ("<Button-5>", self.zoomout)
+        self.pack (fill = BOTH, expand = 1)
+        self.bind ("<Configure>", self.configure)
+
+        self.root.after (self.refresh, self.check_new_image)
+        self.root.protocol ("WM_DELETE_WINDOW", self.quit)
+    
+        self.t = Thread (target = self.listen_stdin)
+        self.t.daemon = True
+        self.t.start()
+
+root = Tk()
+root.withdraw()
+root.title ('bview')
+root.canvas = BCanvas (root, sys.stdout)
+sys.stdout = sys.stderr
+
+try:
+    mainloop()
+except (KeyboardInterrupt, SystemExit):
+    None

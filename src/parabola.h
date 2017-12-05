@@ -20,16 +20,6 @@ typedef struct {
 #endif /* 3D */
 } ParabolaFit;
 
-static void normalize (coord * n)
-{
-  double norm = 0.;
-  foreach_dimension()
-    norm += sq(n->x);
-  norm = sqrt(norm);
-  foreach_dimension()
-    n->x /= norm;
-}
-
 static void parabola_fit_init (ParabolaFit * p, coord o, coord m)
 {
   foreach_dimension()

@@ -797,6 +797,16 @@ typedef struct {
 # define dv() (cube(Delta)*cm[])
 #endif
 
+void normalize (coord * n)
+{
+  double norm = 0.;
+  foreach_dimension()
+    norm += sq(n->x);
+  norm = sqrt(norm);
+  foreach_dimension()
+    n->x /= norm;
+}
+
 struct _origin { double x, y, z; };
 
 void origin (struct _origin p) {

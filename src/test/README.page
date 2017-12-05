@@ -84,6 +84,7 @@ Note that only the documented test cases appear in the list below
 * [Poisson solver on non-uniform mesh](mpi-circle.c)
 * [Boundary conditions for face fluxes](mpi-flux.c)
 * [Boundary conditions for face vector fields](mpi-interpu.c)
+* [Simple test of Basilisk View](view.c)
 
 ## Speed benchmarks
 

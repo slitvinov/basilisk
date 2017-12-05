@@ -159,6 +159,13 @@ taylor-green.tst: taylor-green-all-mach.tst
 terrain.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
 terrain.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
 
+view.tst: CC = mpicc -D_MPI=4
+view.tst: LIBS = "-Lgl -lglutils $(OPENGLIBS)"
+view.tst: view.3D.tst
+
+view.3D.tst: CC = mpicc -D_MPI=4
+view.3D.tst: LIBS = "-Lgl -lglutils $(OPENGLIBS)"
+
 coarsen.tst: CFLAGS=-DMTRACE=3
 
 # Axisymmetric tests
@@ -193,7 +200,7 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	gfsi.tst gfs.tst \
 	load-balancing \
 	mpi-grid.tst mpi-periodic-3D.tst \
-	source.tst tag.tst
+	source.tst tag.tst view.tst view.3D.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3

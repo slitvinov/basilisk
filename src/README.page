@@ -170,13 +170,24 @@ Several metric spaces/coordinate systems are predefined:
 * [Single field interpolated on a regular grid (binary format)](output.h#output_matrix-single-field-interpolated-on-a-regular-grid-binary-format)
 * [Portable PixMap (PPM) image output](output.h#output_ppm-portable-pixmap-ppm-image-output)
 * [Volume-Of-Fluid facets](fractions.h#interface-output)
+* [Basilisk snapshots](output.h#dump-basilisk-snapshots)
+* [Basilisk View](view.h)
 * [Gerris simulation format](output.h#output_gfs-gerris-simulation-format)
 * [ESRI ASCII Grid format](output.h#output_grd-esri-ascii-grid-format)
 * [VTK format](vtk.h)
 
 # Input functions
 
-* [Importing Portable Gray Map (PGM) images](input.h#input_pgm-importing-portable-gray-map-pgm-images)
+* [Basilisk snapshots](output.h#dump-basilisk-snapshots)
+* [Gerris simulation format](input.h#input_gfs-gerris-simulation-format)
+* [ESRI ASCII Grid format](input.h#input_grd-raster-format-esri-grid)
+* [Portable Gray Map (PGM) images](input.h#input_pgm-importing-portable-gray-map-pgm-images)
+
+# Interactive Basilisk View
+
+* [bview](): a script to start the client/server visualisation pipeline.
+* [bview-server.c](): the server.
+* [bview-client.py](): the client.
 
 # Tracking floating-point exceptions
 
