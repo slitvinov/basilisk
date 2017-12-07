@@ -93,7 +93,14 @@ else
     ssh $remote bview-server$dimension $args < $fifo | \
 	python $BASILISK/bview-client.py > $fifo &
 fi
-pids=`jobs -p`
+pids=$!
+
+function ctrl_c() {
+    rm -f $fifo
+    kill $pids %1 $(jobs -p) 2> /dev/null
+}
+
+trap 'ctrl_c' SIGINT
 
 modtime() {
     if test -f $1; then
@@ -122,14 +129,6 @@ for f in $watched; do
     watchbv $f > $fifo &
 done
 
-function ctrl_c() {
-    rm -f $fifo
-    for pid in $pids; do
-	kill $pid 2> /dev/null
-    done
-}
-
-trap 'ctrl_c' SIGINT
-
 cat > $fifo
-rm -f $fifo
+
+ctrl_c
