@@ -363,7 +363,7 @@ double line_length_center (coord m, double alpha, coord * p)
 
   p->x = p->y = 0.;
 
-  if (alpha < 0. || alpha > n.x + n.y)
+  if (alpha <= 0. || alpha >= n.x + n.y)
     return 0.;
   
   foreach_dimension(2)
