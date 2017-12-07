@@ -1,7 +1,7 @@
 /**
 # Simple test of Basilisk View
 
-This is run in parallel on four MPI processes. */
+Ran in parallel on four MPI processes. */
 
 #include "fractions.h"
 #include "view.h"
@@ -21,8 +21,12 @@ int main() {
   
   <table>
   <tr>
-  <td>![2D Basilisk view image](view/out.png)</td>
-  <td>![3D Basilisk view image](view.3D/out.png)</td>
+  <td>![2D Basilisk view](view/out.png)</td>
+  <td>![3D Basilisk view](view.3D/out.png)</td>
+  </tr>
+  <tr>
+  <td>2D Basilisk view</td>
+  <td>3D Basilisk view</td>
   </tr>
   </table>
   */

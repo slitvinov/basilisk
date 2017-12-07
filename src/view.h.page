@@ -11,57 +11,18 @@ in various formats (PPM, Gnuplot, OBJ, KML, PDF, SVG etc.).
 ## Installation
 
 In contrast with other Basilisk modules, this module relies on
-libraries which needs to be installed and linked with the Basilisk
-program. To install these libraries, the *config* file needs to define
-the *OPENGLIBS* environment variable indicating how to link the
-required OpenGL libraries, as installed on the system. An example is
-given in [config.gcc](). Two options are possible, depending on which
-version of OpenGL is installed on the system:
-
-1. Using [off-screen rendering](https://www.mesa3d.org/osmesa.html):
-OSMesa is a software-only implementation of OpenGL i.e. it does not
-require any graphics hardware and is thus suitable for installation on
-large-scale clusters which usually do not have graphical
-capabilities. In this case, a typical definition of *OPENGLIBS* could
-be:
-
-~~~bash
-OPENGLIBS = -lfb_osmesa -lGLU -lOSMesa
-~~~
-
-where *fb_osmesa* is provided by Basilisk and *GLU* and *OSMesa* are
-provided by the system. Depending on where these system libraries are
-installed, additional linking paths (*-L...* options) may be required.
-
-2. Using graphics-acceleration hardware: if a graphics card is
-installed on the system, this can be used to provide faster OpenGL
-graphics. The corresponding *OPENGLIBS* definition could be:
-
-~~~bash
-OPENGLIBS = -lfb_glx -lGLU -lGLEW -lGL -lX11
-~~~
-
-where *fb_glx* is provided by Basilisk and *GLU*, *GLEW*, *GL* and
-*X11* are provided by the system.
-
-Once this variable is defined in *config*, the Basilisk libraries can
-be compiled using:
-
-~~~bash
-cd $BASILISK
-make bview_server
-~~~
+additional libraries which needs to be installed and linked with the
+Basilisk program. See [gl/INSTALL]() for instructions.
 
 ## Usage
 
-A simple example could look like:
+A simple example would look like:
 
 ~~~literatec
 ...
 #include "view.h"
 ...
 event image (t = 1) {
-  view (width = 1024, height = 768);
   clear();
   draw_vof ("f");
   box();
@@ -80,10 +41,18 @@ The resulting program needs to be linked with the appropriate
 libraries using e.g.:
 
 ~~~bash
-qcc -Wall -O2 program.c -o program -L$BASILISK/gl -lglutils -lfb_osmesa -lGLU -lOSMesa -lm
+qcc -Wall -O2 program.c -o program \
+    -L$BASILISK/gl -lglutils -lfb_osmesa -lGLU -lOSMesa -lm
 ~~~
 
-(or the second option above).
+or
+
+~~~bash
+qcc -Wall -O2 program.c -o program \
+    -L$BASILISK/gl -lglutils -lfb_glx -lGLU -lGLEW -lGL -lX11
+~~~
+
+depending on which version of OpenGL should be used.
 
 # Implementation
 
@@ -377,7 +346,7 @@ Drawing user functions are defined in [draw.h](). */
 #include "draw.h"
 
 /**
-## load(): read drawing commands from a file or buffer
+## *load()*: read drawing commands from a file or buffer
 
 The commands are calls of user functions. They can be read from a
 file defined by *fp* or *file*, or from the memory buffer *buf*.
@@ -405,7 +374,7 @@ struct _load {
 bool load (struct _load p);
 
 /**
-## *save()*: saves drawing to a file in various formats.
+## *save()*: saves drawing to a file in various formats
 
 The file to write to is given either using its name *file* or the file
 pointer *fp*. If neither is specified, the default is *stdout*.

@@ -4,10 +4,13 @@
 sudo apt-get install tsp make gcc
 ~~~
 
-Install the KDT library and binaries in
+Install the KDT library, [OpenGL utility libraries](gl/INSTALL) and
+binaries in
 
 ~~~bash
 $HOME/lib/libkdt.a
+$HOME/lib/libglutils.a
+$HOME/lib/libfb_osmesa.a
 $HOME/include/kdt/kdt.h
 $HOME/bin/ppm2mpeg
 $HOME/bin/ppm2mp4

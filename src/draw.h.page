@@ -6,7 +6,7 @@ This file contains the definitions for the drawing primitives of
 #include "gl/font.h"
 
 /**
-# *clear()*: removes all objects previously drawn. */
+# *clear()*: removes all objects previously drawn */
 
 void clear()
 {
@@ -20,7 +20,7 @@ void clear()
 }
 
 /**
-# *view()*: sets up viewing parameters. 
+# *view()*: sets up viewing parameters
 
 * *tx*, *ty*: shifts the camera center point.
 * *fov*: changes the field-of-view.
@@ -266,7 +266,7 @@ static inline double interp (Point point, coord p, scalar col) {
 }
 
 /**
-# *draw_vof()*: displays VOF-reconstructed interfaces.
+# *draw_vof()*: displays VOF-reconstructed interfaces
 
 * *c*: the name (as a string) of the Volume-Of-Fluid field.
 * *edges*: whether to display the edges of the facets.
@@ -445,7 +445,7 @@ bool draw_vof (struct _draw_vof p)
 }
 
 /**
-# *cells()*: displays grid cells.
+# *cells()*: displays grid cells
 
 In 3D the intersections of the cells with a plane are displayed. The
 default plane is $z=0$. This can be changed by setting *n* and *alpha*
@@ -492,7 +492,7 @@ void cells (struct _cells p)
 }
 
 /**
-# *squares()*: displays colormapped fields.
+# *squares()*: displays colormapped fields
 
 The field name is given by *f*. The *min*, *max*, *spread* and *map*
 arguments work as described in
@@ -683,7 +683,7 @@ bool squares (struct _squares p)
 }
 
 /**
-# *box()*: displays box boundaries and axis coordinates.
+# *box()*: displays box boundaries and axis coordinates
 */
 	  
 trace
@@ -797,7 +797,7 @@ bool box()
 }
 
 /**
-# *isosurface()*: displays an isosurface of a field.
+# *isosurface()*: displays an isosurface of a field
 
 Work in progress. */
 

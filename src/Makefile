@@ -3,18 +3,15 @@ CFLAGS += -O2
 # these are not tests
 EXCLUDE = qcc.c include.c rotate.c qplot.c
 
-all: links qcc qplot libkdt
+all: links qcc qplot libkdt draw_get.h
 	@chmod +x ppm2mpeg ppm2mp4 ppm2gif runtest sequence bview.page
 	@test -f xyz2kdt || ln -s kdt/xyz2kdt
 	@test -f kdtquery || ln -s kdt/kdtquery
 
-bview_server: libgl bview-server2D bview-server3D bview2D bview3D
+bview-servers: bview-server2D bview-server3D bview2D bview3D
 
 libkdt:
 	cd kdt && make
-
-libgl:
-	cd gl && make
 
 qcc: qcc.c include.o rotate.o config
 	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" \

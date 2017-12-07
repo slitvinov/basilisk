@@ -20,4 +20,4 @@ gl2ps.o: gl2ps/gl2ps.c
 utils.o: utils.h
 
 clean:
-	rm -f *.o
+	rm -f *.o *.a

@@ -13,7 +13,35 @@ line.
 It can run in parallel using MPI.
 
 It is typically connected to a client such as [bview-client.py](), as
-automated by the [bview]() script. */
+automated by the [bview]() script. 
+
+## Installation
+
+The server is not installed by default and relies on additional
+libraries which need to be [installed](gl/INSTALL) first.
+
+Once either `libfb_osmesa.a` or `libfb_glx.a` have been installed, the
+`config` file needs to define the *OPENGLIBS* environment variable
+accordingly i.e. using either
+
+~~~bash
+OPENGLIBS = -lfb_osmesa -lGLU -lOSMesa
+~~~
+
+or
+
+~~~bash
+OPENGLIBS = -lfb_glx -lGLU -lGLEW -lGL -lX11
+~~~
+
+See [config.gcc]() for an example. Once this variable is defined in
+*config*, the Basilisk servers can be compiled using:
+
+~~~bash
+cd $BASILISK
+make bview-servers
+~~~
+*/
 
 #include "view.h"
 

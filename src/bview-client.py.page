@@ -1,4 +1,5 @@
-"""# A Graphical User Interface for Basilisk View
+"""
+# A Graphical User Interface for Basilisk View
 
 The interactive version of [Basilisk View](view.h) relies on a
 [client/server

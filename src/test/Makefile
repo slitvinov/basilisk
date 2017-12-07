@@ -160,11 +160,11 @@ terrain.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
 terrain.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
 
 view.tst: CC = mpicc -D_MPI=4
-view.tst: LIBS = "-Lgl -lglutils $(OPENGLIBS)"
+view.tst: LIBS = "-L$(BASILISK)/gl -lglutils $(OPENGLIBS)"
 view.tst: view.3D.tst
 
 view.3D.tst: CC = mpicc -D_MPI=4
-view.3D.tst: LIBS = "-Lgl -lglutils $(OPENGLIBS)"
+view.3D.tst: LIBS = "-L$(BASILISK)/gl -lglutils $(OPENGLIBS)"
 
 coarsen.tst: CFLAGS=-DMTRACE=3
 
