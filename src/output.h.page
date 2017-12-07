@@ -992,18 +992,13 @@ bool restore (struct Dump p)
     exit (1);
   }
   dimensions (header.n.x, header.n.y, header.n.z);
-  int cell_size = sizeof(unsigned) + header.len*sizeof(double);
-  long offset = pid()*((1 << dimension*(header.depth + 1)) - 1)/
-    ((1 << dimension) - 1)*cell_size;
-  if (fseek (fp, offset, SEEK_CUR) < 0) {
-    perror ("restore(): error while seeking");
-    exit (1);
-  }
-  int n = header.n.x;
+  int n = header.n.x, depth = header.depth;
   while (n > 1)
-    header.depth++, n /= 2;
-#endif // MULTIGRID_MPI
+    depth++, n /= 2;
+  init_grid (1 << depth);
+#else // !MULTIGRID_MPI
   init_grid (1 << header.depth);
+#endif
 #endif // multigrid
 
   bool restore_all = (p.list == all);
@@ -1071,6 +1066,16 @@ bool restore (struct Dump p)
     size (o[3]);
   }
 
+#if MULTIGRID_MPI
+  int cell_size = sizeof(unsigned) + header.len*sizeof(double);
+  long offset = pid()*((1 << dimension*(header.depth + 1)) - 1)/
+    ((1 << dimension) - 1)*cell_size;
+  if (fseek (fp, offset, SEEK_CUR) < 0) {
+    perror ("restore(): error while seeking");
+    exit (1);
+  }
+#endif // MULTIGRID_MPI
+  
   scalar * listm = is_constant(cm) ? NULL : (scalar *){fm};
 #if TREE && _MPI
   restore_mpi (fp, list);

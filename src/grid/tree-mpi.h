@@ -1314,6 +1314,7 @@ void restore_mpi (FILE * fp, scalar * list1)
   flag_border_cells();
 
   mpi_boundary_update (list);
+  free (list);
 }
 
 /**
