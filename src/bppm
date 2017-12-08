@@ -1,0 +1,1 @@
+python $BASILISK/bview-client.py > /dev/null
