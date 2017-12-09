@@ -8,7 +8,7 @@
   #include <sys/wait.h>
   #include <assert.h>
 
-  enum { scalar, vector, tensor, bid, struct_type = -1 };
+  enum { scalar, vector, tensor, bid, struct_type = -1, other_type = -2 };
 
   typedef struct { int i; char * name; } Scalar;
   typedef struct { int x, y, face; char * name; } Vector;
@@ -1487,6 +1487,33 @@ map{WS}+"{" {
 }
 
 \({WS}*const{WS}*\)    varmaybeconst = 1;
+
+(void|char|short|int|long|float|double){WS}+[\*]*{WS}*{ID}+ {
+  char * var = yytext;
+  space (var);
+  nonspace (var);
+  while (*var == '*') var++;
+  nonspace (var);
+  if (para == 0) /* declaration */
+    varpush (var, other_type, scope, 0);
+  else if (para == 1) /* function prototype (no nested functions) */
+    varpush (var, other_type, scope + 1, 0);
+  if (debug)
+    fprintf (stderr, "%s:%d: %s\n", fname, line, yytext);
+  ECHO;
+}
+
+struct{WS}+{ID}+{WS}+{ID}+ {
+  char * var = yytext;
+  space (var); nonspace (var); space (var); nonspace (var);
+  if (para == 0) /* declaration */
+    varpush (var, struct_type, scope, 0);
+  else if (para == 1) /* function prototype (no nested functions) */
+    varpush (var, struct_type, scope + 1, 0);
+  if (debug)
+    fprintf (stderr, "%s:%d: %s\n", fname, line, yytext);
+  ECHO;
+}
 
 symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
 face{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
