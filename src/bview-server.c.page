@@ -41,6 +41,8 @@ See [config.gcc]() for an example. Once this variable is defined in
 cd $BASILISK
 make bview-servers
 ~~~
+
+## Implementation
 */
 
 #include "view.h"

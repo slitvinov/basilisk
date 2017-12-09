@@ -30,12 +30,10 @@ event image (t = 1) {
 }
 ~~~
 
-The *view()* function sets the image size (and optionally the viewing
-camera angle, zoom etc.), *clear()* resets the image, *draw_vof()* and
-*box()* add two graphical representations and *save()* saves the
-resulting image in [PPM](https://en.wikipedia.org/wiki/Netpbm_format)
-format. See [User functions](view.h#user-functions) for a detailed
-documentation.
+The *clear()* function resets the image, *draw_vof()* and *box()* add
+two graphical representations and *save()* saves the resulting image
+in [PPM](https://en.wikipedia.org/wiki/Netpbm_format) format. See
+[User functions](view.h#user-functions) for a detailed documentation.
 
 The resulting program needs to be linked with the appropriate
 libraries using e.g.:
@@ -758,24 +756,21 @@ static bool process_line (char * line, Array * history, FILE * interactive)
   else if (!strcmp (s, "cells")) {
     struct _cells p = {{0}};
     _cells_get (&p);
-    @define cells_(p) cells(p) // trick to pass struct
-    cells_ (p);
+    cells (p);
     draw_append (buf, history, interactive);
   }
     
   else if (!strcmp (s, "draw_vof")) {
     struct _draw_vof p = {0};
     _draw_vof_get (&p);
-    @define draw_vof_(p) draw_vof(p) // trick to pass struct
-    if (draw_vof_ (p))
+    if (draw_vof (p))
       draw_append (buf, history, interactive);
   }
     
   else if (!strcmp (s, "squares")) {
     struct _squares p = {0};
     _squares_get (&p);
-    @define squares_(p) squares(p) // trick to pass struct
-    squares_ (p);
+    squares (p);
     draw_append (buf, history, interactive);
   }
     
@@ -804,8 +799,7 @@ static bool process_line (char * line, Array * history, FILE * interactive)
   else if (!strcmp (s, "view")) {
     struct _view_set p = {0};
     _view_set_get (&p);
-    @define view_(p) view(p) // trick to pass struct
-    view_ (p);
+    view (p);
     if (p.width || p.height || p.samples) {
       // rebuild display list using history
       if (history->len && load (buf = history) && p.samples && interactive)
