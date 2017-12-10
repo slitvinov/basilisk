@@ -1,55 +1,43 @@
-// Default parameters
-// maximum timestep
-double DT = 1e10;
-// CFL number
-double CFL = 0.5;
+/**
+# Various utility functions
 
-void runge_kutta (int stages,
-		  double t, double dt,
-		  int nv, scalar f[nv], scalar df[stages][nv], 
-		  void (* advance) (double t, scalar f[nv], scalar df[nv]),
-		  void (* update)  (double t, scalar f[nv]))
-{
-  switch (stages) {
-  case 1:
-    (* advance) (t, f, df[0]);
-    foreach()
-      for (int v = 0; v < nv; v++)
-	f[v][] += df[0][v][]*dt;
-    (* update) (t + dt, f);
-    break;
+## Default parameters and variables
 
-  case 2:
-    (* advance) (t, f, df[0]);
-    foreach()
-      for (int v = 0; v < nv; v++)
-	df[0][v][] = f[v][] + df[0][v][]*dt/2.;
-    (* update) (t + dt/2., df[0]);
+The default maximum timestep and CFL number. */
 
-    (* advance) (t + dt/2., df[0], df[1]);
-    foreach()
-      for (int v = 0; v < nv; v++)
-	f[v][] += df[1][v][]*dt;
-    (* update) (t + dt, f);
-    break;
+double DT = 1e10, CFL = 0.5;
 
-  default:
-    /* not implemented yet */
-    assert(false);
-  }
+/**
+Performance statistics are stored in this structure. */
+
+struct {
+  // total number of (leaf) cells advanced for this process
+  long nc;
+  // total number of (leaf) cells advanced for all processes
+  long tnc;
+  // real time elapsed since the start
+  double t;
+  // average computational speed (leaves/sec)
+  double speed;
+  // global timer
+  timer gt;
+} perf;
+
+/**
+Performance statistics are gathered by this function, which is
+typically called by the run() loop. */
+
+void update_perf() {
+  perf.nc += grid->n;
+  perf.tnc += grid->tn;
+  perf.t = timer_elapsed (perf.gt);
+  perf.speed = perf.tnc/perf.t;
 }
 
-double change (scalar v, scalar vn)
-{
-  double max = 0.;
-  foreach(reduction(max:max)) {
-    double dv = fabs (v[] - vn[]);
-    if (dv > max)
-      max = dv;
-    vn[] = v[];
-  }
-  return max;
-}
+/**
+## Timing
+
+These functions can be used for profiling. */
 
 typedef struct {
   double cpu;   // CPU time (sec)
@@ -61,6 +49,11 @@ typedef struct {
   size_t tnc;   // Number of grid points
   long   mem;   // Maximum resident memory (kB)
 } timing;
+
+/**
+Given a timer, iteration count *i*, total number of cells *tnc* and
+array of MPI timings *mpi* (with a size equal to the number of
+processes), this function returns the statistics above. */
 
 timing timer_timing (timer t, int i, size_t tnc, double * mpi)
 {
@@ -104,6 +97,9 @@ timing timer_timing (timer t, int i, size_t tnc, double * mpi)
   return s;
 }
 
+/**
+This function writes timing statistics on standard output. */
+
 void timer_print (timer t, int i, size_t tnc)
 {
   timing s = timer_timing (t, i, tnc, NULL);
@@ -121,6 +117,12 @@ void timer_print (timer t, int i, size_t tnc)
 	   s.max, 100.*s.max/s.real);
 @endif
 }
+
+/**
+## Simple field statistics 
+
+The *normf()* function returns the (volume) average, RMS norm, max
+norm and volume for field *f*. */
 
 typedef struct {
   double avg, rms, max, volume;
@@ -146,6 +148,10 @@ norm normf (scalar f)
   return n;
 }
 
+/**
+The *statsf()* function returns the minimum, maximum, volume sum,
+standard deviation and volume for field *f*. */
+
 typedef struct {
   double min, max, sum, stddev, volume;
 } stats;
@@ -169,6 +175,13 @@ stats statsf (scalar f)
   return s;
 }
 
+/**
+## Slope limiters 
+
+Given three values, these [slope
+limiters](https://en.wikipedia.org/wiki/Flux_limiter#Limiter_functions)
+return the corresponding slope-limited gradient. */
+
 static double generic_limiter (double r, double beta)
 {
   double v1 = min (r, beta), v2 = min (beta*r, 1.);
@@ -188,6 +201,13 @@ double sweby (double s0, double s1, double s2) {
   return generic_limiter ((s2 - s1)/(s1 - s0), 1.5)*(s1 - s0);
 }
 
+/**
+This is the
+[https://en.wikipedia.org/wiki/Flux_limiter#Generalised_minmod_limiter]. The
+$\theta$ global variable can be used to tune the limiting ($\theta=1$
+gives minmod, the most dissipative limiter and $\theta=2$ gives
+superbee, the least dissipative). */
+	  
 double theta = 1.3;
 
 double minmod2 (double s0, double s1, double s2)
@@ -205,6 +225,13 @@ double minmod2 (double s0, double s1, double s2)
   return 0.;
 }
 
+/**
+Given a list of scalar fields *f*, this function fills the gradient
+fields *g* with the corresponding gradients. If the *gradient*
+attribute of a field is set (typically to one of the limiting
+functions above), it is used to compute the gradient, otherwise simple
+centered differencing is used. */
+	  
 void gradients (scalar * f, vector * g)
 {
   assert (list_len(f) == vectors_len(g));
@@ -223,11 +250,10 @@ void gradients (scalar * f, vector * g)
 }
 
 /**
-## Vorticity
+## Other functions
 
-For convenience, we also define a function which, given a velocity
-field $\mathbf{u}$, fills a scalar field $\omega$ with the vorticity
-field
+Given a velocity field $\mathbf{u}$, this function fills a scalar
+field $\omega$ with the vorticity field
 $$
 \omega = \partial_x u_y - \partial_y u_x
 $$ */
@@ -242,26 +268,57 @@ void vorticity (const vector u, scalar omega)
 }
 
 /**
-Performance statistics are stored in this structure. */
+A simple Runge-Kutta time-integrator. */
+  
+void runge_kutta (int stages,
+		  double t, double dt,
+		  int nv, scalar f[nv], scalar df[stages][nv], 
+		  void (* advance) (double t, scalar f[nv], scalar df[nv]),
+		  void (* update)  (double t, scalar f[nv]))
+{
+  switch (stages) {
+  case 1:
+    (* advance) (t, f, df[0]);
+    foreach()
+      for (int v = 0; v < nv; v++)
+	f[v][] += df[0][v][]*dt;
+    (* update) (t + dt, f);
+    break;
 
-struct {
-  // total number of (leaf) cells advanced for this process
-  long nc;
-  // total number of (leaf) cells advanced for all processes
-  long tnc;
-  // real time elapsed since the start
-  double t;
-  // average computational speed (leaves/sec)
-  double speed;
-  // global timer
-  timer gt;
-} perf;
+  case 2:
+    (* advance) (t, f, df[0]);
+    foreach()
+      for (int v = 0; v < nv; v++)
+	df[0][v][] = f[v][] + df[0][v][]*dt/2.;
+    (* update) (t + dt/2., df[0]);
 
-void update_perf() {
-  perf.nc += grid->n;
-  perf.tnc += grid->tn;
-  perf.t = timer_elapsed (perf.gt);
-  perf.speed = perf.tnc/perf.t;
+    (* advance) (t + dt/2., df[0], df[1]);
+    foreach()
+      for (int v = 0; v < nv; v++)
+	f[v][] += df[1][v][]*dt;
+    (* update) (t + dt, f);
+    break;
+
+  default:
+    /* not implemented yet */
+    assert(false);
+  }
+}
+
+/**
+Given two scalar fields *v* and *vn* this function returns the maximum
+of their absolute difference. */
+
+double change (scalar v, scalar vn)
+{
+  double max = 0.;
+  foreach(reduction(max:max)) {
+    double dv = fabs (v[] - vn[]);
+    if (dv > max)
+      max = dv;
+    vn[] = v[];
+  }
+  return max;
 }
 
 #include "output.h"

@@ -164,6 +164,12 @@ Several metric spaces/coordinate systems are predefined:
 * [Axisymmetric](axi.h)
 * [Spherical](spherical.h)
 
+# Data processing
+
+* [Various utility functions](utils.h): timing, field statistics,
+  slope limiters, etc.
+* [Tagging connected neighborhoods](tag.h)
+
 # Output functions
 
 * [Multiple fields interpolated on a regular grid (text format)](output.h#output_field-multiple-fields-interpolated-on-a-regular-grid-text-format)

@@ -293,8 +293,8 @@ local% scp _atomisation.c mesu.dsi.upmc.fr:
 and on mesu (to run on 672 cores, with 12 levels of refinement)
 
 ~~~bash
-occigen% qstat -u popinet
-occigen% qsub run.sh
+mesu% qstat -u popinet
+mesu% qsub run.sh
 ~~~
 
 with the following `run.sh` script
