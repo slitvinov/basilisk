@@ -3,7 +3,8 @@ CFLAGS += -O2 -fopenmp
 
 all: check
 
-tsunami.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
+atomisation.tst: LIBS = "-L$(BASILISK)/gl -lglutils $(OPENGLIBS)"
+
 tsunami.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
 
 madsen-sv.c: madsen.c

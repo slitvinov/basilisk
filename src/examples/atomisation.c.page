@@ -9,12 +9,13 @@ characteristic scale of the smallest droplets.
 
 We solve the two-phase Navier--Stokes equations with surface
 tension. We need the *tag()* function to count the number of
-droplets. */
+droplets. We generate animations online using Basilisk View. */
 
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
 #include "tension.h"
 #include "tag.h"
+#include "view.h"
 
 /**
 We define the radius of the jet, the initial jet length, the Reynolds
@@ -81,7 +82,7 @@ int main (int argc, char * argv[])
 ## Initial conditions */
 
 event init (t = 0) {
-  if (!restore (file = "dump")) {
+  if (!restore (file = "restart")) {
 
     /**
     We use a static refinement down to *maxlevel* in a cylinder 1.2
@@ -123,54 +124,45 @@ event logfile (i++) {
 }
 
 /**
-If gfsview is installed on the system, we can also visualise the
-simulation as it proceeds. */
+We generate an animation using Basilisk View. */
 
-#if 0
-event gfsview (i += 10) {
-  static FILE * fp = popen ("gfsview3D atomisation.gfv", "w");
-  output_gfs (fp, list = {u,p,f});
-}
-#endif
-
-/**
-To generate an animation, uncomment this and use the `run.sh` script
-below. */
-
-#if 0
-event movie (t += 2e-2)
+event movie (t += 1e-2)
 {
-  scalar pid[], ff[];
-  foreach() {
+#if dimension == 2
+  scalar omega[];
+  vorticity (u, omega);
+  view (tx = -0.5);
+  clear();
+  draw_vof ("f");
+  squares ("omega", linear = true, spread = 10);
+  box ();
+#else // 3D
+  scalar pid[];
+  foreach()
     pid[] = fmod(pid()*(npe() + 37), npe());
-    ff[] = f[] < 1e-4 ? 0 : f[] > 1. - 1e-4 ? 1. : f[];
-  }
-  boundary ({pid,ff});
-  output_gfs (fout);
-  fprintf (fout, "Save stdout { format = PPM width = 1600 height = 1200 }\n");
+  boundary ({pid}); // not used for the moment
+  view (camera = "iso",
+	fov = 14.5, tx = -0.418, ty = 0.288,
+	width = 1600, height = 1200);
+  clear();
+  draw_vof ("f");
+#endif // 3D
+  static FILE * fp = popen ("ppm2mp4 > movie.mp4", "w");
+  save (fp = fp);
 }
-#endif
 
 /**
 We save snapshots of the simulation at regular intervals to
-post-process with gfsview. */
+restart or to post-process with [bview](src/bview). */
 
-event snapshot (t = 0.1; t += 0.1; t <= 2.5) {
-
-  /**
-  We also dump the entire simulation to be able to restart. */
-
-  dump (file = "dump");
-
+event snapshot (t = 0.1; t += 0.1; t <= 3.8) {
   char name[80];
-  sprintf (name, "snapshot-%g.gfs", t);
-  scalar pid[], ff[];
-  foreach() {
+  sprintf (name, "snapshot-%g", t);
+  scalar pid[];
+  foreach()
     pid[] = fmod(pid()*(npe() + 37), npe());
-    ff[] = f[] < 1e-4 ? 0 : f[] > 1. - 1e-4 ? 1. : f[];
-  }
-  boundary ({pid,ff});
-  output_gfs (file = name);
+  boundary ({pid});
+  dump (name);
 }
 
 /**
@@ -242,6 +234,8 @@ event adapt (i++) {
 /**
 ## Running in parallel
 
+### On Occigen
+
 To run in 3D on
 [occigen](https://www.cines.fr/calcul/materiels/occigen/), we can do on
 the local machine
@@ -277,37 +271,97 @@ module load openmpi
 module load intel
 
 NAME=atomisation
-mpicc -Wall -std=c99 -O2 _$NAME.c -o $NAME -lm
+mpicc -Wall -std=c99 -O2 _$NAME.c -o $NAME \
+      -L$HOME/gl -lglutils -lfb_osmesa -lOSMesa -lGLU -lm
 srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./$NAME $LEVEL \
-     2> log-$LEVEL-$SLURM_NTASKS | \
-     sed 's/VariableTracerVOF f/VariableTracerVOF ff/g' | \
-     $HOME/local/bin/gfsview-batch3D $NAME.gfv \
-     > out-$LEVEL-$SLURM_NTASKS.ppm
+     2> log-$LEVEL-$SLURM_NTASKS > out-$LEVEL-$SLURM_NTASKS
 ~~~
 
-Note that this assumes that `gfsview-batch` is installed on the
-machine to generate the animation. The animated GIF below can then be
-created using
+Note that this assumes that the gl libraries have been
+[installed](/src/gl/INSTALL) in `$HOME/gl`.
+
+### On Mesu
+
+To run in 3D on [mesu](http://iscd.upmc.fr/expertise/mesu), we can do
+on the local machine
 
 ~~~bash
-ppm2gif --scale 0.5 --delay 10 < out-12-1536.ppm > atomisation.gif
+local% qcc -source -grid=octree -D_MPI=1 atomisation.c
+local% scp _atomisation.c mesu.dsi.upmc.fr: 
 ~~~
+
+and on mesu (to run on 672 cores, with 12 levels of refinement)
+
+~~~bash
+occigen% qstat -u popinet
+occigen% qsub run.sh
+~~~
+
+with the following `run.sh` script
+
+~~~bash
+#!/bin/bash 
+#PBS -l select=28:ncpus=24:mpiprocs=24
+#PBS -l walltime=12:00:00
+#PBS -N atomisation
+#PBS -j oe  
+# load modules 
+module load mpt
+mpicc -Wall -O2 -std=c99 _atomisation.c -o atomisation \
+     -L$HOME/gl -lglutils -lfb_osmesa -lOSMesa -lGLU -lm
+# change to the directory where program job_script_file is located 
+cd $PBS_O_WORKDIR 
+# mpirun -np 672 !!!! does not work !!!!
+mpiexec_mpt -n 672 ./atomisation 12 2>> log >> out
+~~~
+
+Note that this assumes that the gl libraries have been
+[installed](/src/gl/INSTALL) in `$HOME/gl`.
 
 ## Results
 
-![Atomisation of a pulsed liquid jet. 4096^3^ equivalent
- resolution.](atomisation/atomisation.gif)
+<p>
+<center>
+<video width="800" height="600" controls>
+  <source src="atomisation/movie.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+<br>
+Atomisation of a pulsed liquid jet. 4096^3^ equivalent resolution.
+</center>
+</p>
 
 The gain in number of grid points of the adaptive simulation (relative
 to a constant 4096^3^ Cartesian grid discretisation) is illustrated
-below as well as the computational speed (in points.timesteps/sec).
+below as well as the computational speed (in
+points.timesteps/sec). The simulation on Mesu is restarted at $t=2.6$
+(after 12 hours of runtime).
 
 ~~~gnuplot Compression ratio and computational speed
 set xlabel 'Time'
 set logscale y
-set key bottom left
-plot 'atomisation.occigen' u 1:(4096.**3./$6) w l t 'compression ratio', \
-     '' u 1:8 w l t 'speed'
+set key center right
+plot 'atomisation.occigen' u 1:8 w l t 'speed (occigen 1536 cores)', \
+     'atomisation.mesu' u 1:8 w l t 'speed (mesu 672 cores)', \
+     'atomisation.mesu' u 1:(4096.**3./$6) w l t 'compression ratio'
+~~~
+
+~~~gnuplot Histogram of droplet volumes at $t=3.7$
+reset
+set xlabel 'log10(Volume)'
+set ylabel 'Number of droplets'
+binstart = -100
+binwidth = 0.2
+set boxwidth binwidth
+set style fill solid 0.5
+Delta = 3./2**12 # minimum cell size
+minvol = log10(Delta**3) # minimum cell volume
+set arrow from minvol, graph 0 to minvol, graph 1 nohead
+set label "Minimum cell volume" at minvol - 0.2, graph 0.35 rotate by 90
+t = "3.7"
+plot "< awk '{if ($2==".t.") print $0;}' atomisation.out" u \
+     (binwidth*(floor((log10($4)-binstart)/binwidth)+0.5)+binstart):(1.0) \
+     smooth freq w boxes t ''
 ~~~
 
 ## See also
