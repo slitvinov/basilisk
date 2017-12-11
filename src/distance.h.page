@@ -441,6 +441,7 @@ static void delete_distance (scalar d) {
   for (int l = 0; l <= depth(); l++)
     foreach_level (l)
       free (double_to_pointer (surface[]));
+  delete ({surface});
 }
 
 trace
@@ -449,8 +450,7 @@ void distance (scalar d, coord * p)
   scalar surface = d.surface;
   if (surface.i)
     delete_distance (d);
-  else
-    surface = new scalar;
+  surface = new scalar;
   surface.restriction = no_restriction;
 #if TREE
   surface.prolongation = no_restriction;
