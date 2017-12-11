@@ -166,8 +166,11 @@ The arguments and their default values are:
 *file*
 : the name of the file to read from (mutually exclusive with *fp*). */
 
+trace
 void input_gfs (struct OutputGfs p)
 {
+  not_mpi_compatible();
+  
   bool opened = false;
   if (p.fp == NULL) {
     if (p.file == NULL)
@@ -179,7 +182,12 @@ void input_gfs (struct OutputGfs p)
     else
       opened = true;
   }
+  bool input_all = (p.list == all);
   if (p.list == NULL) p.list = all;
+
+  #if TREE
+  init_grid (1);
+  #endif
 
   next_char (p.fp, '{');
   
@@ -218,14 +226,21 @@ void input_gfs (struct OutputGfs p)
   while (s1) {
     char * name = replace (s1, '_', '.', false);
     bool found = false;
-    for (scalar s in p.list) {
-      if (!found && !strcmp (s.name, name)) {
+    for (scalar s in p.list)
+      if (!is_constant(s) && s.name && !strcmp (s.name, name)) {
 	input = list_append (input, s);
-	found = true;
+	found = true; break;
       }
+    if (!found) {
+      if (input_all) {
+	scalar s = new scalar;
+	free (s.name);
+	s.name = strdup (name);
+	input = list_append (input, s);
+      }
+      else
+	input = list_append (input, (scalar){INT_MAX});
     }
-    if (!found)
-      input = list_append (input, (scalar){INT_MAX});
     free (name);
     s1 = strtok (NULL, ", \t");
   }
@@ -258,9 +273,6 @@ void input_gfs (struct OutputGfs p)
   scalar * listr = !is_constant(cm) ? listm : NULL;
   NOT_UNUSED (listr);
 
-  #if TREE
-  init_grid (1);
-  #endif
   foreach_cell() {
     unsigned flags;
     if (fread (&flags, sizeof (unsigned), 1, p.fp) != 1) {

@@ -40,11 +40,20 @@
 static FILE * qstderr (void);
 static FILE * qstdout (void);
 FILE * ferr, * fout;
+@ def not_mpi_compatible()
+do {
+  if (npe() > 1) {
+    fprintf (ferr, "%s() is not compatible with MPI (yet)\n", __func__);
+    exit (1);
+  }
+} while(0)
+@
 @else
 @ define qstderr() stderr
 @ define qstdout() stdout
 @ define ferr      stderr
 @ define fout      stdout
+@ define not_mpi_compatible()
 @endif
 
 // Memory tracing
