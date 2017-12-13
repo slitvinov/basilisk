@@ -115,7 +115,7 @@
     int i[9];
     char * conditional;
   } var_t;
-  var_t _varstack[100]; int varstack = -1;
+  var_t * _varstack = NULL; int varstack = -1, varstackmax = 0;
   var_t * varpush (const char * s, int type, int scope, int maybeconst) {
     var_t * v = NULL;
     if (s[0] != '\0') {
@@ -126,8 +126,13 @@
       while ((q = strchr (q, '['))) {
 	*q++ = '\0'; na++;
       }
-      _varstack[++varstack] = (var_t) { f, NULL, type, na, scope, 
-					0, 0, 0, 0, maybeconst, 0, {-1} };
+      varstack++;
+      if (varstack >= varstackmax) {
+	varstackmax += 100;
+	_varstack = realloc (_varstack, varstackmax*sizeof (var_t));
+      }
+      _varstack[varstack] = (var_t) { f, NULL, type, na, scope, 
+				      0, 0, 0, 0, maybeconst, 0, {-1} };
       v = &(_varstack[varstack]);
     }
     return v;
