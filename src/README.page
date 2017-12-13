@@ -169,6 +169,7 @@ Several metric spaces/coordinate systems are predefined:
 * [Various utility functions](utils.h): timing, field statistics,
   slope limiters, etc.
 * [Tagging connected neighborhoods](tag.h)
+* [Counting droplets](examples/atomisation.c#counting-droplets)
 
 # Output functions
 

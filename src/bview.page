@@ -37,6 +37,10 @@ Note that the servers need to be
 [installed](bview-server.c#installation) separately before using
 `bview`.
 
+You also need to check that the
+[dependencies](bview-client.py#dependencies) of the Python client are
+verified.
+
 ## Examples
 
 A typical session could look like:

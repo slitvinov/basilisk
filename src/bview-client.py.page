@@ -52,6 +52,15 @@ responds with images which are used to refresh the Tkinter window.
 * 'q' key: quits.
 * '<' or '>' keys: decrease or increase minimum delay between screen refreshes.
 
+## Dependencies
+
+Besides Tkinter, the program also uses the ImageTk extension of the
+Python Imaging Library (PIL). On Debian-like systems, this can be
+installed easily using:
+
+~~~bash
+sudo apt-get install python-pil.imagetk
+~~~
 """
 
 from Tkinter import *

@@ -203,10 +203,10 @@ double sweby (double s0, double s1, double s2) {
 
 /**
 This is the
-[https://en.wikipedia.org/wiki/Flux_limiter#Generalised_minmod_limiter]. The
-$\theta$ global variable can be used to tune the limiting ($\theta=1$
-gives minmod, the most dissipative limiter and $\theta=2$ gives
-superbee, the least dissipative). */
+[https://en.wikipedia.org/wiki/Flux_limiter#Generalised_minmod_limiter](generalised
+minmod limiter). The $\theta$ global variable can be used to tune the
+limiting ($\theta=1$ gives minmod, the most dissipative limiter and
+$\theta=2$ gives superbee, the least dissipative). */
 	  
 double theta = 1.3;
 
