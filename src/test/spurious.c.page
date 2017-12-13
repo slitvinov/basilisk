@@ -144,8 +144,8 @@ event error (t = end) {
   the velocity *un* and the shape error *ec*. */
   
   double ekmax = 0.;
-  scalar un[], ec[];
-  scalar kappa = c.kappa;
+  scalar un[], ec[], kappa[];
+  curvature (c, kappa);
   foreach() {
     un[] = norm(u);
     ec[] = c[] - cref[];

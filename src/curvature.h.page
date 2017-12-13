@@ -374,7 +374,12 @@ static inline bool interfacial (Point point, scalar c)
 The function below computes the mean curvature *kappa* of the
 interface defined by the volume fraction *c*. It uses a combination of
 the methods above: statistics on the number of curvatures computed
-which each method is returned in a *cstats* data structure. */
+which each method is returned in a *cstats* data structure. 
+
+If *sigma* is different from zero the curvature is multiplied by *sigma*.
+
+If *add* is *true*, the curvature (optionally multiplied by *sigma*)
+is added to field *kappa*. */
 
 typedef struct {
   int h; // number of standard HF curvatures
@@ -383,9 +388,17 @@ typedef struct {
   int c; // number of centroids fit curvatures
 } cstats;
 
+struct Curvature {
+  scalar c, kappa;
+  double sigma;
+  bool add;
+};
+
 trace
-cstats curvature (scalar c, scalar kappa)
+cstats curvature (struct Curvature p)
 {
+  scalar c = p.c, kappa = p.kappa;
+  double sigma = p.sigma ? p.sigma : 1.;
   cstats s = {0,0,0,0};
   vector h[];
   heights (c, h);
@@ -430,9 +443,10 @@ cstats curvature (scalar c, scalar kappa)
     /**
     We then construct the final curvature field using either the
     computed temporary curvature... */
-  
+
+    double kf;
     if (k[] < nodata)
-      kappa[] = k[];
+      kf = k[];
     else if (interfacial (point, c)) {
 
       /**
@@ -444,16 +458,26 @@ cstats curvature (scalar c, scalar kappa)
 	if (k[] < nodata)
 	  sk += k[], a++;
       if (a > 0.)
-	kappa[] = sk/a, s.a++;
+	kf = sigma*sk/a, s.a++;
       else
 
 	/**
 	Empty neighborhood: we try centroids as a last resort. */
 	
-	kappa[] = centroids_curvature_fit (point, c), s.c++;
+	kf = sigma*centroids_curvature_fit (point, c), s.c++;
     }
     else
+      kf = nodata;
+
+    /**
+    We add or set *kappa*. */
+    
+    if (kf == nodata)
       kappa[] = nodata;
+    else if (p.add)
+      kappa[] += sigma*kf;
+    else
+      kappa[] = sigma*kf;      
   }
   boundary ({kappa});
 

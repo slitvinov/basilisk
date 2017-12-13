@@ -124,10 +124,11 @@ $$
 \partial_tf_i+\mathbf{u}\cdot\nabla f_i=0
 $$
     + [Volume-Of-Fluid advection](vof.h)
-* [Surface tension](tension.h)
+* [Interfacial forces](iforce.h)
 $$
-\sigma\kappa\mathbf{n}\delta_s/\rho
+\phi\mathbf{n}\delta_s
 $$
+    + [Surface tension](tension.h)
 * [Reaction--Diffusion](diffusion.h)
 $$ 
 \theta\partial_tf = \nabla\cdot(D\nabla f) + \beta f + r
