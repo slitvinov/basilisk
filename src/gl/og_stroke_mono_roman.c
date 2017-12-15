@@ -14,7 +14,7 @@
 
 static const SOG_StrokeStrip ch32st[] =
 {
-    { 0, NULL }
+    { 0, 0 }
 };
 
 static const SOG_StrokeChar ch32 = {104.762f,0,ch32st};

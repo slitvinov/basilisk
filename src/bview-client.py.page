@@ -12,33 +12,6 @@ A Basilisk View client running on the local system then sends
 "commands" to the server and receives in return a stream of PPM images
 containing the updated views.
 
-This work either on debian-like system or on macOS, with python 2.7. However,
-for macOS user, you should pay attention to the Tkinter package. To see if
-Tkinter is correctly installed on your system, do:
-
-~~~bash
-python -m Tkinter
-~~~
-
-If a window pop up with a clic button, then it works. Else, if you get an error
-message saying that Tkinter may not be configure for your system, or if there 
-is no module named Tkinter, you should install it.
-
-It is recommanded to reinstall python as well.
-
- - For [python 2.7](https://www.python.org/downloads/release/python-2714/)
-
- - For [Tkinter](https://www.python.org/download/mac/tcltk/)
-
-You may also need to install the module PIL (or pillow). For that, do on your
-terminal:
-
-~~~bash
-sudo easy_install pip
-pip install pillow
-~~~
-
-
 The commands are just function calls, sent as a stream of text by the
 client, using the same syntax as for the
 [*load()*](view.h#load-read-drawing-commands-from-a-file-or-buffer)
@@ -81,12 +54,40 @@ responds with images which are used to refresh the Tkinter window.
 
 ## Dependencies
 
-Besides Tkinter, the program also uses the ImageTk extension of the
-Python Imaging Library (PIL). On Debian-like systems, this can be
-installed easily using:
+The current version will work with python2.7 but not
+python3.x. Besides Tkinter, the program also uses the ImageTk
+extension of the Python Imaging Library (PIL).
+
+### Debian-like systems (Debian, Ubuntu etc.)
+
+The required dependencies can be installed easily using:
 
 ~~~bash
 sudo apt-get install python-pil.imagetk
+~~~
+
+### Mac OSX
+
+To see if Tkinter is correctly installed on your system, do:
+
+~~~bash
+python -m Tkinter
+~~~
+
+If a window pops up with a click button, then it works. Otherwise you
+will need to install it.
+
+It is recommanded to reinstall python as well. See:
+
+* [python 2.7](https://www.python.org/downloads/release/python-2714/)
+* [Tkinter](https://www.python.org/download/mac/tcltk/)
+
+You may also need to install the PIL (or Pillow) module PIL. This can
+be done using:
+
+~~~bash
+sudo easy_install pip
+pip install pillow
 ~~~
 """
 

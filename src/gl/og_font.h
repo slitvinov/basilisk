@@ -4,8 +4,6 @@
 #  include <GL/gl.h>
 #endif
 
-#include <stddef.h>
-
 /*
  * The stroke font structures
  */
