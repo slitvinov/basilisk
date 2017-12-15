@@ -34,6 +34,15 @@ or
 OPENGLIBS = -lfb_glx -lGLU -lGLEW -lGL -lX11
 ~~~
 
+For a macOS system use:
+
+~~~bash
+OPENGLIBS = -L/opt/local/lib/ -lfb_osmesa -lGLU -lOSMesa
+~~~
+
+For OS X 10.9 and above, you may seen some warning about deprecated function. 
+Do not worry, those are just some warning, they are not errors.
+
 See [config.gcc]() for an example. Once this variable is defined in
 *config*, the Basilisk servers can be compiled using:
 

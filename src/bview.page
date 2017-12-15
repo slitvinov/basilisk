@@ -92,10 +92,10 @@ fifo=`mktemp -u -t bview.XXXXXX`
 mkfifo $fifo
 if test -z "$remote"; then
     bview-server$dimension $args < $fifo | \
-	python $BASILISK/bview-client.py > $fifo &
+	python2.7 $BASILISK/bview-client.py > $fifo &
 else
     ssh $remote bview-server$dimension $args < $fifo | \
-	python $BASILISK/bview-client.py > $fifo &
+	python2.7 $BASILISK/bview-client.py > $fifo &
 fi
 pids=$!
 

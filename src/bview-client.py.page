@@ -12,6 +12,33 @@ A Basilisk View client running on the local system then sends
 "commands" to the server and receives in return a stream of PPM images
 containing the updated views.
 
+This work either on debian-like system or on macOS, with python 2.7. However,
+for macOS user, you should pay attention to the Tkinter package. To see if
+Tkinter is correctly installed on your system, do:
+
+~~~bash
+python -m Tkinter
+~~~
+
+If a window pop up with a clic button, then it works. Else, if you get an error
+message saying that Tkinter may not be configure for your system, or if there 
+is no module named Tkinter, you should install it.
+
+It is recommanded to reinstall python as well.
+
+ - For [python 2.7](https://www.python.org/downloads/release/python-2714/)
+
+ - For [Tkinter](https://www.python.org/download/mac/tcltk/)
+
+You may also need to install the module PIL (or pillow). For that, do on your
+terminal:
+
+~~~bash
+sudo easy_install pip
+pip install pillow
+~~~
+
+
 The commands are just function calls, sent as a stream of text by the
 client, using the same syntax as for the
 [*load()*](view.h#load-read-drawing-commands-from-a-file-or-buffer)
@@ -66,7 +93,7 @@ sudo apt-get install python-pil.imagetk
 from Tkinter import *
 from PIL import Image, ImageTk
 from threading import Thread, Lock
-from sys import stdin, stdout
+from sys import stdin, stdout, platform
 from os import fdopen, devnull
 from time import sleep, time
 from StringIO import StringIO
@@ -280,11 +307,18 @@ class BCanvas (Canvas):
         self.bind ("<ButtonRelease-2>", self.button_release)
         self.bind ("<ButtonRelease-3>", self.button_release)
         self.bind ("<B1-Motion>", self.trackball)
-        self.bind ("<B2-Motion>", self.zoom)
-        self.bind ("<B3-Motion>", self.move)
+        if platform == "linux" or platform == "linux2":
+            self.bind ("<B2-Motion>", self.zoom)
+            self.bind ("<B3-Motion>", self.move)
+        elif platform == "darwin":
+            self.bind ("<B3-Motion>", self.zoom)
+            self.bind ("<B2-Motion>", self.move)
         self.bind ("<MouseWheel>", self.zoom_wheel)
-        self.bind ("<Button-4>", self.zoomin)
-        self.bind ("<Button-5>", self.zoomout)
+        if platform == "linux" or platform == "linux2":
+            self.bind ("<Button-4>", self.zoomin)
+            self.bind ("<Button-5>", self.zoomout)   
+        elif platform == "darwin":
+            self.bind("<MouseWheel>", self.zoom)         
         self.pack (fill = BOTH, expand = 1)
         self.bind ("<Configure>", self.configure)
 

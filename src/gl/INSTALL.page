@@ -19,8 +19,6 @@ cd $BASILISK/gl
 make libglutils.a libfb_osmesa.a
 ~~~
 
-to compile the libraries provided by Basilisk.
-
 2. Using graphics-acceleration hardware: if a graphics card is
 installed on the system, this can be used to provide faster OpenGL
 graphics. libGLU, libGLEW, libGL and libX11 are required.
