@@ -6,21 +6,19 @@ if test -z "$AVCONV"; then
 fi
 
 if test -z "$AVCONV"; then
-    echo "ppm2mp4: warning: could not find 'avconv' or 'ffmpeg'" > /dev/stderr
-    echo "ppm2mp4: the output will just be concatenated PPM files" \
+    echo "ppm2ogv: warning: could not find 'avconv' or 'ffmpeg'" > /dev/stderr
+    echo "ppm2ogv: the output will just be concatenated PPM files" \
 	> /dev/stderr
     command=cat
     log=/dev/null
 else
-    # -crf 18 low compression/high quality, 28 high compression/low quality
-    # see https://trac.ffmpeg.org/wiki/Encode/H.264
     # -r 15  '15 frames/sec'
     if test -d "$TMPDIR" ; then
-	log=`mktemp $TMPDIR/ppm2mp4.XXXXXX`
-	out=`mktemp $TMPDIR/ppm2mp4.XXXXXX`
+	log=`mktemp $TMPDIR/ppm2ogv.XXXXXX`
+	out=`mktemp $TMPDIR/ppm2ogv.XXXXXX`
     else
-	log=`mktemp /tmp/ppm2mp4.XXXXXX`
-	out=`mktemp /tmp/ppm2mp4.XXXXXX`
+	log=`mktemp /tmp/ppm2ogv.XXXXXX`
+	out=`mktemp /tmp/ppm2ogv.XXXXXX`
     fi
     while test $# -gt 0; do
 	case $1 in
@@ -28,7 +26,7 @@ else
 	esac
 	shift
     done
-    command="$AVCONV -f image2pipe -vcodec ppm $rate -i - -c:v libx264 -preset slow -crf 18 -vf format=yuv420p -y -f mp4"
+    command="$AVCONV -f image2pipe -vcodec ppm $rate -i - -codec:v libtheora -qscale:v 7 -y -f ogg"
     while test $# -gt 0; do
 	case $1 in
 	    -r) shift ;;
