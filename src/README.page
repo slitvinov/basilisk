@@ -129,6 +129,7 @@ $$
 \phi\mathbf{n}\delta_s
 $$
     + [Surface tension](tension.h)
+    + [Reduced gravity](reduced.h)
 * [Reaction--Diffusion](diffusion.h)
 $$ 
 \theta\partial_tf = \nabla\cdot(D\nabla f) + \beta f + r

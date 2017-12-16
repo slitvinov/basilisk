@@ -483,3 +483,136 @@ cstats curvature (struct Curvature p)
 
   return s;
 }
+
+/**
+# Position of an interface
+
+This is similar to curvature but this time for the position of the
+interface, defined as
+$$
+pos = \mathbf{G}\cdot(\mathbf{x} - \mathbf{Z})
+$$
+with $\mathbf{G}$ and $\mathbf{Z}$ two vectors and $\mathbf{x}$ the
+coordinates of the interface.
+
+This is defined only in interfacial cells. In all the other cells it
+takes the value *nodata*.
+
+We first need a function to compute the position $\mathbf{x}$ of an
+interface. For accuracy, we first try to use height functions. */
+
+foreach_dimension()
+static double pos_x (Point point, vector h, coord * G, coord * Z) {
+  if (h.x[] == nodata)
+    return nodata;
+  coord o = {x, y, z};
+  o.x += height(h.x[])*Delta;
+  double pos = 0.;
+  foreach_dimension()
+    pos += (o.x - Z->x)*G->x;
+  return pos;
+}
+
+/**
+We now need to choose one of the $x$, $y$ or $z$ height functions to
+compute the position. This is done by the function below which returns
+the HF position given a volume fraction field *f*, a height function
+field *h* and vectors *G* and *Z*. */
+
+static double height_position (Point point, scalar f, vector h,
+			       coord * G, coord * Z)
+{
+
+  /**
+  We first define pairs of normal coordinates *n* (computed by simple
+  differencing of *f*) and corresponding HF position function *pos*
+  (defined above). */
+
+  typedef struct {
+    double n;
+    double (* pos) (Point, vector, coord *, coord *);
+  } NormPos;
+  struct { NormPos x, y, z; } n;
+  foreach_dimension()
+    n.x.n = f[1] - f[-1], n.x.pos = pos_x;
+  
+  /**
+  We sort these pairs in decreasing order of $|n|$. */
+  
+  if (fabs(n.x.n) < fabs(n.y.n))
+    swap (NormPos, n.x, n.y);
+#if dimension == 3
+  if (fabs(n.x.n) < fabs(n.z.n))
+    swap (NormPos, n.x, n.z);
+  if (fabs(n.y.n) < fabs(n.z.n))
+    swap (NormPos, n.y, n.z);
+#endif
+
+  /**
+  We try each position function in turn. */
+
+  double pos = nodata;
+  foreach_dimension()
+    if (pos == nodata)
+      pos = n.x.pos (point, h, G, Z);
+
+  return pos;
+}
+
+/**
+The position() function fills field *pos* with
+$$
+\mathbf{G}\cdot(\mathbf{x} - \mathbf{Z})
+$$
+with $\mathbf{x}$ the position of the interface defined by $f$.
+
+If *add* is *true*, the position is added to *pos*. */
+
+struct Position {
+  scalar f, pos;
+  coord G, Z;
+  bool add;
+};
+
+void position (struct Position p)
+{
+  scalar f = p.f, pos = p.pos;
+  coord * G = &p.G, * Z = &p.Z;
+
+  /**
+  On trees we set the prolongation and restriction functions for
+  the position. */
+  
+#if TREE
+  pos.refine = pos.prolongation = curvature_prolongation;
+  pos.restriction = curvature_restriction;
+#endif
+  
+  vector h[];
+  heights (f, h);
+  foreach() {
+    if (interfacial (point, f)) {
+      double hp = height_position (point, f, h, G, Z);
+      if (hp == nodata) {
+
+	/**
+	If the height function is not defined, we use the centroid of
+	the reconstructed VOF interface. */
+	
+	coord n = mycs (point, f), o = {x,y,z}, c;
+	double alpha = plane_alpha (f[], n);
+	plane_area_center (n, alpha, &c);
+	hp = 0.;
+	foreach_dimension()
+	  hp += (o.x + Delta*c.x - Z->x)*G->x;
+      }
+      if (p.add)
+	pos[] += hp;
+      else
+	pos[] = hp;
+    }
+    else
+      pos[] = nodata;
+  }
+  boundary ({pos});  
+}
