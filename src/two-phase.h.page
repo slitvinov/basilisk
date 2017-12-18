@@ -17,16 +17,21 @@ double rho1 = 1., mu1 = 0., rho2 = 1., mu2 = 0.;
 
 /**
 Auxilliary fields are necessary to define the (variable) specific
-volume $\alpha=1/\rho$ and average viscosity $\mu$ (on faces) as well
-as the cell-centered density. */
+volume $\alpha=1/\rho$ as well as the cell-centered density. */
 
-face vector alphav[], muv[];
+face vector alphav[];
 scalar rhov[];
 
 event defaults (i = 0) {
   alpha = alphav;
   rho = rhov;
-  mu = muv;
+
+  /**
+  If the viscosity is non-zero, we need to allocate the face-centered
+  viscosity field. */
+  
+  if (mu1 || mu2)
+    mu = new face vector;
 }
 
 /**
@@ -83,7 +88,10 @@ event properties (i++) {
   foreach_face() {
     double ff = (sf[] + sf[-1])/2.;
     alphav.x[] = fm.x[]/rho(ff);
-    muv.x[] = fm.x[]*mu(ff);
+    if (mu1 || mu2) {
+      face vector muv = mu;
+      muv.x[] = fm.x[]*mu(ff);
+    }
   }
   foreach()
     rhov[] = cm[]*rho(sf[]);
