@@ -149,6 +149,12 @@ reversed.tst: reversed.ctst
 
 rotate.tst: rotate.ctst
 
+rt.tst: rt-reduced.tst
+
+rt-reduced.c: rt.c
+	ln -s rt.c rt-reduced.c
+rt-reduced.tst: CFLAGS += -DREDUCED=1
+
 taylor-green-all-mach.c: taylor-green.c
 	ln -s taylor-green.c taylor-green-all-mach.c 
 taylor-green-all-mach.tst: taylor-green-all-mach.s

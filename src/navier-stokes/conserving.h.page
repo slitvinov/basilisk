@@ -5,11 +5,61 @@ This file implements momentum-conserving VOF advection of the velocity
 components for the [two-phase](/src/two-phase.h) Navier--Stokes
 solver.
 
-We first switch-off the default advection scheme of the [centered
+On trees, we first define refinement and restriction functions which
+guarantee conservation of each component of the total momentum. Note
+that these functions do not guarantee conservation of momentum for
+each phase. */
+
+#if TREE
+static void momentum_refine (Point point, scalar u) {
+  refine_bilinear (point, u);
+  double rhou = 0.;
+  foreach_child()
+    rhou += rho(f[])*u[];
+  double du = u[] - rhou/((1 << dimension)*rho(f[]));
+  foreach_child()
+    u[] += du;
+}
+
+static void momentum_restriction (Point point, scalar u)
+{
+  restriction_average (point, u);
+  double rhou = 0.;
+  foreach_child()
+    rhou += rho(f[])*u[];
+  double du = u[] - rhou/((1 << dimension)*rho(f[]));
+  u[] -= du;
+}
+#endif
+
+/**
+We switch-off the default advection scheme of the [centered
 solver](centered.h). */
 
 event defaults (i = 0) {
   stokes = true;
+
+  /**
+  On trees, the refinement and restriction functions above rely on the
+  volume fraction field *f* being refined/restricted before the
+  components of velocity. To ensure this, we move *f* to the front of
+  the field list (*all*). */
+  
+#if TREE
+  assert (all[f.i].i == f.i);
+  for (int i = f.i; i >= 2; i--)
+    all[i] = all[i-1];
+  all[1] = f;
+
+  /**
+  We then set the refinement and restriction functions for the
+  components of the velocity field. */
+  
+  foreach_dimension() {
+    u.x.refine = momentum_refine;
+    u.x.restriction = momentum_restriction;
+  }
+#endif
 }
 
 /**
@@ -31,18 +81,18 @@ static double boundary_q2_x (Point neighbor, Point point, scalar q2)
 }
 
 /**
-Similarly, on trees we need refinement/prolongation functions which
-also follow this definition. */
+Similarly, on trees we need prolongation functions which also follow
+this definition. */
 
 #if TREE
 foreach_dimension()
-static void refine_q1_x (Point point, scalar q1) {
+static void prolongation_q1_x (Point point, scalar q1) {
   foreach_child()
     q1[] = clamp(f[],0,1)*rho1*u.x[];
 }
 
 foreach_dimension()
-static void refine_q2_x (Point point, scalar q2) {
+static void prolongation_q2_x (Point point, scalar q2) {
   foreach_child()
     q2[] = (1. - clamp(f[],0,1))*rho2*u.x[];
 }
@@ -62,6 +112,9 @@ event vof (i++) {
   functions. */
   
   vector q1[], q2[];
+  for (scalar s in {q1,q2})
+    foreach_dimension()
+      s.v.x.i = -1; // not a vector
   for (int i = 0; i < nboundary; i++)
     foreach_dimension() {
       q1.x.boundary[i] = boundary_q1_x;
@@ -69,8 +122,8 @@ event vof (i++) {
     }
 #if TREE
   foreach_dimension() {
-    q1.x.refine = q1.x.prolongation = refine_q1_x;
-    q2.x.refine = q2.x.prolongation = refine_q2_x;
+    q1.x.prolongation = prolongation_q1_x;
+    q2.x.prolongation = prolongation_q2_x;
   }
 #endif
 

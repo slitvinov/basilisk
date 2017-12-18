@@ -91,7 +91,7 @@ $$
 $$
 
 * [Two-phase interfacial flows](two-phase.h)
-* [Momentum conservation option](navier-stokes/momentum.h)
+    + [Momentum conservation option](navier-stokes/conserving.h)
 * [Momentum-conserving two-phase interfacial flows](momentum.h)
 
 ## Electrohydrodynamics
