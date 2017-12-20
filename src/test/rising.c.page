@@ -9,7 +9,8 @@ page](http://www.featflow.de/en/benchmarks/cfdbenchmarking/bubble.html)).
 
 We solve the incompressible, variable-density, Navier--Stokes
 equations with interfaces and surface tension. We can solve either the
-axisymmetric or planar version. */
+axisymmetric or planar version. We can used standard or "reduced"
+gravity. */
 
 #if AXIS
 # include "axi.h" // fixme: does not run with -catch
@@ -17,6 +18,9 @@ axisymmetric or planar version. */
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
 #include "tension.h"
+#if REDUCED
+# include "reduced.h"
+#endif
 
 #ifndef LEVEL
 # define LEVEL 8
@@ -62,6 +66,10 @@ int main() {
   improve the accuracy. */
   
   TOLERANCE = 1e-4;
+#if REDUCED
+  G.x = -0.98;
+  Z.x = 1.;
+#endif
   run();
 }
 
@@ -81,11 +89,13 @@ event init (t = 0) {
 /**
 We add the acceleration of gravity. */
 
+#if !REDUCED
 event acceleration (i++) {
   face vector av = a;
   foreach_face(x)
     av.x[] -= 0.98;
 }
+#endif
 
 /**
 A utility function to check the convergence of the multigrid

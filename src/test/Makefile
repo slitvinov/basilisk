@@ -143,16 +143,18 @@ rising2.c: rising.c
 rising2.tst: rising.s
 rising2.tst: CFLAGS += -DCASE2=1
 
-rising.tst: rising2.tst
+rising-reduced.c: rising.c
+	ln -s rising.c rising-reduced.c
+rising-reduced.tst: rising.s
+rising-reduced.tst: CFLAGS += -DREDUCED=1
 
 reversed.tst: reversed.ctst
 
 rotate.tst: rotate.ctst
 
-rt.tst: rt-reduced.tst
-
 rt-reduced.c: rt.c
 	ln -s rt.c rt-reduced.c
+rt-reduced.tst: rt.s
 rt-reduced.tst: CFLAGS += -DREDUCED=1
 
 taylor-green-all-mach.c: taylor-green.c
