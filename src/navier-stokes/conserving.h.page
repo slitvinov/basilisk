@@ -15,22 +15,20 @@ static void momentum_refine (Point point, scalar u) {
   refine_bilinear (point, u);
   double rhou = 0.;
   foreach_child()
-    rhou += rho(f[])*u[];
-  double du = u[] - rhou/((1 << dimension)*rho(f[]));
+    rhou += cm[]*rho(f[])*u[];
+  double du = u[] - rhou/((1 << dimension)*cm[]*rho(f[]));
   foreach_child()
     u[] += du;
 }
 
 static void momentum_restriction (Point point, scalar u)
 {
-  restriction_average (point, u);
   double rhou = 0.;
   foreach_child()
-    rhou += rho(f[])*u[];
-  double du = u[] - rhou/((1 << dimension)*rho(f[]));
-  u[] -= du;
+    rhou += cm[]*rho(f[])*u[];
+  u[] = rhou/((1 << dimension)*cm[]*rho(f[]));
 }
-#endif
+#endif // TREE
 
 /**
 We switch-off the default advection scheme of the [centered
@@ -39,13 +37,14 @@ solver](centered.h). */
 event defaults (i = 0) {
   stokes = true;
 
+#if TREE
+
   /**
   On trees, the refinement and restriction functions above rely on the
   volume fraction field *f* being refined/restricted before the
   components of velocity. To ensure this, we move *f* to the front of
   the field list (*all*). */
   
-#if TREE
   assert (all[f.i].i == f.i);
   for (int i = f.i; i >= 2; i--)
     all[i] = all[i-1];
@@ -56,7 +55,7 @@ event defaults (i = 0) {
   components of the velocity field. */
   
   foreach_dimension() {
-    u.x.refine = momentum_refine;
+    u.x.refine = u.x.prolongation = momentum_refine;
     u.x.restriction = momentum_restriction;
   }
 #endif
