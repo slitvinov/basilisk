@@ -82,13 +82,15 @@ It is recommanded to reinstall python as well. See:
 * [python 2.7](https://www.python.org/downloads/release/python-2714/)
 * [Tkinter](https://www.python.org/download/mac/tcltk/)
 
-You may also need to install the PIL (or Pillow) module PIL. This can
+You may also need to install the PIL (or Pillow) module. This can
 be done using:
 
 ~~~bash
 sudo easy_install pip
 pip install pillow
 ~~~
+
+# Implementation
 """
 
 from Tkinter import *
@@ -133,9 +135,6 @@ class BCanvas (Canvas):
     def zoomout (self, event):
         self.draw ("view (fov = +0.01, relative = 1);\n")
 
-    def zoom_wheel (self, event):
-        print event.delta
-
     def move (self, event):
         self.draw ("view (tx = %g, ty = %g, relative = 1);\n" %
                    ((event.x - self.beginx)/float(self.winfo_width()),
@@ -164,10 +163,8 @@ class BCanvas (Canvas):
         if c == "'<'":
             if self.refresh > 1:
                 self.refresh = self.refresh - 1
-                print self.refresh
         elif c == "'>'":
             self.refresh = self.refresh + 1
-            print self.refresh
         elif c == "'-'":
             self.draw ("view (fov =  0.02, relative = 1);\n")
         elif c == "'+'" or c == "'='":
@@ -308,18 +305,15 @@ class BCanvas (Canvas):
         self.bind ("<ButtonRelease-2>", self.button_release)
         self.bind ("<ButtonRelease-3>", self.button_release)
         self.bind ("<B1-Motion>", self.trackball)
-        if platform == "linux" or platform == "linux2":
-            self.bind ("<B2-Motion>", self.zoom)
-            self.bind ("<B3-Motion>", self.move)
-        elif platform == "darwin":
+        if platform == "darwin":
             self.bind ("<B3-Motion>", self.zoom)
             self.bind ("<B2-Motion>", self.move)
-        self.bind ("<MouseWheel>", self.zoom_wheel)
-        if platform == "linux" or platform == "linux2":
+            self.bind ("<MouseWheel>", self.zoom)
+        else:
+            self.bind ("<B2-Motion>", self.zoom)
+            self.bind ("<B3-Motion>", self.move)
             self.bind ("<Button-4>", self.zoomin)
-            self.bind ("<Button-5>", self.zoomout)   
-        elif platform == "darwin":
-            self.bind("<MouseWheel>", self.zoom)         
+            self.bind ("<Button-5>", self.zoomout)
         self.pack (fill = BOTH, expand = 1)
         self.bind ("<Configure>", self.configure)
 
