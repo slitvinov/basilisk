@@ -68,7 +68,7 @@ int main (int argc, char * argv[])
     }
     else {
       if (!restore (file = argv[i], list = all)) {
-	fprintf (stderr, "bview-server: could not restore from '%s'\n", argv[i]);
+	fprintf (ferr, "bview-server: could not restore from '%s'\n", argv[i]);
 	exit (1);
       }
       fields_stats();

@@ -1,1 +1,5 @@
-python $BASILISK/bview-client.py > /dev/null
+if test -z "$DISPLAY"; then
+   cat > /dev/null
+else
+   python $BASILISK/bview-client.py > /dev/null
+fi

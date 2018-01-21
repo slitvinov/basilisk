@@ -66,6 +66,12 @@ The required dependencies can be installed easily using:
 sudo apt-get install python-pil.imagetk
 ~~~
 
+or for older Debian versions ($\leq 7$):
+
+~~~bash
+sudo apt-get install python-imaging
+~~~
+
 ### Mac OSX
 
 To see if Tkinter is correctly installed on your system, do:
