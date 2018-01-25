@@ -24,7 +24,7 @@ struct Viscosity {
 
 static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
 {
-  struct Viscosity * p = data;
+  struct Viscosity * p = (struct Viscosity *) data;
   (const) face vector mu = p->mu;
   (const) scalar rho = p->rho;
   double dt = p->dt;
@@ -87,7 +87,7 @@ static void relax_viscosity (scalar * a, scalar * b, int l, void * data)
 static double residual_viscosity (scalar * a, scalar * b, scalar * resl, 
 				  void * data)
 {
-  struct Viscosity * p = data;
+  struct Viscosity * p = (struct Viscosity *) data;
   (const) face vector mu = p->mu;
   (const) scalar rho = p->rho;
   double dt = p->dt;

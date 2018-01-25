@@ -57,7 +57,7 @@ void input_pgm (struct InputPGM p)
     exit (1);
   }
   if (maxval < 256) {
-    unsigned char * a = malloc (width*height);
+    unsigned char * a = qmalloc (width*height, unsigned char);
     size_t n = 0;
     if (binary)
       n = fread (a, 1, width*height, p.fp);
@@ -80,7 +80,7 @@ void input_pgm (struct InputPGM p)
     free (a);
   }
   else {
-    unsigned short * a = malloc (2*width*height);
+    unsigned short * a = qmalloc (width*height, unsigned short);
     size_t n = 0;
     if (binary)
       n = fread (a, 2, width*height, p.fp);
@@ -121,7 +121,7 @@ static void next_char (FILE * fp, int target)
 static int next_string (FILE * fp, const char * target)
 {
   int slen = strlen (target), para = 0;
-  char * s = malloc (slen + 1);
+  char s[slen + 1];
   s[slen] = '\0';
   int len = 0, c = fgetc (fp);
   while (c != EOF && len < slen) {
@@ -142,7 +142,6 @@ static int next_string (FILE * fp, const char * target)
   }
   if (strcmp (s, target))
     c = -1;
-  free (s);
   return c;
 }
 
@@ -189,12 +188,12 @@ void input_gfs (struct OutputGfs p)
 
   next_char (p.fp, '{');
   
-  char * s = malloc (1);
+  char * s = qmalloc (1, char);
   int len = 0;
   int c = fgetc(p.fp);
   while (c != EOF && c != '}') {
     s[len++] = c;
-    s = realloc (s, len + 1);
+    qrealloc (s, len + 1, char);
     s[len] = '\0';
     c = fgetc(p.fp);
   }
@@ -398,7 +397,7 @@ void input_grd (struct InputGRD p)
     p.nodatavalue = ndv;
 
   // read the data
-  double * value = malloc (sizeof(double)*nx*ny);
+  double value[nx*ny];
   for (int i = ny - 1; i >= 0; i--)
     for (int j = 0 ; j < nx; j++)
       fscanf (p.fp, "%lf ", &value[j + i*nx]);
@@ -449,7 +448,6 @@ void input_grd (struct InputGRD p)
 	     "input_grd(): Warning: Raster data is not covering all"
 	     " the simulation area\n");
 
-  free (value);
   if (opened)
     fclose (p.fp);
 }

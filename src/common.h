@@ -95,7 +95,7 @@ static int pmfunc_index (const char * func, const char * file, int line)
     if (p->line == line && !strcmp(func, p->func) && !strcmp(file, p->file))
       return p->id;
   pmfuncn++;
-  pmfuncs = sysrealloc (pmfuncs, pmfuncn*sizeof(pmfunc));
+  pmfuncs = (pmfunc *) sysrealloc (pmfuncs, pmfuncn*sizeof(pmfunc));
   p = &pmfuncs[pmfuncn - 1];
   memset (p, 0, sizeof(pmfunc));
   p->func = systrdup(func);
@@ -193,7 +193,7 @@ static void * pmfunc_free (void * ptr, char c)
 static void * pmalloc (size_t size,
 		       const char * func, const char * file, int line)
 {
-  return pmfunc_alloc (sysmalloc (sizeof(pmdata) + size),
+  return pmfunc_alloc ((pmdata *) sysmalloc (sizeof(pmdata) + size),
 		       size, func, file, line, '+');
 }
 
@@ -207,8 +207,8 @@ static void * pcalloc (size_t nmemb, size_t size,
 static void * prealloc (void * ptr, size_t size,
 			const char * func, const char * file, int line)
 {
-  return pmfunc_alloc (sysrealloc (pmfunc_free(ptr, '<'),
-				   sizeof(pmdata) + size),
+  return pmfunc_alloc ((pmdata *) sysrealloc (pmfunc_free(ptr, '<'),
+					      sizeof(pmdata) + size),
 		       size, func, file, line, '>');
 }
 
@@ -221,7 +221,7 @@ static void pfree (void * ptr,
 static char * pstrdup (const char * s,
 		       const char * func, const char * file, int line)
 {
-  char * d = pmalloc (strlen(s) + 1, func, file, line);
+  char * d = (char *) pmalloc (strlen(s) + 1, func, file, line);
   return strcpy (d, s);
 }
 
@@ -233,7 +233,7 @@ static int pmaxsort (const void * a, const void * b) {
 @endif
 
 static int ptotalsort (const void * a, const void * b) {
-  const pmfunc * p1 = a, * p2 = b;
+  const pmfunc * p1 = (const pmfunc *) a, * p2 = (const pmfunc *) b;
   return p1->total < p2->total;
 }
 
@@ -317,6 +317,10 @@ void pmuntrace (void)
 @ define pstrdup(s,func,file,line)    strdup(s)
 @endif // !MTRACE
 
+#define qrealloc(p, size, type) p = (type *) realloc (p, (size)*sizeof(type))
+#define qmalloc(size, type) ((type *) malloc ((size)*sizeof(type)))
+#define qcalloc(size, type) ((type *) calloc (size, sizeof(type)))
+
 // Arrays
 
 typedef struct {
@@ -326,7 +330,7 @@ typedef struct {
 
 Array * array_new()
 {
-  Array * a = malloc (sizeof(Array));
+  Array * a = qmalloc (1, Array);
   a->p = NULL;
   a->max = a->len = 0;
   return a;
@@ -888,7 +892,7 @@ int list_len (scalar * list)
 scalar * list_append (scalar * list, scalar s)
 {
   int len = list_len (list);
-  list = realloc (list, sizeof (scalar)*(len + 2));
+  qrealloc (list, len + 2, scalar);
   list[len] = s;
   list[len + 1].i = -1;
   return list;
@@ -947,7 +951,7 @@ int vectors_len (vector * list)
 vector * vectors_append (vector * list, vector v)
 {
   int len = vectors_len (list);
-  list = realloc (list, sizeof (vector)*(len + 2));
+  qrealloc (list, len + 2, vector);
   list[len] = v;
   list[len + 1] = (vector){{-1}};
   return list;
@@ -1000,7 +1004,7 @@ int tensors_len (tensor * list)
 tensor * tensors_append (tensor * list, tensor t)
 {
   int len = tensors_len (list);
-  list = realloc (list, sizeof (tensor)*(len + 2));
+  qrealloc (list, len + 2, tensor);
   list[len] = t;
   list[len + 1] = (tensor){{{-1}}};
   return list;
@@ -1113,7 +1117,7 @@ FILE * qpopen (const char * command, const char * type)
     FILE ** i = qpopen_pipes;
     int n = 0;
     while (i && *i) { n++; i++; }
-    qpopen_pipes = realloc (qpopen_pipes, sizeof(FILE *)*(n + 2));
+    qrealloc (qpopen_pipes, n + 2, FILE *);
     qpopen_pipes[n] = fp;
     qpopen_pipes[n+1] = NULL;
   }
@@ -1159,8 +1163,8 @@ FILE * lfopen (const char * name, const char * mode)
 
 void * matrix_new (int n, int p, size_t size)
 {
-  void ** m = malloc (n*sizeof (void *));
-  char * a = malloc (n*p*size);
+  void ** m = qmalloc (n, void *);
+  char * a = qmalloc (n*p*size, char);
   for (int i = 0; i < n; i++)
     m[i] = a + i*p*size;
   return m;

@@ -103,7 +103,7 @@ pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
   foreach() {
     nt[] = 0;
     if (surface[]) {
-      coord ** p = double_to_pointer (surface[]);
+      coord ** p = (coord **) double_to_pointer (surface[]);
       while (*p)
 	nt[]++, p++;
     }

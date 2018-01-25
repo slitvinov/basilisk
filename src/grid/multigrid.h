@@ -343,7 +343,7 @@ foreach_vertex() {
 
 void reset (void * alist, double val)
 {
-  scalar * list = alist;
+  scalar * list = (scalar *) alist;
   Point p;
   p.level = depth(); p.n = 1 << p.level;
   for (; p.level >= 0; p.n /= 2, p.level--)
@@ -673,14 +673,14 @@ int log_base2 (int n) {
 void init_grid (int n)
 {
   free_grid();
-  Multigrid * m = malloc (sizeof(Multigrid));
+  Multigrid * m = qmalloc (1, Multigrid);
   grid = (Grid *) m;
   grid->depth = grid->maxdepth = log_base2(n);
   N = 1 << depth();
   // mesh size
   grid->n = grid->tn = 1 << dimension*depth();
   // box boundaries
-  Boundary * b = calloc (1, sizeof (Boundary));
+  Boundary * b = qcalloc (1, Boundary);
   b->level = box_boundary_level;
   add_boundary (b);
 #if _MPI
@@ -689,16 +689,16 @@ void init_grid (int n)
 #else
   // periodic boundaries
   foreach_dimension() {
-    Boundary * b = calloc (1, sizeof (Boundary));
+    Boundary * b = qcalloc (1, Boundary);
     b->level = periodic_boundary_level_x;
     add_boundary (b);
   }
 #endif
   // allocate grid
-  m->d = malloc(sizeof(Point *)*(depth() + 1));
+  m->d = (char **) malloc(sizeof(Point *)*(depth() + 1));
   for (int l = 0; l <= depth(); l++) {
     size_t len = _size(l)*datasize;
-    m->d[l] = malloc (len);
+    m->d[l] = (char *) malloc (len);
     /* trash the data just to make sure it's either explicitly
        initialised or never touched */
     double * v = (double *) m->d[l];
@@ -714,7 +714,7 @@ void realloc_scalar (void)
   size_t oldatasize = datasize - sizeof(double);
   for (int l = 0; l <= depth(); l++) {
     size_t len = _size(l);
-    p->d[l] = realloc (p->d[l], len*datasize);
+    qrealloc (p->d[l], len*datasize, char);
     char * data = p->d[l] + (len - 1)*oldatasize;
     for (int i = len - 1; i > 0; i--, data -= oldatasize)
       memmove (data + i*sizeof(double), data, oldatasize);  

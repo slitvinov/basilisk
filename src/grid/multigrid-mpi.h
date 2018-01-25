@@ -15,7 +15,7 @@ static BUF snd_x (int i, int dst, int tag, int l, scalar * list,
     return NULL;
   int nl = (1 << l) + 2*GHOSTS;
   size_t size = pow(nl, dimension - 1)*list_len(list)*GHOSTS*sizeof(double);
-  double * buf = malloc (size), * b = buf;
+  double * buf = (double *) malloc (size), * b = buf;
   foreach_slice_x (i, i + GHOSTS, l)
     for (scalar s in list)
       *b++ = s[];
@@ -84,7 +84,7 @@ static void mpi_boundary_destroy (Boundary * b)
 
 Boundary * mpi_boundary_new()
 {
-  MpiBoundary * m = calloc (1, sizeof (MpiBoundary));
+  MpiBoundary * m = qcalloc (1, MpiBoundary);
   MPI_Dims_create (npe(), dimension, mpi_dims);
   MPI_Cart_create (MPI_COMM_WORLD, dimension,
 		   mpi_dims, Periods, 0, &m->cartcomm);

@@ -50,7 +50,7 @@ scalar new_scalar (const char * name)
   // need to allocate a new slot
   assert (nvar < _NVARMAX);
   datasize += sizeof(double); nvar++;
-  _attribute = realloc (_attribute, nvar*sizeof (_Attributes));
+  qrealloc (_attribute, nvar, _Attributes);
   memset (&_attribute[nvar-1], 0, sizeof (_Attributes));
   s = (scalar){nvar - 1};
   realloc_scalar(); // allocate extra space on the grid
@@ -142,7 +142,7 @@ void init_const_scalar (scalar s, const char * name, double val)
 {
   if (s.i - _NVARMAX >= nconst) {
     nconst = s.i - _NVARMAX + 1;
-    _constant = realloc (_constant, nconst*sizeof (double));
+    qrealloc (_constant, nconst, double);
   }
   _constant[s.i - _NVARMAX] = val;
 }
@@ -246,7 +246,7 @@ void free_solver_func_add (free_solver_func func)
 void free_solver()
 {
   if (free_solver_funcs) {
-    free_solver_func * a = free_solver_funcs->p;
+    free_solver_func * a = (free_solver_func *) free_solver_funcs->p;
     for (int i = 0; i < free_solver_funcs->len/sizeof(free_solver_func); i++)
       a[i] ();
     array_free (free_solver_funcs);
@@ -331,8 +331,10 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   _attribute[s.i] = (const _Attributes){0};
   s.name = pname;
   /* set default boundary conditions */
-  s.boundary = malloc (nboundary*sizeof (void (*)()));
-  s.boundary_homogeneous = malloc (nboundary*sizeof (void (*)()));
+  s.boundary = (double (**)(Point, Point, scalar))
+    malloc (nboundary*sizeof (void (*)()));
+  s.boundary_homogeneous = (double (**)(Point, Point, scalar))
+    malloc (nboundary*sizeof (void (*)()));
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] =
       b < 2*dimension ? default_scalar_bc[b] : symmetry;
@@ -656,9 +658,10 @@ bid new_bid()
 {
   int b = nboundary++;
   for (scalar s in all) {
-    s.boundary = realloc (s.boundary, nboundary*sizeof (void (*)()));
-    s.boundary_homogeneous = realloc (s.boundary_homogeneous,
-				      nboundary*sizeof (void (*)()));
+    s.boundary = (double (**)(Point, Point, scalar))
+      realloc (s.boundary, nboundary*sizeof (void (*)()));
+    s.boundary_homogeneous = (double (**)(Point, Point, scalar))
+      realloc (s.boundary_homogeneous, nboundary*sizeof (void (*)()));
   }
   for (scalar s in all) {
     if (s.v.x.i < 0) // scalar

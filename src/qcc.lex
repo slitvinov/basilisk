@@ -2547,11 +2547,11 @@ void write_event (int i, FILE * fout)
   if (eventarray[i] == 'i')
     fprintf (fout, "%s_array, ", func);
   else
-    fprintf (fout, "((void *)0), ");
+    fprintf (fout, "((int *)0), ");
   if (eventarray[i] == 't')
     fprintf (fout, "%s_array,\n", func);
   else
-    fprintf (fout, "((void *)0),\n");
+    fprintf (fout, "((double *)0),\n");
   fprintf (fout, "    \"%s\", %d, \"%s\"});\n", eventfile[i], 
 	   nolineno ? 0 : eventline[i], eventid[i]);
 }
@@ -2619,7 +2619,7 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	 "  init_solver();\n", fout);
   /* events */
   fprintf (fout,
-	   "  Events = pmalloc (sizeof (Event), __func__, __FILE__, %s);\n"
+	   "  Events = (Event *) pmalloc (sizeof (Event), __func__, __FILE__, %s);\n"
 	   "  Events[0].last = 1;\n", nolineno ? "0" : "__LINE__");
   int last;
   for (last = 0; last <= 1; last++)
@@ -2632,12 +2632,12 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	}
       }
   /* scalar attributes */
-  fprintf (fout, "  _attribute = pcalloc (datasize/sizeof(double), "
+  fprintf (fout, "  _attribute = (_Attributes *) pcalloc (datasize/sizeof(double), "
 	   "sizeof (_Attributes), __func__, __FILE__, %s);\n",
 	   nolineno ? "0" : "__LINE__");
   /* list of all scalars */
   fprintf (fout, 
-	   "  all = pmalloc (sizeof (scalar)*%d,__func__, __FILE__, %s);\n"
+	   "  all = (scalar *) pmalloc (sizeof (scalar)*%d,__func__, __FILE__, %s);\n"
 	   "  for (int i = 0; i < %d; i++)\n"
 	   "    all[i].i = i;\n"
 	   "  all[%d].i = -1;\n"

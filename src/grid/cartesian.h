@@ -73,7 +73,7 @@ foreach_face_generic() {
 
 void reset (void * alist, double val)
 {
-  scalar * list = alist;
+  scalar * list = (scalar *) alist;
   for (int i = 0; i < sq(cartesian->n + 2); i++)
     for (scalar s in list)
       if (!is_constant(s))
@@ -251,10 +251,10 @@ void init_grid (int n)
   if (cartesian && n == cartesian->n)
     return;
   free_grid();
-  Cartesian * p = malloc(sizeof(Cartesian));
+  Cartesian * p = qmalloc (1, Cartesian);
   size_t len = (n + 2)*(n + 2)*datasize;
   p->n = N = n;
-  p->d = malloc (len);
+  p->d = qmalloc (len, char);
   /* trash the data just to make sure it's either explicitly
      initialised or never touched */
   double * v = (double *) p->d;
@@ -263,7 +263,7 @@ void init_grid (int n)
   grid = (Grid *) p;
   reset (all, 0.);
   for (int d = 0; d < nboundary; d++) {
-    BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
+    BoxBoundary * box = qcalloc (1, BoxBoundary);
     box->d = d;
     Boundary * b = (Boundary *) box;
     b->level   = box_boundary_level;
@@ -278,7 +278,7 @@ void realloc_scalar (void)
   Cartesian * p = cartesian;
   size_t oldatasize = datasize - sizeof(double);
   size_t len = (p->n + 2)*(p->n + 2);
-  p->d = realloc (p->d, len*datasize);
+  qrealloc (p->d, len*datasize, char);
   char * data = p->d + (len - 1)*oldatasize;
   for (int i = len - 1; i > 0; i--, data -= oldatasize)
     memmove (data + i*sizeof(double), data, oldatasize);  

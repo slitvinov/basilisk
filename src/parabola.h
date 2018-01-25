@@ -62,7 +62,7 @@ static void parabola_fit_init (ParabolaFit * p, coord o, coord m)
   int n = 6;
 # endif
 #endif /* 3D */
-  p->M = matrix_new (n, n, sizeof(double));  
+  p->M = (double **) matrix_new (n, n, sizeof(double));  
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++)
       p->M[i][j] = 0.;

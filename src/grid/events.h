@@ -95,14 +95,14 @@ void event_register (Event event) {
     n++;
   }
   if (parent < 0) {
-    Events = realloc (Events, (n + 2)*sizeof (Event));
+    qrealloc (Events, n + 2, Event);
     Events[n] = event;
     Events[n].next = NULL;
     Events[n + 1].last = true;
     init_event (&Events[n]);
   }
   else {
-    Event * ev = calloc (1, sizeof(Event));
+    Event * ev = qcalloc (1, Event);
     *ev = Events[parent];
     Events[parent] = event;
     Events[parent].next = ev;

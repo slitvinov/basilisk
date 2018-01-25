@@ -158,7 +158,7 @@ void free_grid (void)
 
 void reset (void * alist, double val)
 {
-  scalar * list = alist;
+  scalar * list = (scalar *) alist;
   char * data = cartesian->d;
   for (int i = 0; i < cartesian->n + 2; i++, data += datasize) {
     double * v = (double *) data;
@@ -173,10 +173,10 @@ void init_grid (int n)
   if (cartesian && n == cartesian->n)
     return;
   free_grid();
-  Cartesian * p = malloc(sizeof(Cartesian));
+  Cartesian * p = qmalloc (1, Cartesian);
   size_t len = (n + 2)*datasize;
   p->n = N = n;
-  p->d = malloc (len);
+  p->d = qmalloc (len, char);
   /* trash the data just to make sure it's either explicitly
      initialised or never touched */
   double * v = (double *) p->d;
@@ -186,14 +186,14 @@ void init_grid (int n)
   reset (all, 0.);
   // box boundaries
   for (int d = 0; d < 2; d++) {
-    BoxBoundary * box = calloc (1, sizeof (BoxBoundary));
+    BoxBoundary * box = qcalloc (1, BoxBoundary);
     box->d = d;
     Boundary * b = (Boundary *) box;
     b->level   = box_boundary_level;
     add_boundary (b);
   }
   // periodic boundaries
-  Boundary * b = calloc (1, sizeof (Boundary));
+  Boundary * b = qcalloc (1, Boundary);
   b->level = periodic_boundary_level_x;
   add_boundary (b);
   // mesh size
@@ -204,7 +204,7 @@ void realloc_scalar (void)
 {
   Cartesian * p = cartesian;
   size_t len = (p->n + 2)*datasize;
-  p->d = realloc (p->d, len);
+  qrealloc (p->d, len, char);
   int oldatasize = datasize - sizeof(double);
   char * data = p->d + (p->n + 1)*oldatasize;
   for (int i = p->n + 1; i > 0; i--, data -= oldatasize)

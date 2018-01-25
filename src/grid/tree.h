@@ -138,7 +138,7 @@ static size_t poolsize (size_t depth, size_t size)
 
 static Layer * new_layer (int depth)
 {
-  Layer * l = malloc (sizeof (Layer));
+  Layer * l = qmalloc (1, Layer);
   l->len = _size (depth);
   if (depth == 0)
     l->pool = NULL; // the root layer does not use a pool
@@ -148,7 +148,13 @@ static Layer * new_layer (int depth)
     // 2^dimension children at a time
     l->pool = mempool_new (poolsize (depth, size), (1 << dimension)*size);
   }
-  l->m = calloc (l->len, sizeof (char *));
+#if dimension == 1
+  l->m = qcalloc (l->len, char *);
+#elif dimension == 2
+  l->m = qcalloc (l->len, char **);
+#elif dimension == 3
+  l->m = qcalloc (l->len, char ***);
+#endif
   l->nc = 0;
   return l;
 }
@@ -179,14 +185,20 @@ static bool layer_remove_row (Layer * l, int i)
 #else // dimension != 1
 static void layer_add_row (Layer * l, int i, int j)
 {
+#if dimension == 2
   if (!l->m[i]) {
-    l->m[i] = new_refarray (l->len, sizeof (char *));
+    l->m[i] = (char **) new_refarray (l->len, sizeof (char *));
     l->nc++;
   }
   refarray (l->m[i], l->len, sizeof(char *));
-#if dimension > 2
+#elif dimension == 3
+  if (!l->m[i]) {
+    l->m[i] = (char ***) new_refarray (l->len, sizeof (char **));
+    l->nc++;
+  }
+  refarray (l->m[i], l->len, sizeof(char *));
   if (!l->m[i][j])
-    l->m[i][j] = new_refarray (l->len, sizeof (char *));
+    l->m[i][j] = (char **) new_refarray (l->len, sizeof (char *));
   refarray (l->m[i][j], l->len, sizeof(char *));
 #endif
 }
@@ -249,7 +261,7 @@ static void cache_level_append (CacheLevel * c, Point p)
 {
   if (c->n >= c->nm) {
     c->nm += BSIZE;
-    c->p = realloc (c->p, sizeof (IndexLevel)*c->nm);
+    qrealloc (c->p, c->nm, IndexLevel);
   }
   c->p[c->n].i = p.i;
 #if dimension >= 2
@@ -266,7 +278,7 @@ static void cache_level_shrink (CacheLevel * c)
   if (c->nm > (c->n/BSIZE + 1)*BSIZE) {
     c->nm = (c->n/BSIZE + 1)*BSIZE;
     assert (c->nm > c->n);
-    c->p = realloc (c->p, sizeof (Index)*c->nm);
+    c->p = (IndexLevel *) realloc (c->p, sizeof (Index)*c->nm);
   }
 }
 
@@ -274,7 +286,7 @@ static void cache_append (Cache * c, Point p, unsigned short flags)
 {
   if (c->n >= c->nm) {
     c->nm += BSIZE;
-    c->p = realloc (c->p, sizeof (Index)*c->nm);
+    qrealloc (c->p, c->nm, Index);
   }
   c->p[c->n].i = p.i;
 #if dimension >= 2
@@ -828,7 +840,7 @@ static void update_cache_f (void)
 
 void reset (void * alist, double val)
 {
-  scalar * list = alist;
+  scalar * list = (scalar *) alist;
   Tree * q = tree;
   /* low-level memory management */
   for (int l = 0; l <= depth(); l++) {
@@ -862,7 +874,7 @@ void reset (void * alist, double val)
   for (int i = 0; i <= depth() - a; i++)
     free (q->name[i].p);
   free (q->name);
-  q->name = calloc (depth() + 1, sizeof (CacheLevel));
+  q->name = qcalloc (depth() + 1, CacheLevel);
 }
 @
 
@@ -871,7 +883,7 @@ static void update_depth (int inc)
   Tree * q = tree;
   grid->depth += inc;
   q->L = &(q->L[-1]);
-  q->L = realloc(q->L, sizeof (Layer *)*(grid->depth + 2));
+  qrealloc (q->L, grid->depth + 2, Layer *);
   q->L = &(q->L[1]);
   if (inc > 0)
     q->L[grid->depth] = new_layer (grid->depth);
@@ -892,7 +904,7 @@ static void alloc_children (Point point)
   /* low-level memory management */
   Layer * L = tree->L[point.level + 1];
   size_t len = sizeof(Cell) + datasize;
-  char * b = mempool_alloc0 (L->pool);
+  char * b = (char *) mempool_alloc0 (L->pool);
   for (int k = 0; k < 2; k++) {
     layer_add_row (L, 2*point.i - GHOSTS + k);
     assert (!CHILD(k,0,0));
@@ -903,7 +915,7 @@ static void alloc_children (Point point)
   /* low-level memory management */
   Layer * L = tree->L[point.level + 1];
   size_t len = sizeof(Cell) + datasize;
-  char * b = mempool_alloc0 (L->pool);
+  char * b = (char *) mempool_alloc0 (L->pool);
   for (int k = 0; k < 2; k++) {
     layer_add_row (L, 2*point.i - GHOSTS + k, 0);
     for (int l = 0; l < 2; l++) {
@@ -916,7 +928,7 @@ static void alloc_children (Point point)
   /* low-level memory management */
   Layer * L = tree->L[point.level + 1];
   size_t len = sizeof(Cell) + datasize;
-  char * b = mempool_alloc0 (L->pool);
+  char * b = (char *) mempool_alloc0 (L->pool);
   for (int k = 0; k < 2; k++)
     for (int l = 0; l < 2; l++) {
       layer_add_row (L, 2*point.i - GHOSTS + k, 2*point.j - GHOSTS + l);
@@ -1024,14 +1036,14 @@ void realloc_scalar (void)
   size_t len = _size(0);
   for (int i = 0; i < len; i++)
 #if dimension == 1
-    q->L[0]->m[i] = realloc (q->L[0]->m[i], newlen);
+    qrealloc (q->L[0]->m[i], newlen, char);
 #else
     for (int j = 0; j < len; j++)
 #if dimension == 2
-      q->L[0]->m[i][j] = realloc (q->L[0]->m[i][j], newlen);
+      qrealloc (q->L[0]->m[i][j], newlen, char);
 #else
       for (int k = 0; k < len; k++)
-	q->L[0]->m[i][j][k] = realloc (q->L[0]->m[i][j][k], newlen);
+	qrealloc (q->L[0]->m[i][j][k], newlen, char);
 #endif
 #endif
   /* all other levels */
@@ -1043,7 +1055,7 @@ void realloc_scalar (void)
     for (int i = 0; i < len; i += 2)
       if (L->m[i]) {
 #if dimension == 1
-	char * new = mempool_alloc (L->pool);
+	char * new = (char *) mempool_alloc (L->pool);
 	for (int k = 0; k < 2; k++) {
 	  memcpy (new, L->m[i+k], oldlen);
 	  L->m[i+k] = new;
@@ -1053,7 +1065,7 @@ void realloc_scalar (void)
 	for (int j = 0; j < len; j += 2)
 	  if (L->m[i][j]) {
 #if dimension == 2
-	    char * new = mempool_alloc (L->pool);
+	    char * new = (char *) mempool_alloc (L->pool);
 	    for (int k = 0; k < 2; k++)
 	      for (int o = 0; o < 2; o++) {
 		memcpy (new, L->m[i+k][j+o], oldlen);
@@ -1063,7 +1075,7 @@ void realloc_scalar (void)
 #else // dimension == 3
 	    for (int k = 0; k < len; k += 2)
 	      if (L->m[i][j][k]) {
-		char * new = mempool_alloc (L->pool);
+		char * new = (char *) mempool_alloc (L->pool);
 		for (int l = 0; l < 2; l++)
 		  for (int m = 0; m < 2; m++)
 		    for (int n = 0; n < 2; n++) {
@@ -1562,12 +1574,12 @@ void init_grid (int n)
     n /= 2;
     depth++;
   }
-  Tree * q = calloc (1, sizeof (Tree));
+  Tree * q = qcalloc (1, Tree);
   grid = (Grid *) q;
   grid->depth = 0;
 
   /* low-level memory management */
-  q->L = malloc(sizeof (Layer *)*2);
+  q->L = qmalloc (2, Layer *);
   /* make sure we don't try to access level -1 */
   q->L[0] = NULL; q->L = &(q->L[1]);
   /* initialise the root cell */
@@ -1576,7 +1588,7 @@ void init_grid (int n)
 #if dimension == 1
   for (int i = 0; i < L->len; i++) {
     layer_add_row (L, i);
-    L->m[i] = calloc (1, sizeof(Cell) + datasize);
+    L->m[i] = (char *) calloc (1, sizeof(Cell) + datasize);
   }
   CELL(L->m[GHOSTS]).flags |= leaf;
   if (pid() == 0)
@@ -1590,7 +1602,7 @@ void init_grid (int n)
   for (int i = 0; i < L->len; i++) {
     layer_add_row (L, i, 0);
     for (int j = 0; j < L->len; j++)
-      L->m[i][j] = calloc (1, sizeof(Cell) + datasize);
+      L->m[i][j] = (char *) calloc (1, sizeof(Cell) + datasize);
   }
   CELL(L->m[GHOSTS][GHOSTS]).flags |= leaf;
   if (pid() == 0)
@@ -1608,7 +1620,7 @@ void init_grid (int n)
     for (int j = 0; j < L->len; j++) {
       layer_add_row (L, i, j);
       for (int k = 0; k < L->len; k++)
-	L->m[i][j][k] = calloc (1, sizeof(Cell) + datasize);
+	L->m[i][j][k] = (char *) calloc (1, sizeof(Cell) + datasize);
     }
   CELL(L->m[GHOSTS][GHOSTS][GHOSTS]).flags |= leaf;
   if (pid() == 0)
@@ -1625,10 +1637,10 @@ void init_grid (int n)
 	   n < 0 ? -1 - back :
 	   0);
 #endif // dimension == 3
-  q->active = calloc (1, sizeof (CacheLevel));
-  q->prolongation = calloc (1, sizeof (CacheLevel));
-  q->boundary = calloc (1, sizeof (CacheLevel));
-  q->restriction = calloc (1, sizeof (CacheLevel));
+  q->active = qcalloc (1, CacheLevel);
+  q->prolongation = qcalloc (1, CacheLevel);
+  q->boundary = qcalloc (1, CacheLevel);
+  q->restriction = qcalloc (1, CacheLevel);
   q->dirty = true;
   N = 1 << depth;
 @if _MPI
@@ -1637,13 +1649,13 @@ void init_grid (int n)
 @endif
   update_cache();
   // boundaries
-  Boundary * b = calloc (1, sizeof (Boundary));
+  Boundary * b = qcalloc (1, Boundary);
   b->level = box_boundary_level;
   b->restriction = masked_boundary_restriction;
   add_boundary (b);
   // periodic boundaries
   foreach_dimension() {
-    Boundary * b = calloc (1, sizeof (Boundary));
+    Boundary * b = qcalloc (1, Boundary);
     b->level = periodic_boundary_level_x;
     add_boundary (b);
   }

@@ -17,7 +17,7 @@ void add_boundary (Boundary * b) {
     Boundary ** i = boundaries;
     while (*i++) len++;
   }
-  boundaries = realloc (boundaries, sizeof(Boundary *)*(len + 2));
+  qrealloc (boundaries, len + 2, Boundary *);
   boundaries[len] = b;
   boundaries[len+1] = NULL;
 }

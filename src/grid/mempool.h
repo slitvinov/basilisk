@@ -28,7 +28,7 @@ Mempool * mempool_new (size_t poolsize, size_t size)
   // to get the effective pool size, we cap this amount to 2^20 = 1MB
   // i.e. something comparable to the size of a L2 cache
   poolsize = min(1 << 20, poolsize + sizeof(Pool));
-  Mempool * m = calloc (1, sizeof(Mempool));
+  Mempool * m = qcalloc (1, Mempool);
   m->poolsize = poolsize;
   m->size = size;
   return m;
@@ -49,7 +49,7 @@ void * mempool_alloc (Mempool * m)
 {
   if (!m->first) {
     // allocate new pool
-    Pool * p = malloc (m->poolsize);
+    Pool * p = (Pool *) malloc (m->poolsize);
     p->next = NULL;
     if (m->last)
       m->last->next = p;
@@ -61,7 +61,7 @@ void * mempool_alloc (Mempool * m)
     b->next = NULL;
   }
   void * ret = m->first;
-  FreeBlock * b = ret;
+  FreeBlock * b = (FreeBlock *) ret;
   char * next = b->next;
   if (!next) {
     m->lastb += m->size;
@@ -75,7 +75,7 @@ void * mempool_alloc (Mempool * m)
   }
   m->first = next;
 @if TRASH
-  double * v = ret;
+  double * v = (double *) ret;
   for (int i = 0; i < m->size/sizeof(double); i++)
     v[i] = undefined;
 @endif
@@ -92,11 +92,11 @@ void * mempool_alloc0 (Mempool * m)
 void mempool_free (Mempool * m, void * p)
 {
 @if TRASH
-  double * v = p;
+  double * v = (double *) p;
   for (int i = 0; i < m->size/sizeof(double); i++)
     v[i] = undefined;
 @endif
-  FreeBlock * b = p;
+  FreeBlock * b = (FreeBlock *) p;
   b->next = m->first;
-  m->first = p;
+  m->first = (char *) p;
 }

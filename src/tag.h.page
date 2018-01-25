@@ -28,7 +28,7 @@ tag < a[s+1]$. */
 static long lookup_tag (Array * a, double tag)
 {
   long len = a->len/sizeof(double);
-  double * p = a->p;
+  double * p = (double *) a->p;
   if (tag == p[0])
     return 0;
   if (tag == p[len - 1])
@@ -162,7 +162,7 @@ int tag (scalar t)
       position of the (possibly new) index in the array. A negative
       value means that the index is already in the array.  */
   
-      double tag = t[], * ap = a->p;
+      double tag = t[], * ap = (double *) a->p;
       long s = -1;
       if (a->len == 0 || tag > ap[a->len/sizeof(double) - 1])
 	s = a->len/sizeof(double);
@@ -185,7 +185,7 @@ int tag (scalar t)
 	If the index is new, we add it to the array in the correct
 	position (s). */
 	
-	array_append (a, &tag, sizeof(double)); ap = a->p;
+	array_append (a, &tag, sizeof(double)), ap = (double *) a->p;
 	for (int i = a->len/sizeof(double) - 1; i > s; i--)
 	  ap[i] = ap[i-1];
 	ap[s] = tag;
@@ -213,10 +213,10 @@ int tag (scalar t)
   local arrays need to be of the same size to be able to use
   MPI_Allgather(), so we first pad the arrays with -1. */
   
-  double * p = a->p;
+  double * q = a->p;
   for (int i = a->len/sizeof(double); i < lmax; i++)
-    p[i] = -1;
-  p = malloc(lmax*npe()*sizeof(double));
+    q[i] = -1;
+  double p[lmax*npe()];
   MPI_Allgather (a->p, lmax, MPI_DOUBLE, p, lmax, MPI_DOUBLE, MPI_COMM_WORLD);
   qsort (p, lmax*npe(), sizeof(double), compar_double);
 
@@ -234,7 +234,6 @@ int tag (scalar t)
       array_append (a, &p[i], sizeof(double));
       last = p[i];
     }
-  free (p);
 #endif
 
   /**

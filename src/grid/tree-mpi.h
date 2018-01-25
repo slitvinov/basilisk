@@ -38,7 +38,7 @@ static void cache_level_init (CacheLevel * c)
 static void rcv_append (Point point, Rcv * rcv)
 {
   if (level > rcv->depth) {
-    rcv->halo = realloc (rcv->halo, (level + 1)*sizeof (CacheLevel));
+    qrealloc (rcv->halo, level + 1, CacheLevel);
     for (int j = rcv->depth + 1; j <= level; j++)
       cache_level_init (&rcv->halo[j]);
     rcv->depth = level;
@@ -78,7 +78,7 @@ static void rcv_destroy (Rcv * rcv)
 
 static RcvPid * rcv_pid_new (const char * name)
 {
-  RcvPid * r = calloc (sizeof (RcvPid), 1);
+  RcvPid * r = qcalloc (1, RcvPid);
   r->name = strdup (name);
   return r;
 }
@@ -93,11 +93,11 @@ static Rcv * rcv_pid_pointer (RcvPid * p, int pid)
       break;
 
   if (i == p->npid) {
-    p->rcv = realloc (p->rcv, ++p->npid*sizeof (Rcv));
+    qrealloc (p->rcv, ++p->npid, Rcv);
     Rcv * rcv = &p->rcv[p->npid-1];
     rcv->pid = pid;
     rcv->depth = rcv->maxdepth = 0;
-    rcv->halo = malloc (sizeof (CacheLevel));
+    rcv->halo = qmalloc (1, CacheLevel);
     rcv->buf = NULL;
     cache_level_init (&rcv->halo[0]);
   }
@@ -429,7 +429,7 @@ static void mpi_boundary_restriction (const Boundary * b, scalar * list, int l)
 
 void mpi_boundary_new()
 {
-  mpi_boundary = calloc (1, sizeof (MpiBoundary));
+  mpi_boundary = (Boundary *) qcalloc (1, MpiBoundary);
   mpi_boundary->destroy = mpi_boundary_destroy;
   mpi_boundary->level = mpi_boundary_level;
   mpi_boundary->restriction = mpi_boundary_restriction;
@@ -703,7 +703,7 @@ void check_snd_rcv_matrix (SndRcv * sndrcv, const char * name)
 {
   int maxlevel = depth();
   mpi_all_reduce (maxlevel, MPI_INT, MPI_MAX);
-  int * row = malloc (npe()*sizeof(int));
+  int * row = qmalloc (npe(), int);
   for (int l = 0; l <= maxlevel; l++) {
     int status = 0;
     if (pid() == 0) { // master
@@ -718,7 +718,7 @@ void check_snd_rcv_matrix (SndRcv * sndrcv, const char * name)
       MPI_Gather (row, npe(), MPI_INT, &receive[0][0], npe(), MPI_INT, 0,
 		  MPI_COMM_WORLD);
 
-      int * astatus = malloc (npe()*sizeof(int));
+      int * astatus = qmalloc (npe(), int);
       for (int i = 0; i < npe(); i++)
 	astatus[i] = 0;
       for (int i = 0; i < npe(); i++)

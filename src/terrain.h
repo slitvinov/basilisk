@@ -36,7 +36,7 @@ static void reconstruct_terrain (Point point, scalar zb)
   Delta_x /= 2.; Delta_y /= 2.;
   KdtRect rect = {{x - Delta_x, x + Delta_x},
 		  {y - Delta_y, y + Delta_y}};
-  for (Kdt ** kdt = zb.kdt[PROC]; *kdt; kdt++)
+  for (Kdt ** kdt = (Kdt **) zb.kdt[PROC]; *kdt; kdt++)
     kdt_query_sum (*kdt,
 		   (KdtCheck) includes,
 		   (KdtCheck) intersects, &point,
@@ -71,7 +71,7 @@ void refine_terrain (Point point, scalar zb)
 static void delete_terrain (scalar zb)
 {
   for (int i = 0; i < NPROC; i++) {
-    for (Kdt ** kdt = zb.kdt[i]; *kdt; kdt++)
+    for (Kdt ** kdt = (Kdt **) zb.kdt[i]; *kdt; kdt++)
       kdt_destroy (*kdt);
     free (zb.kdt[i]);
   }
@@ -80,7 +80,7 @@ static void delete_terrain (scalar zb)
 
 void terrain (scalar zb, ...)
 {
-  zb.kdt = calloc (NPROC, sizeof (Kdt **));
+  zb.kdt = qcalloc (NPROC, void *);
   zb.delete = delete_terrain;
   
   int nt = 0;
@@ -89,8 +89,8 @@ void terrain (scalar zb, ...)
   char * name;
   while ((name = va_arg (ap, char *))) {
     for (int i = 0; i < NPROC; i++) {
-      Kdt ** kdt = zb.kdt[i];
-      zb.kdt[i] = kdt = realloc (kdt, sizeof(Kdt *)*(nt + 2));
+      Kdt ** kdt = (Kdt **) zb.kdt[i];
+      zb.kdt[i] = qrealloc (kdt, nt + 2, Kdt *);
       kdt[nt] = kdt_new();
       kdt[nt + 1] = NULL;
       if (kdt_open (kdt[nt], name)) {

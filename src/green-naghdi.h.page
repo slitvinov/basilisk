@@ -110,7 +110,7 @@ static double residual_GN (scalar * a, scalar * r, scalar * resl, void * data)
   We first recover all the parameters from the generic pointers and
   rename them according to our notations. */
   
-  scalar * list = data;
+  scalar * list = (scalar *) data;
   scalar h = list[0], zb = list[1], wet = list[2];
   vector D = vector(a[0]), b = vector(r[0]), res = vector(resl[0]);
 
@@ -193,7 +193,7 @@ residual implementation above and inverting manually for $D_x$. */
 
 static void relax_GN (scalar * a, scalar * r, int l, void * data)
 {
-  scalar * list = data;
+  scalar * list = (scalar *) data;
   scalar h = list[0], zb = list[1], wet = list[2];
   vector D = vector(a[0]), b = vector(r[0]);
   foreach_level_or_leaf (l)

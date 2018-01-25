@@ -250,7 +250,7 @@ parameters from the data pointer. */
 static void relax (scalar * al, scalar * bl, int l, void * data)
 {
   scalar a = al[0], b = bl[0];
-  struct Poisson * p = data;
+  struct Poisson * p = (struct Poisson *) data;
   (const) face vector alpha = p->alpha;
   (const) scalar lambda = p->lambda;
 
@@ -311,7 +311,7 @@ requires more careful consideration... */
 static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
 {
   scalar a = al[0], b = bl[0], res = resl[0];
-  struct Poisson * p = data;
+  struct Poisson * p = (struct Poisson *) data;
   (const) face vector alpha = p->alpha;
   (const) scalar lambda = p->lambda;
   double maxres = 0.;

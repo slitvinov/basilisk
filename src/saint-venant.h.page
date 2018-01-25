@@ -360,7 +360,7 @@ event defaults (i = 0)
   /**
   By default, all the layers have the same relative thickness. */
 
-  layer = malloc (nl*sizeof(double));
+  layer = qmalloc (nl, double);
   for (int l = 0; l < nl; l++)
     layer[l] = 1./nl;
   

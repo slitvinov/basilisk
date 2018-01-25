@@ -45,7 +45,7 @@ void output_field (struct OutputField p)
   if (!p.fp) p.fp = stdout;
 
   int len = list_len(p.list);
-  double ** field = matrix_new (p.n, p.n, len*sizeof(double));
+  double ** field = (double **) matrix_new (p.n, p.n, len*sizeof(double));
   
   double Delta = L0/p.n;
   for (int i = 0; i < p.n; i++) {
@@ -378,7 +378,7 @@ void output_ppm (struct OutputPPM p)
   double Delta = (p.box[1][0] - p.box[0][0])/fn;
   int ny = (p.box[1][1] - p.box[0][1])/Delta;
   
-  color ** ppm = matrix_new (ny, p.n, sizeof(color));
+  color ** ppm = (color **) matrix_new (ny, p.n, sizeof(color));
   double cmap[NCMAP][3];
   p.map (cmap);
   OMP_PARALLEL() {
@@ -421,12 +421,11 @@ void output_ppm (struct OutputPPM p)
 @endif
     if (!p.fp) p.fp = stdout;
     if (p.file) {
-      char * command = malloc (strlen ("convert ppm:- -transparent black ") +
-			       strlen (p.file) + 1);
+      char command[strlen ("convert ppm:- -transparent black ") +
+		   strlen (p.file) + 1];
       strcpy (command, "convert ppm:- -transparent black ");
       strcat (command, p.file);
       p.fp = popen (command, "w");
-      free (command);
     }
     
     fprintf (p.fp, "P6\n%u %u 255\n", p.n, ny);
@@ -621,7 +620,7 @@ void output_gfs (struct OutputGfs p)
   if (p.file == NULL) {
     long pid = getpid();
     MPI_Bcast (&pid, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-    fname = malloc (80);
+    fname = qmalloc (80, char);
     snprintf (fname, 80, ".output-%ld", pid);
     p.fp = NULL;
   }

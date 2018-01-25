@@ -106,7 +106,7 @@ typedef struct _bview bview;
 The allocator method. */
 
 bview * bview_new() {
-  bview * p = calloc (1, sizeof(bview));
+  bview * p = qcalloc (1, bview);
 
   p->tx = p->ty = 0;
   p->sx = p->sy = p->sz = 1.;
@@ -310,7 +310,7 @@ static pointer compose_image (bview * view)
     MPI_Type_commit (&rgba);
     fbdepth_t * depth = framebuffer_depth (view->fb);
     int size = view->width*view->height;
-    RGBA * buf = malloc (size*sizeof(RGBA));
+    RGBA buf[size];
     unsigned char * ptr = image;
     fbdepth_t * dptr = depth;
     for (int i = 0; i < size; i++) {
@@ -327,7 +327,6 @@ static pointer compose_image (bview * view)
     }
     else
       MPI_Reduce (buf, buf, size, rgba, op, 0, MPI_COMM_WORLD);
-    free (buf);
     MPI_Op_free (&op);
     MPI_Type_free (&rgba);
   }
@@ -534,7 +533,7 @@ bool save (struct _save p)
 
   if (!strcmp (p.format, "ppm")) {
     bview_draw (view);
-    unsigned char * image = compose_image (view);
+    unsigned char * image = (unsigned char *) compose_image (view);
     if (pid() == 0)
       gl_write_image (p.fp, image, view->width, view->height, view->samples);    
   }
@@ -542,7 +541,7 @@ bool save (struct _save p)
   else if (!strcmp (p.format, "png") ||
 	   !strcmp (p.format, "jpg")) {
     bview_draw (view);
-    unsigned char * image = compose_image (view);
+    unsigned char * image = (unsigned char *) compose_image (view);
     if (pid() == 0) {
       char command[strlen ("convert ppm:- ") + strlen (p.file) + 1];
       strcpy (command, "convert ppm:- ");
@@ -835,7 +834,7 @@ bool load (struct _load p) {
   }
   else if (p.buf) { // read lines from buffer
     int i = 0;
-    char * s = p.buf->p;
+    char * s = (char *) p.buf->p;
     while (i < p.buf->len) {
       char * start = s;
       while (i < p.buf->len && *s != '\n')
