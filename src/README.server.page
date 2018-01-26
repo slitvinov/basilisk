@@ -30,6 +30,13 @@ export PATH=$PATH:$HOME/bin
 
 # howto compile C99 programs
 export CC99="gcc -O2 -Wall -std=c99 -D_GNU_SOURCE=1"
+
+# howto compile CADNA programs
+export CADNACC="clang -D_CADNA=1 -x c++ -m64 \
+        -Wno-unused-function \
+        -Wno-unused-result \
+        -Wno-c++11-compat-deprecated-writable-strings \
+        -Wno-address-of-array-temporary"
 ~~~
 
 If you also intend to generate graphics etc... on the server, do

@@ -108,12 +108,16 @@ remotely()
     mv -f _$test.c $test/$test.c
     cd $test
     cp -f $test.* $chksum 2> /dev/null || true
-    PCFLAGS=`echo $CFLAGS | sed 's/-grid=[^-]*//'`
+    PCC="\$CC99"
+    case "$CFLAGS" in
+	*-cadna*) PCC="\$CADNACC" ;;
+    esac
+    PCFLAGS=`echo $CFLAGS | sed -e 's/-grid=[^-]*//' -e 's/-cadna//'`
     NCORES=`echo $EXEC | awk 'BEGIN{ np = 1 }{
       if ($1 == "mpirun") np = $3; }END{ print np;}'`
     cat <<EOF >$chksum/$test.sh
 #!/bin/sh
-\$CC99 $PCFLAGS -I\$HOME/include -o $test $test.c -L\$HOME/lib $LIBS -lm > warn 2>&1 || mv -f warn fail
+$PCC $PCFLAGS -I\$HOME/include -o $test $test.c -L\$HOME/lib $LIBS -lm > warn 2>&1 || mv -f warn fail
 rm -f $test.c
 if ! test -f fail; then
   test -s warn || rm -f warn
