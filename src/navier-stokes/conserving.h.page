@@ -70,13 +70,13 @@ using the functions below. */
 foreach_dimension()
 static double boundary_q1_x (Point neighbor, Point point, scalar q1)
 {
-  return clamp(f[],0,1)*rho1*u.x[];
+  return clamp(f[],0.,1.)*rho1*u.x[];
 }
 
 foreach_dimension()
 static double boundary_q2_x (Point neighbor, Point point, scalar q2)
 {
-  return (1. - clamp(f[],0,1))*rho2*u.x[];
+  return (1. - clamp(f[],0.,1.))*rho2*u.x[];
 }
 
 /**
@@ -87,13 +87,13 @@ this definition. */
 foreach_dimension()
 static void prolongation_q1_x (Point point, scalar q1) {
   foreach_child()
-    q1[] = clamp(f[],0,1)*rho1*u.x[];
+    q1[] = clamp(f[],0.,1.)*rho1*u.x[];
 }
 
 foreach_dimension()
 static void prolongation_q2_x (Point point, scalar q2) {
   foreach_child()
-    q2[] = (1. - clamp(f[],0,1))*rho2*u.x[];
+    q2[] = (1. - clamp(f[],0.,1.))*rho2*u.x[];
 }
 #endif
 

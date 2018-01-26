@@ -32,11 +32,18 @@ clean:
 .DELETE_ON_ERROR:
 
 %.3D.c: %.c
-	ln -s $*.c $*.3D.c
+	ln -s $< $@
 
 %.3D.tst: %.3D.s %.3D.c
 	@CFLAGS="$(CFLAGS) -grid=octree" LIBS=$(LIBS) \
-		$(BASILISK)/runtest $*.3D.tst
+		$(BASILISK)/runtest $@
+
+%.CADNA.c: %.c
+	ln -s $< $@
+
+%.CADNA.tst: %.CADNA.s %.CADNA.c
+	@CFLAGS="$(CFLAGS) -cadna" LIBS="$(LIBS) $(CADNALIBS)" \
+		$(BASILISK)/runtest $@
 
 %.tst: %.s %.c
 	@PNG=$(PNG) LIBS=$(LIBS) $(BASILISK)/runtest $@

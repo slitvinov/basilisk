@@ -79,7 +79,7 @@ event epfield (t = 10) {
     double Ey = (phi[0,-1] - phi[0,1])/(2*Delta);
     double r = sqrt(x*x + y*y);
     double En = sqrt(Ex*Ex + Ey*Ey);
-    ee[] = En - (r < R ? 0 : 0.5*sq(R)*rhoini/r);
+    ee[] = En - (r < R ? 0. : 0.5*sq(R)*rhoini/r);
 #if NAVIER
     fprintf (fp, "%g %g %g %g\n", r, En, p[], rhoe[]);
 #else

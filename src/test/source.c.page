@@ -39,8 +39,8 @@ double etas;
 
 event inflow (i++) {
   etas = eta_b (0.1*(1.1 - cos(4.*pi*t)), source);
-  h[source] = max (etas - zb[], 0);
-  eta[source] = max (etas - zb[], 0) + zb[];
+  h[source] = max (etas - zb[], 0.);
+  eta[source] = max (etas - zb[], 0.) + zb[];
 }
 
 /**

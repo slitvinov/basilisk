@@ -33,7 +33,7 @@ double line_alpha (double c, coord n)
   if (n1 > n2)
     swap (double, n1, n2);
 
-  c = clamp (c, 0, 1);
+  c = clamp (c, 0., 1.);
   double v1 = n1/2.;
   if (c <= v1/n2)
     alpha = sqrt (2.*c*n1*n2);
@@ -87,7 +87,7 @@ double plane_alpha (double c, coord n)
     V3 = mm/(2.*m3);
   }
 
-  c = clamp (c, 0, 1);
+  c = clamp (c, 0., 1.);
   double ch = min(c, 1. - c);
   if (ch < V1)
     alpha = pow (pr*ch, 1./3.);

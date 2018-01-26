@@ -22,7 +22,7 @@ event init (i = 0)
   foreach() {
     x += 0.5;
     zb[] = 0.8*exp(-5.*sq(x - 0.9) - 50.*y*y);
-    h[] = (0.05 < x && x < 0.15 ? 1.01 : 1) - zb[];
+    h[] = (0.05 < x && x < 0.15 ? 1.01 : 1.) - zb[];
   }
 }
 
@@ -47,7 +47,7 @@ event logfile (i++) {
 event adapt (i++) {
   scalar eta[];
   foreach()
-    eta[] = h[] > dry ? h[] + zb[] : 0;
+    eta[] = h[] > dry ? h[] + zb[] : 0.;
   boundary ({eta});
 
   astats s = adapt_wavelet ({eta}, (double[]){1e-4}, MAXLEVEL, MINLEVEL);

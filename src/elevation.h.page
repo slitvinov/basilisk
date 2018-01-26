@@ -30,7 +30,7 @@ static void refine_elevation (Point point, scalar h)
       double etac = eta;
       foreach_dimension()
 	etac += g.x*child.x;
-      h[] = max(0, etac - zb[]);
+      h[] = max(0., etac - zb[]);
     }
   }
   else {
@@ -66,7 +66,7 @@ static void refine_elevation (Point point, scalar h)
     
     // reconstruct water depth h from eta and zb
     foreach_child()
-      h[] = max(0, eta - zb[]);
+      h[] = max(0., eta - zb[]);
   }
 }
 

@@ -121,7 +121,7 @@ event epfield (t = 10) {
   scalar ee[];
   foreach() {
     double Ey = (phi[0,-1] - phi[0,1])/(2*Delta);
-    ee[] = Ey - (y < R ? 0 : 0.5*sq(R)*rhoini/y);
+    ee[] = Ey - (y < R ? 0. : 0.5*sq(R)*rhoini/y);
 #if NAVIER
     fprintf (fp, "%g %g %g %g\n", y, Ey, p[], rhoe[]);
 #else

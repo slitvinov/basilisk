@@ -286,7 +286,7 @@ surface elevation. */
 event adapt (i++) {
   scalar eta[];
   foreach()
-    eta[] = h[] > dry ? h[] + zb[] : 0;
+    eta[] = h[] > dry ? h[] + zb[] : 0.;
   boundary ({eta});
 
   astats s = adapt_wavelet ({eta}, (double[]){3e-4}, MAXLEVEL, MINLEVEL);

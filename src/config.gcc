@@ -24,3 +24,12 @@ PYTHONPATH = /usr/include/python2.7
 # see bview-server.c#installation for explanations
 OPENGLIBS = -lfb_osmesa -lGLU -lOSMesa
 # OPENGLIBS = -lfb_glx -lGLU -lGLEW -lGL -lX11
+
+# Compiler and libraries to use with CADNA.
+# See [README.cadna]() for more documentation.
+CADNACC = clang -D_CADNA=1 -x c++ -m64 \
+	-Wno-unused-function \
+	-Wno-unused-result \
+	-Wno-c++11-compat-deprecated-writable-strings \
+	-Wno-address-of-array-temporary
+CADNALIBS = -lcadnaC -lstdc++

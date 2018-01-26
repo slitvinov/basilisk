@@ -80,8 +80,8 @@ event inflow (i++) {
   the top boundary of both riverbeds, we impose them on both $h$
   and $\eta=h+z_b$. */
   
-  h[top] = max ((river[] == 1 ? eta1 : eta2) - zb[], 0);
-  eta[top] = max ((river[] == 1 ? eta1 : eta2) - zb[], 0) + zb[];
+  h[top] = max ((river[] == 1. ? eta1 : eta2) - zb[], 0.);
+  eta[top] = max ((river[] == 1. ? eta1 : eta2) - zb[], 0.) + zb[];
 }
 
 /**

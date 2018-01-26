@@ -101,5 +101,5 @@ event result (t = tfinal) {
     E[] = (phi[0,-1] - phi[0,1])/(2.*Delta);
   stats s = statsf (E);
   fprintf (stderr, "%d %g %g\n", N, 100*fabs(1.- s.max/E2),
-	   E1 > 0. ? 100*fabs(1.- s.min/E1) : 0 );
+	   E1 > 0. ? 100*fabs(1.- s.min/E1) : 0. );
 }

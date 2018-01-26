@@ -19,10 +19,8 @@ scalar c[], cold[];
 double errmax;
 
 /**
-The generic time loop needs a timestep. We will store the statistics
-on the diffusion solvers in `mgd`. */
+We will store the statistics on the diffusion solvers in `mgd`. */
 
-double dt;
 mgstats mgd;
 
 /**

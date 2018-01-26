@@ -268,6 +268,9 @@ void free_solver()
 @if MTRACE
   pmuntrace();
 @endif
+@if _CADNA
+  cadna_end();
+@endif
 }
 
 // Cartesian methods

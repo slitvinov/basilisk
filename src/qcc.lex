@@ -8,7 +8,8 @@
   #include <sys/wait.h>
   #include <assert.h>
 
-  enum { scalar, vector, tensor, bid, struct_type = -1, other_type = -2 };
+  enum { scalar, vector, tensor, bid,
+	 struct_type = -1, other_type = -2 };
 
   typedef struct { int i; char * name; } Scalar;
   typedef struct { int x, y, face; char * name; } Vector;
@@ -16,7 +17,7 @@
 
   int dimension = 2, bghosts = 0;
   
-  int debug = 0, catch = 0, nolineno = 0, events = 0;
+  int debug = 0, catch = 0, cadna = 0, nolineno = 0, events = 0;
   char dir[] = ".qccXXXXXX";
 
   int nvar = 0, nconst = 0, nevents = 0;
@@ -24,12 +25,13 @@
   int scope, para, inforeach, foreachscope, foreachpara, 
     inforeach_boundary, inforeach_face, nmaybeconst = 0;
   int invardecl, vartype, varsymmetric, varface, varvertex, varmaybeconst;
-  char * varconst;
+  char * varconst, * type = NULL;
   int inval, invalpara, indef;
   int brack, inarray, inarraypara, inarrayargs;
   int infine;
   int inreturn;
-
+  int inmalloc;
+  
   #define EVMAX 100
   int inevent, eventscope, eventpara;
   char eventarray[EVMAX], * eventfile[EVMAX], * eventid[EVMAX];
@@ -107,7 +109,10 @@
 
   char ** args = NULL, ** argss = NULL;
   int nargs = 0, inarg;
-
+  int incadna = 0, incadnaargs = -1, incadnanargs = 0, incadnaarg[80];
+  #define doubletype (cadna ? "double_st" : "double")
+  #define floattype (cadna ? "float_st" : "float")
+  
   typedef struct { 
     char * v, * constant;
     int type, args, scope, automatic, symmetric, face, vertex, maybeconst;
@@ -146,7 +151,8 @@
     int i, size = 1;
     for (i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
       var_t var = _varstack[i];
-      if (var.automatic && !var.constant && (conditional || !var.conditional)) {
+      if (var.automatic && !var.constant && var.type >= 0 &&
+	  (conditional || !var.conditional)) {
 	size += strlen (var.v) + 2;
 	if (list == NULL) {
 	  list = malloc (size);
@@ -176,16 +182,24 @@
     int i;
     for (i = varstack; i >= 0 && _varstack[i].scope > scope; i--) {
       var_t var = _varstack[i];
-      if (var.automatic && var.conditional) {
-	if (debug)
-	  fprintf (stderr, "%s:%d: deleting conditional %s\n", 
-		   fname, line, var.v);
-	char list[80];
-	sprintf (list, "{%s}", var.v);
-	char * slist = makelist (list, scalar);
-	fprintf (yyout, " { if (!%s) delete (%s); } ", 
-		 var.conditional, slist);
-	free (slist);
+      if (var.automatic) {
+	if (var.conditional) {
+	  if (debug)
+	    fprintf (stderr, "%s:%d: deleting conditional %s\n", 
+		     fname, line, var.v);
+	  char list[80];
+	  sprintf (list, "{%s}", var.v);
+	  char * slist = makelist (list, scalar);
+	  fprintf (yyout, " { if (!%s) delete (%s); } ", 
+		   var.conditional, slist);
+	  free (slist);
+	}
+	else if (var.type < 0) {
+	  if (debug)
+	    fprintf (stderr, "%s:%d: freeing array %s\n", 
+		     fname, line, var.v);
+	  fprintf (yyout, " free (%s);", var.v);
+	}
       }
     }
   }
@@ -393,7 +407,7 @@
 	  if (foreachconst[i]->type == scalar) {
 	    if (bits & (1 << i))
 	      fprintf (yyout,
-		       "const double _const_%s = _constant[%s.i -_NVARMAX];\n"
+		       "const %s _const_%s = _constant[%s.i -_NVARMAX];\n"
 		       "NOT_UNUSED(_const_%s);\n"
 		       "#undef val_%s\n"
 		       "#define val_%s(a,i,j,k) _const_%s\n"
@@ -401,6 +415,7 @@
 		       "#define fine_%s(a,i,j,k) _const_%s\n"
 		       "#undef coarse_%s\n"
 		       "#define coarse_%s(a,i,j,k) _const_%s\n",
+		       doubletype,
 		       foreachconst[i]->v, foreachconst[i]->v, 
 		       foreachconst[i]->v, foreachconst[i]->v, 
 		       foreachconst[i]->v, foreachconst[i]->v,
@@ -422,7 +437,7 @@
 	  else if (foreachconst[i]->type == vector) {
 	    int c, j;
 	    if (bits & (1 << i)) {
-	      fputs ("const struct { double x", yyout);
+	      fprintf (yyout, "const struct { %s x", doubletype);
 	      for (c = 'y', j = 1; j < dimension; c++, j++)
 		fprintf (yyout, ", %c", c);
 	      fprintf (yyout, "; } _const_%s = {_constant[%s.x.i -_NVARMAX]",
@@ -920,8 +935,8 @@
 	  nconst++;
 	}
 	else if (var->type == vector) {
-	  fprintf (yyout, ", %d, (double [])%s", 
-		   nconst, var->constant);
+	  fprintf (yyout, ", %d, (%s [])%s", 
+		   nconst, doubletype, var->constant);
 	  nconst += dimension;
 	}
 	else
@@ -977,11 +992,45 @@
     }
   }
 
-  void declaration (char * var, char * text) {
+#define IDENTIFIER(c) (((c) >= 'A' && (c) <= 'Z') || \
+                       ((c) >= 'a' && (c) <= 'z') || \
+		       ((c) == '_'))
+#define SEPARATOR(c)  (!IDENTIFIER(c) && c != '.')
+  
+  void cadna_echo (char * text) {
+    if (cadna) {
+      static char * rep[] = {"double", "float"};
+      int i;
+      for (i = 0; i < 2; i++) {
+	char * s = strstr (text, rep[i]);
+	if (s) {
+	  char * end = s + strlen (rep[i]);
+	  if ((s == text || SEPARATOR (*(s-1))) &&
+	      (*end == '\0' || SEPARATOR (*end))) {
+	    char c = *s;
+	    *s = '\0';
+	    cadna_echo (text);
+	    *s = c;
+	    fprintf (yyout, "%s_st", rep[i]);
+	    cadna_echo (end);
+	    return;
+	  }
+	}
+      }
+    }
+    fputs (text, yyout);
+  }
+
+#define cadna_type(type) (!cadna ? type :			   \
+			  !strcmp (type, "double") ? "double_st" : \
+			  !strcmp (type, "float") ? "float_st" :   \
+			  type)
+
+  void declaration (char * var, char * text, int npointers) {
     var_t * v;
-    if (!strcmp (&var[strlen(var)-2], "[]")) {
+    if (vartype >= 0 && strchr (text, '[') && strchr (text, ']')) {
       // automatic
-      var[strlen(var)-2] = '\0';
+      *strchr (text, '[') = '\0';
       v = varpush (var, vartype, scope, 0);
       v->automatic = 1;
       v->symmetric = varsymmetric;
@@ -994,18 +1043,49 @@
       new_field (v);
     }
     else {
+      char * start = strchr (text, '['), * end = strchr (text, ']');
+      if (start) {
+	if (!end)
+	  brack++;
+	*start = '\0';
+      }
       v = varpush (var, vartype, scope, varmaybeconst);
       v->symmetric = varsymmetric;
       v->face = varface;    
       v->vertex = varvertex;
-      fputs (text, yyout);
       if (scope == 0 && v->type == bid)
 	// global boundary id
 	v->i[0] = 1;
+      if (start) {
+	if (cadna &&
+	    scope > 0 && npointers == 0 && !end && type &&
+	    (!strcmp (type, "double") ||
+	     !strcmp (type, "float") ||
+	     !strcmp (type, "coord") ||
+	     !strcmp (type, "stats") ||
+	     !strcmp (type, "norm"))) {
+	  /* clang does not like variable-size arrays of "non-POD
+	     types" e.g double_st or float_st of CADNA
+	     we turn them into malloc'd arrays */
+	  if (yytext[0] == ',')
+	    fputc (',', yyout);
+	  else
+	    fputs (cadna_type (type), yyout);
+	  fprintf (yyout, " *%s=(%s*)malloc(sizeof(%s)*(",
+		   var, cadna_type (type), cadna_type (type));
+	  inmalloc = brack;
+	  v->automatic = 1;
+	  if (debug)
+	    fprintf (stderr, "%s:%d: malloc'd %s\n", fname, line, var);
+	  return;
+	}
+	*start = '[';
+      }
+      cadna_echo (text);
     }
     if (debug)
-      fprintf (stderr, "%s:%d: declaration: %s type: %d face: %d\n",
-	       fname, line, var, vartype, varface);
+      fprintf (stderr, "%s:%d: declaration: %s type: %d face: %d brack: %d\n",
+	       fname, line, var, vartype, varface, brack);
   }
 
   static int homogeneize (FILE * in, FILE * fp)
@@ -1059,7 +1139,7 @@
       yyerror ("expecting ')'");
     fclose (fp);
   }
-
+  
 #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
 #define space(s) { while (!strchr(" \t\v\n\f", *s)) s++; }
 
@@ -1074,11 +1154,20 @@
   int comment(void);
 %}
 
-ID  [a-zA-Z_0-9]
-SP  [ \t]
-ES  (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
-WS  [ \t\v\n\f]
-SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyzntr])*
+D			[0-9]
+L			[a-zA-Z_]
+H			[a-fA-F0-9]
+E			[Ee][+-]?{D}+
+FS			(f|F|l|L)
+IS			(u|U|l|L)*
+
+ID                      {L}({L}|{D})*
+SP                      [ \t]
+ES                      (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
+WS                      [ \t\v\n\f]
+SCALAR                  {ID}({WS}*[.]{WS}*[xyzntr])*
+CONSTANT                ({D}|{WS}|[<>+\-=*/^%&|!()~?:])+
+TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
 
 %%
 
@@ -1102,7 +1191,8 @@ SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyzntr])*
 	     "OMP(omp parallel) {\n", yyout);
       int i;
       for (i = 0; i < nreduct; i++)
-	fprintf (yyout, "double _%s = %s; ", reductvar[i], reductvar[i]);
+	fprintf (yyout, "%s _%s = %s; ",
+		 doubletype, reductvar[i], reductvar[i]);
       fprintf (yyout, "\n#line %d\n", foreach_line);
     }
     yyout = dopen ("_foreach_body.h", "w");
@@ -1148,9 +1238,9 @@ SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyzntr])*
 	       "  return ret; "
 	       "} ");
     fprintf (yyout, 
-	     "static int %s (const int i, const double t, Event * _ev) { "
+	     "static int %s (const int i, const %s t, Event * _ev) { "
 	     "trace (\"%s\", \"%s\", %d); ",
-	     eventfunc[nevents],
+	     eventfunc[nevents], doubletype,
 	     eventfunc[nevents], fname, nolineno ? 0 : line);
     free (tracefunc);
     tracefunc = strdup (eventfunc[nevents]);
@@ -1174,6 +1264,11 @@ SCALAR [a-zA-Z_0-9]+({WS}*[.]{WS}*[xyzntr])*
   }
   else
     ECHO;
+  if (incadna == para + 1) {
+    incadna = 0;
+    if (incadnanargs && incadnaargs == incadnaarg[incadnanargs-1] + 1)
+      fputc (')', yyout);
+  }
 }
 
 "{" {
@@ -1255,7 +1350,7 @@ break {
     ECHO;
 }
 
-foreach{ID}* {
+foreach{ID}? {
   if (indef)
     REJECT;
   fputs (" { ", yyout);
@@ -1273,7 +1368,7 @@ foreach{ID}* {
   ECHO;
 }
 
-end_foreach{ID}*{SP}*"()" {
+end_foreach{ID}?{SP}*"()" {
   if (strncmp(&yytext[4], foreachs, strlen (foreachs))) {
     fprintf (stderr, 
 	     "%s:%d: error: "
@@ -1304,11 +1399,35 @@ map{WS}+"{" {
 }
 
 , {
-  if (inarray == brack && inarraypara == para)
+  if (inarray && inarray == brack && inarraypara == para) {
     inarrayargs++;
-  else if (infine == para)
+    REJECT;
+  }
+  else if (infine == para) {
     inarrayargs++;
-  REJECT;
+    REJECT;
+  }
+  else if (incadna == para && incadnanargs) {
+    int i, found = 0;
+    for (i = 0; i < incadnanargs && !found; i++) {
+      if (incadnaargs == incadnaarg[i]) {
+	fputs (",strp(", yyout);
+	found = 1;
+      }
+      else if (incadnaargs == incadnaarg[i] + 1) {
+	if (i < incadnanargs - 1 && incadnaargs == incadnaarg[i+1])
+	  fputs ("),strp(", yyout);
+	else
+	  fputs ("),", yyout);
+	found = 1;
+      }
+    }
+    if (!found)
+      ECHO;
+    incadnaargs++;
+  }
+  else
+    REJECT;
 }
 
 ; {
@@ -1345,9 +1464,9 @@ map{WS}+"{" {
     maybeconst_combinations (line, boundary_body);
     fputs (" return 0.; } ", yyout);
     fprintf (yyout, 
-	     "static double _boundary%d_homogeneous "
+	     "static %s _boundary%d_homogeneous "
 	     "(Point point, Point neighbor, scalar _s) {",
-	     nboundary);
+	     doubletype, nboundary);
     boundary_staggering (yyout);
     fputs (" POINT_VARIABLES; ", yyout);
     maps (line - 1);
@@ -1386,9 +1505,10 @@ map{WS}+"{" {
 	     "  *ip = i; *tp = t; "
 	     "  return ret; "
 	     "} "
-	     "static int %s_expr%d (int * ip, double * tp, Event * _ev) { "
-	     "  int i = *ip; double t = *tp; "
-	     "  int ret = (", eventfunc[nevents], inevent++);
+	     "static int %s_expr%d (int * ip, %s * tp, Event * _ev) { "
+	     "  int i = *ip; %s t = *tp; "
+	     "  int ret = (", eventfunc[nevents], inevent++,
+	     doubletype, doubletype);
   }
   else if (inevent == 4 && scope == eventscope && para == eventpara - 1) {
     ECHO;
@@ -1408,7 +1528,7 @@ map{WS}+"{" {
   invardecl = varmaybeconst = 0;
 }
 
-{ID}+{WS}*[=]{WS}*new{WS}+(symmetric|face|vertex){0,1}*{WS}*(scalar|vector|tensor) |
+{ID}{WS}*[=]{WS}*new{WS}+(symmetric|face|vertex){0,1}*{WS}*(scalar|vector|tensor) |
 [=]{WS}*new{WS}+(symmetric|face|vertex){0,1}{WS}*(scalar|vector|tensor) {
   char * type = strchr (yytext, '=');
   type = strstr (type, "new"); space(type); nonspace(type);
@@ -1461,7 +1581,7 @@ map{WS}+"{" {
 	     type, var->v);
 }
 
-{ID}+{WS}*[=]{WS}*automatic{WS}*[(][^)]*[)] |
+{ID}{WS}*[=]{WS}*automatic{WS}*[(][^)]*[)] |
 [=]{WS}*automatic{WS}*[(][^)]*[)] {
   var_t * var;
   if (yytext[0] == '=') {
@@ -1493,22 +1613,40 @@ map{WS}+"{" {
 
 \({WS}*const{WS}*\)    varmaybeconst = 1;
 
-(void|char|short|int|long|float|double){WS}+[\*]*{WS}*{ID}+ {
+(void|char|short|int|long|float|double|coord|stats|norm){WS}+{TYPE} {
   char * var = yytext;
   space (var);
   nonspace (var);
-  while (*var == '*') var++;
-  nonspace (var);
-  if (para == 0) /* declaration */
-    varpush (var, other_type, scope, 0);
-  else if (para == 1) /* function prototype (no nested functions) */
+  int npointers = 0;
+  while (*var == '*') var++, npointers++;
+  nonspace (var);  if (para == 0) { /* declaration */
+    varsymmetric = varface = varvertex = varmaybeconst = 0;
+    varconst = NULL;
+    vartype = other_type;
+    free (type);
+    char * s = yytext; space (s);
+    type = strndup (yytext, s - yytext);
+    declaration (var, yytext, npointers);
+    invardecl = scope + 1;
+  }
+  else if (para == 1) { /* function prototype (no nested functions) */
+    char * b = strchr (yytext, '[');
+    if (b) {
+      if (!strchr(yytext, ']'))
+	brack++;
+      *b = '\0';
+    }
     varpush (var, other_type, scope + 1, 0);
-  if (debug)
-    fprintf (stderr, "%s:%d: %s\n", fname, line, yytext);
-  ECHO;
+    invardecl = varmaybeconst = 0;
+    if (b)
+      *b = '[';
+    cadna_echo (yytext);
+  }
+  else
+    cadna_echo (yytext);
 }
 
-struct{WS}+{ID}+{WS}+{ID}+ {
+struct{WS}+{ID}{WS}+{ID} {
   char * var = yytext;
   space (var); nonspace (var); space (var); nonspace (var);
   if (para == 0) /* declaration */
@@ -1524,7 +1662,7 @@ symmetric{WS}+tensor{WS}+[a-zA-Z0-9_\[\]]+ |
 face{WS}+vector{WS}+[a-zA-Z0-9_\[\]]+ |
 vertex{WS}+scalar{WS}+[a-zA-Z0-9_\[\]]+ |
 (scalar|vector|tensor){WS}+[a-zA-Z0-9_\[\]]+ |
-bid{WS}+{ID}+ {
+bid{WS}+{ID} {
   varsymmetric = (strstr(yytext, "symmetric") == yytext);
   varface = (strstr(yytext, "face") == yytext);
   varvertex = (strstr(yytext, "vertex") == yytext);
@@ -1557,7 +1695,8 @@ bid{WS}+{ID}+ {
     fputs (text, yyout);
   }
   else if (para == 0) { /* declaration */
-    declaration (var, text);
+    free (type); type = NULL;
+    declaration (var, text, 0);
     invardecl = scope + 1;
   }
   else if (para == 1) { /* function prototype (no nested functions) */
@@ -1571,7 +1710,7 @@ bid{WS}+{ID}+ {
     fputs (text, yyout);
 }
 
-const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+{WS}*=[^;]+ {
+const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}{WS}*=[^;]+ {
   ECHO;
   char * s = strchr (yytext, '='); s--;
   while (strchr (" \t\v\n\f", *s)) s--; s++; *s = '\0';
@@ -1579,7 +1718,7 @@ const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}
 	   fname, line, yytext);
 }
 
-const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}+\[{WS}*\]{WS}*=[^;]+ {
+const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}+{ID}\[{WS}*\]{WS}*=[^;]+ {
   // const scalar a[] = 1.;
   char * var = strstr(yytext,"scalar");
   vartype = scalar;
@@ -1608,14 +1747,18 @@ const{WS}+(symmetric{WS}+|face{WS}+|vertex{WS}+|{WS}*)(scalar|vector|tensor){WS}
 	     fname, line, var, cst, text);
   varconst = cst;
   varsymmetric = varface = varvertex = 0;
-  declaration (var, text);
+  free (type); type = NULL;
+  declaration (var, text, 0);
 }
 
-,{WS}*[a-zA-Z0-9_\[\]]+ {
-  if (invardecl == scope + 1) {
+,{WS}*{TYPE} {
+  if (para == 0 && brack == 0 && invardecl == scope + 1) {
     char * var = &yytext[1];
     nonspace (var);
-    declaration (var, yytext);
+    int npointers = 0;
+    while (*var == '*') var++, npointers++;
+    nonspace (var);
+    declaration (var, yytext, npointers);
   }
   else
     REJECT;
@@ -1725,7 +1868,7 @@ val{WS}*[(]    {
     REJECT;
 }
 
-[a-zA-Z_0-9]+[.ntr]*{WS}*\[{WS}*{ID}+{WS}*\]{WS}*= {
+[a-zA-Z_0-9]+[.ntr]*{WS}*\[{WS}*{ID}{WS}*\]{WS}*= {
   /* v[top] = ..., u.n[left] = ..., u.t[left] = ... */
   char * s = yytext;
   while (!strchr(" \t\v\n\f[.", *s)) s++;
@@ -1760,9 +1903,9 @@ val{WS}*[(]    {
     yyout = boundaryheader;
     fprintf (yyout,
 	     "#line %d \"%s\"\n"
-	     "static double _boundary%d"
+	     "static %s _boundary%d"
 	     " (Point point, Point neighbor, scalar _s) {",
-	     line, fname, nboundary);
+	     line, fname, doubletype, nboundary);
     boundary_staggering (yyout);
     fputs (" POINT_VARIABLES; ", yyout);
     maps (line - 1);
@@ -1909,7 +2052,7 @@ Point{WS}+point[^{ID}] {
   ECHO;
 }
 
-for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}+{WS}+in{WS}+ {
+for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}{WS}+in{WS}+ {
   /* for (scalar .. in .. */
   char * s = strchr (&yytext[3], 'r'); s++;
   int vartype = s[-3] == 's' ? tensor : s[-3] == 't' ? vector : scalar;
@@ -2019,6 +2162,10 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
     fputc (')', yyout);
     inarray = 0;
   }
+  else if (inmalloc == brack) {
+    fputs ("))", yyout);
+    inmalloc = 0;
+  }
   else
     ECHO;
   brack--;
@@ -2026,7 +2173,7 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
     return yyerror ("mismatched ']'");  
 }
 
-event{WS}+{ID}+{WS}*[(] {
+event{WS}+{ID}{WS}*[(] {
   /* event (... */
   char ids[80], * id = ids;
   strncpy (id, yytext, 80);
@@ -2058,9 +2205,9 @@ event{WS}+{ID}+{WS}*[(] {
     eventchild[nevents] = lastfound;
   }
   fprintf (yyout, 
-	   "static int %s_expr%d (int * ip, double * tp, Event * _ev) {"
-	   "  int i = *ip; double t = *tp;"
-	   "  int ret = (", id, inevent++);
+	   "static int %s_expr%d (int * ip, %s * tp, Event * _ev) {"
+	   "  int i = *ip; %s t = *tp;"
+	   "  int ret = (", id, inevent++, doubletype, doubletype);
   eventscope = scope; eventpara = ++para;
   eventarray[nevents] = 0;
   eventfile[nevents] = strdup (fname);
@@ -2137,16 +2284,16 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   stack_push (&foreachdim_stack, &dim);
 }
 
-{ID}+{WS}+{ID}+{WS}*\( {
+{ID}{WS}+{ID}{WS}*\( {
   if (scope == 0 && para == 0) {
     // function prototype
     para++;
-    ECHO;
+    cadna_echo (yytext);
     char * s1 = yytext; space (s1); *s1++ = '\0';
     nonspace (s1);
     char * s2 = s1; while (!strchr (" \t\v\n\f(", *s2)) s2++; *s2 = '\0';
     free (return_type);
-    return_type = strdup (yytext);
+    return_type = strdup (cadna_type (yytext));
     infunctionproto = 1;
     if (debug)
       fprintf (stderr, "%s:%d: function '%s' returns '%s'\n", 
@@ -2170,7 +2317,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     REJECT;
 }
 
-,?{WS}*reduction{WS}*[(](min|max|\+):{ID}+[)] {
+,?{WS}*reduction{WS}*[(](min|max|\+):{ID}[)] {
   if (debug)
     fprintf (stderr, "%s:%d: '%s'\n", fname, line, yytext);
   if (yytext[0] == ',')
@@ -2196,7 +2343,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   }
 }
 
-{ID}+ {
+{ID} {
   var_t * var;
   if (inforeach) {
     int i;
@@ -2205,7 +2352,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
 	fputc ('_', yyout);
 	break;
       }
-    ECHO;
+    cadna_echo (yytext);
   }
   else if (scope == 0 && para == 0 &&
 	   (var = varlookup (yytext, strlen(yytext))) &&
@@ -2224,7 +2371,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
       assert (0);
   }
   else
-    ECHO;
+    cadna_echo (yytext);
 }
 
 {SCALAR}[.][xyzi] ECHO;
@@ -2248,13 +2395,13 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     ECHO;
 }
 
-{ID}+{WS}+{ID}+{WS}*[(]{WS}*struct{WS}+{ID}+{WS}+{ID}+{WS}*[)] {
+{ID}{WS}+{ID}{WS}*[(]{WS}*struct{WS}+{ID}{WS}+{ID}{WS}*[)] {
   // function declaration with struct argument
-  ECHO;
+  cadna_echo (yytext);
   char * s = yytext;
   space (s); *s++ = '\0'; nonspace (s);
   free (return_type);
-  return_type = strdup (yytext);
+  return_type = strdup (cadna_type (yytext));
   args = realloc (args, sizeof (char *)*++nargs);
   argss = realloc (argss, sizeof (char *)*nargs);
   char * s1 = s; while (!strchr(" \t\v\n\f(", *s1)) s1++;
@@ -2278,7 +2425,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
 	     fname, line, s, s1, s2, return_type);
 }
 
-{ID}+{WS}*[(]{WS}*{ID}+{WS}*[)] {
+{ID}{WS}*[(]{WS}*{ID}{WS}*[)] {
   // function call with a single 'args' assignment
   if (inarg)
     REJECT;
@@ -2303,7 +2450,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   inarg = 0;
 }
 
-{ID}+{WS}*[(] {
+{ID}{WS}*[(] {
   // function call with multiple 'args' assignment
   if (inarg)
     REJECT;
@@ -2320,7 +2467,17 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     REJECT;
 }
 
-{ID}+{WS}*=[^=] {
+[fs]?printf{WS}*[(] {
+  if (cadna) {
+    ECHO; para++;
+    incadna = para;
+    incadnanargs = 0;
+  }
+  else
+    REJECT;
+}
+
+{ID}{WS}*=[^=] {
   // arguments of function call with 'args' assignment
   if (inarg && para == inarg) {
     fputc('.', yyout);
@@ -2374,16 +2531,18 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     ECHO;
 }
 
-^{SP}*@{SP}*{ID}+{SP}+(foreach|end_foreach|trace) |
-^{SP}*@{SP}*{ID}+ {
+^{SP}*@{SP}*{ID}{SP}+(foreach|end_foreach|trace) |
+^{SP}*@{SP}*{ID} {
   // @... foreach...
   // @... end_foreach...
   // @...
   yytext = strchr(yytext, '@'); yytext++;
   fprintf (yyout, "#%s", yytext);
   register int oldc = 0, c;
+  char * text = malloc (100);
+  int len = 0, maxlen = 100;
   for (;;) {
-    while ((c = getput()) != '\n' && c != EOF) {
+    while ((c = input()) != '\n' && c != EOF) {
       if (c == '(') para++;
       if (c == ')') para--;
       if (para < 0)
@@ -2393,10 +2552,21 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
       if (scope < 0)
 	return yyerror ("mismatched '}'");
       oldc = c;    /* eat up text of preproc */
+      if (len == maxlen - 1)
+	maxlen += 100, text = realloc (text, maxlen);	
+      text[len++] = c;
+    }
+    if (c == '\n') {
+      if (len == maxlen - 1)
+	maxlen += 100, text = realloc (text, maxlen);	
+      text[len++] = c;
     }
     if (c == EOF || oldc != '\\')
       break;
   }
+  text[len] = '\0';
+  cadna_echo (text);
+  free (text);
 }
 
 ^{SP}*@.*" Pragma(" {
@@ -2413,7 +2583,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   }
 }
 
-static{WS}+FILE{WS}*[*]{WS}*{ID}+{WS}*= {
+static{WS}+FILE{WS}*[*]{WS}*{ID}{WS}*= {
   if (scope == 0)
     REJECT;
   // static FILE * fp = ...
@@ -2430,10 +2600,69 @@ static{WS}+FILE{WS}*[*]{WS}*{ID}+{WS}*= {
 	   "fopen(\"/dev/null\", \"w\") : ", id, id);
 }
 
+{D}+{E}{FS}?		|
+{D}*"."{D}+({E})?{FS}?	|
+{D}+"."{D}*({E})?{FS}?	{
+  if (cadna)
+    /* Force (double_st) type casting of floating-point constants (for
+       compatibility with CADNA) */
+    fprintf (yyout, "(double_st)%s", yytext);
+  else
+    REJECT;
+}
+
 "/*"                                    { ECHO; if (comment()) return 1; }
 "//".*                                  { ECHO; /* consume //-comment */ }
-({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+	{ ECHO; /* STRING_LITERAL */ }
-'.'                                     { ECHO; /* character literal */ }
+
+({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+	{
+  /* STRING_LITERAL */
+  if (incadna) {
+    char * s = yytext;
+    int nargs = 0;
+    incadnanargs = 0;
+    while (*s != '\0') {
+      if (*s == '%') {
+	char * f = s++;
+	while (*s != '\0' && !strchr("diouxXeEfFgGaAcspn%", *s)) s++;
+
+	switch (*s) {
+	case 'e': case 'E': case 'f': case 'F': case 'g': case 'G':
+	case 'a': case 'A':
+	  fputs ("%s", yyout);
+	  incadnaarg[incadnanargs++] = nargs++;
+	  assert (incadnanargs < 80);
+	  break;
+	  
+	default:
+	  if (*s != 'm' && *s != '%')
+	    nargs++;
+	    
+	  while (f != s)
+	    fputc (*f++, yyout);
+	  fputc (*s, yyout);
+	}
+      }
+      else
+	fputc (*s, yyout);
+      s++;
+    }
+    incadnaargs = 0;
+#if 0
+    if (incadnanargs) {
+      fprintf (stderr, "%s:%d: incadna: %d para: %d infine: %d %s:",
+	       fname, line, incadna, para, infine, yytext);
+      int i;
+      for (i = 0; i < incadnanargs; i++)
+	fprintf (stderr, " %d", incadnaarg[i]);
+      fputc ('\n', stderr);
+    }
+#endif
+  }
+  else
+    ECHO;
+}
+
+'.' { ECHO; /* character literal */ }
 
 %%
 
@@ -2481,7 +2710,7 @@ int endfor (FILE * fin, FILE * fout)
     inforeach_boundary = inforeach_face = 0;
   invardecl = 0;
   inval = invalpara = indef = 0;
-  brack = inarray = infine = 0;
+  brack = inarray = infine = inmalloc = 0;
   inevent = inreturn = inattr = inmap = 0;
   mallocpara = 0;
   foreachdim_stack.n = 0;
@@ -2492,7 +2721,7 @@ int endfor (FILE * fin, FILE * fout)
   if (tracefp)
     fclose (tracefp);
   tracefp = NULL;
-  inarg = 0;
+  inarg = incadna = 0;
   boundaryheader = dopen ("_boundary.h", "w");
   int ret = yylex();
   if (!ret) {
@@ -2551,7 +2780,7 @@ void write_event (int i, FILE * fout)
   if (eventarray[i] == 't')
     fprintf (fout, "%s_array,\n", func);
   else
-    fprintf (fout, "((double *)0),\n");
+    fprintf (fout, "((%s *)0),\n", doubletype);
   fprintf (fout, "    \"%s\", %d, \"%s\"});\n", eventfile[i], 
 	   nolineno ? 0 : eventline[i], eventid[i]);
 }
@@ -2575,18 +2804,18 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   for (i = 0; i < nboundary; i++)
     if (!periodic[i])
       fprintf (fout, 
-	       "static double _boundary%d (Point point, Point neighbor,"
+	       "static %s _boundary%d (Point point, Point neighbor,"
 	       " scalar _s);\n"
-	       "static double _boundary%d_homogeneous (Point point,"
+	       "static %s _boundary%d_homogeneous (Point point,"
 	       " Point neighbor, scalar _s);\n", 
-	     i, i);
+	       doubletype, i, doubletype, i);
   fclose (fout);
 
   fout = dopen ("_grid.h", "w");
   /* new variables */
   fprintf (fout,
-	   "size_t datasize = %d*sizeof (double);\n",
-	   nvar);
+	   "size_t datasize = %d*sizeof (%s);\n",
+	   nvar, doubletype);
   /* attributes */
   FILE * fp = dopen ("_attributes.h", "a");
   fputs ("\n"
@@ -2598,15 +2827,16 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   for (i = 0; i < nevents; i++) {
     char * id = eventfunc[i];
     fprintf (fout, 
-	     "static int %s (const int i, const double t, Event * _ev);\n", id);
+	     "static int %s (const int i, const %s t, Event * _ev);\n",
+	     id, doubletype);
     int j;
     for (j = 0; j < nexpr[i]; j++)
       fprintf (fout,
-	       "static int %s_expr%d (int * ip, double * tp, Event * _ev);\n",
-	       id, j);
+	       "static int %s_expr%d (int * ip, %s * tp, Event * _ev);\n",
+	       id, j, doubletype);
     if (eventarray[i])
       fprintf (fout, "static %s %s_array[] = %s,-1};\n", 
-	       eventarray[i] == 'i' ? "int" : "double", id,
+	       eventarray[i] == 'i' ? "int" : doubletype, id,
 	       eventarray_elems[i]);
   }
   /* boundaries */
@@ -2632,9 +2862,9 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	}
       }
   /* scalar attributes */
-  fprintf (fout, "  _attribute = (_Attributes *) pcalloc (datasize/sizeof(double), "
+  fprintf (fout, "  _attribute = (_Attributes *) pcalloc (datasize/sizeof(%s), "
 	   "sizeof (_Attributes), __func__, __FILE__, %s);\n",
-	   nolineno ? "0" : "__LINE__");
+	   doubletype, nolineno ? "0" : "__LINE__");
   /* list of all scalars */
   fprintf (fout, 
 	   "  all = (scalar *) pmalloc (sizeof (scalar)*%d,__func__, __FILE__, %s);\n"
@@ -2661,7 +2891,8 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 		   var.i[0]);
 	  for (i = 1; i < dimension; i++)
 	    fprintf (fout, ",{_NVARMAX+%d}", var.i[i]);
-	  fprintf (fout, "}, \"%s\", (double [])%s);\n", var.v, var.constant);
+	  fprintf (fout, "}, \"%s\", (%s [])%s);\n",
+		   var.v, doubletype, var.constant);
 	}
 	else
 	  assert (0);
@@ -2758,6 +2989,26 @@ int main (int argc, char ** argv)
       catch = 1;
     else if (!strcmp (argv[i], "-source"))
       source = 1;
+    else if (!strcmp (argv[i], "-Wall")) {
+      char * s = strchr (command, ' ');
+      if (s) {
+	char command1[1000];
+	strcpy (command1, s);
+	*(s+1) = '\0';
+	strcat (command, argv[i]);
+	strcat (command, command1);
+      }
+      else
+	strcat (command, argv[i]);
+    }
+    else if (!strcmp (argv[i], "-cadna")) {
+      cadna = 1;
+      char * cc = getenv ("CADNACC");
+      if (cc == NULL)
+	strcpy (command, CADNACC);
+      else
+	strcpy (command, cc);
+    }
     else if (!strncmp (argv[i], "-Ddimension=", 12))
       dimension = 1 + argv[i][12] - '1';
     else if (catch && !strncmp (argv[i], "-O", 2))

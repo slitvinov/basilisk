@@ -65,10 +65,10 @@ or by the Basilisk libraries in gl/. */
 #  include <GL/glu.h>
 #endif
 
-#include "gl/framebuffer.h"
-#include "gl/gl2ps/gl2ps.h"
-#include "gl/trackball.h"
-#include "gl/utils.h"
+#include <gl/framebuffer.h>
+#include <gl/gl2ps/gl2ps.h>
+#include <gl/trackball.h>
+#include <gl/utils.h>
 #include "utils.h"
 #include "input.h"
 
@@ -310,7 +310,7 @@ static pointer compose_image (bview * view)
     MPI_Type_commit (&rgba);
     fbdepth_t * depth = framebuffer_depth (view->fb);
     int size = view->width*view->height;
-    RGBA buf[size];
+    RGBA * buf = malloc (size*sizeof(RGBA));
     unsigned char * ptr = image;
     fbdepth_t * dptr = depth;
     for (int i = 0; i < size; i++) {
@@ -327,6 +327,7 @@ static pointer compose_image (bview * view)
     }
     else
       MPI_Reduce (buf, buf, size, rgba, op, 0, MPI_COMM_WORLD);
+    free (buf);
     MPI_Op_free (&op);
     MPI_Type_free (&rgba);
   }

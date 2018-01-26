@@ -46,7 +46,6 @@ and the counterion as $Cm$. The valence is one, ($|Z|=1$). */
 
 scalar phi[];
 scalar Cp[], Cm[];
-double dt;
 int Z[2] = {1,-1};
 scalar * sp = {Cp, Cm};
 

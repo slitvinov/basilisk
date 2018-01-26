@@ -59,7 +59,7 @@ event acceleration (i++)
       zero. */
 
       foreach()
-	f[] = clamp (f[], 0, 1);
+	f[] = clamp (f[], 0., 1.);
       boundary ({f});
     }
 

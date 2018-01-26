@@ -71,9 +71,9 @@ the forcing terms diverge near the axis of symmetry. */
 #define PHI(x,y) y*cos(x)*sin(y)
 #define RHOE(x,y) cos(x)*(-3*cos(y) + (2*y-1/y)*sin(y))
 
-#define FY(x,y) (y == 0. ? 0 : sq(cos(x))/y*(sq(sin(y)) + \
-					     y/2*(y + 5*y*cos(2*y) \
-						  - 2*(-2+sq(y))*sin(2*y))))
+#define FY(x,y) (y == 0. ? 0. : sq(cos(x))/y*(sq(sin(y)) + \
+					      y/2*(y + 5*y*cos(2*y)	\
+						   - 2*(-2+sq(y))*sin(2*y))))
 
 #define FX(x,y) cos(x)*sin(x)*sin(y)*(-3*y*cos(y)+(2*sq(y)-1)*sin(y))
 

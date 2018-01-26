@@ -18,6 +18,7 @@ qcc: qcc.c include.o rotate.o config
 	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
 		-DCC99="\"$(CC99)\"" \
 		-DCPP99="\"$(CPP99)\"" \
+		-DCADNACC="\"$(CADNACC)\"" \
 		-DBASILISK="\"$(BASILISK)\"" \
 		qcc.c include.o rotate.o -o qcc
 
@@ -64,7 +65,7 @@ bview3D:
 include.c: include.lex
 	flex -P inc -o include.c include.lex
 
-qcc.c: qcc.lex
+qcc.c: qcc.lex Makefile
 	flex -o qcc.c qcc.lex
 
 alltags:

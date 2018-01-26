@@ -12,6 +12,18 @@
 @include <sys/time.h>
 @include <sys/resource.h>
 
+@if _CADNA
+@ include <cadna.h>
+@endif // CADNA
+
+@if __cplusplus
+@ define delete delete_qcc
+@ define right right_qcc
+@ define left left_qcc
+@ define norm norm_qcc
+@ define new new_qcc
+@endif // _cplusplus
+
 @define pi 3.14159265358979
 @undef HUGE
 @define HUGE ((double)1e30)
@@ -707,6 +719,9 @@ void mpi_init()
 
 void init_solver()
 {
+@if _CADNA
+  cadna_init (-1);
+@endif
 @if _MPI
   mpi_init();
 @elif MTRACE == 1
@@ -733,7 +748,7 @@ double _val_higher_dimension = 0.;
  * This blog was useful:
  *   http://codingcastles.blogspot.co.nz/2008/12/nans-in-c.html 
  */
-@if (_GNU_SOURCE || __APPLE__) && !_OPENMP
+@if (_GNU_SOURCE || __APPLE__) && !_OPENMP && !_CADNA
 double undefined;
 @ if __APPLE__
 @   include <stdint.h>
@@ -748,7 +763,7 @@ static void set_fpe (void) {
   enable_fpe (FE_DIVBYZERO|FE_INVALID);
 }
 @else
-@  define undefined DBL_MAX
+@  define undefined ((double) DBL_MAX)
 @  define enable_fpe(flags)
 @  define disable_fpe(flags)
 static void set_fpe (void) {}

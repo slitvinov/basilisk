@@ -65,9 +65,10 @@ timing timer_timing (timer t, int i, size_t tnc, double * mpi)
   s.cpu = ((double) (end - t.c))/CLOCKS_PER_SEC;
   s.real = timer_elapsed (t);
   if (tnc == 0) {
-    foreach(reduction(+:tnc)) tnc++;
-    s.tnc = tnc;
-    tnc *= i;
+    double n = 0;
+    foreach(reduction(+:n)) n++;
+    s.tnc = n;
+    tnc = n*i;
   }
   else
     s.tnc = tnc;
@@ -93,7 +94,7 @@ timing timer_timing (timer t, int i, size_t tnc, double * mpi)
 @else
   s.min = s.max = s.avg = 0.;
 @endif
-  s.speed = s.real > 0. ? tnc/s.real : -1;
+  s.speed = s.real > 0. ? tnc/s.real : -1.;
   return s;
 }
 
@@ -265,44 +266,6 @@ void vorticity (const vector u, scalar omega)
       omega[] = (u.y[1,0] - u.y[-1,0] + u.x[0,-1] - u.x[0,1])/(2.*Delta);
     boundary ({omega});
   #endif
-}
-
-/**
-A simple Runge-Kutta time-integrator. */
-  
-void runge_kutta (int stages,
-		  double t, double dt,
-		  int nv, scalar f[nv], scalar df[stages][nv], 
-		  void (* advance) (double t, scalar f[nv], scalar df[nv]),
-		  void (* update)  (double t, scalar f[nv]))
-{
-  switch (stages) {
-  case 1:
-    (* advance) (t, f, df[0]);
-    foreach()
-      for (int v = 0; v < nv; v++)
-	f[v][] += df[0][v][]*dt;
-    (* update) (t + dt, f);
-    break;
-
-  case 2:
-    (* advance) (t, f, df[0]);
-    foreach()
-      for (int v = 0; v < nv; v++)
-	df[0][v][] = f[v][] + df[0][v][]*dt/2.;
-    (* update) (t + dt/2., df[0]);
-
-    (* advance) (t + dt/2., df[0], df[1]);
-    foreach()
-      for (int v = 0; v < nv; v++)
-	f[v][] += df[1][v][]*dt;
-    (* update) (t + dt, f);
-    break;
-
-  default:
-    /* not implemented yet */
-    assert(false);
-  }
 }
 
 /**

@@ -105,7 +105,7 @@ void mg_print (mgstats mg)
 {
   if (mg.i > 0 && mg.resa > 0.)
     printf ("%d %g %g %g %d ", mg.i, mg.resb, mg.resa,
-	    mg.resb > 0 ? exp (log (mg.resb/mg.resa)/mg.i) : 0,
+	    mg.resb > 0 ? exp (log (mg.resb/mg.resa)/mg.i) : 0.,
 	    mg.nrelax);
 }
 

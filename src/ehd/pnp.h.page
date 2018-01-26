@@ -31,7 +31,7 @@ void ohmic_flux (struct Species sp)
   if (!sp.K) { // fixme: this does not work yet
     int i = 0;
     for (scalar s in sp.c) {
-      const face vector kc[] = {sp.z[i], sp.z[i++]};
+      const face vector kc[] = {sp.z[i], sp.z[i]}; i++;
       sp.K = vectors_append (sp.K, kc);
     }
   }

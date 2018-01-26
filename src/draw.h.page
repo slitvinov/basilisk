@@ -68,7 +68,7 @@ void view (struct _view_set p)
       v->fov += (0.1 + 3.*v->fov)*p.fov;
     else
       v->fov = p.fov;
-    v->fov = clamp(v->fov,0.01,100);
+    v->fov = clamp(v->fov,0.01,100.);
   }
   for (int i = 0; i < 4; i++)
     if (p.quat[i]) {
@@ -389,7 +389,7 @@ bool draw_vof (struct _draw_vof p)
   glEnd ();
   glPopMatrix ();
 #else // dimension == 3
-  double larger = p.larger ? p.larger : p.edges ? 1 : 1.1;
+  double larger = p.larger ? p.larger : p.edges ? 1. : 1.1;
   glColor3f (1., 1., 1.); // default color
   foreach_visible (view)
     if (cfilter (point, c, cmin)) {
@@ -399,7 +399,7 @@ bool draw_vof (struct _draw_vof p)
       int m = facets (n, alpha, v, larger);
       if (m > 2) {
 	if (p.color && (!p.linear || col.i < 0)) {
-	  color b = colormap_color (cmap, col.i < 0 ? level : col[],
+	  color b = colormap_color (cmap, col.i < 0 ? (double) level : col[],
 				    p.min, p.max);
 	  glColor3f (b.r/255., b.g/255., b.b/255.);
 	}
@@ -515,7 +515,7 @@ struct _squares {
   double alpha;
 };
 
-#define gltexcoord(v) glTexCoord1d (clamp(((v) - p.min)/(p.max - p.min), 0, 1))
+#define gltexcoord(v) glTexCoord1d (clamp(((v) - p.min)/(p.max - p.min), 0., 1.))
 
 trace
 bool squares (struct _squares p)

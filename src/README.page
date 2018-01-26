@@ -349,3 +349,4 @@ program (i.e. `a[]` in this example), accordingly `ga.x[]` and
 * [Built-in profiling](README.trace)
 * [Built-in memory profiling](README.mtrace)
 * [Performance profiling with Paraver](README.paraver)
+* [Profiling round-off errors with CADNA](README.cadna)

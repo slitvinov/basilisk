@@ -1,4 +1,5 @@
-all: check 3D-tests mpi-tests load-balancing curvature-tests axi-tests
+all: check 3D-tests mpi-tests load-balancing curvature-tests axi-tests \
+	cadna-tests
 
 include $(BASILISK)/Makefile.defs
 
@@ -6,7 +7,7 @@ include $(BASILISK)/Makefile.defs
 CFLAGS += -O2 -DMTRACE=3
 
 # list only non-default tests
-check: halo.vtst rk2.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst \
+check: halo.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst \
 	lid-restore.tst
 
 # these tests have special dependencies/compilation requirements
@@ -302,3 +303,7 @@ mpi-periodic-3D.c: periodic.c
 mpi-periodic-3D.s: periodic.s $(BASILISK)/grid/multigrid-mpi.h
 mpi-periodic-3D.tst: CC = mpicc -D_MPI=8
 mpi-periodic-3D.tst: CFLAGS += -grid=multigrid3D
+
+# CADNA tests
+
+cadna-tests: poiseuille.CADNA.tst sag.CADNA.tst poisson.CADNA.tst

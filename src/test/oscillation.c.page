@@ -38,7 +38,7 @@ scalar f[], * interfaces = {f};
 /**
 The density inside the droplet is one and outside 10^-3^. */
 
-#define rho(f) (clamp(f,0,1)*(1. - 1e-3) + 1e-3)
+#define rho(f) (clamp(f,0.,1.)*(1. - 1e-3) + 1e-3)
 
 /**
 We have the option of using some "smearing" of the density jump. */
