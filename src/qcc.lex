@@ -1351,10 +1351,10 @@ break {
 }
 
 foreach{ID}? {
+  strcpy (foreachs, yytext);
   if (indef)
     REJECT;
   fputs (" { ", yyout);
-  strcpy (foreachs, yytext);
   inforeach = 1; foreachscope = scope; foreachpara = para;
   free (foreachconst); 
   foreachconst = NULL;
@@ -3187,8 +3187,10 @@ int main (int argc, char ** argv)
 	strcat (preproc, "\\\"\" ");
       }
       strcat (preproc, cpp);
-      if (debug)
+      if (debug) {
 	fprintf (stderr, "preproc: %s\n", preproc);
+	strcat (preproc, " | tee _preproc.c");
+      }
 
       fin = popen (preproc, "r");
       if (!fin) {
