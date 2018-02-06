@@ -14,6 +14,7 @@ for accurate initialisation of interfacial shapes [Bna et al,
 2015](/src/references.bib#bna2015). */
 
 #include <vofi.h>
+#pragma autolink -L$HOME/local/lib -lvofi
 
 #include "fractions.h"
 #include "curvature.h"

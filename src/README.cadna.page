@@ -17,11 +17,11 @@ CADNA to control round-off errors.
 [Download](http://cadna.lip6.fr/Download_Dir/register.php) page and
 untar it.
 
-2. Download and apply this [patch](cadna.patch) using:
+2. Apply this [patch](cadna.patch) using:
 
 ~~~bash
 cd cadna_c-2.0.2/
-patch -p1 < cadna.patch
+patch -p1 < $BASILISK/cadna.patch
 ~~~
 
 This is necessary to add missing double/float to bool conversion

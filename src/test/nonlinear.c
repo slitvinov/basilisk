@@ -1,4 +1,5 @@
 #include <gsl/gsl_integration.h>
+#pragma autolink -lgsl -lgslcblas
 #include "grid/cartesian.h"
 #include "atmosphere.h"
 

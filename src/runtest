@@ -90,7 +90,7 @@ expirecache()
 locally()
 {
     echo \[$test.$ext\]
-    qcc $CFLAGS -o $test/$test $test.c $LIBS -lm > $test/warn 2>&1 \
+    qcc -autolink $CFLAGS -o $test/$test $test.c $LIBS -lm > $test/warn 2>&1 \
 	|| mv -f $test/warn $test/fail
     cd $test
     script
@@ -102,7 +102,7 @@ locally()
 remotely()
 {
     rhost=$1
-    qcc -source $CFLAGS $test.c
+    autolink=`qcc -autolink -source $CFLAGS $test.c`
     chksum=`$GENSUM $test.s | cut -d' ' -f1`.$ext
     mkdir $test/$chksum
     mv -f _$test.c $test/$test.c
@@ -117,7 +117,7 @@ remotely()
       if ($1 == "mpirun") np = $3; }END{ print np;}'`
     cat <<EOF >$chksum/$test.sh
 #!/bin/sh
-$PCC $PCFLAGS -I\$HOME/include -o $test $test.c -L\$HOME/lib $LIBS -lm > warn 2>&1 || mv -f warn fail
+$PCC $PCFLAGS -I\$HOME/include -o $test $test.c -L\$HOME/lib $LIBS $autolink -lm > warn 2>&1 || mv -f warn fail
 rm -f $test.c
 if ! test -f fail; then
   test -s warn || rm -f warn

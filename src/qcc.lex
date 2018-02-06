@@ -20,6 +20,9 @@
   int debug = 0, catch = 0, cadna = 0, nolineno = 0, events = 0;
   char dir[] = ".qccXXXXXX";
 
+  char * autolink = NULL;
+  int autolinks = 0, source = 0;
+  
   int nvar = 0, nconst = 0, nevents = 0;
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
@@ -2531,6 +2534,19 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     ECHO;
 }
 
+^{SP}*#{SP}*pragma{SP}+autolink{SP}+.*$ {
+  char * s = strstr (yytext, "autolink"); space (s);
+  if (!autolink) {
+    autolink = malloc (strlen(s) + 1);
+    autolink[0] = '\0';
+  }
+  else
+    autolink = realloc (autolink, strlen(s) + 1 + strlen (autolink));
+  strcat (autolink, s);
+  if (debug)
+    fprintf (stderr, "%s:%d: %s\n", fname, line, autolink);
+}
+  
 ^{SP}*@{SP}*{ID}{SP}+(foreach|end_foreach|trace) |
 ^{SP}*@{SP}*{ID} {
   // @... foreach...
@@ -2935,6 +2951,9 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
     fprintf (fout, "  _set_boundary%d();\n", boundaryindex[i]);
   fputs ("}\n", fout);
   fclose (fout);
+
+  if (source && autolinks && autolink)
+    printf ("%s\n", autolink);
   
   /* SWIG interface */
   if (swigfp) {
@@ -2971,7 +2990,7 @@ int main (int argc, char ** argv)
   else
     strcpy (command, cc);
   char * file = NULL;
-  int i, dep = 0, tags = 0, source = 0, swig = 0;
+  int i, dep = 0, tags = 0, swig = 0;
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
       ;
@@ -2989,6 +3008,8 @@ int main (int argc, char ** argv)
       catch = 1;
     else if (!strcmp (argv[i], "-source"))
       source = 1;
+    else if (!strcmp (argv[i], "-autolink"))
+      autolinks = 1;
     else if (!strcmp (argv[i], "-Wall")) {
       char * s = strchr (command, ' ');
       if (s) {
@@ -3287,6 +3308,8 @@ int main (int argc, char ** argv)
     strcat (command, command1);
   /* compilation */
   if (!dep && !tags && !source) {
+    if (autolinks && autolink)
+      strcat (command, autolink);
     if (debug)
       fprintf (stderr, "command: %s\n", command);
     status = system (command);

@@ -73,12 +73,7 @@ conical-implicit.tst: CFLAGS += -DSAINT_VENANT=1 -DIMPLICIT=1
 
 conical.tst: conicalsv.tst conical-implicit.tst
 
-curvature.s: LIBS = "-L$(HOME)/local/lib -lvofi"
-curvature.tst: LIBS = "-L$(HOME)/local/lib -lvofi"
 curvature.tst: curvature.3D.tst
-
-curvature.3D.s: LIBS = "-L$(HOME)/local/lib -lvofi"
-curvature.3D.tst: LIBS = "-L$(HOME)/local/lib -lvofi"
 
 explicit.c: implicit.c
 	ln -s implicit.c explicit.c 
@@ -111,9 +106,6 @@ lid-restore.dump: lid.tst
 	rm -f lid-restore.dump; ln -s lid/dump lid-restore.dump
 lid-restore.tst: lid-restore.dump
 
-nonlinear.s: LIBS = "-lgsl -lgslcblas"
-nonlinear.tst: LIBS = "-lgsl -lgslcblas"
-
 oscillation-momentum.c: oscillation.c
 	ln -s oscillation.c oscillation-momentum.c 
 oscillation-momentum.s: oscillation.s
@@ -124,12 +116,8 @@ oscillation.tst: oscillation-momentum.tst
 ponds-implicit.c: ponds.c
 	ln -s ponds.c ponds-implicit.c
 ponds-implicit.s: ponds.s
-ponds-implicit.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
-ponds-implicit.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
 ponds-implicit.tst: CFLAGS += -DIMPLICIT=1
 
-ponds.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
-ponds.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
 ponds.tst: ponds-implicit.tst
 
 poisson.tst: poisson.ctst
@@ -165,15 +153,10 @@ taylor-green-all-mach.tst: CFLAGS += -DALL_MACH=1
 
 taylor-green.tst: taylor-green-all-mach.tst
 
-terrain.s: LIBS = "-L$(BASILISK)/kdt -lkdt"
-terrain.tst: LIBS = "-L$(BASILISK)/kdt -lkdt"
-
 view.tst: CC = mpicc -D_MPI=4
-view.tst: LIBS = "-L$(BASILISK)/gl -lglutils $(OPENGLIBS)"
 view.tst: view.3D.tst
 
 view.3D.tst: CC = mpicc -D_MPI=4
-view.3D.tst: LIBS = "-L$(BASILISK)/gl -lglutils $(OPENGLIBS)"
 
 coarsen.tst: CFLAGS=-DMTRACE=3
 

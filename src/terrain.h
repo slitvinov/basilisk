@@ -1,5 +1,7 @@
 #include <stdarg.h>
 #include <kdt/kdt.h>
+#pragma autolink -L$BASILISK/kdt -lkdt
+
 @if _OPENMP
 @ define NPROC omp_get_max_threads()
 @ define PROC tid()

@@ -37,6 +37,9 @@ export CADNACC="clang -D_CADNA=1 -x c++ -m64 \
         -Wno-unused-result \
         -Wno-c++11-compat-deprecated-writable-strings \
         -Wno-address-of-array-temporary"
+
+# OpenGL libraries
+export OPENGLIBS="-lfb_osmesa -lGLU -lOSMesa"
 ~~~
 
 If you also intend to generate graphics etc... on the server, do
