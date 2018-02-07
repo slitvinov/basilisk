@@ -141,6 +141,9 @@ class BCanvas (Canvas):
     def zoomout (self, event):
         self.draw ("view (fov = +0.01, relative = 1);\n")
 
+    def zoomMac (self, event):
+        self.draw("view (fov = %g, relative = 1);\n" % (event.delta/100.))
+
     def move (self, event):
         self.draw ("view (tx = %g, ty = %g, relative = 1);\n" %
                    ((event.x - self.beginx)/float(self.winfo_width()),
@@ -314,7 +317,7 @@ class BCanvas (Canvas):
         if platform == "darwin":
             self.bind ("<B3-Motion>", self.zoom)
             self.bind ("<B2-Motion>", self.move)
-            self.bind ("<MouseWheel>", self.zoom)
+            self.bind ("<MouseWheel>", self.zoomMac)
         else:
             self.bind ("<B2-Motion>", self.zoom)
             self.bind ("<B3-Motion>", self.move)
