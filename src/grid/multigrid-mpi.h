@@ -38,41 +38,6 @@ static void rcv_x (int i, int src, int tag, int l, scalar * list)
       s[] = *b++;
 }
 
-foreach_dimension()
-static void snd_rcv_x (int right, int left,
-		       int start, int end, int l, size_t size,
-		       scalar * list)
-{
-  double * send = NULL;
-  if (right != MPI_PROC_NULL) {
-    send = qmalloc (size, double);
-    double * b = send;
-    foreach_slice_x (start, start + GHOSTS, l)
-      for (scalar s in list)
-	*b++ = s[];
-    assert (b - send == size);
-  }
-  if (left != MPI_PROC_NULL) {
-    double * recv = qmalloc (size, double);
-    if (send)
-      MPI_Sendrecv (send, size, MPI_DOUBLE, right, 0,
-		    recv, size, MPI_DOUBLE, left, 0,
-		    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    else
-      MPI_Recv (recv, size, MPI_DOUBLE, left, 0,
-		MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    double * b = recv;
-    foreach_slice_x (end, end + GHOSTS, l)
-      for (scalar s in list)
-	s[] = *b++;
-    assert (b - recv == size);    
-    free (recv);
-  }
-  else if (send)
-    MPI_Send (send, size, MPI_DOUBLE, right, 0, MPI_COMM_WORLD);
-  free (send);
-}
-
 trace
 static void mpi_boundary_level (const Boundary * b, scalar * list, int level)
 {
@@ -88,12 +53,9 @@ static void mpi_boundary_level (const Boundary * b, scalar * list, int level)
   if (level < 0) level = depth();  
   MpiBoundary * mpi = (MpiBoundary *) b;
   struct { int x, y, z; } dir = {0,1,2};
-  int nl = (1 << level) + 2*GHOSTS;
-  size_t size = pow(nl, dimension - 1)*list_len(list1)*GHOSTS;
   foreach_dimension() {
     int left, right;
-    MPI_Cart_shift (mpi->cartcomm, dir.x, 1, &left, &right);
-#if 1
+    MPI_Cart_shift (mpi->cartcomm, dir.x, 1, &left, &right);  
     MPI_Request reqs[2];
     void * buf[2];
     int nl = (1 << level) + 2*GHOSTS, nr = 0;
@@ -106,10 +68,6 @@ static void mpi_boundary_level (const Boundary * b, scalar * list, int level)
     MPI_Status stats[nr];
     MPI_Waitall (nr, reqs, stats);
     free (buf[0]); free (buf[1]);
-#else
-    snd_rcv_x (right, left, nl - 2*GHOSTS, 0, level, size, list1);
-    snd_rcv_x (left, right, GHOSTS, nl - GHOSTS, level, size, list1);
-#endif
   }
 
   free (list1);
