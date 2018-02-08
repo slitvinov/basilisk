@@ -174,12 +174,12 @@ EOF
     tar czf $chksum.tgz $chksum
     rm -r -f $chksum
 
-    if ! ( scp -q $chksum.tgz $rhost: && rm -f $chksum.tgz && \
+    if ! ( scp $chksum.tgz $rhost: && rm -f $chksum.tgz && \
 	ssh $rhost bash -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -N \$(test \$(tsp -S) -le $NCORES && echo \$(tsp -S) || echo $NCORES) -n nice -19 sh $test.sh\" && sleep 0 && tsp -p && tsp -w" > tspid.$ext && \
 	scp -q $rhost:$chksum.tgz $chksum.tgz && \
 	ssh $rhost rm -r -f $chksum.tgz && \
 	tar xmzf $chksum.tgz && \
-	rm -f $chksum.tgz $test.c $test.*ref ) > ssh.log 2>&1;
+	rm -f $chksum.tgz $test.c $test.*ref ) > /dev/null 2>> ssh.log;
     then
 	cat ssh.log >> fail
     fi
@@ -272,6 +272,7 @@ elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
     if test -n "$SANDBOX"; then
         ( remotely $SANDBOX ) &
 	echo $! > $test/pid.$ext
+	sleep 1
     else
 	locally
 	rm -f $test/plots
