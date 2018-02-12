@@ -7,7 +7,7 @@ int main()
   scalar a[], b[], e[];
 
 #if 0
-  // this does not work with multigrid MPI
+  // this does not work with multigrid MPI or trees
   foreach_dimension() {
     a[right] = periodic();
   }

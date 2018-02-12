@@ -709,8 +709,6 @@ static void periodic_boundary (int d)
   default_vector_bc[d] = periodic_bc;
 }
 
-int Periods[dimension];
-
 void periodic (int dir)
 {
   #if dimension < 2
@@ -724,5 +722,5 @@ void periodic (int dir)
   int c = dir/2;
   periodic_boundary (2*c);
   periodic_boundary (2*c + 1);
-  Periods[c] = true;
+  (&Period.x)[c] = true;
 }

@@ -14,11 +14,10 @@ int main (int argc, char * argv[])
   boundary ({s});
 
   // check boundary conditions on leaves
-  // fixme: should be = -GHOSTS; i <= GHOSTS
+  // fixme: should work with 2 neighbors
   foreach()
-    for (int i = -1; i <= 1; i++)
-      for (int j = -1; j <= 1; j++)
-	assert (s[i,j] == 1.);
+    foreach_neighbor (1)
+      assert (s[] == 1.);
 
   // rebalancing
   int nf = 0;

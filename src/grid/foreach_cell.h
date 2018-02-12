@@ -136,12 +136,12 @@ void recursive (Point point)
 
 @def foreach_cell_all() {
   Point root = { .level = 0 };
-  for (root.i = 0; root.i <= 2*GHOSTS; root.i++)
+  for (root.i = GHOSTS*Period.x; root.i <= GHOSTS*(2 - Period.x); root.i++)
 #if dimension >= 2
-    for (root.j = 0; root.j <= 2*GHOSTS; root.j++)
+    for (root.j = GHOSTS*Period.y; root.j <= GHOSTS*(2 - Period.y); root.j++)
 #endif
 #if dimension >= 3
-      for (root.k = 0; root.k <= 2*GHOSTS; root.k++)
+      for (root.k = GHOSTS*Period.z; root.k <= GHOSTS*(2 - Period.z); root.k++)
 #endif
 	foreach_cell_root (root)
 @

@@ -179,6 +179,8 @@ hf-mask.tst: CFLAGS = -DTRASH=1
 
 ## MPI tests
 
+# bump2Dp.tst crashes with -DDEBUGCOND=1 but works with -DDEBUGCOND=0
+
 mpi-tests: indexing.tst indexing.3D.tst \
 	mpi-restriction.tst mpi-restriction.3D.tst \
 	mpi-reduce.tst mpi-refine.tst mpi-refine1.tst mpi-refine.3D.tst \
@@ -290,3 +292,13 @@ mpi-periodic-3D.tst: CFLAGS += -grid=multigrid3D
 # CADNA tests
 
 cadna-tests: poiseuille.CADNA.tst sag.CADNA.tst poisson.CADNA.tst
+
+# Periodic boundary tests
+
+periodic1.tst: CFLAGS += -grid=bitree -DTRASH=1
+periodic2.c: periodic1.c
+	ln -s periodic1.c periodic2.c
+periodic2.tst: CFLAGS += -DTRASH=1
+periodic3.c: periodic1.c
+	ln -s periodic1.c periodic3.c
+periodic3.tst: CFLAGS += -grid=octree -DTRASH=1

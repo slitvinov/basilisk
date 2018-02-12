@@ -6,8 +6,7 @@ int main()
     periodic (right);
 
   L0 = 2.*pi;
-  
-  init_grid (4);
+  init_grid (8);
   output_cells (stdout);
 
   vector u[];

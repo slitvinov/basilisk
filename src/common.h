@@ -810,6 +810,8 @@ typedef struct {
 #endif
 } tensor;
 
+struct { int x, y, z; } Period = {false, false, false};
+
 typedef struct {
   double x, y, z;
 } coord;

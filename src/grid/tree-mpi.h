@@ -1115,7 +1115,7 @@ static void flag_border_cells()
 	if (!is_local(cell) || (level > 0 && !is_local(aparent(0))))
 	  flags |= border, break;
 	// root cell
-	if (is_refined(cell))
+	if (is_refined_check())
 	  foreach_child()
 	    if (!is_local(cell))
 	      flags |= border, break;

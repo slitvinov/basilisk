@@ -3,7 +3,6 @@
 
 Same as [poiseuille-periodic.c]() but axisymmetric. */
 
-#include "grid/multigrid.h"
 #include "axi.h"
 #include "navier-stokes/centered.h"
 

@@ -84,8 +84,8 @@ typedef struct {
 #if dimension > 1
 // Refcounted array
 
-static void * new_refarray (size_t len, size_t size) {
-  return calloc (len + 1, size);
+static char * new_refarray (size_t len, size_t size) {
+  return (char *) calloc (len + 1, size);
 }
 
 static void refarray (void * p, size_t len, size_t size) {
@@ -134,6 +134,19 @@ static size_t poolsize (size_t depth, size_t size)
 #else
   return cube(_size(depth))*size;
 #endif
+}
+
+foreach_dimension()
+static inline
+void assign_periodic_x (char ** m, int i, int nl, char * b)
+{
+  m[i] = b;
+  if (Period.x) {
+    for (int j = i; j < nl + 2*GHOSTS; j += nl)
+      m[j] = b;
+    for (int j = i - nl; j >= 0; j -= nl)
+      m[j] = b;
+  }
 }
 
 static Layer * new_layer (int depth)
@@ -185,20 +198,16 @@ static bool layer_remove_row (Layer * l, int i)
 #else // dimension != 1
 static void layer_add_row (Layer * l, int i, int j)
 {
-#if dimension == 2
   if (!l->m[i]) {
-    l->m[i] = (char **) new_refarray (l->len, sizeof (char *));
+    assign_periodic_x ((char **) l->m, i, l->len - 2*GHOSTS,
+		       new_refarray (l->len, sizeof (char *)));
     l->nc++;
   }
   refarray (l->m[i], l->len, sizeof(char *));
-#elif dimension == 3
-  if (!l->m[i]) {
-    l->m[i] = (char ***) new_refarray (l->len, sizeof (char **));
-    l->nc++;
-  }
-  refarray (l->m[i], l->len, sizeof(char *));
+#if dimension > 2
   if (!l->m[i][j])
-    l->m[i][j] = (char **) new_refarray (l->len, sizeof (char *));
+    assign_periodic_y ((char **) l->m[i], j, l->len - 2*GHOSTS,
+		       new_refarray (l->len, sizeof (char *)));
   refarray (l->m[i][j], l->len, sizeof(char *));
 #endif
 }
@@ -207,10 +216,10 @@ static bool layer_remove_row (Layer * l, int i, int j)
 {
 #if dimension > 2
   if (unrefarray (l->m[i][j], l->len, sizeof (char *)))
-    l->m[i][j] = NULL;
+    assign_periodic_y ((char **) l->m[i], j, l->len - 2*GHOSTS, NULL);
 #endif
   if (unrefarray (l->m[i], l->len, sizeof (char *))) {
-    l->m[i] = NULL;
+    assign_periodic_x ((char **) l->m, i, l->len - 2*GHOSTS, NULL);
     if (--l->nc == 0) {
       destroy_layer (l);
       return true; // layer has been destroyed
@@ -440,6 +449,11 @@ void cache_shrink (Cache * c)
 #if dimension >= 3
   parent.k = (point.k + GHOSTS)/2;
 #endif
+#if TRASH
+  Cell * cellp = point.level <= depth() && allocated(0,0,0) ?
+    (Cell *) NEIGHBOR(0,0,0) : NULL;
+  NOT_UNUSED(cellp);
+#endif
 @
 
 #include "foreach_cell.h"
@@ -505,6 +519,17 @@ void cache_shrink (Cache * c)
 #define is_refined(cell)      (!is_leaf (cell) && cell.neighbors && cell.pid >= 0)
 #define is_prolongation(cell) (!is_leaf(cell) && !cell.neighbors && cell.pid >= 0)
 #define is_boundary(cell)     (cell.pid < 0)
+  
+@def is_refined_check() (is_refined(cell) &&
+			 point.i > 0 && point.i < (1 << level) + 2*GHOSTS - 1
+#if dimension > 1
+			 && point.j > 0 && point.j < (1 << level) + 2*GHOSTS - 1
+#endif
+#if dimension > 2
+			 && point.k > 0 && point.k < (1 << level) + 2*GHOSTS - 1
+#endif
+			 )
+@
 
 @def foreach_cache(_cache) {
   OMP_PARALLEL() {
@@ -647,11 +672,42 @@ static inline void cache_append_face (Point point, unsigned short flags)
 
 #define FBOUNDARY 1 // fixme: this should work with zero
 
+void check_periodic (Tree * q)
+{
+#if TRASH
+  for (int l = 0; l <= depth(); l++) {
+    Layer * L = q->L[l];
+    size_t len = L->len - 2*GHOSTS;
+    if (Period.x)
+      for (int k = 0; k < 2*GHOSTS; k++)
+	assert (L->m[k] == L->m[k + len]);
+#if dimension > 1
+    if (Period.y)
+      for (int i = 0; i < L->len; i++)
+	if (L->m[i])
+	  for (int k = 0; k < 2*GHOSTS; k++)
+	    assert (L->m[i][k] == L->m[i][k + len]);
+#  if dimension > 2
+    if (Period.z)
+      for (int i = 0; i < L->len; i++)
+	if (L->m[i])
+	  for (int j = 0; j < L->len; j++)
+	    if (L->m[i][j])
+	      for (int k = 0; k < 2*GHOSTS; k++)
+		assert (L->m[i][j][k] == L->m[i][j][k + len]);
+#  endif // dimension > 2
+#endif // dimension > 1
+  }
+#endif // TRASH
+}
+
 static void update_cache_f (void)
 {
   Tree * q = tree;
 
-  foreach_cache(q->vertices)
+  check_periodic (q);
+  
+  foreach_cache (q->vertices)
     if (level <= depth() && allocated(0))
       cell.flags &= ~vertex;
   
@@ -900,45 +956,39 @@ static void alloc_children (Point point)
   else if (allocated_child(0,0,0))
     return;
   
+  /* low-level memory management */
+  Layer * L = tree->L[point.level + 1];
+  size_t len = sizeof(Cell) + datasize;
+  char * b = (char *) mempool_alloc0 (L->pool);
+  int nl = L->len - 2*GHOSTS;
+  int i = 2*point.i - GHOSTS;
+  for (int k = 0; k < 2; k++, i++) {
 #if dimension == 1
-  /* low-level memory management */
-  Layer * L = tree->L[point.level + 1];
-  size_t len = sizeof(Cell) + datasize;
-  char * b = (char *) mempool_alloc0 (L->pool);
-  for (int k = 0; k < 2; k++) {
-    layer_add_row (L, 2*point.i - GHOSTS + k);
-    assert (!CHILD(k,0,0));
-    CHILD(k,0,0) = b;
+    layer_add_row (L, i);
+    assert (!L->m[i]);
+    assign_periodic_x (L->m, i, nl, b);
     b += len;
-  }
 #elif dimension == 2
-  /* low-level memory management */
-  Layer * L = tree->L[point.level + 1];
-  size_t len = sizeof(Cell) + datasize;
-  char * b = (char *) mempool_alloc0 (L->pool);
-  for (int k = 0; k < 2; k++) {
-    layer_add_row (L, 2*point.i - GHOSTS + k, 0);
-    for (int l = 0; l < 2; l++) {
-      assert (!CHILD(k,l,0));
-      CHILD(k,l,0) = b;
+    layer_add_row (L, i, 0);
+    int j = 2*point.j - GHOSTS;
+    for (int l = 0; l < 2; l++, j++) {
+      assert (!L->m[i][j]);
+      assign_periodic_y (L->m[i], j, nl, b);
       b += len;
     }
-  }
 #else // dimension == 3
-  /* low-level memory management */
-  Layer * L = tree->L[point.level + 1];
-  size_t len = sizeof(Cell) + datasize;
-  char * b = (char *) mempool_alloc0 (L->pool);
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++) {
-      layer_add_row (L, 2*point.i - GHOSTS + k, 2*point.j - GHOSTS + l);
-      for (int n = 0; n < 2; n++) {
-	assert (!CHILD(k,l,n));
-	CHILD(k,l,n) = b;
+    int j = 2*point.j - GHOSTS;
+    for (int l = 0; l < 2; l++, j++) {
+      layer_add_row (L, i, j);
+      int m = 2*point.k - GHOSTS;
+      for (int n = 0; n < 2; n++, m++) {
+	assert (!L->m[i][j][m]);
+	assign_periodic_z (L->m[i][j], m, nl, b);
 	b += len;
       }
     }
 #endif
+  }
   
   int pid = cell.pid;
   foreach_child() {
@@ -955,11 +1005,12 @@ static void free_children (Point point)
 {
   /* low-level memory management */
   Layer * L = tree->L[point.level + 1];
-  assert (CHILD(0,0,0));
-  mempool_free (L->pool, CHILD(0,0,0));
-  for (int k = 0; k < 2; k++) {
-    CHILD(k,0,0) = NULL;
-    if (layer_remove_row (L, 2*point.i - GHOSTS + k)) {
+  int i = 2*point.i - GHOSTS, nl = L->len - 2*GHOSTS;
+  assert (L->m[i]);
+  mempool_free (L->pool, L->m[i]);
+  for (int k = 0; k < 2; k++, i++) {
+    assign_periodic_x (L->m, i, nl, NULL);
+    if (layer_remove_row (L, i)) {
       assert (point.level + 1 == grid->depth);
       update_depth (-1);
     }
@@ -970,12 +1021,14 @@ static void free_children (Point point)
 {
   /* low-level memory management */
   Layer * L = tree->L[point.level + 1];
-  assert (CHILD(0,0,0));
-  mempool_free (L->pool, CHILD(0,0,0));
-  for (int k = 0; k < 2; k++) {
-    for (int l = 0; l < 2; l++)
-      CHILD(k,l,0) = NULL;
-    if (layer_remove_row (L, 2*point.i - GHOSTS + k, 0)) {
+  int i = 2*point.i - GHOSTS, nl = L->len - 2*GHOSTS;
+  assert (L->m[i][2*point.j - GHOSTS]);
+  mempool_free (L->pool, L->m[i][2*point.j - GHOSTS]);
+  for (int k = 0; k < 2; k++, i++) {
+    int j = 2*point.j - GHOSTS;
+    for (int l = 0; l < 2; l++, j++)
+      assign_periodic_y (L->m[i], j, nl, NULL);
+    if (layer_remove_row (L, i, j)) {
       assert (point.level + 1 == grid->depth);
       update_depth (-1);
     }
@@ -986,26 +1039,33 @@ static void free_children (Point point)
 {
   /* low-level memory management */
   Layer * L = tree->L[point.level + 1];
-  assert (CHILD(0,0,0));
-  mempool_free (L->pool, CHILD(0,0,0));
-  for (int k = 0; k < 2; k++)
-    for (int l = 0; l < 2; l++) {
-      for (int n = 0; n < 2; n++)
-	CHILD(k,l,n) = NULL;
-      if (layer_remove_row (L, 2*point.i - GHOSTS + k, 2*point.j - GHOSTS + l)) {
+  int i = 2*point.i - GHOSTS, nl = L->len - 2*GHOSTS;
+  assert (L->m[i][2*point.j - GHOSTS][2*point.k - GHOSTS]);
+  mempool_free (L->pool, L->m[i][2*point.j - GHOSTS][2*point.k - GHOSTS]);
+  for (int k = 0; k < 2; k++, i++) {
+    int j = 2*point.j - GHOSTS;
+    for (int l = 0; l < 2; l++, j++) {
+      int m = 2*point.k - GHOSTS;
+      for (int n = 0; n < 2; n++, m++)
+	assign_periodic_z (L->m[i][j], m, nl, NULL);
+      if (layer_remove_row (L, i, j)) {
 	assert (point.level + 1 == grid->depth);
 	update_depth (-1);
       }
     }
+  }
 }
 #endif // dimension == 3
 
 void increment_neighbors (Point point)
 {
   tree->dirty = true;
+  if (cell.neighbors++ == 0)
+    alloc_children (point);
   foreach_neighbor (GHOSTS/2)
     if (cell.neighbors++ == 0)
       alloc_children (point);
+  cell.neighbors--;
 }
 
 void decrement_neighbors (Point point)
@@ -1026,6 +1086,54 @@ void decrement_neighbors (Point point)
   }
 }
 
+static void apply_periodic_elem (char ** m, int len)
+{
+  if (m) {
+    int end = len - GHOSTS;
+    for (int k = 0; k < GHOSTS; k++) {
+      m[k] = m[k + end - GHOSTS];
+      m[end + k] = m[k + GHOSTS];
+    }
+  }
+}
+
+static void apply_periodic (Tree * q)
+{
+#if dimension == 1
+  if (Period.x) {
+    for (int i = 0; i < q->L[0]->len; i++)
+      q->L[0]->m[i] = q->L[0]->m[GHOSTS];
+    for (int l = 1; l <= depth(); l++)
+      apply_periodic_elem ((char **) q->L[l]->m, q->L[l]->len);
+  }
+#elif dimension == 2
+  if (Period.y) {
+    for (int i = 0; i < q->L[0]->len; i++)
+      for (int j = 0; j < q->L[0]->len; j++)
+	q->L[0]->m[i][j] = q->L[0]->m[i][GHOSTS];
+    for (int l = 1; l <= depth(); l++) {
+      Layer * L = q->L[l];
+      for (int i = 0; i < L->len; i++)
+	apply_periodic_elem (L->m[i], L->len);
+    }
+  }
+#else // dimension == 3
+  if (Period.z) {
+    for (int i = 0; i < q->L[0]->len; i++)
+      for (int j = 0; j < q->L[0]->len; j++)
+	for (int k = 0; k < q->L[0]->len; k++)
+	  q->L[0]->m[i][j][k] = q->L[0]->m[i][j][GHOSTS];
+    for (int l = 1; l <= depth(); l++) {
+      Layer * L = q->L[l];
+      for (int i = 0; i < L->len; i++)
+	if (L->m[i])
+	  for (int j = 0; j < L->len; j++)
+	    apply_periodic_elem (L->m[i][j], L->len);
+    }
+  }
+#endif // dimension == 3
+}
+ 
 void realloc_scalar (void)
 {
   /* low-level memory management */
@@ -1033,26 +1141,29 @@ void realloc_scalar (void)
   size_t newlen = sizeof(Cell) + datasize;
   size_t oldlen = newlen - sizeof(double);
   /* the root level is allocated differently */
-  size_t len = _size(0);
-  for (int i = 0; i < len; i++)
+  Layer * L = q->L[0];
+  int len = L->len;
+  for (int i = Period.x*GHOSTS; i < len - Period.x*GHOSTS; i++) {
 #if dimension == 1
-    qrealloc (q->L[0]->m[i], newlen, char);
-#else
-    for (int j = 0; j < len; j++)
+    qrealloc (L->m[i], newlen, char);
+#else // dimension != 1
+    for (int j = Period.y*GHOSTS; j < len - Period.y*GHOSTS; j++) {
 #if dimension == 2
-      qrealloc (q->L[0]->m[i][j], newlen, char);
+      qrealloc (L->m[i][j], newlen, char);
 #else
-      for (int k = 0; k < len; k++)
-	qrealloc (q->L[0]->m[i][j][k], newlen, char);
+      for (int k = Period.z*GHOSTS; k < len - Period.z*GHOSTS; k++)
+	qrealloc (L->m[i][j][k], newlen, char);
 #endif
-#endif
+    }
+#endif // dimension != 1
+  }
   /* all other levels */
   for (int l = 1; l <= depth(); l++) {
     Layer * L = q->L[l];
-    size_t len = L->len;
+    int len = L->len;
     Mempool * oldpool = L->pool;
     L->pool = mempool_new (poolsize (l, newlen), (1 << dimension)*newlen);
-    for (int i = 0; i < len; i += 2)
+    for (int i = Period.x*GHOSTS; i < len - Period.x*GHOSTS; i += 2)
       if (L->m[i]) {
 #if dimension == 1
 	char * new = (char *) mempool_alloc (L->pool);
@@ -1062,7 +1173,7 @@ void realloc_scalar (void)
 	  new += newlen;
 	}
 #else // dimension >= 2
-	for (int j = 0; j < len; j += 2)
+	for (int j = Period.y*GHOSTS; j < len - Period.y*GHOSTS; j += 2)
 	  if (L->m[i][j]) {
 #if dimension == 2
 	    char * new = (char *) mempool_alloc (L->pool);
@@ -1073,7 +1184,7 @@ void realloc_scalar (void)
 		new += newlen;
 	      }
 #else // dimension == 3
-	    for (int k = 0; k < len; k += 2)
+	    for (int k = Period.z*GHOSTS; k < len - Period.z*GHOSTS; k += 2)
 	      if (L->m[i][j][k]) {
 		char * new = (char *) mempool_alloc (L->pool);
 		for (int l = 0; l < 2; l++)
@@ -1090,6 +1201,8 @@ void realloc_scalar (void)
       }
     mempool_destroy (oldpool);
   }
+  apply_periodic (q);
+  check_periodic (q);
 }
 
 /* Boundaries */
@@ -1405,88 +1518,6 @@ static void masked_boundary_restriction (const Boundary * b,
   tree->dirty = true;					\
 }
 
-/* Periodic boundaries */
-
-static double periodic_bc (Point, Point, scalar);
-  
-foreach_dimension()
-static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
-{
-  scalar * list1 = NULL;
-  for (scalar s in list)
-    if (!is_constant(s)) {
-      if (s.face) {
-#if dimension >= 2
-	scalar vt = VT;
-	if (vt.boundary[right] == periodic_bc)
-	  list1 = list_add (list1, s);
-#endif
-      }
-      else if (s.boundary[right] == periodic_bc) {
-	if (s.v.x.i >= 0) // component of a vector field
-	  foreach_dimension()
-	    list1 = list_add (list1, s.v.x);
-	else
-	  list1 = list_add (list1, s);
-      }
-    }
-  if (!list1)
-    return;
-
-  if (l == 0) {
-    Point point = {0};
-    int n = 1 << point.level;
-#if dimension >= 2
-    for (int j = 0; j < n + 2*GHOSTS; j++)
-#endif
-#if dimension >= 3
-      for (int k = 0; k < n + 2*GHOSTS; k++)
-#endif
-	{
-	  for (int i = 0; i < GHOSTS; i++)
-	    for (scalar s in list1)
-	      s[i,j,k] = s[GHOSTS,GHOSTS,GHOSTS];
-	  for (int i = n + GHOSTS; i < n + 2*GHOSTS; i++)
-	    for (scalar s in list1)
-	      s[i,j,k] = s[GHOSTS,GHOSTS,GHOSTS];
-	}
-  }
-  else { // l != 0
-    OMP_PARALLEL() {
-#if dimension == 1
-      Point point = {0,0};
-#else
-      Point point = {0,0,0};
-#endif
-      point.level = l < 0 ? depth() : l;
-      int n = 1 << point.level;
-#if dimension >= 2
-      int j;
-      OMP(omp for schedule(static))
-	for (j = 0; j < n + 2*GHOSTS; j++)
-#endif
-#if dimension >= 3
-	  for (int k = 0; k < n + 2*GHOSTS; k++)
-#endif
-	    {
-	      for (int i = 0; i < GHOSTS; i++)
-		if (allocated(i + n,j,k))
-		  for (scalar s in list1)
-		    s[i,j,k] = s[i + n,j,k];
-	      for (int i = n + GHOSTS; i < n + 2*GHOSTS; i++)
-		if (allocated(i - n,j,k))
-		  for (scalar s in list1)
-		    s[i,j,k] = s[i - n,j,k];
-	    }
-    }
-  }
-  
-  free (list1);
-}
-
-@undef VN
-@undef VT
-
 static void free_cache (CacheLevel * c)
 {
   for (int l = 0; l <= depth(); l++)
@@ -1508,25 +1539,24 @@ void free_grid (void)
   /* the root level is allocated differently */
   Layer * L = q->L[0];
 #if dimension == 1
-  for (int i = 0; i < L->len; i++)
+  for (int i = Period.x*GHOSTS; i < L->len - Period.x*GHOSTS; i++)
     free (L->m[i]);
 #elif dimension == 2
-  for (int i = 0; i < L->len; i++) {
-    for (int j = 0; j < L->len; j++)
+  for (int i = Period.x*GHOSTS; i < L->len - Period.x*GHOSTS; i++) {
+    for (int j = Period.y*GHOSTS; j < L->len - Period.y*GHOSTS; j++)
       free (L->m[i][j]);
     free (L->m[i]);
   }
   /* all other levels */
   for (int l = 1; l <= depth(); l++) {
     Layer * L = q->L[l];
-    for (int i = 0; i < L->len; i++)
-      if (L->m[i])
-	free (L->m[i]);
+    for (int i = Period.x*GHOSTS; i < L->len - Period.x*GHOSTS; i++)
+      free (L->m[i]);
   }
 #else // dimension == 3
-  for (int i = 0; i < L->len; i++) {
-    for (int j = 0; j < L->len; j++) {
-      for (int k = 0; k < L->len; k++)
+  for (int i = Period.x*GHOSTS; i < L->len - Period.x*GHOSTS; i++) {
+    for (int j = Period.y*GHOSTS; j < L->len - Period.y*GHOSTS; j++) {
+      for (int k = Period.z*GHOSTS; k < L->len - Period.z*GHOSTS; k++)
 	free (L->m[i][j][k]);
       free (L->m[i][j]);
     }
@@ -1535,9 +1565,9 @@ void free_grid (void)
   /* all other levels */
   for (int l = 1; l <= depth(); l++) {
     Layer * L = q->L[l];
-    for (int i = 0; i < L->len; i++)
+    for (int i = Period.x*GHOSTS; i < L->len - Period.x*GHOSTS; i++)
       if (L->m[i]) {
-	for (int j = 0; j < L->len; j++)
+	for (int j = Period.y*GHOSTS; j < L->len - Period.y*GHOSTS; j++)
 	  if (L->m[i][j])
 	    free (L->m[i][j]);
 	free (L->m[i]);
@@ -1586,56 +1616,59 @@ void init_grid (int n)
   Layer * L = new_layer (0);
   q->L[0] = L;
 #if dimension == 1
-  for (int i = 0; i < L->len; i++) {
+  for (int i = Period.x*GHOSTS; i < L->len - Period.x*GHOSTS; i++) {
     layer_add_row (L, i);
     L->m[i] = (char *) calloc (1, sizeof(Cell) + datasize);
   }
+  apply_periodic (q);
   CELL(L->m[GHOSTS]).flags |= leaf;
   if (pid() == 0)
     CELL(L->m[GHOSTS]).flags |= active;
-  for (int k = -GHOSTS; k <= GHOSTS; k++)
-    CELL(L->m[GHOSTS+k]).pid =
-      (k < 0 ? -1 - left :
-       k > 0 ? -1 - right :
-       0);
+  for (int k = -GHOSTS*(1 - Period.x); k <= GHOSTS*(1 - Period.x); k++)
+    CELL(L->m[GHOSTS+k]).pid = (k < 0 ? -1 - left :
+				k > 0 ? -1 - right :
+				0);
+  CELL(L->m[GHOSTS]).pid = 0;
 #elif dimension == 2
-  for (int i = 0; i < L->len; i++) {
+  for (int i = Period.x*GHOSTS; i < L->len - Period.x*GHOSTS; i++) {
     layer_add_row (L, i, 0);
-    for (int j = 0; j < L->len; j++)
+    for (int j = Period.y*GHOSTS; j < L->len - Period.y*GHOSTS; j++)
       L->m[i][j] = (char *) calloc (1, sizeof(Cell) + datasize);
   }
+  apply_periodic (q);
   CELL(L->m[GHOSTS][GHOSTS]).flags |= leaf;
   if (pid() == 0)
     CELL(L->m[GHOSTS][GHOSTS]).flags |= active;
-  for (int k = -GHOSTS; k <= GHOSTS; k++)
-    for (int l = -GHOSTS; l <= GHOSTS; l++)
-      CELL(L->m[GHOSTS+k][GHOSTS+l]).pid =
-	(k < 0 ? -1 - left :
-	 k > 0 ? -1 - right :
-	 l > 0 ? -1 - top :
-	 l < 0 ? -1 - bottom :
-	 0);
+  for (int k = - GHOSTS*(1 - Period.x); k <= GHOSTS*(1 - Period.x); k++)
+    for (int l = -GHOSTS*(1 - Period.y); l <= GHOSTS*(1 - Period.y); l++)
+      CELL(L->m[GHOSTS+k][GHOSTS+l]).pid = (k < 0 ? -1 - left :
+					    k > 0 ? -1 - right :
+					    l > 0 ? -1 - top :
+					    l < 0 ? -1 - bottom :
+					    0);
+  CELL(L->m[GHOSTS][GHOSTS]).pid = 0;
 #else // dimension == 3
-  for (int i = 0; i < L->len; i++)
-    for (int j = 0; j < L->len; j++) {
+  for (int i = Period.x*GHOSTS; i < L->len - Period.x*GHOSTS; i++)
+    for (int j = Period.y*GHOSTS; j < L->len - Period.y*GHOSTS; j++) {
       layer_add_row (L, i, j);
-      for (int k = 0; k < L->len; k++)
+      for (int k = Period.z*GHOSTS; k < L->len - Period.z*GHOSTS; k++)
 	L->m[i][j][k] = (char *) calloc (1, sizeof(Cell) + datasize);
     }
+  apply_periodic (q);
   CELL(L->m[GHOSTS][GHOSTS][GHOSTS]).flags |= leaf;
   if (pid() == 0)
     CELL(L->m[GHOSTS][GHOSTS][GHOSTS]).flags |= active;
-  for (int k = -GHOSTS; k <= GHOSTS; k++)
-    for (int l = -GHOSTS; l <= GHOSTS; l++)
-      for (int n = -GHOSTS; n <= GHOSTS; n++)
-	CELL(L->m[GHOSTS+k][GHOSTS+l][GHOSTS+n]).pid =
-	  (k > 0 ? -1 - right :
-	   k < 0 ? -1 - left :
-	   l > 0 ? -1 - top :
-	   l < 0 ? -1 - bottom :
-	   n > 0 ? -1 - front :
-	   n < 0 ? -1 - back :
-	   0);
+  for (int k = - GHOSTS*(1 - Period.x); k <= GHOSTS*(1 - Period.x); k++)
+    for (int l = -GHOSTS*(1 - Period.y); l <= GHOSTS*(1 - Period.y); l++)
+      for (int n = -GHOSTS*(1 - Period.z); n <= GHOSTS*(1 - Period.z); n++)
+	CELL(L->m[GHOSTS+k][GHOSTS+l][GHOSTS+n]).pid = (k > 0 ? -1 - right :
+							k < 0 ? -1 - left :
+							l > 0 ? -1 - top :
+							l < 0 ? -1 - bottom :
+							n > 0 ? -1 - front :
+							n < 0 ? -1 - back :
+							0);
+  CELL(L->m[GHOSTS][GHOSTS][GHOSTS]).pid = 0;
 #endif // dimension == 3
   q->active = qcalloc (1, CacheLevel);
   q->prolongation = qcalloc (1, CacheLevel);
@@ -1647,20 +1680,14 @@ void init_grid (int n)
   void mpi_boundary_new();
   mpi_boundary_new();
 @endif
-  update_cache();
   // boundaries
   Boundary * b = qcalloc (1, Boundary);
   b->level = box_boundary_level;
   b->restriction = masked_boundary_restriction;
   add_boundary (b);
-  // periodic boundaries
-  foreach_dimension() {
-    Boundary * b = qcalloc (1, Boundary);
-    b->level = periodic_boundary_level_x;
-    add_boundary (b);
-  }
   refine_level (depth);
   reset (all, 0.);
+  update_cache();
 }
 
 #if dimension == 2
@@ -1739,6 +1766,18 @@ bool tree_is_full()
 
 #include "tree-common.h"
 
+// overload the default periodic() function
+void tree_periodic (int dir)
+{
+  int depth = grid ? depth() : -1;
+  if (grid)
+    free_grid();
+  periodic (dir);
+  if (depth >= 0)
+    init_grid (1 << depth);
+}
+#define periodic(dir) tree_periodic(dir)
+ 
 @if _MPI
 #include "tree-mpi.h"
 #include "balance.h"

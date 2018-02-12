@@ -37,7 +37,7 @@ void free_boundaries() {
 
 #define boundary_iterate(type,...) {	     \
     Boundary ** _i = boundaries, * _b;	     \
-    while ((_b = *_i++))		     \
+    while (_i && (_b = *_i++))		     \
       if (_b->type)			     \
 	_b->type (_b, __VA_ARGS__);	     \
 }

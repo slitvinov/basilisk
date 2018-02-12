@@ -11,6 +11,10 @@ attribute {
 
 // Tree methods
 
+#define periodic_clamp(a, level) do {					\
+    if (a < GHOSTS) a += 1 << level;					\
+    else if (a >= GHOSTS + (1 << level)) a -= 1 << level; } while(0)
+
 /*
   A cache of refined cells is maintained (if not NULL).
 */
@@ -33,13 +37,16 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
 	       independent from the tree implementation */
 	    p.level = point.level - 1;
 	    p.i = (point.i + GHOSTS)/2 + k;
+	    periodic_clamp (p.i, p.level);
             #if dimension > 1
 	      p.j = (point.j + GHOSTS)/2 + l;
+	      periodic_clamp (p.j, p.level);
             #endif
             #if dimension > 2
 	      p.k = (point.k + GHOSTS)/2 + m;
+	      periodic_clamp (p.k, p.level);
             #endif
-	      nr += refine_cell (p, list, flag, refined);
+	    nr += refine_cell (p, list, flag, refined);
 	    aparent(k,l,m).flags |= flag;
 	  }
 #endif
@@ -66,7 +73,7 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
       foreach_neighbor() {
 	if (!is_local(cell) || (level > 0 && !is_local(aparent(0))))
 	  bord = true, break;
-	if (is_refined(cell))
+	if (is_refined_check())
 	  foreach_child()
 	    if (!is_local(cell))
 	      bord = true, break;

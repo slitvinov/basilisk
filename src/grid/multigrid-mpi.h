@@ -87,7 +87,7 @@ Boundary * mpi_boundary_new()
   MpiBoundary * m = qcalloc (1, MpiBoundary);
   MPI_Dims_create (npe(), dimension, mpi_dims);
   MPI_Cart_create (MPI_COMM_WORLD, dimension,
-		   mpi_dims, Periods, 0, &m->cartcomm);
+		   mpi_dims, &Period.x, 0, &m->cartcomm);
   MPI_Cart_coords (m->cartcomm, pid(), dimension, mpi_coords);
 
   // make sure other boundary conditions are not applied

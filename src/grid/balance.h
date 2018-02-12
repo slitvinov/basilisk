@@ -32,7 +32,7 @@ Array * linear_tree (size_t size, scalar newpid)
     else {
       if (cell.pid >= 0 && NEWPID()->leaf)
 	assert (is_leaf(cell));
-      if (is_refined(cell)) {
+      if (is_refined_check()) {
 	/* check that we are not too refined i.e. that none of our
 	   children are prolongations */
 	bool prolo = false;
