@@ -46,14 +46,18 @@ clean:
 		$(BASILISK)/runtest $@
 
 %.tst: %.s %.c
-	@PNG=$(PNG) LIBS="$(LIBS)" OPENGLIBS="$(OPENGLIBS)" $(BASILISK)/runtest $@
+	@PNG=$(PNG) LIBS="$(LIBS)" OPENGLIBS="$(OPENGLIBS)" \
+		$(BASILISK)/runtest $@
 
 %.ctst: %.s %.c
-	@CFLAGS="-grid=multigrid $(CFLAGS)" PNG=$(PNG) LIBS=$(LIBS) \
+	@PNG=$(PNG) LIBS="$(LIBS)" OPENGLIBS="$(OPENGLIBS)" \
+		CFLAGS="-grid=multigrid $(CFLAGS)" \
 		$(BASILISK)/runtest $@
 
 %.vtst: %.s %.c
-	@PNG=$(PNG) LIBS=$(LIBS) EXEC="$(VALGRIND)" $(BASILISK)/runtest $@
+	@PNG=$(PNG) LIBS="$(LIBS)" OPENGLIBS="$(OPENGLIBS)" \
+		EXEC="$(VALGRIND)" \
+		$(BASILISK)/runtest $@
 
 %.h: %.h.page
 	ln -s $< $@
