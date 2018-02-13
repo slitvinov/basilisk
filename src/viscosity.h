@@ -169,3 +169,15 @@ mgstats viscosity (struct Viscosity p)
   return mg_solve ((scalar *){u}, (scalar *){r},
 		   residual_viscosity, relax_viscosity, &p, p.nrelax, p.res);
 }
+
+mgstats viscosity_explicit (struct Viscosity p)
+{
+  vector u = p.u, r[];
+  mgstats mg = {0};
+  mg.resb = residual_viscosity ((scalar *){u}, (scalar *){u}, (scalar *){r}, &p);
+  foreach()
+    foreach_dimension()
+      u.x[] += r.x[];
+  boundary ((scalar *){u});
+  return mg;
+}
