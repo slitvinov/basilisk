@@ -12,6 +12,16 @@
 @include <sys/time.h>
 @include <sys/resource.h>
 
+@if _OPENMP
+@ include <omp.h>
+@elif _MPI
+@ include <mpi.h>
+static int mpi_rank, mpi_npe;
+@ define tid() mpi_rank
+@ define pid() mpi_rank
+@ define npe() mpi_npe
+@endif // _MPI
+
 @if _CADNA
 @ include <cadna.h>
 @endif // CADNA
@@ -373,177 +383,6 @@ void * array_shrink (Array * a)
   return p;
 }
 
-static void trace (const char * func, const char * file, int line);
-static void end_trace (const char * func, const char * file, int line);
-
-// OpenMP / MPI
-  
-@if _OPENMP
-
-@include <omp.h>
-@define OMP(x) Pragma(#x)
-@define tid() omp_get_thread_num()
-@define pid() 0
-@define npe() omp_get_num_threads()
-@define mpi_all_reduce(v,type,op)
-@define mpi_all_reduce_double(v,op)
-
-@elif _MPI
-
-@include <mpi.h>
-@define OMP(x)
-
-static bool in_prof = false;
-static double prof_start, _prof;
-@def prof_start(name)
-  assert (!in_prof); in_prof = true;
-  prof_start = MPI_Wtime();
-@
-@def prof_stop()
-  assert (in_prof); in_prof = false;
-  _prof = MPI_Wtime();
-  mpi_time += _prof - prof_start;
-@
-
-@if FAKE_MPI
-@define mpi_all_reduce(v,type,op)
-@define mpi_all_reduce_double(v,op)
-@else // !FAKE_MPI
-trace
-int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
-		     MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
-{
-  return MPI_Allreduce (sendbuf, recvbuf, count, datatype, op, comm);
-}
-@def mpi_all_reduce(v,type,op) {
-  prof_start ("mpi_all_reduce");
-  union { int a; float b; double c;} global;
-  mpi_all_reduce0 (&(v), &global, 1, type, op, MPI_COMM_WORLD);
-  memcpy (&(v), &global, sizeof (v));
-  prof_stop();
-}
-@
-@def mpi_all_reduce_double(v,op) {
-  prof_start ("mpi_all_reduce");
-  double global, tmp = v;
-  mpi_all_reduce0 (&tmp, &global, 1, MPI_DOUBLE, op, MPI_COMM_WORLD);
-  v = global;
-  prof_stop();
-}
-@
-
-@endif // !FAKE_MPI
-
-static int mpi_rank, mpi_npe;
-@define tid() mpi_rank
-@define pid() mpi_rank
-@define npe() mpi_npe
-
-@define QFILE FILE // a dirty trick to avoid qcc 'static FILE *' rule
-
-static FILE * qstderr (void)
-{
-  static QFILE * fp = NULL;
-  if (!fp) {
-    if (mpi_rank > 0) {
-      char name[80];
-      sprintf (name, "log-%d", mpi_rank);
-      fp = fopen (name, "w");
-    }
-    else
-      fp = systderr;
-  }
-  return fp;
-}
-
-static FILE * qstdout (void)
-{
-  static QFILE * fp = NULL;
-  if (!fp) {
-    if (mpi_rank > 0) {
-      char name[80];
-      sprintf (name, "out-%d", mpi_rank);
-      fp = fopen (name, "w");
-    }
-    else
-      fp = systdout;
-  }
-  return fp;
-}
-
-static void finalize (void)
-{
-  MPI_Finalize();
-}
-
-void mpi_init()
-{
-  int initialized;
-  MPI_Initialized (&initialized);
-  if (!initialized) {
-    MPI_Init (NULL, NULL);
-    MPI_Comm_set_errhandler (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
-    atexit (finalize);
-    MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
-    MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
-    srand (mpi_rank + 1);
-    if (mpi_rank > 0) {
-      ferr = fopen ("/dev/null", "w");
-      fout = fopen ("/dev/null", "w");
-    }
-    else {
-      ferr = stderr;
-      fout = stdout;
-    }
-    char * etrace = getenv ("MALLOC_TRACE"), name[80];
-    if (etrace && mpi_rank > 0) {
-      sprintf (name, "%s-%d", etrace, mpi_rank);
-      setenv ("MALLOC_TRACE", name, 1);
-    }
-@if MTRACE == 1
-    etrace = getenv ("MTRACE");
-    if (!etrace)
-      etrace = "mtrace";
-    if (mpi_rank > 0) {
-      sprintf (name, "%s-%d", etrace, mpi_rank);
-      pmtrace.fp = fopen (name, "w");
-      pmtrace.fname = systrdup(name);
-    }
-    else {
-      pmtrace.fp = fopen (etrace, "w");
-      pmtrace.fname = systrdup(etrace);
-    }
-@endif
-  }
-}
-
-@else // not MPI, not OpenMP
-
-@define OMP(x)
-@define tid() 0
-@define pid() 0
-@define npe() 1
-@define mpi_all_reduce(v,type,op)
-@define mpi_all_reduce_double(v,op)
-
-@endif // not MPI, not OpenMP
-
-void init_solver()
-{
-@if _CADNA
-  cadna_init (-1);
-@endif
-@if _MPI
-  mpi_init();
-@elif MTRACE == 1
-  char * etrace = getenv ("MTRACE");
-  pmtrace.fp = fopen (etrace ? etrace : "mtrace", "w");
-  pmtrace.fname = systrdup (etrace ? etrace : "mtrace");
-@endif
-}
-
-@define OMP_PARALLEL() OMP(omp parallel)
-
 // Function tracing
 
 @if TRACE == 1 // with Extrae library
@@ -783,6 +622,167 @@ static void trace_off()
 @  define trace(...)
 @  define end_trace(...)
 @endif
+
+// OpenMP / MPI
+  
+@if _OPENMP
+
+@define OMP(x) Pragma(#x)
+@define tid() omp_get_thread_num()
+@define pid() 0
+@define npe() omp_get_num_threads()
+@define mpi_all_reduce(v,type,op)
+@define mpi_all_reduce_double(v,op)
+
+@elif _MPI
+
+@define OMP(x)
+
+static bool in_prof = false;
+static double prof_start, _prof;
+@def prof_start(name)
+  assert (!in_prof); in_prof = true;
+  prof_start = MPI_Wtime();
+@
+@def prof_stop()
+  assert (in_prof); in_prof = false;
+  _prof = MPI_Wtime();
+  mpi_time += _prof - prof_start;
+@
+
+@if FAKE_MPI
+@define mpi_all_reduce(v,type,op)
+@define mpi_all_reduce_double(v,op)
+@else // !FAKE_MPI
+trace
+int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
+		     MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
+{
+  return MPI_Allreduce (sendbuf, recvbuf, count, datatype, op, comm);
+}
+@def mpi_all_reduce(v,type,op) {
+  prof_start ("mpi_all_reduce");
+  union { int a; float b; double c;} global;
+  mpi_all_reduce0 (&(v), &global, 1, type, op, MPI_COMM_WORLD);
+  memcpy (&(v), &global, sizeof (v));
+  prof_stop();
+}
+@
+@def mpi_all_reduce_double(v,op) {
+  prof_start ("mpi_all_reduce");
+  double global, tmp = v;
+  mpi_all_reduce0 (&tmp, &global, 1, MPI_DOUBLE, op, MPI_COMM_WORLD);
+  v = global;
+  prof_stop();
+}
+@
+
+@endif // !FAKE_MPI
+
+@define QFILE FILE // a dirty trick to avoid qcc 'static FILE *' rule
+
+static FILE * qstderr (void)
+{
+  static QFILE * fp = NULL;
+  if (!fp) {
+    if (mpi_rank > 0) {
+      char name[80];
+      sprintf (name, "log-%d", mpi_rank);
+      fp = fopen (name, "w");
+    }
+    else
+      fp = systderr;
+  }
+  return fp;
+}
+
+static FILE * qstdout (void)
+{
+  static QFILE * fp = NULL;
+  if (!fp) {
+    if (mpi_rank > 0) {
+      char name[80];
+      sprintf (name, "out-%d", mpi_rank);
+      fp = fopen (name, "w");
+    }
+    else
+      fp = systdout;
+  }
+  return fp;
+}
+
+static void finalize (void)
+{
+  MPI_Finalize();
+}
+
+void mpi_init()
+{
+  int initialized;
+  MPI_Initialized (&initialized);
+  if (!initialized) {
+    MPI_Init (NULL, NULL);
+    MPI_Comm_set_errhandler (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+    atexit (finalize);
+    MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
+    MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
+    srand (mpi_rank + 1);
+    if (mpi_rank > 0) {
+      ferr = fopen ("/dev/null", "w");
+      fout = fopen ("/dev/null", "w");
+    }
+    else {
+      ferr = stderr;
+      fout = stdout;
+    }
+    char * etrace = getenv ("MALLOC_TRACE"), name[80];
+    if (etrace && mpi_rank > 0) {
+      sprintf (name, "%s-%d", etrace, mpi_rank);
+      setenv ("MALLOC_TRACE", name, 1);
+    }
+@if MTRACE == 1
+    etrace = getenv ("MTRACE");
+    if (!etrace)
+      etrace = "mtrace";
+    if (mpi_rank > 0) {
+      sprintf (name, "%s-%d", etrace, mpi_rank);
+      pmtrace.fp = fopen (name, "w");
+      pmtrace.fname = systrdup(name);
+    }
+    else {
+      pmtrace.fp = fopen (etrace, "w");
+      pmtrace.fname = systrdup(etrace);
+    }
+@endif
+  }
+}
+
+@else // not MPI, not OpenMP
+
+@define OMP(x)
+@define tid() 0
+@define pid() 0
+@define npe() 1
+@define mpi_all_reduce(v,type,op)
+@define mpi_all_reduce_double(v,op)
+
+@endif // not MPI, not OpenMP
+
+void init_solver()
+{
+@if _CADNA
+  cadna_init (-1);
+@endif
+@if _MPI
+  mpi_init();
+@elif MTRACE == 1
+  char * etrace = getenv ("MTRACE");
+  pmtrace.fp = fopen (etrace ? etrace : "mtrace", "w");
+  pmtrace.fname = systrdup (etrace ? etrace : "mtrace");
+@endif
+}
+
+@define OMP_PARALLEL() OMP(omp parallel)
 
 @define NOT_UNUSED(x) (void)(x)
 
