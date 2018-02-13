@@ -267,7 +267,14 @@ static void mpi_recv_check (void * buf, int count, MPI_Datatype datatype,
     assert (timer_delete (timerid) != -1);
 #endif
 }
-  
+
+trace
+static int mpi_waitany (int count, MPI_Request array_of_requests[], int *indx,
+			MPI_Status *status)
+{
+  return MPI_Waitany (count, array_of_requests, indx, status);
+}
+
 static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
 {
   if (m->npid == 0)
@@ -307,19 +314,20 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
   if (nr > 0) {
     int i;
     MPI_Status s;
-    MPI_Waitany (nr, r, &i, &s);
+    mpi_waitany (nr, r, &i, &s);
     while (i != MPI_UNDEFINED) {
       Rcv * rcv = rrcv[i];
       assert (l <= rcv->depth && rcv->halo[l].n > 0);
       assert (rcv->buf);
       apply_bc (rcv, list, listf, l, s);
-      MPI_Waitany (nr, r, &i, &s);
+      mpi_waitany (nr, r, &i, &s);
     }
   }
   
   prof_stop();
 }
 
+trace
 static void rcv_pid_wait (RcvPid * m)
 {
   /* wait for completion of send requests */

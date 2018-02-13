@@ -361,3 +361,9 @@ event adapt (i++,last) {
   event ("properties");
 }
 #endif
+
+/**
+## See also
+
+* [Performance monitoring](perfs.h)
+*/

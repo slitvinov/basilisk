@@ -64,6 +64,43 @@ refinement), 0.96 seconds (38%) doing actual work (in the
 could easily speed up the calculation (a bit) by outputting less often
 (i.e. less than 18 times).
 
+## Graphing tools
+
+It is sometimes useful to monitor the evolution with time of how much
+time is taken by each function. This can be done by adding something
+like:
+
+~~~literatec
+#if TRACE > 1
+event profiling (i += 20) {
+  static FILE * fp = fopen ("profiling", "w");
+  trace_print (fp, 1);
+}
+#endif
+~~~
+
+where argument `1` specifies that only functions taking more than one
+percent of runtime should be displayed. The `profiling` file will
+contain records looking like the above but measured between successive
+calls to the `trace_print()` function (not over the entire program
+runtime). These data can be conveniently displayed using
+
+~~~bash
+gnuplot> load ("< awk -f $BASILISK/trace.awk < profiling");
+~~~
+
+which will display a graph looking like:
+
+![Output of the `trace.awk` profiling script](figures/trace.png)
+
+The functions are arranged in decreasing order of runtime (for example
+here the `project()` function takes the largest proportion of the
+runtime, followed by `mpi_waitany()` etc.). The horizontal axis is the
+time, where the units are the number of outputs of the `profiling()`
+event above.
+
+This can also be automated using [continuous monitoring](profiling.h).
+
 # See also
 
 * [Built-in memory profiling](README.mtrace)
