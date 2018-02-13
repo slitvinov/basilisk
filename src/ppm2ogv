@@ -6,20 +6,11 @@ if test -z "$AVCONV"; then
 fi
 
 if test -z "$AVCONV"; then
-    echo "ppm2ogv: warning: could not find 'avconv' or 'ffmpeg'" > /dev/stderr
-    echo "ppm2ogv: the output will just be concatenated PPM files" \
-	> /dev/stderr
+    echo "ppm2ogv: warning: could not find 'avconv' or 'ffmpeg'" >&2
+    echo "ppm2ogv: the output will just be concatenated PPM files" >&2
     command=cat
-    log=/dev/null
 else
     # -r 15  '15 frames/sec'
-    if test -d "$TMPDIR" ; then
-	log=`mktemp $TMPDIR/ppm2ogv.XXXXXX`
-	out=`mktemp $TMPDIR/ppm2ogv.XXXXXX`
-    else
-	log=`mktemp /tmp/ppm2ogv.XXXXXX`
-	out=`mktemp /tmp/ppm2ogv.XXXXXX`
-    fi
     while test $# -gt 0; do
 	case $1 in
 	    -r) shift; rate="-r $1" ;;
@@ -36,9 +27,17 @@ else
     done
 fi
 
+if test -d "$TMPDIR" ; then
+    log=`mktemp $TMPDIR/ppm2ogv.XXXXXX`
+    out=`mktemp $TMPDIR/ppm2ogv.XXXXXX`
+else
+    log=`mktemp /tmp/ppm2ogv.XXXXXX`
+    out=`mktemp /tmp/ppm2ogv.XXXXXX`
+fi
+
 if $command $out 2> $log; then :
 else
-    cat $log > /dev/stderr
+    cat $log >&2
     rm -f $log $out
     exit 1
 fi

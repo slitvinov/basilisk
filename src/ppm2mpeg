@@ -6,27 +6,26 @@ if test -z "$AVCONV"; then
 fi
 
 if test -z "$AVCONV"; then
-    echo "ppm2mpeg: warning: could not find 'avconv' or 'ffmpeg'" > /dev/stderr
-    echo "ppm2mpeg: the output will just be concatenated PPM files" \
-	> /dev/stderr
+    echo "ppm2mpeg: warning: could not find 'avconv' or 'ffmpeg'" >&2
+    echo "ppm2mpeg: the output will just be concatenated PPM files" >&2
     command=cat
-    log=/dev/null
 else
     command="$AVCONV -f image2pipe -vcodec ppm -i - -vcodec mpeg1video -b 1800K -f mpeg1video"
     while test $# -gt 0; do
 	command="$command $1"
 	shift
     done
-    if test -d "$TMPDIR" ; then
-	log=`mktemp $TMPDIR/ppm2mpeg.XXXXXX`
-    else
-	log=`mktemp /tmp/ppm2mpeg.XXXXXX`
-    fi
+fi
+
+if test -d "$TMPDIR" ; then
+    log=`mktemp $TMPDIR/ppm2mpeg.XXXXXX`
+else
+    log=`mktemp /tmp/ppm2mpeg.XXXXXX`
 fi
 
 if $command - 2> $log; then :
 else
-    cat $log > /dev/stderr
+    cat $log >&2
     rm -f $log
     exit 1
 fi

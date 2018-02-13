@@ -4,9 +4,8 @@ CONVERT="`which convert`"
 GIFSICLE="`which gifsicle`"
 
 if test -z "$CONVERT" -o -z "$GIFSICLE"; then
-    echo "ppm2gif: warning: could not find 'convert' or 'gifsicle'" > /dev/stderr
-    echo "ppm2gif: the output will just be concatenated PPM files" \
-	 > /dev/stderr
+    echo "ppm2gif: warning: could not find 'convert' or 'gifsicle'" >&2
+    echo "ppm2gif: the output will just be concatenated PPM files" >&2
     cat
 else
     command="gifsicle --colors 256 --optimize --delay 5"
@@ -31,7 +30,7 @@ else
     $ppm ppm:- $log-%04d.gif
     if $command $log-*.gif 2> $log; then :
     else
-	cat $log > /dev/stderr
+	cat $log >&2
 	rm -f $log*
 	exit 1
     fi
