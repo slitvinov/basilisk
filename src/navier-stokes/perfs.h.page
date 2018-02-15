@@ -22,9 +22,10 @@ If we have a display (and gnuplot works), a graph of the statistics is
 displayed and updated at regular intervals. */
 
 event perf_plot (i = 10) {
-  system ("test -z \"$DISPLAY\" || "
-	  "gnuplot -e 'set term x11 noraise' "
-	  "$BASILISK/navier-stokes/perfs.plot &");
+  if (getenv ("DISPLAY"))
+    popen ("gnuplot -e 'set term x11 noraise title perfs' "
+	   "$BASILISK/navier-stokes/perfs.plot "
+	   "& read dummy; kill $!", "w");
 }
 
 /**

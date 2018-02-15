@@ -8,7 +8,7 @@ mpl_height = 2.0 #inch  height of individual plots
 mpl_width  = 3.0 #inch  width of individual plots
 mpl_dx     = 0.2 #inch  inter-plot horizontal spacing
 mpl_dy     = 0.2 #inch  inter-plot vertical spacing
-mpl_ny     = 3   #number of rows
+mpl_ny     = 4   #number of rows
 mpl_nx     = 2   #number of columns
 
 # calculate full dimensions
@@ -34,8 +34,9 @@ set format x ''
 # start plotting
 set multiplot
 
-stats "perfs" u 1:2 nooutput
-EVERY = ceil(STATS_records/1000)
+stats "perfs" u 1:7 nooutput
+EVERY = ceil(STATS_records/200)
+unset key
 
 #-----------------------------------------------
 # subplot  1-3
@@ -43,11 +44,11 @@ EVERY = ceil(STATS_records/1000)
 set lmargin at screen left(1)
 set rmargin at screen right(1)
 #  set horizontal margins for third row (top)
-set tmargin at screen top(3)
-set bmargin at screen bot(3)
+set tmargin at screen top(4)
+set bmargin at screen bot(4)
 
 set ylabel "dt"
-plot 'perfs' u 1:2 every EVERY w l t '' lw 2
+plot 'perfs' u 1:2 every EVERY w filledcurves x1 lw 2 lc 0
 
 #-----------------------------------------------
 # subplot  2-3
@@ -55,14 +56,50 @@ plot 'perfs' u 1:2 every EVERY w l t '' lw 2
 set lmargin at screen left(2)
 set rmargin at screen right(2)
 #  set horizontal margins for third row (top)
-set tmargin at screen top(3)
-set bmargin at screen bot(3)
+set tmargin at screen top(4)
+set bmargin at screen bot(4)
 
 unset ytics
 set y2tics
 unset ylabel
 set y2label '# cells'
-plot 'perfs' u 1:7 every EVERY w l lw 2 t ''
+if (STATS_min_y == STATS_max_y) set yrange [STATS_max_y-1:STATS_max_y+1];
+plot 'perfs' u 1:7 every EVERY w filledcurves x1 lw 2 lc 0
+set yrange [*:*]
+
+#-----------------------------------------------
+# subplot  1-2
+#  set horizontal margins for first column
+set lmargin at screen left(1)
+set rmargin at screen right(1)
+#  set horizontal margins for second row (middle)
+set tmargin at screen top(3)
+set bmargin at screen bot(3)
+
+set style fill solid
+
+unset ylabel
+unset y2label
+set ytics auto
+unset y2tics
+colori(i) = i < 10 ? 2 : i > 20 ? 1 : 7
+set ylabel 'mgp.i'
+plot [][0:]'perfs' u 1:3:(colori($3)) every EVERY w boxes lc var
+
+#-----------------------------------------------
+# subplot  2-2
+#  set horizontal margins for second column
+set lmargin at screen left(2)
+set rmargin at screen right(2)
+#  set horizontal margins for second row (middle)
+set tmargin at screen top(3)
+set bmargin at screen bot(3)
+
+unset ytics
+set y2tics auto
+unset ylabel
+set y2label 'mgu.i'
+plot [][0:]'perfs' u 1:5:(colori($5)) every EVERY w boxes lc var
 
 #-----------------------------------------------
 # subplot  1-2
@@ -77,9 +114,9 @@ unset ylabel
 unset y2label
 set ytics auto
 unset y2tics
-set key bottom left
-plot [][0:]'perfs' u 1:3 every EVERY w l lw 2 t 'mgp.i', \
-                '' u 1:4 every EVERY w l lw 2 t 'mgp.nrelax'
+set ylabel 'mgp.nrelax'
+colori(i) = i < 10 ? 2 : i > 20 ? 1 : 7
+plot [][0:]'perfs' u 1:4:(colori($4)) every EVERY w boxes lc var
 
 #-----------------------------------------------
 # subplot  2-2
@@ -92,8 +129,9 @@ set bmargin at screen bot(2)
 
 unset ytics
 set y2tics auto
-plot [][0:]'perfs' u 1:5 every EVERY w l lw 2 t 'mgu.i', \
-                '' u 1:6 every EVERY w l lw 2 t 'mgu.nrelax'
+unset ylabel
+set y2label 'mgu.nrelax'
+plot [][0:]'perfs' u 1:6:(colori($6)) every EVERY w boxes lc var
 
 #-----------------------------------------------
 # subplot  1-2
@@ -105,12 +143,13 @@ set tmargin at screen top(1)
 set bmargin at screen bot(1)
 
 set xlabel "time"
+unset y2label
 set ylabel "Wall-clock time"
 set xtics auto
 set format x '% g'
 unset y2tics
 set ytics auto
-plot 'perfs' u 1:8 every EVERY w l lw 2 t ''
+plot 'perfs' u 1:8 every EVERY w filledcurves x1 lw 2 lc 0
 
 #-----------------------------------------------
 # subplot  2-2
@@ -124,9 +163,9 @@ set bmargin at screen bot(1)
 unset ytics
 set y2tics auto
 unset ylabel
-set y2label 'points.timestep/sec/core'
+set y2label 'points.step/sec/core'
 set format y '%e'
-plot 'perfs' u 1:($9/$10) every EVERY w l lw 2 t ''
+plot 'perfs' u 1:($9/$10) every EVERY w filledcurves x1 lw 2 lc 0
 
 unset multiplot
 
