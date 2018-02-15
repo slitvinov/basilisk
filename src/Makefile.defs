@@ -95,6 +95,8 @@ clean:
 %/plots: %.c
 	cd $* && awk -f $(BASILISK)/gnuplot.awk < ../$*.c > plots && \
 	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh || rm -f plots
+	cd $* && awk -f $(BASILISK)/python.awk < ../$*.c > plots.py && \
+	python plots.py || rm -f plots
 
 %.gnu: %.eps
 	pstoedit -f gnuplot -flat 0.1 $< $@

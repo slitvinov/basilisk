@@ -161,8 +161,8 @@ and *"offline" plots*.
 
 ### Inline plots
 
-These are generated using gnuplot commands embedded directly in
-the documentation comments of the source code (*mytest.c*). Using 
+These are generated using gnuplot or python commands embedded directly
+in the documentation comments of the source code (*mytest.c*). Using
 the standard wiki syntax for scripts these commands appear as
 
     ~~~gnuplot Caption
@@ -170,10 +170,16 @@ the standard wiki syntax for scripts these commands appear as
     ...
     ~~~
 
+    ~~~pythonplot Caption
+    import matplotlib.pyplot as plt
+    ...
+    plt.savefig('plot.png')
+    ~~~
+
 and are replaced by the corresponding figure when the page is displayed
-in the wiki. Note that the *set output* command is optional. If you 
+in the wiki. Note that for gnuplot the *set output* command is optional. If you 
 don't supply a file name, a unique name looking like *_plot1.png* will be
-generated automatically.
+generated automatically. For python the *savefig* command is mandatory.
 
 To generate the figures from the command line, just do
 
