@@ -187,9 +187,9 @@ mgstats mg_solve (struct MGSolve p)
     on the finest grid. */
     
     if (s.resa > TOLERANCE) {
-      if (resb/s.resa < 2 && s.nrelax < 100)
+      if (resb/s.resa < 1.2 && s.nrelax < 100)
 	s.nrelax++;
-      else if (resb/s.resa > 20 && s.nrelax > 1)
+      else if (resb/s.resa > 10 && s.nrelax > 2)
 	s.nrelax--;
     }
     resb = s.resa;

@@ -41,7 +41,7 @@ event logfile (i++) {
   printf ("%g %d %g %g %g %g %d %d %d\n", 
 	  t, i, dt, s.sum - 2., s.min, s.max - 1., mgp.i, mgpf.i, mgu.i);
   assert (s.min >= -1e-10 && s.max <= 1. + 1e-10);
-  assert (fabs (s.sum - 2.) < 3.5e-7);
+  assert (fabs (s.sum - 2.) < 9e-7);
 }
 
 event interface (t = {0,0.2,0.4,0.8}) {
