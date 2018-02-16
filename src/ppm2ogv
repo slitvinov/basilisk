@@ -14,34 +14,25 @@ else
     while test $# -gt 0; do
 	case $1 in
 	    -r) shift; rate="-r $1" ;;
+	    *) options="$options $1" ;;
 	esac
 	shift
     done
-    command="$AVCONV -f image2pipe -vcodec ppm $rate -i - -codec:v libtheora -qscale:v 7 -y -f ogg"
-    while test $# -gt 0; do
-	case $1 in
-	    -r) shift ;;
-	    *) command="$command $1" ;;
-	esac
-	shift
-    done
+    command="$AVCONV -f image2pipe -vcodec ppm $rate -i - -codec:v libtheora -qscale:v 7 -y -f ogv $options -"
 fi
 
 if test -d "$TMPDIR" ; then
     log=`mktemp $TMPDIR/ppm2ogv.XXXXXX`
-    out=`mktemp $TMPDIR/ppm2ogv.XXXXXX`
 else
     log=`mktemp /tmp/ppm2ogv.XXXXXX`
-    out=`mktemp /tmp/ppm2ogv.XXXXXX`
 fi
 
-if $command $out 2> $log; then :
+if $command 2> $log; then :
 else
     cat $log >&2
-    rm -f $log $out
+    rm -f $log
     exit 1
 fi
-cat $out
-rm -f $log $out
+rm -f $log
 
 exit 0
