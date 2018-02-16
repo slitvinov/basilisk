@@ -51,6 +51,7 @@ responds with images which are used to refresh the Tkinter window.
 * Up/down arrow keys: rotates up/down by 3 degrees.
 * 'q' key: quits.
 * '<' or '>' keys: decrease or increase minimum delay between screen refreshes.
+* '1' and '4': set the number of samples (1 fast/coarse, 4 slow/fine).
 
 ## Dependencies
 
@@ -196,6 +197,10 @@ class BCanvas (Canvas):
             self.draw ('view (camera = "back");\n')
         elif c == "'i'":
             self.draw ('view (camera = "iso");\n')
+        elif c == "'1'":
+            self.draw ('view (samples = 1);\n')
+        elif c == "'4'":
+            self.draw ('view (samples = 4);\n')
         elif event.keysym == 'Right':
             self.draw ("view (theta = %g, phi = %g, relative = 1);\n" %
                   (2.*pi/120., 0.))
