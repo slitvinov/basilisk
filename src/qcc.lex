@@ -34,7 +34,7 @@
   int infine;
   int inreturn;
   int inmalloc;
-  
+
   #define EVMAX 100
   int inevent, eventscope, eventpara;
   char eventarray[EVMAX], * eventfile[EVMAX], * eventid[EVMAX];
@@ -239,6 +239,9 @@
   } foreach_child_t;
   
   Stack foreach_child_stack = {NULL, 0, sizeof(foreach_child_t)};
+  
+  char * inbegin = NULL, ** blocks = NULL;
+  Stack inblock_stack = {NULL, 0, sizeof(foreach_child_t)};
   
   int identifier (int c) {
     return ((c >= 'a' && c <= 'z') || 
@@ -1257,6 +1260,9 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
   else if (inarg == para + 1) {
     fputs ("})", yyout);
     inarg = 0;
+    foreach_child_t * block = stack_top (&inblock_stack);
+    if (block && block->scope == scope && block->para == para)
+      fputc (';', yyout);
   }
   else if (infine == para + 1) {
     int i;
@@ -1318,10 +1324,16 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
     }
     ECHO;
   }
-  foreach_child_t * child;
-  while ((child = stack_top(&foreach_child_stack)) && child->scope == scope) {
-    fprintf (yyout, " end_%s(); }", child->name);
+  foreach_child_t * i;
+  while ((i = stack_top(&foreach_child_stack)) &&
+	 i->scope == scope && i->para == para) {
+    fprintf (yyout, " end_%s(); }", i->name);
     stack_pop (&foreach_child_stack);
+  }
+  while ((i = stack_top(&inblock_stack)) &&
+	 i->scope == scope && i->para == para) {
+    fprintf (yyout, " end_%s(); }", i->name);
+    stack_pop (&inblock_stack);
   }
   if (inforeach && scope == foreachscope)
     endforeach ();
@@ -1442,14 +1454,22 @@ map{WS}+"{" {
     ECHO; insthg = 1;
     endforeachdim ();
   }
-  foreach_child_t * child;
-  while ((child = stack_top(&foreach_child_stack)) &&
-	 child->scope == scope && child->para == para) {
+  foreach_child_t * i;
+  while ((i = stack_top(&foreach_child_stack)) &&
+	 i->scope == scope && i->para == para) {
     if (!insthg) {
       ECHO; insthg = 1;
     }
-    fprintf (yyout, " end_%s(); }", child->name);
+    fprintf (yyout, " end_%s(); }", i->name);
     stack_pop (&foreach_child_stack);
+  }
+  while ((i = stack_top(&inblock_stack)) &&
+	 i->scope == scope && i->para == para) {
+    if (!insthg) {
+      ECHO; insthg = 1;
+    }
+    fprintf (yyout, " end_%s(); }", i->name);
+    stack_pop (&inblock_stack);
   }
   if (infunction && scope == functionscope) {
     if (scope > 0 && !infunctiondecl) {
@@ -2307,6 +2327,25 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     }      
     if (!strcmp (s1, "main") && !strcmp (yytext, "int"))
       inmain = 1;
+    else if (!strncmp (s1, "begin_", 6)) {
+      if (debug)
+	fprintf (stderr, "%s:%d: %s\n", fname, line, s1);
+      free (inbegin);
+      inbegin = strdup (s1 + 6);
+    }
+    else if (inbegin && !strncmp (s1, "end_", 4) &&
+	     !strcmp (inbegin, s1 + 4)) {
+      if (debug)
+	fprintf (stderr, "%s:%d: %s\n", fname, line, s1);
+      char ** b = blocks;
+      int n = 0;
+      while (b && *b)
+	n++, b++;
+      blocks = realloc (blocks, (n + 2)*sizeof (char *));
+      blocks[n] = inbegin;
+      blocks[n + 1] = NULL;
+      inbegin = NULL;
+    }
     // function tracing
     if (traceon) {
       intrace = 1; traceon = 0;
@@ -2414,6 +2453,13 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   args[nargs-1] = strdup (s);
   argss[nargs-1] = strdup (s1);
   varpush (s2, struct_type, scope + 1, 0);
+
+  if (!strncmp (s, "begin_", 6)) {
+    if (debug)
+      fprintf (stderr, "%s:%d: %s\n", fname, line, s);
+    free (inbegin);
+    inbegin = strdup (s + 6);
+  }
   // function tracing
   if (traceon) {
     intrace = 1; traceon = 0;
@@ -2459,14 +2505,41 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     REJECT;
   char * s = yytext;
   while (!strchr(" \t\v\n\f(", *s)) s++;
-  int len = s - yytext, i;
+  int len = s - yytext;
+  char ** b = blocks, * func = yytext;
+  while (b && *b) {
+    if (!strncmp (*b, yytext, len)) {
+      if (debug)
+	fprintf (stderr, "%s:%d: block %s\n", fname, line, *b);
+      func = malloc (strlen (yytext) + 7);
+      strcpy (func, "begin_");
+      strcat (func, yytext);
+      len += 6;
+      fputs ("{ ", yyout);
+      break;
+    }
+    b++;
+  }
+
+  int i;
   for (i = 0; i < nargs && !inarg; i++)
-    if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {
-      ECHO; para++;
+    if (strlen(args[i]) == len && !strncmp (args[i], func, len)) {
+      fputs (func, yyout);
+      para++;
       inarg = para;
       fprintf (yyout, "(struct %s){", argss[i]);
     }
-  if (!inarg)
+  
+  if (func != yytext) {
+    if (!inarg) {
+      fputs (func, yyout); para++;
+    }
+    free (func);
+    foreach_child_t block = {scope, para - 1};
+    strcpy (block.name, *b);
+    stack_push (&inblock_stack, &block);
+  }
+  else if (!inarg)
     REJECT;
 }
 
@@ -2731,6 +2804,7 @@ int endfor (FILE * fin, FILE * fout)
   mallocpara = 0;
   foreachdim_stack.n = 0;
   foreach_child_stack.n = 0;
+  inblock_stack.n = 0;
   inboundary = nboundary = nsetboundary = 0;
   infunction = 0;
   infunctionproto = inmain = intrace = traceon = 0;
