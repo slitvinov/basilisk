@@ -11,11 +11,8 @@ This file contains the definitions for the drawing primitives of
 void clear()
 {
   bview * view = get_view();
-  if (view->active) {
-    if (view->list >= 0)
-      glEndList();
+  if (view->active)
     view->active = false;
-  }
   draw();
 }
 
@@ -177,6 +174,78 @@ void view (struct _view_set p)
   }
 
   clear();
+}
+
+/**
+# *translate()*: translates the origin.
+
+The block following this command will be drawn in a translated
+coordinate system. */
+
+struct _translate {
+  float x, y, z;
+};
+
+void begin_translate (struct _translate p)
+{
+  bview * view = draw();
+  glMatrixMode (GL_MODELVIEW);
+  glPushMatrix();
+  glTranslatef (p.x, p.y, p.z);
+  gl_get_frustum (&view->frustum);
+}
+
+void end_translate()
+{
+  bview * view = draw();
+  glMatrixMode (GL_MODELVIEW);
+  glPopMatrix();
+  gl_get_frustum (&view->frustum);
+}
+
+/**
+# *mirror()*: symmetry relative to a plane.
+
+The block following this command will be drawn in a coordinate system
+symmetric relative to the given plane. */
+
+struct _mirror {
+  coord n;
+  double alpha;
+};
+
+void begin_mirror (struct _mirror p)
+{
+  bview * view = draw();
+  glMatrixMode (GL_MODELVIEW);
+  glPushMatrix();
+  normalize (&p.n);
+  GLfloat s[16], t[16];
+  s[0] = 1. - 2.*p.n.x*p.n.x;
+  s[1] = - 2.*p.n.x*p.n.y;  s[2] = - 2.*p.n.x*p.n.z;
+  s[3] = 0.;
+  s[4] = s[1];
+  s[5] = 1. - 2.*p.n.y*p.n.y; s[6] = - 2.*p.n.y*p.n.z;
+  s[7] = 0.;
+  s[8] = s[2];   s[9] = s[6];  s[10] = 1. - 2.*p.n.z*p.n.z; 
+  s[11] = 0.;
+  s[12] = 0.;    s[13] = 0.;   s[14] = 0.;                    
+  s[15] = 1.;
+
+  t[0] = -1.;  t[1] = 0.;   t[2] = 0.;  t[3] = 0.;
+  t[4] = 0.;  t[5] = -1.;   t[6] = 0.;  t[7] = 0.;
+  t[8] = 0.;  t[9] = 0.;   t[10] = -1.; t[11] = 0.;
+  t[12] = - 2.*p.n.x*p.alpha; 
+  t[13] = - 2.*p.n.y*p.alpha;  
+  t[14] = - 2.*p.n.z*p.alpha; 
+  t[15] = 1.;
+  matrix_multiply (s, t);
+  glMultMatrixf (s);
+  gl_get_frustum (&view->frustum);
+}
+
+void end_mirror() {
+  end_translate();
 }
 
 /**

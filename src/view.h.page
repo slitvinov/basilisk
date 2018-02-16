@@ -98,7 +98,6 @@ struct _bview {
   
   int ni; // number of items drawn
 
-  int list; // display list, for symmetries, not used yet
   bool active;
 };
 
@@ -132,7 +131,6 @@ bview * bview_new() {
   p->fb = framebuffer_new (p->width, p->height);
   
   init_gl();
-  p->list = -1; // glGenLists (1);
   p->active = false;
   
   return p;
@@ -143,8 +141,6 @@ The destructor method. */
 
 void bview_destroy (bview * p)
 {
-  if (p->list >= 0)
-    glDeleteLists (p->list, 1);
   framebuffer_destroy (p->fb);
   free (p);
 }
@@ -225,11 +221,8 @@ This is called by graphics primitives before drawing. */
 
 bview * draw() {
   bview * view = get_view();
-  if (!view->active) {
+  if (!view->active)
     redraw();
-    if (view->list >= 0)
-      glNewList (view->list, GL_COMPILE);
-  }
   return view;
 }
 
@@ -422,65 +415,8 @@ static void bview_draw (bview * view)
 {
   if (!view->active)
     return;
-  
-  if (view->list >= 0)
-    glEndList();
   view->active = false;
-    
-#if 0  
-  GfsFrustum frustum;
-  gfs_gl_get_frustum (view, symmetries, &frustum);
-  
-  GList * i = list;
-  while (i) {
-    GfsGl * gl = i->data;
-
-    if (GFS_IS_GL_CLIP_PLANE (gl)) {
-      gl->format = p->format;
-      gfs_gl_clip_plane_disable (GFS_GL_CLIP_PLANE (gl));
-    }
-    i = i->next;
-  }
-  i = list;
-  while (i) {
-    if (GFS_IS_GL_CUT_PLANE (i->data))
-      GFS_GL_CUT_PLANE (i->data)->list = list;
-    i = i->next;
-  }
-
-  GSList * clip = NULL;
-  gboolean firstclip = TRUE;
-  i = list;
-  while (i) {
-    GfsGl * gl = i->data;
-    gl->format = p->format;
-    if (GFS_IS_GL_CLIP_PLANE (gl)) {
-      if (firstclip) {
-	g_slist_foreach (clip, (GFunc) gfs_gl_clip_plane_disable, NULL);
-	g_slist_free (clip); clip = NULL;
-	firstclip = FALSE;	  
-      }
-      gfs_gl_draw (gl, &frustum);
-      clip = g_slist_prepend (clip, gl);
-    }
-    else {
-      gfs_gl_draw (gl, &frustum);
-      firstclip = TRUE;
-    }
-    i = i->next;
-  }
-  g_slist_free (clip);
-  glEndList();
-  
-  gfs_gl_symmetry_apply (symmetries, display_list);
-  gfs_gl_frustum_free (&frustum);
-  g_list_free (symmetries);
-#else
-  if (view->list >= 0)
-    glCallList (view->list);
-#endif
   glFinish ();
-
   enable_fpe (FE_DIVBYZERO|FE_INVALID);
 }
 
@@ -495,12 +431,15 @@ static void redraw_feedback (struct _save * p)
     redraw();
     // we use a display list, just as a workaround for some buggy
     // feedback buffer implementations
-    view->list = glGenLists (1);
-    glNewList (view->list, GL_COMPILE);
+    int list = glGenLists (1);
+    glNewList (list, GL_COMPILE);
     load (buf = p->history);
-    bview_draw (view);
-    glDeleteLists (view->list, 1);
-    view->list = -1;
+    glEndList();
+    glCallList (list);
+    glFinish ();
+    glDeleteLists (list, 1);
+    enable_fpe (FE_DIVBYZERO|FE_INVALID);
+    view->active = false;
     view->vector = false;
     view->res = res;
   }
@@ -769,6 +708,37 @@ static bool process_line (char * line, Array * history, FILE * interactive)
       draw_append (buf, history, interactive);
   }
     
+  else if (!strcmp (s, "squares")) {
+    struct _squares p = {0};
+    _squares_get (&p);
+    squares (p);
+    draw_append (buf, history, interactive);
+  }
+  
+  else if (!strcmp (s, "begin_translate")) {
+    struct _translate p = {0};
+    _translate_get (&p);
+    begin_translate (p);
+    draw_append (buf, history, interactive);
+  }
+
+  else if (!strcmp (s, "end_translate")) {
+    end_translate();
+    draw_append (buf, history, interactive);
+  }
+  
+  else if (!strcmp (s, "begin_mirror")) {
+    struct _mirror p = {{0}};
+    _mirror_get (&p);
+    begin_mirror (p);
+    draw_append (buf, history, interactive);
+  }
+
+  else if (!strcmp (s, "end_mirror")) {
+    end_mirror();
+    draw_append (buf, history, interactive);
+  }
+  
   else if (!strcmp (s, "squares")) {
     struct _squares p = {0};
     _squares_get (&p);

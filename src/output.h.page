@@ -557,8 +557,6 @@ void output_grd (struct OutputGRD p)
 
 #if MULTIGRID
 
-#if !MULTIGRID_MPI
-
 /**
 ## *output_gfs()*: Gerris simulation format
 
@@ -616,6 +614,9 @@ void output_gfs (struct OutputGfs p)
   char * fname = p.file;
   
 @if _MPI
+#if MULTIGRID_MPI
+  not_mpi_compatible();
+#endif // !MULTIGRID_MPI
   FILE * fp = p.fp;
   if (p.file == NULL) {
     long pid = getpid();
@@ -789,8 +790,6 @@ void output_gfs (struct OutputGfs p)
   }
 @endif // _MPI
 }
-
-#endif // !MULTIGRID_MPI
 
 /**
 ## *dump()*: Basilisk snapshots
@@ -1069,7 +1068,7 @@ bool restore (struct Dump p)
   }
 
 #if MULTIGRID_MPI
-  int cell_size = sizeof(unsigned) + header.len*sizeof(double);
+  long cell_size = sizeof(unsigned) + header.len*sizeof(double);
   long offset = pid()*((1 << dimension*(header.depth + 1)) - 1)/
     ((1 << dimension) - 1)*cell_size;
   if (fseek (fp, offset, SEEK_CUR) < 0) {
