@@ -1180,6 +1180,8 @@ static FILE ** qpopen_pipes = NULL;
 
 FILE * qpopen (const char * command, const char * type)
 {
+  if (pid() > 0)
+    return fopen ("/dev/null", type);
   FILE * fp = popen (command, type);
   if (fp) {
     FILE ** i = qpopen_pipes;
@@ -1194,6 +1196,8 @@ FILE * qpopen (const char * command, const char * type)
 
 int qpclose (FILE * fp)
 {
+  if (pid() > 0)
+    return fclose (fp);
   FILE ** i = qpopen_pipes;
   while (i && *i) {
     if (*i == fp)
