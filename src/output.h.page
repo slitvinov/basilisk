@@ -910,7 +910,7 @@ void dump (struct Dump p)
   char * file = p.file;
 
   if (fp != NULL || file == NULL) {
-    fprintf (stderr, "dump(): must specify a file name when using MPI\n");
+    fprintf (ferr, "dump(): must specify a file name when using MPI\n");
     exit(1);
   }
 
@@ -974,7 +974,7 @@ bool restore (struct Dump p)
 
   struct DumpHeader header;  
   if (fread (&header, sizeof(header), 1, fp) < 1) {
-    fprintf (stderr, "restore(): error: expecting header\n");
+    fprintf (ferr, "restore(): error: expecting header\n");
     exit (1);
   }
 
@@ -988,14 +988,15 @@ bool restore (struct Dump p)
 #else // multigrid
 #if MULTIGRID_MPI
   if (header.npe != npe()) {
-    fprintf (stderr,
+    fprintf (ferr,
 	     "restore(): error: the number of processes don't match:"
 	     " %d != %d\n",
 	     header.npe, npe());
     exit (1);
   }
   dimensions (header.n.x, header.n.y, header.n.z);
-  int n = header.n.x, depth = header.depth;
+  double n = header.n.x;
+  int depth = header.depth;
   while (n > 1)
     depth++, n /= 2;
   init_grid (1 << depth);
@@ -1008,7 +1009,7 @@ bool restore (struct Dump p)
   scalar * list = dump_list (p.list ? p.list : all);
   if (header.version == 161020) {
     if (header.len - 1 != list_len (list)) {
-      fprintf (stderr,
+      fprintf (ferr,
 	       "restore(): error: the list lengths don't match: "
 	       "%ld (file) != %d (code)\n",
 	       header.len - 1, list_len (list));
@@ -1017,7 +1018,7 @@ bool restore (struct Dump p)
   }
   else { // header.version != 161020
     if (header.version != dump_version) {
-      fprintf (stderr,
+      fprintf (ferr,
 	       "restore(): error: file version mismatch: "
 	       "%d (file) != %d (code)\n",
 	       header.version, dump_version);
@@ -1028,12 +1029,12 @@ bool restore (struct Dump p)
     for (int i = 0; i < header.len; i++) {
       unsigned len;
       if (fread (&len, sizeof(unsigned), 1, fp) < 1) {
-	fprintf (stderr, "restore(): error: expecting len\n");
+	fprintf (ferr, "restore(): error: expecting len\n");
 	exit (1);
       }
       char name[len + 1];
       if (fread (name, sizeof(char), len, fp) < 1) {
-	fprintf (stderr, "restore(): error: expecting s.name\n");
+	fprintf (ferr, "restore(): error: expecting s.name\n");
 	exit (1);
       }
       name[len] = '\0';
@@ -1062,7 +1063,7 @@ bool restore (struct Dump p)
 
     double o[4];
     if (fread (o, sizeof(double), 4, fp) < 4) {
-      fprintf (stderr, "restore(): error: expecting coordinates\n");
+      fprintf (ferr, "restore(): error: expecting coordinates\n");
       exit (1);
     }
     origin (o[0], o[1], o[2]);
@@ -1086,7 +1087,7 @@ bool restore (struct Dump p)
   foreach_cell() {
     unsigned flags;
     if (fread (&flags, sizeof(unsigned), 1, fp) != 1) {
-      fprintf (stderr, "restore(): error: expecting 'flags'\n");
+      fprintf (ferr, "restore(): error: expecting 'flags'\n");
       exit (1);
     }
     // skip subtree size
@@ -1094,7 +1095,7 @@ bool restore (struct Dump p)
     for (scalar s in list) {
       double val;
       if (fread (&val, sizeof(double), 1, fp) != 1) {
-	fprintf (stderr, "restore(): error: expecting a scalar\n");
+	fprintf (ferr, "restore(): error: expecting a scalar\n");
 	exit (1);
       }
       if (s.i != INT_MAX)
