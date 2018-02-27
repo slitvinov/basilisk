@@ -166,6 +166,7 @@ Several metric spaces/coordinate systems are predefined:
 
 * [Axisymmetric](axi.h)
 * [Spherical](spherical.h)
+* [Radial/cylindrical](radial.h)
 
 # Data processing
 
