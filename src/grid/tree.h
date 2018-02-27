@@ -138,7 +138,7 @@ static size_t poolsize (size_t depth, size_t size)
 
 foreach_dimension()
 static inline
-void assign_periodic_x (char ** m, int i, int nl, char * b)
+void assign_periodic_x (void ** m, int i, int nl, void * b)
 {
   m[i] = b;
   if (Period.x) {
@@ -199,15 +199,15 @@ static bool layer_remove_row (Layer * l, int i)
 static void layer_add_row (Layer * l, int i, int j)
 {
   if (!l->m[i]) {
-    assign_periodic_x ((char **) l->m, i, l->len - 2*GHOSTS,
-		       new_refarray (l->len, sizeof (char *)));
+    assign_periodic_x ((void **) l->m, i, l->len - 2*GHOSTS,
+		       (void *) new_refarray (l->len, sizeof (char *)));
     l->nc++;
   }
   refarray (l->m[i], l->len, sizeof(char *));
 #if dimension > 2
   if (!l->m[i][j])
-    assign_periodic_y ((char **) l->m[i], j, l->len - 2*GHOSTS,
-		       new_refarray (l->len, sizeof (char *)));
+    assign_periodic_y ((void **) l->m[i], j, l->len - 2*GHOSTS,
+		       (void *) new_refarray (l->len, sizeof (char *)));
   refarray (l->m[i][j], l->len, sizeof(char *));
 #endif
 }
@@ -216,10 +216,10 @@ static bool layer_remove_row (Layer * l, int i, int j)
 {
 #if dimension > 2
   if (unrefarray (l->m[i][j], l->len, sizeof (char *)))
-    assign_periodic_y ((char **) l->m[i], j, l->len - 2*GHOSTS, NULL);
+    assign_periodic_y ((void **) l->m[i], j, l->len - 2*GHOSTS, NULL);
 #endif
   if (unrefarray (l->m[i], l->len, sizeof (char *))) {
-    assign_periodic_x ((char **) l->m, i, l->len - 2*GHOSTS, NULL);
+    assign_periodic_x ((void **) l->m, i, l->len - 2*GHOSTS, NULL);
     if (--l->nc == 0) {
       destroy_layer (l);
       return true; // layer has been destroyed
@@ -966,14 +966,14 @@ static void alloc_children (Point point)
 #if dimension == 1
     layer_add_row (L, i);
     assert (!L->m[i]);
-    assign_periodic_x (L->m, i, nl, b);
+    assign_periodic_x ((void **) L->m, i, nl, (void *) b);
     b += len;
 #elif dimension == 2
     layer_add_row (L, i, 0);
     int j = 2*point.j - GHOSTS;
     for (int l = 0; l < 2; l++, j++) {
       assert (!L->m[i][j]);
-      assign_periodic_y (L->m[i], j, nl, b);
+      assign_periodic_y ((void **) L->m[i], j, nl, (void *) b);
       b += len;
     }
 #else // dimension == 3
@@ -983,7 +983,7 @@ static void alloc_children (Point point)
       int m = 2*point.k - GHOSTS;
       for (int n = 0; n < 2; n++, m++) {
 	assert (!L->m[i][j][m]);
-	assign_periodic_z (L->m[i][j], m, nl, b);
+	assign_periodic_z ((void **) L->m[i][j], m, nl, (void *) b);
 	b += len;
       }
     }
@@ -1009,7 +1009,7 @@ static void free_children (Point point)
   assert (L->m[i]);
   mempool_free (L->pool, L->m[i]);
   for (int k = 0; k < 2; k++, i++) {
-    assign_periodic_x (L->m, i, nl, NULL);
+    assign_periodic_x ((void **) L->m, i, nl, NULL);
     if (layer_remove_row (L, i)) {
       assert (point.level + 1 == grid->depth);
       update_depth (-1);
@@ -1027,7 +1027,7 @@ static void free_children (Point point)
   for (int k = 0; k < 2; k++, i++) {
     int j = 2*point.j - GHOSTS;
     for (int l = 0; l < 2; l++, j++)
-      assign_periodic_y (L->m[i], j, nl, NULL);
+      assign_periodic_y ((void **) L->m[i], j, nl, NULL);
     if (layer_remove_row (L, i, j)) {
       assert (point.level + 1 == grid->depth);
       update_depth (-1);
@@ -1047,7 +1047,7 @@ static void free_children (Point point)
     for (int l = 0; l < 2; l++, j++) {
       int m = 2*point.k - GHOSTS;
       for (int n = 0; n < 2; n++, m++)
-	assign_periodic_z (L->m[i][j], m, nl, NULL);
+	assign_periodic_z ((void **) L->m[i][j], m, nl, NULL);
       if (layer_remove_row (L, i, j)) {
 	assert (point.level + 1 == grid->depth);
 	update_depth (-1);

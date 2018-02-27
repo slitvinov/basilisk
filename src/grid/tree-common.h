@@ -408,7 +408,6 @@ static scalar tree_init_scalar (scalar s, const char * name)
 foreach_dimension()
 static void refine_face_x (Point point, scalar s)
 {
-  assert (dimension > 1);
   vector v = s.v;
   if (!is_refined(neighbor(-1)) &&
       (is_local(cell) || is_local(neighbor(-1)))) {
