@@ -95,6 +95,8 @@ struct _bview {
 
   framebuffer * fb;
   Frustum frustum; // the view frustum
+
+  void (* map) (coord *); // an optional mapping function
   
   int ni; // number of items drawn
 

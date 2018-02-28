@@ -40,6 +40,7 @@ void clear()
    angles).
 * *camera*: predefined camera angles: "left", "right", "top",
    "bottom", "front", "back" and "iso".
+* *map*: an optional coordinate mapping function.
 */
 
 struct _view_set {
@@ -53,6 +54,7 @@ struct _view_set {
   bool relative;
   float res;
   char * camera;
+  void (* map) (coord *);
   float p1x, p1y, p2x, p2y; // for trackball
   bview * view;
 };
@@ -149,6 +151,9 @@ void view (struct _view_set p)
     }
   }
 
+  if (p.map)
+    v->map = p.map;
+  
   if (p.p1x || p.p1y || p.p2x || p.p2y) { // trackball
     float q[4];
     gl_trackball(q, p.p1x, p.p1y, p.p2x, p.p2y);
@@ -254,17 +259,37 @@ void end_mirror() {
 The tree structure is used to traverse only the cells which are within
 the field of view of the camera. */
 
+static void mapped_position (bview * view, coord * p, double * r)
+{
+  double x = p->x, y = p->y, z = p->z, rm = 0.;
+  view->map (p);
+  for (int i = -1; i <= 1; i += 2)
+    for (int j = -1; j <= 1; j += 2)
+      for (int k = -1; k <= 1; k += 2) {
+	coord q = {x + i**r, y + j**r, z + k**r};
+	view->map (&q);
+	double pq = sq(p->x - q.x) + sq(p->y - q.y) + sq(p->z - q.z);
+	if (pq > rm)
+	  rm = pq;
+      }
+  *r = sqrt (rm);
+}
+
 @def foreach_visible(view)
 foreach_cell() {
 #if dimension == 2
-  double r = Delta*0.71;
+  double _r = Delta*0.71;
 #else // dimension == 3
-  double r = Delta*0.87;
+  double _r = Delta*0.87;
 #endif
-  if (!sphere_in_frustum (x, y, z, r, &(view)->frustum))
+  coord _p = {x, y, z};
+  if ((view)->map)
+    mapped_position (view, &_p, &_r);
+  if (!sphere_in_frustum (_p.x, _p.y, _p.z, _r, &(view)->frustum))
     continue;
   if (is_leaf(cell) ||
-      sphere_diameter (x, y, z, r/L0, &(view)->frustum) < (view)->res) {
+      sphere_diameter (_p.x, _p.y, _p.z, _r/L0, &(view)->frustum)
+      < (view)->res) {
     if (is_active(cell) && is_local(cell)) {
 @
 @def end_foreach_visible()
@@ -301,7 +326,7 @@ foreach_cell() {
   if (fabs(alpha) > 0.87 || !sphere_in_frustum (x, y, z, _r, &(view)->frustum))
     continue;
   if (is_leaf(cell) ||
-      sphere_diameter (x, y, z, r/L0, &(view)->frustum) < (view)->res) {
+      sphere_diameter (x, y, z, _r/L0, &(view)->frustum) < (view)->res) {
     if (is_active(cell) && is_local(cell)) {
 @
 @def end_foreach_visible_plane()
@@ -331,8 +356,8 @@ static void draw_lines (bview * view)
 }
 
 static inline double interp (Point point, coord p, scalar col) {
-  struct _interpolate r = { col, x + p.x*Delta, y + p.y*Delta, z + p.z*Delta };
-  return interpolate_linear (point, r);
+  struct _interpolate _r = { col, x + p.x*Delta, y + p.y*Delta, z + p.z*Delta };
+  return interpolate_linear (point, _r);
 }
 
 /**
@@ -396,6 +421,28 @@ static bool cfilter (Point point, scalar c, double cmin)
   return max - min > 0.5;
 }
 
+#if dimension <= 2
+static void glvertex2d (bview * view, double x, double y) {
+  if (view->map) {
+    coord p = {x, y, 0.};
+    view->map (&p);
+    glVertex2d (p.x, p.y);
+  }
+  else
+    glVertex2d (x, y);
+}
+#else // dimension > 2
+static void glvertex3d (bview * view, double x, double y, double z) {
+  if (view->map) {
+    coord p = {x, y, z};
+    view->map (&p);
+    glVertex3d (p.x, p.y, p.z);
+  }
+  else
+    glVertex3d (x, y, z);
+}
+#endif // dimension > 2
+
 trace
 bool draw_vof (struct _draw_vof p)
 {
@@ -451,8 +498,8 @@ bool draw_vof (struct _draw_vof p)
       double alpha = plane_alpha (c[], n);
       coord segment[2];
       if (facets (n, alpha, segment) == 2) {
-	glVertex2d (x + segment[0].x*Delta, y + segment[0].y*Delta);
-	glVertex2d (x + segment[1].x*Delta, y + segment[1].y*Delta);
+	glvertex2d (view, x + segment[0].x*Delta, y + segment[0].y*Delta);
+	glvertex2d (view, x + segment[1].x*Delta, y + segment[1].y*Delta);
 	view->ni++;
       }
     }
@@ -485,7 +532,8 @@ bool draw_vof (struct _draw_vof p)
 				      p.min, p.max);
 	    glColor3f (b.r/255., b.g/255., b.b/255.);
 	  }
-	  glVertex3d (x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+	  glvertex3d (view,
+		      x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
 	}
 	glEnd ();
 	view->ni++;
@@ -502,7 +550,8 @@ bool draw_vof (struct _draw_vof p)
 	if (m > 2) {
 	  glBegin (GL_LINE_LOOP);
 	  for (int i = 0; i < m; i++)
-	    glVertex3d (x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+	    glvertex3d (view,
+			x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
 	  glEnd ();
 	  view->ni++;
 	}
@@ -538,10 +587,10 @@ void cells (struct _cells p)
 #if dimension == 2
   foreach_visible (view) {
     glBegin (GL_LINE_LOOP);
-    glVertex2d (x - Delta/2., y - Delta/2.);
-    glVertex2d (x + Delta/2., y - Delta/2.);
-    glVertex2d (x + Delta/2., y + Delta/2.);
-    glVertex2d (x - Delta/2., y + Delta/2.);
+    glvertex2d (view, x - Delta/2., y - Delta/2.);
+    glvertex2d (view, x + Delta/2., y - Delta/2.);
+    glvertex2d (view, x + Delta/2., y + Delta/2.);
+    glvertex2d (view, x - Delta/2., y + Delta/2.);
     glEnd();
     view->ni++;
   }
@@ -552,7 +601,7 @@ void cells (struct _cells p)
     if (m > 2) {
       glBegin (GL_LINE_LOOP);
       for (int i = 0; i < m; i++)
-	glVertex3d (x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+	glvertex3d (view, x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
       glEnd ();
       view->ni++;
     }
@@ -620,19 +669,19 @@ bool squares (struct _squares p)
 	  c = colormap_color (cmap, (f[] + f[-1] + f[-1,-1] + f[0,-1])/4.,
 			      p.min, p.max);
 	  glColor3f (c.r/255., c.g/255., c.b/255.);
-	  glVertex2d (x - Delta/2., y - Delta/2.);
+	  glvertex2d (view, x - Delta/2., y - Delta/2.);
 	  c = colormap_color (cmap, (f[] + f[1] + f[1,-1] + f[0,-1])/4.,
 			      p.min, p.max);
 	  glColor3f (c.r/255., c.g/255., c.b/255.);
-	  glVertex2d (x + Delta/2., y - Delta/2.);
+	  glvertex2d (view, x + Delta/2., y - Delta/2.);
 	  c = colormap_color (cmap, (f[] + f[1] + f[1,1] + f[0,1])/4.,
 			      p.min, p.max);
 	  glColor3f (c.r/255., c.g/255., c.b/255.);
-	  glVertex2d (x + Delta/2., y + Delta/2.);
+	  glvertex2d (view, x + Delta/2., y + Delta/2.);
 	  c = colormap_color (cmap, (f[] + f[-1] + f[-1,1] + f[0,1])/4.,
 			      p.min, p.max);
 	  glColor3f (c.r/255., c.g/255., c.b/255.);
-	  glVertex2d (x - Delta/2., y + Delta/2.);
+	  glvertex2d (view, x - Delta/2., y + Delta/2.);
 	  view->ni++;
 	}
       glEnd();
@@ -647,7 +696,8 @@ bool squares (struct _squares p)
 	      color c = colormap_color (cmap, interp (point, v[i], f),
 					p.min, p.max);
 	      glColor3f (c.r/255., c.g/255., c.b/255.);
-	      glVertex3d (x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+	      glvertex3d (view,
+			  x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
 	    }
 	    glEnd ();
 	    view->ni++;
@@ -677,17 +727,17 @@ bool squares (struct _squares p)
 	  gltexcoord ((4.*f[] +
 		       2.*(f[1] + f[-1] + f[0,1] + f[0,-1]) +
 		       f[-1,-1] + f[1,1] + f[-1,1] + f[1,-1])/16.);
-	  glVertex2d (x, y);
+	  glvertex2d (view, x, y);
 	  gltexcoord ((f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
-	  glVertex2d (x - Delta/2., y - Delta/2.);
+	  glvertex2d (view, x - Delta/2., y - Delta/2.);
 	  gltexcoord ((f[] + f[1] + f[1,-1] + f[0,-1])/4.);
-	  glVertex2d (x + Delta/2., y - Delta/2.);
+	  glvertex2d (view, x + Delta/2., y - Delta/2.);
 	  gltexcoord ((f[] + f[1] + f[1,1] + f[0,1])/4.);
-	  glVertex2d (x + Delta/2., y + Delta/2.);
+	  glvertex2d (view, x + Delta/2., y + Delta/2.);
 	  gltexcoord ((f[] + f[-1] + f[-1,1] + f[0,1])/4.);
-	  glVertex2d (x - Delta/2., y + Delta/2.);
+	  glvertex2d (view, x - Delta/2., y + Delta/2.);
 	  gltexcoord ((f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
-	  glVertex2d (x - Delta/2., y - Delta/2.);
+	  glvertex2d (view, x - Delta/2., y - Delta/2.);
 	  glEnd();
 	  view->ni++;
 	}
@@ -703,13 +753,15 @@ bool squares (struct _squares p)
 		c.x += v[i].x/m;
 	    glBegin (GL_TRIANGLE_FAN);
 	    gltexcoord (interp (point, c, f));
-	    glVertex3d (x + c.x*Delta, y + c.y*Delta, z + c.z*Delta);
+	    glvertex3d (view, x + c.x*Delta, y + c.y*Delta, z + c.z*Delta);
 	    for (int i = 0; i < m; i++) {
 	      gltexcoord (interp (point, v[i], f));
-	      glVertex3d (x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+	      glvertex3d (view,
+			  x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
 	    }
 	    gltexcoord (interp (point, v[0], f));
-	    glVertex3d (x + v[0].x*Delta, y + v[0].y*Delta, z + v[0].z*Delta);
+	    glvertex3d (view,
+	    		x + v[0].x*Delta, y + v[0].y*Delta, z + v[0].z*Delta);
 	    glEnd ();
 	    view->ni++;
 	  }
@@ -725,10 +777,10 @@ bool squares (struct _squares p)
       if (f[] != nodata) {	
 	color c = colormap_color (cmap, f[], p.min, p.max);
 	glColor3f (c.r/255., c.g/255., c.b/255.);
-	glVertex2d (x - Delta/2., y - Delta/2.);
-	glVertex2d (x + Delta/2., y - Delta/2.);
-	glVertex2d (x + Delta/2., y + Delta/2.);
-	glVertex2d (x - Delta/2., y + Delta/2.);
+	glvertex2d (view, x - Delta/2., y - Delta/2.);
+	glvertex2d (view, x + Delta/2., y - Delta/2.);
+	glvertex2d (view, x + Delta/2., y + Delta/2.);
+	glvertex2d (view, x - Delta/2., y + Delta/2.);
 	view->ni++;
       }
     glEnd();
@@ -742,7 +794,8 @@ bool squares (struct _squares p)
 	  glColor3f (c.r/255., c.g/255., c.b/255.);
 	  glBegin (GL_POLYGON);
 	  for (int i = 0; i < m; i++)
-	    glVertex3d (x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+	    glvertex3d (view,
+			x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
 	  glEnd ();
 	  view->ni++;
 	}
@@ -833,10 +886,10 @@ bool box()
 #if dimension == 2
   foreach_level (0) {
     glBegin (GL_LINE_LOOP);
-    glVertex2d (x - Delta/2., y - Delta/2.);
-    glVertex2d (x + Delta/2., y - Delta/2.);
-    glVertex2d (x + Delta/2., y + Delta/2.);
-    glVertex2d (x - Delta/2., y + Delta/2.);
+    glvertex2d (view, x - Delta/2., y - Delta/2.);
+    glvertex2d (view, x + Delta/2., y - Delta/2.);
+    glvertex2d (view, x + Delta/2., y + Delta/2.);
+    glvertex2d (view, x - Delta/2., y + Delta/2.);
     glEnd ();
     view->ni++;
   }  
@@ -844,16 +897,16 @@ bool box()
   foreach_level (0) {
     for (int i = -1; i <= 1; i += 2) {
       glBegin (GL_LINE_LOOP);
-      glVertex3d (x - Delta/2., y - Delta/2., z + i*Delta/2.);
-      glVertex3d (x + Delta/2., y - Delta/2., z + i*Delta/2.);
-      glVertex3d (x + Delta/2., y + Delta/2., z + i*Delta/2.);
-      glVertex3d (x - Delta/2., y + Delta/2., z + i*Delta/2.);
+      glvertex3d (view, x - Delta/2., y - Delta/2., z + i*Delta/2.);
+      glvertex3d (view, x + Delta/2., y - Delta/2., z + i*Delta/2.);
+      glvertex3d (view, x + Delta/2., y + Delta/2., z + i*Delta/2.);
+      glvertex3d (view, x - Delta/2., y + Delta/2., z + i*Delta/2.);
       glEnd ();
       view->ni++;
       glBegin (GL_LINES);
       for (int j = -1; j <= 1; j += 2) {
-	glVertex3d (x + i*Delta/2., y + j*Delta/2., z - Delta/2.);
-	glVertex3d (x + i*Delta/2., y + j*Delta/2., z + Delta/2.);
+	glvertex3d (view, x + i*Delta/2., y + j*Delta/2., z - Delta/2.);
+	glvertex3d (view, x + i*Delta/2., y + j*Delta/2., z + Delta/2.);
       }
       glEnd ();
       view->ni++;
