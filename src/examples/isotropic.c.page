@@ -122,13 +122,24 @@ event logfile (i++; t <= 300) {
 }
 
 event gfsview (t += 0.5; t <= 150) {
+#if 0
   static FILE * fp =
     popen ("gfsview-batch3D isotropic.gfv | ppm2mpeg > isotropic.mpg", "w");
   output_gfs (fp, translate = true);
+#endif
 }
 
+#if 0
 event snapshot (i += 100)
   dump (file = "snapshot");
+#endif
+
+#if TREE
+event adapt (i++) {
+  double uemax = 0.2*normf(u.x).avg;
+  adapt_wavelet ((scalar *){u}, (double[]){uemax,uemax,uemax}, maxlevel);
+}
+#endif
 
 /**
 ## Running with MPI on occigen
@@ -152,6 +163,7 @@ with the `run.sh` script
 #!/bin/bash
 #SBATCH -J basilisk
 #SBATCH --nodes=32
+#SBATCH --constraint=HSW24
 #SBATCH --ntasks-per-node=16
 #SBATCH --threads-per-core=1
 #SBATCH --time=5:00
@@ -161,7 +173,7 @@ with the `run.sh` script
 LEVEL=7
 
 module purge
-module load bullxmpi
+module load openmpi
 module load intel
 
 mpicc -Wall -std=c99 -O2 -D_GNU_SOURCE=1 _isotropic.c -o isotropic -lm
@@ -169,33 +181,67 @@ srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./isotropic $LEVEL \
      2> log-$LEVEL-$SLURM_NTASKS > out-$LEVEL-$SLURM_NTASKS
 ~~~
 
+## Running with MPI on mesu
+
+On the local machine
+
+~~~bash
+%local qcc -source -D_MPI=1 isotropic.c
+%local scp _isotropic.c mesu.dsi.upmc.fr:
+~~~
+
+On mesu (using 512 cores)
+
+~~~bash
+module load mpt
+mpicc -Wall -O2 -std=c99 _isotropic.c -o isotropic -lm
+qsub run.sh
+~~~
+
+with the `run.sh` script
+
+~~~bash
+#!/bin/bash 
+#PBS -l select=22:ncpus=24:mpiprocs=24
+#PBS -l walltime=10:00
+#PBS -N isotropic
+#PBS -j oe  
+# load modules 
+module load mpt
+# mpicc -Wall -O2 -std=c99 _isotropic.c -o isotropic -lm
+# change to the directory where program job_script_file is located 
+cd $PBS_O_WORKDIR 
+# mpirun -np 64 !!!! does not work !!!!
+NP=512
+mpiexec_mpt -n $NP ./isotropic 2> log.$NP > out.$NP
+~~~
+
 ## Results
 
 The two codes agree at early time, or until the solution transitions
-to a turbulent state. This happens earlier in Basilisk as the symmetry
-of the base state is not preserved with the same accuracy as in the
-pseudo-spectral code (the main reason being the tolerance on
-non-divergence of the incompressible velocity field). Note however
-that the statistics produced by the two codes agree well after
-transition to turbulence.
+to a turbulent state. The statistics produced by the two codes agree
+well after transition to turbulence.
 
 ~~~gnuplot Evolution of kinetic energy
 set xlabel 'Time'
 set ylabel 'Kinetic energy'
 set logscale  y
-plot 'isotropic.occigen' u 1:3 w l t 'Basilisk', \
+plot 'isotropic.occigen' u 1:3 w l t 'Basilisk (occigen)', \
+     'isotropic.mesu' u 1:3 w l t 'Basilisk (mesu)', \
      'isotropic.hit3d' u 1:($3*3./2.) w l t 'Spectral'
 ~~~
 
 ~~~gnuplot Evolution of microscale Reynolds number
 set ylabel 'Microscale Reynolds number'
-plot 'isotropic.occigen' u 1:4 w l t 'Basilisk', \
+plot 'isotropic.occigen' u 1:4 w l t 'Basilisk (occigen)', \
+     'isotropic.mesu' u 1:4 w l t 'Basilisk (mesu)', \
      'isotropic.hit3d' u 1:4 w l t 'Spectral'
 ~~~
 
 ~~~gnuplot Evolution of dissipation
 set ylabel 'Dissipation function'
-plot 'isotropic.occigen' u 1:2 w l t 'Basilisk', \
+plot 'isotropic.occigen' u 1:2 w l t 'Basilisk (occigen)', \
+     'isotropic.mesu' u 1:2 w l t 'Basilisk (mesu)', \
      'isotropic.hit3d' u 1:2 w l t 'Spectral'
 ~~~
 
@@ -205,7 +251,8 @@ problem on 512 cores).
 ~~~gnuplot Computational speed in points.timesteps/sec/core
 set ylabel 'Speed'
 unset logscale
-plot 'isotropic.occigen' u 1:($7/512) w l t ''
+plot 'isotropic.occigen' u 1:($7/512) w l t 'occigen', \
+     'isotropic.mesu' u 1:($7/512) w l t 'mesu'
 ~~~
 
 ## See also
