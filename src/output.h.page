@@ -642,7 +642,8 @@ void output_gfs (struct OutputGfs p)
   }
   
   scalar * list = p.list ? p.list : list_copy (all);
-  
+
+  restriction (list);
   fprintf (p.fp, 
 	   "1 0 GfsSimulation GfsBox GfsGEdge { binary = 1"
 	   " x = %g y = %g ",
@@ -733,24 +734,20 @@ void output_gfs (struct OutputGfs p)
 #if dimension >= 2
 	    if (s.v.x.i == s.i) {
 	      s = s.v.y;
-	      a = is_local(cell) && !isnan(s[]) && s[] != nodata ? s[] :
-		(double) DBL_MAX;
+	      a = is_local(cell) && s[] != nodata ? s[] : (double) DBL_MAX;
 	    }
 	    else if (s.v.y.i == s.i) {
 	      s = s.v.x;
-	      a = is_local(cell) && !isnan(s[]) && s[] != nodata ?
-		- s[] : (double) DBL_MAX;
+	      a = is_local(cell) && s[] != nodata ? - s[] : (double) DBL_MAX;
 	    }
 #endif
 #if dimension >= 3
 	    else
-	      a = is_local(cell) && !isnan(s[]) && s[] != nodata ? s[] :
-		(double) DBL_MAX;
+	      a = is_local(cell) && s[] != nodata ? s[] : (double) DBL_MAX;
 #endif
 	  }
 	  else
-	    a = is_local(cell) && !isnan(s[]) && s[] != nodata ? s[] :
-	      (double) DBL_MAX;
+	    a = is_local(cell) && s[] != nodata ? s[] : (double) DBL_MAX;
 	  fwrite (&a, sizeof (double), 1, p.fp);
 	}
     }

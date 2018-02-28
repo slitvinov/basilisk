@@ -27,5 +27,5 @@ event logfile (i = 1)
     printf ("%g %g %g %g %.3g %.3g %.3g\n", x, y, h[], zb[], 
 	    u.x[] < 1e-10 ? 0. : u.x[], 
 	    u.y[] < 1e-10 ? 0. : u.y[], 
-	    h[] > dry ? h[] + zb[] - 0.1 : undefined);
+	    h[] > dry ? h[] + zb[] - 0.1 : nodata);
 }
