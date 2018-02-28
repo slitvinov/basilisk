@@ -970,15 +970,23 @@
 	fputc ('}', yyout);
       }
       else if (var->type == tensor) {
-	fputs (" {", yyout);
 	int i, j, k = 0;
+	for (i = 0; i < dimension; i++)
+	  for (j = 0; j < dimension; j++) {
+	    if (!var->symmetric || i <= j)
+	      var->i[k] = (*n)++;
+	    else
+	      var->i[k] = var->i[j*dimension + i];
+	    k++;
+	  }
+	fputs (" {", yyout);
+	k = 0;
 	for (i = 0; i < dimension; i++) {
 	  fputc ('{', yyout);
 	  for (j = 0; j < dimension; j++) {
-	    fprintf (yyout, "{%s%d}", constant, (*n));
+	    fprintf (yyout, "{%s%d}", constant, var->i[k++]);
 	    if (j < dimension - 1)
 	      fputc (',', yyout);
-	    var->i[k++] = (*n)++;
 	  }
 	  fputc ('}', yyout);
 	  if (i < dimension - 1)
@@ -1090,8 +1098,9 @@
       cadna_echo (text);
     }
     if (debug)
-      fprintf (stderr, "%s:%d: declaration: %s type: %d face: %d brack: %d\n",
-	       fname, line, var, vartype, varface, brack);
+      fprintf (stderr, "%s:%d: declaration: %s type: %d face: %d brack: %d "
+	       "symmetric: %d\n",
+	       fname, line, var, vartype, varface, brack, varsymmetric);
   }
 
   static int homogeneize (FILE * in, FILE * fp)
