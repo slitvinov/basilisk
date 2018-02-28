@@ -14,7 +14,8 @@ capabilities. Both libGLU and libOSMesa are required.
 sudo apt-get install libglu1-mesa-dev libosmesa6-dev
 ~~~
 
-to install the required system libraries, then do:
+to install the required system libraries (and their "development"
+requirements i.e. header files etc.), then do:
 
 ~~~bash
 cd $BASILISK/gl
@@ -55,7 +56,8 @@ Use
 sudo apt-get install libglu1-mesa-dev libglew-dev libgl1-mesa-dev
 ~~~
 
-to install the required system libraries, then do:
+to install the required system libraries (and their "development"
+requirements i.e. header files etc.), then do:
 
 ~~~bash
 cd $BASILISK/gl

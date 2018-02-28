@@ -48,7 +48,9 @@ set tmargin at screen top(4)
 set bmargin at screen bot(4)
 
 set ylabel "dt"
+set logscale y
 plot 'perfs' u 1:2 every EVERY w filledcurves x1 lw 2 lc 0
+unset logscale y
 
 #-----------------------------------------------
 # subplot  2-3

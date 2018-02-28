@@ -30,7 +30,15 @@ cd basilisk
 darcs pull
 ~~~
 
-and recompile.
+and recompile using
+
+~~~bash
+make clean
+make
+~~~
+
+Note that the [Basilisk View installation](#visualisation) may also
+need separate recompilation.
 
 ### Using a tarball
 
@@ -67,8 +75,8 @@ make
 Note that on 32-bits systems you need to use *config.gcc.32bits*
 instead.
 
-If you are using another system/compiler, find a config file which
-looks close to yours, then try
+If you are using another system/compiler (for example Mac OSX), find a
+config file which looks close to yours, then try
 
 ~~~bash
 cd basilisk/src
@@ -107,6 +115,15 @@ Debian-like system (i.e. Debian, Ubuntu, Mint etc...) you just need to do
 ~~~bash
 sudo apt-get install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle
 ~~~
+
+## Visualisation
+
+Online visualisation with [Basilisk View](view.h) requires a separate
+[installation](gl/INSTALL).
+
+Offline (interactive) [visualisation](bview) requires the
+[installation](bview-server.c#installation) of the [Basilisk View
+servers](bview-server.c).
 
 ## Using Basilisk with python
 

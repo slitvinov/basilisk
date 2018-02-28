@@ -296,8 +296,9 @@ double _alpha = (alpha1);
 }
 glNormal3d (n.x, n.y, n.z);
 foreach_cell() {
-  double r = Delta*0.87, alpha = (_alpha - n.x*x - n.y*y - n.z*z)/Delta;
-  if (fabs(alpha) > 0.87 || !sphere_in_frustum (x, y, z, r, &(view)->frustum))
+  // fixme: coordinate mapping
+  double _r = Delta*0.87, alpha = (_alpha - n.x*x - n.y*y - n.z*z)/Delta;
+  if (fabs(alpha) > 0.87 || !sphere_in_frustum (x, y, z, _r, &(view)->frustum))
     continue;
   if (is_leaf(cell) ||
       sphere_diameter (x, y, z, r/L0, &(view)->frustum) < (view)->res) {
