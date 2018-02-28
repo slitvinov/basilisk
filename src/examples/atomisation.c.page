@@ -147,7 +147,7 @@ event movie (t += 1e-2)
   clear();
   draw_vof ("f");
 #endif // 3D
-  static FILE * fp = popen ("ppm2mp4 > movie.mp4", "w");
+  static FILE * fp = popen ("ppm2mp4 movie.mp4", "w");
   save (fp = fp);
 }
 
