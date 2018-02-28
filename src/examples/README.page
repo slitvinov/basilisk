@@ -18,6 +18,8 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [Bubble rising in a large tank](bubble.c)
 * [Forced isotropic turbulence in a triply-periodic box](isotropic.c)
 * [Distance field computation from a 3D model](distance.c)
+* [A Shallow Water Analogue for the Standing Accretion Shock
+  Instability](swasi.c)
 
 ## Python interface
 
