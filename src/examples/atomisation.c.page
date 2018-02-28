@@ -42,6 +42,9 @@ left-hand-side and free outflow on the right-hand-side. */
 scalar f0[];
 u.n[left]  = dirichlet(f0[]*(1. + 0.05*sin (10.*2.*pi*t)));
 u.t[left]  = dirichlet(0);
+#if dimension > 2
+u.r[left]  = dirichlet(0);
+#endif
 p[left]    = neumann(0);
 f[left]    = f0[];
 
