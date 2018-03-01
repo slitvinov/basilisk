@@ -361,8 +361,7 @@ Array * array_new()
 
 void array_free (Array * a)
 {
-  if (a->max > 0)
-    free (a->p);
+  free (a->p);
   free (a);
 }
 

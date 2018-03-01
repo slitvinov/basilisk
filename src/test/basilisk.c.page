@@ -80,8 +80,10 @@ pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
   foreach()
     tt[] = d[] < 0;
   boundary ({tt});
-  assert (tag (tt) == 8);
-  output_ppm (tt, file = "tag.png", n = 512, box = {{-5,-5},{100,30}});
+  int n = tag (tt);
+  output_ppm (tt, file = "tag.png", n = 512, box = {{-5,-5},{100,30}},
+	      map = randomap, min = 0, max = n);
+  assert (n == 8);
 
   /**
   We initialise a vertex distance field by interpolating the centered

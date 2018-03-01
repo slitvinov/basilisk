@@ -8,7 +8,7 @@ CFLAGS += -O2 -DMTRACE=3
 
 # list only non-default tests
 check: halo.vtst interpolate.vtst events.vtst faces.vtst coarsen.vtst \
-	lid-restore.tst poiseuille.vtst
+	lid-restore.tst poiseuille.vtst tag.ctst
 
 # these tests have special dependencies/compilation requirements
 
@@ -194,7 +194,7 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	gfsi.tst gfs.tst \
 	load-balancing \
 	mpi-grid.tst mpi-periodic-3D.tst \
-	source.tst tag.tst view.tst view.3D.tst
+	source.tst tag.tst tag1.tst view.tst view.3D.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3
@@ -224,6 +224,7 @@ poiseuille-periodic.tst: CC = mpicc -D_MPI=4
 source.tst: CC = mpicc -D_MPI=7
 
 tag.tst: CC = mpicc -D_MPI=7
+tag1.tst: CC = mpicc -D_MPI=7
 
 # parallel dump()/restore()
 
