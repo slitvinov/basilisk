@@ -197,7 +197,7 @@ event fit (t = end) {
            "fit k(x) 'k-%d' via a,b,c\n"
 	   "level = %d\n"
 	   "res = D/%g*2.**level\n"
-           "print \"fit \", res, a, b, c, D\n"
+	   "print sprintf (\"fit %%g %%.6f %%.2f %%.0f\\n\", res, a, b, c, D)\n"
 	   "\n"
 	   "set table 'fit-%d'\n"
 	   "plot [0:1] 2.*a*exp(-b*x)\n"
