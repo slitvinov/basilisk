@@ -969,3 +969,45 @@ bool isosurface (struct _isosurface p)
 #endif // dimension > 2
   return true;
 }
+
+/**
+# *travelling()*: moves the camera to a different viewpoint
+
+* *start*: starting time of the camera motion.
+* *end*: time at which the viewpoint should be reached.
+* *tx*, *ty*, *quat*, *fov*: definition of the target viewpoint.
+*/
+
+struct _travelling {
+  double start, end;
+  float tx, ty, quat[4], fov;
+};
+
+#define interpo(v)							\
+  (!p.v ? v : ((t - p.start)*(p.v) + (p.end - t)*(v))/(p.end - p.start))
+
+void travelling (struct _travelling p)
+{
+  static float tx, ty, quat[4], fov;
+  static double told = -1.;
+  if (told < p.start && t >= p.start) {
+    bview * view = get_view();
+    tx = view->tx, ty = view->ty, fov = view->fov;
+    for (int i = 0; i < 4; i++)
+      quat[i] = view->quat[i];
+  }
+  if (t >= p.start && t <= p.end)
+    view (tx = interpo (tx), ty = interpo (ty),
+	  fov = interpo (fov),
+	  quat = {interpo(quat[0]), interpo(quat[1]),
+	          interpo(quat[2]), interpo(quat[3])});
+  if (told < p.end && t >= p.end) {
+    bview * view = get_view();
+    tx = view->tx, ty = view->ty, fov = view->fov;
+    for (int i = 0; i < 4; i++)
+      quat[i] = view->quat[i];
+  }  
+  told = t;  
+}
+
+#undef interpo
