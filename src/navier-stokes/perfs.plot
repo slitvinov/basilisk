@@ -37,6 +37,7 @@ set multiplot
 stats "perfs" u 1:7 nooutput
 EVERY = ceil(STATS_records/200)
 unset key
+set style fill solid
 
 #-----------------------------------------------
 # subplot  1-3
@@ -49,7 +50,7 @@ set bmargin at screen bot(4)
 
 set ylabel "dt"
 set logscale y
-plot 'perfs' u 1:2 every EVERY w filledcurves x1 lw 2 lc 0
+plot 'perfs' u 1:2 every EVERY w boxes lc 0
 unset logscale y
 
 #-----------------------------------------------
@@ -66,7 +67,7 @@ set y2tics
 unset ylabel
 set y2label '# cells'
 if (STATS_min_y == STATS_max_y) set yrange [STATS_max_y-1:STATS_max_y+1];
-plot 'perfs' u 1:7 every EVERY w filledcurves x1 lw 2 lc 0
+plot 'perfs' u 1:7 every EVERY w boxes lc 0
 set yrange [*:*]
 
 #-----------------------------------------------
@@ -78,15 +79,13 @@ set rmargin at screen right(1)
 set tmargin at screen top(3)
 set bmargin at screen bot(3)
 
-set style fill solid
-
 unset ylabel
 unset y2label
 set ytics auto
 unset y2tics
-colori(i) = i < 10 ? 2 : i > 20 ? 1 : 7
+colori(i) = (i < 10 ? 65280 : i > 20 ? 16711680 : 16753920)
 set ylabel 'mgp.i'
-plot [][0:]'perfs' u 1:3:(colori($3)) every EVERY w boxes lc var
+plot [][0:]'perfs' u 1:3:(colori($3)) every EVERY w boxes lc rgbcolor variable
 
 #-----------------------------------------------
 # subplot  2-2
@@ -101,7 +100,7 @@ unset ytics
 set y2tics auto
 unset ylabel
 set y2label 'mgu.i'
-plot [][0:]'perfs' u 1:5:(colori($5)) every EVERY w boxes lc var
+plot [][0:]'perfs' u 1:5:(colori($5)) every EVERY w boxes lc rgbcolor variable
 
 #-----------------------------------------------
 # subplot  1-2
@@ -117,8 +116,7 @@ unset y2label
 set ytics auto
 unset y2tics
 set ylabel 'mgp.nrelax'
-colori(i) = i < 10 ? 2 : i > 20 ? 1 : 7
-plot [][0:]'perfs' u 1:4:(colori($4)) every EVERY w boxes lc var
+plot [][0:]'perfs' u 1:4:(colori($4)) every EVERY w boxes lc rgbcolor variable
 
 #-----------------------------------------------
 # subplot  2-2
@@ -133,7 +131,7 @@ unset ytics
 set y2tics auto
 unset ylabel
 set y2label 'mgu.nrelax'
-plot [][0:]'perfs' u 1:6:(colori($6)) every EVERY w boxes lc var
+plot [][0:]'perfs' u 1:6:(colori($6)) every EVERY w boxes lc rgbcolor variable
 
 #-----------------------------------------------
 # subplot  1-2
@@ -151,7 +149,7 @@ set xtics auto
 set format x '% g'
 unset y2tics
 set ytics auto
-plot 'perfs' u 1:8 every EVERY w filledcurves x1 lw 2 lc 0
+plot 'perfs' u 1:8 every EVERY w boxes lc 0
 
 #-----------------------------------------------
 # subplot  2-2
@@ -167,7 +165,7 @@ set y2tics auto
 unset ylabel
 set y2label 'points.step/sec/core'
 set format y '%e'
-plot 'perfs' u 1:($9/$10) every EVERY w filledcurves x1 lw 2 lc 0
+plot 'perfs' u 1:($9/$10) every EVERY w boxes lc 0
 
 unset multiplot
 
