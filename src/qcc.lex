@@ -1269,9 +1269,6 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
   else if (inarg == para + 1) {
     fputs ("})", yyout);
     inarg = 0;
-    foreach_child_t * block = stack_top (&inblock_stack);
-    if (block && block->scope == scope && block->para == para)
-      fputc (';', yyout);
   }
   else if (infine == para + 1) {
     int i;
@@ -1282,6 +1279,9 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
   }
   else
     ECHO;
+  foreach_child_t * block = stack_top (&inblock_stack);
+  if (block && block->scope == scope && block->para == para)
+    fputc (';', yyout);
   if (incadna == para + 1) {
     incadna = 0;
     if (incadnanargs && incadnaargs == incadnaarg[incadnanargs-1] + 1)

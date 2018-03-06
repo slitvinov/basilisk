@@ -180,7 +180,6 @@ static void redraw() {
   /* OpenGL somehow generates floating-point exceptions... turn them off */
   disable_fpe (FE_DIVBYZERO|FE_INVALID);
 
-  //  glViewport (100, 100, view->width, view->height);
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
   double max = 2.;    
@@ -188,13 +187,12 @@ static void redraw() {
   GList * symmetries = get_symmetries (list);
   max = gfs_gl_domain_extent (domain, symmetries);
 #endif
-
+  
   gluPerspective (view->fov, view->width/(float)view->height, 1., 1. + 2.*max);
   glMatrixMode (GL_MODELVIEW);
 	    
   glLoadIdentity ();
   glTranslatef (view->tx, view->ty, - (1. + max));
-  //  glTranslatef (0, 0, - (1. + max));
     
   GLfloat m[4][4];
   gl_build_rotmatrix (m, view->quat);
@@ -745,6 +743,13 @@ static bool process_line (char * line, Array * history, FILE * interactive)
     struct _squares p = {0};
     _squares_get (&p);
     squares (p);
+    draw_append (buf, history, interactive);
+  }
+    
+  else if (!strcmp (s, "isosurface")) {
+    struct _isosurface p = {0};
+    _isosurface_get (&p);
+    isosurface (p);
     draw_append (buf, history, interactive);
   }
     

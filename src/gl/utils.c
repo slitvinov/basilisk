@@ -1,13 +1,3 @@
-#if defined(__APPLE__)
-#  include <OpenGL/gl.h>
-#  include <OpenGL/glu.h>
-#else
-#  include <GL/gl.h>
-#  include <GL/glu.h>
-#endif
-
-#include <stdio.h>
-#include <stdbool.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -75,20 +65,6 @@ void init_gl() {
   glColorMaterial (GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
   glEnable (GL_COLOR_MATERIAL);
 }
-
-#if 0
-static GList * get_symmetries (GList * i)
-{
-  GList * symmetry = NULL;
-
-  while (i) {
-    if (GFS_IS_GL_SYMMETRY (i->data))
-      symmetry = gl_ist_append (symmetry, i->data);
-    i = i->next;
-  }
-  return symmetry;
-}
-#endif
 
 void gl_draw_texture (GLuint id, int width, int height)
 {
@@ -195,20 +171,8 @@ void gl_check_error()
   abort();
 }
 
-void gl_get_frustum (Frustum * f
-		     //, GList * symmetries
-		     )
+void gl_get_frustum (Frustum * f)
 {
-#if 0  
-  f->symmetries = symmetries;
-  guint n = 1;
-  while (symmetries) {
-    n *= 2;
-    symmetries = symmetries->next;
-  }
-  f->s = g_malloc (n*sizeof (FttVector));
-#endif
-
   GLint v[4];
   glGetIntegerv (GL_VIEWPORT, v);
   gl_check_error();
@@ -275,30 +239,20 @@ void gl_get_frustum (Frustum * f
 */
 int sphere_in_frustum (double x, double y, double z, double r, Frustum * f)
 {
-  int I1 = 0;
-
-#if 0
-  int j, n = create_symmetries (f->s, f->symmetries, p);
-  for (j = 0; j < n; j++) {
-    p = &f->s[j];
-#endif
-  {
-    int i;
-    int I = 1;
-    for (i = 0; i < 6; i++) {
-      double d = f->n[i][0]*x + f->n[i][1]*y + f->n[i][2]*z + f->d[i];
-      if (d < -r) {
-	I = 0;
-	break;
-      }
-      if (d < r)
-	I = -1;
+  int I1 = 0, i, I = 1;
+  for (i = 0; i < 6; i++) {
+    double d = f->n[i][0]*x + f->n[i][1]*y + f->n[i][2]*z + f->d[i];
+    if (d < -r) {
+      I = 0;
+      break;
     }
-    if (I == 1)
-      return 1;
-    if (I == -1)
-      I1 = -1;
+    if (d < r)
+      I = -1;
   }
+  if (I == 1)
+    return 1;
+  if (I == -1)
+    I1 = -1;
   return I1;
 }
 
@@ -308,20 +262,13 @@ int sphere_in_frustum (double x, double y, double z, double r, Frustum * f)
 */
 float sphere_diameter (double x, double y, double z, double r, Frustum * f)
 {
-#if 0
-  int j, n = create_symmetries (f->s, f->symmetries, c);
-  for (j = 0; j < n; j++) {
-    c = &f->s[j];
-#endif
-  {
-    float v[4];
-    v[0] = x; v[1] = y; v[2] = z; v[3] = 1.;
-    vector_multiply (v, f->m);
-    v[0] = r;
-    vector_multiply (v, f->p);
-    float rp = v[3] == 0. ? 0 : v[0]*f->width/v[3];
-    return rp;
-  }
+  float v[4];
+  v[0] = x; v[1] = y; v[2] = z; v[3] = 1.;
+  vector_multiply (v, f->m);
+  v[0] = r;
+  vector_multiply (v, f->p);
+  float rp = v[3] == 0. ? 0 : v[0]*f->width/v[3];
+  return rp;
 }
 
 static bool atobool (char * s)

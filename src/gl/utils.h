@@ -1,3 +1,13 @@
+#if defined(__APPLE__)
+#  include <OpenGL/gl.h>
+#  include <OpenGL/glu.h>
+#else
+#  include <GL/gl.h>
+#  include <GL/glu.h>
+#endif
+#include <stdio.h>
+#include <stdbool.h>
+
 void gl_write_image (FILE * fp, const GLubyte * buffer,
 		     unsigned width, unsigned height, unsigned samples);
 void init_gl();
@@ -40,3 +50,5 @@ float * gl_feedback_begin (unsigned buffersize);
 bool    gl_feedback_end   (float * f,
 			   FILE * fp,
 			   enum FeedbackFormat format);
+
+int polygonize (const double val[8], double isolevel, double triangles[5][3][3]);

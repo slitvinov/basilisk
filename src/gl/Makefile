@@ -4,7 +4,7 @@ CFLAGS += -O2
 
 all: libglutils.a libfb_osmesa.a libfb_glx.a
 
-libglutils.a: trackball.o gl2ps.o utils.o \
+libglutils.a: trackball.o gl2ps.o utils.o polygonize.o \
 		og_font.o og_stroke_mono_roman.o
 	ar cr $@ $^
 

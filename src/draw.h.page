@@ -311,7 +311,7 @@ $$
 #if dimension == 3
 @def foreach_visible_plane(view, n1, alpha1)
 coord n = {(n1).x, (n1).y, (n1).z};
-double _alpha = (alpha1);
+double _alpha = 0.9999999*(alpha1);
 {
   double norm = sqrt(sq(n.x) + sq(n.y) + sq(n.z));
   if (!norm)
@@ -359,6 +359,83 @@ static inline double interp (Point point, coord p, scalar col) {
   struct _interpolate _r = { col, x + p.x*Delta, y + p.y*Delta, z + p.z*Delta };
   return interpolate_linear (point, _r);
 }
+
+@def colorize_args(args)
+  scalar col = {-1};
+  if (args.color && strcmp (args.color, "level")) {
+    col = lookup_field (args.color);
+    if (col.i < 0) {
+      fprintf (stderr, "colorize_args(): no field named '%s'\n", args.color);
+      return false;
+    }
+  }
+    
+  double cmap[NCMAP][3];
+  if (args.color) {
+    if (args.min == 0 && args.max == 0) {
+      if (col.i < 0) // level
+	args.min = 0, args.max = depth();
+      else {
+	stats s = statsf (col);
+	double avg = s.sum/s.volume;
+	double spread = (args.spread ? args.spread : 5.)*s.stddev;
+	args.min = avg - spread; args.max = avg + spread;
+      }
+    }
+    if (!args.map)
+      args.map = jet;
+    args.map (cmap);
+  }
+@
+
+@def color_facet(args)
+if (args.color && (!args.linear || col.i < 0)) {
+  color b = colormap_color (cmap, col.i < 0 ? (double) level : val(col,0,0,0),
+			    args.min, args.max);
+  glColor3f (b.r/255., b.g/255., b.b/255.);
+}
+@
+
+@def color_vertex(args, val)
+if (args.color && args.linear && col.i >= 0) {
+  if (view->vector) {
+    color b = colormap_color (cmap, val, args.min, args.max);
+    glColor3f (b.r/255., b.g/255., b.b/255.);
+  }
+  else {
+    double _v = val;
+    glTexCoord1d (clamp(((_v) - args.min)/(args.max - args.min), 0., 1.));
+  }
+}
+@
+
+static void begin_colorized (double cmap[NCMAP][3], bool use_texture)
+{
+  // do not use textures for vector graphics (not supported by GL2PS)
+  if (use_texture) {
+    GLfloat texture[3*256];
+    for (int i = 0; i < 256; i++) {
+      color c = colormap_color (cmap, i/255., 0, 1);
+      texture[3*i] = c.r/255.;
+      texture[3*i + 1] = c.g/255.;
+      texture[3*i + 2] = c.b/255.;
+    }
+    glTexImage1D (GL_TEXTURE_1D, 0, GL_RGB, 256,0, GL_RGB, GL_FLOAT, texture);
+    glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glEnable (GL_TEXTURE_1D);
+  }
+  glColor3f (1., 1., 1.);
+}
+
+static void end_colorized() {
+  glDisable (GL_TEXTURE_1D);
+}
+
+#define colorize() colorized (cmap, !view->vector && \
+			      p.color && p.linear && col.i >= 0)
 
 /**
 # *draw_vof()*: displays VOF-reconstructed interfaces
@@ -452,31 +529,7 @@ bool draw_vof (struct _draw_vof p)
     return false;
   }
 
-  scalar col = {-1};
-  if (p.color && strcmp (p.color, "level")) {
-    col = lookup_field (p.color);
-    if (col.i < 0) {
-      fprintf (stderr, "draw_vof(): no field named '%s'\n", p.color);
-      return false;
-    }
-  }
-    
-  double cmap[NCMAP][3];
-  if (p.color) {
-    if (p.min == 0 && p.max == 0) {
-      if (col.i < 0) // level
-	p.min = 0, p.max = depth();
-      else {
-	stats s = statsf (col);
-	double avg = s.sum/s.volume,
-	  spread = (p.spread ? p.spread : 5.)*s.stddev;
-	p.min = avg - spread; p.max = avg + spread;
-      }
-    }
-    if (!p.map)
-      p.map = jet;
-    p.map (cmap);
-  }
+  colorize_args (p);
   
   double cmin = 1e-3; // do not reconstruct fragments smaller than this
 
@@ -506,39 +559,32 @@ bool draw_vof (struct _draw_vof p)
   glEnd ();
   glPopMatrix ();
 #else // dimension == 3
-  double larger = p.larger ? p.larger : p.edges ? 1. : 1.1;
-  glColor3f (1., 1., 1.); // default color
-  foreach_visible (view)
-    if (cfilter (point, c, cmin)) {
-      coord n = mycs (point, c);
-      double alpha = plane_alpha (c[], n);
-      coord v[12];
-      int m = facets (n, alpha, v, larger);
-      if (m > 2) {
-	if (p.color && (!p.linear || col.i < 0)) {
-	  color b = colormap_color (cmap, col.i < 0 ? (double) level : col[],
-				    p.min, p.max);
-	  glColor3f (b.r/255., b.g/255., b.b/255.);
-	}
-	normalize (&n);
-	if (view->gfsview)
-	  glNormal3d (- n.x, - n.y, - n.z);
-	else
-	  glNormal3d (n.x, n.y, n.z);
-	glBegin (GL_POLYGON);
-	for (int i = 0; i < m; i++) {
-	  if (p.color && p.linear && col.i >= 0) {
-	    color b = colormap_color (cmap, interp (point, v[i], col),
-				      p.min, p.max);
-	    glColor3f (b.r/255., b.g/255., b.b/255.);
+  double larger =
+    p.larger ? p.larger : p.edges || (p.color && !p.linear) ? 1. : 1.1;
+  colorize() {
+    foreach_visible (view)
+      if (cfilter (point, c, cmin)) {
+	coord n = mycs (point, c);
+	double alpha = plane_alpha (c[], n);
+	coord v[12];
+	int m = facets (n, alpha, v, larger);
+	if (m > 2) {
+	  color_facet (p);
+	  if (view->gfsview)
+	    glNormal3d (- n.x, - n.y, - n.z);
+	  else
+	    glNormal3d (n.x, n.y, n.z);
+	  glBegin (GL_POLYGON);
+	  for (int i = 0; i < m; i++) {
+	    color_vertex (p, interp (point, v[i], col));
+	    glvertex3d (view,
+			x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
 	  }
-	  glvertex3d (view,
-		      x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+	  glEnd ();
+	  view->ni++;
 	}
-	glEnd ();
-	view->ni++;
       }
-    }
+  }
   if (p.edges) {
     draw_lines (view);
     foreach_visible (view)
@@ -613,7 +659,7 @@ void cells (struct _cells p)
 /**
 # *squares()*: displays colormapped fields
 
-The field name is given by *f*. The *min*, *max*, *spread* and *map*
+The field name is given by *color*. The *min*, *max*, *spread* and *map*
 arguments work as described in
 [draw_vof()](draw.h#draw_vof-displays-vof-reconstructed-interfaces).
 
@@ -626,117 +672,42 @@ $$
 */
 
 struct _squares {
-  char * f;
+  char * color;
   double min, max, spread;
   bool linear;
   colormap map;
+
   coord n;
   double alpha;
 };
 
-#define gltexcoord(v) glTexCoord1d (clamp(((v) - p.min)/(p.max - p.min), 0., 1.))
-
 trace
 bool squares (struct _squares p)
 {
-  scalar f = lookup_field (p.f);
-  if (f.i < 0) {
-    fprintf (stderr, "squares(): no field named '%s'\n", p.f);
-    return false;
-  }
+  colorize_args (p);
+  scalar f = col;
   
-  if (p.min == 0 && p.max == 0) {
-    stats s = statsf (f);
-    double avg = s.sum/s.volume, spread = (p.spread ? p.spread : 5.)*s.stddev;
-    p.min = avg - spread; p.max = avg + spread;
-  }
-  if (!p.map)
-    p.map = jet;
-  double cmap[NCMAP][3];
-  p.map (cmap);
-
   bview * view = draw();
-
   glShadeModel (GL_SMOOTH);
   if (p.linear) {
-    if (view->vector) { // does not use textures for vector graphics
-			// (not supported by GL2PS)
-#if dimension == 2
-      glBegin (GL_QUADS);
-      foreach_visible (view)
-	if (f[] != nodata) {
-	  color c;
-	  c = colormap_color (cmap, (f[] + f[-1] + f[-1,-1] + f[0,-1])/4.,
-			      p.min, p.max);
-	  glColor3f (c.r/255., c.g/255., c.b/255.);
-	  glvertex2d (view, x - Delta/2., y - Delta/2.);
-	  c = colormap_color (cmap, (f[] + f[1] + f[1,-1] + f[0,-1])/4.,
-			      p.min, p.max);
-	  glColor3f (c.r/255., c.g/255., c.b/255.);
-	  glvertex2d (view, x + Delta/2., y - Delta/2.);
-	  c = colormap_color (cmap, (f[] + f[1] + f[1,1] + f[0,1])/4.,
-			      p.min, p.max);
-	  glColor3f (c.r/255., c.g/255., c.b/255.);
-	  glvertex2d (view, x + Delta/2., y + Delta/2.);
-	  c = colormap_color (cmap, (f[] + f[-1] + f[-1,1] + f[0,1])/4.,
-			      p.min, p.max);
-	  glColor3f (c.r/255., c.g/255., c.b/255.);
-	  glvertex2d (view, x - Delta/2., y + Delta/2.);
-	  view->ni++;
-	}
-      glEnd();
-#else // dimension == 3
-      foreach_visible_plane (view, p.n, p.alpha)
-	if (f[] != nodata) {
-	  coord v[12];
-	  int m = facets (n, alpha, v, 1.);
-	  if (m > 2) {
-	    glBegin (GL_POLYGON);
-	    for (int i = 0; i < m; i++) {
-	      color c = colormap_color (cmap, interp (point, v[i], f),
-					p.min, p.max);
-	      glColor3f (c.r/255., c.g/255., c.b/255.);
-	      glvertex3d (view,
-			  x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
-	    }
-	    glEnd ();
-	    view->ni++;
-	  }
-	}
-#endif // dimension == 3
-    }
-    else { // not vector graphics, better results with textures
-      glEnable (GL_TEXTURE_1D);
-      GLfloat texture[3*256];
-      for (int i = 0; i < 256; i++) {
-	color c = colormap_color (cmap, i/255., 0, 1);
-	texture[3*i] = c.r/255.;
-	texture[3*i + 1] = c.g/255.;
-	texture[3*i + 2] = c.b/255.;
-      }
-      glTexImage1D (GL_TEXTURE_1D, 0, GL_RGB, 256,0, GL_RGB, GL_FLOAT, texture);
-      glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      glColor3f (1., 1., 1.);
+    colorize() {
 #if dimension == 2
       foreach_visible (view)
-	if (f[] != nodata) {
+        if (f[] != nodata) {
 	  glBegin (GL_TRIANGLE_FAN);
-	  gltexcoord ((4.*f[] +
-		       2.*(f[1] + f[-1] + f[0,1] + f[0,-1]) +
-		       f[-1,-1] + f[1,1] + f[-1,1] + f[1,-1])/16.);
+	  color_vertex ((4.*f[] +
+			 2.*(f[1] + f[-1] + f[0,1] + f[0,-1]) +
+			 f[-1,-1] + f[1,1] + f[-1,1] + f[1,-1])/16.);
 	  glvertex2d (view, x, y);
-	  gltexcoord ((f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
+	  color_vertex ((f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
 	  glvertex2d (view, x - Delta/2., y - Delta/2.);
-	  gltexcoord ((f[] + f[1] + f[1,-1] + f[0,-1])/4.);
+	  color_vertex ((f[] + f[1] + f[1,-1] + f[0,-1])/4.);
 	  glvertex2d (view, x + Delta/2., y - Delta/2.);
-	  gltexcoord ((f[] + f[1] + f[1,1] + f[0,1])/4.);
+	  color_vertex ((f[] + f[1] + f[1,1] + f[0,1])/4.);
 	  glvertex2d (view, x + Delta/2., y + Delta/2.);
-	  gltexcoord ((f[] + f[-1] + f[-1,1] + f[0,1])/4.);
+	  color_vertex ((f[] + f[-1] + f[-1,1] + f[0,1])/4.);
 	  glvertex2d (view, x - Delta/2., y + Delta/2.);
-	  gltexcoord ((f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
+	  color_vertex ((f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
 	  glvertex2d (view, x - Delta/2., y - Delta/2.);
 	  glEnd();
 	  view->ni++;
@@ -752,31 +723,29 @@ bool squares (struct _squares p)
 	      foreach_dimension()
 		c.x += v[i].x/m;
 	    glBegin (GL_TRIANGLE_FAN);
-	    gltexcoord (interp (point, c, f));
+	    color_vertex (p, interp (point, c, f));
 	    glvertex3d (view, x + c.x*Delta, y + c.y*Delta, z + c.z*Delta);
 	    for (int i = 0; i < m; i++) {
-	      gltexcoord (interp (point, v[i], f));
+	      color_vertex (p, interp (point, v[i], f));
 	      glvertex3d (view,
 			  x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
 	    }
-	    gltexcoord (interp (point, v[0], f));
+	    color_vertex (p, interp (point, v[0], f));
 	    glvertex3d (view,
-	    		x + v[0].x*Delta, y + v[0].y*Delta, z + v[0].z*Delta);
+			x + v[0].x*Delta, y + v[0].y*Delta, z + v[0].z*Delta);
 	    glEnd ();
 	    view->ni++;
 	  }
 	}
 #endif // dimension == 3
-      glDisable (GL_TEXTURE_1D);
     }
   }
   else { // !p.linear
 #if dimension == 2
     glBegin (GL_QUADS);
     foreach_visible (view)
-      if (f[] != nodata) {	
-	color c = colormap_color (cmap, f[], p.min, p.max);
-	glColor3f (c.r/255., c.g/255., c.b/255.);
+      if (f[] != nodata) {
+	color_facet();
 	glvertex2d (view, x - Delta/2., y - Delta/2.);
 	glvertex2d (view, x + Delta/2., y - Delta/2.);
 	glvertex2d (view, x + Delta/2., y + Delta/2.);
@@ -790,8 +759,7 @@ bool squares (struct _squares p)
 	coord v[12];
 	int m = facets (n, alpha, v, 1.);
 	if (m > 2) {
-	  color c = colormap_color (cmap, f[], p.min, p.max);
-	  glColor3f (c.r/255., c.g/255., c.b/255.);
+	  color_facet (p);
 	  glBegin (GL_POLYGON);
 	  for (int i = 0; i < m; i++)
 	    glvertex3d (view,
@@ -922,25 +890,77 @@ bool box()
 /**
 # *isosurface()*: displays an isosurface of a field
 
-Work in progress. */
+* *f*: the name (as a string) of the field.
+* *v*: the value of the isosurface.
+* *color*: use this field to color each interface fragment.
+* *min*, *max*: the minimum and maximum values to use for color mapping.
+* *spread*: the "spread factor" to use if *min* and *max* are not
+   defined. The maximum and minimum values will be taken as the average
+   plus or minus *spread* times the standard deviation. Default is 5.
+* *linear*: if *true* the color will be linearly interpolated for each
+   vertex of the facet.
+* *map*: the colormap to use. Default is *jet*.
+*/
 
 struct _isosurface {
   char * f;
   double v;
+
+  char * color;
+  double min, max, spread;
+  bool linear;
+  colormap map;
 };
 
 trace
 bool isosurface (struct _isosurface p)
 {
+#if dimension > 2
   scalar f = lookup_field (p.f);
   if (f.i < 0) {
     fprintf (stderr, "isosurface(): no field named '%s'\n", p.f);
     return false;
   }
 
+  colorize_args (p);
+
+  vertex scalar v[];
+  foreach_vertex()
+    v[] = (f[] + f[-1] + f[0,-1] + f[-1,-1] +
+	   f[0,0,-1] + f[-1,0,-1] + f[0,-1,-1] + f[-1,-1,-1])/8.;
+
+  vector n[];
+  foreach()
+    foreach_dimension()
+      n.x[] = (f[1] - f[-1])/(2.*Delta);
+  boundary ((scalar *){n});
+
   bview * view = draw();
-  foreach_visible (view) {
-    
+  glShadeModel (GL_SMOOTH);
+  colorize() {
+    foreach_visible (view) {
+      double val[8] = {
+	v[0,0,0], v[1,0,0], v[1,0,1], v[0,0,1],
+	v[0,1,0], v[1,1,0], v[1,1,1], v[0,1,1]
+      };
+      double t[5][3][3];
+      int nt = polygonize (val, p.v, t);
+      for (int i = 0; i < nt; i++) {
+	color_facet (p);
+	glBegin (GL_POLYGON);
+	for (int j = 0; j < 3; j++) {
+	  coord v = {t[i][j][0], t[i][j][1], t[i][j][2]}, np;
+	  foreach_dimension()
+	    np.x = interp (point, v, n.x);
+	  glNormal3d (np.x, np.y, np.z);
+	  color_vertex (p, interp (point, v, col));
+	  glvertex3d (view, x + v.x*Delta, y + v.y*Delta, z + v.z*Delta);
+	}
+	glEnd ();
+	view->ni++;
+      }
+    }
   }
+#endif // dimension > 2
   return true;
 }
