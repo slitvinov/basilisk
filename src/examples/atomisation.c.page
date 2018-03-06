@@ -323,16 +323,14 @@ Note that this assumes that the gl libraries have been
 
 ## Results
 
-<p>
-<center>
+<p><center>
 <video width="800" height="600" controls>
   <source src="atomisation/movie.mp4" type="video/mp4">
   Your browser does not support the video tag.
 </video>
 <br>
 Atomisation of a pulsed liquid jet. 4096^3^ equivalent resolution.
-</center>
-</p>
+</center></p>
 
 The gain in number of grid points of the adaptive simulation (relative
 to a constant 4096^3^ Cartesian grid discretisation) is illustrated

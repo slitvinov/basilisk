@@ -8,13 +8,23 @@ pseudo-spectral code. The initial condition is an unstable solution to
 the incompressible Euler equations. Numerical noise in the solution
 eventually leads to the destabilisation of the base solution into a
 fully turbulent flow where turbulent dissipation balances the linear
-input of energy.
-
-For the moment we can only use the "multigrid" regular Cartesian grid
-implementation, as octrees do not support periodic boundaries yet. */
+input of energy. */
 
 #include "grid/multigrid3D.h"
 #include "navier-stokes/centered.h"
+
+/**
+We use the $\lambda_2$ criterion and Basilisk View for visualisation
+of vortices. */
+
+#include "lambda2.h"
+#include "view.h"
+
+/**
+We monitor performance statistics and control the maximum runtime. */
+
+#include "navier-stokes/perfs.h"
+#include "maxruntime.h"
 
 #define MU 0.01
 
@@ -24,11 +34,13 @@ We need to store the variable forcing term. */
 face vector av[];
 
 /**
-The code takes the level of refinement as optional command-line argument. */
+The code takes the level of refinement as optional command-line
+argument (as well as an optional maximum runtime). */
 
 int maxlevel = 7;
 
 int main (int argc, char * argv[]) {
+  maxruntime (&argc, argv);
   if (argc > 1)
     maxlevel = atoi(argv[1]);
 
@@ -54,20 +66,15 @@ int main (int argc, char * argv[]) {
 ## Initial conditions
 
 The initial condition is "ABC" flow. This is a laminar base flow that 
-is easy to implement in both Basilisk and a spectral code. 
-
-For the moment *dump()* and *restore()* do not work with MPI. */
+is easy to implement in both Basilisk and a spectral code. */
 
 event init (i = 0) {
-#if !MULTIGRID_MPI
-  if (!restore (file = "snapshot"))
-#endif
+  if (!restore (file = "restart"))
     foreach() {
       u.x[] = cos(y) + sin(z);
       u.y[] = sin(x) + cos(z);
       u.z[] = cos(x) + sin(y);
     }
-  boundary ((scalar *){u});
 }
 
 /**
@@ -89,8 +96,8 @@ event acceleration (i++) {
 /**
 ## Outputs
 
-We log the evolution of viscous dissipation, kinetic energy,
-microscale Reynolds number and some performance statistics. */
+We log the evolution of viscous dissipation, kinetic energy, and
+microscale Reynolds number. */
 
 event logfile (i++; t <= 300) {
   coord ubar;
@@ -115,24 +122,55 @@ event logfile (i++; t <= 300) {
   vd *= MU/vol;
 
   if (i == 0)
-    fprintf (ferr,
-	     "t dissipation energy Reynolds grid->tn perf.t perf.speed\n");
-  fprintf (ferr, "%g %g %g %g %ld %g %g\n",
-	   t, vd, ke, 2./3.*ke/MU*sqrt(15.*MU/vd), grid->tn, perf.t, perf.speed);
+    fprintf (ferr, "t dissipation energy Reynolds\n");
+  fprintf (ferr, "%g %g %g %g\n",
+	   t, vd, ke, 2./3.*ke/MU*sqrt(15.*MU/vd));
 }
 
-event gfsview (t += 0.5; t <= 150) {
-#if 0
-  static FILE * fp =
-    popen ("gfsview-batch3D isotropic.gfv | ppm2mpeg > isotropic.mpg", "w");
-  output_gfs (fp, translate = true);
+/**
+We generate a movie of the vortices. 
+
+<p><center>
+<video width="600" height="600" controls>
+  <source src="isotropic/movie.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+<br>
+Animation of the $\lambda_2$ isosurface (a way to characterise
+vortices) and cross-sections of velocity and vorticity.
+</center></p>
+*/
+
+event movie (t += 0.25; t <= 150)
+{
+  view (fov = 44, camera = "iso", ty = .2,
+	width = 600, height = 600, bg = {1,1,1}, samples = 4);
+  clear();
+  squares ("u.y", linear = true);
+  squares ("u.x", linear = true, n = {1,0,0});
+  scalar omega[];
+  vorticity (u, omega);
+  squares ("omega", linear = true, n = {0,1,0});
+  scalar l2[];
+  lambda2 (u, l2);
+  isosurface ("l2", -1);
+
+  /**
+  Since parallel machines often do not like pipes, we just open a
+  file, in "append mode" if we are not starting from zero (i.e. we are
+  restarting). In serial, we use a pipe to directly generate a
+  compressed MP4 video. */
+  
+#if _MPI
+  static FILE * fp = fopen ("movie.ppm", t > 0 ? "a" : "w");
+#else
+  static FILE * fp = popen ("ppm2mp4 movie.mp4", "w");
 #endif
+  save (fp = fp);
 }
 
-#if 0
-event snapshot (i += 100)
-  dump (file = "snapshot");
-#endif
+/**
+We can optionally try adaptivity. */
 
 #if TREE
 event adapt (i++) {
@@ -154,10 +192,18 @@ On the local machine
 On occigen (using 512 cores)
 
 ~~~bash
-sbatch run.sh
+module purge
+module load openmpi
+module load intel
+mpicc -Wall -O2 -std=c99 _isotropic.c -o isotropic \
+        -I$HOME -L$HOME/gl -lglutils -lfb_osmesa -lGLU -lOSMesa -lm
+sed 's/WALLTIME/10:00/g' run.sh | sbatch
 ~~~
 
-with the `run.sh` script
+Note that this assumes that the Basilisk gl libraries have been
+[installed](/src/gl/INSTALL#standalone-installation) in `$HOME/gl`.
+
+With the `run.sh` script
 
 ~~~bash
 #!/bin/bash
@@ -166,7 +212,7 @@ with the `run.sh` script
 #SBATCH --constraint=HSW24
 #SBATCH --ntasks-per-node=16
 #SBATCH --threads-per-core=1
-#SBATCH --time=5:00
+#SBATCH --time=WALLTIME
 #SBATCH --output basilisk.output
 #SBATCH --exclusive
 
@@ -176,8 +222,8 @@ module purge
 module load openmpi
 module load intel
 
-mpicc -Wall -std=c99 -O2 -D_GNU_SOURCE=1 _isotropic.c -o isotropic -lm
-srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./isotropic $LEVEL \
+srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS \
+     ./isotropic -m WALLTIME $LEVEL \
      2> log-$LEVEL-$SLURM_NTASKS > out-$LEVEL-$SLURM_NTASKS
 ~~~
 
@@ -194,8 +240,9 @@ On mesu (using 512 cores)
 
 ~~~bash
 module load mpt
-mpicc -Wall -O2 -std=c99 _isotropic.c -o isotropic -lm
-qsub run.sh
+mpicc -Wall -O2 -std=c99 _isotropic.c -o isotropic -I$HOME -L$HOME/gl -lglutils \
+	-lfb_osmesa -lGLU -lOSMesa -lm
+sed 's/WALLTIME/10:00/g' run.sh | qsub
 ~~~
 
 with the `run.sh` script
@@ -203,17 +250,16 @@ with the `run.sh` script
 ~~~bash
 #!/bin/bash 
 #PBS -l select=22:ncpus=24:mpiprocs=24
-#PBS -l walltime=10:00
+#PBS -l walltime=WALLTIME
 #PBS -N isotropic
 #PBS -j oe  
 # load modules 
 module load mpt
-# mpicc -Wall -O2 -std=c99 _isotropic.c -o isotropic -lm
 # change to the directory where program job_script_file is located 
 cd $PBS_O_WORKDIR 
 # mpirun -np 64 !!!! does not work !!!!
 NP=512
-mpiexec_mpt -n $NP ./isotropic 2> log.$NP > out.$NP
+mpiexec_mpt -n $NP ./isotropic -m WALLTIME 2>> log.$NP >> out.$NP
 ~~~
 
 ## Results
@@ -246,7 +292,8 @@ plot 'isotropic.occigen' u 1:2 w l t 'Basilisk (occigen)', \
 ~~~
 
 The computational speed is respectable (for a relatively small 128^3^
-problem on 512 cores).
+problem on 512 cores). Note that these were obtained when switching
+off movie outputs.
 
 ~~~gnuplot Computational speed in points.timesteps/sec/core
 set ylabel 'Speed'
