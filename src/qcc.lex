@@ -3073,7 +3073,8 @@ int main (int argc, char ** argv)
   else
     strcpy (command, cc);
   char * file = NULL;
-  int i, dep = 0, tags = 0, swig = 0;
+  int i, dep = 0, tags = 0, swig = 0,
+    use_mpi = (strstr (command, "-D_MPI") != NULL);
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
       ;
@@ -3115,6 +3116,11 @@ int main (int argc, char ** argv)
     }
     else if (!strncmp (argv[i], "-Ddimension=", 12))
       dimension = 1 + argv[i][12] - '1';
+    else if (!strncmp (argv[i], "-D_MPI=", 7))
+      use_mpi = 1;
+    else if (use_mpi && !strcmp (argv[i], "-fopenmp"))
+      // MPI and OpenMP are not compatible
+      ;
     else if (catch && !strncmp (argv[i], "-O", 2))
       ;
     else if (!strcmp (argv[i], "-nolineno")) {
