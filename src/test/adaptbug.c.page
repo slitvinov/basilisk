@@ -34,7 +34,6 @@ int  main(int argc, char const *argv[])
 	 adapt_wavelet ({f}, (double[]){1e-3}, LEVEL).nf != 0 &&
 	 iteration++ <= 10);
 
-  FILE * fp = popen ("ppm2gif > grid.gif", "w");
   for (int i = 0; i <= 5; i++) {
     scalar s[];
     foreach()
@@ -58,6 +57,6 @@ int  main(int argc, char const *argv[])
     scalar l[];
     foreach()
       l[] = level;
-    output_ppm (l, fp, min = 5, max = LEVEL);
+    output_ppm (l, min = 5, max = LEVEL, file = "grid.gif");
   }
 }

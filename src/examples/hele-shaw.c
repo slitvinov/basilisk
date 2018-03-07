@@ -32,17 +32,14 @@ event logfile (i++)
 
 event movies (t += 0.2)
 {
-  static FILE * fp1 = popen ("ppm2mpeg > f.mpg", "w");
-  output_ppm (f, fp1, N, min = 0, max = 1);
+  output_ppm (f, min = 0, max = 1, file = "f.mp4");
 
-  static FILE * fp2 = popen ("ppm2mpeg > v.mpg", "w");
-  output_ppm (u.y, fp2, N);
+  output_ppm (u.y, file = "v.mp4");
 
-  static FILE * fp3 = popen ("ppm2mpeg > level.mpg", "w");
   scalar l[];
   foreach()
     l[] = level;
-  output_ppm (l, fp3, N, min = 0, max = MAXLEVEL, linear = false);
+  output_ppm (l, min = 0, max = MAXLEVEL, linear = false, file = "level.mp4");
 }
 
 event output (t += 10; t <= 50)

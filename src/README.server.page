@@ -12,6 +12,7 @@ $HOME/lib/libkdt.a
 $HOME/lib/libglutils.a
 $HOME/lib/libfb_osmesa.a
 $HOME/include/kdt/kdt.h
+$HOME/include/gl/utils.h
 $HOME/bin/ppm2mpeg
 $HOME/bin/ppm2mp4
 $HOME/bin/ppm2gif

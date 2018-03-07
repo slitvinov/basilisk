@@ -212,7 +212,9 @@ void end_translate()
 # *mirror()*: symmetry relative to a plane.
 
 The block following this command will be drawn in a coordinate system
-symmetric relative to the given plane. */
+symmetric relative to the given plane. The plane is given by $n$ and
+$\alpha$ as explained in
+[squares()](#squares-displays-colormapped-fields). */
 
 struct _mirror {
   coord n;

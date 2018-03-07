@@ -95,8 +95,7 @@ deviation. */
 
 event movie (i = 1; i += 10)
 {
-  static FILE * fp1 = popen ("ppm2mpeg > f.mpg", "w");
-  output_ppm (C1, fp1, 200, linear = true, spread = 2);
+  output_ppm (C1, linear = true, spread = 2, file = "f.mp4", n = 200);
   fprintf (stderr, "%d %g %g %d %d\n", i, t, dt, mgd1.i, mgd2.i);
 }
 
@@ -158,5 +157,5 @@ patterns](http://en.wikipedia.org/wiki/The_Chemical_Basis_of_Morphogenesis).
 | ![](brusselator/mu-0.04.png) | ![](brusselator/mu-0.1.png) | ![](brusselator/mu-0.98.png) |
 | $\mu=0.04$                   |    $\mu=0.1$ (stripes)      |    $\mu=0.98$ (hexagons)     |
 
-  : [Animation of the transitions](brusselator/f.mpg)
+  : [Animation of the transitions](brusselator/f.mp4)
 */

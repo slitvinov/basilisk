@@ -246,33 +246,18 @@ void radial (coord * p) {
 }
 
 event movie (t = 60; t += 0.1) {
-  static FILE * fp = popen ("ppm2mp4 eta.mp4", "w");
   view (map = radial, fov = 45, width = 600, height = 600, samples = 1);
   clear();
   squares ("eta", min = -1.4, max = -0.2, linear = true);
-  save (fp = fp);
+  save ("eta.mp4");
 }
 #endif
 
 /**
-<p><center>
-<video width="600" height="600" controls>
-  <source src="swasi/eta.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-<br>
-SWASI instability. Growth and non-linear saturation of mode 1.
-</center></p>
+![SWASI instability. Growth and non-linear saturation of mode 1.](swasi/eta.mp4)
 
-<p><center>
-<video width="600" height="600" controls>
-  <source src="swasi/eta-spiral.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-<br>
-SWASI instability. Spiral mode produced by adding a small azimuthal
-[perturbation](#perturbation).
-</center></p>
+![SWASI instability. Spiral mode produced by adding a small azimuthal
+perturbation.](swasi/eta-spiral.mp4)
 
 ## References
 

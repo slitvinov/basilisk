@@ -26,12 +26,11 @@ event init (i = 0) {
 }
 
 /**
-We generate images of the vorticity field every 8 timesteps up to
+We generate images of the vorticity field every 4 timesteps up to
 $t=1000$. We fix the colorscale to $[-0.3:0.3]$.
 
-![Evolution of the vorticity](turbulence/omega.gif) */
+![Evolution of the vorticity](turbulence/omega.mp4)(autoplay loop) */
 
-event output (i += 8; t <= 1000) {
-  static FILE * fp = popen ("ppm2gif --delay 10 > omega.gif", "w");
-  output_ppm (omega, fp, min = -0.3, max = 0.3);
+event output (i += 4; t <= 1000) {
+  output_ppm (omega, min = -0.3, max = 0.3, file = "omega.mp4");
 }

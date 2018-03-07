@@ -4,9 +4,11 @@
 We wish to study the behaviour of a single bubble rising "in a large
 tank" i.e. far from any boundaries.
 
-We use the centered Navier--Stokes solver. */
+We use the centered Navier--Stokes solver and log performance
+statistics. */
 
 #include "navier-stokes/centered.h"
+#include "navier-stokes/perfs.h"
 
 /**
 We have two phases e.g. air and water. For large viscosity and density
@@ -20,12 +22,19 @@ the default arithmetic mean. We "overload" the default by defining the
 /**
 We also need surface tension, and in 3D only we will use the
 $\lambda_2$ criterion of [Jeong and Hussain,
-1995](/src/references.bib#jeong1995) to display the vortices. */
+1995](/src/references.bib#jeong1995) to display the vortices using
+Basilisk View. */
 
 #include "tension.h"
 #if dimension == 3
 # include "lambda2.h"
 #endif
+#include "view.h"
+
+/**
+We can control the maximum runtime. */
+
+#include "maxruntime.h"
 
 /**
 The density ratio is 1000 and the dynamic viscosity ratio 100. */
@@ -74,18 +83,15 @@ maximum time for the simulation comparable to the domain size. */
 #define Z0 3.5
 int LEVEL = 12;
 #define MAXTIME WIDTH
-double maxruntime = HUGE;
 
 /**
 The main function can take two optional parameters: the maximum level
-of adaptive refinement and a maximum runtime in minutes (see
-below). */
+of adaptive refinement (as well as an optional maximum runtime). */
 
 int main (int argc, char * argv[]) {
+  maxruntime (&argc, argv);
   if (argc > 1)
     LEVEL = atoi (argv[1]);
-  if (argc > 2)
-    maxruntime = atoi (argv[2]);
   
   /**
   We set the domain geometry and initial refinement. */
@@ -115,13 +121,13 @@ int main (int argc, char * argv[]) {
 
 /**
 For the initial conditions, we first try to restore the simulation
-from a previous "dump" (see *snapshot()* below), if this fails we
-refine the mesh locally to the maximum level, in a sphere of diameter
-1.5 around the bubble. We then initialise the volume fraction for a
-bubble initially at (0,Z0,0) of diameter unity. */
+from a previous "restart", if this fails we refine the mesh locally to
+the maximum level, in a sphere of diameter 1.5 around the bubble. We
+then initialise the volume fraction for a bubble initially at (0,Z0,0)
+of diameter unity. */
 
 event init (t = 0) {
-  if (!restore (file = "dump")) {
+  if (!restore (file = "restart")) {
     refine (sq(x) + sq(y - Z0) + sq(z) - sq(0.75) < 0 && level < LEVEL);
     fraction (f, sq(x) + sq(y - Z0) + sq(z) - sq(.5));
   }
@@ -147,8 +153,10 @@ event adapt (i++) {
 }
 
 /**
-Every ten timesteps, we output the time, volume, position, velocity of
-the bubble, timestep etc... */
+## Outputs
+
+Every ten timesteps, we output the time, volume, position, and
+velocity of the bubble. */
 
 event logfile (i += 10) {
   double xb = 0., yb = 0., zb = 0., sb = 0.;
@@ -165,54 +173,70 @@ event logfile (i += 10) {
     vbz += u.z[]*dv;
     sb += dv;
   }
-  fprintf (fout,
-	   "%.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f "
-	   "%.8f %d %d %d %ld %.8f %.8f\n", 
+  fprintf (ferr,
+	   "%.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", 
 	   t, sb,
 	   xb/sb, yb/sb, zb/sb,
-	   vbx/sb, vby/sb, vbz/sb,
-	   dt, mgp.i, mgpf.i, mgu.i,
-	   grid->tn, perf.t, perf.speed);
-  fflush (fout);
+	   vbx/sb, vby/sb, vbz/sb);
+  fflush (ferr);
 }
 
 /**
 Every time unit, we output a full snapshot of the simulation, to be
-able to restart (with *dump()*) and for visualisation (with
-*output_gfs()*). In three dimensions, we compute the value of the
-$\lambda_2$ field which will be used for visualisation of vortices, as
-well as the streamwise vorticity $\omega_y = \partial_x u_z -
-\partial_z u_x$. */
+able to restart and for visualisation. In three dimensions, we compute
+the value of the $\lambda_2$ field which will be used for
+visualisation of vortices, as well as the streamwise vorticity
+$\omega_y = \partial_x u_z - \partial_z u_x$. */
 
 event snapshot (t = 1; t <= MAXTIME; t++)
 {
-  dump (file = "dump");
-    
   scalar l2[], omegay[];
-  #if dimension == 3
+#if dimension == 3
   lambda2 (u, l2);
   foreach()
     omegay[] = (u.z[1] - u.z[-1] - u.x[0,0,1] + u.x[0,0,-1])/(2.*Delta);
   boundary ({omegay});
-  #endif
+#endif
   
   char name[80];
-  sprintf (name, "snapshot-%03d.gfs", (int) t);
-  output_gfs (file = name, t = t, list = {f,u,p,l2,omegay});
+  sprintf (name, "dump-%03d", (int) t);
+  dump (file = name);
 }
 
 /**
-If running interactively, we can display the evolution of the
-simulation with gfsview. */
+We make a movie of the trailing wake and bubble shape. */
 
-#if 0
-event gfsview (i += 10) {
-  static FILE * fp = popen(dimension == 2 ?
-			   "gfsview2D bubble.gfv" : "gfsview3D bubble.gfv", "w");
-  output_gfs (fp, t = t);
+event movie (t = 21; t <= 82; t += 0.25)
+{
+  view (fov = 5.0278, quat = {-0.132839,0.513023,0.0748175,0.844727},
+	tx = 0.00149469, ty = -0.355489, width = 300, height = 800);
 
-}
+  /**
+  For $50 < t < 60$ we do a tracking shot from the initial camera
+  position (above) to a new position, following and zooming on the
+  bubble. */
+  
+  travelling (50, 60, fov = 2.07254, tx = 0.00524944, ty = -0.513744);
+
+  /**
+  For $60 < t < 82$ we just follow the bubble. */
+  
+  travelling (60, 82, tx = 0.00898601, ty = -0.703841);
+
+  /**
+  We use a different color for the bubble interface and for the
+  isosurface. */
+  
+  clear();
+  draw_vof ("f", fc = {0.13,0.47,0.77});
+#if dimension == 3
+  scalar l2[];
+  lambda2 (u, l2);
+  isosurface ("l2", -0.0002);
 #endif
+
+  save ("bubble.mp4");
+}
 
 /**
 ## Parallel runs
@@ -229,23 +253,9 @@ local% qcc -source -grid=octree -D_MPI=1 bubble.c
 local% scp _bubble.c occigen.cines.fr:
 ~~~
 
-and see the [atomisation example](atomisation.c#running-in-parallel)
-for details.
+and see the [isotropic turbulence
+example](isotropic.c#running-with-mpi-on-occigen) for details.
 
-On parallel machines, runs are not allowed to exceed a maximum
-duration (typically 24 hours). To avoid having the job terminated
-brutally by the queueing system, we add the option to exit gracefully
-after a given runtime (given in minutes). */
-
-event runtime (i += 10) {
-  mpi_all_reduce (perf.t, MPI_DOUBLE, MPI_MAX);
-  if (perf.t/60 >= maxruntime) {
-    dump (file = "dump"); // so that we can restart
-    return 1; // exit
-  }
-}
-
-/**
 ## Results
 
 The evolution of the bubble Reynols number for bubble 19 and 26 can be
@@ -283,22 +293,9 @@ splot [-0.6:0.6][-0.6:0.6]'bubble.19' u 3:5:4 w l t ''
 splot [-0.6:0.6][-0.6:0.6]'bubble.26' u 3:5:4 w l t ''
 ~~~
 
-The scripts below can be used to create animations of the two regimes.
-
-~~~bash
-sequence snapshot-*.gfs \
-  19:bubble.19.gfv 50:bubble.19.gfv 60:bubble.19.gfv 82:bubble.19.gfv \
-  Save stdout { format = PPM width = 600 height = 1600 } | \
-  gfsview-batch3D | convert ppm:-[300x800] bubble-19.gif
-
-sequence snapshot-*.gfs \
-  29:bubble.26.gfv 70:bubble.26.gfv 80:bubble.26.gfv 102:bubble.26.gfv \
-  Save stdout { format = PPM width = 600 height = 1600 } | \
-  gfsview-batch3D | convert ppm:-[300x800] bubble-26.gif
-~~~
-
-The bubble interface is in dark blue and the white surface is the
-$\lambda_2$ isosurface showing vortical structures.
+On the movies below, the bubble interface is in dark blue and the
+white surface is the $\lambda_2$ isosurface showing vortical
+structures.
 
 -------------------------------------------------------------- -------------------------------------------------------------------
  ![Zig-zag regime. $Ga=100.8$, $Bo=4$.](bubble/bubble.19.gif)   ![Spiralling regime. $Ga=100.25$, $Bo=10$.](bubble/bubble.26.gif)

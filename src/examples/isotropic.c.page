@@ -154,19 +154,7 @@ event movie (t += 0.25; t <= 150)
   scalar l2[];
   lambda2 (u, l2);
   isosurface ("l2", -1);
-
-  /**
-  Since parallel machines often do not like pipes, we just open a
-  file, in "append mode" if we are not starting from zero (i.e. we are
-  restarting). In serial, we use a pipe to directly generate a
-  compressed MP4 video. */
-  
-#if _MPI
-  static FILE * fp = fopen ("movie.ppm", t > 0 ? "a" : "w");
-#else
-  static FILE * fp = popen ("ppm2mp4 movie.mp4", "w");
-#endif
-  save (fp = fp);
+  save ("movie.mp4");
 }
 
 /**

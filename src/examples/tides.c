@@ -7,7 +7,7 @@
 // metres to degrees
 double mtd = 360./40075e3;
 
-int main run()
+int main()
 {
   // 512^2 grid points
   init_grid (1 << MAXLEVEL);
@@ -18,18 +18,19 @@ int main run()
   /* rescale G so that time is in minutes, horizontal length scales in
      degrees and vertical length scales in metres */
   G = 9.81*sq(mtd)*sq(60.);
+  run();
 }
 
 // M2 tidal frequency. The period is 12h25 (745 minutes).
 #define M2F (2.*M_PI/745.)
 
 // "radiation" boundary conditions on left,right,top,bottom
-u.x[left]   = - radiation (  sin(M2F*t));
-u.x[top]    =   radiation (  sin(M2F*t));
-u.x[right]  = + radiation (- sin(M2F*t));
-u.x[bottom] = - radiation (- sin(M2F*t));
+u.n[left]   = - radiation (  sin(M2F*t));
+u.n[top]    =   radiation (  sin(M2F*t));
+u.n[right]  = + radiation (- sin(M2F*t));
+u.n[bottom] = - radiation (- sin(M2F*t));
 
-void init()
+event init (i = 0)
 {
   // use several databases for topography zb
   terrain (zb, 
@@ -71,28 +72,24 @@ event snapshots (t += 60; t <= 6000) {
 
 // movies every 10 minutes
 event movies (t += 10) {
-  static FILE * fp = popen ("ppm2mpeg > eta.mpg", "w");
   scalar m[], etam[];
   foreach() {
     etam[] = eta[]*(h[] > dry);
     m[] = etam[] - zb[];
   }
   boundary ({m, etam});
-  output_ppm (etam, fp, mask = m, min = -1, max = 1, n = 512, linear = true);
+  output_ppm (etam, mask = m, min = -1, max = 1, n = 512, linear = true,
+	      file = "eta.mp4");
 
-  static FILE * fp2 = popen ("ppm2mpeg > vort.mpg", "w");
   scalar vort = etam;
-  foreach()
-    vort[] = (u.x[0,1] - u.x[0,-1] - u.y[1,0] + u.y[-1,0])/(2.*delta);
-  boundary ({vort});
-  output_ppm (vort, fp2, mask = m, // min = -1e-2, max = 1e-2, 
-	      n = 512, linear = true);
+  vorticity (u, vort);
+  output_ppm (vort, mask = m, // min = -1e-2, max = 1e-2, 
+	      n = 512, linear = true, file = "vort.mp4");
 
-  static FILE * fp1 = popen ("ppm2mpeg > level.mpg", "w");
   scalar l = etam;
   foreach()
     l[] = level;
-  output_ppm (l, fp1, min = MINLEVEL, max = MAXLEVEL, n = 512);
+  output_ppm (l, min = MINLEVEL, max = MAXLEVEL, n = 512, file = "level.mp4");
 }
 
 // tide gauges
@@ -110,14 +107,7 @@ event adapt (i++) {
     eta[] = h[] > dry ? h[] + zb[] : 0;
   boundary ({eta});
 
-  scalar w[];
-  wavelet (eta, w);
-
   double cmax = 1e-2;
-  int nf = refine_wavelet (w, cmax, MAXLEVEL, all);
-  int nc = coarsen_wavelet (w, cmax/4., MINLEVEL, all);
-  if (nf || nc)
-    boundary (all);
-
-  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", nf, nc);
+  astats s = adapt_wavelet ({eta}, (double[]){cmax}, MAXLEVEL, MINLEVEL);
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }

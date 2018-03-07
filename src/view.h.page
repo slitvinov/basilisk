@@ -372,6 +372,9 @@ bool load (struct _load p);
 The file to write to is given either using its name *file* or the file
 pointer *fp*. If neither is specified, the default is *stdout*.
 
+If *file* is used, options for 'convert' or 'ffmpeg' can be given in
+*opt*.
+
 The format to use is given either explicitly using *format*, or, if a
 *file* name is given, using the file name extension (i.e. *.ppm*,
 *.bv*, etc.). If neither is specified, the default is "ppm".
@@ -387,6 +390,9 @@ The recognised file formats are:
                 *convert* command from
                 [ImageMagick](http://imagemagick.org) is installed on
                 the system.
+* "mp4", "gif", "ogv": Compressed animation formats. Will only work if
+                       [ffmpeg](https://www.ffmpeg.org) is installed on 
+                       the system.
 * "bv": Basilisk View format. Saves all Basilisk function calls necessary to 
         reproduce the figure. Use together with 
         [load()](view.h#load-read-drawing-commands-from-a-file-or-buffer).
@@ -399,10 +405,11 @@ The recognised file formats are:
          formats supported by [gl2ps](http://www.geuz.org/gl2ps).
 
 Note that MPI-parallel output is only implemented for the "ppm" format
-at the moment. */
+at the moment. Other animation and image formats will be automatically
+converted to PPM when using MPI. */
 
 struct _save {
-  char * file, * format;
+  char * file, * format, * opt;
   FILE * fp;
   float lw; /* base line width for vector drawings */
   int sort, options;
@@ -450,13 +457,6 @@ static void redraw_feedback (struct _save * p)
 trace
 bool save (struct _save p)
 {
-  if (p.file && (p.fp = fopen (p.file, "w")) == NULL) {
-    perror (p.file);
-    return false;
-  }
-  if (!p.fp)
-    p.fp = stdout;
-
   char ppm[] = "ppm";
   if (!p.format) {
     p.format = ppm;
@@ -472,26 +472,32 @@ bool save (struct _save p)
   }
 
   bview * view = p.view ? p.view : get_view();
+  
+  if (!strcmp (p.format, "png") ||
+      !strcmp (p.format, "jpg") ||
+      (p.file && is_animation (p.file))) {
+    bview_draw (view);
+    unsigned char * image = (unsigned char *) compose_image (view);
+    if (pid() == 0) {
+      FILE * fp = open_image (p.file, p.opt);
+      gl_write_image (fp, image, view->width, view->height, view->samples);
+      close_image (p.file, fp);
+    }
+    return true;
+  }  
+  
+  if (p.file && (p.fp = fopen (p.file, "w")) == NULL) {
+    perror (p.file);
+    return false;
+  }
+  if (!p.fp)
+    p.fp = stdout;
 
   if (!strcmp (p.format, "ppm")) {
     bview_draw (view);
     unsigned char * image = (unsigned char *) compose_image (view);
     if (pid() == 0)
       gl_write_image (p.fp, image, view->width, view->height, view->samples);    
-  }
-
-  else if (!strcmp (p.format, "png") ||
-	   !strcmp (p.format, "jpg")) {
-    bview_draw (view);
-    unsigned char * image = (unsigned char *) compose_image (view);
-    if (pid() == 0) {
-      char command[strlen ("convert ppm:- ") + strlen (p.file) + 1];
-      strcpy (command, "convert ppm:- ");
-      strcat (command, p.file);
-      FILE * fp = popen (command, "w");
-      gl_write_image (fp, image, view->width, view->height, view->samples);
-      pclose (fp);
-    }
   }
 
   else if (!strcmp (p.format, "bv")) {
@@ -527,7 +533,7 @@ bool save (struct _save p)
       buffsize *= 2;
     }
     if (!done)
-      fprintf (stderr, "save(): error: exceeded maximum feedback buffer size\n");
+      fprintf (ferr, "save(): error: exceeded maximum feedback buffer size\n");
   }
   
   else if (!strcmp (p.format, "ps") ||
@@ -566,11 +572,11 @@ bool save (struct _save p)
       buffsize *= 2;
     }
     if (state == GL2PS_OVERFLOW)
-      fprintf (stderr, "save(): error: exceeded maximum feedback buffer size\n");
+      fprintf (ferr, "save(): error: exceeded maximum feedback buffer size\n");
   }
 
   else {
-    fprintf (stderr, "save(): unknown format '%s'\n", p.format);
+    fprintf (ferr, "save(): unknown format '%s'\n", p.format);
     if (p.file) {
       fclose (p.fp);
       remove (p.file);
@@ -609,10 +615,10 @@ static char * remove_blanks (char * line)
 
 static void fields_stats()
 {
-  fprintf (stderr, "# t = %g, fields = {", t);
+  fprintf (ferr, "# t = %g, fields = {", t);
   for (scalar s in all)
-    fprintf (stderr, " %s", s.name);
-  fputs (" }\n", stderr);
+    fprintf (ferr, " %s", s.name);
+  fputs (" }\n", ferr);
 }
 
 static void draw_append (char * buf, Array * history, FILE * interactive)
@@ -648,7 +654,7 @@ static bool process_line (char * line, Array * history, FILE * interactive)
     parse_params ((Params[]){{"file", pstring, &file}, {NULL}});
     if (file) {
       if (!restore (file = file, list = all))
-	fprintf (stderr, "could not restore from '%s'\n", file);
+	fprintf (ferr, "could not restore from '%s'\n", file);
       else {
 	fields_stats();
 	clear();
@@ -767,7 +773,7 @@ static bool process_line (char * line, Array * history, FILE * interactive)
 
   else if (!strcmp (s, "show")) {
     if (interactive && history->len)
-      save (fp = stderr, format = "bv", history = history);
+      save (fp = ferr, format = "bv", history = history);
   }
 
   else if (!strcmp (s, "box")) {
@@ -792,7 +798,7 @@ static bool process_line (char * line, Array * history, FILE * interactive)
   }
   
   else if (s[0] != '\n')
-    fprintf (stderr, "load(): syntax error: '%s'\n", s);
+    fprintf (ferr, "load(): syntax error: '%s'\n", s);
 
   free (buf);
   return true;

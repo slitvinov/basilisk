@@ -81,8 +81,7 @@ event logfile (i++; t <= 2.) {
 }
 
 event output (i += 5) {
-  static FILE * fp = popen ("ppm2gif > source.gif", "w");
-  output_ppm (h, fp, min = 0, max = 0.05);
+  output_ppm (h, min = 0, max = 0.05, file = "source.gif");
 }
 
 /**

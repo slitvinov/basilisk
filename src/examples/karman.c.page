@@ -90,15 +90,11 @@ We produce animations of the vorticity and tracer fields...
 */
 
 event movies (i += 4; t <= 15.) {
-  static FILE * fp = popen ("ppm2gif > vort.gif", "w");
-  scalar vorticity[];
-  foreach()
-    vorticity[] = (u.x[0,1] - u.x[0,-1] - u.y[1,0] + u.y[-1,0])/(2.*Delta);
-  boundary ({vorticity});
-  output_ppm (vorticity, fp, box = {{-0.5,-0.5},{7.5,0.5}},
+  scalar omega[];
+  vorticity (u, omega);
+  output_ppm (omega, file = "vort.gif", box = {{-0.5,-0.5},{7.5,0.5}},
 	      min = -10, max = 10, linear = true);
-  static FILE * fp1 = popen ("ppm2gif > f.gif", "w");
-  output_ppm (f, fp1, box = {{-0.5,-0.5},{7.5,0.5}},
+  output_ppm (f, file = "f.gif", box = {{-0.5,-0.5},{7.5,0.5}},
 	      linear = true, min = 0, max = 1);
 }
 

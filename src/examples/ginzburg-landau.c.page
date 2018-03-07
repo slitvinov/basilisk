@@ -107,26 +107,15 @@ event integration (i++) {
 /**
 ## Outputs
 
-Here we create mpeg animations for both components. The `spread`
+Here we create MP4 animations for both components. The `spread`
 parameter sets the color scale to $\pm$ twice the standard
 deviation. */
 
 event movies (i += 3; t <= 150) {
-  fprintf (stderr, "%g %g\n", t, sqrt(normf(A2).max));
+  fprintf (ferr, "%g %g\n", t, sqrt(normf(A2).max));
 
-  static FILE * fp = popen ("ppm2mpeg > Ai.mpg", "w");
-  output_ppm (Ai, fp, spread = 2, linear = true);
-  static FILE * fp1 = popen ("ppm2mpeg > A2.mpg", "w");
-  output_ppm (A2, fp1, spread = 2, linear = true);
-}
-
-/**
-At the end of the simulation, we create snapshot images of both
-fields, in PNG format. */
-
-event pictures (t = end) {
-  output_ppm (Ai, file = "Ai.png", spread = 2, linear = true);
-  output_ppm (A2, file = "A2.png", spread = 2, linear = true);
+  output_ppm (Ai, spread = 2, linear = true, file = "Ai.mp4");
+  output_ppm (A2, spread = 2, linear = true, file = "A2.mp4");
 }
 
 /**
@@ -135,11 +124,11 @@ composed of "cellular structures" for $|A|^2$ and stationary spirals
 for $A_i$.
 
 |:------:|:-----:|
-| [![](ginzburg-landau/A2.png)](ginzburg-landau/A2.mpg) | [![](ginzburg-landau/Ai.png)](ginzburg-landau/Ai.mpg) |
-| $|A|^2$                     |    $A_i$                    |
+| ![](ginzburg-landau/A2.mp4)(autoplay) | ![](ginzburg-landau/Ai.mp4)(autoplay) |
+| $|A|^2$                               |    $A_i$                              |
 
-  : Final states (click on images for animations)
+  : Evolution of the norm and imaginary part
 
 ## See also
 
-* [The Brusselator](brusselator.c) */
+* [The Brusselator](brusselator.c). */

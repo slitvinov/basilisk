@@ -288,6 +288,163 @@ color colormap_color (double cmap[NCMAP][3],
 }
 
 /**
+## Image/animation conversion
+
+The open_image()/close_image() functions use pipes to convert PPM
+images to other formats, including `.mp4`, `.ogv` and `.gif`
+animations.
+
+The functions check whether the 'ffmpeg' or 'convert' executables are
+accessible, if they are not the conversion is disabled and the raw PPM
+images are saved. An extra ".ppm" extension is added to the file name
+to indicate that this happened. */
+
+static const char * extension (const char * file, const char * ext) {
+  int len = strlen(file);
+  return len > 4 && !strcmp (file + len - 4, ext) ? file + len - 4 : NULL;
+}
+
+static const char * is_animation (const char * file) {
+  const char * ext;
+  if ((ext = extension (file, ".mp4")) ||
+      (ext = extension (file, ".ogv")) ||
+      (ext = extension (file, ".gif")))
+    return ext;
+  return NULL;
+}
+
+static struct {
+  FILE ** fp;
+  char ** names;
+  int n;
+} open_image_data = {NULL, NULL, 0};
+
+static void open_image_cleanup()
+{
+  for (int i = 0; i < open_image_data.n; i++) {
+    pclose (open_image_data.fp[i]);
+    free (open_image_data.names[i]);
+  }
+  free (open_image_data.fp);
+  free (open_image_data.names);
+  open_image_data.fp = NULL;
+  open_image_data.names = NULL;
+  open_image_data.n = 0;
+}
+
+static FILE * open_image_lookup (const char * file)
+{
+  for (int i = 0; i < open_image_data.n; i++)
+    if (!strcmp (file, open_image_data.names[i]))
+      return open_image_data.fp[i];
+  return NULL;
+}
+
+static bool which (const char * command)
+{
+  char * s = getenv ("PATH");
+  if (!s)
+    return false;
+  char path[strlen(s) + 1];
+  strcpy (path, s);
+  s = strtok (path, ":");
+  while (s) {
+    char f[strlen(s) + strlen(command) + 2];
+    strcpy (f, s);
+    strcat (f, "/");
+    strcat (f, command);
+    FILE * fp = fopen (f, "r");
+    if (fp) {
+      fclose (fp);
+      return true;
+    }
+    s = strtok (NULL, ":");
+  }
+  return false;
+}
+
+static FILE * ppm_fallback (const char * file, const char * mode)
+{
+  char filename[strlen(file) + 5];
+  strcpy (filename, file);
+  strcat (filename, ".ppm");
+  FILE * fp = fopen (filename, mode);
+  if (!fp) {
+    perror (file);
+#if _MPI
+    MPI_Abort (MPI_COMM_WORLD, 1);
+#endif
+    exit (1);
+  }
+  return fp;
+}
+
+FILE * open_image (const char * file, const char * options)
+{
+  assert (pid() == 0);
+  const char * ext;
+  if ((ext = is_animation (file))) {
+    FILE * fp = open_image_lookup (file);
+    if (fp)
+      return fp;
+
+    int len = strlen ("ppm2???    ") + strlen (file) +
+      (options ? strlen (options) : 0);
+    char command[len];
+    strcpy (command, "ppm2"); strcat (command, ext + 1);
+
+    if (!which (command) || (!which ("ffmpeg") && !which ("avconv")))
+      return ppm_fallback (file, "a");
+
+    static bool added = false;
+    if (!added) {
+      free_solver_func_add (open_image_cleanup);
+      added = true;
+    }      
+    open_image_data.n++;
+    qrealloc (open_image_data.names, open_image_data.n, char *);
+    open_image_data.names[open_image_data.n - 1] = strdup (file);
+
+    if (options) {
+      strcat (command, " ");
+      strcat (command, options);
+    }
+    strcat (command, !strcmp (ext, ".mp4") ? " " : " > ");
+    strcat (command, file);
+    qrealloc (open_image_data.fp, open_image_data.n, FILE *);
+    return open_image_data.fp[open_image_data.n - 1] = popen (command, "w");
+  }
+  else { // !animation
+    if (!which ("convert"))
+      return ppm_fallback (file, "w");
+    
+    int len = strlen ("convert ppm:-   ") + strlen (file) +
+      (options ? strlen (options) : 0);
+    char command[len];
+    strcpy (command, "convert ppm:- ");
+    if (options) {
+      strcat (command, options);
+      strcat (command, " ");
+    }
+    strcat (command, file);
+    return popen (command, "w");
+  }
+}
+
+void close_image (const char * file, FILE * fp)
+{
+  assert (pid() == 0);
+  if (is_animation (file)) {
+    if (!open_image_lookup (file))
+      fclose (fp);
+  }
+  else if (which ("convert"))
+    pclose (fp);
+  else
+    fclose (fp);
+}
+
+/**
 ## *output_ppm()*: Portable PixMap (PPM) image output
 
 Given a field, this function outputs a colormaped representation as a
@@ -344,6 +501,10 @@ of the domain for which *mask* is negative.
 
 *map*
 : the colormap: *jet*, *cool_warm* or *gray*. Default is *jet*.
+
+*opt*
+: options to pass to 'convert' or to the 'ppm2???' scripts (used
+with *file*).
 */
 
 struct OutputPPM {
@@ -356,6 +517,7 @@ struct OutputPPM {
   double box[2][2];
   scalar mask;
   colormap map;
+  char * opt;
 };
 
 trace
@@ -422,19 +584,14 @@ void output_ppm (struct OutputPPM p)
 		MPI_COMM_WORLD);
 @endif
     if (!p.fp) p.fp = stdout;
-    if (p.file) {
-      char command[strlen ("convert ppm:- -transparent black ") +
-		   strlen (p.file) + 1];
-      strcpy (command, "convert ppm:- -transparent black ");
-      strcat (command, p.file);
-      p.fp = popen (command, "w");
-    }
+    if (p.file)
+      p.fp = open_image (p.file, p.opt);
     
     fprintf (p.fp, "P6\n%u %u 255\n", p.n, ny);
     fwrite (((void **) ppm)[0], sizeof(color), ny*p.n, p.fp);
     
     if (p.file)
-      pclose (p.fp);
+      close_image (p.file, p.fp);
     else
       fflush (p.fp);
   }
@@ -446,15 +603,6 @@ void output_ppm (struct OutputPPM p)
     
   matrix_free (ppm);
 }
-
-/**
-We also define a convenience macro which calls *avconv* to generate a
-MPEG movie from the PPM stream. */
-
-#define mpeg(c,name,...) {					\
-    static FILE * fp = popen ("ppm2mpeg > " name, "w");		\
-    output_ppm (c, fp, __VA_ARGS__);				\
-  }
 
 /**
 ## *output_grd()*: ESRI ASCII Grid format

@@ -1,6 +1,9 @@
 # parser for python commands in Literate C pages
 
-BEGIN { nplots = 0 }
+BEGIN {
+    nplots = 0
+    print "# -*- coding: utf-8 -*-"
+}
 
 /^[ \t]*~~~/ {
     if (python) {

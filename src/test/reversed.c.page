@@ -144,11 +144,10 @@ event levels (t = T/2) {
 #if 0
 event movie (i += 10)
 {
-  static FILE * fp = popen ("ppm2mpeg > level.mpg", "w");
   scalar l[];
   foreach()
     l[] = level;
-  output_ppm (l, fp, 1 << MAXLEVEL);
+  output_ppm (l, 1 << MAXLEVEL, file = "level.mp4");
 }
 #endif
 

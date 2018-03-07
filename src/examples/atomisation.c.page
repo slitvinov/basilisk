@@ -150,8 +150,7 @@ event movie (t += 1e-2)
   clear();
   draw_vof ("f");
 #endif // 3D
-  static FILE * fp = popen ("ppm2mp4 movie.mp4", "w");
-  save (fp = fp);
+  save ("movie.mp4");
 }
 
 /**
@@ -323,14 +322,8 @@ Note that this assumes that the gl libraries have been
 
 ## Results
 
-<p><center>
-<video width="800" height="600" controls>
-  <source src="atomisation/movie.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-<br>
-Atomisation of a pulsed liquid jet. 4096^3^ equivalent resolution.
-</center></p>
+![Atomisation of a pulsed liquid jet. 4096^3^ equivalent
+ resolution.](/src/examples/atomisation/movie.mp4)(width="800" height="600")
 
 The gain in number of grid points of the adaptive simulation (relative
 to a constant 4096^3^ Cartesian grid discretisation) is illustrated

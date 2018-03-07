@@ -8,6 +8,7 @@ The goal is to build a distance field representation of a 3D
 #include "utils.h"
 #include "distance.h"
 #include "fractions.h"
+#include "view.h"
 
 int main()
 {
@@ -55,14 +56,14 @@ int main()
   /**
   We display an isosurface of the distance function coloured with the
   level of refinement. */
-  
-  FILE * fp = 
-  popen ("gfsview-batch3D distance.gfv | convert ppm:- horse.png", "w");
-  output_gfs (fp);
-  fprintf (fp, "Save stdout { format = PPM }\n");
+
+  view (fov = 15.65, quat = {-0.52,0.31,0.38,-0.7},
+	tx = -0.045, ty = 0.015, width = 640, height = 480);
+  isosurface ("d", 0, color = "level", min = 5, max = 10);
+  save ("horse.png");
 
   /**
-  We also compute volume and surface fractions from the distance
+  We also compute the volume and surface fractions from the distance
   field. We first construct a vertex field interpolated from the
   centered field and then call the appropriate VOF functions. */
 
@@ -77,16 +78,9 @@ int main()
   /**
   Finally we display the surface reconstructed from volume fractions. */
 
-  FILE * fp1 = 
-  popen ("gfsview-batch3D distance.vof.gfv | "
-	 "convert ppm:- -resize 640x480 vof.png", "w");
-  output_gfs (fp1);
-  fprintf (fp1, "Save stdout { format = PPM width = 1280 height = 960 }\n");
-
-#if 0
-  FILE * fp2 = popen ("gfsview3D -s distance.gfv", "w");
-  output_gfs (fp2);
-#endif
+  clear();
+  draw_vof ("f", edges = true, lw = 0.5);
+  save ("vof.png");
 }
 
 /**

@@ -55,38 +55,20 @@ event logfile (i++) {
 /**
 We generate movies of depth and level of refinement. */
 
-event movie (t += 0.0025) {
-  static FILE * fp = popen ("ppm2mpeg > depth.mpg", "w");
-  output_ppm (h, fp,
-	      min = 0.1, max = 6, map = cool_warm, n = 400, linear = true);
-  static FILE * fp1 = popen ("ppm2mpeg > level.mpg", "w");
+event movie (t += 0.0025; t <= 0.3) {
+  output_ppm (h, min = 0.1, max = 6, map = cool_warm, linear = true,
+	      n = 400, file = "depth.mp4");
   scalar l[];
   foreach()
     l[] = level;
-  output_ppm (l, fp1, map = cool_warm, min = 4, max = LEVEL, n = 400);
+  output_ppm (l, map = cool_warm, min = 4, max = LEVEL, n = 400,
+	      file = "level.mp4");
 }
 
 /**
-At $t=0.3$ we generate snapshots of the depth and level of refinement... */
+![Animation of the fluid depth](shock/depth.mp4)(autoplay)
 
-event image (t = 0.3) {
-  output_ppm (h, file = "depth.png",
-	      min = 0.1, max = 6, map = cool_warm, n = 400, linear = true);
-  scalar l[];
-  foreach()
-    l[] = level;
-  output_ppm (l, file = "level.png", map = cool_warm,
-	      min = 4, max = LEVEL, n = 400);
-}
-
-/**
-...which gives the following results
-
-![[Animation](shock/depth.mpg) of the fluid depth. Snapshot at
- $t=0.3$.](shock/depth.png)
-
-![[Animation](shock/level.mpg) of the level of refinement. Snapshot at
- $t=0.3$.](shock/level.png)
+![Animation of the level of refinement](shock/level.mp4)(autoplay)
 
 The mesh is adapted according to the error on the height field. */
 

@@ -95,20 +95,17 @@ event logfile (t <= 30; t += 1) {
 We make animations of the vorticity and level of refinement. */
 
 event movie (t += 0.2; t <= 30) {
-  static FILE * fp = popen ("ppm2mpeg > vort.mpg", "w");
   scalar omega[];
   vorticity (u, omega);
-  output_ppm (omega, fp, linear = true);
+  output_ppm (omega, linear = true, file = "vort.mp4");
 
-  static FILE * fp1 = popen ("ppm2mpeg > level.mpg", "w");
   foreach()
     omega[] = level;
-  output_ppm (omega, fp1, spread = 2);
+  output_ppm (omega, spread = 2, file = "level.mp4");
 
-  static FILE * fp2 = popen ("ppm2mpeg > pid.mpg", "w");
   foreach()
     omega[] = pid();
-  output_ppm (omega, fp2, min = 0, max = npe() - 1);
+  output_ppm (omega, min = 0, max = npe() - 1, file = "pid.mp4");
 }
 
 /**
@@ -154,7 +151,7 @@ event adapt (i++) {
 After running and processing by gnuplot we get
 the following pictures and animations.
 
-~~~gnuplot [Evolution of the vorticity field with time.](vortex/vort.mpg)
+~~~gnuplot [Evolution of the vorticity field with time.](vortex/vort.mp4)
 set term @PNG enhanced size 640,426
 set output 'vorticity.png'
 set size ratio -1
@@ -180,7 +177,7 @@ splot 'omega-5'
 unset multiplot
 ~~~
 
-~~~gnuplot [Evolution of level of refinement with time.](vortex/level.mpg)
+~~~gnuplot [Evolution of level of refinement with time.](vortex/level.mp4)
 set output 'level.png'
 set cbrange [3:8]
 set multiplot layout 2,3 scale 1.6,1.6
