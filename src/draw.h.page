@@ -346,13 +346,13 @@ static scalar lookup_field (const char * name)
   return (scalar){-1};
 }
 
-static void draw_lines (bview * view, float color[3])
+static void draw_lines (bview * view, float color[3], float lw)
 {
   glMatrixMode (GL_PROJECTION);
   glPushMatrix();
   glTranslatef (0., 0., view->lc);
   glColor3f (color[0], color[1], color[2]);
-  glLineWidth (view->samples);
+  glLineWidth (view->samples*(lw > 0. ? lw : 1.));
 }
 
 static inline double interp (Point point, coord p, scalar col) {
@@ -459,6 +459,7 @@ static void end_colorized() {
   defines the facet color.
 * *lc[]*: an array of red, green, blue values between 0 and 1 which
   defines the line color.
+* *lw*: the line width.
 */
 
 struct _draw_vof {
@@ -470,7 +471,7 @@ struct _draw_vof {
   double min, max, spread;
   bool linear;
   colormap map;
-  float fc[3], lc[3];
+  float fc[3], lc[3], lw;
 };
 
 /**
@@ -550,7 +551,7 @@ bool draw_vof (struct _draw_vof p)
     
   bview * view = draw();
 #if dimension == 2
-  draw_lines (view, p.lc);
+  draw_lines (view, p.lc, p.lw);
   glBegin (GL_LINES);
   foreach_visible (view)
     if (cfilter (point, c, cmin)) {
@@ -593,7 +594,7 @@ bool draw_vof (struct _draw_vof p)
       }
   }
   if (p.edges) {
-    draw_lines (view, p.lc);
+    draw_lines (view, p.lc, p.lw);
     foreach_visible (view)
       if (cfilter (point, c, cmin)) {
 	coord n = mycs (point, c);
@@ -630,14 +631,14 @@ $$
 struct _cells {
   coord n;
   double alpha;
-  float lc[3]; // the line color
+  float lc[3], lw; // the line color and width
 };
 
 trace
 void cells (struct _cells p)
 {
   bview * view = draw();
-  draw_lines (view, p.lc);
+  draw_lines (view, p.lc, p.lw);
 #if dimension == 2
   foreach_visible (view) {
     glBegin (GL_LINE_LOOP);
@@ -790,7 +791,7 @@ trace
 bool box()
 {
   bview * view = draw();
-  draw_lines (view, (float[3]){0,0,0});
+  draw_lines (view, (float[3]){0,0,0}, 1.);
 
   float height = 0.5*gl_StrokeHeight();
   float width = gl_StrokeWidth ('1'), scale = L0/(60.*width), length;
