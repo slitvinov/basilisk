@@ -393,7 +393,18 @@ FILE * open_image (const char * file, const char * options)
     char command[len];
     strcpy (command, "ppm2"); strcat (command, ext + 1);
 
-    if (!which (command) || (!which ("ffmpeg") && !which ("avconv")))
+    static int has_ffmpeg = -1;
+    if (has_ffmpeg < 0) {
+      if (which (command) && (which ("ffmpeg") || which ("avconv")))
+	has_ffmpeg = true;
+      else {
+	fprintf (ferr,
+		 "open_image(): cannot find '%s' or 'ffmpeg'/'avconv'\n"
+		 "  falling back to raw PPM outputs\n", command);
+	has_ffmpeg = false;
+      }
+    }
+    if (!has_ffmpeg)
       return ppm_fallback (file, "a");
 
     static bool added = false;
@@ -415,7 +426,18 @@ FILE * open_image (const char * file, const char * options)
     return open_image_data.fp[open_image_data.n - 1] = popen (command, "w");
   }
   else { // !animation
-    if (!which ("convert"))
+    static int has_convert = -1;
+    if (has_convert < 0) {
+      if (which ("convert"))
+	has_convert = true;
+      else {
+	fprintf (ferr,
+		 "open_image(): cannot find 'convert'\n"
+		 "  falling back to raw PPM outputs\n");
+	has_convert = false;
+      }
+    }
+    if (!has_convert)
       return ppm_fallback (file, "w");
     
     int len = strlen ("convert ppm:-   ") + strlen (file) +
