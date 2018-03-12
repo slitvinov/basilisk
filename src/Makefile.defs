@@ -137,7 +137,7 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	$(QCC) $(CFLAGS) -python -c $(MDFLAGS) -I$(PYTHONPATH) $<
 
 %.py: %.i
-	swig -I$(BASILISK) -python $*.i
+	swig -I$(BASILISK) -python $(PYTHON3) $*.i
 	$(CC) $(CFLAGS) -c $(MDFLAGS) -I$(PYTHONPATH) $*_wrap.c
 	$(CC) -shared $*.o $*_wrap.o -o _$*.so
 

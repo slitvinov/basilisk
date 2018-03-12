@@ -18,7 +18,13 @@ PNG = pngcairo
 
 # configuration for python modules (requires swig)
 MDFLAGS = -fpic
+# flags for python 2
+PYTHON3 =
 PYTHONPATH = /usr/include/python2.7
+
+# flags for python 3
+#PYTHON3 = -py3
+#PYTHONPATH = /usr/include/python3.6m
 
 # OpenGL libraries
 # see bview-server.c#installation for explanations

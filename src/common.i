@@ -88,7 +88,7 @@ class scalar(int):
     def __new__(cls,i=None):
         if i == None:
             i = new_scalar("python")
-	return int.__new__(cls,i)
+        return int.__new__(cls,i)
     def __del__(self):
         if callable(_delete):
             _delete([self])

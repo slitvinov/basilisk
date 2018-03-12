@@ -3,10 +3,14 @@ int py_scalar_init (scalar s, PyObject * f) {
     fprintf (stderr, "parameter must be callable\n");
     return -1;
   }
+@if PY_MAJOR_VERSION >= 3
+  PyObject * code = PyObject_GetAttrString (f, "__code__");
+@else
   PyObject * code = PyObject_GetAttrString (f, "func_code");
+@endif
   PyObject * nargs = PyObject_GetAttrString (code, "co_argcount");
   Py_DECREF (code);
-  int n = PyInt_AsLong (nargs);
+  int n = PyLong_AsLong (nargs);
   Py_DECREF (nargs);
   char * format = (n == 0 ? "()" :
 		   n == 1 ? "(d)" : 
@@ -34,11 +38,12 @@ typedef struct {
   PyObject * i, * t, * action;
 } PyEvent;
 
+
 static double get_double (PyObject * item) {
   if (PyFloat_Check (item))
     return PyFloat_AsDouble (item);
-  else if (PyInt_Check (item))
-    return PyInt_AsLong (item);
+  else if (PyLong_Check (item))
+    return PyLong_AsLong (item);
   else {
     fprintf (stderr, "expecting a float\n");
     exit (1);
@@ -49,23 +54,23 @@ static double get_double (PyObject * item) {
 static int py_start (int * i, double * t, Event * ev) {
   PyEvent * p = ev->data;
   if (p->i != Py_None) {
-    if (PyInt_Check (p->i))
-      *i = PyInt_AsLong (p->i);
+    if (PyLong_Check (p->i))
+      *i = PyLong_AsLong (p->i);
     else {
       PyObject * item = PySequence_GetItem (p->i, (ev->a = 0));
-      if (!item || !PyInt_Check(item)) {
+      if (!item || !PyLong_Check(item)) {
 	fprintf (stderr, "expecting an integer\n");
 	exit (1);
       }
-      *i = PyInt_AsLong (item);
+      *i = PyLong_AsLong (item);
       Py_DECREF (item);
     }
   }
   else {
     if (PyFloat_Check (p->t))
       *t = PyFloat_AsDouble (p->t);
-    else if (PyInt_Check (p->t))
-      *t = PyInt_AsLong (p->t);
+    else if (PyLong_Check (p->t))
+      *t = PyLong_AsLong (p->t);
     else {
       PyObject * item = PySequence_GetItem (p->t, (ev->a = 0));
       if (!item) {
@@ -93,7 +98,7 @@ static int py_inc (int * i, double * t, Event * ev) {
   if (p->i != Py_None) {
     if (ev->a < PySequence_Size (p->i)) {
       PyObject * item = PySequence_GetItem (p->i, ev->a);
-      *i = PyInt_AsLong (item);
+      *i = PyLong_AsLong (item);
       Py_DECREF (item);
     }
     else
@@ -135,17 +140,30 @@ int py_register_event (PyObject * action, PyObject * i, PyObject * t) {
   ev.arrayt = NULL;
   PyObject * code = PyObject_GetAttrString (action, "__code__");
   PyObject * file = PyObject_GetAttrString (code, "co_filename");
+@if PY_MAJOR_VERSION >= 3
+  PyObject * temp_bytes = PyUnicode_AsEncodedString(file, "UTF-8", "strict");
+  ev.file = strdup (PyBytes_AsString (temp_bytes));
+  Py_DECREF(temp_bytes);
+@else
   ev.file = strdup (PyString_AsString (file));
+@endif
   Py_DECREF (file);
   PyObject * lineno = PyObject_GetAttrString (code, "co_firstlineno");
-  ev.line = PyInt_AsLong (lineno);
+  ev.line = PyLong_AsLong (lineno);
   Py_DECREF (lineno);
+@if PY_MAJOR_VERSION >= 3
+  PyObject * name = PyObject_GetAttrString (action, "__name__");
+  PyObject * temp_bytes2 = PyUnicode_AsEncodedString(name, "UTF-8", "strict");
+  ev.name = strdup (PyBytes_AsString (temp_bytes2));
+  Py_DECREF(temp_bytes2);
+@else
   PyObject * name = PyObject_GetAttrString (action, "func_name");
   ev.name = strdup (PyString_AsString (name));
+@endif
   Py_DECREF (name);
   ev.a = 0;
 
-  if (i != Py_None && !PySequence_Check(i) && !PyInt_Check(i)) {
+  if (i != Py_None && !PySequence_Check(i) && !PyLong_Check(i)) {
     fprintf (stderr, "parameter i must be a sequence or an int\n");
     exit (1);
   }
@@ -154,7 +172,7 @@ int py_register_event (PyObject * action, PyObject * i, PyObject * t) {
     exit (1);
   }
 
-  if (PyInt_Check(i) || PyFloat_Check(t)) {
+  if (PyLong_Check(i) || PyFloat_Check(t)) {
     ev.expr[0] = py_start;
     ev.nexpr = 1;
   }
