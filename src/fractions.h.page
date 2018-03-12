@@ -263,9 +263,10 @@ void fractions (struct Fractions a)
       Once we have $\mathbf{n}$ and $\alpha$, the (linear) interface
       is fully defined and we can compute the surface fraction using
       our pre-defined function. For marginal cases, the cell is full
-      or empty (*ni == 0*) and we are reduced to the case above. */
+      or empty (*ni == 0*) and we look at the line fractions to
+      decide. */
 
-      s_z[] = ni ? line_area (n.x, n.y, alpha/ni) : p.x[];
+      s_z[] = ni ? line_area (n.x, n.y, alpha/ni) : max (p.x[], p.y[]);
     }
   }
 

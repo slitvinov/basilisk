@@ -43,6 +43,7 @@ Note that only the documented test cases appear in the list below
 
 * [Computation of volume fractions from a levelset function](fractions.c)
 * [Computation of volume fractions on a variable-resolution grid](fractions1.c)
+* [Fractions in marginal cases](fractions2.c)
 * [Computation of a levelset field from a contour](basilisk.c)
 * [Time-reversed VOF advection in a vortex](reversed.c)
 
