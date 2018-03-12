@@ -1,0 +1,69 @@
+# How to contribute new code or bug fixes
+
+## Using darcs
+
+This is the preferred option since [darcs](http://darcs.net/) is the
+[version control system](https://en.wikipedia.org/wiki/Version_control)
+used to manage the source code and wiki of Basilisk.
+
+If you followed the [installation instructions](INSTALL#using-darcs)
+(using darcs), you can easily generate a new patch for the Basilisk
+main distribution using the following workflow:
+
+1. `cd $BASILISK`
+2. Synchronize your repo with the main branch using `darcs pull`.
+3. Edit the source files.
+4. Test that the changes work:
+   [add a test case](test/README#running-and-creating-test-cases-and-examples),
+   [run the test suite](test/README#running-and-creating-test-cases-and-examples).
+5. If you created new files, add them to the distribution using `darcs add`.
+6. Review and record the changes using `darcs record`.
+7. If you are still not happy with your patch, you can go back
+   to 1. and use `darcs amend` to modify it until your are satistfied.
+
+You are then ready to submit your patch. You have two options: a
+simple one (email) and a more systematic one (publishing your repo).
+
+### Emailing your patch(es)
+
+Just use `darcs send -o patches` (with a better name than `patches`)
+and select which patches you want to submit. Attach the `patches` file
+to an email and send it (with some explanations) to the
+[basilisk-fr mailing list](http://groups.google.com/d/forum/basilisk-fr).
+
+### Publishing your repository
+
+You can use a darcs hosting service, such as
+[darcs hub](https://hub.darcs.net/) to publish your repository. Note
+that both the Basilisk wiki and source code are
+[mirrored on darcs hub](https://hub.darcs.net/basilisk). To create
+your own branch, login into darcs hub, go to the
+[basilisk repo](https://hub.darcs.net/basilisk/basilisk) and use the
+`fork` button.
+
+Note that if you have ssh/scp access to a web server somewhere, you
+can also simply copy your repository there.
+
+To publish your changes, you can then `darcs push` them to this
+repository and send its http:// address together with your message to
+the mailing list.
+
+## Using Unix patches
+
+If for some reason you don't want/can't use darcs, you can simply send
+a [Unix patch](https://en.wikipedia.org/wiki/Patch_(Unix)) to the
+mailing list. Let's assume you modified `src/fractions.h`. You first
+need to get back to the original version of this file (using the
+original tarball, getting the raw page source on the wiki etc.) and
+save it as `src/fractions.h.orig`, then do:
+
+~~~bash
+cd $BASILISK
+diff -u fractions.h.orig fractions.h > fractions.patch
+~~~
+
+You can then review the changes in the patch file and send it to the
+mailing list if you are happy with it. Note that much more complex
+patches (for multiple files and directories etc.) can be
+generated. See the many online tutorials if you want to know more
+about patching.
