@@ -3152,14 +3152,16 @@ int main (int argc, char ** argv)
       fprintf (stderr,
 	       "qcc: warning: OpenMP cannot be used with MPI (yet): "
 	       "switching it off\n");
-      for (int i = 0; i < strlen("-fopenmp"); i++)
+      int i;
+      for (i = 0; i < strlen("-fopenmp"); i++)
 	openmp[i] = ' ';
     }
     else if (swig) {
       fprintf (stderr,
 	       "qcc: warning: OpenMP cannot be used with Python (yet): "
 	       "switching it off\n");
-      for (int i = 0; i < strlen("-fopenmp"); i++)
+      int i;
+      for (i = 0; i < strlen("-fopenmp"); i++)
 	openmp[i] = ' ';
     }
   }
