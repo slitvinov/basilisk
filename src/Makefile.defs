@@ -133,12 +133,12 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	@test -f $@
 
 # python modules
-%.i: %.c $(QCC)
-	$(QCC) $(CFLAGS) -python -c $(MDFLAGS) -I$(PYTHONPATH) $<
+%.i: %.c $(QCC) $(BASILISK)/python.h
+	$(QCC) $(CFLAGS) -python -c $(MDFLAGS) -I$(PYTHONINCLUDE) $<
 
 %.py: %.i
-	swig -I$(BASILISK) -python $(PYTHON3) $*.i
-	$(CC) $(CFLAGS) -c $(MDFLAGS) -I$(PYTHONPATH) $*_wrap.c
+	swig -I$(BASILISK) -python $(subst python3,-py3,$(findstring python3, $(PYTHONINCLUDE))) $*.i
+	$(CC) $(CFLAGS) -c $(MDFLAGS) -I$(PYTHONINCLUDE) $*_wrap.c
 	$(CC) -shared $*.o $*_wrap.o -o _$*.so
 
 # generated makefiles
