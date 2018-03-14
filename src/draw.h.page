@@ -1014,3 +1014,44 @@ void travelling (struct _travelling p)
 }
 
 #undef interpo
+
+/**
+   # *draw_string()*: draws strings on a separate
+   layer. currently bottom left (BL) position only */
+
+
+struct _draw_string {
+  char * str;
+  float fg[3];
+};
+
+trace
+bool draw_string(struct _draw_string p)
+{
+  //char mystring[42];
+  float width = gl_StrokeWidth ('1'); 
+  float height = gl_StrokeHeight();
+  float scale = L0/(0.5*width);
+  
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();             
+    glLoadIdentity(); //reset coords
+    glOrtho( 0, width, 0, height, -1, 1 );
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    glColor3f(p.fg[0],p.fg[1],p.fg[2]);//colors
+
+    glTranslatef(1.1,1.1,0.); //very slight origin shift
+    glScalef (2*scale, 2.5*scale, 2*scale);
+    gl_StrokeString(p.str);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();  
+
+  return true;
+}
