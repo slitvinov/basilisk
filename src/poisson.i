@@ -11,6 +11,8 @@
     vector alpha;
     scalar _lambda;
     double tolerance;
+    int nrelax;
+    scalar * res;
   };
   
   extern mgstats poisson (struct Poisson p);
@@ -32,20 +34,23 @@ def poisson(a,b,alpha=None,lambda0=0,tolerance=1e-3):
 			void (* relax) (scalar * da, scalar * res, 
 				 int depth, void * data),
 			void * data,
-			int nrelax, int minlevel);
+			int nrelax, int minlevel, int maxlevel);
   
   extern int NITERMAX;
+  extern int NITERMIN;
   extern double TOLERANCE;
 
   extern mgstats mg_solve (scalar * a, scalar * b,
 			   double (* residual) (scalar * a, scalar * b, 
-						scalar ** res,
+						scalar * res,
 						void * data),
 			   void (* relax) (scalar * da, scalar * res, 
 					   int depth, 
 					   void * data),
-			   void * data);
+			   void * data,
+                           int nrelax,
+                           scalar * res);
   
   extern mgstats project (face vector u, scalar p, 
-			  face vector alpha, double dt);
+			  face vector alpha, double dt, int nrelax);
 %}
