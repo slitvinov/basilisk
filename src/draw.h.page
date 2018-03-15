@@ -1017,25 +1017,30 @@ void travelling (struct _travelling p)
 
 /**
    # *draw_string()*: draws strings on a separate
-   layer. currently bottom left (BL) position only */
+   layer. Arguments: str: string, fg: vector of foreground
+   color (RGB), pos: position, 0 bottom left, 1 top left,
+   2 top right, 3 bottom right (default 0) */
 
 
 struct _draw_string {
   char * str;
   float fg[3];
+  int  pos;
 };
 
 trace
 bool draw_string(struct _draw_string p)
 {
-  //char mystring[42];
-  float width = gl_StrokeWidth ('1'); 
+  float width  = gl_StrokeWidth ('1'); 
   float height = gl_StrokeHeight();
-  float scale = L0/(0.5*width);
-  
+  float aspect = 1.*width/height;
+  float xscale = 0.9*0.025*L0/aspect;
+  float yscale = 0.8*0.05*L0/aspect;
+  float zscale = 1.;
+    
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();             
-    glLoadIdentity(); //reset coords
+    glLoadIdentity(); 
     glOrtho( 0, width, 0, height, -1, 1 );
 
     glMatrixMode(GL_MODELVIEW);
@@ -1044,9 +1049,17 @@ bool draw_string(struct _draw_string p)
     
     glColor3f(p.fg[0],p.fg[1],p.fg[2]);//colors
 
-    glTranslatef(1.1,1.1,0.); //very slight origin shift
-    glScalef (2*scale, 2.5*scale, 2*scale);
-    gl_StrokeString(p.str);
+    if (p.pos == 1)
+      glTranslatef(0.01*width,0.97*height,0.); //TL
+    else if (p.pos == 2)      
+      glTranslatef(0.9*width-1.6*strlen(p.str),0.97*height,0.); //TR
+    else if (p.pos == 3)
+      glTranslatef(0.9*width-1.6*strlen(p.str),0.02*height,0.); //BR
+    else
+      glTranslatef(0.01*width,0.02*height,0.); //BL      
+    
+    glScalef (xscale, yscale, zscale);
+    gl_StrokeString(p.str); 
     
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
