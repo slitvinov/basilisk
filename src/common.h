@@ -61,7 +61,7 @@ static int mpi_rank, mpi_npe;
 @if _MPI
 static FILE * qstderr (void);
 static FILE * qstdout (void);
-FILE * ferr, * fout;
+FILE * ferr = NULL, * fout = NULL;
 @ def not_mpi_compatible()
 do {
   if (npe() > 1) {
@@ -719,13 +719,14 @@ void mpi_init()
 {
   int initialized;
   MPI_Initialized (&initialized);
-  if (!initialized) {
+  if (!initialized) 
     MPI_Init (NULL, NULL);
-    MPI_Comm_set_errhandler (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
-    atexit (finalize);
-    MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
-    MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
-    srand (mpi_rank + 1);
+  MPI_Comm_set_errhandler (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+  atexit (finalize);
+  MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
+  srand (mpi_rank + 1);
+  if (ferr == NULL){
     if (mpi_rank > 0) {
       ferr = fopen ("/dev/null", "w");
       fout = fopen ("/dev/null", "w");
