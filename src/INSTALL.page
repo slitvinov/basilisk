@@ -95,7 +95,7 @@ either edit `$HOME/.bashrc` manually or do
 ~~~bash
 cd basilisk/src
 echo "export BASILISK=$PWD" >> ~/.bashrc
-echo "export PATH=$PATH:$PWD" >> ~/.bashrc
+echo "export PATH=\$PATH:$BASILISK" >> ~/.bashrc
 ~~~
 
 ## Useful additional packages
