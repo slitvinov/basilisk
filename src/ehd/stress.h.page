@@ -22,7 +22,7 @@ event defaults (i = 0) {
 
 /**
 We overload the 
-[acceleration event](/src/navier-stokes/centered.h##acceleration-term) 
+[acceleration event](/src/navier-stokes/centered.h#acceleration-term) 
 of the Navier--Stokes solver to add the electrohydrodynamics acceleration
 term. */
 

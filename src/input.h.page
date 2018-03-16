@@ -150,7 +150,7 @@ static int next_string (FILE * fp, const char * target)
 
 The function reads simulation data in the format used in
 [Gerris](http://gfs.sf.net) simulation files. This is the reciprocal
-function of [*output_gfs()*](output.h#...).
+function of [*output_gfs()*](output.h#output_gfs).
 
 The arguments and their default values are:
 
@@ -332,7 +332,7 @@ void input_gfs (struct OutputGfs p)
 
 This function reads a scalar field from a [Raster
 file](https://en.wikipedia.org/wiki/Esri_grid). This is the reciprocal
-function of [*output_grd()*](output.h#...).
+function of [*output_grd()*](output.h#output_grd).
 
 The arguments and their default values are:
 

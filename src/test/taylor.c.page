@@ -45,7 +45,7 @@ is the outer permittivity and $\mu_2$ is the outer viscosity. The
 electrical forces induces recirculations in both (viscous) fluids.
 
 This test case is also discussed in 
-[Lopez-Herrera et al, 2011](/src/references.bib#lopez2011).
+[Lopez-Herrera et al, 2011](/src/references.bib#lopez-herrera2011).
 
 The problem is assumed to be axisymmetric. */
 

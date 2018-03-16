@@ -108,6 +108,7 @@ remotely()
     mv -f _$test.c $test/$test.c
     cd $test
     cp -f $test.* $chksum 2> /dev/null || true
+    rm -f $chksum/$test.c.page
     PCC="\$CC99"
     case "$CFLAGS" in
 	*-cadna*) PCC="\$CADNACC" ;;
@@ -261,7 +262,7 @@ elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
     mkdir -p $test && cp -f $test.c $test
     awk -f $BASILISK/gnuplot.awk < $test.c > $test/plots
     cp -f $test.* $test 2> /dev/null || true
-    rm -f $test/*.[sd] $test/*.*tst 2> /dev/null || true
+    rm -f $test/*.[sd] $test/*.*tst $test/$test.c.page 2> /dev/null || true
     if test -d $BASILISK_WIKI/static -a -f $test.c.page; then
 	if test ! -L $BASILISK_WIKI/static/$dir/$test; then
 	    mkdir -p $BASILISK_WIKI/static/$dir

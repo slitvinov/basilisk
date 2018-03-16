@@ -2,7 +2,7 @@
 # Gravity wave
 
 A similar test to the [capillary wave](capwave.c) but for a pure
-gravity wave, using the [reduced gravity](reduced.h) approach.
+gravity wave, using the [reduced gravity](/src/reduced.h) approach.
 
 We use a constant-resolution grid, the Navier--Stokes solver for
 two-phase flows and reduced gravity. */

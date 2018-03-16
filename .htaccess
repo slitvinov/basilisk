@@ -1,0 +1,30 @@
+#
+# Force *.page to be displayed in browser for the "Raw page source" option
+#
+
+# Requires mod_headers
+# i.e. 'sudo a2enmod headers'
+
+<FilesMatch "\.page$">
+ForceType "text/plain; charset=utf-8"
+Header set Content-Disposition inline
+</FilesMatch>
+
+#
+# Use mod_rewrite to redirect files to their .html versions (if present) 
+#
+
+# Note that MultiViews must be disabled in
+# /etc/apache2/mods-enabled/userdir.conf
+
+RewriteEngine on
+
+#   first try to find something with a .html extension
+#   ...and if found stop and be happy:
+RewriteCond         "%{REQUEST_FILENAME}.html"  -f
+RewriteRule  "^(.+)"  "$1.html"  [L]
+
+#   else go on for other Alias or ScriptAlias directives,
+#   etc.
+RewriteRule   "^"  "-"  [PT]
+

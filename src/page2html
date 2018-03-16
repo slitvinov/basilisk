@@ -1,0 +1,73 @@
+#!/bin/sh
+
+usage()
+{
+    cat <<EOF
+usage: page2html -url URL -ext EXT FILE.page
+
+  If -url is not specified it is set $BASILISK_URL (if defined) or to
+  http://basilisk.fr
+
+  The EXT extension (typically .html) is added to page links.
+EOF
+    exit 1
+}
+
+ext=""
+while test $# -gt 0; do
+    case $1 in
+	-url)
+	    shift
+	    BASILISK_URL="$1"
+	    ;;
+	-ext)
+	    shift
+	    ext="$1"
+	    ;;
+	-*)
+	    usage
+	    ;;
+	*.page)  page="$1" ;;
+    esac
+    shift
+done
+
+if test -z "$page"; then
+    usage
+fi
+
+if test ! -f $page; then
+    echo "page2html: cannot access '$page'" >&2
+    exit 1
+fi
+
+basename=`echo $page | sed 's/\.page$//'`
+target=$basename.html
+title=""
+case $PWD in
+    $BASILISK/*)
+	title=`echo $PWD | sed "s|$BASILISK|src|"`/
+	;;
+esac
+title=$title$basename
+url=$basename
+
+if test -z "$BASILISK_URL"; then
+    BASILISK_URL="http://basilisk.fr"
+fi
+
+$BASILISK/plugins/literate-c '???' $basename			\
+    | sed 's/~~~literatec/~~~c/g'				\
+    | pandoc -f markdown -s --mathml --smart --toc --preserve-tabs  \
+	   -V wikititle=Basilisk				\
+	   -V base=http://basilisk.fr				\
+	   -V pageUrl=$url			                \
+	   -V pagetitle=$title 			                \
+	   -V wikiupload=true					\
+	   -V sitenav=true					\
+	   -V pagetools=true					\
+	   -V usecache=true					\
+	   --template=$BASILISK/templates/page.static	 	\
+    | sed 's/__ESCAPEDDOLLAR__/$$/g'			        \
+    | $BASILISK/plugins/codeblock "$BASILISK_URL" $basename $ext > $target
+test -s $target || (rm -f $target && exit 1)

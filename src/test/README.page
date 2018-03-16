@@ -4,7 +4,7 @@ The following test cases are run automatically whenever the code
 changes.
 
 Note that only the documented test cases appear in the list below
-(follow the [All tests](/src/test) link for a complete list).
+(follow the [All tests](/src/test/) link for a complete list).
 
 ## Systems of conservation laws
 
@@ -96,7 +96,7 @@ Note that only the documented test cases appear in the list below
 
 * [Kuramoto--Sivashinsky equation](kuramoto.c)
 
-## [All tests](/src/test)
+## [All tests](/src/test/)
 
 # Running and creating test cases (and examples)
 

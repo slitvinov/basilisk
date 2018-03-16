@@ -36,14 +36,24 @@
     return NULL;
   }
 
+  static int is_page (const char * fname) {
+    char * page = malloc (strlen (fname) + strlen (".page") + 1);
+    strcpy (page, fname);
+    strcat (page, ".page");
+    FILE * fp = fopen (page, "r");
+    if (fp)
+      fclose (fp);
+    free (page);
+    return (fp != NULL);
+  }
+  
   static FILE * fdepend = NULL, * ftags = NULL, * myout = NULL;
   static char * fname;
   
   static char * paths[100] = { LIBDIR }, grid[80] = "quadtree";
   static int npath = 1, hasgrid = 0, debug = 0, dimension = 0, bghosts = 0;
-  static int incode;   // are we in a code block?
-  static int somecode; // any code blocks in this file?
-
+  static int incode;    // are we in code (or in a code block)?
+  
   static char * _stack[100]; int stack = -1;
   #define push(s) { char * f = malloc (strlen (s) + 1);	\
                     strcpy (f, s); _stack[++stack] = f; }
@@ -98,25 +108,28 @@
   }
 
   static void check_tag (char * text) {
-    if (ftags && keywords_only) {
+    if (ftags && keywords_only && incode) {
       Tag * t;
-      if (target && (t = lookup_tag(text)))
+      if (target && (t = lookup_tag(text))) {
 	switch (t->type) {
 	case FUNCTION:
 	  if (debug)
 	    fprintf (stderr, "%s:%d: function call '%s'\n", 
 		     fname, yylineno, text);
-	  fprintf (ftags, "call %s %s %d\n", 
-		   t->id, shortpath (t->file), t->line);
 	  break;
 	case TYPEDEF:
 	  if (debug)
 	    fprintf (stderr, "%s:%d: typedef reference '%s'\n", 
 		     fname, yylineno, text);
-	  fprintf (ftags, "call %s %s %d\n", 
-		   t->id, shortpath (t->file), t->line);
 	  break;
 	}
+	if (is_page (t->file))
+	  fprintf (ftags, "call %s %s %s\n", 
+		   t->id, shortpath (t->file), t->id);
+	else
+	  fprintf (ftags, "call %s %s %d\n", 
+		   t->id, shortpath (t->file), t->line);
+      }
     }
   }
 
@@ -151,9 +164,9 @@ ID     [a-zA-Z0-9_]
 SP     [ \t]
 WS     [ \t\v\n\f]
 ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
-BEGINCODE ^[SP]*[~]{3,}literatec[^\n]*\n
+BEGINCODE ^[SP]*[~]{3,}(c|literatec)[^\n]*\n
 ENDCODE   ^[SP]*[~]{3,}[^\n]*\n
-FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
+FDECL     {ID}+{SP}*\(
 
 %%
 
@@ -162,7 +175,7 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
     yylineno--;
     return yyerror ("code blocks cannot be nested");
   }
-  incode = somecode = 1;
+  incode = 1;
   if (myout) fputc ('\n', myout);
 }
 
@@ -171,6 +184,10 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
     incode = 0;
     if (myout) fputc ('\n', myout);
   }
+}
+
+\'.\' {
+  echo(); // quoted character
 }
 
 "{" {
@@ -251,19 +268,28 @@ FDECL  (^{ID}+{SP}+{ID}+{SP}*\([^)]*\){WS}*[{])
   bghosts = atoi(s);
 }
 
-^{ID}+{SP}+{ID}+{SP}*\( {
+^{SP}*{ID}+{SP}*\**({SP}+{ID}+{SP}*\**)*{SP}+{ID}+{SP}*\( {
   // function definition
   echo();
-  if (ftags) {
+  if (ftags && scope == 0) {
+    //    fprintf (stderr, "'%s'\n", yytext);
     char * s = yytext; int nl = 0;
-    while (*s != '\0') if (*s++ == '\n') nl++;
-    s = yytext; space(s); *s++ = '\0';
-    check_tag (yytext);
-    if (!keywords_only) {
-      nonspace(s); s[-1] = '\0';
-      char * s1 = s;
-      while (!strchr(" \t\v\n\f(", *s1)) s1++;
-      *s1++ = '\0';
+    int fstatic = 0;
+    s = strtok (s, " \t\v\n\f(");
+    char * id = s;
+    while (s) {
+#if 0 // ignore static functions
+      if (!strcmp (s, "static"))
+	fstatic = 1;
+#endif
+      id = s;
+      s = strtok (NULL, " \t\v\n\f(");
+      if (s)
+	check_tag (id);
+    }
+    s = id;
+    if (!fstatic && !keywords_only) {
+      //      fprintf (stderr, "id: '%s'\n", s);
       Tag t = { s, fname, yylineno - nl, FUNCTION};
       int p = 0, para = 1, c;
       while (para > p && (c = input()) != EOF) {
@@ -328,8 +354,13 @@ typedef{WS}+ {
   check_tag (yytext);
 }
 
-"/*"              { echo(); if ((!somecode || incode) && comment()) return 1; }
-"//".*            { echo(); /* consume //-comment */ }
+"/*"              { echo(); if (incode && comment()) return 1; }
+"//".*            {
+  if (!incode)
+    REJECT;
+  /* consume //-comment */
+  echo();
+}
 .                   echo();
 [\n]                echo();
 ({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+  echo(); /* STRING_LITERAL */
@@ -354,7 +385,7 @@ static int getput(void)
 static int comment(void)
 {
   int c, lineno = yylineno;
-  while ((c = getput()) != EOF) {
+  while ((c = getput())) {
     if (c == '*') {
       while ((c = getput()) == '*')
 	;
@@ -397,6 +428,15 @@ char * stripslash (char * path)
   return strip;
 }
 
+static int is_code (const char * file)
+{
+  // check whether file has a .c or .h extension
+  char * s = strstr (file, ".c");
+  if (!s)
+    s = strstr (file, ".h");
+  return s && (s[2] == '\0' || s[2] == '.');
+}
+
 static int include (char * file, FILE * fin, FILE * fout)
 {
   fname = stripslash (file);
@@ -406,12 +446,13 @@ static int include (char * file, FILE * fin, FILE * fout)
   yyin = fin;
   myout = fout;
   yylineno = 1;
-  incode = somecode = 0;
   scope = intypedef = 0;
   long header = fout ? ftell (fout) : 0;
+  incode = is_code (file);
+  //  yy_flex_debug = 1;
   int ret = yylex();
-  if (fout && !somecode) {
-    // no literate code block found, assume the entire file is pure code
+  if (fout && incode) {
+    // Assume the entire file is pure code
     fseek (fout, header, SEEK_SET);
     rewind (fin);
     char s[81];
@@ -585,7 +626,7 @@ int includes (int argc, char ** argv, char ** out,
     }
     target = 1;
     nout = compdir (file, out, 0, dir);
-    if (!hasgrid) {
+    if (!hasgrid && is_code (file)) {
       char * path, gridpath[80] = "grid/";
       strcat (gridpath, grid); strcat (gridpath, ".h");
       FILE * fp = openpath (gridpath, "r", &path);

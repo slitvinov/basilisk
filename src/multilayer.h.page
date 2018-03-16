@@ -69,7 +69,7 @@ $$
 \mathbf{Mu}_{n + 1} = \mathrm{rhs}
 $$
 where $\mathbf{M}$ is a 
-[tridiagonal matrix](https://en.wikipedia.org/wiki/Tridiagonal\tmrsub{m}atrix). 
+[tridiagonal matrix](https://en.wikipedia.org/wiki/Tridiagonal_matrix). 
 The lower, principal and upper diagonals are *a*, *b* and *c* respectively. */
 
 void vertical_viscosity (Point point, double h, vector * ul, double dt)

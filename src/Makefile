@@ -3,9 +3,9 @@ CFLAGS += -O2
 # these are not tests
 EXCLUDE = qcc.c include.c rotate.c qplot.c
 
-all: links qcc qplot libkdt draw_get.h
+all: links qcc qplot libkdt literatec draw_get.h
 	@chmod +x ppm2mpeg ppm2mp4 ppm2ogv ppm2gif runtest \
-		sequence bview.page bppm
+		sequence bview.page bppm page2html
 	@test -f xyz2kdt || ln -s kdt/xyz2kdt
 	@test -f kdtquery || ln -s kdt/kdtquery
 
@@ -13,6 +13,9 @@ bview-servers: bview-server2D bview-server3D bview2D bview3D
 
 libkdt:
 	cd kdt && make
+
+literatec:
+	cd plugins && make literate-c codeblock
 
 qcc: qcc.c include.o rotate.o config
 	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
@@ -82,6 +85,18 @@ alltags:
 
 etags:
 	etags *.h grid/*.h
+
+allhtml: alltags
+	for f in `find . -name '*.page'`; do 				\
+		( cd `dirname $$f` && make -f $(BASILISK)/Makefile.defs \
+			`basename $$f .page`.html ); 			\
+	done;
+
+checklinks:
+	$(LINKCHECKER) 	$(BASILISK_URL)/src/README.html 		\
+			$(BASILISK_URL)/src/test/README.html 		\
+			$(BASILISK_URL)/src/examples/README.html | 	\
+		tee checklinks.log
 
 changelog:
 	darcs changes > ChangeLog

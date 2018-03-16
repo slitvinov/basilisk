@@ -143,7 +143,7 @@
                   models and laboratory measurements},
   institution =  {Delft hydraulics laboratory},
   year = 	 {1994},
-  url =          {http://repository.tudelft.nl/assets/uuid:c2091d53-f455-48af-a84b-ac86680455e9/Dingemans1994.pdf}
+  url =          {https://repository.tudelft.nl/islandora/object/uuid:c2091d53-f455-48af-a84b-ac86680455e9/datastream/OBJ/download}
 }
 
 @Article{esteves2000,
@@ -466,7 +466,7 @@ booktitle = {Proceedings of the 7th Biennial Engineering Mathematics
                   and Applications Conference, EMAC-2005},
 editor = {Andrew Stacey  and Bill Blyth  and John Shepherd  and A. J. Roberts},
 month = {oct},
-url = {http://anziamj.austms.org.au/V47EMAC2005/Sampson}
+url = {https://journal.austms.org.au/ojs/index.php/ANZIAMJ/article/viewFile/1050/983}
 }
 
 @Article{synolakis1987,

@@ -154,7 +154,7 @@ operators (divergence etc...) can be obtained, for any orthogonal
 curvilinear coordinate system, using only a few additional geometric
 parameters.
 
-![Metric scale factors](/src/figures/metric.svg)
+![Metric scale factors](figures/metric.svg)
 
 The [face vector](/Basilisk C#face-and-vertex-fields) *fm* is the
 *scale factor* for the length of a face i.e. the physical length is

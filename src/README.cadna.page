@@ -4,7 +4,8 @@ The [CADNA](http://www-pequan.lip6.fr/cadna) (Control of Accuracy and
 Debugging for Numerical Applications) library estimates round-off
 errors in numerical simulations.
 
-See the documentation in [doc/ug_cadna.pdf](ug_cadna.pdf) in the CADNA
+See the documentation in
+[doc/ug_cadna.pdf](http://basilisk.fr/src/ug_cadna.pdf) in the CADNA
 [source code](http://cadna.lip6.fr/Download_Dir/register.php)
 distribution for details.
 
@@ -77,7 +78,8 @@ slower (10 to 100 times) than without CADNA.
 The [printf()](http://man7.org/linux/man-pages/man3/printf.3.html)
 formatting of the floating-point results is changed to reflect the
 number of significant digits, and CADNA diagnostics are written on
-standard output. See the [documentation](ug_cadna.pdf) for details.
+standard output. See the
+[documentation](http://basilisk.fr/src/ug_cadna.pdf) for details.
 
 ## Known bugs
 

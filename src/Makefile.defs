@@ -141,6 +141,22 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	$(CC) $(CFLAGS) -c $(MDFLAGS) -I$(PYTHONINCLUDE) $*_wrap.c
 	$(CC) -shared $*.o $*_wrap.o -o _$*.so
 
+# HTML
+%.html: %.page %.tags $(BASILISK)/Makefile.defs 	\
+		$(BASILISK)/templates/page.static 	\
+		$(BASILISK)/plugins/literate-c		\
+		$(BASILISK)/plugins/codeblock		\
+		$(BASILISK)/page2html
+	$(BASILISK)/page2html $<
+
+LINKCHECKER = linkchecker --no-warnings --no-status --anchors	\
+	--ignore-url='.*/$$'					\
+	--ignore-url='http://groups.google.com/'		\
+	--ignore-url='http://basilisk.fr/_'
+
+%.html.check: %.html
+	$(LINKCHECKER) -r 1 $<
+
 # generated makefiles
 Makefile.tests: Makefile $(BASILISK)/tests.sh
 	sh $(BASILISK)/tests.sh

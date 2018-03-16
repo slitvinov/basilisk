@@ -2,7 +2,7 @@
 # The complex Ginzburg--Landau equation
 
 The complex [Ginzburg--Landau
-equation](http://codeinthehole.com/static/tutorial/index.html)
+equation](http://codeinthehole.com/tutorial/index.html)
 $$
 \partial_t A = A + \left( 1 + i \alpha \right) \nabla^2 A - \left( 1 + i
 \beta \right)  \left| A \right|^2 A
@@ -123,11 +123,16 @@ For the value of $\beta$ we chose, we get a typical "frozen state"
 composed of "cellular structures" for $|A|^2$ and stationary spirals
 for $A_i$.
 
-|:------:|:-----:|
-| ![](ginzburg-landau/A2.mp4)(autoplay) | ![](ginzburg-landau/Ai.mp4)(autoplay) |
-| $|A|^2$                               |    $A_i$                              |
-
-  : Evolution of the norm and imaginary part
+<center><table>
+<tr>
+<td>![](ginzburg-landau/A2.mp4)(autoplay)</td>
+<td>![](ginzburg-landau/Ai.mp4)(autoplay)</td>
+</tr>
+<tr><td>$|A|^2$</td>  <td>$A_i$</td></tr>
+<caption>
+Evolution of the norm and imaginary part
+</caption>
+</table></center>
 
 ## See also
 

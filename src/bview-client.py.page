@@ -43,7 +43,7 @@ responds with images which are used to refresh the Tkinter window.
 * Center-mouse button + drag: zoom.
 * Mouse wheel: zoom.
 * '+' or '-' keys: zoom.
-* 'B' key: calls [*box()*](draw.h#displays-box-boundaries-and-axis-coordinates).
+* 'B' key: calls [*box()*](draw.h#box-displays-box-boundaries-and-axis-coordinates).
 * 'c' key: calls [*clear()*](draw.h#clear-removes-all-objects-previously-drawn).
 * 'l', 'r', 't', 'b', 'f', 'z', 'i' keys: changes view to 'left', 'right',
   'top', 'bottom', 'front', 'back', 'iso' respectively.

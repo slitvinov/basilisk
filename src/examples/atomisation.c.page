@@ -155,7 +155,7 @@ event movie (t += 1e-2)
 
 /**
 We save snapshots of the simulation at regular intervals to
-restart or to post-process with [bview](src/bview). */
+restart or to post-process with [bview](/src/bview). */
 
 event snapshot (t = 0.1; t += 0.1; t <= 3.8) {
   char name[80];
@@ -323,7 +323,7 @@ Note that this assumes that the gl libraries have been
 ## Results
 
 ![Atomisation of a pulsed liquid jet. 4096^3^ equivalent
- resolution.](/src/examples/atomisation/movie.mp4)(width="800" height="600")
+ resolution.](atomisation/movie.mp4)(width="800" height="600")
 
 The gain in number of grid points of the adaptive simulation (relative
 to a constant 4096^3^ Cartesian grid discretisation) is illustrated

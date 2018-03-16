@@ -61,7 +61,7 @@ done
 	sort | uniq | sed 's/\(.*\)/	\1 \\/g'
     echo ""
     echo "ALLPAGES = \\"
-    showfiles '[ch]\.page'
+    showfiles 'page'
     echo ""
 ) > Makefile.tests
 

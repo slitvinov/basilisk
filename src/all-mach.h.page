@@ -230,8 +230,8 @@ event pressure (i++, last)
   
   /**
   The Poisson--Helmholtz solver is called with a [definition of the
-  tolerance](poisson.h#377) identical to that used for incompressible
-  flows. */
+  tolerance](poisson.h#project) identical to that used for
+  incompressible flows. */
   
   mgp = poisson (p, rhs, alpha, lambda, tolerance = TOLERANCE/sq(dt));
 

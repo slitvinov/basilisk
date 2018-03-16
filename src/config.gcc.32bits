@@ -17,4 +17,4 @@ PNG = pngcairo
 
 # configuration for python modules (requires swig)
 MDFLAGS = -fpic
-PYTHONPATH = /usr/include/python2.7
+PYTHONINCLUDE = /usr/include/python2.7

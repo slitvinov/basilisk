@@ -12,6 +12,7 @@ set logscale
 set xrange [32:512]
 set xtics 32,2,512
 set grid ytics
+set cbrange [1:2]
 plot 'log' u 1:4 t 'max', 'log' u 1:2 t 'norm1', exp(f(log(x))) t ftitle(a,b), exp(f2(log(x))) t ftitle(a2,b2)
 
 if (batch) set term @PNG; set output "error.png"; else pause -1;

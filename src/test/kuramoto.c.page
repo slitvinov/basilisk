@@ -2,7 +2,7 @@
 # Kuramoto--Sivashinsky equation
 
 [Duchemin et Eggers, JCP 263, 37--52,
-2014](http://www2.maths.bris.ac.uk/~majge/1-s2.0-S0021999114000400-main.pdf),
+2014](http://research-information.bristol.ac.uk/files/55958431/stiff_revision2_nored.pdf),
 section 6 propose to use their "Explicit-Implicit-Null" method to solve
 the Kuramoto--Sivashinsky equation
 $$

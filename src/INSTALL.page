@@ -133,7 +133,7 @@ You will need [SWIG](http://www.swig.org/) which can easily be installed with
 sudo apt-get install swig
 ~~~
 
-You also need to setup the *MDFLAGS* and *PYTHONPATH* variables in your
+You also need to setup the *MDFLAGS* and *PYTHONINCLUDE* variables in your
 *config* file.
 
 ## Getting started

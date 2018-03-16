@@ -1,15 +1,13 @@
 # Profiling with Paraver
 
 Basilisk can be compiled to generate execution traces which can be
-analyzed with
-[Paraver](http://www.bsc.es/computer-sciences/performance-tools/paraver).
+analyzed with [Paraver](https://tools.bsc.es/paraver).
 
 ## Extrae installation
 
-Traces are generated using the
-[Extrae](http://www.bsc.es/computer-sciences/extrae) library which
-needs to be installed on the system. See the [Extrae
-documentation](http://www.bsc.es/computer-sciences/performance-tools/trace-generation/extrae/extrae-user-guide)
+Traces are generated using the [Extrae](https://tools.bsc.es/extrae)
+library which needs to be installed on the system. See the [Extrae
+documentation](https://tools.bsc.es/sites/default/files/documentation/pdf/extrae-3.5.2-user-guide.pdf)
 for a detailed description of installation. On a Debian-like system,
 the following can help you.
 
@@ -42,7 +40,7 @@ CFLAGS="-DTRACE=1 -I$EXTRAE_HOME/include" \
 ~~~
 
 For an MPI test case, use `-lmpitrace` instead. See the [Extrae
-documentation](http://www.bsc.es/computer-sciences/performance-tools/trace-generation/extrae/extrae-user-guide)
+documentation](https://tools.bsc.es/sites/default/files/documentation/pdf/extrae-3.5.2-user-guide.pdf)
 for detailed explanations. The doc is also in
 `$EXTRAE_HOME/share/doc/user-guide.pdf`.
 
@@ -51,15 +49,14 @@ After the run, several files are generated (e.g. `bump2D/bump2D.prv`,
 
 To get you started with Paraver, several configuration files are
 provided in `$BASILISK/paraver`. You should also install and do the
-useful
-[tutorials](http://www.bsc.es/computer-sciences/performance-tools/downloads).
+useful [tutorials](https://tools.bsc.es/tutorial_guidelines).
 
 ## Paraver installation
 
 Paraver should be installable from source, however it does not seem to
 work with recent versions of wxwidget (see below). Binaries for
 various operating systems are available for
-[download](http://www.bsc.es/computer-sciences/performance-tools/downloads).
+[download](https://tools.bsc.es/downloads).
 
 This is the script which eventually fails on Debian 8.
 
