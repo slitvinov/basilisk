@@ -106,7 +106,7 @@ the following conventions:
    also true of comment/documentation blocks. Note that emacs will
    automatically reformat long paragraphs of text if you use ESC-q.
 
-3. Comments starting with /** are assumed to be formatted using the
+3. Comments starting with "/**" are assumed to be formatted using the
    [wiki markdown](/Help#markdown) syntax. Please respect/use
    this. They are meant to be written using
    grammatically/typographically correct sentences i.e. starting with

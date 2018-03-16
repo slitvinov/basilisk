@@ -467,6 +467,12 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     output_s (yytext);
 }
 
+({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+  {
+  /* STRING_LITERAL */
+  if (!yyextra->gnuplot)
+    output_s (yytext);
+}
+
 %%
 
 static void revert (char * src, char * bak)
