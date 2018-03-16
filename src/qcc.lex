@@ -2773,7 +2773,7 @@ int yyerror (const char * s)
 int comment(void)
 {
   int c;
-  while ((c = getput()) != 0) {
+  while ((c = getput())) {
     if (c == '*') {
       while ((c = getput()) == '*')
 	;

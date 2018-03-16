@@ -1,7 +1,7 @@
 CFLAGS += -O2
 
 # these are not tests
-EXCLUDE = qcc.c include.c rotate.c qplot.c
+EXCLUDE = qcc.c include.c rotate.c qplot.c bview-server.c
 
 all: links qcc qplot libkdt literatec draw_get.h
 	@chmod +x ppm2mpeg ppm2mp4 ppm2ogv ppm2gif runtest \
