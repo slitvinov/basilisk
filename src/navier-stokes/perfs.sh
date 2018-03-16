@@ -16,5 +16,5 @@ if scp -q $path . && test -f perfs; then
 	    $BASILISK/navier-stokes/perfs.plot &
     host=`echo $path | sed 's/:.*$//'`
     file=`echo $path | sed 's/^.*://'`
-    ssh $host tail -f $file >> perfs
+    ssh -n $host tail -f $file >> perfs
 fi
