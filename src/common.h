@@ -719,10 +719,11 @@ void mpi_init()
 {
   int initialized;
   MPI_Initialized (&initialized);
-  if (!initialized) 
+  if (!initialized) {
     MPI_Init (NULL, NULL);
-  MPI_Comm_set_errhandler (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
-  atexit (finalize);
+    MPI_Comm_set_errhandler (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+    atexit (finalize);
+  }
   MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
   MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
   srand (mpi_rank + 1);
@@ -813,7 +814,7 @@ static void set_fpe (void) {
   memcpy (&undefined, &lnan, sizeof (double));
   enable_fpe (FE_DIVBYZERO|FE_INVALID);
 }
-@else
+@else // !((_GNU_SOURCE || __APPLE__) && !_OPENMP && !_CADNA)
 @  define undefined ((double) DBL_MAX)
 @  define enable_fpe(flags)
 @  define disable_fpe(flags)
