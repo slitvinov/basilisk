@@ -17,9 +17,31 @@ main distribution using the following workflow:
    [add a test case](test/README#running-and-creating-test-cases-and-examples),
    [run the test suite](test/README#running-and-creating-test-cases-and-examples).
 5. If you created new files, add them to the distribution using `darcs add`.
-6. Review and record the changes using `darcs record`.
-7. If you are still not happy with your patch, you can go back
+6. Check that your code follows the
+   [coding style guidelines](#coding-style-guidelines).
+7. Review and record the changes using `darcs record`.
+8. If you are still not happy with your patch, you can go back
    to 1. and use `darcs amend` to modify it until your are satistfied.
+
+Note that, for consistency, the patch title should start with a capital
+and also be reasonably descriptive. Avoid titles such as "Modified
+this file", we (through darcs) already know which files are modified
+by the patch, rather you should explain concisely what the patch does. Use
+
+~~~bash
+darcs changes | more
+~~~
+
+to see examples of patch titles and summary.
+
+Also for consistency, your identity/authorship should be something
+like:
+
+~~~
+Joe Bloggs <joe.bloggs@foo.net>
+~~~
+
+You can change it by editing the `$HOME/.darcs/author` file.
 
 You are then ready to submit your patch. You have two options: a
 simple one (email) and a more systematic one (publishing your repo).
@@ -67,3 +89,42 @@ mailing list if you are happy with it. Note that much more complex
 patches (for multiple files and directories etc.) can be
 generated. See the many online tutorials if you want to know more
 about patching.
+
+# Coding style guidelines
+
+Before submitting new patches, please check that your code verifies
+the following conventions:
+
+1. It is indented properly. You should (must!) use a text editor which
+   does this automatically. The standard indentation is two
+   spaces. This is the default in emacs for example. In emacs you can
+   easily indent/reindent an entire block of code by selecting it
+   (with Ctrl-space or the mouse) and hitting the TAB key.
+
+2. Lines are not longer than 80 characters. If necessary reformat the
+   code by cutting lines in logical places to make them fit. This is
+   also true of comment/documentation blocks. Note that emacs will
+   automatically reformat long paragraphs of text if you use ESC-q.
+
+3. Comments starting with /** are assumed to be formatted using the
+   [wiki markdown](/Help#markdown) syntax. Please respect/use
+   this. They are meant to be written using
+   grammatically/typographically correct sentences i.e. starting with
+   capitals, ending with ., with a subject and a verb, proper spelling
+   etc. This is what
+   [literate programming](https://en.wikipedia.org/wiki/Literate_programming)
+   is about.
+   
+4. Check that your code 'fits in' stylistically with the existing code
+   i.e. look around and copy what you see!. In particular, the
+   Basilisk convention is to use "natural" punctuation/spaces. For
+   example, commas are always followed by a space and opening and
+   closing parenthesis are preceded (resp. followed) by a space. For
+   readability, the '+' and '-' operators are preceded and followed by
+   a space, but the '*' and '/' operators are not.
+
+This may seem like nitpicking but think how disagreable it is to read
+a text which is full of spelling mistakes and/or typographic
+errors. The same holds for code and, with some discipline (which is
+also generally useful when programming...) and some training,
+following the conventions above is not difficult.
