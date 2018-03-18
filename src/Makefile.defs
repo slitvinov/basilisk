@@ -113,7 +113,8 @@ clean:
 	rm -f $(subst $(BASILISK_WIKI),$(BASILISK_WIKI)/cache,$(PWD))/$<
 
 %.itags: %.tags $(subst .page,.tags,$(ALLPAGES)) $(BASILISK)/includedin.sh
-	sh $(BASILISK)/includedin.sh $(subst .tags,,$<) > $@
+	sh $(BASILISK)/includedin.sh $* > $@
+	rm -f $*.html
 	( ! test -d $(BASILISK_WIKI)/cache ) || \
 	rm -f $(subst $(BASILISK_WIKI),$(BASILISK_WIKI)/cache,$(PWD))/$(subst .tags,.page,$<)
 

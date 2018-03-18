@@ -215,9 +215,9 @@ tar czvf curie.tgz out-*-*
 ## Results on Curie
 
 The memory usage per core is given below. The curves are a model (see
-[mpi-laplacian.plot]() for details). The increase for a large number
-of cores corresponds to the memory overhead of communication buffers
-etc...
+[mpi-laplacian.plot](mpi-laplacian.plot) for details). The increase
+for a large number of cores corresponds to the memory overhead of
+communication buffers etc...
 
 ![Memory usage on Curie](curie/memory.png)
 

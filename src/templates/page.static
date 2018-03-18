@@ -165,7 +165,7 @@ $body$
   <fieldset>
     <legend>This page</legend>
     <ul>
-      <li><a href="$pageUrl$.page">Raw page source</a></li>
+      <li><a href="/_showraw$pageUrl$">Raw page source</a></li>
     </ul>
   </fieldset>
 </div>

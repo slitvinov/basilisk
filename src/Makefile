@@ -93,9 +93,15 @@ allhtml: alltags
 	done;
 
 checklinks:
-	$(LINKCHECKER) 	$(BASILISK_URL)/src/README.html 		\
-			$(BASILISK_URL)/src/test/README.html 		\
-			$(BASILISK_URL)/src/examples/README.html | 	\
+	$(LINKCHECKER) 	$(BASILISK_URL)/src/README 		\
+			$(BASILISK_URL)/src/test/README 	\
+			$(BASILISK_URL)/src/examples/README | 	\
+		tee checklinks.log
+
+checklinksfast:
+	wget --spider -nd -nv -r $(BASILISK_URL)/src/README 		\
+			$(BASILISK_URL)/src/test/README 		\
+			$(BASILISK_URL)/src/examples/README 2>&1 | 	\
 		tee checklinks.log
 
 changelog:
