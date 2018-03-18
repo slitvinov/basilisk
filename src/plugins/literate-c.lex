@@ -370,7 +370,8 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
 	  }
 	  if (n == 3)
 	    break;
-	  for (int i = 0; i < n; i++)
+	  int i;
+	  for (i = 0; i < n; i++)
 	    fputc ('~', fp);
 	  if (res)
 	    fputc (b, fp);
