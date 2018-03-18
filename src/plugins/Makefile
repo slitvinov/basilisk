@@ -18,6 +18,9 @@ literate-c: literate-c.c
 codeblock: codeblock.c
 	$(CC) -g -O2 -DSTANDALONE=1 codeblock.c -o codeblock
 
+codeblock-test: codeblock.c
+	$(CC) -g -O2 -DTEST=1 codeblock.c -o codeblock-test
+
 clean:
 	rm -f *.o
 

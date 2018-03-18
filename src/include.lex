@@ -288,7 +288,7 @@ FDECL     {ID}+{SP}*\(
 	check_tag (id);
     }
     s = id;
-    if (!fstatic && !keywords_only) {
+    if (!fstatic && !keywords_only && strcmp(s, "if")) {
       //      fprintf (stderr, "id: '%s'\n", s);
       Tag t = { s, fname, yylineno - nl, FUNCTION};
       int p = 0, para = 1, c;

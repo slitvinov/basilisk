@@ -294,12 +294,15 @@ WS  [ \t\v\n\f]
 
 "}" {
   echo();
-  if (!yyextra->scope) {
+  yyextra->scope--;
+  if (yyextra->scope < 0) {
+#if STANDALONE
     puts (yyextra->output);
     fprintf (stderr, "codeblock: %s: error: mismatched '}'\n", yyextra->page);
     exit (1);
+#endif
+    yyextra->scope = 0;
   }
-  yyextra->scope--;
 }
 
 "<img src=\""[^\"]+\" |
@@ -521,10 +524,15 @@ char * codeblock (char * s, char * page)
   return sdata.output;
 }
 
-#if STANDALONE
+#if STANDALONE || TEST
 static void usage () {
+#if STANDALONE
   fprintf (stderr,
 	   "usage: codeblock BASEURL FILE.[ch] [EXT] < FILE.[ch].html\n");
+#else // TEST
+  fprintf (stderr,
+	   "usage: codeblock BASEURL FILE.[ch] < FILE.markdown\n");
+#endif
   exit (1);
 }
 
@@ -533,9 +541,12 @@ int main (int argc, char * argv[])
   if (argc < 3)
     usage();
   char * name = argv[2];
+
+#if STANDALONE
   baseurl = argv[1];
   if (argc >= 4)
     ext = argv[3];
+#endif
   
 #define BUF_SIZE 1024
   char buffer[BUF_SIZE];
