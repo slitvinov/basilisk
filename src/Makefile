@@ -99,7 +99,9 @@ checklinks:
 		tee checklinks.log
 
 checklinksfast:
-	wget --spider -nd -nv -r $(BASILISK_URL)/src/README 		\
+	wget --spider -nd -nv -r					\
+		-X sandbox						\
+			$(BASILISK_URL)/src/README 			\
 			$(BASILISK_URL)/src/test/README 		\
 			$(BASILISK_URL)/src/examples/README 2>&1 | 	\
 		tee checklinks.log

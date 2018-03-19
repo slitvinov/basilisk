@@ -298,8 +298,7 @@ WS  [ \t\v\n\f]
   if (yyextra->scope < 0) {
 #if STANDALONE
     puts (yyextra->output);
-    fprintf (stderr, "codeblock: %s: error: mismatched '}'\n", yyextra->page);
-    exit (1);
+    fprintf (stderr, "warning: %s: error: mismatched '}'\n", yyextra->page);
 #endif
     yyextra->scope = 0;
   }

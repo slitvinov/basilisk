@@ -196,8 +196,13 @@ FDECL     {ID}+{SP}*\(
 
 "}" {
   scope--;
-  if (scope < 0)
-    return yyerror ("mismatched '}'");
+  if (scope < 0) {
+    if (!ftags)
+      return yyerror ("mismatched '}'");
+    else
+      fprintf (stderr, "%s:%d: warning: mismatched '}'\n", fname, yylineno);
+    scope = 0;
+  }
 }
 
 ^{SP}*#{SP}*include{SP}+<.*>{SP}*\n {
