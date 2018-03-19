@@ -37,7 +37,7 @@ i.e. www-data can now both write/overwrite in $BASILISK.
 
 ~~~bash
 sudo apt-get install apache2-suexec-custom
-sudo a2enmod suexec
+sudo a2enmod suexec proxy_http
 sudo chmod 755 $BASILISK/cgi-bin
 sudo chmod 700 $BASILISK/cgi-bin/page2html
 sudo chmod 700 $BASILISK/cgi-bin/ch2html
