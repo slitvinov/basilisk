@@ -69,7 +69,7 @@ cpostproc()
     # add anchors since the .lineAnchors does not seem to work
     # with pandoc 1.17.2
     sed -e 's|<pre>1$|<pre><a id="1" href="#1">1</a>|' \
-	-e 's|^\([0-9]*\)$|<a id="\1" href="#\1">\1</a>|g'
+	-e 's|^ *\([0-9]*\)$|<a id="\1" href="#\1">\1</a>|g'
 }
 
 pagepreproc()
