@@ -184,6 +184,7 @@ WS  [ \t\v\n\f]
 }
 
 \&quot;({ID}|[-/])+\.h\&quot; |
+">"#{SP}*include{SP}+\".*\""<" |
 ^{SP}*#{SP}*include{SP}+\".*\" {
   if (!INCODE())
     REJECT;
