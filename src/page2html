@@ -102,6 +102,7 @@ $PREPROC | pandoc -f markdown -s --mathml --smart --toc --preserve-tabs  \
 	   -V sitenav=true					\
 	   -V pagetools=true					\
 	   -V usecache=true					\
+	   -V tabs=true                                         \
 	   --template=$BASILISK/templates/page.static	 	\
     | sed 's/__ESCAPEDDOLLAR__/$$/g'			        \
     | $POSTPROC > $target
