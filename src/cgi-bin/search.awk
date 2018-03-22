@@ -1,4 +1,4 @@
-function shortline(line, string)
+function shortline(line, string,     i,j)
 {
     i = match(line, string)
     j = i + length(string) - 60
@@ -10,6 +10,9 @@ function shortline(line, string)
 }
     
 BEGIN {
+    nf = 0
+    N = 0
+    oldfile = ""
 }
 {
     file = $0
@@ -17,17 +20,24 @@ BEGIN {
     sub(/^\./, "", file)
     line = $0
     sub(/^[^:]*:/, "", line)
-    files[file] = file;
+    if (file != oldfile) {
+	files[nf++] = file;
+	n[file] = 0;
+    }
+    oldfile = file;
     lines[file][n[file]] = line;
     n[file]++;
+    N++;
 }
 END {
-    N = 0
-    for (file in files)
-	N += n[file];
-    print "### " N " matches found for <span id=pattern>" string "</span>";
+    if (N >= 2000)
+	print "### More than " N " matches found for <span id=pattern>" \
+	    string "</span>";
+    else
+	print "### " N " matches found for <span id=pattern>" string "</span>";
     print "<ol>"
-    for (file in files) {
+    for (i = 0; i < nf; i++) {
+	file = files[i]
 	short = file
 	sub(/\.page$/, "", short)
 	veryshort = short
@@ -41,11 +51,11 @@ END {
 	print "<li><a href=\"" short "\">" veryshort \
 	    "</a> (" n[file] " matching lines)"
 	print "<pre class=matches style=\"\">"
-	for (line in lines[file]) {
-	    highlighted = shortline(lines[file][line], string);
-	    gsub(string, "<span class=highlighted>" string "</span>",
-		 highlighted)
-	    print highlighted
+	for (j = 0; j < n[file]; j++) {
+	    line = lines[file][j];
+	    highlighted = shortline(line, string);
+	    print gensub(string, "<span class=highlighted>\\0</span>",
+			 "g", highlighted)
 	}
 	print "</pre></li>"
     }
