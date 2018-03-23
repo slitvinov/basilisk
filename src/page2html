@@ -50,8 +50,8 @@ case $PWD in
 	title=`echo $PWD | sed "s|$BASILISK|src|"`/
 	;;
 esac
-title=$title$basename
-url=/$title
+url=/$title$basename
+title=$title`echo $basename | sed 's/%20/ /g'`
 
 if test -z "$BASILISK_URL"; then
     BASILISK_URL="http://basilisk.fr"
@@ -96,8 +96,8 @@ esac
 $PREPROC | pandoc -f markdown -s --mathml --smart --toc --preserve-tabs  \
 	   -V wikititle=Basilisk				\
 	   -V base=http://basilisk.fr				\
-	   -V pageUrl=$url			                \
-	   -V pagetitle=$title 			                \
+	   -V pageUrl="$url"			                \
+	   -V pagetitle="$title" 			        \
 	   -V wikiupload=true					\
 	   -V sitenav=true					\
 	   -V pagetools=true					\
