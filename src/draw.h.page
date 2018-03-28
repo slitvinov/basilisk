@@ -1016,15 +1016,19 @@ void travelling (struct _travelling p)
 #undef interpo
 
 /**
-   # *draw_string()*: draws strings on a separate
-   layer. Arguments: str: string, fg: vector of foreground
-   color (RGB), pos: position, 0 bottom left, 1 top left,
-   2 top right, 3 bottom right (default 0) */
+# *draw_string()*: draws strings on a separate layer (for annotations).
+
+* *str*: string to be used. 
+* *lc*: vector of line (foreground) color (RGB).   
+* *pos*: position code (default 0)
+
+Codes for string positions are: "0" bottom left, "1" top left,
+   "2" top right and "3" bottom right (default 0) */
 
 
 struct _draw_string {
   char * str;
-  float fg[3];
+  float lc[3];
   int  pos;
 };
 
@@ -1037,34 +1041,34 @@ bool draw_string(struct _draw_string p)
   float xscale = 0.9*0.025*L0/aspect;
   float yscale = 0.8*0.05*L0/aspect;
   float zscale = 1.;
-    
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();             
-    glLoadIdentity(); 
-    glOrtho( 0, width, 0, height, -1, 1 );
 
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-    
-    glColor3f(p.fg[0],p.fg[1],p.fg[2]);//colors
+  glMatrixMode(GL_PROJECTION);
+  glPushMatrix();             
+  glLoadIdentity();  
+  glOrtho( -1.0f, width, -1.0f, height, -10.0f, 10.0f );
 
-    if (p.pos == 1)
-      glTranslatef(0.01*width,0.97*height,0.); //TL
-    else if (p.pos == 2)      
-      glTranslatef(0.9*width-1.6*strlen(p.str),0.97*height,0.); //TR
-    else if (p.pos == 3)
-      glTranslatef(0.9*width-1.6*strlen(p.str),0.02*height,0.); //BR
-    else
-      glTranslatef(0.01*width,0.02*height,0.); //BL      
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
     
-    glScalef (xscale, yscale, zscale);
-    gl_StrokeString(p.str); 
+  glColor3f(p.lc[0],p.lc[1],p.lc[2]);
+  
+  if (p.pos == 1)
+    glTranslatef(0.01*width,0.97*height,0.); 
+  else if (p.pos == 2)      
+    glTranslatef(0.9*width-1.6*strlen(p.str),0.97*height,0.); 
+  else if (p.pos == 3)
+    glTranslatef(0.9*width-1.6*strlen(p.str),0.02*height,0.); 
+  else
+    glTranslatef(0.01*width,0.02*height,0.); 
     
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();  
+  glScalef (xscale, yscale, zscale);
+  gl_StrokeString(p.str); 
+    
+  glMatrixMode(GL_MODELVIEW);
+  glPopMatrix();
+  glMatrixMode(GL_PROJECTION);
+  glPopMatrix();  
 
   return true;
 }
