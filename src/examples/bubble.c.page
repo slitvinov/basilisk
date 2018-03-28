@@ -62,14 +62,16 @@ tension coefficient.
 
 We consider two bubbles studied by Cano-Lozano et al, 2016. */
 
-#if 1
+#if BUBBLE19
 // Bubble 19 of Cano-Lozano et al, P.R.Fluids, 2016
 # define Ga 100.8
 # define Bo 4.
+# define MAXTIME 82
 #else
 // Bubble 26 of Cano-Lozano et al, P.R.Fluids, 2016
 # define Ga 100.25
 # define Bo 10.
+# define MAXTIME 110
 #endif
 
 /**
@@ -82,7 +84,6 @@ maximum time for the simulation comparable to the domain size. */
 #define WIDTH 120.0
 #define Z0 3.5
 int LEVEL = 12;
-#define MAXTIME WIDTH
 
 /**
 The main function can take two optional parameters: the maximum level
@@ -206,11 +207,14 @@ event snapshot (t = 1; t <= MAXTIME; t++)
 /**
 We make a movie of the trailing wake and bubble shape. */
 
-event movie (t = 21; t <= 82; t += 0.25)
+event movie (t = 21; t <= MAXTIME; t += 0.25)
 {
+
+#if BUBBLE19
+  
   view (fov = 5.0278, quat = {-0.132839,0.513023,0.0748175,0.844727},
 	tx = 0.00149469, ty = -0.355489, width = 300, height = 800);
-
+  
   /**
   For $50 < t < 60$ we do a tracking shot from the initial camera
   position (above) to a new position, following and zooming on the
@@ -223,6 +227,19 @@ event movie (t = 21; t <= 82; t += 0.25)
   
   travelling (60, 82, tx = 0.00898601, ty = -0.703841);
 
+#else // BUBBLE26
+
+  /**
+  The viewing parameters are different for bubble 26. */
+
+  view (fov = 5.0278, quat = {-0.0487657,0.654023,0.0506598,0.7532},
+	tx = -0.00353642, ty = -0.302285, width = 300, height = 800);
+
+  travelling (50, 60, fov = 2.07254, tx = -0.0022909, ty = -0.402237);
+
+  travelling (60, 110, tx = -0.00644264, ty = -0.741016);
+#endif
+  
   /**
   We use a different color for the bubble interface and for the
   isosurface. */
@@ -279,25 +296,45 @@ plot [0:80]'bubble.19' u 1:($7*100.8) w l t 'bubble 19', \
 The trajectories of the center of gravity of the bubble reveal the two
 regimes.
 
-~~~gnuplot Zig-zag trajectory for bubble 19
+<table>
+<tr>
+<td>
+~~~gnuplot
 unset grid
 set term PNG size 480,640
 set xlabel 'x'
 set ylabel 'y'
 set zlabel 'z'
 set xyplane 0
-splot [-0.6:0.6][-0.6:0.6]'bubble.19' u 3:5:4 w l t ''
+splot [-0.7:0.7][-0.7:0.7]'bubble.19' u 3:5:4 w l t ''
 ~~~
-
-~~~gnuplot Spiralling trajectory for bubble 26
-splot [-0.6:0.6][-0.6:0.6]'bubble.26' u 3:5:4 w l t ''
+</td>
+<td>
+~~~gnuplot
+splot [-0.7:0.7][-0.7:0.7]'bubble.26' u 3:5:4 w l t ''
 ~~~
+</td>
+</tr>
+<tr>
+<td><center>Zig-zag trajectory for bubble 19</center></td>
+<td><center>Spiralling trajectory for bubble 26</center></td>
+</tr>
+</table>
 
 On the movies below, the bubble interface is in dark blue and the
 white surface is the $\lambda_2$ isosurface showing vortical
 structures.
 
--------------------------------------------------------------- -------------------------------------------------------------------
- ![Zig-zag regime. $Ga=100.8$, $Bo=4$.](bubble/bubble.19.gif)   ![Spiralling regime. $Ga=100.25$, $Bo=10$.](bubble/bubble.26.gif)
-
+<center>
+<table>
+<tr>
+<td>
+![Zig-zag regime. $Ga=100.8$, $Bo=4$.](bubble/bubble.19.mp4)(autoplay loop)
+</td>
+<td>
+![Spiralling regime. $Ga=100.25$, $Bo=10$.](bubble/bubble.26.mp4)(autoplay loop)
+</td>
+</tr>
+</table>
+</center>
 */
