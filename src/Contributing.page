@@ -128,3 +128,139 @@ a text which is full of spelling mistakes and/or typographic
 errors. The same holds for code and, with some discipline (which is
 also generally useful when programming...) and some training,
 following the conventions above is not difficult.
+
+# Markdown documentation
+
+The Basilisk wiki uses [pandoc](https://pandoc.org/) to generate HTML
+pages from the documented source files. Markdown is a fairly common
+and quite simple text formatting language. Most of the common text
+formatting objects are available: headings, bold, italics, lists,
+tables, figures, code listings etc. A useful extension provided by
+pandoc is the [support](https://pandoc.org/MANUAL.html#math) for
+mathematical expressions written in TeX. Have a look at the extensive
+[pandoc Markdown manual](https://pandoc.org/MANUAL.html#pandocs-markdown)
+for details.
+
+In addition to what is available in pandoc, Basilisk also provides
+support for [inline plots](test/README#inline-plots).
+
+## Generating local HTML pages
+
+Documented source files included in patches pushed to the wiki will
+automatically be rendered as HTML. Before pushing a patch, it is
+important to check that the Mardown documentation is formatted and
+renders properly in HTML (and also that links to images and other
+content are not broken etc.).
+
+A simple, but cumbersome way to do this is to cut-and-paste the entire
+source file into a temporary page, created using the web interface of
+the wiki, and use the "Preview" button. Repeat until satisfied and
+then cut-and-paste from the web interface back into the local
+file. Then use the "Cancel" button.
+
+A better way to do this is to generate a local HTML file and open it
+with your web browser. To do this, you first need to
+[install pandoc](https://pandoc.org/installing.html). If you want to
+use BiBTeX-style references (see
+[this example](examples/swasi.c#references)), you will also need to
+install [bibtex2html](https://www.lri.fr/~filliatr/bibtex2html/). If
+you are using a Debian-like system, just do:
+
+~~~bash
+sudo apt-get install pandoc bibtex2html
+~~~
+
+As an exercise, we will generate the documentation for a simple test
+case: [Oscillations in a parabolic container](test/parabola.c). We
+first run the test case using:
+
+~~~bash
+cd $BASILISK/test
+make parabola.tst
+~~~
+
+which should return either
+
+~~~
+make: `parabola.tst' is up to date.
+~~~
+
+or
+
+~~~
+qcc -autolink -g -Wall ... parabola.c -lm
+qcc -autolink -g -Wall ... parabola-explicit.c -lm
+[parabola-explicit.tst]
+[parabola.tst]
+~~~
+
+We then generate the corresponding
+[inline plots](test/README#inline-plots) using:
+
+~~~bash
+make parabola/plots
+~~~
+
+Finally, we generate the HTML page using:
+
+~~~bash
+make parabola.c.html
+~~~
+
+The HTML file can then be rendered using e.g.
+
+~~~bash
+firefox parabola.c.html
+~~~
+
+Once the file is opened in the web browser, one can repeat the steps
+above and use the "Reload" button of the browser to refresh the
+rendering. Plugins such as
+[Firefox Auto Reload](https://addons.mozilla.org/fr/firefox/addon/auto-reload/)
+can also be used to automate this step.
+
+## Emacs Basilisk mode
+
+If you are using [emacs](https://www.gnu.org/software/emacs/) (if not
+you should!), you can use the [Basilisk mode](basilisk-mode.el) to
+automate many of the steps above and benefit from a better interface
+to edit both the C code and Markdown documentation.
+
+To install it, you will need both
+[mmm-mode](https://github.com/purcell/mmm-mode) and
+[markdown-mode](https://jblevins.org/projects/markdown-mode/), which
+are easily installable on Debian-like systems using:
+
+~~~bash
+sudo apt-get install mmm-mode elpa-markdown-mode
+~~~
+
+Then add the following to your `.emacs` (or `.emacs.d/init.el`) file:
+
+~~~commonlisp
+;; Use markdown-mode for .page files
+(add-to-list 'auto-mode-alist '("\\.page\\'" . markdown-mode))
+
+;; Basilisk mode
+(add-to-list 'load-path "$BASILISK")
+(require 'basilisk-mode)
+~~~
+
+where you need to manually replace `$BASILISK` with the corresponding path.
+
+Restart emacs and open [test/parabola.c](test/parabola.c). This should
+use the standard C-mode by default. To switch to Basilisk mode just
+type
+
+~~~bash
+Esc-x basilisk-mode
+~~~
+
+The Mardown-formatted comments should now use a different background
+color. The emacs mode menus will also change depending on where the
+cursor is positioned.
+
+To generate the HTML page and open it in your web browser, just move
+the cursor within a Markdown comment block and hit F8. To refresh the
+HTML page hit F9 and use the "Reload" button of your web browser (or
+the F5 or Ctrl-R keys within the web browser).

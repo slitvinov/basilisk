@@ -3,7 +3,7 @@
 usage()
 {
     cat <<EOF
-usage: page2html -url URL -ext EXT FILE.([ch]|page)
+usage: page2html -url URL -ext EXT -refresh SEC FILE.([ch]|page)
 
   If -url is not specified it is set $BASILISK_URL (if defined) or to
   http://basilisk.fr
@@ -14,6 +14,7 @@ EOF
 }
 
 ext=""
+refresh=""
 while test $# -gt 0; do
     case $1 in
 	-url)
@@ -23,6 +24,10 @@ while test $# -gt 0; do
 	-ext)
 	    shift
 	    ext="$1"
+	    ;;
+	-refresh)
+	    shift
+	    refresh="-V refresh=$1"
 	    ;;
 	-*)
 	    usage
@@ -42,16 +47,29 @@ if test ! -f $page; then
     exit 1
 fi
 
+if test -f $page.page; then
+    page=$page.page
+fi
+
 basename=`echo $page | sed 's/\.page$//'`
-target=$basename.html
 title=""
 case $PWD in
     $BASILISK*)
 	title=`echo $PWD | sed "s|$BASILISK|src|"`/
 	;;
 esac
-url=/$title$basename
-title=$title`echo $basename | sed 's/%20/ /g'`
+case $basename in
+    /*)
+	basename=`basename $basename`
+	page=`basename $page`
+	url=$basename
+	title=`echo $url | sed 's/%20/ /g'`
+	;;
+    *)
+	url=/$title$basename
+	title=$title`echo $basename | sed 's/%20/ /g'`
+	;;
+esac
 
 if test -z "$BASILISK_URL"; then
     BASILISK_URL="http://basilisk.fr"
@@ -93,7 +111,15 @@ case $page in
 	;;
 esac
 
-$PREPROC | pandoc -f markdown -s --mathml --smart --toc --preserve-tabs  \
+# Test whether pandoc supports the --smart option
+if echo "" | pandoc --smart > /dev/null 2>&1; then
+    PANDOC="pandoc -f markdown --smart"
+else 
+    # assumes it works like this (i.e. it is a recent version)
+    PANDOC="pandoc -f markdown+smart"
+fi
+
+$PREPROC | $PANDOC -s --mathml --toc --preserve-tabs            \
 	   -V wikititle=Basilisk				\
 	   -V base=http://basilisk.fr				\
 	   -V pageUrl="$url"			                \
@@ -103,7 +129,7 @@ $PREPROC | pandoc -f markdown -s --mathml --smart --toc --preserve-tabs  \
 	   -V pagetools=true					\
 	   -V usecache=true					\
 	   -V tabs=true                                         \
+	   $refresh                                             \
 	   --template=$BASILISK/templates/page.static	 	\
     | sed 's/__ESCAPEDDOLLAR__/$$/g'			        \
-    | $POSTPROC > $target
-test -s $target || (rm -f $target && exit 1)
+    | $POSTPROC

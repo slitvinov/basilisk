@@ -148,7 +148,8 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(BASILISK)/plugins/literate-c		\
 		$(BASILISK)/plugins/codeblock		\
 		$(BASILISK)/page2html
-	$(BASILISK)/page2html $<
+	$(BASILISK)/page2html $< > $@
+	@test -s $@ || exit 1
 
 LINKCHECKER = linkchecker --no-warnings --no-status --anchors	\
 	--ignore-url='.*/$$'					\
