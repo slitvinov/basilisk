@@ -1,0 +1,162 @@
+/**
+# Viscoelastic 2D drop in a Couette newtonian shear flow
+
+This problem has been used as benchmark (see for example Chinyoka et
+al. (2005)). Usually equations are made dimensionless with the outer
+density $\rho_2$ the droplet's radius $a$ and the shear rate,
+$\dot{\gamma}$. The following dimensionless parameters follows from
+adimensionalization, 
+
+$$ 
+We = \frac{\rho_2 a^3 \dot{\gamma}^2}{\sigma}, \quad
+Re = \frac{\rho_2 a^2 \dot{\gamma}}{\mu_2}, \quad 
+\mu_r =\frac{\mu_1}{\mu_2} , \quad 
+m = \frac{\rho_1}{\rho_2}, \quad \beta = \frac{\mu_s}{\mu_1} 
+$$ 
+
+where subscript "1" and "2" stand for droplet and matrix fluid,
+respectively and $\mu_s$ is the solvent viscosity. Note that the
+polymer viscosity is, $\mu_p=\mu_1-\mu_s$. 
+*/
+
+#include "navier-stokes/centered.h"
+#include "log_conform_1.h"
+#include "vof.h"
+#include "tension.h"
+
+#define Ca 0.6 // Capillary number
+#define Re 0.3 // Reynold number
+#define We (Ca*Re) // Weber number
+#define MUr 1. // ratio of outer(matrix) to inner(drop) viscosity
+#define M 1 // ratio of outer to inner density
+#define Deb 0.4 //Deborah number
+#define Beta 0.5 //ratio of the solvent viscosity to the viscoelastic visc.
+
+/**
+The volume fraction is stored in scalar field `f` which is listed as
+an *interface* for the VOF solver.  */
+
+u.t[top] = dirichlet (4.);
+u.t[bottom] = dirichlet (-4.);
+
+
+scalar f[];
+scalar * interfaces = {f};
+int MAXLEVEL = 9;
+face vector alphav[], visc[];
+scalar mupd[], lam[];
+
+/**
+In principle, we set as domain a 16x16 box. Later will be masked. The
+bottom-left corner of the domain will have as coordinates ($x=-8,
+y=-4$). We set a maximum timestep of 0.1 */
+
+int main() {
+  L0 = 16 ;
+  origin (-L0/2, -L0/4.);
+  periodic (right);
+  p[left] = dirichlet (0.);
+  DT = .1;
+  f.sigma = 1./We;
+  init_grid (1 << MAXLEVEL);
+  alpha = alphav;
+  mu = visc;
+  lambda = lam;
+  mup = mupd;
+  run();
+}
+
+#define circle(x,y) (1 - (sq(x) + sq(y)))
+
+event init (i = 0) {
+
+  /**
+  We mask above $y > 4$. The computational domain is now a 16x8
+  rectangle with the origin in the center of it. */
+
+  mask( y > 4 ? top : none);
+
+  /**
+  As initial conditions we set the viscoelastic droplet of radius 1
+  and a linear velocity profile typical of the Couette flow. */
+
+  vertex scalar phi[];
+  foreach_vertex()
+    phi[] = circle(x,y);
+  fractions (phi, f);
+  foreach()
+    u.x[] = y;
+  boundary ((scalar *){u});
+}
+
+event properties (i++) {
+  foreach_face () {
+    double T = (f[]+f[-1,0])/2.;
+    visc.x[] = (MUr*Beta*T+(1.-T))/Re;
+    alphav.x[] = 1./(M*T +(1.-T));
+  }
+  foreach () {
+    lam[] = Deb*f[];
+    mupd[] = MUr*(1.-Beta)*f[]/Re;
+  }
+  boundary ((scalar *) {visc, alphav, lam, mupd});
+}
+
+event adaption (i += 5) {
+  adapt_wavelet ({f, u.x, u.y}, (double[]){1e-3, 1e-3,1e-3}, MAXLEVEL, MAXLEVEL-2);
+}
+
+/** 
+As output we plot the shape of the interface at instant t = 10 and the
+time evolution of the deformation parameter. */
+
+event form (t = 10.) {
+  FILE* fp = fopen("interf","w");
+  output_facets (f, fp);
+  fclose (fp);
+}
+
+event deformation (t += 0.1) {
+  double rmax = -HUGE, rmin = HUGE ;
+  foreach (reduction(max:rmax) reduction(min:rmin)) 
+    if (f[] > 0 && f[] < 1) {
+      coord p;
+      coord n = mycs (point, f);
+      double alpha = plane_alpha (f[], n);
+      plane_area_center (n, alpha, &p);
+      double rad  = sqrt(sq(x + Delta*p.x) + sq(y + Delta*p.y)); 
+      if (rad > rmax)
+	rmax = rad;
+      if (rad < rmin)
+	rmin = rad;
+    }
+  double D = (rmax-rmin)/(rmax+rmin);
+  static FILE * fp1 = fopen("deform","w");
+  fprintf (fp1, "%g %g %g %g\n",t, rmin, rmax, D);
+  fflush (fp1);
+}
+
+#if 0
+event gfsview (t += 0.01) {
+  static FILE * fpg = popen("gfsview2D -s","w");
+  output_gfs (fpg, t= t);
+}
+#endif
+
+/**
+~~~gnuplot Time evolution of the deformation
+set terminal @PNG enhanced size 640,640 font ",12"
+set xlabel 't'
+set ylabel 'D'
+set key bottom Right
+ plot 'deform' u 1:4 w l lw 2 t 'Basilisk', 'drop.Fig_2016' u 1:2 every 2 ps 2 pt 6 t 'Figueiredo et al. (2016)'
+~~~
+
+~~~gnuplot Interface shape at t = 10
+set terminal @PNG enhanced size 640,640 font ",12"
+set xlabel 'x'
+set ylabel 'y'
+set key bottom Right
+plot 'interf' u 1:2 w l lw 2 t 'Basilisk', 'drop.interface' u 1:2 every 2 ps 2 pt 6 t 'Figueiredo et al. (2016)'
+~~~
+*/
