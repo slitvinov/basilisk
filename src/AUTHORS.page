@@ -7,5 +7,6 @@
   multiple rivers](test/multiriverinflow.c)
 * [Pierre-Yves Lagrée](/sandbox/M1EMN/README): [SAG equation](test/sag.c)
 * Emily Lane: GRD export
-* Jose Lopez-Herrera: [Electrohydrodynamics](README#electrohydrodynamics)
+* Jose Lopez-Herrera: [Electrohydrodynamics](README#electrohydrodynamics), 
+  [Viscoelasticity](README#viscoelasticity)
 * [Stéphane Popinet](http://gfs.sourceforge.net/wiki/index.php/User:Popinet)

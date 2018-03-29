@@ -112,6 +112,24 @@ $$
 M_{ij} = \varepsilon (E_i E_j - \frac{E^2}{2}\delta_{ij})
 $$
 
+## Viscoelasticity
+
+* [The log-conformation method for some constitutive models](log_conform.h)
+$$ 
+D_t \Psi = rhs =  (\Omega \cdot \Psi -\Psi \cdot \Omega) + 2 \mathbf{B} +
+\frac{e^{-\Psi} \mathbf{f}_r (e^{\Psi})}{\lambda}
+$$
+$$
+\begin{array}{lcc}
+\mbox{model} & \mathbf{f}_s (\mathbf{A}) & \mathbf{f}_r (\mathbf{A}) \\ 
+\mbox{Oldroyd-B} & \mathbf{A} -\mathbf{I} & \mathbf{A} -\mathbf{I} \\
+\mbox{FENE-P} & \frac{\mathbf{A}}{1-Tr(\mathbf{A})/L^2} -\mathbf{I} & 
+\frac{\mathbf{A}}{1-Tr(\mathbf{A})/L^2} -\mathbf{I} \\
+\mbox{FENE-CR} & \frac{\mathbf{A}-\mathbf{I}}{1-Tr(\mathbf{A})/L^2}  & 
+\frac{\mathbf{A}-\mathbf{I}}{1-Tr(\mathbf{A})/L^2}  \\ \\
+\end{array}
+$$
+
 ## Other equations
 * [Hele-Shaw/Darcy flows](hele-shaw.h)
 $$

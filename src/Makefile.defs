@@ -97,6 +97,7 @@ clean:
 	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh || rm -f plots
 	cd $* && awk -f $(BASILISK)/python.awk < ../$*.c > plots.py && \
 	python plots.py || rm -f plots
+	@test -f $*/plots || exit 1
 
 %.gnu: %.eps
 	pstoedit -f gnuplot -flat 0.1 $< $@
