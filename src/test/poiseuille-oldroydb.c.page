@@ -5,14 +5,15 @@ The onset of a Poiseuille flow from a fluid at rest after the sudden
 application of a pressure gradient is characterized, for a Newtonian fluid, 
 by a monotonic exponential increase of the axial velocity.
 
-In the case of a viscoelastic fluid its elastic nature gives up to a
-different behaviour since a oscillation is superposed to the exponential
-increase. The problem has an analytical solution due to Waters \& King (1970), 
+In the case of a viscoelastic fluid, an elastic oscillation is
+superposed on the exponential increase. The problem has an analytical
+solution due to [Waters \& King (1970)](#waters1970),
+
 $$
-U(Y,T) = 1.5*(1-Y^2) - 48 \sum_{k=1}^\infty \frac{\sin((1+Y)n/2)}{n^3} 
+U(Y,T) = 1.5 (1-Y^2) - 48 \sum_{k=1}^\infty \frac{\sin((1+Y)n/2)}{n^3} 
 e^{\alpha_n T/2} G(T) 
 $$
-being $n=(2k-1)\pi$, $\alpha_n = 1 + \beta \,E \, n^2 /4$ and
+with $n=(2k-1)\pi$, $\alpha_n = 1 + \beta \,E \, n^2 /4$ and
 $$
 G(T) =\sinh(\beta_n T/2) + \frac{\gamma_n}{\beta_n} \cosh(\beta_n T/2)
 $$
@@ -24,28 +25,34 @@ $$
 
 $E$ is the elastic number given by $E = \lambda \mu_o/(\rho h^2)$. 
 The time is made dimensionless with $\lambda$, $T = t/\lambda$, 
-and the velocity with the average velocity steady velocity,
+and the velocity with the average steady velocity,
 $$
 \bar{u}_\infty = \frac{-\Delta p}{\Delta x} \frac{h^2}{3 \mu_o} 
 $$ 
 
-The first modes of the analytical solution implies complex values of
-$\beta_n$, this is why we include the complex library "complex.h". */
+The first modes of the analytical solution imply complex values of
+$\beta_n$, which is why we include the complex library. */
 
 #include <complex.h>
 
-#define DT_MAX (0.001)
-#define MU0 1. // Total viscoelastic viscosity 
-#define BETA (1/9.) // Ratio of the solvent viscosity to the total viscosity
-#define MUP ((1-BETA)*MU0) // Polymer viscosity
-#define MUS (BETA*MU0) // Solvent viscosity 
-#define LAM 1 // Relaxation viscoelastic time
-#define UAVG (1./(3*MU0)) // Average velocity steady flow
+#define DT_MAX 0.001
+// Total viscoelastic viscosity 
+#define MU0 1.          
+// Ratio of the solvent viscosity to the total viscosity
+#define BETA (1/9.)
+// Polymer viscosity
+#define MUP ((1. - BETA)*MU0)
+// Solvent viscosity 
+#define MUS (BETA*MU0)
+// Relaxation viscoelastic time
+#define LAM 1.
+// Average velocity steady flow
+#define UAVG (1./(3.*MU0))
 
 /**
-Note that we are using as base for the dimensioning base, the width of
-the gap, the density of the fluid and the gradient of pressure (rather
-than average velocity for the steady flow). */
+Note that we are using as dimensioning scales the width of the gap,
+the density of the fluid and the gradient of pressure (rather than the
+average velocity for the steady flow). */
 
 #include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
@@ -67,18 +74,10 @@ int main()
   const face vector mus[] = {MUS,MUS};
   mu = mus;
 
-  lev = 4;
-  init_grid (1 << lev);
-  run();
-
-  lev = 5;
-  init_grid (1 << lev);
-  run();
-
-  lev = 6;
-  init_grid (1 << lev);
-  run();
-
+  for (lev = 4; lev <= 6; lev++) {
+    init_grid (1 << lev);
+    run();
+  }
 }
 
 u.t[top] = dirichlet(0);
@@ -98,56 +97,66 @@ event init (i = 0)
 double analytical (double Y, double T, int KF)
 {
   double E = LAM*MU0;
-  double U = 0. ;
-  for (int k = 1 ; k<= KF; k++) {
-    double n = (2*k-1)*M_PI;
-    double alpha = 1 + 0.25*BETA*E*sq(n);
-    complex double beta = csqrt(sq(alpha)-E*sq(n));
-    double gamma = 1 - 0.25*(2-BETA)*E*sq(n);
-    double G =  creal(ccosh(0.5*beta*T)+gamma/beta*csinh(0.5*beta*T));
-    U += 1./n/sq(n)*sin(0.5*(1+Y)*n)*exp(-0.5*alpha*T)*G;
+  double U = 0.;
+  for (int k = 1; k <= KF; k++) {
+    double n = (2*k - 1)*M_PI;
+    double alpha = 1. + 0.25*BETA*E*sq(n);
+    complex double beta = csqrt(sq(alpha) - E*sq(n));
+    double gamma = 1. - 0.25*(2. - BETA)*E*sq(n);
+    double G =  creal(ccosh(0.5*beta*T) + gamma/beta*csinh(0.5*beta*T));
+    U += 1./n/sq(n)*sin(0.5*(1. + Y)*n)*exp(-0.5*alpha*T)*G;
   }
-  return 1.5*(1.-sq(Y))-48*U;
+  return 1.5*(1. - sq(Y)) - 48.*U;
 }
 
-event uaxis_evolution (t+= 0.2 ;  t <= 10.0) {
-  char name[80];
-  sprintf(name,"uaxis_%d",lev);
-  static FILE * fp = fopen(name, "w");
+event uaxis_evolution (t += 0.2; t <= 10.) {
 
   /**
   The  velocity is made dimensionless with the average velocity. 
   when the flow is fully developed, $u_{axis}/ \bar{u}_\infty$ = 3/2. */
 
-  fprintf (fp," %g %g %g\n", t/LAM, 
+  fprintf (stderr, "%d %g %g %g\n", lev, t/LAM, 
 	   interpolate(u.x, 0.5, 0.)/UAVG, analytical (0, t/LAM, 8));
 }
 
 /**
-  ~~~gnuplot Temporal evolution of the axial velocity
-  set terminal @PNG enhanced size 640,640 font ",8"
-  set xlabel 't'
-  set ylabel '{u_x(0,t)}'
-  set key left
-  plot 'uaxis_4' u 1:2 t 'Basilisk','uaxis_4' u 1:3 t 'Theory' w lp
-  ~~~
+~~~gnuplot Temporal evolution of the axial velocity
+set xlabel 't'
+set ylabel '{u_x(0,t)}'
+set key left
+plot "< grep ^4 log" u 2:3 t 'Basilisk (16x16)', '' u 2:4 t 'Theory' w lp
+~~~
 
-  ~~~gnuplot Temporal evolution of the error for different grids
-  set terminal @PNG enhanced size 640,640 font ",8"
-  set xlabel 't'
-  set ylabel '{/Symbol e}'
-  p 'uaxis_4' u 1:($2-$3) w l lw 2 t '16x16', 'uaxis_5' u 1:($2-$3) w l lw 2 t '32x32' , 'uaxis_6' u 1:($2-$3) w l lw 2 t '64x64'
-  ~~~
+~~~gnuplot Temporal evolution of the error for different grids
+set xlabel 't'
+set ylabel '{/Symbol e}'
+p "< grep ^4 log" u 2:($3 - $4) w l lw 2 t '16x16', \
+  "< grep ^5 log" u 2:($3 - $4) w l lw 2 t '32x32' , \
+  "< grep ^6 log" u 2:($3 - $4) w l lw 2 t '64x64'
+~~~
 
-
-## Bibliography
+## References
  
- * N.D. Waters and M.J. King. "Unsteady flow of an elastico-viscous liquid". 
-Rheologica Acta, 9(3):345–355, 1970.
+~~~bib
+@article{waters1970,
+  title={Unsteady flow of an elastico-viscous liquid},
+  author={Waters, ND and King, MJ},
+  journal={Rheologica Acta},
+  volume={9},
+  number={3},
+  pages={345--355},
+  year={1970},
+  publisher={Springer}
+}
 
- * Gros E.
- ["Comparing In-House Numerical Simulations to the Analytical
-Solution of the Poiseuille Flow for the Oldroyd-B Model"](http://www.cats.rwth-aachen.de:8080/theses/ba-gros-2013.pdf) 
-Bachelor Thesis, Aachen University, 2013.
-
+@MastersThesis{gros2013,
+  author = {E. Gros},
+  title = {Comparing In-House Numerical Simulations to the Analytical
+  Solution of the Poiseuille Flow for the Oldroyd-B Model},
+  school = {Aachen University},
+  address = {Germany},
+  year = {2013},
+  url = {http://www.cats.rwth-aachen.de:8080/theses/ba-gros-2013.pdf}
+}
+~~~
 */

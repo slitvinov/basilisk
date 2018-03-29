@@ -72,6 +72,11 @@ Note that only the documented test cases appear in the list below
 * [Charge relaxation in a planar cross-section](cyl_planar.c)
 * [Equilibrium of a droplet suspended in an electric field](taylor.c)
 
+## Viscoelasticity
+
+* [Transient planar poiseuille flow for 
+   an Oldroyd-B fluid](poiseuille-oldroydb.c)
+
 ## Reaction--Diffusion
 
 * [The SAG equation](sag.c)
