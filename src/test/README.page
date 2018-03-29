@@ -75,7 +75,7 @@ Note that only the documented test cases appear in the list below
 ## Viscoelasticity
 
 * [Transient planar poiseuille flow for 
-   an Oldroyd-B fluid](poiseuille-oldroydb.c)
+   an Oldroyd-B or FENE-P fluid](poiseuille-oldroydb.c)
 
 ## Reaction--Diffusion
 

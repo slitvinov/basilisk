@@ -665,4 +665,8 @@ event acceleration (i++)
   publisher={Elsevier}
 }
 ~~~
+
+## See also
+
+* [Functions $f_s$ and $f_r$ for the FENE-P model](fene_p.h)
 */

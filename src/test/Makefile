@@ -120,6 +120,13 @@ ponds-implicit.tst: CFLAGS += -DIMPLICIT=1
 
 ponds.tst: ponds-implicit.tst
 
+poiseuille-fenep.c: poiseuille-oldroydb.c
+	ln -s poiseuille-oldroydb.c poiseuille-fenep.c
+poiseuille-fenep.s: poiseuille-oldroydb.s
+poiseuille-fenep.tst: CFLAGS += -DFENE_P=1
+
+poiseuille-oldroydb.tst: poiseuille-fenep.tst
+
 poisson.tst: poisson.ctst
 
 rising-axi.c: rising.c

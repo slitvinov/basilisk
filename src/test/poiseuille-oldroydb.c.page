@@ -1,5 +1,5 @@
 /**
-# Transient planar poiseuille flow for a viscoelastic Oldroyd-B fluid
+# Transient planar poiseuille flow for a viscoelastic Oldroyd-B or FENE-P fluid
 
 The onset of a Poiseuille flow from a fluid at rest after the sudden
 application of a pressure gradient is characterized, for a Newtonian fluid, 
@@ -57,6 +57,11 @@ average velocity for the steady flow). */
 #include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
 #include "log_conform.h"
+#if FENE_P
+# include "fene_p.h"
+#else
+# define L2 1.
+#endif
 
 int lev;
 
@@ -73,11 +78,18 @@ int main()
   mup = mupc;
   const face vector mus[] = {MUS,MUS};
   mu = mus;
-
+#if FENE_P
+  lev = 5;
+  init_grid (1 << lev);
+  L2 = 10.;   run();
+  L2 = 50.;   run();
+  L2 = 1000.; run();
+#else // Oldroyd-B
   for (lev = 4; lev <= 6; lev++) {
     init_grid (1 << lev);
     run();
   }
+#endif
 }
 
 u.t[top] = dirichlet(0);
@@ -103,7 +115,7 @@ double analytical (double Y, double T, int KF)
     double alpha = 1. + 0.25*BETA*E*sq(n);
     complex double beta = csqrt(sq(alpha) - E*sq(n));
     double gamma = 1. - 0.25*(2. - BETA)*E*sq(n);
-    double G =  creal(ccosh(0.5*beta*T) + gamma/beta*csinh(0.5*beta*T));
+    double G = creal(ccosh(0.5*beta*T) + gamma/beta*csinh(0.5*beta*T));
     U += 1./n/sq(n)*sin(0.5*(1. + Y)*n)*exp(-0.5*alpha*T)*G;
   }
   return 1.5*(1. - sq(Y)) - 48.*U;
@@ -115,24 +127,60 @@ event uaxis_evolution (t += 0.2; t <= 10.) {
   The  velocity is made dimensionless with the average velocity. 
   when the flow is fully developed, $u_{axis}/ \bar{u}_\infty$ = 3/2. */
 
-  fprintf (stderr, "%d %g %g %g\n", lev, t/LAM, 
-	   interpolate(u.x, 0.5, 0.)/UAVG, analytical (0, t/LAM, 8));
+  fprintf (stderr, "%g %g %g %d %g\n", t/LAM, 
+	   interpolate(u.x, 0.5, 0.)/UAVG, analytical (0, t/LAM, 8), lev, L2);
 }
 
-/**
+#if FENE_P
+event uprofile (t = end) {
+  int np = 20;
+  double hh = 0.999999999/np;
+  for (int j = 0; j <= np; j++)
+    printf ("%g %g %d %g\n", hh*j, interpolate(u.x, 0.5, hh*j)/UAVG, lev, L2);
+}
+#endif // FENE_P
+
+/** 
+For an Oldroyd-B fluid the solution converges to the theoretical
+solution with grid resolution.
+
 ~~~gnuplot Temporal evolution of the axial velocity
 set xlabel 't'
 set ylabel '{u_x(0,t)}'
 set key left
-plot "< grep ^4 log" u 2:3 t 'Basilisk (16x16)', '' u 2:4 t 'Theory' w lp
+plot "< grep '4 1$' log" u 1:2 t 'Basilisk (16x16)', '' u 1:2 t 'Theory' w lp
 ~~~
 
 ~~~gnuplot Temporal evolution of the error for different grids
 set xlabel 't'
 set ylabel '{/Symbol e}'
-p "< grep ^4 log" u 2:($3 - $4) w l lw 2 t '16x16', \
-  "< grep ^5 log" u 2:($3 - $4) w l lw 2 t '32x32' , \
-  "< grep ^6 log" u 2:($3 - $4) w l lw 2 t '64x64'
+p "< grep '4 1$' log" u 1:($2 - $3) w l t '16x16', \
+  "< grep '5 1$' log" u 1:($2 - $3) w l t '32x32' , \
+  "< grep '6 1$' log" u 1:($2 - $3) w l t '64x64'
+~~~
+
+For a FENE-P fluid, the solution converges toward the Oldroyd-B
+solution when $L^2 \rightarrow \infty$.
+
+~~~gnuplot Temporal evolution of the axial velocity
+set ylabel '{u_x(0,t)}'
+p "< grep '1000$' ../poiseuille-fenep/log" w l lc 7 t 'Analytical', \
+  "< grep '10$' ../poiseuille-fenep/log" w lp ps 0.5 pt 5 t'Fene-P L^2 = 10', \
+  "< grep '1000$' ../poiseuille-fenep/log"  w p ps 0.5 pt 5 t 'Fene-P L^2 = 1000'
+~~~
+
+~~~gnuplot Velocity profiles at instant t=10
+set xlabel '{u_x(y,t=10)}'
+set ylabel 'y'
+set parametric
+set trange [0:1]
+set key top right
+y(t)=1.5*(1-t*t)
+x(t)=t
+p   y(t),x(t) lc 7 t 'Newtonian', \
+  "< grep '10$' ../poiseuille-fenep/out" u 2:1 w lp pt 5 ps 0.5 t 'L^2 = 10', \
+  "< grep '50$' ../poiseuille-fenep/out" u 2:1 w lp pt 5 ps 0.5 t 'L^2 = 50', \
+  "< grep '1000$' ../poiseuille-fenep/out" u 2:1 w p pt 5 ps 0.5 t 'L^2 = 1000'
 ~~~
 
 ## References
