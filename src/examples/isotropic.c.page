@@ -130,15 +130,8 @@ event logfile (i++; t <= 300) {
 /**
 We generate a movie of the vortices. 
 
-<p><center>
-<video width="600" height="600" controls>
-  <source src="isotropic/movie.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-<br>
-Animation of the $\lambda_2$ isosurface (a way to characterise
-vortices) and cross-sections of velocity and vorticity.
-</center></p>
+![Animation of the $\lambda_2$ isosurface (a way to characterise
+vortices) and cross-sections of velocity and vorticity.](isotropic/movie.mp4)
 */
 
 event movie (t += 0.25; t <= 150)
