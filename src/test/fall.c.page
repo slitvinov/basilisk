@@ -1,0 +1,218 @@
+/**
+# Impact of a viscoelastic drop onto a floor
+
+We solve the incompressible, variable-density, Navier--Stokes
+equations with interfaces.  */
+
+#include "axi.h"
+#include "navier-stokes/centered.h"
+#include "log_conform_1.h"
+//#include "balci_kernel.h"
+//#include "oldroydB.h"
+#include "vof.h"
+
+#define RHO_r 0.001
+#define RE 5
+#define MU_r 0.001
+#define FR 2.26
+#define BETA 0.1
+#define WI 1.0
+
+#define LEVEL 7
+
+/**
+The interface between the two-phases will be tracked with the volume
+fraction field *f*. We allocate the fields for the variable density
+and viscosity (*alphav*, *alphacv* and *muv* respectively). */
+
+scalar f[];
+scalar * interfaces = {f};
+face vector alphav[];
+scalar rhov[], lambdav[], mupv[];
+face vector muv[];
+
+/**
+The drop comes from the right. We allows the fluid to get through that
+boundary condition. */
+
+u.n[right]  = neumann(0);
+p[right] = dirichlet(0);
+
+/**
+The wall is at the left side. */
+
+u.t[left] = dirichlet(0);
+u.n[left] = dirichlet(0);
+Sqq[left] = dirichlet(0);
+
+/**
+The fluid is allowed to flow through the top side. */
+
+u.n[top]  = neumann(0);
+p[top] = neumann(0);
+
+/**
+The bottom is the axis of symmetry. */
+
+uf.n[bottom] = 0;
+
+int main() {
+
+  /**
+  The domain will span $[0:2.6]\times[0:2.6]$. */
+
+  size (2.6);
+  init_grid (1 << LEVEL);
+  
+  /**
+  The density and viscosity are defined by the variable fields we
+  allocated above. We reduce the tolerance on the Poisson and viscous
+  solvers to improve the accuracy. */
+  
+  alpha = alphav;
+  mup = mupv;
+  rho = rhov;
+  mu = muv;
+  lambda = lambdav;
+  TOLERANCE = 1e-4;
+  DT = 1e-3;
+  run();
+}
+
+/**
+In case we wish to use a filtered variable we have to set a 0 below.*/
+
+#if 0
+#define ff f
+#else
+scalar ff[];
+#endif
+
+event init (t = 0) {
+
+  vector v = S.x;
+  v.n[left] = dirichlet(0.);
+
+  /**
+  The drop is centered on (2,0) and has a radius of 0.5. */
+
+  vertex scalar phi[];
+  foreach_vertex()
+    phi[] = -sq(x-2.) - sq(y) + sq(0.5);
+  fractions (phi, f);
+
+  /**
+  Initially we set the velocity of the droplet to 1 and, eventually,
+  initialize the filtered variable. */
+
+  foreach() {
+    u.x[] = -f[];
+#ifndef ff
+    ff[] = f[];
+#endif
+  }
+}
+
+
+/**
+The density and viscosity are defined using the arithmetic average. */
+
+#define rho(f) ((f) + (1. - (f))*RHO_r)
+#define mu(f)  ((BETA*(f) + (1. - (f))*MU_r)/RE)
+#define mup(f)  ((1.-BETA)*(f)/RE)
+#define lambda(f)  (WI*clamp(f,0,1))
+
+/**
+We add the acceleration of gravity. */
+
+#if 1
+event acceleration (i++) {
+  face vector av = a;
+  foreach_face(x)
+    av.x[] -= 1./sq(FR);
+}
+#endif
+
+event properties (i++) {
+#ifndef ff
+  foreach()
+    ff[] = (4.*f[] + 
+	    2.*(f[0,1] + f[0,-1] + f[1,0] + f[-1,0]) +
+	    f[-1,-1] + f[1,-1] + f[1,1] + f[-1,1])/16.;
+  boundary ({ff});
+#endif
+  foreach_face() {
+    double T = (ff[] + ff[-1])/2.;
+    alphav.x[] = fm.x[]/rho(T);
+    muv.x[] = fm.x[]*mu(T);
+  }
+ 
+  foreach() {
+    rhov[] = cm[]*rho(ff[]);
+    mupv[] = mup(f[]);
+    lambdav[] = lambda(f[]);
+  }
+  boundary((scalar *){alphav, muv, mupv, rhov, lambdav});
+}
+
+/**
+And we adapt the solution each five steps. */
+
+#if TREE
+event adapt (i += 5) {
+  adapt_wavelet({f,u.x,u.y}, (double[]){1e-3, 1e-3, 1e-3},
+		maxlevel = LEVEL, minlevel = (LEVEL-2));
+}
+#endif
+
+/**
+We track the spreading of the droplet. */
+
+event logfile (t += 0.1; t < 5.) {
+  double  ymax =-HUGE;
+  foreach (reduction(max:ymax)) 
+    if (f[] > 0. && f[] < 1.) {
+      coord p;
+      coord n = mycs (point, f);
+      double alpha = plane_alpha (f[], n);
+      plane_area_center (n, alpha, &p);
+      double rad  = (y + Delta*p.y); 
+      if (rad > ymax)
+	ymax = rad;
+    }
+  fprintf (stdout,"%g %g \n", t, 2.*ymax);
+  fflush(stdout);
+}
+
+/**
+We can output dump files for post processing. */
+#if 0
+event interface (t = {1.7, 2.2, 3.5, 5.}) {
+  char name[80];
+  sprintf (name, "t_%g", t);
+  dump(file = name);
+}
+#endif
+
+/**
+If gfsview is installed on the system, we can also visualise the
+simulation as it proceeds. */
+
+#if 0
+event gfsview (i += 50) {
+  static FILE * fp = popen("gfsview2D", "w");
+  output_gfs (fp, t = t);
+}
+#endif
+
+/**
+# Results
+
+~~~gnuplot Time evolution of the spread
+  set terminal @PNG enhanced size 640,640 font ",12"
+  set ylabel 'Width'
+  set xlabel 't'
+  plot 'out' w l lw 2 t 'Basilisk', 'fall.figueiredo' lt 3 pt 5 ps 2 t 'Figueiredo (2016)'
+~~~
+
+*/
