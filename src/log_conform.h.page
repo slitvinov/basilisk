@@ -257,6 +257,31 @@ static void diagonalization_2D (double eval[dimension],
   }
 }
 
+/** 
+The stress tensor depends on previous instants and has to be
+integrated in time. In the log-conformation scheme the advection of
+the stress tensor is circumvented, instead the conformation tensor,
+$\mathbf{A}$ (or more precisely the related variable $\Psi$) is
+advanced in time.
+
+In what follows we will adopt a scheme similar to that of [Hao \& Pan
+(2007)](#hao2007). They use a split scheme, solving successively
+
+a) the advection term:
+$$ 
+\partial_t \Psi + \nabla \cdot (\Psi \mathbf{u}) = 0
+$$
+b) the upper convective term:
+$$
+\partial_t \Psi = 2 \mathbf{B} + (\Omega \cdot \Psi -\Psi \cdot \Omega)
+$$
+c) the model term (but set in terms of the conformation 
+tensor $\mathbf{A}$). In an Oldroyd-B viscoelastic fluid, the model is
+$$ 
+\partial_t \mathbf{A} = -\frac{\mathbf{f}_r (\mathbf{A})}{\lambda}
+$$
+*/
+
 event tracer_advection (i++)
 {
 #if IMPLICIT  
@@ -264,40 +289,20 @@ event tracer_advection (i++)
 #endif
   symmetric tensor rhs[];
 
-  /** 
-  The stress tensor depends on previous instants and has to be
-  integrated in time. In the log-conformation scheme the advection of
-  the stress tensor is circumvented, instead the conformation tensor,
-  $\mathbf{A}$ (or more precisely the related variable $\Psi$) is
-  advanced in time.
-
-  In what follows we will adopt a scheme similar to that of [Hao \& Pan
-  (2007)](#hao2007). They use a split scheme, solving successively
-
-  a) the advection term:
-  $$ 
-  \partial_t \Psi + \nabla \cdot (\Psi \mathbf{u}) = 0
-  $$
-  b) the upper convective term:
-  $$
-  \partial_t \Psi = 2 \mathbf{B} + (\Omega \cdot \Psi -\Psi \cdot \Omega)
-  $$
-  c) the model term (but set in terms of the conformation 
-  tensor $\mathbf{A}$). In an Oldroyd-B viscoelastic fluid, the model is
-  $$ 
-  \partial_t \mathbf{A} = -\frac{\mathbf{f}_r (\mathbf{A})}{\lambda}
-  $$
-
+  /**
   *Soff* is used to impose wall-type BC to the off-diagonal terms of the
   stress tensor. */
 
-#if 0  //See comment above
+#if 0
   foreach_face() {
     double lamf = (lambda[] + lambda[-1])/2;
     double str =  (mup[] + mup[-1])*(u.y[] - u.y[-1])/(2*Delta);
     Soff.x[] = (str*dt + lamf*Soff.x[])/(dt + lamf);
   }
-#endif 
+#endif
+
+  /**
+  ### Computation of $\Psi = \log \mathbf{A}$ and $rhs = 2 \mathbf{B} + (\Omega \cdot \Psi -\Psi \cdot \Omega)$ */
 
   foreach() {
     if (lambda[] != 0.) {
@@ -347,9 +352,8 @@ event tracer_advection (i++)
       pseudo_t R = {{Ev[0][0], Ev[0][1]}, {Ev[1][0], Ev[1][1]}};
       
       /** 
-      In the method the tensor $\Psi = \log \mathbf{A}$ is also
-      needed. It is easily obtained after diagonalization, $\Psi = R
-      \cdot \log(\Lambda) \cdot R^T$. */
+      $\Psi = \log \mathbf{A}$ is easily obtained after diagonalization, 
+      $\Psi = R \cdot \log(\Lambda) \cdot R^T$. */
       
       Psi.x.y[] = R.x.x*R.y.x*log(eval.x) + R.y.y*R.x.y*log(eval.y);
       foreach_dimension()
@@ -420,6 +424,8 @@ event tracer_advection (i++)
   }
   
   /**
+  ### Advection of $\Psi$
+  
   We proceed with step (a), the advection of the log of the
   conformation tensor $\Psi$, but first we apply boundary
   conditions. */
@@ -432,6 +438,9 @@ event tracer_advection (i++)
   advection ({Psi.x.x, Psi.x.y, Psi.y.y}, uf, dt);
 #endif
 
+  /**
+  ### Upper convective term and model term */
+  
   foreach() {
     if (lambda[] < 1e-6) {
 
@@ -476,7 +485,7 @@ event tracer_advection (i++)
       Psi.x.y[] += rhs.x.y[]*dt;
 #endif
       
-      Psi.y.x[] = Psi.x.y[]; // Out if symmetric tensor works
+      Psi.y.x[] = Psi.x.y[]; // FIXME: not needed for a symmetric tensor
 
       /**
       In the axisymmetric case, the governing equation for $\Psi_{\theta
@@ -582,22 +591,24 @@ event tracer_advection (i++)
 #endif
 }
 
+/**
+### Divergence of the viscoelastic stress tensor
+
+The viscoelastic stress tensor $\mathbf{S}$ is defined at cell centers
+while the corresponding force (acceleration) will be defined at cell
+faces. Two terms contribute to each component of the momentum
+equation. For example the $x$-component in Cartesian coordinates has
+the following terms: $\partial_x \mathbf{S}_{xx} + \partial_y
+\mathbf{S}_{xy}$. The first term is easy to compute since it can be
+calculated directly from center values of cells sharing the face. The
+other one is harder. It will be computed from vertex values. The
+vertex values are obtained by averaging centered values.  Note that as
+a result of the vertex averaging cells `[]` and `[-1,0]` are not
+involved in the computation of shear. */
+
 event acceleration (i++)
 {
   face vector av = a;
-
-  /** 
-  Tensor $\mathbf{S}$ is defined at cell centers while the
-  corresponding force (acceleration) will be defined at cell
-  faces. Two terms contribute to each component of the momentum
-  equation. For example the $x$-component in Cartesian coordinates has
-  the following terms: $\partial_x \mathbf{S}_{xx} + \partial_y
-  \mathbf{S}_{xy}$. The first term is easy to compute since it can be
-  calculated directly from center values of cells sharing the
-  face. The other one is harder. It will be computed from vertex
-  values. The vertex values are obtained by averaging centered values.
-  Note that as a result of the vertex averaging cells `[]` and
-  `[-1,0]` are not involved in the computation of shear. */
 
   foreach_face()
     if (fm.x[] > 1e-20) { // FIXME: why not zero?
