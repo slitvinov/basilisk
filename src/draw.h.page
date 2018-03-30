@@ -1016,58 +1016,60 @@ void travelling (struct _travelling p)
 #undef interpo
 
 /**
-# *draw_string()*: draws strings on a separate layer (for annotations).
+# *draw_string()*: draws strings on a separate layer (for annotations)
 
-* *str*: string to be used. 
-* *lc*: vector of line (foreground) color (RGB).   
-* *pos*: position code (default 0)
-
-Codes for string positions are: "0" bottom left, "1" top left,
-   "2" top right and "3" bottom right (default 0) */
-
+* *str*: string to display.
+* *pos*: position: "0" bottom left, "1" top left, "2" top right 
+  and "3" bottom right (default 0).
+* *size*: the size of the text, given as the number of characters
+   which can fit within the width of the screen. Default is 40.
+* *lc[]*: an array of red, green, blue values between 0 and 1 which
+  defines the text color.
+* *lw*: the line width.
+*/
 
 struct _draw_string {
   char * str;
-  float lc[3];
-  int  pos;
+  int pos;
+  float size;
+  float lc[3], lw;
 };
 
 trace
-bool draw_string(struct _draw_string p)
+bool draw_string (struct _draw_string p)
 {
-  float width  = gl_StrokeWidth ('1'); 
-  float height = gl_StrokeHeight();
-  float aspect = 1.*width/height;
-  float xscale = 0.9*0.025*L0/aspect;
-  float yscale = 0.8*0.05*L0/aspect;
-  float zscale = 1.;
-
-  glMatrixMode(GL_PROJECTION);
+  bview * view = draw();
+  
+  glMatrixMode (GL_PROJECTION);
   glPushMatrix();             
-  glLoadIdentity();  
-  glOrtho( -1.0f, width, -1.0f, height, -10.0f, 10.0f );
+  glLoadIdentity();
 
-  glMatrixMode(GL_MODELVIEW);
+  glMatrixMode (GL_MODELVIEW);
   glPushMatrix();
   glLoadIdentity();
     
-  glColor3f(p.lc[0],p.lc[1],p.lc[2]);
-  
-  if (p.pos == 1)
-    glTranslatef(0.01*width,0.97*height,0.); 
-  else if (p.pos == 2)      
-    glTranslatef(0.9*width-1.6*strlen(p.str),0.97*height,0.); 
-  else if (p.pos == 3)
-    glTranslatef(0.9*width-1.6*strlen(p.str),0.02*height,0.); 
+  glColor3f (p.lc[0], p.lc[1], p.lc[2]);
+  glLineWidth (view->samples*(p.lw > 0. ? p.lw : 1.));
+
+  float width  = gl_StrokeWidth ('1'), height = gl_StrokeHeight();
+  if (!p.size)
+    p.size = 40;
+  float hscale = 2./(p.size*width), vscale = hscale*view->width/view->height;
+  float vmargin = width/2.*vscale;
+  if (p.pos == 0)
+    glTranslatef (-1., -1. + vmargin, 0.);
+  else if (p.pos == 1)
+    glTranslatef (-1., 1. - height*vscale, 0.);
+  else if (p.pos == 2)
+    glTranslatef (1. - strlen(p.str)*width*hscale, 1. - height*vscale, 0.);
   else
-    glTranslatef(0.01*width,0.02*height,0.); 
-    
-  glScalef (xscale, yscale, zscale);
-  gl_StrokeString(p.str); 
-    
-  glMatrixMode(GL_MODELVIEW);
+    glTranslatef (1. - strlen(p.str)*width*hscale, -1. + vmargin, 0.);    
+  glScalef (hscale, vscale, 1.);
+  gl_StrokeString (p.str); 
+  
+  glMatrixMode (GL_MODELVIEW);
   glPopMatrix();
-  glMatrixMode(GL_PROJECTION);
+  glMatrixMode (GL_PROJECTION);
   glPopMatrix();  
 
   return true;
