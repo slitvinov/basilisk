@@ -259,23 +259,10 @@ static void diagonalization_2D (double eval[dimension],
 
 event tracer_advection (i++)
 {
-  double eigenval[2],  AC[3];
-  double Ev[2][2];
-  pseudo_t M;
 #if IMPLICIT  
   scalar OM[];
-#else
-  double OM;
 #endif
-  pseudo_t B, A;
   symmetric tensor rhs[];
-  double fa, eta, nu;
-  scalar trac = trA;
-#if AXI
-  scalar * components = {Psi.x.x, Psi.x.y, Psi.y.y, Psiqq};
-#else
-  scalar * components = {Psi.x.x, Psi.x.y, Psi.y.y};
-#endif
 
   /** 
   The stress tensor depends on previous instants and has to be
@@ -314,7 +301,6 @@ event tracer_advection (i++)
 
   foreach() {
     if (lambda[] != 0.) {
-      eta = 1., nu = 1.;
 
       /**
       We assume that the stress tensor $\mathbf{S}$ depends on the
@@ -327,11 +313,13 @@ event tracer_advection (i++)
       nonlinear parameters that depend on the trace of the conformation tensor,
       $\mathbf{A}$.*/
 
+      double eta = 1., nu = 1.;
       if (f_s)
-	f_s (trac[], &nu, &eta);
+	f_s (trA[], &nu, &eta);
 
       double fa = (mup[] != 0 ? lambda[]/(mup[]*eta) : 0.);
-     
+
+      pseudo_t A;
       A.x.y = fa*S.x.y[]/nu;
       foreach_dimension()
 	A.x.x = (fa*S.x.x[] + 1.)/nu;
@@ -350,9 +338,9 @@ event tracer_advection (i++)
       The conformation tensor is diagonalized through the
       eigenvector tensor $\mathbf{R}$ and the eigenvalues diagonal
       tensor, $\Lambda$. */
-      
-      AC[0] = A.x.x; AC[1] = A.y.y; AC[2] = A.x.y; 
-      
+
+      double eigenval[2], Ev[2][2], AC[3];
+      AC[0] = A.x.x; AC[1] = A.y.y; AC[2] = A.x.y;
       diagonalization_2D (eigenval, Ev, AC);
     
       pseudo_v eval = {eigenval[0], eigenval[1]};
@@ -368,11 +356,15 @@ event tracer_advection (i++)
 	Psi.x.x[] = sq(R.x.x)*log(eval.x) + sq(R.x.y)*log(eval.y);
 
       /**
-      The diagonalization will be applied to velocity gradient
+      The diagonalization will be applied to the velocity gradient
       $(\nabla u)^T$ to obtain the antisymmetric tensor $\Omega$ and
       the traceless, symmetric tensor, $\mathbf{B}$. If the conformation
       tensor is $\mathbf{I}$, $\Omega = 0$ and $\mathbf{B}= \mathbf{D}$.  */
-      
+
+      pseudo_t B;
+#if !IMPLICIT
+      double OM;
+#endif
       if (eval.x - eval.y <= 1.e-20) {
 #if IMPLICIT
 	OM[] = 0;
@@ -385,6 +377,7 @@ event tracer_advection (i++)
 	  B.x.x = (u.x[1,0] - u.x[-1,0])/(2.*Delta);
       }
       else {
+	pseudo_t M;
 	foreach_dimension() {
 	  M.x.x = (sq(R.x.x)*(u.x[1] - u.x[-1]) +
 		   sq(R.y.x)*(u.y[0,1] - u.y[0,-1]) +
@@ -411,7 +404,7 @@ event tracer_advection (i++)
       Now we have all the elements to compute the right side of the
       advancing equation for $\Psi$. */
 
-#if IMPLICIT    
+#if IMPLICIT
       foreach_dimension()
 	rhs.x.x[] = 2.*B.x.x*dt;
       rhs.x.y[] = 2.*B.x.y*dt;
@@ -419,9 +412,9 @@ event tracer_advection (i++)
       double s = - Psi.x.y[];
       foreach_dimension() {
 	s *= -1;
-	rhs.x.x[] = 2*B.x.x + 2.*s*OM;
+	rhs.x.x[] = 2.*(B.x.x + s*OM);
       }
-      rhs.x.y[] = 2*B.x.y + OM*(Psi.y.y[] - Psi.x.x[]);
+      rhs.x.y[] = 2.*B.x.y + OM*(Psi.y.y[] - Psi.x.x[]);
 #endif
    }
   }
@@ -431,8 +424,13 @@ event tracer_advection (i++)
   conformation tensor $\Psi$, but first we apply boundary
   conditions. */
 
-  boundary (components);
-  advection (components, uf, dt);
+#if AXI
+  boundary ({Psi.x.x, Psi.x.y, Psi.y.y, Psiqq});
+  advection ({Psi.x.x, Psi.x.y, Psi.y.y, Psiqq}, uf, dt);
+#else
+  boundary ({Psi.x.x, Psi.x.y, Psi.y.y});
+  advection ({Psi.x.x, Psi.x.y, Psi.y.y}, uf, dt);
+#endif
 
   foreach() {
     if (lambda[] < 1e-6) {
@@ -448,7 +446,6 @@ event tracer_advection (i++)
 	S.x.x[] = mup[]*(u.x[1,0] - u.x[-1,0])/Delta; // 2*mu*dxu;
       S.x.y[] = mup[]*(u.y[1,0] - u.y[-1,0] +
                        u.x[0,1] - u.x[0,-1])/(2.*Delta); // mu*(dxv+dyu)
-      S.y.x[] = S.x.y[];  // Out if symmetric tensor works
 
       Psi.x.x[] = Psi.y.y[] = Psi.x.y[] = Psi.y.x[] = 0;
  #if AXI
@@ -456,7 +453,7 @@ event tracer_advection (i++)
       Sqq[] = 2.*mup[]*u.y[]/y;
 #endif
     }
-    else {
+    else { // lambda >= 1e-6
 
       /**
       If $\lambda \neq 0$ we proceed with step (b). The upper
@@ -500,12 +497,12 @@ event tracer_advection (i++)
       diagonalization, to recover the conformation tensor $\mathbf{A}$
       and to perform step (c).*/
 
-      AC[0] = Psi.x.x[]; AC[1] = Psi.y.y[]; AC[2] = Psi.x.y[]; 
-      
+      double eigenval[2], Ev[2][2], AC[3];
+      AC[0] = Psi.x.x[]; AC[1] = Psi.y.y[]; AC[2] = Psi.x.y[];       
       diagonalization_2D (eigenval, Ev, AC);
       
       pseudo_v eval = {exp(eigenval[0]), exp(eigenval[1])};
-      pseudo_t R = {{Ev[0][0], Ev[0][1]}, {Ev[1][0], Ev[1][1]}};
+      pseudo_t R = {{Ev[0][0], Ev[0][1]}, {Ev[1][0], Ev[1][1]}}, A;
       
       A.x.y = R.x.x*R.y.x*eval.x + R.y.y*R.x.y*eval.y;
       foreach_dimension()
@@ -523,18 +520,19 @@ event tracer_advection (i++)
       $$
       */
 
-      nu = 1; eta = 1.;
+      double eta = 1., nu = 1.;
       if (f_r) {
 #if 0 // Set to one if the midstep trace is to be used.
-	double trac[] = A.x.x + A.y.y;
+	scalar trac = trA;
+	trac[] = A.x.x + A.y.y;
 #if AXI
 	trac[] += Aqq;
 #endif
 #endif
-	f_r (trac[], &nu, &eta);
+	f_r (trA[], &nu, &eta);
       }
 
-      fa = exp(-nu*eta*dt/lambda[]);
+      double fa = exp(-nu*eta*dt/lambda[]);
 
 #if AXI
       Aqq = (1. - fa)/nu + fa*exp(Psiqq[]);
@@ -549,6 +547,7 @@ event tracer_advection (i++)
       The trace at time $n+1$ is also needed for some models. */
       
       if (f_s || f_r) {
+	scalar trac = trA;
 	trac[] = A.x.x + A.y.y;
 #if AXI
 	trac[] += Aqq;
@@ -562,7 +561,7 @@ event tracer_advection (i++)
 
       nu = 1; eta = 1.;
       if (f_s)
-	f_s (trac[], &nu, &eta);
+	f_s (trA[], &nu, &eta);
 
       fa = mup[]/lambda[]*eta;
       
@@ -572,12 +571,11 @@ event tracer_advection (i++)
 #endif
       foreach_dimension()
 	S.x.x[] = fa*(nu*A.x.x - 1);
-
-      S.y.x[] = S.x.y[]; // FIXME: not need for a symmetric tensor
     }
+    S.y.x[] = S.x.y[]; // FIXME: not needed for a symmetric tensor
   }
 
-#if AXI  
+#if AXI
   boundary((scalar *){S, Psi, Psiqq, Sqq});
 #else
   boundary((scalar *){S, Psi});
@@ -588,7 +586,7 @@ event acceleration (i++)
 {
   face vector av = a;
 
-  /**
+  /** 
   Tensor $\mathbf{S}$ is defined at cell centers while the
   corresponding force (acceleration) will be defined at cell
   faces. Two terms contribute to each component of the momentum
@@ -602,7 +600,7 @@ event acceleration (i++)
   `[-1,0]` are not involved in the computation of shear. */
 
   foreach_face()
-    if (fm.x[] > 1e-20) {
+    if (fm.x[] > 1e-20) { // FIXME: why not zero?
       double shear = (S.x.y[0,1]*cm[0,1] + S.x.y[-1,1]*cm[-1,1] -
 		      S.x.y[0,-1]*cm[0,-1] - S.x.y[-1,-1]*cm[-1,-1])/4.;
       av.x[] += (shear + cm[]*S.x.x[] - cm[-1]*S.x.x[-1])*
