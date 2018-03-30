@@ -220,40 +220,40 @@ event init (i = 0) {
 The first step is to implement a routine to calculate the eigenvalues
 and eigenvectors of the conformation tensor $\mathbf{A}$. */
 
-static void diagonalization_2D (double eval[dimension], 
-				double evec[dimension][dimension],
-				double A[dimension+1])
+static void diagonalization_2D (pseudo_v * eval, pseudo_t * evec, pseudo_t * A)
 {
   /**
   The eigenvalues are saved in vector *eval* computed from the
   trace and the determinant of the symmetric conformation tensor
-  $\mathbf{A}$. The conformation tensor is stored in a vector of
-  size 3 in 2D: $(A[0] = A_{11}, A[1] = A_{22}, A[2] = A_{12})$. */
+  $\mathbf{A}$. */
 
-  if (sq(A[2]) < 1e-15) {
-    evec[0][0] = evec[1][1] = 1.;
-    evec[1][0] = evec[0][1] = 0.;
-    eval[0] = A[0]; eval[1] = A[1];
+  if (sq(A->x.y) < 1e-15) {
+    evec->x.x = evec->y.y = 1.;
+    evec->y.x = evec->x.y = 0.;
+    eval->x = A->x.x; eval->y = A->y.y;
     return;
   }
 
-  double T = A[0] + A[1]; // Trace of the tensor
-  double D = A[0]*A[1] - sq(A[2]); // Determinant
+  double T = A->x.x + A->y.y; // Trace of the tensor
+  double D = A->x.x*A->y.y - sq(A->x.y); // Determinant
 
   /**
   The eigenvectors, $\mathbf{v}_i$ are saved by columns in tensor
   $\mathbf{R} = (\mathbf{v}_1|\mathbf{v}_2)$. */
 
-  evec[0][0] = evec[0][1] = A[2];
-  evec[1][0] = evec[1][1] = -A[0];
+  evec->x.x = evec->x.y = A->x.y;
+  evec->y.x = evec->y.y = -A->x.x;
   double s = 1.;
-  for (int i = 0; i < dimension; i++) { 
-    eval[i] = T/2 + s*sqrt(sq(T)/4.-D);
+  for (int i = 0; i < dimension; i++) {
+    double * ev = (double *) eval;
+    ev[i] = T/2 + s*sqrt(sq(T)/4. - D);
     s *= -1;
-    evec[1][i] += eval[i];
-    double mod = sqrt(sq(evec[0][i]) + sq(evec[1][i]));
-    evec[0][i] /= mod;
-    evec[1][i] /= mod;
+    double * evecx = (double *) &evec->x;
+    double * evecy = (double *) &evec->y;
+    evecy[i] += ev[i];
+    double mod = sqrt(sq(evecx[i]) + sq(evecy[i]));
+    evecx[i] /= mod;
+    evecy[i] /= mod;
   }
 }
 
@@ -344,12 +344,9 @@ event tracer_advection (i++)
       eigenvector tensor $\mathbf{R}$ and the eigenvalues diagonal
       tensor, $\Lambda$. */
 
-      double eigenval[2], Ev[2][2], AC[3];
-      AC[0] = A.x.x; AC[1] = A.y.y; AC[2] = A.x.y;
-      diagonalization_2D (eigenval, Ev, AC);
-    
-      pseudo_v eval = {eigenval[0], eigenval[1]};
-      pseudo_t R = {{Ev[0][0], Ev[0][1]}, {Ev[1][0], Ev[1][1]}};
+      pseudo_v eval;
+      pseudo_t R;
+      diagonalization_2D (&eval, &R, &A);
       
       /** 
       $\Psi = \log \mathbf{A}$ is easily obtained after diagonalization, 
@@ -506,12 +503,11 @@ event tracer_advection (i++)
       diagonalization, to recover the conformation tensor $\mathbf{A}$
       and to perform step (c).*/
 
-      double eigenval[2], Ev[2][2], AC[3];
-      AC[0] = Psi.x.x[]; AC[1] = Psi.y.y[]; AC[2] = Psi.x.y[];       
-      diagonalization_2D (eigenval, Ev, AC);
-      
-      pseudo_v eval = {exp(eigenval[0]), exp(eigenval[1])};
-      pseudo_t R = {{Ev[0][0], Ev[0][1]}, {Ev[1][0], Ev[1][1]}}, A;
+      pseudo_t A = {{Psi.x.x[], Psi.x.y[]}, {Psi.y.x[], Psi.y.y[]}};
+      pseudo_v eval;
+      pseudo_t R;
+      diagonalization_2D (&eval, &R, &A);
+      eval.x = exp(eval.x), eval.y = exp(eval.y);
       
       A.x.y = R.x.x*R.y.x*eval.x + R.y.y*R.x.y*eval.y;
       foreach_dimension()
