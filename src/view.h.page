@@ -784,7 +784,9 @@ else if (!strcmp (s, "draw_string")) {
   }
 
   else if (!strcmp (s, "box")) {
-    box();
+    struct _box p = {0};
+    _box_get (&p);
+    box (p);
     draw_append (buf, history, interactive);
   }
 

@@ -787,13 +787,23 @@ bool squares (struct _squares p)
 
 /**
 # *box()*: displays box boundaries and axis coordinates
+
+* *notics*: do not draw tick marks (default is false).
+* *lc[]*: an array of red, green, blue values between 0 and 1 which
+  defines the line color.
+* *lw*: the line width.
 */
+
+struct _box {
+  bool notics;
+  float lc[3], lw;
+};
 	  
 trace
-bool box()
+bool box (struct _box p)
 {
   bview * view = draw();
-  draw_lines (view, (float[3]){0,0,0}, 1.);
+  draw_lines (view, p.lc, p.lw);
 
   float height = 0.5*gl_StrokeHeight();
   float width = gl_StrokeWidth ('1'), scale = L0/(60.*width), length;
@@ -801,24 +811,26 @@ bool box()
   char label[80];
   
   glMatrixMode (GL_MODELVIEW);
-  int nt = 8;
-  for (int i = 0; i <= nt; i++) {
-    glPushMatrix();
-    glTranslatef (X0 + i*L0/nt - height/2.*scale, Y0 - width/3.*scale, Z1);
-    glRotatef (-90, 0, 0, 1);
-    glScalef (scale, scale, scale);
-    sprintf (label, "%g", X0 + i*L0/nt);
-    gl_StrokeString (label);
-    glPopMatrix();
 
-    glPushMatrix();
-    sprintf (label, "%g", Y0 + i*L0/nt);
-    length = gl_StrokeLength (label);
-    glTranslatef (X0 - (length + width/3.)*scale,
-		  Y0 + i*L0/nt - height/2.*scale, Z1);
-    glScalef (scale, scale, scale);
-    gl_StrokeString (label);
-    glPopMatrix();
+  if (!p.notics) {
+    int nt = 8;
+    for (int i = 0; i <= nt; i++) {
+      glPushMatrix();
+      glTranslatef (X0 + i*L0/nt - height/2.*scale, Y0 - width/3.*scale, Z1);
+      glRotatef (-90, 0, 0, 1);
+      glScalef (scale, scale, scale);
+      sprintf (label, "%g", X0 + i*L0/nt);
+      gl_StrokeString (label);
+      glPopMatrix();
+
+      glPushMatrix();
+      sprintf (label, "%g", Y0 + i*L0/nt);
+      length = gl_StrokeLength (label);
+      glTranslatef (X0 - (length + width/3.)*scale,
+		    Y0 + i*L0/nt - height/2.*scale, Z1);
+      glScalef (scale, scale, scale);
+      gl_StrokeString (label);
+      glPopMatrix();
 
 #if dimension > 2
       glPushMatrix();
@@ -831,25 +843,25 @@ bool box()
       gl_StrokeString (label);
       glPopMatrix();
 #endif
-  }
+    }
 
-  glPushMatrix();
-  sprintf (label, "%g", X0 + L0/2.);
-  length = gl_StrokeLength (label);
-  glTranslatef (X0 + L0/2 - height*scale, Y0 - (length + 4.*width)*scale, Z1);
-  glScalef (2.*scale, 2.*scale, 2.*scale);
-  gl_StrokeString ("X");
-  glPopMatrix();
+    glPushMatrix();
+    sprintf (label, "%g", X0 + L0/2.);
+    length = gl_StrokeLength (label);
+    glTranslatef (X0 + L0/2 - height*scale, Y0 - (length + 4.*width)*scale, Z1);
+    glScalef (2.*scale, 2.*scale, 2.*scale);
+    gl_StrokeString ("X");
+    glPopMatrix();
 
   
-  glPushMatrix();
-  sprintf (label, "%g", Y0 + L0/2.);
-  length = gl_StrokeLength (label);
-  glTranslatef (X0 - (length + 4.*width)*scale,
-		Y0 + L0/2. - height*scale, Z1);
-  glScalef (2.*scale, 2.*scale, 2.*scale);
-  gl_StrokeString ("Y");
-  glPopMatrix();
+    glPushMatrix();
+    sprintf (label, "%g", Y0 + L0/2.);
+    length = gl_StrokeLength (label);
+    glTranslatef (X0 - (length + 4.*width)*scale,
+		  Y0 + L0/2. - height*scale, Z1);
+    glScalef (2.*scale, 2.*scale, 2.*scale);
+    gl_StrokeString ("Y");
+    glPopMatrix();
 
 #if dimension > 2
     glPushMatrix();
@@ -862,6 +874,7 @@ bool box()
     gl_StrokeString ("Z");
     glPopMatrix();
 #endif
+  }
   
 #if dimension == 2
   foreach_level (0) {
