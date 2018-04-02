@@ -76,7 +76,6 @@ We will use the Bell--Collela--Glaz scheme to advect the log-conformation
 tensor $\Psi$. */
 
 #include "bcg.h"
-#define IMPLICIT 0
 
 /**
 ## Parameters
@@ -87,6 +86,17 @@ two functions $\mathbf{f}_s (\mathbf{A})$ and $\mathbf{f}_r
 
 void (* f_s) (double, double *, double *) = NULL;
 void (* f_r) (double, double *, double *) = NULL;
+
+/**
+A fundamental viscoelastic fluid property is the retardation or
+relaxation time, $\lambda$. Additionally, the viscosity of the
+viscoelastic fluid is decomposed into the polymeric contribution,
+$\mu_p$, and the solvent contribution, $\mu_s$. The solvent behaves as
+a Newtonian fluid, therefore, $\mu_s$ is not defined here since it is
+already defined in the [Navier-Stokes
+solver](navier-stokes/centered.h). The trace of the conformation
+tensor, $\mathbf{A}$, is often necessary for other constitutive
+viscoelastic models than Oldroyd-B.  */
 
 (const) scalar lambda = unity;
 (const) scalar mup = unity;
@@ -112,16 +122,6 @@ arrays not related to the grid. */
 
 typedef struct { double x, y;}   pseudo_v;
 typedef struct { pseudo_v x, y;} pseudo_t;
-
-/**
-The face vector below, *Soff*, is used to store the time integration of
-the constitutive equation at the faces. Using *Soff*, it is easy to
-set boundary conditions for a no-slip wall for the off-diagonal
-terms $S_{xy}$. */
-
-#if 0
-face vector Soff[]; // After some test I am almost sure this can be neglected
-#endif
 
 event defaults (i = 0) {
   if (is_constant (a.x))
@@ -284,22 +284,7 @@ $$
 
 event tracer_advection (i++)
 {
-#if IMPLICIT  
-  scalar OM[];
-#endif
   symmetric tensor rhs[];
-
-  /**
-  *Soff* is used to impose wall-type BC to the off-diagonal terms of the
-  stress tensor. */
-
-#if 0
-  foreach_face() {
-    double lamf = (lambda[] + lambda[-1])/2;
-    double str =  (mup[] + mup[-1])*(u.y[] - u.y[-1])/(2*Delta);
-    Soff.x[] = (str*dt + lamf*Soff.x[])/(dt + lamf);
-  }
-#endif
 
   /**
   ### Computation of $\Psi = \log \mathbf{A}$ and $rhs = 2 \mathbf{B} + (\Omega \cdot \Psi -\Psi \cdot \Omega)$ */
@@ -363,15 +348,8 @@ event tracer_advection (i++)
       tensor is $\mathbf{I}$, $\Omega = 0$ and $\mathbf{B}= \mathbf{D}$.  */
 
       pseudo_t B;
-#if !IMPLICIT
-      double OM;
-#endif
+      double OM = 0.;
       if (eval.x - eval.y <= 1.e-20) {
-#if IMPLICIT
-	OM[] = 0;
-#else
-	OM = 0;
-#endif
 	B.x.y = (u.y[1,0] - u.y[-1,0] +
 		 u.x[0,1] - u.x[0,-1])/(4.*Delta); 
 	foreach_dimension() 
@@ -390,11 +368,7 @@ event tracer_advection (i++)
 		   R.y.x*R.y.y*(u.y[0,1] - u.y[0,-1]))/(2.*Delta);
 	}
 	double omega = (eval.y*M.x.y + eval.x*M.y.x)/(eval.y - eval.x);
-#if IMPLICIT
-	OM[] = (R.x.x*R.y.y - R.x.y*R.y.x)*omega;
-#else
 	OM = (R.x.x*R.y.y - R.x.y*R.y.x)*omega;
-#endif
 	
 	B.x.y = M.x.x*R.x.x*R.y.x + M.y.y*R.y.y*R.x.y;
 	foreach_dimension()
@@ -405,18 +379,12 @@ event tracer_advection (i++)
       Now we have all the elements to compute the right side of the
       advancing equation for $\Psi$. */
 
-#if IMPLICIT
-      foreach_dimension()
-	rhs.x.x[] = 2.*B.x.x*dt;
-      rhs.x.y[] = 2.*B.x.y*dt;
-#else
       double s = - Psi.x.y[];
       foreach_dimension() {
 	s *= -1;
 	rhs.x.x[] = 2.*(B.x.x + s*OM);
       }
       rhs.x.y[] = 2.*B.x.y + OM*(Psi.y.y[] - Psi.x.x[]);
-#endif
    }
   }
   
@@ -465,22 +433,9 @@ event tracer_advection (i++)
       If $\lambda \neq 0$ we proceed with step (b). The upper
       convection of the log of the conformation tensor, $\Psi$. */
 
-#if IMPLICIT
-      foreach_dimension()
-	rhs.x.x[] += Psi.x.x[];
-      rhs.x.y[] += Psi.x.y[];
-
-      Psi.x.x[] = (rhs.x.x[] + 2.*dt*OM[]*rhs.x.y[] + 
-		   2*sq(dt*OM[])*(rhs.x.x[] + rhs.y.y[]))/(1. + sq(2*dt*OM[]));
-      Psi.y.y[] = (rhs.y.y[] - 2.*dt*OM[]*rhs.x.y[] + 
-		   2*sq(dt*OM[])*(rhs.x.x[] + rhs.y.y[]))/(1. + sq(2*dt*OM[]));
-      Psi.x.y[] = (rhs.x.y[] + (rhs.y.y[] - rhs.x.x[])*dt*OM[])
-	/(1. + sq(2*dt*OM[]));
-#else
       foreach_dimension()
         Psi.x.x[] += rhs.x.x[]*dt;
       Psi.x.y[] += rhs.x.y[]*dt;
-#endif
       
       Psi.y.x[] = Psi.x.y[]; // FIXME: not needed for a symmetric tensor
 
