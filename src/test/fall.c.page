@@ -24,7 +24,9 @@ number is 2.26. */
 #define LEVEL 7
 
 /**
-FIXME: what are BETA and WI? */
+The dimensionless visco-elastic properties used are the ratio of
+the solvent to the total visco-elastic viscosity (polymeric
+plus solvent) and the Weissemberg number. */
 
 #define BETA 0.1
 #define WI 1.0
@@ -79,7 +81,9 @@ int main() {
 event init (t = 0) {
 
   /**
-  FIXME: explain why this is required. */
+  At a wall of normal $\mathbf{n}$ the component of the visco-elastic
+  stress tensor $S_{nn}$ is null. Since the left boundary is a wall, we
+  set $S_{xx}$ equal to zero at that boundary. */
   
   vector v = S.x;
   v.n[left] = dirichlet(0.);

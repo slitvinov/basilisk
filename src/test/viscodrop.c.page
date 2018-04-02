@@ -4,12 +4,13 @@
 This problem has been used as benchmark (see for example [Chinyoka et
 al. (2005)](#chinyoka2005)). Equations are usually made dimensionless 
 with the outer density $\rho_2$, the droplet radius $a$ and the shear rate
-$\dot{\gamma}$. The following dimensionless parameters follow
+$\dot{\gamma}$. The following dimensionless parameters appear
 $$ 
 We = \frac{\rho_2 a^3 \dot{\gamma}^2}{\sigma}, \quad
 Re = \frac{\rho_2 a^2 \dot{\gamma}}{\mu_2}, \quad 
-\mu_r =\frac{\mu_1}{\mu_2} , \quad 
-m = \frac{\rho_1}{\rho_2}, \quad \beta = \frac{\mu_s}{\mu_1} 
+\mu_r =\frac{\mu_1}{\mu_2}, \quad
+m = \frac{\rho_1}{\rho_2}, \quad \beta = \frac{\mu_s}{\mu_1}, \quad
+De = dot{\gamma}\lambda}
 $$ 
 where subscript "1" and "2" stand for the droplet and matrix fluid
 respectively and $\mu_s$ is the solvent viscosity. Note that the
@@ -26,7 +27,7 @@ polymer viscosity is $\mu_p=\mu_1-\mu_s$. */
 #define MUr 1.     // ratio of outer(matrix) to inner(drop) viscosity
 #define M 1.       // ratio of outer to inner density
 #define Deb 0.4    // Deborah number
-#define Beta 0.5   // ratio of the solvent viscosity to the viscoelastic visc.
+#define Beta 0.5   // ratio of the solvent visc. to the total viscoelastic visc.
 
 int MAXLEVEL = 9;
 scalar mupd[], lam[];
@@ -83,8 +84,16 @@ event init (i = 0) {
 }
 
 /**
-FIXME: Need to describe better what happens here. The Deborah number
-is not defined above etc... */
+The event below set viscoelastic properties at each step. The
+dimensionless relaxation parameter is the Deborah number, $De$, while
+the the dimensionless polymer viscosity $\mu_p$ is
+
+$$
+\frac{\mu_p}{\rho_2 a^2 \dot{\gamma}} =
+\frac{\mu_1 - \beta \mu_1}{\rho_2 a^2 \dot{\gamma}} =
+\frac{1-\beta}{Re}\frac{\mu_1}{\mu_2}
+$$
+*/
 
 event properties (i++) {
   foreach () {
