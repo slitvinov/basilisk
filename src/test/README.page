@@ -74,7 +74,7 @@ Note that only the documented test cases appear in the list below
 
 ## Viscoelasticity
 
-* [Transient planar poiseuille flow for 
+* [Transient planar Poiseuille flow for 
    an Oldroyd-B or FENE-P fluid](poiseuille-oldroydb.c)
 * [Oldroyd-B lid-driven cavity](lid-oldroydb.c)
 * [Viscoelastic 2D drop in a Couette Newtonian shear flow](viscodrop.c)

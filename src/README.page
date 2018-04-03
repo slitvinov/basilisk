@@ -114,7 +114,7 @@ $$
 
 ## Viscoelasticity
 
-* [The log-conformation method for some constitutive models](log_conform.h)
+* [The log-conformation method for some constitutive models](log-conform.h)
 $$ 
 D_t \Psi = rhs =  (\Omega \cdot \Psi -\Psi \cdot \Omega) + 2 \mathbf{B} +
 \frac{e^{-\Psi} \mathbf{f}_r (e^{\Psi})}{\lambda}

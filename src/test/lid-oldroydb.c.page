@@ -26,7 +26,7 @@ We assume that the solvent and polymer viscosities are equal ($\beta =
 
 #include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
-#include "log_conform.h"
+#include "log-conform.h"
 
 int main()
 {
@@ -114,7 +114,7 @@ plot 'lid-oldroydb.uy' w l t 'Fattal and Kupferman (2005)', 'xprof' t 'Basilisk'
 ~~~bib
 @article{fattal2005,
   title={Time-dependent simulation of viscoelastic flows at 
-         high Weissenberg number using the log-conformation representation},
+         high {W}eissenberg number using the log-conformation representation},
   author={Fattal, Raanan and Kupferman, Raz},
   journal={Journal of Non-Newtonian Fluid Mechanics},
   volume={126},

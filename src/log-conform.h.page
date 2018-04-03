@@ -4,16 +4,16 @@
 ## Introduction
 
 The numerical resolution of viscoelastic fluid problems often face the
-[High-Weissenberg Number Problem](http://www.ma.huji.ac.il/~razk/iWeb/My_Site/Research_files/Visco1.pdf). This
-is a numerical instability appearing when strongly elastic flows
+[High-Weissenberg Number
+Problem](http://www.ma.huji.ac.il/~razk/iWeb/My_Site/Research_files/Visco1.pdf). 
+This is a numerical instability appearing when strongly elastic flows
 create regions of high stress and fine features. This instability
 poses practical limits to the values of the relaxation time of the
-viscoelastic fluid, $\lambda$.
-[Fattal \& Kupferman (2004, 2005)](#fattal2004) identified the
-exponential nature of the solution as the origin of the instability. They
-proposed to use the logarithm of the conformation tensor $\Psi = \log
-\, \mathbf{A}$ rather than the viscoelastic stress tensor to
-circumvent the instability.
+viscoelastic fluid, $\lambda$.  [Fattal \& Kupferman (2004,
+2005)](#fattal2004) identified the exponential nature of the solution
+as the origin of the instability. They proposed to use the logarithm
+of the conformation tensor $\Psi = \log \, \mathbf{A}$ rather than the
+viscoelastic stress tensor to circumvent the instability.
 
 ## Equations
 
@@ -257,7 +257,7 @@ static void diagonalization_2D (pseudo_v * eval, pseudo_t * evec, pseudo_t * A)
   }
 }
 
-/** 
+/**
 The stress tensor depends on previous instants and has to be
 integrated in time. In the log-conformation scheme the advection of
 the stress tensor is circumvented, instead the conformation tensor,
@@ -314,7 +314,7 @@ event tracer_advection (i++)
       foreach_dimension()
 	A.x.x = (fa*S.x.x[] + 1.)/nu;
 
-      /** 
+      /**
       In the axisymmetric case, $\Psi_{\theta \theta} = \log A_{\theta
       \theta}$. Therefore $\Psi_{\theta \theta} = \log [ ( 1 + fa 
       S_{\theta \theta})/\nu]$. */
@@ -324,7 +324,7 @@ event tracer_advection (i++)
       Psiqq[] = log (Aqq); 
 #endif
 
-      /** 
+      /**
       The conformation tensor is diagonalized through the
       eigenvector tensor $\mathbf{R}$ and the eigenvalues diagonal
       tensor, $\Lambda$. */
@@ -333,7 +333,7 @@ event tracer_advection (i++)
       pseudo_t R;
       diagonalization_2D (&eval, &R, &A);
       
-      /** 
+      /**
       $\Psi = \log \mathbf{A}$ is easily obtained after diagonalization, 
       $\Psi = R \cdot \log(\Lambda) \cdot R^T$. */
       
@@ -409,7 +409,7 @@ event tracer_advection (i++)
   foreach() {
     if (lambda[] < 1e-6) {
 
-      /** 
+      /**
       If $\lambda = 0$ the stress tensor for the polymeric part
       reduces to that of a Newtonian fluid $\mathbf{S} = 2 \mu_p
       \mathbf{D}$ with $\mathbf{D}$ the rate-of-strain
@@ -483,10 +483,10 @@ event tracer_advection (i++)
       double eta = 1., nu = 1.;
       if (f_r) {
 #if 0 // Set to one if the midstep trace is to be used.
-	scalar trac = trA;
-	trac[] = A.x.x + A.y.y;
+	scalar t = trA;
+	t[] = A.x.x + A.y.y;
 #if AXI
-	trac[] += Aqq;
+	t[] += Aqq;
 #endif
 #endif
 	f_r (trA[], &nu, &eta);
@@ -507,10 +507,10 @@ event tracer_advection (i++)
       The trace at time $n+1$ is also needed for some models. */
       
       if (f_s || f_r) {
-	scalar trac = trA;
-	trac[] = A.x.x + A.y.y;
+	scalar t = trA;
+	t[] = A.x.x + A.y.y;
 #if AXI
-	trac[] += Aqq;
+	t[] += Aqq;
 #endif
       }
 
@@ -592,7 +592,7 @@ event acceleration (i++)
 
 @article{fattal2005,
   title={Time-dependent simulation of viscoelastic flows at 
-         high Weissenberg number using the log-conformation representation},
+         high {W}eissenberg number using the log-conformation representation},
   author={Fattal, Raanan and Kupferman, Raz},
   journal={Journal of Non-Newtonian Fluid Mechanics},
   volume={126},
@@ -603,7 +603,7 @@ event acceleration (i++)
 }
 
 @article{hao2007,
-  title={Simulation for high Weissenberg number: viscoelastic 
+  title={Simulation for high {W}eissenberg number: viscoelastic 
          flow by a finite element method},
   author={Hao, Jian and Pan, Tsorng-Whay},
   journal={Applied mathematics letters},
@@ -615,7 +615,7 @@ event acceleration (i++)
 }
 
 @article{comminal2015,
-  title={Robust simulations of viscoelastic flows at high Weissenberg 
+  title={Robust simulations of viscoelastic flows at high {W}eissenberg 
          numbers with the streamfunction/log-conformation formulation},
   author={Comminal, Rapha{\"e}l and Spangenberg, Jon and Hattel, Jesper Henri},
   journal={Journal of Non-Newtonian Fluid Mechanics},

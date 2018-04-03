@@ -1,5 +1,5 @@
 /**
-# Transient planar poiseuille flow for a viscoelastic Oldroyd-B or FENE-P fluid
+# Transient planar Poiseuille flow for a viscoelastic Oldroyd-B or FENE-P fluid
 
 The onset of a Poiseuille flow from a fluid at rest after the sudden
 application of a pressure gradient is characterized, for a Newtonian fluid, 
@@ -56,9 +56,9 @@ average velocity for the steady flow). */
 
 #include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
-#include "log_conform.h"
+#include "log-conform.h"
 #if FENE_P
-# include "fene_p.h"
+# include "fene-p.h"
 #else
 # define L2 1.
 #endif

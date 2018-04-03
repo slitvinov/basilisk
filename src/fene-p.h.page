@@ -1,7 +1,7 @@
 /**
 # Functions $f_s$ and $f_r$ for the FENE-P model
 
-See [log_conform.h](). */
+See [log-conform.h](). */
 
 double L2 = 1.;
 

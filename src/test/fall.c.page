@@ -9,7 +9,7 @@ to compute interface properties. */
 #include "axi.h"
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
-#include "log_conform.h"
+#include "log-conform.h"
 #include "curvature.h"
 
 /**
@@ -25,8 +25,8 @@ number is 2.26. */
 
 /**
 The dimensionless visco-elastic properties used are the ratio of
-the solvent to the total visco-elastic viscosity (polymeric
-plus solvent) and the Weissemberg number. */
+the solvent to the total viscoelastic viscosity (polymeric
+plus solvent) and the Weissenberg number. */
 
 #define BETA 0.1
 #define WI 1.0
@@ -81,8 +81,8 @@ int main() {
 event init (t = 0) {
 
   /**
-  At a wall of normal $\mathbf{n}$ the component of the visco-elastic
-  stress tensor $S_{nn}$ is null. Since the left boundary is a wall, we
+  At a wall of normal $\mathbf{n}$ the component of the viscoelastic
+  stress tensor $S_{nn}$ is zero. Since the left boundary is a wall, we
   set $S_{xx}$ equal to zero at that boundary. */
   
   vector v = S.x;
