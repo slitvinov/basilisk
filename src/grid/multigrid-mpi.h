@@ -30,12 +30,13 @@ static void rcv_x (int i, int src, int tag, int l, scalar * list)
     return;
   int nl = (1 << l) + 2*GHOSTS;
   size_t size = pow(nl, dimension - 1)*list_len(list)*GHOSTS*sizeof(double);
-  double buf[size], * b = buf;
+  double * buf = (double *) malloc (size), * b = buf;
   MPI_Status s;
   MPI_Recv (buf, size, MPI_BYTE, src, tag, MPI_COMM_WORLD, &s);
   foreach_slice_x (i, i + GHOSTS, l)
     for (scalar s in list)
       s[] = *b++;
+  free (buf);
 }
 
 trace
