@@ -7,10 +7,10 @@ with the outer density $\rho_2$, the droplet radius $a$ and the shear rate
 $\dot{\gamma}$. The following dimensionless parameters appear
 $$ 
 We = \frac{\rho_2 a^3 \dot{\gamma}^2}{\sigma}, \quad
-Re = \frac{\rho_2 a^2 \dot{\gamma}}{\mu_2}, \quad 
+Re = \frac{\rho_2 a^2 \dot{\gamma}}{\mu_2}, \quad
 \mu_r =\frac{\mu_1}{\mu_2}, \quad
 m = \frac{\rho_1}{\rho_2}, \quad \beta = \frac{\mu_s}{\mu_1}, \quad
-De = dot{\gamma}\lambda}
+De = \dot{\gamma}\lambda
 $$ 
 where subscript "1" and "2" stand for the droplet and matrix fluid
 respectively and $\mu_s$ is the solvent viscosity. Note that the

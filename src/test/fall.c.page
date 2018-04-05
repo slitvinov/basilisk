@@ -85,8 +85,8 @@ event init (t = 0) {
   stress tensor $S_{nn}$ is zero. Since the left boundary is a wall, we
   set $S_{xx}$ equal to zero at that boundary. */
   
-  vector v = S.x;
-  v.n[left] = dirichlet(0.);
+  scalar s = S.x.x;
+  s[left] = dirichlet(0.);
 
   /**
   The drop is centered on (2,0) and has a radius of 0.5. */

@@ -97,10 +97,10 @@ u.t[bottom] = neumann(0);
 
 event init (i = 0) 
 {
-  vector v = S.y;
-  v.n[top] = dirichlet(0.);
-  v = S.x;
-  v.n[bottom] = dirichlet(0.);
+  scalar s = S.y.y;
+  s[top] = dirichlet(0.);
+  s = S.x.y;
+  s[bottom] = dirichlet(0.);
   foreach()
     u.x[] = 0.;
   boundary ((scalar *){u});
@@ -140,7 +140,7 @@ event uprofile (t = end) {
 }
 #endif // FENE_P
 
-/** 
+/**
 For an Oldroyd-B fluid the solution converges to the theoretical
 solution with grid resolution.
 

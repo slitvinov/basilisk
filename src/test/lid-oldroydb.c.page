@@ -50,11 +50,11 @@ u.t[right]  = dirichlet(0);
 
 event init (i = 0) 
 {
-  vector v = S.x;
-  v.n[left] = dirichlet (0.);
-  v.n[right] = dirichlet (0.);
-  v = S.y;
-  v.n[bottom] = dirichlet (0.);	
+  scalar s = S.x.x;
+  s[left] = dirichlet (0.);
+  s[right] = dirichlet (0.);
+  s = S.y.y;
+  s[bottom] = dirichlet (0.);	
   foreach()
     u.x[] = 0.;
   boundary ((scalar *){u});
