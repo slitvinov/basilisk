@@ -166,17 +166,17 @@ arrays not related to the grid. */
 typedef struct { double x, y;}   pseudo_v;
 typedef struct { pseudo_v x, y;} pseudo_t;
 
-static void diagonalization_2D (pseudo_v * eval, pseudo_t * evec, pseudo_t * A)
+static void diagonalization_2D (pseudo_v * Lambda, pseudo_t * R, pseudo_t * A)
 {
   /**
-  The eigenvalues are saved in vector *eval* computed from the
+  The eigenvalues are saved in vector $\Lambda$ computed from the
   trace and the determinant of the symmetric conformation tensor
   $\mathbf{A}$. */
 
   if (sq(A->x.y) < 1e-15) {
-    evec->x.x = evec->y.y = 1.;
-    evec->y.x = evec->x.y = 0.;
-    eval->x = A->x.x; eval->y = A->y.y;
+    R->x.x = R->y.y = 1.;
+    R->y.x = R->x.y = 0.;
+    Lambda->x = A->x.x; Lambda->y = A->y.y;
     return;
   }
 
@@ -187,19 +187,19 @@ static void diagonalization_2D (pseudo_v * eval, pseudo_t * evec, pseudo_t * A)
   The eigenvectors, $\mathbf{v}_i$ are saved by columns in tensor
   $\mathbf{R} = (\mathbf{v}_1|\mathbf{v}_2)$. */
 
-  evec->x.x = evec->x.y = A->x.y;
-  evec->y.x = evec->y.y = -A->x.x;
+  R->x.x = R->x.y = A->x.y;
+  R->y.x = R->y.y = -A->x.x;
   double s = 1.;
   for (int i = 0; i < dimension; i++) {
-    double * ev = (double *) eval;
+    double * ev = (double *) Lambda;
     ev[i] = T/2 + s*sqrt(sq(T)/4. - D);
     s *= -1;
-    double * evecx = (double *) &evec->x;
-    double * evecy = (double *) &evec->y;
-    evecy[i] += ev[i];
-    double mod = sqrt(sq(evecx[i]) + sq(evecy[i]));
-    evecx[i] /= mod;
-    evecy[i] /= mod;
+    double * Rx = (double *) &R->x;
+    double * Ry = (double *) &R->y;
+    Ry[i] += ev[i];
+    double mod = sqrt(sq(Rx[i]) + sq(Ry[i]));
+    Rx[i] /= mod;
+    Ry[i] /= mod;
   }
 }
 
@@ -211,15 +211,15 @@ $\mathbf{A}$ (or more precisely the related variable $\Psi$) is
 advanced in time.
 
 In what follows we will adopt a scheme similar to that of [Hao \& Pan
-(2007)](#hao2007). They use a split scheme, solving successively
+(2007)](#hao2007). We use a split scheme, solving successively
 
-a) the advection term:
-$$ 
-\partial_t \Psi + \nabla \cdot (\Psi \mathbf{u}) = 0
-$$
-b) the upper convective term:
+a) the upper convective term:
 $$
 \partial_t \Psi = 2 \mathbf{B} + (\Omega \cdot \Psi -\Psi \cdot \Omega)
+$$
+b) the advection term:
+$$ 
+\partial_t \Psi + \nabla \cdot (\Psi \mathbf{u}) = 0
 $$
 c) the model term (but set in terms of the conformation 
 tensor $\mathbf{A}$). In an Oldroyd-B viscoelastic fluid, the model is
@@ -230,7 +230,7 @@ $$
 
 event tracer_advection (i++)
 {
-  symmetric tensor Psi[], rhs[];
+  symmetric tensor Psi[];
 #if AXI
   scalar Psiqq[];
 #endif
@@ -245,13 +245,13 @@ event tracer_advection (i++)
   }
   
   /**
-  ### Computation of $\Psi = \log \mathbf{A}$ and $rhs = 2 \mathbf{B} + (\Omega \cdot \Psi -\Psi \cdot \Omega)$ */
+  ### Computation of $\Psi = \log \mathbf{A}$ and upper convective term */
 
   foreach() {
     if (lambda[] == 0.) {
       foreach_dimension()
-	Psi.x.x[] = rhs.x.x[] = 0.;
-      Psi.x.y[] = rhs.x.y[] = 0.;
+	Psi.x.x[] = 0.;
+      Psi.x.y[] = 0.;
 #if AXI
       Psiqq[] = 0.;
 #endif
@@ -295,19 +295,22 @@ event tracer_advection (i++)
       eigenvector tensor $\mathbf{R}$ and the eigenvalues diagonal
       tensor, $\Lambda$. */
 
-      pseudo_v eval;
+      pseudo_v Lambda;
       pseudo_t R;
-      diagonalization_2D (&eval, &R, &A);
+      diagonalization_2D (&Lambda, &R, &A);
       
       /**
       $\Psi = \log \mathbf{A}$ is easily obtained after diagonalization, 
       $\Psi = R \cdot \log(\Lambda) \cdot R^T$. */
       
-      Psi.x.y[] = R.x.x*R.y.x*log(eval.x) + R.y.y*R.x.y*log(eval.y);
+      Psi.x.y[] = R.x.x*R.y.x*log(Lambda.x) + R.y.y*R.x.y*log(Lambda.y);
       foreach_dimension()
-	Psi.x.x[] = sq(R.x.x)*log(eval.x) + sq(R.x.y)*log(eval.y);
-
+	Psi.x.x[] = sq(R.x.x)*log(Lambda.x) + sq(R.x.y)*log(Lambda.y);
+      
       /**
+      We now compute the upper convective term $2 \mathbf{B} +
+      (\Omega \cdot \Psi -\Psi \cdot \Omega)$.
+	
       The diagonalization will be applied to the velocity gradient
       $(\nabla u)^T$ to obtain the antisymmetric tensor $\Omega$ and
       the traceless, symmetric tensor, $\mathbf{B}$. If the conformation
@@ -315,7 +318,7 @@ event tracer_advection (i++)
 
       pseudo_t B;
       double OM = 0.;
-      if (eval.x - eval.y <= 1e-20) {
+      if (fabs(Lambda.x - Lambda.y) <= 1e-20) {
 	B.x.y = (u.y[1,0] - u.y[-1,0] +
 		 u.x[0,1] - u.x[0,-1])/(4.*Delta); 
 	foreach_dimension() 
@@ -333,7 +336,7 @@ event tracer_advection (i++)
 		   R.x.x*R.y.y*(u.x[0,1] - u.x[0,-1]) +
 		   R.y.x*R.y.y*(u.y[0,1] - u.y[0,-1]))/(2.*Delta);
 	}
-	double omega = (eval.y*M.x.y + eval.x*M.y.x)/(eval.y - eval.x);
+	double omega = (Lambda.y*M.x.y + Lambda.x*M.y.x)/(Lambda.y - Lambda.x);
 	OM = (R.x.x*R.y.y - R.x.y*R.y.x)*omega;
 	
 	B.x.y = M.x.x*R.x.x*R.y.x + M.y.y*R.y.y*R.x.y;
@@ -342,22 +345,36 @@ event tracer_advection (i++)
       }
 
       /**
-      Now we have all the elements to compute the right side of the
-      advancing equation for $\Psi$. */
+      We now advance $\Psi$ in time, adding the upper convective
+      contribution. */
 
       double s = - Psi.x.y[];
+      Psi.x.y[] += dt*(2.*B.x.y + OM*(Psi.y.y[] - Psi.x.x[]));
       foreach_dimension() {
 	s *= -1;
-	rhs.x.x[] = 2.*(B.x.x + s*OM);
+	Psi.x.x[] += dt*2.*(B.x.x + s*OM);
       }
-      rhs.x.y[] = 2.*B.x.y + OM*(Psi.y.y[] - Psi.x.x[]);
+
+      /**
+      In the axisymmetric case, the governing equation for $\Psi_{\theta
+      \theta}$ only involves that component, 
+      $$ 
+      \Psi_{\theta \theta}|_t - 2 L_{\theta \theta} = 
+      \frac{\mathbf{f}_r(e^{-\Psi_{\theta \theta}})}{\lambda} 
+      $$
+      with $L_{\theta \theta} = u_y/y$. Therefore step (a) for
+      $\Psi_{\theta \theta}$ is */
+
+#if AXI
+      Psiqq[] += dt*2.*u.y[]/y;
+#endif
     }
   }
   
   /**
   ### Advection of $\Psi$
   
-  We proceed with step (a), the advection of the log of the
+  We proceed with step (b), the advection of the log of the
   conformation tensor $\Psi$, but first we apply boundary
   conditions. */
 
@@ -370,10 +387,10 @@ event tracer_advection (i++)
 #endif
 
   /**
-  ### Upper convective term and model term */
+  ### Model term */
   
   foreach() {
-    if (lambda[] < 1e-6) {
+    if (lambda[] == 0.) {
 
       /**
       If $\lambda = 0$ the stress tensor for the polymeric part
@@ -390,29 +407,7 @@ event tracer_advection (i++)
       Sqq[] = 2.*mup[]*u.y[]/y;
 #endif
     }
-    else { // lambda >= 1e-6
-
-      /**
-      If $\lambda \neq 0$ we proceed with step (b). The upper
-      convection of the log of the conformation tensor, $\Psi$. */
-
-      foreach_dimension()
-        Psi.x.x[] += rhs.x.x[]*dt;
-      Psi.x.y[] += rhs.x.y[]*dt;
-
-      /**
-      In the axisymmetric case, the governing equation for $\Psi_{\theta
-      \theta}$ only involves that component, 
-      $$ 
-      \Psi_{\theta \theta}|_t - 2 L_{\theta \theta} = 
-      \frac{\mathbf{f}_r(e^{-\Psi_{\theta \theta}})}{\lambda} 
-      $$
-      with $L_{\theta \theta} = u_y/y$. Therefore step (b) for
-      $\Psi_{\theta \theta}$ is */
-
-#if AXI
-      Psiqq[] += dt*2.*u.y[]/y;
-#endif
+    else { // lambda != 0.
       
       /**
       It is time to undo the log-conformation, again by
@@ -420,13 +415,13 @@ event tracer_advection (i++)
       and to perform step (c).*/
 
       pseudo_t A = {{Psi.x.x[], Psi.x.y[]}, {Psi.y.x[], Psi.y.y[]}}, R;
-      pseudo_v eval;
-      diagonalization_2D (&eval, &R, &A);
-      eval.x = exp(eval.x), eval.y = exp(eval.y);
+      pseudo_v Lambda;
+      diagonalization_2D (&Lambda, &R, &A);
+      Lambda.x = exp(Lambda.x), Lambda.y = exp(Lambda.y);
       
-      A.x.y = R.x.x*R.y.x*eval.x + R.y.y*R.x.y*eval.y;
+      A.x.y = R.x.x*R.y.x*Lambda.x + R.y.y*R.x.y*Lambda.y;
       foreach_dimension()
-	A.x.x = sq(R.x.x)*eval.x + sq(R.x.y)*eval.y;
+	A.x.x = sq(R.x.x)*Lambda.x + sq(R.x.y)*Lambda.y;
 #if AXI
       double Aqq = exp(Psiqq[]);
 #endif

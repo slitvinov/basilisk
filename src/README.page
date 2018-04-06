@@ -214,9 +214,9 @@ Several metric spaces/coordinate systems are predefined:
 
 # Interactive Basilisk View
 
-* [bview](): a script to start the client/server visualisation pipeline.
-* [bview-server.c](): the server.
-* [bview-client.py](): the client.
+* [bview](bview): a script to start the client/server visualisation pipeline.
+* [bview-server.c](bview-server.c): the server.
+* [bview-client.py](bview-client.py): the client.
 
 # Miscellaneous functions/modules
 

@@ -24,7 +24,7 @@ number is 2.26. */
 #define LEVEL 7
 
 /**
-The dimensionless visco-elastic properties used are the ratio of
+The dimensionless viscoelastic properties used are the ratio of
 the solvent to the total viscoelastic viscosity (polymeric
 plus solvent) and the Weissenberg number. */
 

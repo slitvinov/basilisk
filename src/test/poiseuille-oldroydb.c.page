@@ -200,7 +200,7 @@ p   y(t),x(t) lc 7 t 'Newtonian', \
 @MastersThesis{gros2013,
   author = {E. Gros},
   title = {Comparing In-House Numerical Simulations to the Analytical
-  Solution of the Poiseuille Flow for the Oldroyd-B Model},
+  Solution of the Poiseuille Flow for the {Oldroyd-B} Model},
   school = {Aachen University},
   address = {Germany},
   year = {2013},
