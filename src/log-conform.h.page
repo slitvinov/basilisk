@@ -1,7 +1,66 @@
 /**
-# The log-conformation method for some constitutive models
+# The log-conformation method for some viscoelastic constitutive models
 
 ## Introduction
+
+Viscoelastic fluids exhibit both viscous and elastic behaviour when
+subjected to deformation. Therefore, these materials are governed with
+the Navier-Stokes equations being the momentum equation enriched
+with extra-stresses, $\tau_{ve}$,
+$$
+\rho(\partial_t \mathbf{u} + \mathbf{u} \cdot \nabla \mathbf{u}) = 
+- \nabla p + \nabla \cdot {\tau_{ve}} 
++ \gamma \kappa  \mathbf{n} \delta_s +  \rho g
+$$
+$\tau_{ve}$ comprises the viscous behaviour (often referred as the
+solvent behaviour) and the elastic part (named also polymeric part)
+$$
+\tau_{ve}$ = \tau_s + \tau_p = 2 \mu_s \mathbf{D}  + \tau_p 
+$$
+where $\mathbf{D}$ is the deformation tensor and $\mu_s$ is the
+solvent viscosity of the viscoelastic fluid.
+
+The polymeric stress, $\tau_p$, takes into account memory effects of
+the polymers. Several constitutive rheological models are available in
+the literature being their polymeric stresses $\tau_p$, typically, a
+strain function $\mathbf{f_s}(\cdot)$ of the conformation tensor
+$\mathbf{A}$,
+$$
+\tau_p = \frac{\mu_p \mathbf{f_s}(\mathbf{A})}{\lambda}
+$$
+where $\lambda$ is the relaxation parameter and $\mu_p$ is the
+polymeric viscosity.  
+
+The conformation tensor $\mathbf{A}$ is related to the deformation of
+the polymer chains. $\mathbf{A}$ is governed by equation
+$$
+D_t \mathbf{A} - \mathbf{A} \cdot \nabla \mathbf{u} - \nabla
+\mathbf{u}^{T} \cdot \mathbf{A} =
+-\frac{\mathbf{f_r}(\mathbf{A})}{\lambda} 
+$$
+where the D_t denotes material derivative and the function
+$\mathbf{f_r}(\cdot)$ is the relaxation function.
+
+In the case of an Oldroyd-B viscoelastic fluid, $\mathbf{f}_s
+(\mathbf{A}) = \mathbf{f}_r (\mathbf{A}) = \mathbf{A} -\mathbf{I}$,
+and the above equations can be combined to avoid the use of
+$\mathbf{A}$,
+$$
+\tau_p + \lambda (D_t \tau_p -
+\tau_p \cdot \nabla \mathbf{u} -
+\nabla \mathbf{u}^{T} \cdot \tau_p)  = 2 \mu_p \mathbf{D}
+$$
+
+[Comminal et al. (2015)](#comminal2015) gathered the functions
+$\mathbf{f}_s (\mathbf{A})$ and $\mathbf{f}_r (\mathbf{A})$ for
+different constitutive models. In the present library together with
+the Oldroyd-B model we have implemented the related FENE-P for which,
+$$
+\mathbf{f}_s (\mathbf{A}) = \mathbf{f}_r (\mathbf{A}) =
+\frac{\mathbf{A}}{1-Tr(\mathbf{A})/L^2} -\mathbf{I}
+$$
+
+## The log conformation approach
 
 The numerical resolution of viscoelastic fluid problems often faces the
 [High-Weissenberg Number
@@ -15,8 +74,6 @@ as the origin of the instability. They proposed to use the logarithm
 of the conformation tensor $\Psi = \log \, \mathbf{A}$ rather than the
 viscoelastic stress tensor to circumvent the instability.
 
-## Equations
-
 The constitutive equation for the log of the conformation tensor is
 $$ 
 D_t \Psi = rhs =  (\Omega \cdot \Psi -\Psi \cdot \Omega) + 2 \mathbf{B} +
@@ -26,11 +83,9 @@ where $\Omega$ and $\mathbf{B}$ are tensors that result from the
 decomposition of the transpose of the tensor gradient of the
 velocity
 $$ 
-(\nabla \mathbf{u})^T = \Omega_1 + \mathbf{B} + N
+(\nabla \mathbf{u})^T = \Omega + \mathbf{B} + N
 \mathbf{A}^{-1} 
 $$ 
-and $\mathbf{f}_r (\mathbf{A})$ is the relaxation function that
-depends on the constitutive model adopted.
 
 The antisymmetric tensor $\Omega$ requires only the memory of a scalar
 in 2D since,
@@ -47,22 +102,6 @@ The log-conformation tensor, $\Psi$, is related to the viscoelastic
 $$ 
 \Psi = \log \, \mathbf{A} \quad \mbox{and} \quad \mathbf{S} =
 \frac{\mu_p}{\lambda} \mathbf{f}_s (\mathbf{A})
-$$
-
-[Comminal et al. (2015)](#comminal2015) gathered the functions $\mathbf{f}_s
-(\mathbf{A})$ and $\mathbf{f}_r (\mathbf{A})$ for different
-constitutive models. In the present library three
-different (but related) constitutive models are implemented
-
-$$
-\begin{array}{lcc}
-\mbox{model} & \mathbf{f}_s (\mathbf{A}) & \mathbf{f}_r (\mathbf{A}) \\ 
-\mbox{Oldroyd-B} & \mathbf{A} -\mathbf{I} & \mathbf{A} -\mathbf{I} \\
-\mbox{FENE-P} & \frac{\mathbf{A}}{1-Tr(\mathbf{A})/L^2} -\mathbf{I} & 
-\frac{\mathbf{A}}{1-Tr(\mathbf{A})/L^2} -\mathbf{I} \\
-\mbox{FENE-CR} & \frac{\mathbf{A}-\mathbf{I}}{1-Tr(\mathbf{A})/L^2} & 
-\frac{\mathbf{A}-\mathbf{I}}{1-Tr(\mathbf{A})/L^2}  \\ \\
-\end{array}
 $$
 
 where $Tr$ denotes the trace of the tensor and $L$ is an additional
@@ -582,5 +621,5 @@ event acceleration (i++)
 
 ## See also
 
-* [Functions $f_s$ and $f_r$ for the FENE-P model](fene_p.h)
+* [Functions $f_s$ and $f_r$ for the FENE-P model](fene-p.h)
 */
