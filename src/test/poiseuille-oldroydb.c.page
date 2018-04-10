@@ -97,9 +97,9 @@ u.t[bottom] = neumann(0);
 
 event init (i = 0) 
 {
-  scalar s = S.y.y;
+  scalar s = tau_p.y.y;
   s[top] = dirichlet(0.);
-  s = S.x.y;
+  s = tau_p.x.y;
   s[bottom] = dirichlet(0.);
   foreach()
     u.x[] = 0.;

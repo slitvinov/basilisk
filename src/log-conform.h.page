@@ -4,62 +4,76 @@
 ## Introduction
 
 Viscoelastic fluids exhibit both viscous and elastic behaviour when
-subjected to deformation. Therefore, these materials are governed with
-the Navier-Stokes equations being the momentum equation enriched
-with extra-stresses, $\tau_{ve}$,
+subjected to deformation. Therefore these materials are governed by
+the Navier--Stokes equations enriched with an extra *elastic* stress
+$\mathbf{\tau}_p$
 $$
-\rho(\partial_t \mathbf{u} + \mathbf{u} \cdot \nabla \mathbf{u}) = 
-- \nabla p + \nabla \cdot {\tau_{ve}} 
-+ \gamma \kappa  \mathbf{n} \delta_s +  \rho g
+\rho\left[\partial_t\mathbf{u}+\nabla\cdot(\mathbf{u}\otimes\mathbf{u})\right] = 
+- \nabla p + \nabla\cdot(2\mu_s\mathbf{D}) + \nabla\cdot\mathbf{\tau}_p
++ \rho\mathbf{a}
 $$
-$\tau_{ve}$ comprises the viscous behaviour (often referred as the
-solvent behaviour) and the elastic part (named also polymeric part)
-$$
-\tau_{ve}$ = \tau_s + \tau_p = 2 \mu_s \mathbf{D}  + \tau_p 
-$$
-where $\mathbf{D}$ is the deformation tensor and $\mu_s$ is the
-solvent viscosity of the viscoelastic fluid.
+where $\mathbf{D}=[\nabla\mathbf{u} + (\nabla\mathbf{u})^T]/2$ is the
+deformation tensor and $\mu_s$ is the solvent viscosity of the
+viscoelastic fluid.
 
-The polymeric stress, $\tau_p$, takes into account memory effects of
+The *polymeric* stress $\mathbf{\tau}_p$ represents memory effects due to
 the polymers. Several constitutive rheological models are available in
-the literature being their polymeric stresses $\tau_p$, typically, a
-strain function $\mathbf{f_s}(\cdot)$ of the conformation tensor
-$\mathbf{A}$,
+the literature where the polymeric stress $\mathbf{\tau}_p$ is typically a 
+function $\mathbf{f_s}(\cdot)$ of the conformation tensor $\mathbf{A}$ such as
 $$
-\tau_p = \frac{\mu_p \mathbf{f_s}(\mathbf{A})}{\lambda}
+\mathbf{\tau}_p = \frac{\mu_p \mathbf{f_s}(\mathbf{A})}{\lambda}
 $$
 where $\lambda$ is the relaxation parameter and $\mu_p$ is the
-polymeric viscosity.  
+polymeric viscosity.
 
 The conformation tensor $\mathbf{A}$ is related to the deformation of
-the polymer chains. $\mathbf{A}$ is governed by equation
+the polymer chains. $\mathbf{A}$ is governed by the equation
 $$
 D_t \mathbf{A} - \mathbf{A} \cdot \nabla \mathbf{u} - \nabla
 \mathbf{u}^{T} \cdot \mathbf{A} =
 -\frac{\mathbf{f_r}(\mathbf{A})}{\lambda} 
 $$
-where the D_t denotes material derivative and the function
+where $D_t$ denotes the material derivative and
 $\mathbf{f_r}(\cdot)$ is the relaxation function.
 
 In the case of an Oldroyd-B viscoelastic fluid, $\mathbf{f}_s
 (\mathbf{A}) = \mathbf{f}_r (\mathbf{A}) = \mathbf{A} -\mathbf{I}$,
 and the above equations can be combined to avoid the use of
-$\mathbf{A}$,
+$\mathbf{A}$
 $$
-\tau_p + \lambda (D_t \tau_p -
-\tau_p \cdot \nabla \mathbf{u} -
-\nabla \mathbf{u}^{T} \cdot \tau_p)  = 2 \mu_p \mathbf{D}
+\mathbf{\tau}_p + \lambda (D_t \mathbf{\tau}_p -
+\mathbf{\tau}_p \cdot \nabla \mathbf{u} -
+\nabla \mathbf{u}^{T} \cdot \mathbf{\tau}_p)  = 2 \mu_p \mathbf{D}
 $$
 
 [Comminal et al. (2015)](#comminal2015) gathered the functions
 $\mathbf{f}_s (\mathbf{A})$ and $\mathbf{f}_r (\mathbf{A})$ for
-different constitutive models. In the present library together with
-the Oldroyd-B model we have implemented the related FENE-P for which,
+different constitutive models. In the present library we have
+implemented the Oldroyd-B model and the related FENE-P model for which
 $$
 \mathbf{f}_s (\mathbf{A}) = \mathbf{f}_r (\mathbf{A}) =
 \frac{\mathbf{A}}{1-Tr(\mathbf{A})/L^2} -\mathbf{I}
 $$
 
+## Parameters
+
+The primary parameters are the retardation or relaxation time
+$\lambda$ and the polymeric viscosity $\mu_p$. The solvent viscosity
+$\mu_s$ is defined in the [Navier-Stokes
+solver](navier-stokes/centered.h). */
+
+(const) scalar lambda = unity;
+(const) scalar mup = unity;
+
+/**
+Constitutive models other than Oldroyd-B (the default) are defined
+through the two functions $\mathbf{f}_s (\mathbf{A})$ and
+$\mathbf{f}_r (\mathbf{A})$. */
+
+void (* f_s) (double, double *, double *) = NULL;
+void (* f_r) (double, double *, double *) = NULL;
+
+/**
 ## The log conformation approach
 
 The numerical resolution of viscoelastic fluid problems often faces the
@@ -76,7 +90,7 @@ viscoelastic stress tensor to circumvent the instability.
 
 The constitutive equation for the log of the conformation tensor is
 $$ 
-D_t \Psi = rhs =  (\Omega \cdot \Psi -\Psi \cdot \Omega) + 2 \mathbf{B} +
+D_t \Psi = (\Omega \cdot \Psi -\Psi \cdot \Omega) + 2 \mathbf{B} +
 \frac{e^{-\Psi} \mathbf{f}_r (e^{\Psi})}{\lambda}
 $$
 where $\Omega$ and $\mathbf{B}$ are tensors that result from the
@@ -97,19 +111,15 @@ $$
 \end{array} 
 \right)
 $$
-The log-conformation tensor, $\Psi$, is related to the viscoelastic
-(polymeric) stress tensor $\mathbf{S}$, by the strain function $\mathbf{f}_s (\mathbf{A})$,
+The log-conformation tensor, $\Psi$, is related to the
+polymeric stress tensor $\mathbf{\tau}_p$, by the strain function 
+$\mathbf{f}_s (\mathbf{A})$
 $$ 
-\Psi = \log \, \mathbf{A} \quad \mbox{and} \quad \mathbf{S} =
+\Psi = \log \, \mathbf{A} \quad \mbox{and} \quad \mathbf{\tau}_p =
 \frac{\mu_p}{\lambda} \mathbf{f}_s (\mathbf{A})
 $$
-
 where $Tr$ denotes the trace of the tensor and $L$ is an additional
 property of the viscoelastic fluid.
-
-The divergence of $\mathbf{S}$ has to be added later to the momentum
-equation as a source. Note that an Oldroyd-B viscoelastic fluid also
-has a solvent part whose stresses follow a Newtonian behaviour. 
 
 We will use the Bell--Collela--Glaz scheme to advect the log-conformation 
 tensor $\Psi$. */
@@ -117,37 +127,15 @@ tensor $\Psi$. */
 #include "bcg.h"
 
 /**
-## Parameters
-
-Constitutive models other than Oldroyd-B are defined through the
-two functions $\mathbf{f}_s (\mathbf{A})$ and $\mathbf{f}_r
-(\mathbf{A})$. */
-
-void (* f_s) (double, double *, double *) = NULL;
-void (* f_r) (double, double *, double *) = NULL;
-
-/**
-A fundamental viscoelastic fluid property is the retardation or
-relaxation time, $\lambda$. Additionally, the viscosity of the
-viscoelastic fluid is decomposed into the polymeric contribution,
-$\mu_p$, and the solvent contribution, $\mu_s$. The solvent behaves as
-a Newtonian fluid, therefore, $\mu_s$ is not defined here since it is
-already defined in the [Navier-Stokes
-solver](navier-stokes/centered.h). */
-
-(const) scalar lambda = unity;
-(const) scalar mup = unity;
-
-/**
 ## Variables
 
-The main variable will be the stress tensor $\mathbf{S}$. The trace of
+The main variable will be the stress tensor $\mathbf{\tau}_p$. The trace of
 the conformation tensor, $\mathbf{A}$, is often necessary for
 constitutive viscoelastic models other than Oldroyd-B.  */
 
-symmetric tensor S[];
+symmetric tensor tau_p[];
 #if AXI
-scalar Sqq[];
+scalar tau_qq[];
 #endif
 (const) scalar trA = zeroc;
 
@@ -159,10 +147,10 @@ event defaults (i = 0) {
 
   foreach() {
     foreach_dimension()
-      S.x.x[] = 0.;
-    S.x.y[] = 0.;
+      tau_p.x.x[] = 0.;
+    tau_p.x.y[] = 0.;
 #if AXI
-    Sqq[] = 0;
+    tau_qq[] = 0;
 #endif
   }
 
@@ -172,7 +160,7 @@ event defaults (i = 0) {
   By default we set a zero Neumann boundary condition for all
   the components except if the bottom is an axis of symmetry. */
 
-  for (scalar s in {S}) {
+  for (scalar s in {tau_p}) {
     s.v.x.i = -1; // just a scalar, not the component of a vector
     foreach_dimension() {
       s[left] = neumann(0);
@@ -180,16 +168,16 @@ event defaults (i = 0) {
     }
   }
 #if AXI
-  scalar s = S.x.y;
+  scalar s = tau_p.x.y;
   s[bottom] = dirichlet (0.);  
 #endif  
 }
 
 event init (i = 0) {
 #if AXI
-  boundary((scalar *){S, Sqq});
+  boundary((scalar *){tau_p, tau_qq});
 #else
-  boundary((scalar *){S});
+  boundary((scalar *){tau_p});
 #endif
 }
 
@@ -298,13 +286,13 @@ event tracer_advection (i++)
     else { // lambda[] != 0.
 
       /**
-      We assume that the stress tensor $\mathbf{S}$ depends on the
+      We assume that the stress tensor $\mathbf{\tau}_p$ depends on the
       conformation tensor $\mathbf{A}$ as follows
       $$
-      \mathbf{S} = \frac{\mu_p}{\lambda} f_s (\mathbf{A}) = 
+      \mathbf{\tau}_p = \frac{\mu_p}{\lambda} f_s (\mathbf{A}) = 
       \frac{\mu_p}{\lambda} \eta (\nu \mathbf{A} - I)
       $$
-      In most of the viscoelastic models,  $\nu$ and $\eta$ are 
+      In most of the viscoelastic models, $\nu$ and $\eta$ are 
       nonlinear parameters that depend on the trace of the conformation tensor,
       $\mathbf{A}$.*/
 
@@ -315,17 +303,17 @@ event tracer_advection (i++)
       double fa = (mup[] != 0 ? lambda[]/(mup[]*eta) : 0.);
 
       pseudo_t A;
-      A.x.y = fa*S.x.y[]/nu;
+      A.x.y = fa*tau_p.x.y[]/nu;
       foreach_dimension()
-	A.x.x = (fa*S.x.x[] + 1.)/nu;
+	A.x.x = (fa*tau_p.x.x[] + 1.)/nu;
 
       /**
       In the axisymmetric case, $\Psi_{\theta \theta} = \log A_{\theta
       \theta}$. Therefore $\Psi_{\theta \theta} = \log [ ( 1 + fa 
-      S_{\theta \theta})/\nu]$. */
+      \tau_p_{\theta \theta})/\nu]$. */
 
 #if AXI
-      double Aqq = (1. + fa*Sqq[])/nu;
+      double Aqq = (1. + fa*tau_qq[])/nu;
       Psiqq[] = log (Aqq); 
 #endif
 
@@ -433,17 +421,17 @@ event tracer_advection (i++)
 
       /**
       If $\lambda = 0$ the stress tensor for the polymeric part
-      reduces to that of a Newtonian fluid $\mathbf{S} = 2 \mu_p
+      reduces to that of a Newtonian fluid $\mathbf{\tau}_p = 2 \mu_p
       \mathbf{D}$ with $\mathbf{D}$ the rate-of-strain
-      tensor. Note that $\mathbf{S}$ is in this case independent of
+      tensor. Note that $\mathbf{\tau}_p$ is in this case independent of
       time. */
 
       foreach_dimension()
-	S.x.x[] = mup[]*(u.x[1,0] - u.x[-1,0])/Delta; // 2*mu*dxu;
-      S.x.y[] = mup[]*(u.y[1,0] - u.y[-1,0] +
-                       u.x[0,1] - u.x[0,-1])/(2.*Delta); // mu*(dxv+dyu)
+	tau_p.x.x[] = mup[]*(u.x[1,0] - u.x[-1,0])/Delta; // 2*mu*dxu;
+      tau_p.x.y[] = mup[]*(u.y[1,0] - u.y[-1,0] +
+			   u.x[0,1] - u.x[0,-1])/(2.*Delta); // mu*(dxv+dyu)
 #if AXI
-      Sqq[] = 2.*mup[]*u.y[]/y;
+      tau_qq[] = 2.*mup[]*u.y[]/y;
 #endif
     }
     else { // lambda != 0.
@@ -510,7 +498,7 @@ event tracer_advection (i++)
       }
 
       /**
-      Then the stress tensor $\mathbf{S}^{n+1}$ is computed from
+      Then the stress tensor $\mathbf{\tau}_p^{n+1}$ is computed from
       $\mathbf{A}^{n+1}$ according to the constitutive model,
       $\mathbf{f}_s(\mathbf{A})$.  */
 
@@ -520,31 +508,31 @@ event tracer_advection (i++)
 
       fa = mup[]/lambda[]*eta;
       
-      S.x.y[] = fa*nu*A.x.y;
+      tau_p.x.y[] = fa*nu*A.x.y;
 #if AXI
-      Sqq[] = fa*(nu*Aqq - 1);
+      tau_qq[] = fa*(nu*Aqq - 1.);
 #endif
       foreach_dimension()
-	S.x.x[] = fa*(nu*A.x.x - 1);
+	tau_p.x.x[] = fa*(nu*A.x.x - 1.);
     }
   }
 
 #if AXI
-  boundary((scalar *){S, Sqq});
+  boundary((scalar *){tau_p, tau_qq});
 #else
-  boundary((scalar *){S});
+  boundary((scalar *){tau_p});
 #endif
 }
 
 /**
 ### Divergence of the viscoelastic stress tensor
 
-The viscoelastic stress tensor $\mathbf{S}$ is defined at cell centers
+The viscoelastic stress tensor $\mathbf{\tau}_p$ is defined at cell centers
 while the corresponding force (acceleration) will be defined at cell
 faces. Two terms contribute to each component of the momentum
 equation. For example the $x$-component in Cartesian coordinates has
-the following terms: $\partial_x \mathbf{S}_{xx} + \partial_y
-\mathbf{S}_{xy}$. The first term is easy to compute since it can be
+the following terms: $\partial_x \mathbf{\tau}_p_{xx} + \partial_y
+\mathbf{\tau}_p_{xy}$. The first term is easy to compute since it can be
 calculated directly from center values of cells sharing the face. The
 other one is harder. It will be computed from vertex values. The
 vertex values are obtained by averaging centered values.  Note that as
@@ -555,16 +543,16 @@ event acceleration (i++)
 {
   face vector av = a;
   foreach_face()
-    if (fm.x[] > 1e-20) { // FIXME: why not zero?
-      double shear = (S.x.y[0,1]*cm[0,1] + S.x.y[-1,1]*cm[-1,1] -
-		      S.x.y[0,-1]*cm[0,-1] - S.x.y[-1,-1]*cm[-1,-1])/4.;
-      av.x[] += (shear + cm[]*S.x.x[] - cm[-1]*S.x.x[-1])*
+    if (fm.x[] > 1e-20) {
+      double shear = (tau_p.x.y[0,1]*cm[0,1] + tau_p.x.y[-1,1]*cm[-1,1] -
+		      tau_p.x.y[0,-1]*cm[0,-1] - tau_p.x.y[-1,-1]*cm[-1,-1])/4.;
+      av.x[] += (shear + cm[]*tau_p.x.x[] - cm[-1]*tau_p.x.x[-1])*
 	alpha.x[]/(sq(fm.x[])*Delta);
     }
 #if AXI
   foreach_face(y)
     if (y > 0.)
-      av.y[] -= (Sqq[] + Sqq[0,-1])*alpha.y[]/sq(y)/2.;
+      av.y[] -= (tau_qq[] + tau_qq[0,-1])*alpha.y[]/sq(y)/2.;
 #endif
 }
 

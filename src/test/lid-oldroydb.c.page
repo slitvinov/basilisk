@@ -50,10 +50,10 @@ u.t[right]  = dirichlet(0);
 
 event init (i = 0) 
 {
-  scalar s = S.x.x;
+  scalar s = tau_p.x.x;
   s[left] = dirichlet (0.);
   s[right] = dirichlet (0.);
-  s = S.y.y;
+  s = tau_p.y.y;
   s[bottom] = dirichlet (0.);	
   foreach()
     u.x[] = 0.;

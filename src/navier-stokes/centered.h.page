@@ -5,12 +5,14 @@ We wish to approximate numerically the incompressible,
 variable-density Navier--Stokes equations
 $$
 \partial_t\mathbf{u}+\nabla\cdot(\mathbf{u}\otimes\mathbf{u}) = 
-\frac{1}{\rho}\left[-\nabla p + \nabla\cdot(\mu\nabla\mathbf{u})\right] + 
+\frac{1}{\rho}\left[-\nabla p + \nabla\cdot(2\mu\mathbf{D})\right] + 
 \mathbf{a}
 $$
 $$
 \nabla\cdot\mathbf{u} = 0
 $$
+with the deformation tensor 
+$\mathbf{D}=[\nabla\mathbf{u} + (\nabla\mathbf{u})^T]/2$.
 
 The scheme implemented here is close to that used in Gerris ([Popinet,
 2003](/src/references.bib#popinet2003), [Popinet,

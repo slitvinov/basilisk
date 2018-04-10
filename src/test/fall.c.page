@@ -45,7 +45,7 @@ The wall is at the left side. We apply a no-slip boundary condition and a
 non-wetting condition for the VOF tracer. */
 
 u.t[left] = dirichlet(0);
-Sqq[left] = dirichlet(0);
+tau_qq[left] = dirichlet(0);
 f[left]   = 0.;
 
 int main() {
@@ -82,10 +82,10 @@ event init (t = 0) {
 
   /**
   At a wall of normal $\mathbf{n}$ the component of the viscoelastic
-  stress tensor $S_{nn}$ is zero. Since the left boundary is a wall, we
-  set $S_{xx}$ equal to zero at that boundary. */
+  stress tensor $tau_p_{nn}$ is zero. Since the left boundary is a wall, we
+  set $tau_p_{xx}$ equal to zero at that boundary. */
   
-  scalar s = S.x.x;
+  scalar s = tau_p.x.x;
   s[left] = dirichlet(0.);
 
   /**

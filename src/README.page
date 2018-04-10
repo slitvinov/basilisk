@@ -84,7 +84,7 @@ $$
 * [Centered formulation](navier-stokes/centered.h)
 $$
 \partial_t\mathbf{u}+\nabla\cdot(\mathbf{u}\otimes\mathbf{u}) = 
-\frac{1}{\rho}\left[-\nabla p + \nabla\cdot(\mu\nabla\mathbf{u})\right] + \mathbf{a}
+\frac{1}{\rho}\left[-\nabla p + \nabla\cdot(2\mu\mathbf{D})\right] + \mathbf{a}
 $$
 $$
 \nabla\cdot\mathbf{u} = 0
@@ -114,20 +114,23 @@ $$
 
 ## Viscoelasticity
 
-* [The log-conformation method for some constitutive models](log-conform.h)
-$$ 
-D_t \Psi = rhs =  (\Omega \cdot \Psi -\Psi \cdot \Omega) + 2 \mathbf{B} +
+* [The log-conformation method for some viscoelastic constitutive 
+models](log-conform.h)
+
+$$
+\rho\left[\partial_t\mathbf{u}+\nabla\cdot(\mathbf{u}\otimes\mathbf{u})\right] = 
+- \nabla p + \nabla\cdot(2\mu_s\mathbf{D}) + \nabla\cdot\mathbf{\tau}_p
++ \rho\mathbf{a}
+$$
+$$
+\mathbf{\tau}_p = \frac{\mu_p \mathbf{f_s}(\mathbf{A})}{\lambda}
+$$
+$$
+\Psi = \log\mathbf{A}
+$$
+$$
+D_t \Psi = (\Omega \cdot \Psi -\Psi \cdot \Omega) + 2 \mathbf{B} +
 \frac{e^{-\Psi} \mathbf{f}_r (e^{\Psi})}{\lambda}
-$$
-$$
-\begin{array}{lcc}
-\mbox{model} & \mathbf{f}_s (\mathbf{A}) & \mathbf{f}_r (\mathbf{A}) \\ 
-\mbox{Oldroyd-B} & \mathbf{A} -\mathbf{I} & \mathbf{A} -\mathbf{I} \\
-\mbox{FENE-P} & \frac{\mathbf{A}}{1-Tr(\mathbf{A})/L^2} -\mathbf{I} & 
-\frac{\mathbf{A}}{1-Tr(\mathbf{A})/L^2} -\mathbf{I} \\
-\mbox{FENE-CR} & \frac{\mathbf{A}-\mathbf{I}}{1-Tr(\mathbf{A})/L^2}  & 
-\frac{\mathbf{A}-\mathbf{I}}{1-Tr(\mathbf{A})/L^2}  \\ \\
-\end{array}
 $$
 
 ## Other equations
