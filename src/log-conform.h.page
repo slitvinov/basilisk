@@ -253,24 +253,19 @@ tensor $\mathbf{A}$). In an Oldroyd-B viscoelastic fluid, the model is
 $$ 
 \partial_t \mathbf{A} = -\frac{\mathbf{f}_r (\mathbf{A})}{\lambda}
 $$
-*/
+
+The implementation below assumes that the values of $\Psi$ and
+$\tau_p$ are never needed simultaneously. This means that $\tau_p$ can
+be used to store (temporarily) the values of $\Psi$ (i.e. $\Psi$ is
+just an alias for $\tau_p$). */
 
 event tracer_advection (i++)
 {
-  symmetric tensor Psi[];
+  tensor Psi = tau_p;
 #if AXI
-  scalar Psiqq[];
+  scalar Psiqq = tau_qq;
 #endif
 
-  // Boundary conditions for Psi
-  for (scalar s in {Psi}) {
-    s.v.x.i = -1; // just a scalar, not the component of a vector
-    foreach_dimension() {
-      s[left] = neumann(0);
-      s[right] = neumann(0);
-    }
-  }
-  
   /**
   ### Computation of $\Psi = \log \mathbf{A}$ and upper convective term */
 
