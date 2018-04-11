@@ -44,11 +44,12 @@ event defaults (i = 0) {
   volume fraction field *f* being refined/restricted before the
   components of velocity. To ensure this, we move *f* to the front of
   the field list (*all*). */
-  
-  assert (all[f.i].i == f.i);
-  for (int i = f.i; i >= 2; i--)
-    all[i] = all[i-1];
-  all[1] = f;
+
+  int i = 0;
+  while (all[i].i != f.i) i++;
+  while (all[i].i)
+    all[i] = all[i-1], i--;
+  all[i] = f;
 
   /**
   We then set the refinement and restriction functions for the
