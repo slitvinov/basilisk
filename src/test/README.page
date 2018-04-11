@@ -62,6 +62,7 @@ Note that only the documented test cases appear in the list below
 * [Axisymmetric mass conservation](axiadvection.c)
 * [Axisymmetric Poiseuille flow](poiseuille-axi.c)
 * [Convergence of axisymmetric viscous terms](axi.c)
+* [Refinement of axisymmetric metric](refine-axi.c)
 
 ## Electrohydrodynamics
 

@@ -81,6 +81,8 @@ p[left]  = neumann(-a.n[]*fm.n[]/alpha.n[]);
 
 #if AXI
 uf.n[bottom] = 0.;
+uf.t[bottom] = dirichlet(0); // since uf is multiplied by the metric which
+                             // is zero on the axis of symmetry
 #else // !AXI
 #  if dimension > 1
 p[top]    = neumann(a.n[ghost]*fm.n[ghost]/alpha.n[ghost]);
