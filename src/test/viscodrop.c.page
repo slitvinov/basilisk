@@ -29,7 +29,13 @@ polymeric viscosity is $\mu_p=\mu_1-\mu_s$. */
 #define Deb 0.4    // Deborah number
 #define Beta 0.5   // ratio of the solvent visc. to the total viscoelastic visc.
 
-int MAXLEVEL = 9;
+/**
+We set a maximum level of 8 only so that the test case runs in less
+than 30 minutes but note that the results presented below are for
+MAXLEVEL = 9. */
+
+int MAXLEVEL = 8;
+
 scalar mupd[], lam[];
 
 /**
@@ -162,14 +168,14 @@ set xlabel 't'
 set ylabel 'D'
 set key bottom Right
 plot 'viscodrop.figueiredo' u 1:2 pt 7 t 'Figueiredo et al. (2016)', \
-     'log' u 1:4 w l lw 2 t 'Basilisk'
+     'viscodrop.log-9' u 1:4 w l lw 2 t 'Basilisk'
 ~~~
 
 ~~~gnuplot Interface shape at t = 10
 set xlabel 'x'
 set ylabel 'y'
 plot 'viscodrop.interface' u 1:2 pt 7 t 'Figueiredo et al. (2016)', \
-     'out' u 1:2 w l lw 2 t 'Basilisk'
+     'viscodrop.out-9' u 1:2 w l lw 2 t 'Basilisk'
 ~~~
 
 ## References
