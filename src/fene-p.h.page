@@ -22,18 +22,7 @@ event init (i = 0) {
 #else
   double dim = dimension;
 #endif  
-#if !BALCI
   scalar trac = trA;
   foreach()
     trac[] = dim*L2/(dim + L2);
-#else
-  foreach() {
-    B.x.y[] = 0.;
-#if AXI
-    Aqq[] = L2/(dim + L2);
-#endif
-    foreach_dimension()
-      B.x.x[] = sqrt(L2/(dim + L2));
-  }
-#endif
 }
