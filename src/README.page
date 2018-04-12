@@ -160,6 +160,10 @@ $$
 $$
 \nabla\cdot (\alpha\nabla a) + \lambda a = b
 $$
+* [Runge--Kutta time integrators](runge-kutta.h)
+$$
+\frac{\partial\mathbf{u}}{\partial t} = L(\mathbf{u}, t)
+$$
 * [Signed distance field](distance.h)
 
 # General orthogonal coordinates

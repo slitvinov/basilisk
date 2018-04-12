@@ -104,6 +104,7 @@ Note that only the documented test cases appear in the list below
 ## Other
 
 * [Kuramoto--Sivashinsky equation](kuramoto.c)
+* [Convergence of the Runge--Kutta solvers](runge-kutta.c)
 
 ## [All tests](/src/test/)
 
