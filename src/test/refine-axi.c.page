@@ -3,17 +3,12 @@ Checks that refinement of axisymmetric metric and face fields behaves
 properly. */
 
 #include "axi.h"
-#include "run.h"
+#include "navier-stokes/centered.h"
 
 double R0 = 0.1;
 int LEVEL = 6;
 
-face vector uf[];
-
 uf.t[top] = dirichlet(0);
-
-uf.t[bottom] = dirichlet(0); // since uf is multiplied by the metric which
-                             // is zero on the axis of symmetry  
 
 int main()
 {
@@ -24,8 +19,6 @@ int main()
 
 event init (t = 0)
 {
-  uf.x.refine = refine_face_solenoidal;
-
   foreach_face()
     uf.x[] = 0.;
   foreach_face (x)
