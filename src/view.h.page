@@ -619,6 +619,13 @@ static void fields_stats()
   for (scalar s in all)
     fprintf (ferr, " %s", s.name);
   fputs (" }\n", ferr);
+  fprintf (ferr, "# %12s: %12s %12s %12s %12s\n",
+	   "name", "min", "avg", "stddev", "max");
+  for (scalar s in all) {
+    stats ss = statsf (s);
+    fprintf (ferr, "# %12s: %12g %12g %12g %12g\n",
+	     s.name, ss.min, ss.sum/ss.volume, ss.stddev, ss.max);
+  }
 }
 
 static void draw_append (char * buf, Array * history, FILE * interactive)
