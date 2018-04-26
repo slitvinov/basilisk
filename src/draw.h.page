@@ -342,10 +342,24 @@ end_foreach_cell();
 
 static scalar lookup_field (const char * name)
 {
-  for (scalar s in all)
-    if (!strcmp (s.name, name))
-      return s;
+  if (name)
+    for (scalar s in all)
+      if (!strcmp (s.name, name))
+	return s;
   return (scalar){-1};
+}
+
+static vector lookup_vector (const char * name)
+{
+  if (name) {
+    char component[strlen(name) + 3];
+    strcpy (component, name);
+    strcat (component, ".x");
+    for (scalar s in all)
+      if (!strcmp (s.name, component))
+	return s.v;
+  }
+  return (vector){{-1}};
 }
 
 static void draw_lines (bview * view, float color[3], float lw)
@@ -445,6 +459,7 @@ static void end_colorized() {
 # *draw_vof()*: displays VOF-reconstructed interfaces
 
 * *c*: the name (as a string) of the Volume-Of-Fluid field.
+* *s*: the (optional) name of the face fraction field.
 * *edges*: whether to display the edges of the facets.
 * *larger*: makes each cell larger by this factor. This helps close
    the gaps in the VOF interface representation. Default is 1.1 in 3D
@@ -466,6 +481,7 @@ static void end_colorized() {
 
 struct _draw_vof {
   char * c;
+  char * s;
   bool edges;
   double larger;
   
@@ -538,7 +554,8 @@ bool draw_vof (struct _draw_vof p)
     fprintf (stderr, "draw_vof(): no field named '%s'\n", p.c);
     return false;
   }
-
+  face vector s = lookup_vector (p.s);
+  
   colorize_args (p);
   
   double cmin = 1e-3; // do not reconstruct fragments smaller than this
@@ -557,7 +574,7 @@ bool draw_vof (struct _draw_vof p)
   glBegin (GL_LINES);
   foreach_visible (view)
     if (cfilter (point, c, cmin)) {
-      coord n = mycs (point, c);
+      coord n = facet_normal (point, c, s);
       double alpha = plane_alpha (c[], n);
       coord segment[2];
       if (facets (n, alpha, segment) == 2) {
@@ -574,7 +591,7 @@ bool draw_vof (struct _draw_vof p)
   colorize() {
     foreach_visible (view)
       if (cfilter (point, c, cmin)) {
-	coord n = mycs (point, c);
+	coord n = facet_normal (point, c, s);
 	double alpha = plane_alpha (c[], n);
 	coord v[12];
 	int m = facets (n, alpha, v, larger);
@@ -599,7 +616,7 @@ bool draw_vof (struct _draw_vof p)
     draw_lines (view, p.lc, p.lw);
     foreach_visible (view)
       if (cfilter (point, c, cmin)) {
-	coord n = mycs (point, c);
+	coord n = facet_normal (point, c, s);
 	double alpha = plane_alpha (c[], n);
 	coord v[12];
 	int m = facets (n, alpha, v, larger);

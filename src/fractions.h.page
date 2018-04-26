@@ -366,6 +366,28 @@ coord youngs_normal (Point point, scalar c)
 }
 
 /**
+### Normal approximation using MYC or face fractions
+*/
+
+coord facet_normal (Point point, scalar c, face vector s)
+{
+  coord n;
+  if (s.x.i < 0)
+    n = mycs (point, c);
+  else { // compute normal from face fractions
+    double nn = 0.;
+    foreach_dimension() {
+      n.x = s.x[] - s.x[1];
+      nn += fabs(n.x);
+    }
+    assert (nn > 0.);
+    foreach_dimension()
+      n.x /= nn;
+  }
+  return n;
+}
+
+/**
 ### Interface reconstruction 
 
 The reconstruction function takes a volume fraction field `c` and
@@ -456,24 +478,11 @@ void output_facets (struct OutputFacets p)
   scalar c = p.c;
   face vector s = p.s;
   if (!p.fp) p.fp = stdout;
+  if (!s.x.i) s.x.i = -1;
 
   foreach()
     if (c[] > 1e-6 && c[] < 1. - 1e-6) {
-      coord n;
-      if (!s.x.i)
-	// compute normal from volume fraction
-	n = mycs (point, c);
-      else {
-	// compute normal from face fractions
-	double nn = 0.;
-	foreach_dimension() {
-	  n.x = s.x[] - s.x[1];
-	  nn += fabs(n.x);
-	}
-	assert (nn > 0.);
-	foreach_dimension()
-	  n.x /= nn;
-      }
+      coord n = facet_normal (point, c, s);
       double alpha = plane_alpha (c[], n);
 #if dimension == 2      
       coord segment[2];
