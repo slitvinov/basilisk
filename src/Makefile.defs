@@ -60,13 +60,13 @@ clean:
 		$(BASILISK)/runtest $@
 
 %.h: %.h.page
-	ln -s $< $@
+	ln -s -f $< $@
 
 %.c: %.c.page
-	ln -s $< $@
+	ln -s -f $< $@
 
 %.plot: %.plot.page
-	ln -s $< $@
+	ln -s -f $< $@
 
 %.3D.s: %.3D.c $(QCC) Makefile
 	@echo qcc -autolink $(CFLAGS) -grid=octree -o $*/$* $*.c $(LIBS) -lm
@@ -79,7 +79,7 @@ clean:
 	@OPENGLIBS="$(OPENGLIBS)" $(QCC) -autolink -nolineno $(STRIPFLAGS) $(subst -g ,,$(subst -O2 ,,$(CFLAGS))) $< -o $@ $(LIBS) -lm
 
 %.prof: %.c
-	$(QCC) -autolink $(subst -DTRASH=1,,$(CFLAGS)) -g -pg $< -o $*/$* -lm
+	$(QCC) -autolink $(subst -DTRASH=1,,$(CFLAGS)) -g -no-pie -pg $< -o $*/$* -lm
 	cd $* && ./$* 2> log > out
 	gprof $*/$* $*/gmon.out > $@
 
