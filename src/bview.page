@@ -108,7 +108,7 @@ trap 'ctrl_c' SIGINT
 
 modtime() {
     if test -f $1; then
-	find $1 -printf "%TY/%Tm/%Td %TH:%TM:%.2TS\n"
+	date -r $1 +%s
     fi
 }
 
