@@ -366,7 +366,7 @@ static void draw_lines (bview * view, float color[3], float lw)
 {
   glMatrixMode (GL_PROJECTION);
   glPushMatrix();
-  glTranslatef (0., 0., view->lc);
+  glTranslatef (0., 0., view->lc*view->fov/24.);
   glColor3f (color[0], color[1], color[2]);
   glLineWidth (view->samples*(lw > 0. ? lw : 1.));
 }
