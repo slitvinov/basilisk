@@ -2,6 +2,37 @@
    due to shear and tensile faults in a half-space", Bulletin of the
    Seismological Society of America, 75:4, 1135-1154, */
 
+/**
+Use function fault() to alter water depth h (where h > dry) according
+to fault parameters below:
+ * x, y - coordinates of the fault centroid (see boolean flat for
+ coordinate  type)
+ * depth - depth of the top edge of the fault (see fault_centroid()
+ below for depth to centroid)
+ * strike, dip, rake - fault parameters in degrees
+ [0<=strike<360, -90<=dip<=90, -90<=rake<=90 where rake=90 degs and
+ dip>0 is reverse faulting. NB Okada defines normal faulting by
+ rake = 90 deg and dip<0 whereas the seismological convention now is
+ generally 0<=dip<=90 and rake=-90 for normal faulting]
+ * mu lambda - mu and lambda - only ratio is important and default is
+ mu/lambda = 1
+ * length, width, U length and width of the fault plane and slip on
+ the fault plane (generally in m).
+ * vU[3] -  displacement vector, Note that vU[0] and vU[1] can be
+ calculated from rake and slip (U), vU[2] is tensile opening of a
+ fault so default is 0. (not needed as long as U and rake given)
+ * R is the radius of the earth (for when x, y are in longitude and
+ latitude (i.e. flat=0)
+ * iterate is the function to use to iterate
+ * flat = 1 assumes x, y cartesian, flat = 0 assumes longitude and
+ latitude
+NB okada() calculates the vertical deformation according to the
+parameters above and stores it in scalar d[]
+
+fault_centroid() does the same as fault() but assumes that depth
+is measured to the centroid of the fault, not the top edge.
+ **/
+
 /* formulae (25)-(30) */
 static void rectangular_source (const double U[3], double cosd, double sind,
 				double mulambda, double d,
@@ -130,7 +161,7 @@ void okada (struct Okada p)
   double sina = sin ((90. - p.strike)*dtr);
   double cosa = cos ((90. - p.strike)*dtr);
   double sind = sin (p.dip*dtr);
-  /* depth of the bottom edge */
+  /* depth of Okada origin */
   double depth = sind > 0. ? p.depth + p.width*sind : p.depth;
   /* origin to the centroid */
   double x0 = p.length/2., y0 = p.width/2.*cos (p.dip*dtr);
@@ -176,4 +207,12 @@ void fault (struct Okada p)
       eta[] = zb[] + h[];
     }
   } while (p.iterate && p.iterate() && nitermax--);
+}
+
+void fault_centroid (struct Okada p)
+{
+  double dtr = pi/180.;
+  double sind = fabs (sin (p.dip*dtr));
+  p.depth = p.depth - p.width*sind/2.;
+  fault (p);
 }
