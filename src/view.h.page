@@ -128,7 +128,7 @@ bview * bview_new() {
   p->vector = false;
   
   p->samples = 4;
-  p->width = 800*p->samples, p->height = 800*p->samples;
+  p->width = 600*p->samples, p->height = 600*p->samples;
 
   p->fb = framebuffer_new (p->width, p->height);
   
@@ -663,6 +663,7 @@ static bool process_line (char * line, Array * history, FILE * interactive)
       if (!restore (file = file, list = all))
 	fprintf (ferr, "could not restore from '%s'\n", file);
       else {
+	restriction (all);
 	fields_stats();
 	clear();
 	// rebuild display list using history
@@ -683,6 +684,7 @@ static bool process_line (char * line, Array * history, FILE * interactive)
     parse_params ((Params[]){{"file", pstring, &file}, {NULL}});
     if (file) {
       input_gfs (file = file, list = all);
+      restriction (all);
       fields_stats();
       clear();
       // rebuild display list using history
@@ -766,7 +768,7 @@ static bool process_line (char * line, Array * history, FILE * interactive)
     draw_append (buf, history, interactive);
   }
     
-else if (!strcmp (s, "draw_string")) {
+  else if (!strcmp (s, "draw_string")) {
     struct _draw_string p = {0};
     _draw_string_get (&p);
     draw_string (p);
