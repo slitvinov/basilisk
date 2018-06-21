@@ -113,7 +113,7 @@ static void sweep_x (scalar c, scalar cc)
 	  cl = 1. - cl, cc = 1. - cc, cr = 1. - cr;
 	gf[] = 0.;
 	static const double cmin = 0.5;
-	if (cc >= cmin) {
+	if (cc >= cmin && t.gradient != zero) {
 	  if (cr >= cmin) {
 	    if (cl >= cmin) {
 	      if (t.gradient)
