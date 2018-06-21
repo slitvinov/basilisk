@@ -264,6 +264,12 @@ event pressure (i++, last)
 }
 
 /**
+Some derived solvers need to hook themselves at the end of the
+timestep. */
+
+event end_timestep (i++, last);
+
+/**
 After mesh adaptation fluid properties need to be updated. */
 
 #if TREE
