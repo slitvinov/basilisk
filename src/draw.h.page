@@ -394,8 +394,12 @@ static inline double interp (Point point, coord p, scalar col) {
       else {								\
 	stats s = statsf (col);						\
 	double avg = s.sum/s.volume;					\
-	double spread = (args.spread ? args.spread : 5.)*s.stddev;	\
-	args.min = avg - spread; args.max = avg + spread;		\
+	if (args.spread < 0.)						\
+	  args.min = s.min, args.max = s.max;				\
+	else {								\
+	  double spread = (args.spread ? args.spread : 5.)*s.stddev;	\
+	  args.min = avg - spread; args.max = avg + spread;		\
+	}								\
       }									\
     }									\
     if (!args.map)							\
