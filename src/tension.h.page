@@ -48,15 +48,17 @@ event stability (i++) {
   double rhom = (1./amin + 1./amax)/2.;
 
   /**
-  We then consider each VOF interface with an associated value of
-  $\sigma$ different from zero and set the maximum timestep. */
-  
+  The maximum timestep is set using the sum of surface tension
+  coefficients. */
+
+  double sigma = 0.;
   for (scalar c in interfaces)
-    if (c.sigma) {
-      double dt = sqrt (rhom*cube(dmin)/(pi*c.sigma));
-      if (dt < dtmax)
-	dtmax = dt;
-    }
+    sigma += c.sigma;
+  if (sigma) {
+    double dt = sqrt (rhom*cube(dmin)/(pi*sigma));
+    if (dt < dtmax)
+      dtmax = dt;
+  }
 }
 
 /**
