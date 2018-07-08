@@ -58,6 +58,7 @@ The function just takes the scalar field *t* which holds the initial
 and final tag values. It returns the maximum neighborhood tag value
 (which is also the number of neighborhoods). */
 
+trace
 int tag (scalar t)
 {
 
