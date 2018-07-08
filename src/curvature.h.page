@@ -502,8 +502,9 @@ We first need a function to compute the position $\mathbf{x}$ of an
 interface. For accuracy, we first try to use height functions. */
 
 foreach_dimension()
-static double pos_x (Point point, vector h, coord * G, coord * Z) {
-  if (h.x[] == nodata)
+static double pos_x (Point point, vector h, coord * G, coord * Z)
+{
+  if (fabs(height(h.x[])) > 1.)
     return nodata;
   coord o = {x, y, z};
   o.x += height(h.x[])*Delta;
