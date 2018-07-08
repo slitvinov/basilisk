@@ -276,10 +276,16 @@ color colormap_color (double cmap[NCMAP][3],
   if (val == nodata) {
     c.r = c.g = c.b = 0; // nodata is black
     return c;
-  }    
-  val = val <= min ? 0. : val >= max ? 0.9999 : (val - min)/(max - min);
-  int i = val*(NCMAP - 1);
-  double coef = val*(NCMAP - 1) - i;
+  }
+  int i;
+  double coef;
+  val = (val - min)/(max - min);
+  if (val <= 0.) i = 0, coef = 0.;
+  else if (val >= 1.) i = NCMAP - 2, coef = 1.;
+  else {
+    i = val*(NCMAP - 1);
+    coef = val*(NCMAP - 1) - i;
+  }
   assert (i < NCMAP - 1);
   unsigned char * c1 = (unsigned char *) &c;
   for (int j = 0; j < 3; j++)
