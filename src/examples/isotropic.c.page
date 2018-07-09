@@ -39,7 +39,8 @@ argument (as well as an optional maximum runtime). */
 
 int maxlevel = 7;
 
-int main (int argc, char * argv[]) {
+int main (int argc, char * argv[])
+{
   maxruntime (&argc, argv);
   if (argc > 1)
     maxlevel = atoi(argv[1]);
@@ -281,6 +282,69 @@ set ylabel 'Speed'
 unset logscale
 plot 'isotropic.occigen' u 1:($7/512) w l t 'occigen', \
      'isotropic.mesu' u 1:($7/512) w l t 'mesu'
+~~~
+
+## Scalability on irene
+
+[Irene](http://www-hpc.cea.fr/en/complexe/tgcc-Irene.htm) is the
+supercomputer at CEA.
+
+On the local machine
+
+~~~bash
+%local qcc -source -D_MPI=1 isotropic.c
+%local scp _isotropic.c irene.ccc.cea.fr:
+~~~
+
+On irene
+
+~~~bash
+mpicc -Wall -O2 -std=c99 -xCORE-AVX512 _isotropic.c -o isotropic \
+        -I$HOME -L$HOME/gl -lglutils -lfb_osmesa -lGLU -lOSMesa -lm
+sed -e 's/WALLTIME/600/g' -e 's/LEVEL/7/g' run.sh | ccc_msub -n 512
+~~~
+
+with the `run.sh` script
+
+~~~bash
+#!/bin/bash
+#MSUB -r isotropic
+#MSUB -T WALLTIME
+#MSUB -o basilisk_%I.out
+#MSUB -e basilisk_%I.log
+#MSUB -q skylake
+#MSUB -A gen7760
+#MSUB -m scratch
+
+set -x
+cd ${BRIDGE_MSUB_PWD}
+
+ccc_mprun -n ${BRIDGE_MSUB_NPROC} ./isotropic -m WALLTIME LEVEL \
+    2> log-${BRIDGE_MSUB_NPROC} > out-${BRIDGE_MSUB_NPROC}
+~~~
+
+~~~gnuplot Weak scaling on Irene (16^3^ per core)
+set xlabel '# of cores'
+set ylabel 'Speed (points x timestep/sec/core)'
+set logscale x
+plot '-' w lp t ''
+8     366497
+64    273009
+512   196904
+4096  167429
+e
+~~~
+
+~~~gnuplot Weak scaling on Irene (32^3^ per core)
+set xlabel '# of cores'
+set ylabel 'Speed (points x timestep/sec/core)'
+set logscale x
+plot '-' w lp t ''
+8     281250
+64    189218
+512   165312
+4096  156683
+e
 ~~~
 
 ## See also
