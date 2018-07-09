@@ -407,7 +407,7 @@ static inline double interp (Point point, coord p, scalar col) {
     args.map (cmap);							\
   }									\
   									\
-  if (!args.fc[0] && !args.fc[1] && !args.fc[2])			\
+  if (dimension > 2 && !args.fc[0] && !args.fc[1] && !args.fc[2])	\
     args.fc[0] = args.fc[1] = args.fc[2] = 1.;
 
 #define color_facet(args)						\
@@ -468,6 +468,7 @@ static void end_colorized() {
 * *larger*: makes each cell larger by this factor. This helps close
    the gaps in the VOF interface representation. Default is 1.1 in 3D
    and when edges are not displayed, otherwise it is 1.
+* *filled*: in 2D, whether to fill the inside (1) or outside (-1).
 * *color*: use this field to color each interface fragment.
 * *min*, *max*: the minimum and maximum values to use for color mapping.
 * *spread*: the "spread factor" to use if *min* and *max* are not
@@ -488,6 +489,7 @@ struct _draw_vof {
   char * s;
   bool edges;
   double larger;
+  int filled;
   
   char * color;
   double min, max, spread;
@@ -574,21 +576,81 @@ bool draw_vof (struct _draw_vof p)
     
   bview * view = draw();
 #if dimension == 2
-  draw_lines (view, p.lc, p.lw);
-  glBegin (GL_LINES);
-  foreach_visible (view)
-    if (cfilter (point, c, cmin)) {
-      coord n = facet_normal (point, c, s);
-      double alpha = plane_alpha (c[], n);
-      coord segment[2];
-      if (facets (n, alpha, segment) == 2) {
-	glvertex2d (view, x + segment[0].x*Delta, y + segment[0].y*Delta);
-	glvertex2d (view, x + segment[1].x*Delta, y + segment[1].y*Delta);
+  if (p.filled) {
+    glColor3f (p.fc[0], p.fc[1], p.fc[2]);
+    foreach_visible (view) {
+      if ((p.filled > 0 && c[] >= 1.) || (p.filled < 0 && c[] <= 0.)) {
+	glBegin (GL_QUADS);
+	glvertex2d (view, x - Delta/2., y - Delta/2.);
+	glvertex2d (view, x + Delta/2., y - Delta/2.);
+	glvertex2d (view, x + Delta/2., y + Delta/2.);
+	glvertex2d (view, x - Delta/2., y + Delta/2.);
+	glEnd();
+	view->ni++;
+      }
+      else if (c[] > 0. && c[] < 1.) {
+	coord n = facet_normal (point, c, s), s = {1.,1.};
+	if (p.filled < 0)
+	  foreach_dimension()
+	    n.x = - n.x;
+	double alpha = plane_alpha (p.filled < 0. ? 1. - c[] : c[], n);
+	alpha += (n.x + n.y)/2.;
+	foreach_dimension()
+	  if (n.x < 0.) alpha -= n.x, n.x = - n.x, s.x = - 1.;
+	coord v[5];
+	int nv = 0;
+	if (alpha >= 0. && alpha <= n.x) {
+	  v[nv].x = alpha/n.x, v[nv++].y = 0.;
+	  if (alpha <= n.y)
+	    v[nv].x = 0., v[nv++].y = alpha/n.y;
+	  else if (alpha >= n.y && alpha - n.y <= n.x) {
+	    v[nv].x = (alpha - n.y)/n.x, v[nv++].y = 1.;
+	    v[nv].x = 0., v[nv++].y = 1.;
+	  }
+	  v[nv].x = 0., v[nv++].y = 0.;
+	}
+	else if (alpha >= n.x && alpha - n.x <= n.y) {
+	  v[nv].x = 1., v[nv++].y = (alpha - n.x)/n.y;
+	  if (alpha >= n.y && alpha - n.y <= n.x) {
+	    v[nv].x = (alpha - n.y)/n.x, v[nv++].y = 1.;
+	    v[nv].x = 0., v[nv++].y = 1.;
+	  }
+	  else if (alpha <= n.y)
+	    v[nv].x = 0., v[nv++].y = alpha/n.y;
+	  v[nv].x = 0., v[nv++].y = 0.;
+	  v[nv].x = 1., v[nv++].y = 0.;
+	}
+	glBegin (GL_POLYGON);
+	if (s.x*s.y < 0.)
+	  for (int i = nv - 1; i >= 0; i--)
+	    glvertex2d (view, x + s.x*(v[i].x - 0.5)*Delta,
+			y + s.y*(v[i].y - 0.5)*Delta);
+	else
+	  for (int i = 0; i < nv; i++)
+	    glvertex2d (view, x + s.x*(v[i].x - 0.5)*Delta,
+			y + s.y*(v[i].y - 0.5)*Delta);
+	glEnd ();
 	view->ni++;
       }
     }
-  glEnd ();
-  glPopMatrix ();
+  }
+  if (!p.filled || p.edges) {
+    draw_lines (view, p.lc, p.lw);
+    glBegin (GL_LINES);
+    foreach_visible (view)
+      if (cfilter (point, c, cmin)) {
+	coord n = facet_normal (point, c, s);
+	double alpha = plane_alpha (c[], n);
+	coord segment[2];
+	if (facets (n, alpha, segment) == 2) {
+	  glvertex2d (view, x + segment[0].x*Delta, y + segment[0].y*Delta);
+	  glvertex2d (view, x + segment[1].x*Delta, y + segment[1].y*Delta);
+	  view->ni++;
+	}
+      }
+    glEnd ();
+    glPopMatrix ();
+  }
 #else // dimension == 3
   double larger =
     p.larger ? p.larger : p.edges || (p.color && !p.linear) ? 1. : 1.1;
