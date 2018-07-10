@@ -11,14 +11,15 @@ the running script given to the queueing system) using the standard
 format H:M:S (hours, minutes and seconds). This should match the
 wall-clock time requested from the queueing system.
 
-When this time is exceeded the state of the simulation is dumped in
-the "restart" file and the program terminates. */
+When this time minus 5 minutes (to allow for clean termination) is
+exceeded the state of the simulation is dumped in the "restart" file
+and the program terminates. */
 
 static double _maxruntime = HUGE;
 
 event runtime (i += 10) {
   mpi_all_reduce (perf.t, MPI_DOUBLE, MPI_MAX);
-  if (perf.t >= _maxruntime - 60) { // we allow 60 seconds for termination
+  if (perf.t >= _maxruntime - 300) { // we allow 5 minutes for termination
     dump (file = "restart"); // so that we can restart
     return 1; // exit
   }
