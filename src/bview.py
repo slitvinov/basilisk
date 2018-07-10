@@ -22,6 +22,8 @@ keymap = {
     "'i'"   : 'view (camera = "iso");\n',
     "'1'"   : 'view (samples = 1);\n',
     "'4'"   : 'view (samples = 4);\n',
+    "'8'"   : 'view (psi = 1.5707963267949, relative = 1);\n',
+    "'9'"   : 'view (psi = -1.5707963267949, relative = 1);\n',
     'Right' : 'view (theta = 0.0523598775598299, phi = 0, relative = 1);\n',
     'Left'  : 'view (theta = -0.0523598775598299, phi = 0, relative = 1);\n',
     'Up'    : 'view (theta = 0, phi = 0.0523598775598299, relative = 1);\n',

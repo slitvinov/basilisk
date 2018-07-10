@@ -32,7 +32,7 @@ void clear()
   is four samples.
 * *bg[]*: an array of red, green, blue values between 0 and 1 which
   defines the background color.
-* *theta*, *phi*: [Euler-like
+* *theta*, *phi*, *psi*: [Euler-like
    angles](https://en.wikipedia.org/wiki/Euler_angles) (in radians),
    used (instead of *quat[]*) to define the camera angle.
 * *relative*: whether the *theta* and *phi* angles are absolute or
@@ -50,7 +50,7 @@ struct _view_set {
   float sx, sy, sz;
   unsigned width, height, samples;
   float bg[3];
-  float theta, phi;
+  float theta, phi, psi;
   bool relative;
   float res;
   char * camera;
@@ -135,7 +135,7 @@ void view (struct _view_set p)
       exit (1);
     }
   }
-  else if (p.theta || p.phi) {
+  else if (p.theta || p.phi || p.psi) {
     v->gfsview = false;
     float q[4];
     gl_axis_to_quat ((float[]){1,0,0}, - p.phi, q);
@@ -143,10 +143,15 @@ void view (struct _view_set p)
       float q1[4];
       gl_axis_to_quat ((float[]){0,1,0}, p.theta, q1);
       gl_add_quats(q, q1, q1);
-      gl_add_quats(q1, v->quat, v->quat);
+      float q2[4];
+      gl_axis_to_quat ((float[]){0,0,1}, p.psi, q2);
+      gl_add_quats(q1, q2, q2);
+      gl_add_quats(q2, v->quat, v->quat);
     }
     else {
       gl_axis_to_quat ((float[]){0,1,0}, p.theta, v->quat);
+      gl_add_quats(q, v->quat, v->quat);
+      gl_axis_to_quat ((float[]){0,0,1}, p.psi, q);
       gl_add_quats(q, v->quat, v->quat);
     }
   }

@@ -52,6 +52,7 @@ responds with images which are used to refresh the Tkinter window.
 * 'q' key: quits.
 * '<' or '>' keys: decrease or increase minimum delay between screen refreshes.
 * '1' and '4': set the number of samples (1 fast/coarse, 4 slow/fine).
+* '8' and '9': rotate view clockwise (resp. anti-clockwise).
 
 ## User customisation
 
