@@ -279,7 +279,10 @@ color colormap_color (double cmap[NCMAP][3],
   }
   int i;
   double coef;
-  val = (val - min)/(max - min);
+  if (max != min)
+    val = (val - min)/(max - min);
+  else
+    val = 0.;
   if (val <= 0.) i = 0, coef = 0.;
   else if (val >= 1.) i = NCMAP - 2, coef = 1.;
   else {
