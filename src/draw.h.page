@@ -412,7 +412,8 @@ static inline double interp (Point point, coord p, scalar col) {
     args.map (cmap);							\
   }									\
   									\
-  if (dimension > 2 && !args.fc[0] && !args.fc[1] && !args.fc[2])	\
+  if ((dimension > 2 || args.linear) &&					\
+      !args.fc[0] && !args.fc[1] && !args.fc[2])			\
     args.fc[0] = args.fc[1] = args.fc[2] = 1.;
 
 #define color_facet(args)						\
