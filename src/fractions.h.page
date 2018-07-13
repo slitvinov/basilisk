@@ -514,7 +514,7 @@ trace
 double interface_area (scalar c)
 {
   double area = 0.;
-  foreach()
+  foreach (reduction(+:area))
     if (c[] > 1e-6 && c[] < 1. - 1e-6) {
       coord n = mycs (point, c), p;
       double alpha = plane_alpha (c[], n);
