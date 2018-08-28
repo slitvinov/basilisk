@@ -73,6 +73,7 @@ int main (int argc, char * argv[])
 	fprintf (ferr, "bview-server: could not restore from '%s'\n", argv[i]);
 	exit (1);
       }
+      restriction (all);
       fields_stats();
     }
   }
