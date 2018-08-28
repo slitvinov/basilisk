@@ -354,14 +354,11 @@ double line_length_center (coord m, double alpha, coord * p)
   alpha += (m.x + m.y)/2.;
 
   coord n = m;
-  if (n.x < 0.) {
-    alpha -= n.x;
-    n.x = - n.x;
-  }
-  if (n.y < 0.) {
-    alpha -= n.y;
-    n.y = - n.y;
-  }
+  foreach_dimension(2)
+    if (n.x < 0.) {
+      alpha -= n.x;
+      n.x = - n.x;
+    }
 
   p->x = p->y = 0.;
 
@@ -491,3 +488,52 @@ double plane_area_center (coord m, double alpha, coord * p)
 		    1./(sq(n.z)*sq(n.y)))/6.;
 }
 #endif // dimension == 3
+
+/**
+This function fills the coordinates *p* of the centroid of the
+fraction *a* of a square cell lying under the line $(m,alpha)$. */
+
+void line_center (coord m, double alpha, double a, coord * p)
+{
+  alpha += (m.x + m.y)/2.;
+  
+  coord n = m;
+  foreach_dimension(2)
+    if (n.x < 0.) {
+      alpha -= n.x;
+      n.x = - n.x;
+    }
+
+  p->z = 0.;
+  if (alpha <= 0.) {
+    p->x = p->y = -0.5;
+    return;
+  }
+
+  if (alpha >= n.x + n.y) {
+    p->x = p->y = 0.;
+    return;
+  }
+
+  foreach_dimension(2)
+    if (n.x < 1e-4) {
+      p->x = 0.;
+      p->y = sign(m.y)*(a/2. - 0.5);
+      return;
+    }
+
+  p->x = p->y = cube(alpha);
+  
+  foreach_dimension(2) {
+    double b = alpha - n.x;
+    if (b > 0.) {
+      p->x -= sq(b)*(alpha + 2.*n.x);
+      p->y -= cube(b);
+    }
+  }
+
+  foreach_dimension(2) {
+    p->x /= 6.*sq(n.x)*n.y*a;
+    p->x = sign(m.x)*(p->x - 0.5);
+  }
+}
