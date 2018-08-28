@@ -380,9 +380,9 @@ coord facet_normal (Point point, scalar c, face vector s)
       n.x = s.x[] - s.x[1];
       nn += fabs(n.x);
     }
-    assert (nn > 0.);
-    foreach_dimension()
-      n.x /= nn;
+    if (nn > 0.)
+      foreach_dimension()
+	n.x /= nn;
   }
   return n;
 }
