@@ -64,6 +64,10 @@ Note that only the documented test cases appear in the list below
 * [Convergence of axisymmetric viscous terms](axi.c)
 * [Refinement of axisymmetric metric](refine-axi.c)
 
+## Complex boundaries
+
+* [Poisson equation on complex domains](neumann.c)
+
 ## Electrohydrodynamics
 
 * [Gouy-Chapman Debye layer](debye.c)

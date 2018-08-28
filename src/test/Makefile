@@ -1,5 +1,5 @@
 all: check 3D-tests mpi-tests load-balancing curvature-tests axi-tests \
-	cadna-tests
+	cadna-tests solid-tests
 
 include $(BASILISK)/Makefile.defs
 
@@ -83,6 +83,10 @@ explicit.tst: CFLAGS += -DEXPLICIT=1
 implicit.tst: explicit.tst
 
 bore.tst: bore1.tst
+
+dirichlet.tst: CFLAGS += -DDIRICHLET=1
+dirichlet.c: neumann.c
+	ln -s neumann.c.page dirichlet.c
 
 explosion3D.tst: CFLAGS=-grid=multigrid3D
 
@@ -310,3 +314,7 @@ periodic2.tst: CFLAGS += -DTRASH=1
 periodic3.c: periodic1.c
 	ln -s periodic1.c periodic3.c
 periodic3.tst: CFLAGS += -grid=octree -DTRASH=1
+
+# Embedded solids tests
+
+solid-tests: neumann.tst dirichlet.tst
