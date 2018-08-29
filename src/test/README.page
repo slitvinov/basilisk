@@ -67,6 +67,7 @@ Note that only the documented test cases appear in the list below
 ## Complex boundaries
 
 * [Poisson equation on complex domains](neumann.c)
+* [Poiseuille flow in a periodic channel inclined at 45 degrees](poiseuille45.c)
 
 ## Electrohydrodynamics
 

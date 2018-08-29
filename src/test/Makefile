@@ -317,4 +317,4 @@ periodic3.tst: CFLAGS += -grid=octree -DTRASH=1
 
 # Embedded solids tests
 
-solid-tests: neumann.tst dirichlet.tst
+solid-tests: neumann.tst dirichlet.tst poiseuille45.tst
