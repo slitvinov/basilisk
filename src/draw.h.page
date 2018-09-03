@@ -574,8 +574,9 @@ bool draw_vof (struct _draw_vof p)
 
 #if TREE
   // make sure we prolongate properly
-  if (c.prolongation != fraction_refine) {
-    c.prolongation = c.refine = fraction_refine;
+  void (* prolongation) (Point, scalar) = c.prolongation;
+  if (prolongation != fraction_refine) {
+    c.prolongation = fraction_refine;
     boundary ({c});
   }
 #endif // TREE
@@ -704,6 +705,14 @@ bool draw_vof (struct _draw_vof p)
     glPopMatrix ();
   }
 #endif // dimension == 3
+
+#if TREE
+  // revert prolongation
+  if (prolongation != fraction_refine) {
+    c.prolongation = prolongation;
+    boundary ({c});
+  }
+#endif // TREE
 
   return true;
 }
