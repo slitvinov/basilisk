@@ -479,7 +479,8 @@ static void end_colorized() {
 * *min*, *max*: the minimum and maximum values to use for color mapping.
 * *spread*: the "spread factor" to use if *min* and *max* are not
    defined. The maximum and minimum values will be taken as the average
-   plus or minus *spread* times the standard deviation. Default is 5.
+   plus or minus *spread* times the standard deviation. Default is 5. If
+   negative, the minimum and maximum values of the field are used.
 * *linear*: if *true* the color will be linearly interpolated for each
    vertex of the facet.
 * *map*: the colormap to use. Default is *jet*.
