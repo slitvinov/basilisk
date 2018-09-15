@@ -983,13 +983,14 @@ entire simulations.
 The arguments and their default values are:
 
 *file*
-: the name of the file to write to (mutually exclusive with *fp*).
+: the name of the file to write to (mutually exclusive with *fp*). The
+default is "dump".
 
 *list*
 : a list of scalar fields to write. Default is *all*. 
 
 *fp*
-: a file pointer. Default is *name* or stdout.
+: a file pointer. Default is stdout.
 */
 
 struct Dump {
@@ -1047,7 +1048,7 @@ trace
 void dump (struct Dump p)
 {
   FILE * fp = p.fp;
-  char * file = p.file;
+  char def[] = "dump", * file = p.file ? p.file : p.fp ? NULL : def;
 
   if (file && (fp = fopen (file, "w")) == NULL) {
     perror (file);
@@ -1088,7 +1089,7 @@ trace
 void dump (struct Dump p)
 {
   FILE * fp = p.fp;
-  char * file = p.file;
+  char def[] = "dump", * file = p.file ? p.file : p.fp ? NULL : def;
 
   if (fp != NULL || file == NULL) {
     fprintf (ferr, "dump(): must specify a file name when using MPI\n");
