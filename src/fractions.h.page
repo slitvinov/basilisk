@@ -335,6 +335,18 @@ field directly from a function. */
   } while(0)
 
 /**
+### Boolean operations
+
+Implicit surface representations have the advantage of allowing simple
+[constructive solid
+geometry](https://en.wikipedia.org/wiki/Constructive_solid_geometry)
+operations. */
+
+#define intersection(a,b)   min(a,b)
+#define union(a,b)          max(a,b)
+#define difference(a,b)     min(a,-(b))
+
+/**
 ## Interface reconstruction from volume fractions
 
 The reconstruction of the interface geometry from the volume fraction
