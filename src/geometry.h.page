@@ -360,7 +360,7 @@ double line_length_center (coord m, double alpha, coord * p)
       n.x = - n.x;
     }
 
-  p->x = p->y = 0.;
+  p->x = p->y = p->z = 0.;
 
   if (alpha <= 0. || alpha >= n.x + n.y)
     return 0.;

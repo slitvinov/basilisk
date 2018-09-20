@@ -51,9 +51,6 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
 	  }
 #endif
 
-  /* refine */
-  cell.flags &= ~leaf;
-
   /* update neighborhood */
   increment_neighbors (point);
 
@@ -65,6 +62,9 @@ int refine_cell (Point point, scalar * list, int flag, Cache * refined)
   for (scalar s in list)
     if (is_local(cell) || s.face)
       s.refine (point, s);
+
+  /* refine */
+  cell.flags &= ~leaf;
 
 @if _MPI
   if (is_border(cell)) {

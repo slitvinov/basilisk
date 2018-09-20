@@ -1,0 +1,578 @@
+/**
+# Embedded boundaries
+
+Boundaries of general shape can be described using an integral
+(i.e. finite volume) formulation which takes into account the volume
+and area fractions of intersection of the embedded boundary with the
+Cartesian mesh. 
+
+We will need to deal with volume fractions. Interpolations (for
+Dirichlet boundary conditions) assume a 5x5 stencil. */
+
+#include "fractions.h"
+#define BGHOSTS 2
+#define EMBED 1
+
+/**
+The volume and area fractions are stored in these fields. */
+
+scalar cs[];
+face vector fs[];
+
+/**
+## Operator overloading
+
+Several standard operators, defined in [common.h]() need to be tuned
+to take into account the embedded fractions. 
+
+The *SEPS* constant is used to avoid division by zero. */
+
+#undef SEPS
+#define SEPS 1e-30
+
+/**
+Face gradients and face values, computed from cell-centered values
+must be tuned to take into account the area fractions of the embedded
+boundary. This follows the procedure described in [Johansen and
+Colella, 1998](#johansen1998), figure 3 and equation. 16 in
+particular. */
+
+foreach_dimension()
+static inline double embed_face_gradient_x (Point point, scalar a, int i)
+{
+  assert (dimension == 2);
+  int j = sign(fs.x[i,1] - fs.x[i,-1]);
+  return fs.x[i,j] > 0.5 ?
+    ((1. + fs.x[i])*(a[i] - a[i-1]) +
+     (1. - fs.x[i])*(a[i,j] - a[i-1,j]))/(2.*Delta) :
+    (a[i] - a[i-1])/Delta;
+}
+
+foreach_dimension()
+static inline double embed_face_value_x (Point point, scalar a, int i)
+{
+  assert (dimension == 2);
+  int j = sign(fs.x[i,1] - fs.x[i,-1]);
+  return fs.x[i,j] > 0.5 ?
+    ((1. + fs.x[i])*(a[i]*cs[i] + a[i-1]*cs[i-1])/(cs[i] + cs[i-1] + SEPS) +
+     (1. - fs.x[i])*(a[i,j]*cs[i,j] + a[i-1,j]*cs[i-1,j])/
+     (cs[i,j] + cs[i-1,j] + SEPS))/2. :
+    (a[i]*cs[i] + a[i-1]*cs[i-1])/(cs[i] + cs[i-1] + SEPS);
+}
+
+/**
+We use the functions above to redefine the face gradient macros. */
+
+#undef face_gradient_x
+#define face_gradient_x(a, i)						\
+  (fs.x[i] > 0. && fs.x[i] < 1. ?					\
+   embed_face_gradient_x (point, a, i) :				\
+   (a[i] - a[i-1])/Delta)
+
+#undef face_gradient_y
+#define face_gradient_y(a, i)						\
+  (fs.y[0,i] > 0. && fs.y[0,i] < 1. ?					\
+   embed_face_gradient_y (point, a, i) :				\
+   (a[0,i] - a[0,i-1])/Delta)
+
+#undef face_gradient_z
+#define face_gradient_z(a, i)						\
+  (fs.z[0,0,i] > 0. && fs.z[0,0,i] < 1. ?				\
+   embed_face_gradient_z (point, a, i) :				\
+   (a[0,0,i] - a[0,0,i-1])/Delta)
+
+/**
+The face values, interpolated from cell-centered values, need to use
+weighting by the cell fraction for stability (of the [centered
+Navier--Stokes solver](navier-stokes/centered.h)). The corresponding
+test case is [test/uf.c](). */
+
+#undef face_value
+#define face_value(a, i)					\
+  (fs.x[i] > 0. && fs.x[i] < 1. ?				\
+   embed_face_value_x (point, a, i) :				\
+   (a[i]*cs[i] + a[i-1]*cs[i-1])/(cs[i] + cs[i-1] + SEPS))
+
+/**
+The centered gradient must not use values of fields entirely contained
+within the embedded boundary (for which *cs* is zero). */
+
+#undef center_gradient
+#define center_gradient(a) (cs[1] && cs[-1] ? (a[1] - a[-1])/(2.*Delta) : \
+			    cs[1] && cs[]   ? (a[1] - a[])/Delta :	  \
+			    cs[-1] && cs[]  ? (a[] - a[-1])/Delta : 0.)
+
+/**
+## Dirichlet boundary condition
+
+This function returns the gradient of scalar *s*, normal to the
+embedded boundary defined by *cs*, of unit normal vector *n*
+(normalised using the Euclidean norm, not the box norm) and of
+centroid *p*. The Dirichlet boundary condition *bc* is imposed on the
+embedded boundary.
+
+The gradient is normalised by the cell size.
+
+The calculation follows [Johansen and Colella, 1998](#johansen1998)
+and is summarised in the figure below (see also Figure 4 of Johansen
+and Colella).
+
+![Third-order normal gradient scheme](figures/dirichlet_gradient.svg) 
+*/
+
+double dirichlet_gradient (Point point, scalar s, scalar cs,
+			   coord n, coord p, double bc)
+{
+  assert (dimension == 2);
+  n.x = - n.x, n.y = - n.y;
+  foreach_dimension()
+    if (fabs(n.x) >= fabs(n.y)) {
+      double d[2], v[2];
+      for (int k = 0; k <= 1; k++) {
+	int i = (k + 1)*sign(n.x);
+	d[k] = (i - p.x)/n.x;
+	double y = p.y + d[k]*n.y;
+	int j = y > 0.5 ? 1 : y < -0.5 ? -1 : 0;
+	y -= j;
+	if (cs[i,j] && cs[i,j - sign(n.y)] && cs[i,j + sign(n.y)] > 0.5)
+	  v[k] = (s[i,j-1]*(y - 1.) + s[i,j+1]*(y + 1.))*y/2.
+	    - s[i,j]*(y + 1.)*(y - 1.); // third-order interpolation
+	else
+	  v[k] = nodata;
+      }
+      if (v[0] != nodata) {
+	if (v[1] != nodata) // third-order gradient
+	  return (d[1]*(bc - v[0])/d[0] - d[0]*(bc - v[1])/d[1])/
+	    ((d[1] - d[0])*Delta);
+	return (bc - v[0])/(d[0]*Delta); // second-order gradient
+      }
+    }
+  return nodata; // not reached
+}
+
+/**
+## Flux through the embedded boundary
+
+This function computes the flux through the embedded boundary contained 
+within a cell
+$$
+\int_b \mu \nabla s\cdot\mathbf{n} db
+$$
+with $db$ the elementary boundary surface and $\mathbf{n}$ the embedded
+boundary (outward-pointing) normal.
+
+Boundary conditions for *s* are taken into account (and are considered
+homogeneous if set to *true*).
+
+The result is returned in *val*.
+
+The function returns *false* if the flux cannot be computed, in which
+case *val* is set to the value of the Dirichlet boundary condition. */
+
+bid embed;
+
+bool embed_flux (Point point, scalar s, face vector mu,
+		 bool homogeneous, double * val)
+{
+
+  /**
+  If the cell does not contain a fragment of embedded boundary, the
+  flux is zero. */
+  
+  *val = 0.;
+  if (cs[] >= 1. || cs[] <= 0.)
+    return true;
+
+  /**
+  We compute the normal and the barycenter of the fragment of embedded
+  boundary contained within the cell. */
+  
+  coord n = facet_normal (point, cs, fs), p;
+  double alpha = plane_alpha (cs[], n);
+  double area = plane_area_center (n, alpha, &p);
+
+  /**
+  We need to shift the location where the boundary condition is
+  evaluated to the position of the barycenter of the fragment of
+  embedded boundary. This is done by modification of the origin of the
+  coordinate system. */
+  
+  // fixme: modifying global variables is a bad idea...
+  bool dirichlet;
+  double vb;
+  OMP (omp critical) {
+    double X = X0, Y = Y0, Z = Z0;
+    X0 += p.x*Delta, Y0 += p.y*Delta; Z0 += p.z*Delta;
+    double sb = s[];
+    vb = s.boundary[embed] (point, point, s);
+    dirichlet = s[]; s[] = sb;
+    X0 = X, Y0 = Y, Z0 = Z;
+  }
+
+  /**
+  If the boundary condition is homogeneous Neumann, the flux is
+  zero. */
+  
+  if (homogeneous && !dirichlet)
+    return true;
+
+  /**
+  If the boundary condition is Dirichlet, we need to compute the
+  normal gradient. */
+  
+  if (dirichlet) {
+    if (homogeneous)
+      vb = 0.;
+    normalize (&n);
+    double dg = dirichlet_gradient (point, s, cs, n, p, vb);
+
+    /**
+    If the gradient cannot be computed, we return the value of the
+    Dirichlet condition. */
+    
+    if (dg == nodata) {
+      *val = vb;
+      return false;
+    }
+    vb = dg;
+  }
+
+  /**
+  We retrieve the (average) value of $\mu$ without the metric. */
+  
+  double mua = 0., fa = 0.;
+  foreach_dimension() {
+    mua += mu.x[] + mu.x[1];
+    fa  += fs.x[] + fs.x[1];
+  }
+  *val = - mua/(fa + SEPS)*vb*area/Delta;
+  return true;
+}
+
+#define neumann_embed(x)   (val(_s) = 0, (x))
+#define dirichlet_embed(x) (val(_s) = 1, (x))
+
+/**
+## Restriction and refinement/prolongation
+
+We first define a function to refine the embedded fractions *cs* and
+*fs*. Note that a single refinement function will be used to refine
+both fields.
+
+For the volume fraction field *c*, the function below is modelled
+closely on the volume fraction refinement function
+[fraction_refine()](fractions.h#fraction_refine). */
+
+#if TREE
+void embed_fraction_refine (Point point, scalar c)
+{
+  double cc = c[];
+
+  /**
+  If the cell is empty or full, simple injection from the coarse cell
+  value is used. */
+  
+  if (cc <= 0. || cc >= 1.) {
+    foreach_child()
+      c[] = cc;
+
+    /**
+    If the cell is a leaf cell, we assume that we are dealing with
+    refinement (in contrast with prolongation) and we need to make
+    sure that the fine cells face fractions match those of their
+    neighbours. */
+    
+    if (is_leaf(cell))
+      foreach_dimension() {
+	fine(fs.x,1,0) = fine(fs.x,1,1) = cc;
+	if (!is_refined(neighbor(-1)) &&
+	    (is_local(cell) || is_local(neighbor(-1))))
+	  fine(fs.x,0,0) = fine(fs.x,0,1) = fs.x[];
+	if (!is_refined(neighbor(1)) && neighbor(1).neighbors &&
+	    (is_local(cell) || is_local(neighbor(1))))
+	  fine(fs.x,2,0) = fine(fs.x,2,1) = fs.x[1];
+      }
+  }
+  else {
+
+    /**
+    If the cell contains the embedded boundary, we reconstruct the
+    boundary using VOF linear reconstruction and a normal estimated
+    from the surface fractions. */
+
+#if dimension == 2
+    coord n = facet_normal (point, c, fs);
+    double alpha = plane_alpha (cc, n);
+      
+    foreach_child() {
+      static const coord a = {0.,0.,0.}, b = {.5,.5,.5};
+      coord nc;
+      foreach_dimension()
+	nc.x = child.x*n.x;
+      c[] = rectangle_fraction (nc, alpha, a, b);
+    }
+
+    /**
+    In case of a leaf cell, we need to reconstruct the face fractions
+    *fs* for the fine cells. */
+    
+    if (is_leaf(cell)) {
+      foreach_dimension() {
+
+	/**
+	For the fine face fractions contained within the coarse cell,
+	we compute the intersections directly using the VOF
+	reconstruction, and obtain the face fractions by taking
+	account the orientation of the normal. */
+	
+	if (2.*fabs(alpha) < fabs(n.y)) {
+	  double yc = alpha/n.y;
+	  int i = yc > 0.;
+	  fine(fs.x,1,1 - i) = n.y < 0. ? 1. - i : i;
+	  fine(fs.x,1,i) = n.y < 0. ? i - 2.*yc : 1. - i + 2.*yc;
+	}
+	else
+	  fine(fs.x,1,0) = fine(fs.x,1,1) = alpha > 0.;
+
+	/**
+	For the fine face fractions coincident with the faces of the
+	coarse cell, we obtain the intersection position from the
+	coarse cell face fraction. The orientation is obtained by
+	looking at the values of face fractions in the transverse
+	direction. */
+	
+	for (int i = 0; i <= 1; i++)
+	  if (!is_refined(neighbor(2*i-1)) && neighbor(2*i-1).neighbors &&
+	      (is_local(cell) || is_local(neighbor(2*i-1)))) {
+	    if (fs.x[i] <= 0. || fs.x[i] >= 1.)
+	      fine(fs.x,2*i,0) = fine(fs.x,2*i,1) = fs.x[i];
+	    else {
+	      double a = fs.y[0,1] <= 0. || fs.y[2*i-1,1] <= 0. ||
+		fs.y[] >= 1. || fs.y[2*i-1] >= 1.;
+	      if ((2.*a - 1)*(fs.x[i] - 0.5) > 0.) {
+		fine(fs.x,2*i,0) = a;
+		fine(fs.x,2*i,1) = 2.*fs.x[i] - a;
+	      }
+	      else {
+		fine(fs.x,2*i,0) = 2.*fs.x[i] + a - 1.;
+		fine(fs.x,2*i,1) = 1. - a;
+	      }
+	    }
+	  }
+      }
+    }
+#else // dimension != 2
+    assert (false); // not implemented yet
+#endif
+  }
+}
+
+/**
+We now define restriction and prolongation functions for cell-centered
+fields. The goal is to define second-order operators which do not use
+any values from cells entirely contained within the embedded boundary
+(for which *cs = 0*). */
+
+static inline void restriction_embed_linear (Point point, scalar s)
+{
+
+  /**
+  For restriction, the cases where 0, 3 or 4 children cells are not
+  entirely contained within the embedded boundary is simple, since
+  linear interpolation can be used directly. */
+  
+  // 0 children
+  if (!cs[]) {
+    s[] = 0.;
+    return;
+  }
+  // 4 children
+  if (fine(cs,0,0) && fine(cs,1,0) && fine(cs,0,1) && fine(cs,1,1)) {
+    s[] = (fine(s,0,0) + fine(s,1,0) + fine(s,0,1) + fine(s,1,1))/4.;
+    return;
+  }
+  // 3 children
+  if (fine(cs,0,0) && fine(cs,1,1)) {
+    s[] = (fine(s,0,0) + fine(s,1,1))/2.;
+    return;
+  }
+  if (fine(cs,0,1) && fine(cs,1,0)) {
+    s[] = (fine(s,0,1) + fine(s,1,0))/2.;
+    return;
+  }
+
+  /**
+  We are now left with the cases of two children sharing the same
+  coarse face, or with a single child. 
+
+  In the case of two children, we extrapolate linearly using only
+  the neighboring coarse leaf cell value or fine cell values, as
+  illustrated on the figure below (where the target value is the black
+  dot).
+
+  ![Extrapolation in the case of two children.](figures/restriction_embed.svg)
+  */
+  
+  // 2 children
+  foreach_dimension()
+    for (int i = 0; i <= 1; i++)
+      if (fine(cs,i,0) && fine(cs,i,1)) {
+	if (is_leaf(neighbor(2*i-1)))
+	  s[] = cs[2*i-1] ? (2.*(fine(s,i,0) + fine(s,i,1)) - s[2*i-1])/3. :
+	    (fine(s,i,0) + fine(s,i,1))/2.;
+	else {
+	  double v = 0.; // v/n is the average of the fine cell neighbors
+	  int n = 0;
+	  for (int j = 0; j <= 1; j++)
+	    if (fine(cs,3*i-1,j))
+	      v += fine(s,3*i-1,j), n++;
+	  if (n == 0) {
+	    s[] = (fine(s,i,0) + fine(s,i,1))/2.;
+	    return;
+	  }
+	  s[] = (3.*(fine(s,i,0) + fine(s,i,1)) - 2.*v/n)/4.;
+	}
+	return;
+      }
+
+  /**
+  There is a single child not entirely contained within the embedded
+  boundary. */
+  
+  // 1 child
+  for (int i = 0; i <= 1; i++)
+    for (int j = 0; j <= 1; j++)
+      if (fine(cs,i,j)) {
+	if (is_leaf(neighbor(2*i-1,2*j-1))) {
+	  assert (cs[2*i-1,2*j-1]);
+	  s[] = (4.*fine(s,i,j) - s[2*i-1,2*j-1])/3.;
+	}
+	else if (fine(cs,3*i-1,3*j-1))
+	  s[] = (3.*fine(s,i,j) - fine(s,3*i-1,3*j-1))/2.;
+	else
+	  s[] = fine(s,i,j);
+	return;
+      }
+  
+  assert (false); // not reached
+}
+
+/**
+For refinement, we use either bilinear interpolation, if the required
+four coarse cell values are defined or trilinear interpolation if only
+three coarse cell values are defined. If less that three coarse cell
+values are defined ("pathological cases" below), we try to estimate
+gradients in each direction and add the corresponding correction. */
+
+static inline void refine_embed_linear (Point point, scalar s)
+{
+  if (!cs[]) {
+    foreach_child()
+      s[] = 0.;
+    return;
+  }
+  foreach_child() {
+    if (!cs[])
+      s[] = 0.;
+    else {
+      if (coarse(fs.x,(child.x + 1)/2) && coarse(fs.y,0,(child.y + 1)/2) &&
+	  coarse(fs.x,(child.x + 1)/2,child.y) &&
+	  coarse(fs.y,child.x,(child.y + 1)/2))
+	// bilinear interpolation
+	s[] = (9.*coarse(s) + 
+	       3.*(coarse(s,child.x) + coarse(s,0,child.y)) + 
+	       coarse(s,child.x,child.y))/16.;
+      else if (coarse(fs.x,(child.x + 1)/2) && coarse(fs.y,0,(child.y + 1)/2))
+	// triangular interpolation
+	s[] = (2.*coarse(s) + coarse(s,child.x) + coarse(s,0,child.y))/4.;
+      else {
+	// pathological cases
+	s[] = coarse(s);
+	foreach_dimension() {
+	  if (coarse(fs.x,(child.x + 1)/2))
+	    s[] += (coarse(s,child.x) - coarse(s))/4.;
+	  else if (!is_leaf(aparent(0,child.y)) &&
+		   aparent(0,child.y).neighbors &&
+		   cs[0,child.y] && cs[-child.x,child.y])
+	    s[] += (s[0,child.y] - s[-child.x,child.y])/2.;
+	}
+      }
+    }
+  }
+}
+#endif // TREE
+
+/**
+## Prolongation for the multigrid solver
+
+We use a simplified prolongation operator for the [multigrid
+solver](poisson.h#mg_solve) i.e. simple injection if bilinear
+interpolation would use values which are fully contained within the
+embedded boundary. */
+
+#if MULTIGRID
+static inline double bilinear_embed (Point point, scalar s)
+{
+  if (!coarse(cs,0) || !coarse(cs,child.x))
+    return coarse(s);
+  #if dimension >= 2
+  if (!coarse(cs,0,child.y) || !coarse(cs,child.x,child.y))
+    return coarse(s);
+  #endif
+  #if dimension >= 3
+  if (!coarse(cs,0,0,child.z) || !coarse(cs,child.x,0,child.z) ||
+      !coarse(cs,0,child.y,child.z) ||
+      !coarse(cs,child.x,child.y,child.z))
+    return coarse(s);  
+  #endif
+  return bilinear (point, s);
+}
+
+#define bilinear(point, s) bilinear_embed(point, s)
+#endif // MULTIGRID
+
+/**
+## Default settings
+
+To apply the volume/area fraction-weighting to the solvers, we define
+the metric using the embedded fractions. */
+
+event metric (i = 0)
+{
+  foreach()
+    cs[] = 1.;
+  foreach_face()
+    fs.x[] = 1.;
+#if TREE
+  cs.refine = cs.prolongation = embed_fraction_refine;
+  foreach_dimension()
+    fs.x.refine = fs.x.prolongation = no_restriction;
+#endif
+  boundary ({cs, fs});
+  restriction ({cs, fs});
+
+  // embedded boundaries cannot be combined with (another) metric yet
+  assert (is_constant (cm) || cm.i == cs.i);
+  
+  cm = cs;
+  fm = fs;
+}
+
+/**
+## References
+
+~~~bib
+@article{johansen1998,
+  title={A Cartesian grid embedded boundary method for Poisson's
+  equation on irregular domains},
+  author={Johansen, Hans and Colella, Phillip},
+  journal={Journal of Computational Physics},
+  volume={147},
+  number={1},
+  pages={60--85},
+  year={1998},
+  publisher={Elsevier},
+  url={https://pdfs.semanticscholar.org/17cd/babecd054d58da05c2ba009cccb3c687f58f.pdf}
+}
+~~~
+*/

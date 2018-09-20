@@ -134,7 +134,7 @@ norm normf (scalar f)
   double avg = 0., rms = 0., max = 0., volume = 0.;
   foreach(reduction(max:max) reduction(+:avg) 
 	  reduction(+:rms) reduction(+:volume)) 
-    if (f[] != nodata) {
+    if (f[] != nodata && dv() > 0.) {
       double v = fabs(f[]);
       if (v > max) max = v;
       volume += dv();
@@ -162,7 +162,7 @@ stats statsf (scalar f)
   double min = 1e100, max = -1e100, sum = 0., sum2 = 0., volume = 0.;
   foreach(reduction(+:sum) reduction(+:sum2) reduction(+:volume)
 	  reduction(max:max) reduction(min:min)) 
-    if (f[] != nodata) {
+    if (f[] != nodata && dv() > 0.) {
       volume += dv();
       sum    += dv()*f[];
       sum2   += dv()*sq(f[]);
@@ -244,7 +244,7 @@ void gradients (scalar * f, vector * g)
 	  v.x[] = s.gradient (s[-1], s[], s[1])/Delta;
       else // centered
 	foreach_dimension()
-	  v.x[] = (s[1] - s[-1])/(2.*Delta);
+	  v.x[] = center_gradient (s);
     }
   }
   boundary ((scalar *) g);

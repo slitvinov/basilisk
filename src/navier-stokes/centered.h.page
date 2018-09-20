@@ -21,12 +21,17 @@ The scheme implemented here is close to that used in Gerris ([Popinet,
 
 We will use the generic time loop, a CFL-limited timestep, the
 Bell-Collela-Glaz advection scheme and the implicit viscosity
-solver. */
+solver. If embedded boundaries are used, a different scheme is used
+for viscosity. */
 
 #include "run.h"
 #include "timestep.h"
 #include "bcg.h"
-#include "viscosity.h"
+#if EMBED
+# include "viscosity-embed.h"
+#else
+# include "viscosity.h"
+#endif
 
 /**
 The primary variables are the centered pressure field $p$ and the
@@ -76,8 +81,10 @@ means that, at the boundary, the acceleration $\mathbf{a}$ must be
 balanced by the pressure gradient. Taking care of boundary orientation
 and staggering of $\mathbf{a}$, this can be written */
 
-p[right] = neumann(a.n[ghost]*fm.n[ghost]/alpha.n[ghost]);
-p[left]  = neumann(-a.n[]*fm.n[]/alpha.n[]);
+#define neumann_pressure(i) (a.n[i]*fm.n[i]/(alpha.n[i] + SEPS))
+
+p[right] = neumann (neumann_pressure(ghost));
+p[left]  = neumann (- neumann_pressure(0));
 
 #if AXI
 uf.n[bottom] = 0.;
@@ -85,12 +92,12 @@ uf.t[bottom] = dirichlet(0); // since uf is multiplied by the metric which
                              // is zero on the axis of symmetry
 #else // !AXI
 #  if dimension > 1
-p[top]    = neumann(a.n[ghost]*fm.n[ghost]/alpha.n[ghost]);
-p[bottom] = neumann(-a.n[]*fm.n[]/alpha.n[]);
+p[top]    = neumann (neumann_pressure(ghost));
+p[bottom] = neumann (- neumann_pressure(0));
 #  endif
 #  if dimension > 2
-p[front]  = neumann(a.n[ghost]*fm.n[ghost]/alpha.n[ghost]);
-p[back]   = neumann(-a.n[]*fm.n[]/alpha.n[]);
+p[front]  = neumann (neumann_pressure(ghost));
+p[back]   = neumann (- neumann_pressure(0));
 #  endif
 #endif
 
@@ -127,7 +134,18 @@ event defaults (i = 0)
 
 #if TREE
   uf.x.refine = refine_face_solenoidal;
-#endif
+
+  /**
+  When using [embedded boundaries](/src/embed.h), the restriction and
+  prolongation operators need to take the boundary into account. */
+
+#if EMBED  
+  for (scalar s in {p,u}) {
+    s.restriction = restriction_embed_linear;
+    s.refine = s.prolongation = refine_embed_linear;
+  }
+#endif // EMBED
+#endif // TREE
 }
 
 /**
@@ -167,7 +185,7 @@ timing of upcoming events. */
 event set_dtmax (i++,last) dtmax = DT;
 
 event stability (i++,last) {
-  dt = dtnext (timestep (uf, dtmax));
+  dt = dtnext (stokes ? dtmax : timestep (uf, dtmax));
 }
 
 /**
@@ -214,7 +232,7 @@ void prediction()
   else
     foreach()
       foreach_dimension()
-        du.x[] = (u.x[1] - u.x[-1])/(2.*Delta);
+        du.x[] = center_gradient (u.x);
   boundary ((scalar *){du});
 
   trash ({uf});
@@ -223,12 +241,16 @@ void prediction()
     int i = -(s + 1.)/2.;
     uf.x[] = u.x[i] + (g.x[] + g.x[-1])*dt/4. + s*(1. - s*un)*du.x[i]*Delta/2.;
     #if dimension > 1
+    if (fm.y[i,0] && fm.y[i,1]) {
       double fyy = u.y[i] < 0. ? u.x[i,1] - u.x[i] : u.x[i] - u.x[i,-1];
       uf.x[] -= dt*u.y[i]*fyy/(2.*Delta);
+    }
     #endif
     #if dimension > 2
+    if (fm.z[i,0,0] && fm.z[i,0,1]) {
       double fzz = u.z[i] < 0. ? u.x[i,0,1] - u.x[i] : u.x[i] - u.x[i,0,-1];
       uf.x[] -= dt*u.z[i]*fzz/(2.*Delta);
+    }
     #endif
     uf.x[] *= fm.x[];
   }
@@ -292,7 +314,7 @@ event viscous_term (i++,last)
   face vector af = a;
   trash ({uf,af});
   foreach_face() {
-    uf.x[] = fm.x[]*(u.x[] + u.x[-1])/2.;
+    uf.x[] = fm.x[]*face_value (u.x, 0);
     if (!is_constant(af.x))
       af.x[] = 0.;
   }
@@ -336,7 +358,7 @@ event projection (i++,last)
 
   face vector gf[];
   foreach_face()
-    gf.x[] = a.x[] - alpha.x[]/fm.x[]*(p[] - p[-1])/Delta;
+    gf.x[] = fm.x[]*a.x[] - alpha.x[]*(p[] - p[-1])/Delta;
   boundary_flux ({gf});
 
   /**
@@ -346,7 +368,7 @@ event projection (i++,last)
   trash ({g});
   foreach()
     foreach_dimension()
-      g.x[] = (gf.x[] + gf.x[1])/2.;
+      g.x[] = (gf.x[] + gf.x[1])/(fm.x[] + fm.x[1] + SEPS);
   boundary ((scalar *){g});
 
   /**

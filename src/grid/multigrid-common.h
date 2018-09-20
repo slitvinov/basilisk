@@ -36,7 +36,7 @@ static inline void restriction_volume_average (Point point, scalar s)
   double sum = 0.;
   foreach_child()
     sum += cm[]*s[];
-  s[] = sum/(1 << dimension)/cm[];
+  s[] = sum/(1 << dimension)/(cm[] + 1e-30);
 }
 
 static inline void face_average (Point point, vector v)

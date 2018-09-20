@@ -45,6 +45,7 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
   We then proceed from the coarsest grid (*minlevel*) down to the
   finest grid. */
 
+  minlevel = min (minlevel, maxlevel);
   for (int l = minlevel; l <= maxlevel; l++) {
 
     /**
@@ -107,6 +108,7 @@ typedef struct {
   double resb, resa;  // maximum residual before and after the iterations
   double sum;         // sum of r.h.s.
   int nrelax;         // number of relaxations
+  int minlevel;       // minimum level of the multigrid hierarchy
 } mgstats;
 
 /**
@@ -115,7 +117,8 @@ The user needs to provide a function which computes the residual field
 user-defined pointer *data* can be used to pass arguments to these
 functions. The optional number of relaxations is *nrelax* (default is
 one) and *res* is an optional list of fields used to store the
-residuals. */
+residuals. The minimum level of the hierarchy can be set (default is
+zero i.e. the root cell). */
 
 struct MGSolve {
   scalar * a, * b;
@@ -127,6 +130,8 @@ struct MGSolve {
   
   int nrelax;
   scalar * res;
+  int minlevel;
+  double tolerance;
 };
 
 mgstats mg_solve (struct MGSolve p)
@@ -174,10 +179,15 @@ mgstats mg_solve (struct MGSolve p)
   also that we force the solver to apply at least one cycle, even if the
   initial residual is lower than *TOLERANCE*. */
 
+  if (p.tolerance == 0.)
+    p.tolerance = TOLERANCE;
   for (s.i = 0;
-       s.i < NITERMAX && (s.i < NITERMIN || s.resa > TOLERANCE);
+       s.i < NITERMAX && (s.i < NITERMIN || s.resa > p.tolerance);
        s.i++) {
-    mg_cycle (p.a, res, da, p.relax, p.data, s.nrelax, 0, grid->maxdepth);
+    mg_cycle (p.a, res, da, p.relax, p.data,
+	      s.nrelax,
+	      p.minlevel,
+	      grid->maxdepth);
     s.resa = p.residual (p.a, p.b, res, p.data);
 
     /**
@@ -185,25 +195,36 @@ mgstats mg_solve (struct MGSolve p)
     by between 2 and 20 for each cycle. This is particularly useful
     for stiff systems which may require a larger number of relaxations
     on the finest grid. */
-    
+
+#if 1
     if (s.resa > TOLERANCE) {
       if (resb/s.resa < 1.2 && s.nrelax < 100)
 	s.nrelax++;
       else if (resb/s.resa > 10 && s.nrelax > 2)
 	s.nrelax--;
     }
+#else
+    if (s.resa == resb) /* convergence has stopped!! */
+      break;
+    if (s.resa > resb/1.1 && p.minlevel < grid->maxdepth)
+      p.minlevel++;
+#endif
+
     resb = s.resa;
   }
-
+  s.minlevel = p.minlevel;
+  
   /**
   If we have not satisfied the tolerance, we warn the user. */
 
-  if (s.resa > TOLERANCE)
+  if (s.resa > p.tolerance) {
+    scalar v = p.a[0];
     fprintf (ferr, 
-	     "WARNING: convergence not reached after %d iterations\n"
-	     "  res: %g sum: %g nrelax: %d\n", 
+	     "WARNING: convergence for %s not reached after %d iterations\n"
+	     "  res: %g sum: %g nrelax: %d\n", v.name,
 	     s.i, s.resa, s.sum, s.nrelax), fflush (ferr);
-
+  }
+    
   /**
   We deallocate the residual and correction fields and free the lists. */
 
@@ -230,17 +251,25 @@ corresponding to the face gradients of field $a$.
 function works also when *alpha* and *lambda* are constant vector
 (resp. scalar) fields. If *tolerance* is set, it supersedes the
 default *TOLERANCE* of the multigrid solver, *nrelax* controls the
-initial number of relaxations (default is one) and *res* is an optional
-list of fields used to store the final residual (which can be useful
-to monitor convergence). */
+initial number of relaxations (default is one), *minlevel* controls
+the minimum level of the hierarchy (default is one) and *res* is an
+optional list of fields used to store the final residual (which can be
+useful to monitor convergence).
+
+When using [embedded boundaries](embed.h) boundary fluxes on the
+boundary need to be included. They are computed by the *embed_flux*
+function. */
 
 struct Poisson {
   scalar a, b;
   (const) face vector alpha;
   (const) scalar lambda;
   double tolerance;
-  int nrelax;
+  int nrelax, minlevel;
   scalar * res;
+#if EMBED
+  bool (* embed_flux) (Point, scalar, vector, bool, double *);
+#endif
 };
 
 /**
@@ -282,7 +311,19 @@ static void relax (scalar * al, scalar * bl, int l, void * data)
       n += alpha.x[1]*a[1] + alpha.x[]*a[-1];
       d += alpha.x[1] + alpha.x[];
     }
-    c[] = n/d;
+#if EMBED
+    if (p->embed_flux) {
+      double c;
+      if (p->embed_flux (point, a, alpha, true, &c))
+	n -= c*sq(Delta);
+      else
+	n = 0., d = 1.;
+    }
+    if (!d)
+      c[] = b[] = 0.;
+    else
+#endif // EMBED
+      c[] = n/d;
   }
 
   /**
@@ -319,26 +360,32 @@ static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
   /* conservative coarse/fine discretisation (2nd order) */
   face vector g[];
   foreach_face()
-    g.x[] = alpha.x[]*(a[] - a[-1])/Delta;
+    g.x[] = alpha.x[]*face_gradient_x (a, 0);
   boundary_flux ({g});
   foreach (reduction(max:maxres)) {
     res[] = b[] - lambda[]*a[];
     foreach_dimension()
-      res[] += (g.x[] - g.x[1])/Delta;
-    if (fabs (res[]) > maxres)
-      maxres = fabs (res[]);
-  }
-#else
+      res[] -= (g.x[1] - g.x[])/Delta;
+#else // !TREE
   /* "naive" discretisation (only 1st order on trees) */
   foreach (reduction(max:maxres)) {
     res[] = b[] - lambda[]*a[];
     foreach_dimension()
-      res[] += ((alpha.x[1] + alpha.x[])*a[]
-		- alpha.x[1]*a[1] - alpha.x[]*a[-1])/sq(Delta);
+      res[] += (alpha.x[0]*face_gradient_x (a, 0) -
+		alpha.x[1]*face_gradient_x (a, 1))/Delta;  
+#endif // !TREE    
+#if EMBED
+    if (p->embed_flux) {
+      double c;
+      if (p->embed_flux (point, a, alpha, false, &c))
+	res[] += c;
+      else
+	a[] = c, res[] = 0.;
+    }
+#endif // EMBED    
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
-#endif
   boundary (resl);
   return maxres;
 }
@@ -360,14 +407,10 @@ mgstats poisson (struct Poisson p)
   unity vector (resp. zero scalar) fields. Note that the user is free to
   provide $\alpha$ and $\beta$ as constant fields. */
 
-  if (!p.alpha.x.i) {
-    const vector alpha[] = {1.,1.,1.};
-    p.alpha = alpha;
-  }
-  if (!p.lambda.i) {
-    const scalar lambda[] = 0.;
-    p.lambda = lambda;
-  }
+  if (!p.alpha.x.i)
+    p.alpha = unityf;
+  if (!p.lambda.i)
+    p.lambda = zeroc;
 
   /**
   We need $\alpha$ and $\lambda$ on all levels of the grid. */
@@ -385,7 +428,8 @@ mgstats poisson (struct Poisson p)
     TOLERANCE = p.tolerance;
 
   scalar a = p.a, b = p.b;
-  mgstats s = mg_solve ({a}, {b}, residual, relax, &p, p.nrelax, p.res);
+  mgstats s = mg_solve ({a}, {b}, residual, relax,
+			&p, p.nrelax, p.res, minlevel = max(1, p.minlevel));
 
   /**
   We restore the default. */
@@ -402,19 +446,19 @@ mgstats poisson (struct Poisson p)
 The function below "projects" the velocity field *u* onto the space of
 divergence-free velocity fields i.e.
 $$
-\mathbf{u}^{n+1} \leftarrow \mathbf{u} - \Delta t\alpha\nabla p
+\mathbf{u}_f^{n+1} \leftarrow \mathbf{u}_f - \Delta t\alpha\nabla p
 $$
 so that
 $$
-\nabla\cdot\mathbf{u}^{n+1} = 0
+\nabla\cdot\mathbf{u}_f^{n+1} = 0
 $$
 This gives the Poisson equation for the pressure
 $$
-\nabla\cdot(\alpha\nabla p) = \frac{\nabla\cdot\mathbf{u}_*}{\Delta t}
+\nabla\cdot(\alpha\nabla p) = \frac{\nabla\cdot\mathbf{u}_f}{\Delta t}
 $$ */
 
 struct Project {
-  face vector u;
+  face vector uf;
   scalar p;
   face vector alpha; // optional: default unityf
   double dt;         // optional: default one
@@ -424,7 +468,7 @@ struct Project {
 trace
 mgstats project (struct Project q)
 {
-  face vector u = q.u;
+  face vector uf = q.uf;
   scalar p = q.p;
   (const) face vector alpha = q.alpha.x.i ? q.alpha : unityf;
   double dt = q.dt ? q.dt : 1.;
@@ -432,14 +476,14 @@ mgstats project (struct Project q)
   
   /**
   We allocate a local scalar field and compute the divergence of
-  $\mathbf{u}_*$. The divergence is scaled by *dt* so that the
+  $\mathbf{u}_f$. The divergence is scaled by *dt* so that the
   pressure has the correct dimension. */
 
   scalar div[];
   foreach() {
     div[] = 0.;
     foreach_dimension()
-      div[] += u.x[1] - u.x[];
+      div[] += uf.x[1] - uf.x[];
     div[] /= dt*Delta;
   }
 
@@ -448,7 +492,7 @@ mgstats project (struct Project q)
   the maximum relative change in volume of a cell (due to the divergence
   of the flow) during one timestep i.e. the non-dimensional quantity 
   $$
-  |\nabla\cdot\mathbf{u}|\Delta t 
+  |\nabla\cdot\mathbf{u}_f|\Delta t 
   $$ 
   Given the scaling of the divergence above, this gives */
 
@@ -456,11 +500,11 @@ mgstats project (struct Project q)
 			 tolerance = TOLERANCE/sq(dt), nrelax = nrelax);
 
   /**
-  And compute $\mathbf{u}_{n+1}$ using $\mathbf{u}_*$ and $p$. */
+  And compute $\mathbf{u}_f^{n+1}$ using $\mathbf{u}_f$ and $p$. */
 
   foreach_face()
-    u.x[] -= dt*alpha.x[]*(p[] - p[-1])/Delta;
-  boundary ((scalar *){u});
+    uf.x[] -= dt*alpha.x[]*face_gradient_x (p, 0);
+  boundary ((scalar *){uf});
 
   return mgp;
 }

@@ -318,9 +318,21 @@ void fractions (struct Fractions a)
 #endif
   
   /**
-  Finally we apply the boundary conditions. */
+  We apply the boundary conditions. */
 
   boundary ({c});
+
+  /**
+  We enforce the consistency of face and cell fractions for marginal
+  cases. */
+
+  if (a.s.x.i) {
+    face vector s = a.s;
+    foreach_face()
+      if (!c[] || !c[-1])
+	s.x[] = 0.;
+    boundary ((scalar *){c, s});
+  }
 }
 
 /**
@@ -395,6 +407,9 @@ coord facet_normal (Point point, scalar c, face vector s)
     if (nn > 0.)
       foreach_dimension()
 	n.x /= nn;
+    else
+      foreach_dimension()
+	n.x = 1./dimension;
   }
   return n;
 }

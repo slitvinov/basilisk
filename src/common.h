@@ -1175,6 +1175,16 @@ const scalar zeroc[] = 0.;
 (const) face vector fm = unityf;
 (const) scalar cm = unity;
 
+// Embedded boundaries
+// these macros are overloaded in embed.h
+
+#define SEPS 0.
+#define face_gradient_x(a,i) ((a[i] - a[i-1])/Delta)
+#define face_gradient_y(a,i) ((a[0,i] - a[0,i-1])/Delta)
+#define face_gradient_z(a,i) ((a[0,0,i] - a[0,0,i-1])/Delta)
+#define face_value(a,i)      ((a[i] + a[i-1])/2.)
+#define center_gradient(a)   ((a[1] - a[-1])/(2.*Delta))
+
 // Pipes
 
 static FILE ** qpopen_pipes = NULL;

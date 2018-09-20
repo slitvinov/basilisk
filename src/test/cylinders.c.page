@@ -4,7 +4,7 @@
 We compare the numerical results with the solution given by the
 multipole expansion of [Sangani and Acrivos, 1982](#sangani1982). */
 
-#include "solid.h"
+#include "embed.h"
 #include "navier-stokes/centered.h"
 #include "view.h"
 
@@ -36,7 +36,7 @@ int maxlevel = 6, nc;
 double radius;
 
 /**
-This function defines the solid volume and face fractions. */
+This function defines the embedded volume and face fractions. */
 
 void cylinder (scalar cs, face vector fs)
 {
@@ -44,7 +44,6 @@ void cylinder (scalar cs, face vector fs)
   foreach_vertex()
     phi[] = sq(x) + sq(y) - sq(radius);
   fractions (phi, cs, fs);
-  restriction ({cs, fs});
 }
 
 int main()
@@ -70,17 +69,6 @@ int main()
   NITERMIN = 5;
 
   /**
-  On trees we need to set the proper restriction and prolongation
-  operators. */
-  
-#if TREE
-  for (scalar s in {p,u}) {
-    s.restriction = restriction_solid_linear;
-    s.refine = s.prolongation = refine_solid_linear;
-  }
-#endif
-
-  /**
   We do the 9 cases computed by Sangani & Acrivos. The radius is
   computed from the volume fraction. */
   
@@ -101,7 +89,7 @@ event init (t = 0)
 {
 
   /**
-  We initialize the solid geometry. */
+  We initialize the embedded geometry. */
   
   cylinder (cs, fs);
 
@@ -113,10 +101,10 @@ event init (t = 0)
   mu = fm;
 
   /**
-  The boundary condition is zero velocity on the embedded solid. */
+  The boundary condition is zero velocity on the embedded boundary. */
 
-  u.n[solid] = dirichlet_solid(0);
-  u.t[solid] = dirichlet_solid(0);
+  u.n[embed] = dirichlet_embed(0);
+  u.t[embed] = dirichlet_embed(0);
   
   /**
   We initialize the reference velocity. */
@@ -131,7 +119,7 @@ We check for a stationary solution. */
 event logfile (i++; i <= 500)
 {
   double avg = normf(u.x).avg, du = change (u.x, un)/(avg + SEPS);
-  fprintf (stdout, "%d %d %d %d %d %d %d %d %.3g %.3g %.3g %.3g %.3g\n",
+  fprintf (fout, "%d %d %d %d %d %d %d %d %.3g %.3g %.3g %.3g %.3g\n",
 	   maxlevel, i,
 	   mgp.i, mgp.nrelax, mgp.minlevel,
 	   mgu.i, mgu.nrelax, mgu.minlevel,
@@ -148,7 +136,7 @@ event logfile (i++; i <= 500)
     double Phi = 1. - s.volume/sq(L0);
     double U = s.sum/s.volume;
     double F = sq(L0)/(1. - Phi);
-    fprintf (stderr,
+    fprintf (ferr,
 	     "%d %g %g %g %g\n", maxlevel, sangani[nc][0], F/U, sangani[nc][1],
 	     fabs(F/U - sangani[nc][1])/sangani[nc][1]);
 
@@ -172,7 +160,7 @@ event logfile (i++; i <= 500)
 
     /**
     We refine the converged solution to get the initial guess for the
-    finer level. We also reset the solid fractions to avoid
+    finer level. We also reset the embedded fractions to avoid
     interpolation errors on the geometry. */
     
     maxlevel++;

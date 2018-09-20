@@ -1,23 +1,23 @@
 /**
 # Poiseuille flow in a periodic channel inclined at 45 degrees
 
-We test the embedded solid boundaries by solving the viscous flow
-driven by gravity in an inclined periodic channel. */
+We test the embedded boundaries by solving the viscous flow driven by
+gravity in an inclined periodic channel. */
 
-#include "grid/multigrid.h"
-#include "solid.h"
-#include "view.h"
+#include "embed.h"
 #include "navier-stokes/centered.h"
+#include "view.h"
 
-int main() {
+int main()
+{
   origin (-0.5, -0.5);
   periodic (right);
   periodic (top);
   
   stokes = true;
-  TOLERANCE = 1e-6;
+  TOLERANCE = 1e-7;
   
-  for (N = 8; N <= 64; N *= 2)
+  for (N = 16; N <= 64; N *= 2)
     run();
 }
 
@@ -39,6 +39,7 @@ event init (t = 0) {
   /**
   The channel geometry is defined using the levelset function
   $\phi$. */  
+
   vertex scalar phi[];
   foreach_vertex()
     phi[] = difference (union (y - x - EPS, x - y - 0.5 + EPS),
@@ -46,24 +47,11 @@ event init (t = 0) {
   fractions (phi, cs, fs);
 
   /**
-  We remove tiny cells. */
-  
-  foreach()
-    if (cs[] < EPS)
-      cs[] = 0.;
-  boundary ({cs});
-  foreach_face()
-    if (!cs[-1] || !cs[])
-      fs.x[] = 0.;
-  boundary ((scalar *){fs});
-  restriction ({cs, fs});
+  The boundary condition is zero velocity on the embedded boundaries. */
 
-  /**
-  The boundary condition is zero velocity on the embedded solid. */
+  u.n[embed] = dirichlet_embed(0);
+  u.t[embed] = dirichlet_embed(0);
   
-  u.n[solid] = dirichlet_solid(0);
-  u.t[solid] = dirichlet_solid(0);
-
   /**
   We initialize the reference velocity. */
   
@@ -93,11 +81,11 @@ event profile (t = end) {
     e[] = u.x[] - 0.25*(sq(WIDTH/2.) - sq(x1 >= 0. ? x1 - 0.25 : x1 + 0.75));
   }
   norm n = normf (e);
-  fprintf (ferr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
-  dump ("end");
+  fprintf (ferr, "%d %.3g %.3g %.3g %d %d %d %d %d\n",
+	   N, n.avg, n.rms, n.max, i, mgp.i, mgp.nrelax, mgu.i, mgu.nrelax);
   
   draw_vof ("cs", "fs");
-  squares ("u.x", linear = true);
+  squares ("u.x", linear = true, spread = -1);
   save ("u.x.png");
 }
 

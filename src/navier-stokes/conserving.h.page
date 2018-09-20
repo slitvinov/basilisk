@@ -63,6 +63,13 @@ event defaults (i = 0) {
 }
 
 /**
+We need to overload the stability event so that the CFL is taken into
+account (because we set stokes to true). */
+
+event stability (i++)
+  dtmax = timestep (uf, dtmax);
+
+/**
 We will transport the two components of the momentum, $q_1=f \rho_1
 \mathbf{u}$ and $q_2=(1 - f) \rho_2 \mathbf{u}$. We will need to
 impose boundary conditions which match this definition. This is done

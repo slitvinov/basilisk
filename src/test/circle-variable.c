@@ -44,7 +44,7 @@ void solve (int depth)
   boundary ((scalar *){c});
 
   const scalar lambda[] = 0.;
-  struct Poisson p;
+  struct Poisson p = {0};
   p.a = a; p.b = b; p.alpha = c; p.lambda = lambda;
 
   #define NITER 13
