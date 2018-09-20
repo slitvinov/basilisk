@@ -110,6 +110,7 @@ clean:
 
 %.tags: %.page $(QCC)
 	$(QCC) -tags $<
+	ln -s -f $< $*
 	( ! test -d $(BASILISK_WIKI)/cache ) || \
 	rm -f $(subst $(BASILISK_WIKI),$(BASILISK_WIKI)/cache,$(PWD))/$<
 
