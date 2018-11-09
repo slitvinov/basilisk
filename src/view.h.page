@@ -715,7 +715,14 @@ static bool process_line (char * line, Array * history, FILE * interactive)
     cells (p);
     draw_append (buf, history, interactive);
   }
-    
+
+  else if (!strcmp (s, "vectors")) {
+    struct _vectors p = {0};
+    _vectors_get (&p);
+    vectors (p);
+    draw_append (buf, history, interactive);
+  }
+        
   else if (!strcmp (s, "draw_vof")) {
     struct _draw_vof p = {0};
     _draw_vof_get (&p);

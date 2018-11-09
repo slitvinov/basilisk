@@ -767,6 +767,45 @@ void cells (struct _cells p)
 }
 
 /**
+# *vectors()*: displays vector fields
+
+The vectors are scaled using the *scale* factor. */
+
+struct _vectors {
+  char * u;
+  double scale;    // default is one
+  float lc[3], lw; // the line color and width
+};
+
+trace
+void vectors (struct _vectors p)
+{
+  vector u;
+  struct { char x, y, z; } index = {'x', 'y', 'z'};
+  foreach_dimension() {
+    char name[80];
+    sprintf (name, "%s.%c", p.u, index.x);
+    u.x = lookup_field (name);
+  }
+  double scale = p.scale ? p.scale : 1.;
+  bview * view = draw();
+  draw_lines (view, p.lc, p.lw);
+#if dimension == 2
+  glBegin (GL_LINES);
+  foreach_visible (view)
+    if (u.x[] != nodata) {
+      glvertex2d (view, x, y);
+      glvertex2d (view, x + scale*u.x[], y + scale*u.y[]);
+      view->ni++;
+    }
+  glEnd();
+#else // dimension == 3
+  assert (false); // not implemented yet
+#endif // dimension == 3
+  glPopMatrix();
+}
+  
+/**
 # *squares()*: displays colormapped fields
 
 The field name is given by *color*. The *min*, *max*, *spread*, *map*
