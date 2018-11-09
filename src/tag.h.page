@@ -292,7 +292,7 @@ void remove_droplets (struct RemoveDroplets p)
   int n = tag (d), size[n];
   for (int i = 0; i < n; i++)
     size[i] = 0;
-  foreach_cell()
+  foreach_leaf()
     if (d[] > 0)
       size[((int) d[]) - 1]++;
 #if _MPI
