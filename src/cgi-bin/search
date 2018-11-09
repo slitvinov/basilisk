@@ -21,7 +21,7 @@ searchrepo()
 {
     cd $1 && \
 	darcs show files --no-pending --no-directories -0 | \
-	    xargs -0 grep "`echo $2 | urldecode`" | head -n 1000
+	    xargs -0 grep -I "`echo $2 | urldecode`" | head -n 1000
 }
 
 searchpreproc()
