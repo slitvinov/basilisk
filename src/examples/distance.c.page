@@ -58,7 +58,7 @@ int main()
   level of refinement. */
 
   view (fov = 15.65, quat = {-0.52,0.31,0.38,-0.7},
-	tx = -0.045, ty = 0.015, width = 640, height = 480);
+	tx = -0.045, ty = 0.015, width = 640, height = 480, bg = {1,1,1});
   isosurface ("d", 0, color = "level", min = 5, max = 10);
   save ("horse.png");
 
