@@ -385,8 +385,10 @@ static void update_distance (Point point, coord ** i, scalar d)
   else { // !a->len
     free (a);
     surface[] = 0.;
-    assert (level > 0);
-    d[] = bilinear (point, d);	
+    if (level > 0)
+      d[] = bilinear (point, d);
+    else
+      d[] = 0.;
   }
 }
 
