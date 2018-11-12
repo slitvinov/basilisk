@@ -72,22 +72,39 @@ static inline void no_data (Point point, scalar s) {
 void wavelet (scalar s, scalar w)
 {
   restriction ({s});
-  for (int l = depth() - 1; l >= 0; l--)
+  for (int l = depth() - 1; l >= 0; l--) {
     foreach_coarse_level (l) {
-      double sc[1 << dimension];
-      int c = 0;
       foreach_child()
-	sc[c++] = s[];
+        w[] = s[];
       s.prolongation (point, s);
-      c = 0;
       foreach_child() {
-	/* difference between fine value and its prolongation */
-	w[] = sc[c] - s[];
-	s[] = sc[c++];
+        double sp = s[];
+        s[] = w[];
+        /* difference between fine value and its prolongation */
+        w[] -= sp;
       }
     }
+    boundary_level ({w}, l + 1);
+  }
   /* root cell */
-  foreach_level(0) w[] = 0.;
+  foreach_level(0) 
+    w[] = s[];
+  boundary_level ({w}, 0);
+}
+
+void inverse_wavelet (scalar s, scalar w)
+{
+  foreach_level(0) 
+    s[] = w[];
+  boundary_level ({s}, 0);
+  for (int l = 0; l <= depth() - 1; l++) {
+    foreach_coarse_level (l) {
+      s.prolongation (point, s);
+      foreach_child()
+        s[] += w[];
+    }
+    boundary_level ({s}, l + 1);
+  }
 }
 
 static inline double bilinear (Point point, scalar s)
