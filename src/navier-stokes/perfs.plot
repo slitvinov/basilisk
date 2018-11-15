@@ -35,7 +35,7 @@ set format x ''
 set multiplot
 
 stats "perfs" u 1:7 nooutput
-EVERY = ceil(STATS_records/200)
+EVERY = ceil(STATS_records/200.)
 unset key
 set style fill solid
 
