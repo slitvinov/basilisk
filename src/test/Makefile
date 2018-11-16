@@ -319,4 +319,4 @@ periodic3.tst: CFLAGS += -grid=octree -DTRASH=1
 
 embed-tests: neumann.tst dirichlet.tst poiseuille45.tst \
 	couette.tst wannier.tst hydrostatic2.tst cylinders.tst \
-	porous.tst uf.tst
+	porous.tst uf.tst starting.tst

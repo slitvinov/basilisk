@@ -67,13 +67,20 @@ Note that only the documented test cases appear in the list below
 ## Embedded boundaries
 
 * [Poisson equation on complex domains](neumann.c)
+* [Stability of the embedded face velocity interpolation](uf.c)
+* [Hydrostatic balance with refined embedded boundaries](hydrostatic2.c)
+
+### Stokes
+
 * [Poiseuille flow in a periodic channel inclined at 45 degrees](poiseuille45.c)
 * [Couette flow between rotating cylinders](couette.c)
 * [Wannier flow between rotating excentric cylinders](wannier.c)
-* [Hydrostatic balance with refined embedded boundaries](hydrostatic2.c)
 * [Stokes flow past a periodic array of cylinders](cylinders.c)
 * [Stokes flow through a complex porous medium](porous.c)
-* [Stability of the embedded face velocity interpolation](uf.c)
+
+### Navier--Stokes
+
+* [Starting flow around a cylinder](starting.c)
 
 ## Electrohydrodynamics
 
