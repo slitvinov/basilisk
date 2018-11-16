@@ -307,15 +307,12 @@ event viscous_term (i++,last)
   }
 
   /**
-  The (provisionary) face velocity field at time $t+\Delta t$ is
-  obtained by simple interpolation. We also reset the acceleration
-  field (if it is not a constant). */
+  We reset the acceleration field (if it is not a constant). */
 
-  face vector af = a;
-  trash ({uf,af});
-  foreach_face() {
-    uf.x[] = fm.x[]*face_value (u.x, 0);
-    if (!is_constant(af.x))
+  if (!is_constant(a.x)) {
+    face vector af = a;
+    trash ({af});
+    foreach_face()
       af.x[] = 0.;
   }
 }
@@ -331,29 +328,32 @@ surface tension or hydrostatic pressure in the presence of gravity.
 To ensure a consistent discretisation, the acceleration term is
 defined on faces as are pressure gradients and the centered combined
 acceleration and pressure gradient term $\mathbf{g}$ is obtained by
-averaging. */
+averaging. 
+
+The (provisionary) face velocity field at time $t+\Delta t$ is
+obtained by interpolation from the centered velocity field. The
+acceleration term is added. */
 
 event acceleration (i++,last)
 {
-  boundary ((scalar *){a});
+  trash ({uf});
   foreach_face()
-    uf.x[] += dt*fm.x[]*a.x[];
-  boundary ((scalar *){uf});
+    uf.x[] = fm.x[]*(face_value (u.x, 0) + dt*a.x[]);
+  boundary ((scalar *){uf, a});
 }
 
 /**
 ## Approximate projection
 
-To get the pressure field at time $t + \Delta t$ we project the face
-velocity field (which will also be used for tracer advection at the
-next timestep). */
+This function constructs the centered pressure gradient and
+acceleration field *g* using the face-centered acceleration field *a*
+and the cell-centered pressure field *p*. */
 
-event projection (i++,last)
+void centered_gradient (scalar p, vector g)
 {
-  mgp = project (uf, p, alpha, dt, mgp.nrelax);
 
   /**
-  We then compute a face field $\mathbf{g}_f$ combining both
+  We first compute a face field $\mathbf{g}_f$ combining both
   acceleration and pressure gradient. */
 
   face vector gf[];
@@ -370,12 +370,29 @@ event projection (i++,last)
     foreach_dimension()
       g.x[] = (gf.x[] + gf.x[1])/(fm.x[] + fm.x[1] + SEPS);
   boundary ((scalar *){g});
+}
+
+/**
+To get the pressure field at time $t + \Delta t$ we project the face
+velocity field (which will also be used for tracer advection at the
+next timestep). Then compute the centered gradient field *g*. */
+
+event projection (i++,last)
+{
+  mgp = project (uf, p, alpha, dt, mgp.nrelax);
+  centered_gradient (p, g);
 
   /**
-  And finally add this term to the centered velocity field. */
+  We add the gradient field *g* to the centered velocity field. */
 
   correction (dt);
 }
+
+/**
+Some derived solvers need to hook themselves at the end of the
+timestep. */
+
+event end_timestep (i++, last);
 
 /**
 ## Adaptivity
@@ -391,5 +408,6 @@ event adapt (i++,last) {
 /**
 ## See also
 
+* [Double projection](double-projection.h)
 * [Performance monitoring](perfs.h)
 */
