@@ -41,14 +41,18 @@ void tracer_fluxes (scalar f,
     and tangential components... */
 
     #if dimension > 1
-      double vn = uf.y[i]/(fm.y[i] + SEPS) + uf.y[i,1]/(fm.y[i,1] + SEPS);
+    if (fm.y[i] && fm.y[i,1]) {
+      double vn = uf.y[i]/fm.y[i] + uf.y[i,1]/fm.y[i,1];
       double fyy = vn < 0. ? f[i,1] - f[i] : f[i] - f[i,-1];
       f2 -= dt*vn*fyy/(4.*Delta);
+    }
     #endif
     #if dimension > 2
-      double wn = uf.z[i]/(fm.z[i] + SEPS) + uf.z[i,0,1]/(fm.z[i,0,1] + SEPS);
+    if (fm.z[i] && fm.z[i,0,1]) {
+      double wn = uf.z[i]/fm.z[i] + uf.z[i,0,1]/fm.z[i,0,1];
       double fzz = wn < 0. ? f[i,0,1] - f[i] : f[i] - f[i,0,-1];
       f2 -= dt*wn*fzz/(4.*Delta);
+    }
     #endif
 
     flux.x[] = f2*uf.x[];
@@ -91,9 +95,13 @@ void advection (struct Advection p)
   for (f,src in p.tracers,lsrc) {
     face vector flux[];
     tracer_fluxes (f, p.u, flux, p.dt, src);
+#if !EMBED
     foreach()
       foreach_dimension()
         f[] += p.dt*(flux.x[] - flux.x[1])/(Delta*cm[] + SEPS);
+#else // EMBED
+    update_tracer (f, p.u, flux, p.dt);
+#endif // EMBED
   }
   boundary (p.tracers);
 

@@ -22,11 +22,11 @@ static double exact (double x, double y) {
   return sq(r2)*cos (3.*theta);
 }
 
-double exact_gradient (Point point) {
+double exact_gradient (Point point, double theta, double r)
+{
   coord n = facet_normal (point, cs, fs);
   double nn = sqrt (sq(n.x) + sq(n.y));
   n.x /= nn, n.y /= nn;
-  double theta = atan2(y,x), r = sqrt(x*x + y*y);
   double dsdtheta = - 3.*cube(r)*sin (3.*theta);
   double dsdr = 4.*cube(r)*cos (3.*theta);
   return (n.x*(dsdr*cos(theta) - dsdtheta*sin(theta)) +
@@ -98,7 +98,8 @@ int main()
 #if DIRICHLET
     a[embed] = dirichlet_embed (exact (x,y));
 #else
-    a[embed] = neumann_embed (exact_gradient (point));
+    a[embed] =
+      neumann_embed (exact_gradient (point, atan2(y, x), sqrt(x*x + y*y)));
 #endif
 
     /**

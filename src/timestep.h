@@ -5,7 +5,13 @@ double timestep (const face vector u, double dtmax)
   dtmax /= CFL;
   foreach_face(reduction(min:dtmax))
     if (u.x[] != 0.) {
-      double dt = Delta*cm[]/fabs(u.x[]);
+      double dt = Delta/fabs(u.x[]);
+#if EMBED
+      assert (fm.x[]);
+      dt *= fm.x[];
+#else
+      dt *= cm[];
+#endif
       if (dt < dtmax) dtmax = dt;
     }
   dtmax *= CFL;

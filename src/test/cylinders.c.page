@@ -125,7 +125,7 @@ event logfile (i++; i <= 500)
 	   mgu.i, mgu.nrelax, mgu.minlevel,
 	   du, mgp.resa*dt, mgu.resa, statsf(u.x).sum, normf(p).max);
 
-  if (i > 0 && du < 1e-3) {  
+  if (i > 1 && du < 1e-3) {  
 
     /**
     We output the non-dimensional force per unit length on the
@@ -142,7 +142,8 @@ event logfile (i++; i <= 500)
 
     /**
     We dump the simulation and draw the mesh for one of the cases. */
-    
+
+    p.nodump = false;
     dump();
     if (maxlevel == 9 && nc == 8) {
       view (fov = 9.78488, tx = 0.250594, ty = -0.250165);
@@ -205,7 +206,7 @@ plot '< grep "^6" log' u 2:5 w lp t '6 levels',  \
 The adaptive mesh for 9 levels of refinement illustrates the automatic
 refinement of the narrow gap between cylinders.
 
-![Adaptive mesh at level 9.](cylinders/mesh.png)
+![Adaptive mesh at level 9 for $\Phi=0.75$.](cylinders/mesh.png)
 
 ## References
 

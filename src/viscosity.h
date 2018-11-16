@@ -155,6 +155,7 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
 
 #undef lambda
 
+trace
 mgstats viscosity (struct Viscosity p)
 {
   vector u = p.u, r[];
@@ -170,6 +171,7 @@ mgstats viscosity (struct Viscosity p)
 		   residual_viscosity, relax_viscosity, &p, p.nrelax, p.res);
 }
 
+trace
 mgstats viscosity_explicit (struct Viscosity p)
 {
   vector u = p.u, r[];

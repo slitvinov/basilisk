@@ -1,5 +1,5 @@
 all: check 3D-tests mpi-tests load-balancing curvature-tests axi-tests \
-	cadna-tests solid-tests
+	cadna-tests embed-tests
 
 include $(BASILISK)/Makefile.defs
 
@@ -315,8 +315,8 @@ periodic3.c: periodic1.c
 	ln -s periodic1.c periodic3.c
 periodic3.tst: CFLAGS += -grid=octree -DTRASH=1
 
-# Embedded solids tests
+# Embedded boundary tests
 
-solid-tests: neumann.tst dirichlet.tst poiseuille45.tst \
+embed-tests: neumann.tst dirichlet.tst poiseuille45.tst \
 	couette.tst wannier.tst hydrostatic2.tst cylinders.tst \
 	porous.tst uf.tst

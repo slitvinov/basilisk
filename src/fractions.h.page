@@ -53,12 +53,8 @@ void fraction_refine (Point point, scalar c)
     matching the fine cells. We use symmetries to simplify the
     combinations. */
 
-    coord a, b;
-    foreach_dimension() {
-      a.x = 0.; b.x = 0.5;
-    }
-    
     foreach_child() {
+      static const coord a = {0.,0.,0.}, b = {.5,.5,.5};
       coord nc;
       foreach_dimension()
 	nc.x = child.x*n.x;

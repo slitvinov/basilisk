@@ -129,6 +129,7 @@ static double residual_diffusion (scalar * a, scalar * b, scalar * resl,
 
 double TOLERANCE_MU = 0.; // default to TOLERANCE
 
+trace
 mgstats viscosity (struct Viscosity p)
 {
   vector u = p.u, r[];

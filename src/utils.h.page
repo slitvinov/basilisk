@@ -162,7 +162,7 @@ stats statsf (scalar f)
   double min = 1e100, max = -1e100, sum = 0., sum2 = 0., volume = 0.;
   foreach(reduction(+:sum) reduction(+:sum2) reduction(+:volume)
 	  reduction(max:max) reduction(min:min)) 
-    if (f[] != nodata && dv() > 0.) {
+    if (dv() > 0. && f[] != nodata) {
       volume += dv();
       sum    += dv()*f[];
       sum2   += dv()*sq(f[]);
@@ -240,8 +240,14 @@ void gradients (scalar * f, vector * g)
     scalar s; vector v;
     for (s,v in f,g) {
       if (s.gradient)
-	foreach_dimension()
-	  v.x[] = s.gradient (s[-1], s[], s[1])/Delta;
+	foreach_dimension() {
+#if EMBED
+	  if (!cs[-1] || !cs[] || !cs[1])
+	    v.x[] = 0.;
+	  else
+#endif
+	    v.x[] = s.gradient (s[-1], s[], s[1])/Delta;
+	}
       else // centered
 	foreach_dimension()
 	  v.x[] = center_gradient (s);
@@ -261,10 +267,14 @@ $$ */
 
 void vorticity (const vector u, scalar omega)
 {
-  #if dimension > 1
-    foreach()
-      omega[] = (u.y[1,0] - u.y[-1,0] + u.x[0,-1] - u.x[0,1])/(2.*Delta);
-    boundary ({omega});
+  #if dimension == 2
+  struct { double x, y; } a = {1., -1.};
+  foreach() {
+    omega[] = 0.;
+    foreach_dimension()
+      omega[] += a.x*center_gradient (u.y);
+  }
+  boundary ({omega});
   #endif
 }
 

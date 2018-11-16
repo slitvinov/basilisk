@@ -140,7 +140,7 @@ event defaults (i = 0)
   prolongation operators need to take the boundary into account. */
 
 #if EMBED  
-  for (scalar s in {p,u}) {
+  for (scalar s in {p,u,g}) {
     s.restriction = restriction_embed_linear;
     s.refine = s.prolongation = refine_embed_linear;
   }
