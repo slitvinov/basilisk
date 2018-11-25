@@ -95,6 +95,20 @@ make clean
 and then follow the [installation
 instructions](#using-off-screen-rendering) above.
 
+## Bug in OSMesa "gallium" implementation
+
+If when using the system-provided OSMesa library in parallel (with
+MPI), you see only a partial image this can be a symptom of a
+[bug](https://bugs.freedesktop.org/show_bug.cgi?id=108853) in the
+"gallium" version of OSMesa. To work around this bug, you will need to
+recompile the `libfb_osmesa` library using something like
+
+~~~bash
+cd $BASILISK/gl
+rm -f fb_osmesa.o
+CFLAGS=-DGALLIUM=1 make libfb_osmesa.a
+~~~
+
 ## Installing OSMesa/GLU from source
 
 If pre-compiled packages for OSMesa/GLU are not available (or broken)
@@ -107,7 +121,7 @@ wget mesa.freedesktop.org/archive/mesa-17.2.4.tar.gz
 tar xzvf mesa-17.2.4.tar.gz
 cd mesa-17.2.4
 ./configure --prefix=/home/popinet/local --enable-osmesa \
-			--with-gallium-drivers=swrast                \
+	    --with-gallium-drivers=swrast                \
             --disable-driglx-direct --disable-dri --disable-gbm --disable-egl
 make
 make install
@@ -127,23 +141,21 @@ see also:
 
 If you have an account on
 [Occigen](https://www.cines.fr/calcul/materiels/occigen/) you can
-access my local installation of gl/OSMesa/GLU using something like:
+access my local installation of basilisk/gl using something like:
 
 ~~~bash
 module purge
 module load openmpi
 module load intel
-module load llvm # no idea why this is necessary
+module load llvm
+module load mesa
 
 NAME=view
+MESA=`module show mesa 2>&1 | grep MANPATH | cut -d' ' -f3`
 GL=/home/popinet/local
-mpicc -Wall -std=c99 -O2 _$NAME.c -o $NAME \
-    -I$GL -L$GL/gl -L$GL/lib \
+mpicc -Wall -std=c99 -O2 _$NAME.c -o $NAME    \
+    -I$MESA -L$MESA/lib -I$GL -L$GL/gl-system \
     -lglutils -lfb_osmesa -lOSMesa -lGLU -lm
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GL/lib
 srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./$NAME \
      2> log-$SLURM_NTASKS > out-$SLURM_NTASKS
 ~~~
-
-Note that the *mesa* package provided by the system, which includes a
-version of the OSMesa library, seems to be broken.

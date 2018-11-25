@@ -59,5 +59,16 @@ fbdepth_t * framebuffer_depth (framebuffer * p)
 			(void **)&depth);
   assert (p->width == width && p->height == height && bytesPerValue == 4);
   assert (sizeof(fbdepth_t) == bytesPerValue);
+#if GALLIUM
+  // fix for bug in gallium/libosmesa
+  // the depth buffer is flipped vertically
+  GLint i, j;
+  for (j = 0; j < height/2; j++)
+    for (i = 0; i < width; i++) {
+      unsigned int tmp = depth[j*width + i];
+      depth[j*width + i] = depth[(height - 1 - j)*width + i];
+      depth[(height - 1 - j)*width + i] = tmp;
+    }
+#endif // GALLIUM
   return depth;
 }

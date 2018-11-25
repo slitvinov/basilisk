@@ -780,6 +780,7 @@ struct _vectors {
 trace
 void vectors (struct _vectors p)
 {
+#if dimension == 2
   vector u;
   struct { char x, y, z; } index = {'x', 'y', 'z'};
   foreach_dimension() {
@@ -787,10 +788,9 @@ void vectors (struct _vectors p)
     sprintf (name, "%s.%c", p.u, index.x);
     u.x = lookup_field (name);
   }
-  double scale = p.scale ? p.scale : 1.;
   bview * view = draw();
   draw_lines (view, p.lc, p.lw);
-#if dimension == 2
+  double scale = p.scale ? p.scale : 1.;
   glBegin (GL_LINES);
   foreach_visible (view)
     if (u.x[] != nodata) {
@@ -799,10 +799,10 @@ void vectors (struct _vectors p)
       view->ni++;
     }
   glEnd();
+  glPopMatrix();
 #else // dimension == 3
   assert (false); // not implemented yet
 #endif // dimension == 3
-  glPopMatrix();
 }
   
 /**

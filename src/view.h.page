@@ -223,6 +223,9 @@ bview * draw() {
   bview * view = get_view();
   if (!view->active)
     redraw();
+  else
+    /* OpenGL somehow generates floating-point exceptions... turn them off */
+    disable_fpe (FE_DIVBYZERO|FE_INVALID);
   return view;
 }
 
