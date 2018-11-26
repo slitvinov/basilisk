@@ -113,9 +113,11 @@ of 2D vertex coordinates separated by blank lines. An easy way to
 create these files is to use a vector graphics editing program
 (e.g. inkscape) and save the curve as an *.eps* file, the convert it
 to gnuplot format using
+
 ~~~bash
 pstoedit -f gnuplot -flat 0.1 file.eps file.gnu
 ~~~
+
 The function below reads such a file and returns an array of pairs of
 coordinates. */
 
