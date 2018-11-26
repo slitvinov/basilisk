@@ -113,6 +113,7 @@ struct Fractions {
   vertex scalar Phi; // compulsory
   scalar c;          // compulsory
   face vector s;     // optional
+  double val;        // optional (default zero)
 };
 
 trace
@@ -121,7 +122,8 @@ void fractions (struct Fractions a)
   vertex scalar Phi = a.Phi;
   scalar c = a.c;
   face vector s = automatic (a.s);
-
+  double val = a.val;
+  
   /**
   We store the positions of the intersections of the surface with the
   edges of the cell in vector field `p`. In two dimensions, this field
@@ -147,15 +149,15 @@ void fractions (struct Fractions a)
     If the values of $\Phi$ on the vertices of the edge have opposite
     signs, we know that the edge is cut by the interface. */
 
-    if (Phi[]*Phi[1] < 0.) {
+    if ((Phi[] - val)*(Phi[1] - val) < 0.) {
 
       /**
       In that case we can find an approximation of the interface position by
       simple linear interpolation. We also check the sign of one of the
       vertices to orient the interface properly. */
 
-      p.x[] = Phi[]/(Phi[] - Phi[1]);
-      if (Phi[] < 0.)
+      p.x[] = (Phi[] - val)/(Phi[] - Phi[1]);
+      if (Phi[] < val)
 	p.x[] = 1. - p.x[];
     }
 
@@ -167,7 +169,7 @@ void fractions (struct Fractions a)
     on one of the vertices). */
 
     else
-      p.x[] = (Phi[] > 0. || Phi[1] > 0.);
+      p.x[] = (Phi[] > val || Phi[1] > val);
   }
 
   /**
@@ -250,7 +252,7 @@ void fractions (struct Fractions a)
       for (int i = 0; i <= 1; i++)
 	foreach_dimension(2)
 	  if (p.x[0,i] > 0. && p.x[0,i] < 1.) {
-	    double a = sign(Phi[0,i])*(p.x[0,i] - 0.5);
+	    double a = sign(Phi[0,i] - val)*(p.x[0,i] - 0.5);
 	    alpha += n.x*a + n.y*(i - 0.5);
 	    ni++;
 	  }
@@ -300,7 +302,7 @@ void fractions (struct Fractions a)
 	for (int j = 0; j <= 1; j++)
 	  foreach_dimension(3)
 	    if (p.x[0,i,j] > 0. && p.x[0,i,j] < 1.) {
-	      double a = sign(Phi[0,i,j])*(p.x[0,i,j] - 0.5);
+	      double a = sign(Phi[0,i,j] - val)*(p.x[0,i,j] - 0.5);
 	      alpha += n.x*a + n.y*(i - 0.5) + n.z*(j - 0.5);
 	      ni++;
 	    }

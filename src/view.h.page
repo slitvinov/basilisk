@@ -224,7 +224,8 @@ bview * draw() {
   if (!view->active)
     redraw();
   else
-    /* OpenGL somehow generates floating-point exceptions... turn them off */
+    /* OpenGL somehow generates floating-point exceptions... turn them off
+       See also: https://bugs.freedesktop.org/show_bug.cgi?id=108856 */
     disable_fpe (FE_DIVBYZERO|FE_INVALID);
   return view;
 }
@@ -730,6 +731,13 @@ static bool process_line (char * line, Array * history, FILE * interactive)
     struct _draw_vof p = {0};
     _draw_vof_get (&p);
     if (draw_vof (p))
+      draw_append (buf, history, interactive);
+  }
+    
+  else if (!strcmp (s, "isoline")) {
+    struct _isoline p = {0};
+    _isoline_get (&p);
+    if (isoline (p))
       draw_append (buf, history, interactive);
   }
     

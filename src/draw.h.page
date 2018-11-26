@@ -497,7 +497,7 @@ struct _draw_vof {
   bool edges;
   double larger;
   int filled;
-  
+
   char * color;
   double min, max, spread;
   bool linear;
@@ -715,6 +715,53 @@ bool draw_vof (struct _draw_vof p)
   }
 #endif // TREE
 
+  return true;
+}
+
+/**
+# *isoline()*: displays isolines
+
+Draws a single isoline at *val* of field *phi*. 
+
+Extra parameters are the same as for
+[draw_vof()](draw.h#draw_vof-displays-vof-reconstructed-interfaces). */
+
+struct _isoline {
+  char * phi;
+  double val;
+
+  // all fields below must be identical to struct _draw_vof above
+  char * c;
+  char * s;
+  bool edges;
+  double larger;
+  int filled;
+
+  char * color;
+  double min, max, spread;
+  bool linear;
+  colormap map;
+  float fc[3], lc[3], lw;
+};
+
+trace
+bool isoline (struct _isoline p)
+{
+#if dimension == 2
+  scalar fiso[];
+  face vector siso[];
+  scalar phi = lookup_field (p.phi);
+  if (phi.i < 0) {
+    fprintf (stderr, "isoline(): no field named '%s'\n", p.phi);
+    return false;
+  }
+  fractions (phi, fiso, siso, p.val);
+  p.c = "fiso", p.s = "siso";
+  struct _draw_vof a = *((struct _draw_vof *)&p.c);
+  return draw_vof (a);
+#else // dimension == 3
+  assert (false);
+#endif // dimension == 3
   return true;
 }
 

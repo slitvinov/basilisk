@@ -15,6 +15,7 @@ representation of the contour, and test the *tag()* function. */
 #include "distance.h"
 #include "fractions.h"
 #include "tag.h"
+#include "view.h"
 
 int main()
 {
@@ -115,29 +116,27 @@ pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
   /**
   We display the resulting curves and meshes. */
 
-  FILE * fp =
-    popen ("gfsview-batch2D basilisk.gfv | "
-	   "convert ppm:- -resize 640x240 mesh.png", "w");
-  output_gfs (fp);
-  fprintf (fp, "Save stdout { format = PPM width = 1600 height = 600 }\n");
-  pclose (fp);
+  view (fov = 6.98459, tx = -0.444569, ty = -0.137936,
+	width = 640, height = 242);
+  squares ("level", min = 2, max = 12);
+  for (double val = -20; val <= 20; val += 2.)
+    isoline ("phi", val, lw = 0.5);
+  save ("mesh.png");
 
-  output_gfs (stdout);
- 
-  FILE * fp1 =
-    popen ("gfsview-batch2D basilisk.self.gfv | "
-	   "convert ppm:- -resize 320x240 self.png", "w");
-  output_gfs (fp1);
-  fprintf (fp1, "Save stdout { format = PPM width = 640 height = 480 }\n");
-  pclose (fp1);
+  /**
+  ![Adaptive mesh and isolines of distance function.](basilisk/mesh.png)
+  
+
+  Note that the input curve is self-intersecting. The algorithm used
+  to compute the distance function is robust but gives the artefact
+  illustrated below. */
+
+  view (fov = 1.64446, tx = -0.309322, ty = -0.0840683,
+	width = 449, height = 303);
+  draw_vof ("f", "s");
+  save ("self.png");
+  
+  /**
+  ![The input curve represented through its 
+	VOF discretisation.](basilisk/self.png) */
 }
-
-/**
-![Adaptive mesh and isolines of distance function.](basilisk/mesh.png)
-
-Note that the input curve is self-intersecting. The algorithm used
-to compute the distance function is robust but gives the artefact
-illustrated below.
-
-![The input curve represented through its VOF discretisation.](basilisk/self.png)
-*/
