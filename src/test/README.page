@@ -55,6 +55,7 @@ Note that only the documented test cases appear in the list below
 * [Gravity wave](gravity.c)
 * [Shape oscillation of an inviscid droplet](oscillation.c)
 * [Rising bubble](rising.c)
+* [Sessile drop](sessile.c)
 
 ## General orthogonal coordinates
 

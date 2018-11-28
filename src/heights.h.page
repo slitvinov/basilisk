@@ -448,3 +448,27 @@ void heights (scalar c, vector h)
 }
 
 #endif // TREE
+
+/**
+## Contact angle
+
+The macro below can be used to impose a contact angle on a boundary by
+setting the corresponding tangential component of the height
+function. 
+
+Note that the equivalent function for the normal component of the
+height function is not defined yet. This limits the range of
+accessible contact angles, since values of the normal component of the
+height function will be required to compute curvature at shallow
+angles. */
+
+#define contact_angle(theta) \
+  (val(_s) == nodata ? nodata : val(_s) + 1./tan(theta))
+
+/**
+An attribute is added so that the height function field can be
+associated to a (VOF) tracer. */
+
+attribute {
+  vector height;
+}

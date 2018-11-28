@@ -400,7 +400,7 @@ cstats curvature (struct Curvature p)
   scalar c = p.c, kappa = p.kappa;
   double sigma = p.sigma ? p.sigma : 1.;
   cstats s = {0,0,0,0};
-  vector h[];
+  vector ch = c.height, h = automatic (ch);
   heights (c, h);
 
   /**
