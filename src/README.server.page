@@ -82,3 +82,16 @@ the new simulation will run on the server.
 The status of the completed simulation is indicated by either an
 (empty) *pass* file (in the simulation directory), or a *fail* file
 containing the error messages.
+
+### Allowing shared SSH connections
+
+On the client, it is a good idea to enable [shared SSH
+connections](https://en.wikibooks.org/wiki/OpenSSH/Cookbook/Multiplexing)
+using something like (in `.ssh/config`):
+
+~~~bash
+Host server.domain.net
+        ControlPath ~/.ssh/controlmasters/%r@%h:%p
+        ControlMaster auto
+        ControlPersist 10m
+~~~

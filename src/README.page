@@ -373,6 +373,25 @@ field is displayed. `v=0` indicates the first field allocated by the
 program (i.e. `a[]` in this example), accordingly `ga.x[]` and
 `ga.y[]` have indices 1 and 2 respectively.
 
+## Tracing permissions
+
+Some recent systems disallow tracing of processes for security
+reasons. The symptom will be an error message from gdb looking like:
+
+~~~bash
+Attaching to process 9351
+Could not attach to process.  If your uid matches the uid of the target
+process, check the setting of /proc/sys/kernel/yama/ptrace_scope, or try
+again as the root user.  For more details, see /etc/sysctl.d/10-ptrace.conf
+ptrace: Operation not permitted.
+~~~
+
+To enable tracing (which weakens your system's security), you need to do:
+
+~~~bash
+sudo sh -c 'echo 0 > /proc/sys/kernel/yama/ptrace_scope'
+~~~
+
 # See also
 
 * [Tips]()
