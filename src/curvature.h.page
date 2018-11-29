@@ -43,7 +43,7 @@ static void curvature_prolongation (Point point, scalar kappa)
 #endif // TREE
 
 /**
-## Height-function curvature
+## Height-function curvature and normal
 
 To compute the curvature, we estimate the derivatives of the height
 functions in a given direction (*x*, *y* or *z*). We first check that
@@ -72,6 +72,33 @@ static double kappa_y (Point point, vector h) {
   double hxx = (h.y[1] + h.y[-1] - 2.*h.y[])/Delta;
   return hxx/pow(1. + sq(hx), 3/2.);
 }
+
+/**
+The normal is computed in a similar way, but also allowing for
+asymmetric 2-points stencils and taking into account the
+orientation. */
+
+foreach_dimension()
+static coord normal_y (Point point, vector h) {
+  coord n = {nodata, nodata, nodata};
+  if (h.y[] == nodata)
+    return n;
+  int ori = orientation(h.y[]);
+  if (h.y[-1] != nodata && orientation(h.y[-1]) == ori) {
+    if (h.y[1] != nodata && orientation(h.y[1]) == ori)
+      n.x = (h.y[-1] - h.y[1])/2.;
+    else
+      n.x = h.y[-1] - h.y[];
+  }
+  else if (h.y[1] != nodata && orientation(h.y[1]) == ori)
+    n.x = h.y[] - h.y[1];
+  else
+    return n;
+  double nn = (ori ? -1. : 1.)*sqrt(1. + sq(n.x));
+  n.x /= nn;
+  n.y = 1./nn;
+  return n;
+}
 #else // dimension == 3
 foreach_dimension()
 static double kappa_z (Point point, vector h) {
@@ -87,6 +114,13 @@ static double kappa_z (Point point, vector h) {
   double hxy = (h.z[1,1] + h.z[-1,-1] - h.z[1,-1] - h.z[-1,1])/(4.*Delta);
   return (hxx*(1. + sq(hy)) + hyy*(1. + sq(hx)) - 2.*hxy*hx*hy)/
     pow(1. + sq(hx) + sq(hy), 3/2.);
+}
+
+foreach_dimension()
+static coord normal_z (Point point, vector h) {
+  coord n = {nodata, nodata, nodata};
+  assert (false); // not implemented yet
+  return n;
 }
 #endif
 
@@ -167,6 +201,50 @@ static double height_curvature (Point point, scalar c, vector h)
   }
   
   return kappa;
+}
+
+/**
+The function below works in a similar manner to return the normal
+estimated using height-functions (or a *nodata* vector if this cannot
+be done). */
+
+coord height_normal (Point point, scalar c, vector h)
+{
+
+  /**
+  We first define pairs of normal coordinates *n* (computed by simple
+  differencing of *c*) and corresponding normal function *normal*
+  (defined above). */
+
+  typedef struct {
+    double n;
+    coord (* normal) (Point, vector);
+  } NormNormal;
+  struct { NormNormal x, y, z; } n;  
+  foreach_dimension()
+    n.x.n = c[1] - c[-1], n.x.normal = normal_x;
+  
+  /**
+  We sort these pairs in decreasing order of $|n|$. */
+  
+  if (fabs(n.x.n) < fabs(n.y.n))
+    swap (NormNormal, n.x, n.y);
+#if dimension == 3
+  if (fabs(n.x.n) < fabs(n.z.n))
+    swap (NormNormal, n.x, n.z);
+  if (fabs(n.y.n) < fabs(n.z.n))
+    swap (NormNormal, n.y, n.z);
+#endif
+
+  /**
+  We try each normal function in turn. */
+
+  coord normal = {nodata, nodata, nodata};
+  foreach_dimension()
+    if (normal.x == nodata)
+      normal = n.x.normal (point, h);
+  
+  return normal;
 }
 
 /**
@@ -401,7 +479,8 @@ cstats curvature (struct Curvature p)
   double sigma = p.sigma ? p.sigma : 1.;
   cstats s = {0,0,0,0};
   vector ch = c.height, h = automatic (ch);
-  heights (c, h);
+  if (!ch.x.i)
+    heights (c, h);
 
   /**
   On trees we set the prolongation and restriction functions for
@@ -588,9 +667,10 @@ void position (struct Position p)
   pos.refine = pos.prolongation = curvature_prolongation;
   pos.restriction = curvature_restriction;
 #endif
-  
-  vector h[];
-  heights (f, h);
+
+  vector fh = f.height, h = automatic (fh);
+  if (!fh.x.i)
+    heights (f, h);
   foreach() {
     if (interfacial (point, f)) {
       double hp = height_position (point, f, h, G, Z);

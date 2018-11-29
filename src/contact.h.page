@@ -1,0 +1,69 @@
+/**
+# Contact angles
+
+This file is used to impose contact angles on boundaries for
+interfaces described using a [VOF](vof.h) tracer and [height
+functions](heights.h).
+
+We first overload the default function used to compute the normal,
+defined in [fractions.h]. */
+
+coord interface_normal (Point point, scalar c);
+#define interface_normal(point, c) interface_normal (point, c)
+
+#include "fractions.h"
+#include "curvature.h"
+
+/**
+We will compute the normal using height-functions instead. If this is
+not possible (typically at low resolutions) we revert back to
+the Mixed-Youngs-Centered approximation. */
+
+coord interface_normal (Point point, scalar c)
+{
+  coord n;
+  if (!c.height.x.i || (n = height_normal (point, c, c.height)).x == nodata)
+    n = mycs (point, c);
+  return n;
+}
+
+/**
+The height functions are stored in the vector field associated with
+each VOF tracer. They need to be updated every time the VOF field
+changes. For the [centered Navier-Stokes
+solver](navier-stokes/centered.h), this means after initialisation and
+after VOF advection. 
+
+Note that strictly speaking this should be done for each
+[sweep](vof.h#sweep_x) of the direction-split VOF advection, which we
+do not do here i.e. we use the normal at the beginning of the timestep
+and assume it is constant during each sweep. This seems to work
+fine. */
+
+extern scalar * interfaces;
+
+event init (i = 0) {
+  for (scalar c in interfaces)
+    if (c.height.x.i)
+      heights (c, c.height);
+}
+
+event vof (i++) {
+  for (scalar c in interfaces)
+    if (c.height.x.i)
+      heights (c, c.height);
+}
+
+/**
+The macro below can be used to impose a contact angle on a boundary by
+setting the corresponding tangential component of the height
+function. 
+
+Note that the equivalent function for the normal component of the
+height function is not defined yet. This limits the range of
+accessible contact angles, since values of the normal component of the
+height function will be required to compute curvature at shallow
+angles. */
+
+#define contact_angle(theta) \
+  (val(_s) == nodata ? nodata : val(_s) + 1./tan(theta))

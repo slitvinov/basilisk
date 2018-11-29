@@ -32,19 +32,18 @@ unset border
 plot 'out' w l, '' u (-$1):2 w l lt 1, 0 lt -1
 set term pop
 ~~~
-
-Note that in the figure above the jagged interface representation near
-the contact line is a visualisation artefact. */
+*/
 
 #include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
+#include "contact.h"
 #include "vof.h"
 #include "tension.h"
 
 scalar f[], * interfaces = {f};
 
 /**
-To set the contact angle, we allocate a [height-function vector
+To set the contact angle, we allocate a [height-function
 field](/src/heights.h) and set the contact angle boundary condition on
 its tangential component. */
 
@@ -112,7 +111,7 @@ event end (t = 10)
   curvature (f, kappa);
   stats s = statsf (kappa);
   double R = s.volume/s.sum, V = 2.*statsf(f).sum;
-  fprintf (ferr, "%d %g %.5g %.5g\n", N, theta0, R/sqrt(V/pi), s.stddev);
+  fprintf (ferr, "%d %g %.5g %.3g\n", N, theta0, R/sqrt(V/pi), s.stddev);
 }
 
 /**
@@ -122,6 +121,7 @@ We compare $R/R_0$ to the analytical expression, with $R_0=\sqrt{V/\pi}$.
 reset
 set xlabel 'Contact angle (degrees)'
 set ylabel 'R/R_0'
+set arrow from 0,1 to 180,1 nohead dt 2
 plot 1./sqrt(x/180. - sin(x*pi/180.)*cos(x*pi/180.)/pi) t 'analytical', \
   'log' u 2:3 pt 7 t 'numerical'
 ~~~

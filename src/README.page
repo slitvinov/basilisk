@@ -151,6 +151,7 @@ $$
 \partial_tf_i+\mathbf{u}\cdot\nabla f_i=0
 $$
     + [Volume-Of-Fluid advection](vof.h)
+	+ [Contact angles](contact.h)
 * [Interfacial forces](iforce.h)
 $$
 \phi\mathbf{n}\delta_s

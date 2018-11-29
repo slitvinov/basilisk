@@ -6,7 +6,8 @@ fractions either from an initial geometric definition or from an
 existing volume fraction field. 
 
 We will use basic geometric functions for square cut cells and the
-"Mixed-Youngs-Centered" normal approximation of Ruben Scardovelli. */
+"Mixed-Youngs-Centered" (MYC) normal approximation of Ruben
+Scardovelli. */
 
 #include "geometry.h"
 #if dimension == 1
@@ -18,6 +19,14 @@ coord mycs (Point point, scalar c) {
 # include "myc2d.h"
 #else // dimension == 3
 # include "myc.h"
+#endif
+
+/**
+By default the interface normal is computed using the MYC
+approximation. This can be overloaded by redefining this macro. */
+
+#ifndef interface_normal
+# define interface_normal(point, c) mycs (point, c)
 #endif
 
 /**
@@ -393,10 +402,8 @@ coord youngs_normal (Point point, scalar c)
 
 coord facet_normal (Point point, scalar c, face vector s)
 {
-  coord n;
-  if (s.x.i < 0)
-    n = mycs (point, c);
-  else { // compute normal from face fractions
+  if (s.x.i >= 0) { // compute normal from face fractions
+    coord n;
     double nn = 0.;
     foreach_dimension() {
       n.x = s.x[] - s.x[1];
@@ -408,8 +415,9 @@ coord facet_normal (Point point, scalar c, face vector s)
     else
       foreach_dimension()
 	n.x = 1./dimension;
+    return n;
   }
-  return n;
+  return interface_normal (point, c);
 }
 
 /**
@@ -440,8 +448,7 @@ void reconstruction (const scalar c, vector n, scalar alpha)
       Mixed-Youngs-Centered scheme, copy the result into the normal field
       and compute the intercept $\alpha$ using our predefined function. */
 
-      coord m = mycs (point, c);
-      // coord m = youngs_normal (point, c);
+      coord m = interface_normal (point, c);
       foreach_dimension()
 	n.x[] = m.x;
       alpha[] = plane_alpha (c[], m);
@@ -541,7 +548,7 @@ double interface_area (scalar c)
   double area = 0.;
   foreach (reduction(+:area))
     if (c[] > 1e-6 && c[] < 1. - 1e-6) {
-      coord n = mycs (point, c), p;
+      coord n = interface_normal (point, c), p;
       double alpha = plane_alpha (c[], n);
       area += pow(Delta, dimension - 1)*plane_area_center (n, alpha, &p);
     }
