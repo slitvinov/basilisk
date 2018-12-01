@@ -25,12 +25,6 @@ set ydata
 set zdata
 set x2data
 set y2data
-set timefmt x "%d/%m/%y,%H:%M"
-set timefmt y "%d/%m/%y,%H:%M"
-set timefmt z "%d/%m/%y,%H:%M"
-set timefmt x2 "%d/%m/%y,%H:%M"
-set timefmt y2 "%d/%m/%y,%H:%M"
-set timefmt cb "%d/%m/%y,%H:%M"
 set boxwidth
 set style fill  empty border
 set style rectangle back fc lt -3 fillstyle   solid 1.00 border lt -1
@@ -147,7 +141,5 @@ unset grid
 plot \
      'out' w l t "" lc 0, \
      '< grep halo log | awk "(\$3==4){print \$0}"' pt 7 lc 1 t 'halo 4', \
-     '< grep halo log | awk "(\$3==3){print \$0}"' pt 7 lc 2 t 'halo 3', \
-     '< grep res log | awk "(\$3==4){print \$0}"' pt 5 lc 3 t 'res 4', \
-     '< grep res log | awk "(\$3==3){print \$0}"' pt 5 lc 4 t 'res 3'
+     '< grep halo log | awk "(\$3==3){print \$0}"' pt 7 lc 2 t 'halo 3'
 #    EOF

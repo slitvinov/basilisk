@@ -52,14 +52,17 @@ int main() {
  ~~~
  
  ~~~gnuplot Reconstruction of $\phi(x, y) = y$
+ unset key
  plot 'out' w l, 'log' u 1:2:4 with labels
  ~~~
  
  ~~~gnuplot Reconstruction of $\phi(x, y) = -x$
+ unset key
  plot 'out' w l, 'log' u 1:2:5 with labels
  ~~~
  
  ~~~gnuplot Reconstruction of $\phi(x, y) = -y$
+ unset key
  plot 'out' w l, 'log' u 1:2:6 with labels
  ~~~
 */

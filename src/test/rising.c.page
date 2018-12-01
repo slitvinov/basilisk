@@ -168,6 +168,8 @@ axisymmetric version of the test. The axisymmetric bubble moves much
 faster.
 
 ~~~gnuplot Bubble shapes at the final time ($t=3$) for test case 1.
+set term push
+set term SVG size 640,320
 set size ratio -1
 set grid
 plot [][0:0.4]'../c1g3l4s.txt' u 2:($1-0.5) w l t 'MooNMD', \
@@ -179,8 +181,6 @@ For test case 2, the mesh in Basilisk is too coarse to accurately
 resolve the skirt.
 
 ~~~gnuplot Bubble shapes at the final time ($t=3$) for test case 2.
-set size ratio -1
-set grid
 plot [][0:0.4]'../c2g3l4s.txt' u 2:($1-0.5) w l t 'MooNMD', \
               '../rising2/log' u 1:2 w l t 'Basilisk'
 ~~~
@@ -188,6 +188,7 @@ plot [][0:0.4]'../c2g3l4s.txt' u 2:($1-0.5) w l t 'MooNMD', \
 The agreement for the bubble rise velocity with time is also good.
 
 ~~~gnuplot Rise velocity as a function of time for test case 1.
+set term pop
 reset
 set grid
 set xlabel 'Time'

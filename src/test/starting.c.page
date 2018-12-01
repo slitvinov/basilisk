@@ -359,11 +359,12 @@ The final state at $tU/D = 3$ can be compared with figure 3 (top row) of
 set xlabel 'tU/D'
 set ylabel 'C_D'
 set grid
+set pointsize 0.5
 plot [][0:2]\
      'fig1a.SIM' u ($1/2.):2 w l lw 2 t 'SIM (Mohahegh et al 2017)', \
-     'fig1a.KL' u ($1/2.):2 pt 7 t 'K \& L. 1995', \
-     'fig19.f' u ($1/2.):2 pt 9 t 'friction, K \& L. 1995', \
-     'fig19.p' u ($1/2.):2 pt 11 t 'pressure, K \& L. 1995', \
+     'fig1a.KL' u ($1/2.):2 pt 7 t 'K and L. 1995', \
+     'fig19.f' u ($1/2.):2 pt 9 t 'friction, K and L. 1995', \
+     'fig19.p' u ($1/2.):2 pt 11 t 'pressure, K and L. 1995', \
      'log' u 2:(4.*($4+$6)) w l lw 2 t 'Basilisk (12 levels)', \
      'level-13/log' u 2:(4.*($4+$6)) w l lw 2 t 'Basilisk (13 levels)', \
      '' u 2:(4.*$6) w l lw 2 t 'friction (13 levels)', \
@@ -382,9 +383,10 @@ set xlabel 'tU/D'
 set ylabel 'Angle/pi'
 set grid
 set key bottom right
-plot 'fig4.1000.KL' u ($1/2.):2 pt 7 t 'K \& L. 1995', \
-     'level-13/omega' u 1:($2/pi) pt 5 ps 0.5 t 'Basilisk (13 levels)', \
-     'omega' u 1:($2/pi) pt 5 ps 0.5 t 'Basilisk (12 levels)'
+set pointsize 0.5
+plot 'fig4.1000.KL' u ($1/2.):2 pt 7 t 'K and L. 1995', \
+     'level-13/omega' u 1:($2/pi) pt 5 t 'Basilisk (13 levels)', \
+     'omega' u 1:($2/pi) pt 5 t 'Basilisk (12 levels)'
 ~~~
 
 ~~~gnuplot Surface vorticity at $tU/D=0.5$. Re = 1000. See Fig. 5a of [Mohahegh et al. 2017](#mohahegh2017).
@@ -392,8 +394,8 @@ reset
 set xlabel 'theta/pi'
 set ylabel 'omega_sD/U'
 set grid
-plot [0:1]'fig5a.SIM' every 20 pt 7 ps 1 t 'SIM (Mohahegh et al 2017)', \
-     'fig5a.KL' w l lw 2 t 'K \& L 1995', \
+plot [0:1]'fig5a.SIM' every 20 pt 7 t 'SIM (Mohahegh et al 2017)', \
+     'fig5a.KL' w l lw 2 t 'K and L 1995', \
      '< sort -k3,4 level-13/cp-0.5 | awk -f surface.awk' w l lw 2 \
      t 'Basilisk (13 levels)', \
      '< sort -k3,4 cp-0.5 | awk -f surface.awk' w l lw 2 \
@@ -401,8 +403,8 @@ plot [0:1]'fig5a.SIM' every 20 pt 7 ps 1 t 'SIM (Mohahegh et al 2017)', \
 ~~~
 
 ~~~gnuplot Surface vorticity at $tU/D=1.5$. Re = 1000. See Fig. 5b of [Mohahegh et al. 2017](#mohahegh2017).
-plot [0:1]'fig5b.SIM' every 20 pt 7 ps 1 t 'SIM (Mohahegh et al 2017)', \
-     'fig5b.KL' w l lw 2 t 'K \& L 1995', \
+plot [0:1]'fig5b.SIM' every 20 pt 7 t 'SIM (Mohahegh et al 2017)', \
+     'fig5b.KL' w l lw 2 t 'K and L 1995', \
      '< sort -k3,4 level-13/cp-1.5 | awk -f surface.awk' w l lw 2 \
      t 'Basilisk (13 levels)', \
      '< sort -k3,4 cp-1.5 | awk -f surface.awk' w l lw 2 \
@@ -422,13 +424,15 @@ set ylabel 'C_D'
 set grid
 plot [][0:2.5] \
      'fig1b.SIM' u ($1/2.):2 w l lw 2 t 'SIM (Mohahegh et al 2017)', \
-     'fig1b.KL' u ($1/2.):2 pt 7 t 'K \& L. 1995', \
+     'fig1b.KL' u ($1/2.):2 pt 7 t 'K and L. 1995', \
      'level-15/log' u 2:(4.*($4+$6)) w l lw 2 t 'Basilisk (15 levels)', \
      'level-16/log' u 2:(4.*($4+$6)) w l lw 2 t 'Basilisk (16 levels)'
 ~~~
 
 ~~~gnuplot Location of the points of zero surface vorticity. Re = 9500. See also Fig. 4 of [K. & L. 1995](#koumoutsakos1995).
 reset
+set term pngcairo enhanced font ",10"
+set output 'loc9500.png'
 set xlabel 'tU/D'
 set ylabel 'Angle/pi'
 set grid
@@ -439,11 +443,12 @@ plot 'level-15/omega' u 1:($2/pi) pt 7 ps 0.25 t 'Basilisk (15 levels)', \
 
 ~~~gnuplot Surface vorticity at $tU/D=0.9$. Re = 9500. See Fig. 6a of [Mohahegh et al. 2017](#mohahegh2017).
 reset
+set term SVG
 set xlabel 'theta/pi'
 set ylabel 'omega_sD/U'
 set grid
-plot [0:1]'fig6a.SIM' every 20 pt 7 ps 1 t 'SIM (Mohahegh et al 2017)', \
-     'fig6a.KL' w l lw 2 t 'K \& L 1995', \
+plot [0:1]'fig6a.SIM' every 20 pt 7 t 'SIM (Mohahegh et al 2017)', \
+     'fig6a.KL' w l lw 2 t 'K and L 1995', \
      '< sort -k3,4 level-15/cp-0.9 | awk -f surface.awk' w l lw 2 \
      t 'Basilisk (15 levels)', \
      '< sort -k3,4 level-16/cp-0.9 | awk -f surface.awk' w l lw 2 \
@@ -451,8 +456,8 @@ plot [0:1]'fig6a.SIM' every 20 pt 7 ps 1 t 'SIM (Mohahegh et al 2017)', \
 ~~~
 
 ~~~gnuplot Surface vorticity at $tU/D=2.5$. Re = 9500. See Fig. 6b of [Mohahegh et al. 2017](#mohahegh2017).
-plot [0:1]'fig6b.SIM' every 20 pt 7 ps 1 t 'SIM (Mohahegh et al 2017)', \
-     'fig6b.KL' w l lw 2 t 'K \& L 1995', \
+plot [0:1]'fig6b.SIM' every 20 pt 7 t 'SIM (Mohahegh et al 2017)', \
+     'fig6b.KL' w l lw 2 t 'K and L 1995', \
      '< sort -k3,4 level-15/cp-2.5 | awk -f surface.awk' w l lw 2 \
      t 'Basilisk (15 levels)', \
      '< sort -k3,4 level-16/cp-2.5 | awk -f surface.awk' w l lw 2 \

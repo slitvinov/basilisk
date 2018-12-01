@@ -7,4 +7,4 @@ all:
 %.html: $(BASILISK)/cgi-bin/Makefile 		\
 	$(BASILISK)/templates/page.static 	\
 	$(BASILISK)/page2html
-	$(BASILISK)/page2html $*
+	$(BASILISK)/page2html $* > $@

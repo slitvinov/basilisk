@@ -188,7 +188,7 @@ $3 < D < 15$
 ~~~gnuplot Relative curvature error as a function of resolution
 set logscale
 set grid
-set key bottom left
+set key top right
 set xlabel 'Diameter (grid points)'
 set ylabel 'Relative curvature error / percentage' 
 f(x)=(x > 0. ? 100.*x : 1e1000)
@@ -203,6 +203,7 @@ Similar results are obtained in three dimensions, but with a much
 wider intermediate range of low-order convergence for the max-norm.
 
 ~~~gnuplot Relative curvature error as a function of resolution in three dimensions
+set key bottom left
 plot 2./(x*x) t '2/x^{2}', '../curvature.3D/log' u 1:4 w lp t 'Max',	\
   '' u 1:3 w lp t 'RMS', '../curvature.3D/log' u 1:(f($5)) w lp t 'HF',	\
   '' u 1:(f($6)) w lp t 'HF fit',					\

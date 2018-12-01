@@ -111,6 +111,7 @@ very well with Toro's numerical experiments.
 set xrange [0:1]
 set xlabel 'r'
 
+set term PNG enhanced font ",10"
 set output 'rho.png'
 set ylabel 'rho'
 plot './cout' u 1:2 w p pt 7 ps 0.2 t '2D Cartesian', \

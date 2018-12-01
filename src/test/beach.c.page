@@ -122,48 +122,50 @@ this latter model seems to do a better job of capturing breaking
 around $t=20$ (they use a more sophisticated breaking criterion).
 
 ~~~gnuplot Comparison of model predictions and experimental snapshots
-set term @PNG enhanced size 640,640 font ",8"
+set term svg enhanced size 640,640 font ",12"
 set xrange [-20:12]
 set yrange [-0.2:0.6]
 set ytics -0.2,0.2,0.6
 set key top left
 set multiplot layout 6,2 scale 1.05,1.1
+set rmargin 2
+set tmargin 0.5
 unset xtics
-plot 'out-10' w l lw 2 t 't=10', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-10' w l lw 2 t 't=10', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-10' pt 6 lc -1 ps 0.5 t ''
 unset ytics
-plot 'out-15' w l lw 2 t 't=15', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-15' w l lw 2 t 't=15', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-15' pt 6 lc -1 ps 0.5 t ''
 set ytics -0.2,0.2,0.6
-plot 'out-20' w l lw 2 t 't=20', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-20' w l lw 2 t 't=20', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-20' pt 6 lc -1 ps 0.5 t ''
 unset ytics
-plot 'out-25' w l lw 2 t 't=25', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-25' w l lw 2 t 't=25', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-25' pt 6 lc -1 ps 0.5 t ''
 set ytics -0.2,0.2,0.6
-plot 'out-30' w l lw 2 t 't=30', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-30' w l lw 2 t 't=30', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-30' pt 6 lc -1 ps 0.5 t ''
 unset ytics
-plot 'out-35' w l lw 2 t 't=35', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-35' w l lw 2 t 't=35', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-35' pt 6 lc -1 ps 0.5 t ''
 set ytics -0.2,0.2,0.6
-plot 'out-40' w l lw 2 t 't=40', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-40' w l lw 2 t 't=40', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-40' pt 6 lc -1 ps 0.5 t ''
 unset ytics
-plot 'out-45' w l lw 2 t 't=45', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-45' w l lw 2 t 't=45', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-45' pt 6 lc -1 ps 0.5 t ''
 set ytics -0.2,0.2,0.6
-plot 'out-50' w l lw 2 t 't=50', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-50' w l lw 2 t 't=50', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-50' pt 6 lc -1 ps 0.5 t ''
 unset ytics
-plot 'out-55' w l lw 2 t 't=55', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-55' w l lw 2 t 't=55', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-55' pt 6 lc -1 ps 0.5 t ''
 set ytics -0.2,0.2,0.6
 set xtics
-plot 'out-60' w l lw 2 t 't=60', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-60' w l lw 2 t 't=60', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-60' pt 6 lc -1 ps 0.5 t ''
 unset ytics
-plot 'out-65' w l lw 2 t 't=65', '' u 1:3 w filledcu lc -1 t '', \
+plot 'out-65' w l lw 2 t 't=65', '' u 1:3 w filledcu x1 lc -1 t '', \
      '../t-65' pt 6 lc -1 ps 0.5 t ''
 unset multiplot
 ~~~

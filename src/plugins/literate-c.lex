@@ -319,7 +319,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
   if (!yyextra->incode && yyextra->gnuplot) {
     if (!yyextra->gnuplot_output) {
       char name[30];
-      sprintf (name, "_plot%d.png", yyextra->nplots++);
+      sprintf (name, "_plot%d.svg", yyextra->nplots++);
       yyextra->gnuplot_output = strdup (name);
     }
     output_s ("\n![");

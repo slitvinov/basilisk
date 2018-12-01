@@ -259,8 +259,8 @@ f(x)=a+b*x
 fit f(x) 'error' u (log($1)):(log(abs($2)*100.)) via a,b
 f1(x)=a1+b1*x
 fit f1(x) '../oscillation-momentum/error' u (log($1)):(log(abs($2)*100.)) via a1,b1
-plot 'error' u ($1):(abs($2)*100.) t "" w p pt 5 ps 2, \
-     '../oscillation-momentum/error' u ($1):(abs($2)*100.) t "" w p pt 7 ps 2, \
+plot 'error' u ($1):(abs($2)*100.) t "" w p pt 5 ps 1, \
+     '../oscillation-momentum/error' u ($1):(abs($2)*100.) t "" w p pt 7 ps 1, \
       exp(f(log(x))) t ftitle(a,b,"standard"), \
       exp(f1(log(x))) t ftitle(a1,b1,"momentum")
 ~~~
@@ -282,8 +282,8 @@ set xlabel 'Diameter (grid points)'
 set ylabel 'Equivalent Laplace number'
 set grid
 set key bottom right
-plot 'laplace' t "standard" w p pt 5 ps 2, \
-     '../oscillation-momentum/laplace' t "momentum" w p pt 7 ps 2
+plot 'laplace' t "standard" w p pt 5 ps 1, \
+     '../oscillation-momentum/laplace' t "momentum" w p pt 7 ps 1
 ~~~
 
 ## See also

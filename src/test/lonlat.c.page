@@ -99,6 +99,8 @@ event profiles (t = 0.3; t += 0.3; t <= 0.9) {
 
 /**
 ~~~gnuplot Scatter plot of the (radial) solution. The black lines are the average solutions. The solution is shown at times $t=0.3$, $t=0.6$, and $t=0.9$.
+set term PNG enhanced font ",10"
+set output 'sol.png'
 rdist(x,y)=acos(cos(x*pi/180.)*cos(y*pi/180.))*180./pi
 set xlabel 'Angular distance (degree)'
 set ylabel 'Surface height'

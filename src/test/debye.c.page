@@ -32,7 +32,7 @@ $$
 $$
 */
 
-#include "grid/multigrid.h"
+#include "grid/multigrid1D.h"
 #include "diffusion.h"
 #include "run.h"
 #include "ehd/pnp.h"

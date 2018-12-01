@@ -207,14 +207,15 @@ set xlabel 'D'
 set ylabel 'Shape error'
 set logscale x
 set xtics 2
-plot [5:120]'< sort -n -k1,2 log' u (0.8*2**$1):5 w lp t "RMS" ps 2, \
-            '< sort -n -k1,2 log' u (0.8*2**$1):6 w lp t "Max" ps 2, \
+set pointsize 1
+plot [5:120]'< sort -n -k1,2 log' u (0.8*2**$1):5 w lp t "RMS", \
+            '< sort -n -k1,2 log' u (0.8*2**$1):6 w lp t "Max", \
              0.2/(x*x) t "Second order"
 ~~~
 
 ~~~gnuplot Convergence of the relative error on the equilibrium curvature value with resolution. The diameter is given in number of grid points.
 set ylabel 'Relative curvature error'
-plot [5:120]'< sort -n -k1,2 log' u (0.8*2**$1):($7/2.5) w lp t "Max" ps 2, \
+plot [5:120]'< sort -n -k1,2 log' u (0.8*2**$1):($7/2.5) w lp t "Max", \
              0.6/(x*x) t "Second order"
 ~~~
 

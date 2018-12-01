@@ -154,6 +154,7 @@ plot "< grep '4 1$' log" u 1:2 t 'Basilisk (16x16)', '' u 1:2 t 'Theory' w lp
 ~~~gnuplot Temporal evolution of the error for different grids
 set xlabel 't'
 set ylabel '{/Symbol e}'
+set key top right
 p "< grep '4 1$' log" u 1:($2 - $3) w l t '16x16', \
   "< grep '5 1$' log" u 1:($2 - $3) w l t '32x32' , \
   "< grep '6 1$' log" u 1:($2 - $3) w l t '64x64'

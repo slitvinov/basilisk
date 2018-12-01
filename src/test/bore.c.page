@@ -54,6 +54,7 @@ numerical scheme.
 ~~~gnuplot Fluid depth profile at $t = 48$ seconds.
 set xlabel 'x'
 set ylabel 'z'
+set key top left
 plot '../bore1/out' w l t 'Saint-Venant', 'out' w l t 'Green-Naghdi'
 ~~~
 

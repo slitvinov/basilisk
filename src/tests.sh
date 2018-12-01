@@ -45,6 +45,7 @@ done
     echo ""
     echo "plots: \\"
     showfiles plot | sed 's/\(.*\)\.plot/\1\/plot.png/g'
+    showfiles 'c.page' | sed 's/\(.*\)\.c\.page/\1\/plots/g'
     echo ""
     echo "TESTS = \\"
     singleline < Makefile | 		                   \

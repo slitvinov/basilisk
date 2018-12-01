@@ -122,32 +122,34 @@ event timeseries (i++; t <= 12) {
 
 /**
 ~~~gnuplot Comparison between experimental (dots) and numerical timeseries
-set term pngcairo enhanced font ",10" size 640,800
+set term svg enhanced font ",12" size 640,800
 set multiplot layout 7,1
-
+set tmargin 1.
+set bmargin 1.
 set yrange [-0.02:0.1]
 set ytics 0,0.05,0.1
 set grid
+set pointsize 0.5
 
-plot [-2:2]'../wg1' pt 7 ps 0.7 t 'WG1', \
+plot [-2:2]'../wg1' pt 7 t 'WG1', \
            '../seawallsv/g0' w l lt 4 lw 1 t '', \
            'g0' w l lt 3 lw 2 t ''
-plot [0:10]'../wg3' pt 7 ps 0.7 t 'WG3', \
+plot [0:10]'../wg3' pt 7 t 'WG3', \
            '../seawallsv/log' w l lt 4 lw 1 t '', \
            'log' w l lt 3 lw 2 t ''
-plot [2:12]'../wg10' pt 7 ps 0.7 t 'WG10', \
+plot [2:12]'../wg10' pt 7 t 'WG10', \
            '../seawallsv/g10' w l lt 4 lw 1 t '', \
            'g10' w l lt 3 lw 2 t ''
-plot [2:12]'../wg22' pt 7 ps 0.7 t 'WG22', \
+plot [2:12]'../wg22' pt 7 t 'WG22', \
            '../seawallsv/g22' w l lt 4 lw 1 t '', \
            'g22' w l lt 3 lw 2 t ''
-plot [2:12]'../wg28' pt 7 ps 0.7 t 'WG28', \
+plot [2:12]'../wg28' pt 7 t 'WG28', \
            '../seawallsv/g28' w l lt 4 lw 1 t '', \
            'g28' w l lt 3 lw 2 t ''
-plot [2:12]'../wg37' pt 7 ps 0.7 t 'WG37', \
+plot [2:12]'../wg37' pt 7 t 'WG37', \
            '../seawallsv/g37' w l lt 4 lw 1 t '', \
            'g37' w l lt 3 lw 2 t ''
-plot [2:12]'../wg40' pt 7 ps 0.7 t 'WG40', \
+plot [2:12]'../wg40' pt 7 t 'WG40', \
            '../seawallsv/g40' w l lt 4 lw 1 t '', \
            'g40' w l lt 3 lw 2 t ''
 unset multiplot
@@ -177,38 +179,41 @@ event profile (t = {2.63,2.89,3.01,3.19,3.35,3.71}) {
 ~~~gnuplot
 reset
 
-set term pngcairo enhanced font ",10" size 640,800
+set term svg enhanced font ",12" size 640,800
 set multiplot layout 6,2
-
+set rmargin 2.
+set lmargin 4.
+set tmargin 0.
+set bmargin 0.
 set yrange [-0.1:0.2]
 set ytics -0.1,0.1,0.2
 set size ratio -1
 unset key
 
 plot [9.6:10.6]'p-2.63' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [9.6:10.6]'../seawallsv/p-2.63' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [9.6:10.6]'p-2.89' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [9.6:10.6]'../seawallsv/p-2.89' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [10.2:11.2]'p-3.01' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [10.2:11.2]'../seawallsv/p-3.01' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [10.2:11.2]'p-3.19' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [10.2:11.2]'../seawallsv/p-3.19' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [10.2:11.2]'p-3.35' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [10.2:11.2]'../seawallsv/p-3.35' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [10.2:11.2]'p-3.71' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 plot [10.2:11.2]'../seawallsv/p-3.71' u 1:($2+$4) w l lc -1 lw 2, \
-     '' u 1:($4) w filledcu lc -1
+     '' u 1:4 w filledcu x1 lc -1
 
 unset multiplot
 ~~~

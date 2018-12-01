@@ -196,7 +196,6 @@ in the documentation comments of the source code (*mytest.c*). Using
 the standard wiki syntax for scripts these commands appear as
 
     ~~~gnuplot Caption
-    set output 'plotname.png'
     ...
     ~~~
 
@@ -207,9 +206,7 @@ the standard wiki syntax for scripts these commands appear as
     ~~~
 
 and are replaced by the corresponding figure when the page is displayed
-in the wiki. Note that for gnuplot the *set output* command is optional. If you 
-don't supply a file name, a unique name looking like *_plot1.png* will be
-generated automatically. For python the *savefig* command is mandatory.
+in the wiki.
 
 To generate the figures from the command line, just do
 

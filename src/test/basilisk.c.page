@@ -32,6 +32,7 @@ pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
   This gives the following curve
   
   ~~~gnuplot
+  set term SVG size 640,240
   set size ratio -1
   plot 'basilisk.gnu' w l t ''
   ~~~

@@ -106,6 +106,8 @@ int main()
 The result can be compared to Figure 8 of Duchemin & Eggers. 
 
 ~~~gnuplot Solution of the Kuramoto--Sivashinski equation
+set term PNG enhanced font ",10"
+set output 'sol.png'
 set pm3d map
 set xlabel 'x'
 set ylabel 't'
