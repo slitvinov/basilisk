@@ -89,9 +89,8 @@ expansion than the GN model ([Madsen et al,
 2006](/src/references.bib#madsen2006)).
 
 ~~~gnuplot Evolution of surface elevation
-set term @PNG enhanced size 640,480 font ",8"
+set term svg enhanced size 640,480 font ",9"
 set multiplot layout 4,1 scale 1.,1.
-set grid
 set ytics 0,0.05,0.1
 set yrange [-0.02:0.1]
 set xtics -50,10,50

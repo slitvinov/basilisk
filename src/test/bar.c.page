@@ -114,7 +114,7 @@ relation. Note that using the optimised dispersion relation (with
 $\alpha_d=1.153$) is necessary to obtain such an agreement.
 
 ~~~gnuplot Comparison of experimental and numerical timeseries
-set term svg enhanced size 640,480 font ",12"
+set term svg enhanced size 640,480 font ",10"
 set xrange [33:39]
 set yrange [-2:4]
 set ytics -2,2,4

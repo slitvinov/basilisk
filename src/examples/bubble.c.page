@@ -301,7 +301,7 @@ regimes.
 <td>
 ~~~gnuplot
 unset grid
-set term PNG size 480,640
+set term svg size 480,640 font ",10"
 set xlabel 'x'
 set ylabel 'y'
 set zlabel 'z'

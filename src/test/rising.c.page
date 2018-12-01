@@ -169,7 +169,7 @@ faster.
 
 ~~~gnuplot Bubble shapes at the final time ($t=3$) for test case 1.
 set term push
-set term SVG size 640,320
+set term @SVG size 640,320
 set size ratio -1
 set grid
 plot [][0:0.4]'../c1g3l4s.txt' u 2:($1-0.5) w l t 'MooNMD', \

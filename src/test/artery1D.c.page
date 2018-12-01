@@ -140,7 +140,6 @@ We get the following comparison between the numerical solution and the
 linear theory for the flow rate $Q$.
 
 ~~~gnuplot
-set output 'plot.png'
 Amp = 0.01
 e2 = 0.1
 set yrange [0.008:]

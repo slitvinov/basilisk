@@ -1,4 +1,5 @@
-if ! gnuplot -e "batch=1; PNG=\"$PNG\"; SVG=\"svg enhanced font \\\",14\\\"\"; set term SVG; set macros;" \
+SVG="svg enhanced font ',11'"
+if ! gnuplot -e "batch=1; PNG=\"$PNG\"; SVG=\"$SVG\"; set macros; set term $SVG;" \
     plots > /dev/null 2> gnuplot.log; then
     gawk -v test=`basename $PWD` '
     /line [0-9]+:/ {

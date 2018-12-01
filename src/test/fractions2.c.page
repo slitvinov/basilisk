@@ -44,7 +44,7 @@ int main() {
 ## Ouputs
 
  ~~~gnuplot Reconstruction of $\phi(x, y) = x$
- set size 0.3
+ set term @SVG size 100,100
  unset key 
  unset border
  unset tics
@@ -52,16 +52,19 @@ int main() {
  ~~~
  
  ~~~gnuplot Reconstruction of $\phi(x, y) = y$
+ set term @SVG size 100,100
  unset key
  plot 'out' w l, 'log' u 1:2:4 with labels
  ~~~
  
  ~~~gnuplot Reconstruction of $\phi(x, y) = -x$
+ set term @SVG size 100,100
  unset key
  plot 'out' w l, 'log' u 1:2:5 with labels
  ~~~
  
  ~~~gnuplot Reconstruction of $\phi(x, y) = -y$
+ set term @SVG size 100,100
  unset key
  plot 'out' w l, 'log' u 1:2:6 with labels
  ~~~

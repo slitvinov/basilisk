@@ -309,6 +309,7 @@ as this one:
 ! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
 
 set term pngcairo enhanced size 700,700 font ",8"
+set output 'maximum.png'
 
 # this sets the color palette to "jet"
 set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1, \
@@ -328,6 +329,9 @@ set pm3d map
 set logscale cb
 set cbrange [0.1:10]
 splot 't-600' u 1:2:($3 > 1e-3 ? $5 : 1e1000)
+
+# we trim the image
+! mogrify -trim maximum.png
 
 # we remove the subfiles of tsunami/out
 ! rm -f t-*
@@ -432,7 +436,7 @@ As before gnuplot processes these files to produce this image:
 
 ~~~gnuplot Comparison between observed and simulated timeseries (hours) of wave elevations (metres) for a selection of tide gauges.
 reset
-set term pngcairo enhanced size 625,800 font ",8"
+set term svg enhanced size 625,800 font ",10"
 set multiplot layout 5,1 scale 1,1.1
 set xrange [3:8]
 set key bottom right

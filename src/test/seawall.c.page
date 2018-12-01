@@ -122,7 +122,7 @@ event timeseries (i++; t <= 12) {
 
 /**
 ~~~gnuplot Comparison between experimental (dots) and numerical timeseries
-set term svg enhanced font ",12" size 640,800
+set term svg enhanced font ",10" size 640,800
 set multiplot layout 7,1
 set tmargin 1.
 set bmargin 1.
@@ -179,7 +179,7 @@ event profile (t = {2.63,2.89,3.01,3.19,3.35,3.71}) {
 ~~~gnuplot
 reset
 
-set term svg enhanced font ",12" size 640,800
+set term svg enhanced font ",10" size 640,800
 set multiplot layout 6,2
 set rmargin 2.
 set lmargin 4.

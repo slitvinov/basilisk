@@ -169,7 +169,7 @@ scheme is only second order (versus 4th order).
 
 ~~~gnuplot Comparison of the maximum wave height with the experimental data (symbols) along various cross-sections
 reset
-set term @PNG enhanced size 640,480 font ",8"
+set term svg enhanced size 640,480 font ",10"
 set multiplot layout 2,2
 set key top left
 set xlabel 'y (m)'

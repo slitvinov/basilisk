@@ -143,7 +143,6 @@ set style boxplot candles range  1.50 outliers pt 7 separation 1 labels auto uns
 set loadpath 
 set fontpath 
 set psdir
-set fit noerrorvariables noprescale
 GNUTERM = "qt"
 plot 'out' w l, '< grep hx log' u ($1+$3*$4):2, '< grep hy log' u 1:($2+$3*$4), '< grep kappa log' u 1:2:3 w labels
 #    EOF

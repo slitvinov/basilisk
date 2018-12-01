@@ -443,7 +443,7 @@ plot 'level-15/omega' u 1:($2/pi) pt 7 ps 0.25 t 'Basilisk (15 levels)', \
 
 ~~~gnuplot Surface vorticity at $tU/D=0.9$. Re = 9500. See Fig. 6a of [Mohahegh et al. 2017](#mohahegh2017).
 reset
-set term SVG
+set term @SVG
 set xlabel 'theta/pi'
 set ylabel 'omega_sD/U'
 set grid

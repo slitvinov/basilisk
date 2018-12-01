@@ -17,7 +17,7 @@ function tightbb(output)
 function defaults()
 {
     printf "set pointsize 0.75; ";
-    print "set key spacing 0.8";
+#    print "set key spacing 0.8";
 }
 
 /^[ \t]*~~~/ {
@@ -36,7 +36,7 @@ function defaults()
     if (gnuplot) {
 	if (match($0, "^[ \t]*reset")) {
 	    printf "reset; ";
-	    printf "load '~/.gnuplot'; ";
+#	    printf "load '~/.gnuplot'; ";
 	    defaults();
 	}
 	else {

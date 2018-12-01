@@ -170,10 +170,10 @@ Which gives the following wave (left column) and mesh (right column)
 evolutions. 
 
 ~~~gnuplot Evolution of free surface (left) and mesh (right)
-! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
- 
 set term @PNG enhanced size 640,1120 font ",8"
 set output 'free.png'
+
+! awk '{ if ($1 == "file:") file = $2; else print $0 > file; }' < out
 
 unset key
 unset xtics
@@ -250,7 +250,7 @@ fronts.
 
 ~~~gnuplot Timeseries of surface elevation. Numerical results and experimental data (symbols).
 reset
-set term svg enhanced size 640,800
+set term svg enhanced size 640,800 font ",10"
 set multiplot layout 5,1 scale 1.,1.
 set tmargin 0.5
 set xrange [3:20]
