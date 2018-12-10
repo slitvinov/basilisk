@@ -190,6 +190,12 @@ fields are constant and unity (i.e. the Cartesian metric).
 Several metric spaces/coordinate systems are predefined:
 
 * [Axisymmetric](axi.h)
+    + [Stokes stream function](axistream.h)
+    $$
+    \frac{\partial^2\psi}{\partial z^2} + 
+    \frac{\partial^2\psi}{\partial r^2} - \frac{1}{r}\partial_r\psi 
+    = - \omega r
+    $$
 * [Spherical](spherical.h)
 * [Radial/cylindrical](radial.h)
 

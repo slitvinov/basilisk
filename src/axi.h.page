@@ -104,3 +104,9 @@ event metric (i = 0) {
   
   boundary ({cm, fm});
 }
+
+/**
+## See also
+
+* [Axisymmetric streamfunction](axistream.h)
+*/
