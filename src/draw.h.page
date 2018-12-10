@@ -721,7 +721,8 @@ bool draw_vof (struct _draw_vof p)
 /**
 # *isoline()*: displays isolines
 
-Draws a single isoline at *val* of field *phi*. 
+Draws a single isoline at *val* of field *phi*, or *n* isolines
+between *min* and *max* (included).
 
 Extra parameters are the same as for
 [draw_vof()](draw.h#draw_vof-displays-vof-reconstructed-interfaces). */
@@ -729,7 +730,8 @@ Extra parameters are the same as for
 struct _isoline {
   char * phi;
   double val;
-
+  int n;
+  
   // all fields below must be identical to struct _draw_vof above
   char * c;
   char * s;
@@ -748,17 +750,23 @@ trace
 bool isoline (struct _isoline p)
 {
 #if dimension == 2
-  scalar fiso[];
+  if (!p.color) p.color = p.phi;
+  colorize_args (p);
+  scalar phi = col, fiso[];
   face vector siso[];
-  scalar phi = lookup_field (p.phi);
-  if (phi.i < 0) {
-    fprintf (stderr, "isoline(): no field named '%s'\n", p.phi);
-    return false;
-  }
-  fractions (phi, fiso, siso, p.val);
   p.c = "fiso", p.s = "siso";
   struct _draw_vof a = *((struct _draw_vof *)&p.c);
-  return draw_vof (a);
+  if (p.n < 2) {
+    fractions (phi, fiso, siso, p.val);
+    draw_vof (a);
+  }
+  else if (p.max > p.min) {
+    double dv = (p.max - p.min)/(p.n - 1);
+    for (p.val = p.min; p.val <= p.max; p.val += dv) {
+      fractions (phi, fiso, siso, p.val);
+      draw_vof (a);
+    }
+  }
 #else // dimension == 3
   assert (false);
 #endif // dimension == 3
