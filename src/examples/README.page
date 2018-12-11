@@ -21,6 +21,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [A Shallow Water Analogue for the Standing Accretion Shock
   Instability](swasi.c)
 * [Two-phase flow around RV Tangaroa](tangaroa.c)
+* [Flow in a rotating bottom-driven cylindrical container](yang.c)
 
 ## Python interface
 
