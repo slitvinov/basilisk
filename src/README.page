@@ -89,7 +89,12 @@ $$
 $$
 \nabla\cdot\mathbf{u} = 0
 $$
-
+    + [Azimuthal velocity for axisymmetric flows](navier-stokes/swirl.h)
+	$$
+    \partial_t w + u_x \partial_x w + u_y \partial_y w + \frac{u_y w}{y} =
+    \frac{1}{\rho y}  \left[ \nabla \cdot (\mu y \nabla w) - w \left(
+    \frac{\mu}{y} + \partial_y \mu \right) \right]
+	$$
 * [Two-phase interfacial flows](two-phase.h)
     + [Momentum conservation option](navier-stokes/conserving.h)
 * [Momentum-conserving two-phase interfacial flows](momentum.h)
