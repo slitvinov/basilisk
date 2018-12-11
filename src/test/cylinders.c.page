@@ -185,7 +185,7 @@ set ylabel 'k_0'
 set logscale y
 set grid
 set key top left
-plot '< grep "^8" log' u 2:4 ps 1 lw 2 t 'Sangani \& Acrivos, 1982', \
+plot '< grep "^8" log' u 2:4 ps 1 lw 2 t 'Sangani and Acrivos, 1982', \
      '' u 2:3 ps 1 pt 6 lw 2 t '8 levels'
 ~~~
 

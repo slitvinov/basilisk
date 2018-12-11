@@ -7,16 +7,18 @@ tension. If the electrification level is moderate an equilibrium shape
 is reached. It was observed experimentally that droplets deforms as
 prolate or oblate spheroids (i.e. larger elongation aligned with the
 external electric field or viceversa). The analytical analysis of
-O'Konski \& Thacher (1953) unexpectedly predicted prolate forms
-whereas the experiments showed oblate ones (and viceversa).
+[O'Konski \& Thacher (1953)](#konski1953) unexpectedly predicted
+prolate forms whereas the experiments showed oblate ones (and
+viceversa).
 
-It was the genius of Geoffrey Taylor (1966) who shed light on
-the problem. The work of O'Konski \& Thacher assumed that both fluids
-(inner and outer) were perfect dielectrics, given the low conductivity
-of the fluids involved. Taylor realized that the conductivity could be
-very low but it was not zero, so that the charges could migrate
-through the "leaky" media, thus accumulating at the fluid interface
-and altering radically the pattern of electrical forces.
+It was the genius of [Geoffrey Taylor (1966)](#taylor1966) who shed
+light on the problem. The work of O'Konski \& Thacher assumed that
+both fluids (inner and outer) were perfect dielectrics, given the low
+conductivity of the fluids involved. Taylor realized that the
+conductivity could be very low but it was not zero, so that the
+charges could migrate through the "leaky" media, thus accumulating at
+the fluid interface and altering radically the pattern of electrical
+forces.
 
 Moreover, approximating the electrostatic Maxwell equations with the
 Taylor--Melcher leaky dielectric model and assuming small deformation
@@ -231,16 +233,6 @@ event adapt (i += 20) {
 }
 
 /**
-Set to one below to see the simulation on-the-fly.*/
-
-#if 0
-event gfsview (i += 20) {
-  static FILE * fp = popen ("gfsview2D taylor.gfv", "w");
-  output_gfs (fp);
-}
-#endif
-
-/**
 ~~~gnuplot Radial profiles of radial azimuthal velocities compared to analytical results.
 set xlabel 'r'
 set ylabel 'v'
@@ -252,16 +244,33 @@ plot 'log' u 1:2 notitle, 'log' u 1:3 w l t "v_r",\
 
 ## Bibliography
 
-* Chester T. O'Konski, Henry C. Thacher Jr. "The Distortion of Aerosol
-Droplets by an Electric Field" J. Phys. Chem., 1953, 57 (9), pp
-955–958.
+~~~bib
+@article{konski1953,
+  title={The distortion of aerosol droplets by an electric field},
+  author={O'Konski, Chester T and Thacher Jr, Henry C},
+  journal={The Journal of Physical Chemistry},
+  volume={57},
+  number={9},
+  pages={955--958},
+  year={1953},
+  publisher={ACS Publications}
+}
 
-* G. Taylor, "Studies in Electrohydrodynamics. I. The Circulation
- Produced in a Drop by an Electrical Field", Proc Roy. Soc. Lond. Ser. A:
- Math. Phys. Sci., 1966, vol. 291, pp. 159-166.
+@article{taylor1966,
+  title={Studies in electrohydrodynamics. I. The circulation produced 
+         in a drop by an electric field},
+  author={Taylor, Geoffrey Ingram},
+  journal={Proc. R. Soc. Lond. A},
+  volume={291},
+  number={1425},
+  pages={159--166},
+  year={1966},
+  publisher={The Royal Society}
+}
+~~~
 
 ## See also
 
-* [Same test with Gerris](http://gerris.dalembert.upmc.fr/gerris/tests/tests/electro.html)
-
+* [Same test with 
+   Gerris](http://gerris.dalembert.upmc.fr/gerris/tests/tests/electro.html)
 */
