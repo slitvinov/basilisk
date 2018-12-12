@@ -2,33 +2,28 @@
 
 BEGIN { nplots = 0 }
 
-function tightbb(output)
+# This works around a bug in gnuplot 5, where font units are missing
+function fixfonts(output)
 {
-    if (0) # This is too expensive and requires inkscape
-	print "! sed 's|^<rect x=\"0\" y=\"0\" width=\".*/>||' "	\
-	    output							\
-	    " | inkscape -z -D -l "					\
-	    output							\
-	    " -f /dev/stdin 2> /dev/null";
-    else
-	print "# ";
+    print "! sed -i 's/font-size=\"\\([0-9.]*\\)\"/font-size=\"\\1pt\"/g' " \
+	output;
 }
 
 function defaults()
 {
     printf "set pointsize 0.75; ";
-#    print "set key spacing 0.8";
 }
 
 /^[ \t]*~~~/ {
     if (gnuplot) {
 	gnuplot = 0;
+	print "set output";
 	if (match (output, ".*\\.png"))
 	    print "! mogrify -trim" output;
 	else if (match (output, ".*\\.svg"))
-	    tightbb(output);
+	    fixfonts(output);
 	else if (output == "")
-	    tightbb("_plot" nplots++ ".svg");
+	    fixfonts("_plot" nplots++ ".svg");
     }
 }
 
