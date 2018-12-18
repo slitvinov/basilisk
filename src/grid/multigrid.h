@@ -66,8 +66,46 @@ static size_t _size (size_t l)
 					 (point.k + o))*datasize]) @
 #endif
 
+/* low-level memory management */
+#if dimension == 1
+# if BGHOSTS == 1
 @define allocated(...) true
-@define allocated_child(...) true
+# else // BGHOST != 1
+@define allocated(k,l,m) (point.i+k >= 0 && point.i+k < (1 << point.level) + 2*GHOSTS)
+# endif // BGHOST != 1
+@def allocated_child(k,l,m) (level < depth() &&
+                             point.i > 0 && point.i <= (1 << point.level) + 2)
+@
+#elif dimension == 2
+# if BGHOSTS == 1
+@define allocated(...) true
+# else // BGHOST != 1
+@def allocated(k,l,m) (point.i+k >= 0 && point.i+k < (1 << point.level) + 2*GHOSTS &&
+		       point.j+l >= 0 && point.j+l < (1 << point.level) + 2*GHOSTS)
+@
+# endif // BGHOST != 1
+@def allocated_child(k,l,m)  (level < depth() &&
+			      point.i > 0 && point.i <= (1 << point.level) + 2 &&
+			      point.j > 0 && point.j <= (1 << point.level) + 2)
+@			   
+#else // dimension == 3
+# if BGHOSTS == 1
+@define allocated(...) true
+#else // BGHOST != 1
+@def allocated(a,l,m) (point.i+a >= 0 &&
+		       point.i+a < (1 << point.level) + 2*GHOSTS &&
+		       point.j+l >= 0 &&
+		       point.j+l < (1 << point.level) + 2*GHOSTS &&
+		       point.k+m >= 0 &&
+		       point.k+m < (1 << point.level) + 2*GHOSTS)
+@
+#endif // BGHOST != 1
+@def allocated_child(a,l,m)  (level < depth() &&
+			      point.i > 0 && point.i <= (1 << point.level) + 2 &&
+			      point.j > 0 && point.j <= (1 << point.level) + 2 &&
+			      point.k > 0 && point.k <= (1 << point.level) + 2)
+@
+#endif // dimension == 3
 
 /***** Multigrid variables and macros *****/
 @define depth()       (grid->depth)
