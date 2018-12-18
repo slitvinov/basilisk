@@ -165,7 +165,7 @@ val_{ID}*{WS}*\( |
       fputc (j < 2 ? ',' : ')', yyout);
     }
     for (j = dimension + 1; j <= 3; j++) {
-      rotate_string (index[j]);
+      rotate_string (index[j - 1 + start]);
       fputc (j < 3 ? ',' : ')', yyout);
     }
   }
