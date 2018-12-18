@@ -320,12 +320,12 @@ void cache_shrink (Cache * c)
 #if dimension == 1
 # if BGHOSTS == 1
 @define allocated(k,l,n) (tree->L[point.level]->m[point.i+k])
-# else
+# else // BGHOST != 1
 @def allocated(k,l,n) (point.i+k >= 0 &&
 		       point.i+k < (1 << point.level) + 2*GHOSTS &&
 		       tree->L[point.level]->m[point.i+k])
 @
-# endif
+# endif // BGHOST != 1
 @define NEIGHBOR(k,l,n)	(tree->L[point.level]->m[point.i+k])
 @define PARENT(k,l,n) (tree->L[point.level-1]->m[(point.i+GHOSTS)/2+k])
 @def allocated_child(k,l,n) (level < depth() &&
@@ -338,7 +338,7 @@ void cache_shrink (Cache * c)
 @def allocated(k,l,n) (tree->L[point.level]->m[point.i+k] &&
 		       tree->L[point.level]->m[point.i+k][point.j+l])
 @
-# else
+# else // BGHOST != 1
 @def allocated(k,l,n) (point.i+k >= 0 &&
 		       point.i+k < (1 << point.level) + 2*GHOSTS &&
 		       tree->L[point.level]->m[point.i+k] &&
@@ -346,7 +346,7 @@ void cache_shrink (Cache * c)
 		       point.j+l < (1 << point.level) + 2*GHOSTS &&
 		       tree->L[point.level]->m[point.i+k][point.j+l])
 @
-# endif
+# endif // BGHOST != 1
 @define NEIGHBOR(k,l,n)	(tree->L[point.level]->m[point.i+k][point.j+l])
 @def PARENT(k,l,n) (tree->L[point.level-1]->m[(point.i+GHOSTS)/2+k]
 		  [(point.j+GHOSTS)/2+l])
@@ -367,7 +367,7 @@ void cache_shrink (Cache * c)
 		       tree->L[point.level]->m[point.i+a][point.j+l]
 		       [point.k+n])
 @
-#else     
+#else // BGHOST != 1
 @def allocated(a,l,n) (point.i+a >= 0 &&
 		       point.i+a < (1 << point.level) + 2*GHOSTS &&
 		       tree->L[point.level]->m[point.i+a] &&
@@ -379,7 +379,7 @@ void cache_shrink (Cache * c)
 		       tree->L[point.level]->m[point.i+a][point.j+l]
 		       [point.k+n])
 @
-#endif
+#endif // BGHOST != 1
 @def NEIGHBOR(a,l,n)	(tree->L[point.level]->m[point.i+a][point.j+l]
 			                                       [point.k+n])
 @			
@@ -398,7 +398,7 @@ void cache_shrink (Cache * c)
 @def CHILD(a,l,n)  (tree->L[point.level+1]->m[2*point.i-GHOSTS+a]
 		    [2*point.j-GHOSTS+l][2*point.k-GHOSTS+n])
 @
-#endif
+#endif // dimension == 3
 @define CELL(m) (*((Cell *)(m)))
 
 /***** Multigrid macros *****/

@@ -121,7 +121,8 @@ We compare $R/R_0$ to the analytical expression, with $R_0=\sqrt{V/\pi}$.
 reset
 set xlabel 'Contact angle (degrees)'
 set ylabel 'R/R_0'
-set arrow from 0,1 to 180,1 nohead dt 2
+set arrow from 15,1 to 165,1 nohead dt 2
+set xtics 15,15,165
 plot 1./sqrt(x/180. - sin(x*pi/180.)*cos(x*pi/180.)/pi) t 'analytical', \
   'log' u 2:3 pt 7 t 'numerical'
 ~~~

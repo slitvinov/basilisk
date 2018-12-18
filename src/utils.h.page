@@ -171,7 +171,8 @@ stats statsf (scalar f)
     }
   stats s;
   s.min = min, s.max = max, s.sum = sum, s.volume = volume;
-  sum2 -= sum*sum/volume;
+  if (volume > 0.)
+    sum2 -= sum*sum/volume;
   s.stddev = sum2 > 0. ? sqrt(sum2/volume) : 0.;
   return s;
 }
