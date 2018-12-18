@@ -1,7 +1,7 @@
 # How to configure a Basilisk server
 
 ~~~bash
-sudo apt-get install tsp make gcc
+sudo apt install task-spooler make gcc
 ~~~
 
 Install the KDT library, [OpenGL utility libraries](gl/INSTALL) and
@@ -12,7 +12,10 @@ $HOME/lib/libkdt.a
 $HOME/lib/libglutils.a
 $HOME/lib/libfb_osmesa.a
 $HOME/include/kdt/kdt.h
+$HOME/include/gl/framebuffer.h
 $HOME/include/gl/utils.h
+$HOME/include/gl/trackball.h
+$HOME/include/gl/gl2ps/gl2ps.h
 $HOME/bin/ppm2mpeg
 $HOME/bin/ppm2mp4
 $HOME/bin/ppm2gif
