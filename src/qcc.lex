@@ -2134,7 +2134,7 @@ for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}{WS}+in{WS}+ {
 
 for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
   /* for (a,b in c,d) */
-  char * id[10], * list[10];
+  char * id[10] = {NULL}, * list[10] = {NULL};
   int nid = 0, nlist = 0, inin = 0;
   char * s = strchr (yytext, '('); s++;
   s = strtok (s, " \t\v\n\f,");
@@ -2517,7 +2517,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   int len = s - yytext;
   char ** b = blocks, * func = yytext;
   while (b && *b) {
-    if (!strncmp (*b, yytext, len)) {
+    if (strlen(*b) == len && !strncmp (*b, yytext, len)) {
       if (debug)
 	fprintf (stderr, "%s:%d: block %s\n", fname, line, *b);
       func = malloc (strlen (yytext) + 7);
