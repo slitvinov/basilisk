@@ -244,9 +244,9 @@ void begin_mirror (struct _mirror p)
   s[12] = 0.;    s[13] = 0.;   s[14] = 0.;                    
   s[15] = 1.;
 
-  t[0] = -1.;  t[1] = 0.;   t[2] = 0.;  t[3] = 0.;
-  t[4] = 0.;  t[5] = -1.;   t[6] = 0.;  t[7] = 0.;
-  t[8] = 0.;  t[9] = 0.;   t[10] = -1.; t[11] = 0.;
+  t[0] = 1.;  t[1] = 0.;   t[2] = 0.;  t[3] = 0.;
+  t[4] = 0.;  t[5] = 1.;   t[6] = 0.;  t[7] = 0.;
+  t[8] = 0.;  t[9] = 0.;   t[10] = 1.; t[11] = 0.;
   t[12] = - 2.*p.n.x*p.alpha; 
   t[13] = - 2.*p.n.y*p.alpha;  
   t[14] = - 2.*p.n.z*p.alpha; 
@@ -254,10 +254,13 @@ void begin_mirror (struct _mirror p)
   matrix_multiply (s, t);
   glMultMatrixf (s);
   gl_get_frustum (&view->frustum);
+  view->reversed = !view->reversed;
 }
 
 void end_mirror() {
   end_translate();
+  bview * view = draw();
+  view->reversed = !view->reversed;
 }
 
 /**
@@ -316,6 +319,14 @@ $$
 */
 
 #if dimension == 3
+static void glnormal3d (bview * view, double x, double y, double z) {
+  // fixme: mapping? (see glvertex3d)
+  if (view->gfsview || view->reversed)
+    glNormal3d (- x, - y, - z);
+  else
+    glNormal3d (x, y, z);
+}
+
 @def foreach_visible_plane(view, n1, alpha1)
 coord n = {(n1).x, (n1).y, (n1).z};
 double _alpha = 0.9999999*(alpha1);
@@ -326,7 +337,7 @@ double _alpha = 0.9999999*(alpha1);
   else
     n.x /= norm, n.y /= norm, n.z /= norm, _alpha /= norm;
 }
-glNormal3d (n.x, n.y, n.z);
+glnormal3d (view, n.x, n.y, n.z); // do not use normal inversion
 foreach_cell() {
   // fixme: coordinate mapping
   double _r = Delta*0.87, alpha = (_alpha - n.x*x - n.y*y - n.z*z)/Delta;
@@ -367,13 +378,25 @@ static vector lookup_vector (const char * name)
   return (vector){{-1}};
 }
 
-static void draw_lines (bview * view, float color[3], float lw)
+static bool _reversed = false;
+
+static void begin_draw_lines (bview * view, float color[3], float lw)
 {
   glMatrixMode (GL_PROJECTION);
   glPushMatrix();
   glTranslatef (0., 0., view->lc*view->fov/24.);
   glColor3f (color[0], color[1], color[2]);
   glLineWidth (view->samples*(lw > 0. ? lw : 1.));
+  _reversed = view->reversed;
+  view->reversed = false;
+}
+
+static void end_draw_lines()
+{    
+  glMatrixMode (GL_PROJECTION);
+  glPopMatrix();
+  bview * view = draw();
+  view->reversed = _reversed;
 }
 
 static inline double interp (Point point, coord p, scalar col) {
@@ -642,23 +665,22 @@ bool draw_vof (struct _draw_vof p)
       }
     }
   }
-  if (!p.filled || p.edges) {
-    draw_lines (view, p.lc, p.lw);
-    glBegin (GL_LINES);
-    foreach_visible (view)
-      if (cfilter (point, c, cmin)) {
-	coord n = facet_normal (point, c, s);
-	double alpha = plane_alpha (c[], n);
-	coord segment[2];
-	if (facets (n, alpha, segment) == 2) {
-	  glvertex2d (view, x + segment[0].x*Delta, y + segment[0].y*Delta);
-	  glvertex2d (view, x + segment[1].x*Delta, y + segment[1].y*Delta);
-	  view->ni++;
+  if (!p.filled || p.edges)
+    draw_lines (view, p.lc, p.lw) {
+      glBegin (GL_LINES);
+      foreach_visible (view)
+	if (cfilter (point, c, cmin)) {
+	  coord n = facet_normal (point, c, s);
+	  double alpha = plane_alpha (c[], n);
+	  coord segment[2];
+	  if (facets (n, alpha, segment) == 2) {
+	    glvertex2d (view, x + segment[0].x*Delta, y + segment[0].y*Delta);
+	    glvertex2d (view, x + segment[1].x*Delta, y + segment[1].y*Delta);
+	    view->ni++;
+	  }
 	}
-      }
-    glEnd ();
-    glPopMatrix ();
-  }
+      glEnd ();
+    }
 #else // dimension == 3
   double larger =
     p.larger ? p.larger : p.edges || (p.color && !p.linear) ? 1. : 1.1;
@@ -671,10 +693,7 @@ bool draw_vof (struct _draw_vof p)
 	int m = facets (n, alpha, v, larger);
 	if (m > 2) {
 	  color_facet (p);
-	  if (view->gfsview)
-	    glNormal3d (- n.x, - n.y, - n.z);
-	  else
-	    glNormal3d (n.x, n.y, n.z);
+	  glnormal3d (view, n.x, n.y, n.z);
 	  glBegin (GL_POLYGON);
 	  for (int i = 0; i < m; i++) {
 	    color_vertex (p, interp (point, v[i], col));
@@ -686,25 +705,24 @@ bool draw_vof (struct _draw_vof p)
 	}
       }
   }
-  if (p.edges) {
-    draw_lines (view, p.lc, p.lw);
-    foreach_visible (view)
-      if (cfilter (point, c, cmin)) {
-	coord n = facet_normal (point, c, s);
-	double alpha = plane_alpha (c[], n);
-	coord v[12];
-	int m = facets (n, alpha, v, larger);
-	if (m > 2) {
-	  glBegin (GL_LINE_LOOP);
-	  for (int i = 0; i < m; i++)
-	    glvertex3d (view,
-			x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
-	  glEnd ();
-	  view->ni++;
+  if (p.edges)
+    draw_lines (view, p.lc, p.lw) {
+      foreach_visible (view)
+	if (cfilter (point, c, cmin)) {
+	  coord n = facet_normal (point, c, s);
+	  double alpha = plane_alpha (c[], n);
+	  coord v[12];
+	  int m = facets (n, alpha, v, larger);
+	  if (m > 2) {
+	    glBegin (GL_LINE_LOOP);
+	    for (int i = 0; i < m; i++)
+	      glvertex3d (view,
+			  x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+	    glEnd ();
+	    view->ni++;
+	  }
 	}
-      }
-    glPopMatrix ();
-  }
+    }
 #endif // dimension == 3
 
 #if TREE
@@ -794,31 +812,31 @@ trace
 void cells (struct _cells p)
 {
   bview * view = draw();
-  draw_lines (view, p.lc, p.lw);
+  draw_lines (view, p.lc, p.lw) {
 #if dimension == 2
-  foreach_visible (view) {
-    glBegin (GL_LINE_LOOP);
-    glvertex2d (view, x - Delta/2., y - Delta/2.);
-    glvertex2d (view, x + Delta/2., y - Delta/2.);
-    glvertex2d (view, x + Delta/2., y + Delta/2.);
-    glvertex2d (view, x - Delta/2., y + Delta/2.);
-    glEnd();
-    view->ni++;
-  }
-#else // dimension == 3
-  foreach_visible_plane (view, p.n, p.alpha) {
-    coord v[12];
-    int m = facets (n, alpha, v, 1.);
-    if (m > 2) {
+    foreach_visible (view) {
       glBegin (GL_LINE_LOOP);
-      for (int i = 0; i < m; i++)
-	glvertex3d (view, x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
-      glEnd ();
+      glvertex2d (view, x - Delta/2., y - Delta/2.);
+      glvertex2d (view, x + Delta/2., y - Delta/2.);
+      glvertex2d (view, x + Delta/2., y + Delta/2.);
+      glvertex2d (view, x - Delta/2., y + Delta/2.);
+      glEnd();
       view->ni++;
     }
-  }
+#else // dimension == 3
+    foreach_visible_plane (view, p.n, p.alpha) {
+      coord v[12];
+      int m = facets (n, alpha, v, 1.);
+      if (m > 2) {
+	glBegin (GL_LINE_LOOP);
+	for (int i = 0; i < m; i++)
+	  glvertex3d (view, x + v[i].x*Delta, y + v[i].y*Delta, z + v[i].z*Delta);
+	glEnd ();
+	view->ni++;
+      }
+    }
 #endif // dimension == 3
-  glPopMatrix ();  
+  }
 }
 
 /**
@@ -844,17 +862,17 @@ void vectors (struct _vectors p)
     u.x = lookup_field (name);
   }
   bview * view = draw();
-  draw_lines (view, p.lc, p.lw);
-  double scale = p.scale ? p.scale : 1.;
-  glBegin (GL_LINES);
-  foreach_visible (view)
-    if (u.x[] != nodata) {
-      glvertex2d (view, x, y);
-      glvertex2d (view, x + scale*u.x[], y + scale*u.y[]);
-      view->ni++;
-    }
-  glEnd();
-  glPopMatrix();
+  draw_lines (view, p.lc, p.lw) {
+    double scale = p.scale ? p.scale : 1.;
+    glBegin (GL_LINES);
+    foreach_visible (view)
+      if (u.x[] != nodata) {
+	glvertex2d (view, x, y);
+	glvertex2d (view, x + scale*u.x[], y + scale*u.y[]);
+	view->ni++;
+      }
+    glEnd();
+  }
 #else // dimension == 3
   assert (false); // not implemented yet
 #endif // dimension == 3
@@ -996,112 +1014,110 @@ trace
 bool box (struct _box p)
 {
   bview * view = draw();
-  draw_lines (view, p.lc, p.lw);
+  draw_lines (view, p.lc, p.lw) {
 
-  float height = 0.5*gl_StrokeHeight();
-  float width = gl_StrokeWidth ('1'), scale = L0/(60.*width), length;
-  float Z1 = dimension == 2 ? 0. : Z0;
-  char label[80];
+    float height = 0.5*gl_StrokeHeight();
+    float width = gl_StrokeWidth ('1'), scale = L0/(60.*width), length;
+    float Z1 = dimension == 2 ? 0. : Z0;
+    char label[80];
   
-  glMatrixMode (GL_MODELVIEW);
+    glMatrixMode (GL_MODELVIEW);
 
-  if (!p.notics) {
-    int nt = 8;
-    for (int i = 0; i <= nt; i++) {
+    if (!p.notics) {
+      int nt = 8;
+      for (int i = 0; i <= nt; i++) {
+	glPushMatrix();
+	glTranslatef (X0 + i*L0/nt - height/2.*scale, Y0 - width/3.*scale, Z1);
+	glRotatef (-90, 0, 0, 1);
+	glScalef (scale, scale, scale);
+	sprintf (label, "%g", X0 + i*L0/nt);
+	gl_StrokeString (label);
+	glPopMatrix();
+
+	glPushMatrix();
+	sprintf (label, "%g", Y0 + i*L0/nt);
+	length = gl_StrokeLength (label);
+	glTranslatef (X0 - (length + width/3.)*scale,
+		      Y0 + i*L0/nt - height/2.*scale, Z1);
+	glScalef (scale, scale, scale);
+	gl_StrokeString (label);
+	glPopMatrix();
+
+#if dimension > 2
+	glPushMatrix();
+	sprintf (label, "%g", Z0 + i*L0/nt);
+	length = gl_StrokeLength (label);
+	glTranslatef (X0 - (length + width/3.)*scale,
+		      Y0, Z0 + i*L0/nt + height/2.*scale);
+	glRotatef (-90, 1, 0, 0);
+	glScalef (scale, scale, scale);
+	gl_StrokeString (label);
+	glPopMatrix();
+#endif
+      }
+
       glPushMatrix();
-      glTranslatef (X0 + i*L0/nt - height/2.*scale, Y0 - width/3.*scale, Z1);
-      glRotatef (-90, 0, 0, 1);
-      glScalef (scale, scale, scale);
-      sprintf (label, "%g", X0 + i*L0/nt);
-      gl_StrokeString (label);
+      sprintf (label, "%g", X0 + L0/2.);
+      length = gl_StrokeLength (label);
+      glTranslatef (X0 + L0/2 - height*scale, Y0 - (length + 4.*width)*scale, Z1);
+      glScalef (2.*scale, 2.*scale, 2.*scale);
+      gl_StrokeString ("X");
       glPopMatrix();
 
+  
       glPushMatrix();
-      sprintf (label, "%g", Y0 + i*L0/nt);
+      sprintf (label, "%g", Y0 + L0/2.);
       length = gl_StrokeLength (label);
-      glTranslatef (X0 - (length + width/3.)*scale,
-		    Y0 + i*L0/nt - height/2.*scale, Z1);
-      glScalef (scale, scale, scale);
-      gl_StrokeString (label);
+      glTranslatef (X0 - (length + 4.*width)*scale,
+		    Y0 + L0/2. - height*scale, Z1);
+      glScalef (2.*scale, 2.*scale, 2.*scale);
+      gl_StrokeString ("Y");
       glPopMatrix();
 
 #if dimension > 2
       glPushMatrix();
-      sprintf (label, "%g", Z0 + i*L0/nt);
+      sprintf (label, "%g", Z0 + L0/2.);
       length = gl_StrokeLength (label);
-      glTranslatef (X0 - (length + width/3.)*scale,
-		    Y0, Z0 + i*L0/nt + height/2.*scale);
+      glTranslatef (X0 - (length + 4.*width)*scale,
+		    Y0, Z0 + L0/2. + height*scale);
       glRotatef (-90, 1, 0, 0);
-      glScalef (scale, scale, scale);
-      gl_StrokeString (label);
+      glScalef (2.*scale, 2.*scale, 2.*scale);
+      gl_StrokeString ("Z");
       glPopMatrix();
 #endif
     }
-
-    glPushMatrix();
-    sprintf (label, "%g", X0 + L0/2.);
-    length = gl_StrokeLength (label);
-    glTranslatef (X0 + L0/2 - height*scale, Y0 - (length + 4.*width)*scale, Z1);
-    glScalef (2.*scale, 2.*scale, 2.*scale);
-    gl_StrokeString ("X");
-    glPopMatrix();
-
-  
-    glPushMatrix();
-    sprintf (label, "%g", Y0 + L0/2.);
-    length = gl_StrokeLength (label);
-    glTranslatef (X0 - (length + 4.*width)*scale,
-		  Y0 + L0/2. - height*scale, Z1);
-    glScalef (2.*scale, 2.*scale, 2.*scale);
-    gl_StrokeString ("Y");
-    glPopMatrix();
-
-#if dimension > 2
-    glPushMatrix();
-    sprintf (label, "%g", Z0 + L0/2.);
-    length = gl_StrokeLength (label);
-    glTranslatef (X0 - (length + 4.*width)*scale,
-		  Y0, Z0 + L0/2. + height*scale);
-    glRotatef (-90, 1, 0, 0);
-    glScalef (2.*scale, 2.*scale, 2.*scale);
-    gl_StrokeString ("Z");
-    glPopMatrix();
-#endif
-  }
   
 #if dimension == 2
-  foreach_level (0) {
-    glBegin (GL_LINE_LOOP);
-    glvertex2d (view, x - Delta/2., y - Delta/2.);
-    glvertex2d (view, x + Delta/2., y - Delta/2.);
-    glvertex2d (view, x + Delta/2., y + Delta/2.);
-    glvertex2d (view, x - Delta/2., y + Delta/2.);
-    glEnd ();
-    view->ni++;
-  }  
-#else // dimension != 2
-  foreach_level (0) {
-    for (int i = -1; i <= 1; i += 2) {
+    foreach_level (0) {
       glBegin (GL_LINE_LOOP);
-      glvertex3d (view, x - Delta/2., y - Delta/2., z + i*Delta/2.);
-      glvertex3d (view, x + Delta/2., y - Delta/2., z + i*Delta/2.);
-      glvertex3d (view, x + Delta/2., y + Delta/2., z + i*Delta/2.);
-      glvertex3d (view, x - Delta/2., y + Delta/2., z + i*Delta/2.);
+      glvertex2d (view, x - Delta/2., y - Delta/2.);
+      glvertex2d (view, x + Delta/2., y - Delta/2.);
+      glvertex2d (view, x + Delta/2., y + Delta/2.);
+      glvertex2d (view, x - Delta/2., y + Delta/2.);
       glEnd ();
       view->ni++;
-      glBegin (GL_LINES);
-      for (int j = -1; j <= 1; j += 2) {
-	glvertex3d (view, x + i*Delta/2., y + j*Delta/2., z - Delta/2.);
-	glvertex3d (view, x + i*Delta/2., y + j*Delta/2., z + Delta/2.);
+    }  
+#else // dimension != 2
+    foreach_level (0) {
+      for (int i = -1; i <= 1; i += 2) {
+	glBegin (GL_LINE_LOOP);
+	glvertex3d (view, x - Delta/2., y - Delta/2., z + i*Delta/2.);
+	glvertex3d (view, x + Delta/2., y - Delta/2., z + i*Delta/2.);
+	glvertex3d (view, x + Delta/2., y + Delta/2., z + i*Delta/2.);
+	glvertex3d (view, x - Delta/2., y + Delta/2., z + i*Delta/2.);
+	glEnd ();
+	view->ni++;
+	glBegin (GL_LINES);
+	for (int j = -1; j <= 1; j += 2) {
+	  glvertex3d (view, x + i*Delta/2., y + j*Delta/2., z - Delta/2.);
+	  glvertex3d (view, x + i*Delta/2., y + j*Delta/2., z + Delta/2.);
+	}
+	glEnd ();
+	view->ni++;
       }
-      glEnd ();
-      view->ni++;
     }
-  }
 #endif // dimension != 2
-
-  glMatrixMode (GL_PROJECTION);
-  glPopMatrix();
+  }
   return true;
 }
 
@@ -1166,7 +1182,7 @@ bool isosurface (struct _isosurface p)
 	  coord v = {t[i][j][0], t[i][j][1], t[i][j][2]}, np;
 	  foreach_dimension()
 	    np.x = interp (point, v, n.x);
-	  glNormal3d (np.x, np.y, np.z);
+	  glnormal3d (view, np.x, np.y, np.z);
 	  color_vertex (p, interp (point, v, col));
 	  glvertex3d (view, x + v.x*Delta, y + v.y*Delta, z + v.z*Delta);
 	}
