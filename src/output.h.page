@@ -991,12 +991,16 @@ default is "dump".
 
 *fp*
 : a file pointer. Default is stdout.
+
+*buffered*
+: whether to use a file buffer. Default is false.
 */
 
 struct Dump {
   char * file;
   scalar * list;
   FILE * fp;
+  bool buffered;
 };
 
 struct DumpHeader {
@@ -1050,9 +1054,16 @@ void dump (struct Dump p)
   FILE * fp = p.fp;
   char def[] = "dump", * file = p.file ? p.file : p.fp ? NULL : def;
 
-  if (file && (fp = fopen (file, "w")) == NULL) {
-    perror (file);
-    exit (1);
+  char * name = NULL;
+  if (file) {
+    name = (char *) malloc (strlen(file) + 2);
+    strcpy (name, file);
+    if (p.buffered)
+      strcat (name, "~");
+    if ((fp = fopen (name, "w")) == NULL) {
+      perror (name);
+      exit (1);
+    }
   }
   assert (fp);
   
@@ -1081,8 +1092,12 @@ void dump (struct Dump p)
   }
   
   free (list);
-  if (file)
+  if (file) {
     fclose (fp);
+    if (p.buffered)
+      rename (name, file);
+    free (name);
+  }
 }
 @else // _MPI
 trace
@@ -1096,8 +1111,16 @@ void dump (struct Dump p)
     exit(1);
   }
 
-  FILE * fh = fopen (file, "w");
-   
+  char name[strlen(file) + 2];
+  strcpy (name, file);
+  if (p.buffered)
+    strcat (name, "~");
+  FILE * fh = fopen (name, "w");
+  if (fh == NULL) {
+    perror (name);
+    exit (1);    
+  }
+
   scalar * dlist = dump_list (p.list ? p.list : all);
   scalar size[];
   scalar * list = list_concat ({size}, dlist); free (dlist);
@@ -1142,6 +1165,8 @@ void dump (struct Dump p)
   
   free (list);
   fclose (fh);
+  if (p.buffered && pid() == 0)
+    rename (name, file);
 }
 @endif // _MPI
 
