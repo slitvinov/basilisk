@@ -80,7 +80,7 @@ The values correspond to those used by Yang for figure 5.9 in his PhD
 double G = 0.25,
        Fr = 0.88,
        Re = 3063,
-       We = 858.5,
+       We = 3153,
        rhor = 1.205/1.2107e3,
        mur = 18.2e-6/6.09e-2;
 
