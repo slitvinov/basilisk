@@ -57,13 +57,18 @@ $$
 \kappa = \frac{h_{xx}(1 + h_y^2) + h_{yy}(1 + h_x^2) - 2h_{xy}h_xh_y}
 {(1 + h_x^2 + h_y^2)^{3/2}}
 $$
-in three dimensions. */
+in three dimensions.
+
+The normal is computed in a similar way, but also allowing for
+asymmetric 2-points stencils and taking into account the
+orientation. */
 
 #include "heights.h"
 
 #if dimension == 2
 foreach_dimension()
-static double kappa_y (Point point, vector h) {
+static double kappa_y (Point point, vector h)
+{
   int ori = orientation(h.y[]);
   for (int i = -1; i <= 1; i++)
     if (h.y[i] == nodata || orientation(h.y[i]) != ori)
@@ -73,13 +78,9 @@ static double kappa_y (Point point, vector h) {
   return hxx/pow(1. + sq(hx), 3/2.);
 }
 
-/**
-The normal is computed in a similar way, but also allowing for
-asymmetric 2-points stencils and taking into account the
-orientation. */
-
 foreach_dimension()
-static coord normal_y (Point point, vector h) {
+static coord normal_y (Point point, vector h)
+{
   coord n = {nodata, nodata, nodata};
   if (h.y[] == nodata)
     return n;
@@ -101,7 +102,8 @@ static coord normal_y (Point point, vector h) {
 }
 #else // dimension == 3
 foreach_dimension()
-static double kappa_z (Point point, vector h) {
+static double kappa_z (Point point, vector h)
+{
   int ori = orientation(h.z[]);
   for (int i = -1; i <= 1; i++)
     for (int j = -1; j <= 1; j++)
@@ -109,18 +111,62 @@ static double kappa_z (Point point, vector h) {
 	return nodata;
   double hx = (h.z[1] - h.z[-1])/2.;
   double hy = (h.z[0,1] - h.z[0,-1])/2.;
-  double hxx = (h.z[1] + h.z[-1] - 2.*h.z[])/Delta;
-  double hyy = (h.z[0,1] + h.z[0,-1] - 2.*h.z[])/Delta;
+
+  /**
+  We "filter" the curvature using a weighted sum of the three
+  second-derivatives in the $x$ and $y$ directions. This is necessary
+  to avoid a numerical mode when the curvature is used to compute
+  surface tension. */
+  
+  double filter = 0.2;
+  double hxx = (filter*(h.z[1,1] + h.z[-1,1] - 2.*h.z[0,1]) +
+		(h.z[1] + h.z[-1] - 2.*h.z[]) +
+		filter*(h.z[1,-1] + h.z[-1,-1] - 2.*h.z[0,-1]))/
+    ((1. + 2.*filter)*Delta);
+  double hyy = (filter*(h.z[1,1] + h.z[1,-1] - 2.*h.z[1]) +
+		(h.z[0,1] + h.z[0,-1] - 2.*h.z[]) +
+		filter*(h.z[-1,1] + h.z[-1,-1] - 2.*h.z[-1]))/
+    ((1. + 2.*filter)*Delta);
   double hxy = (h.z[1,1] + h.z[-1,-1] - h.z[1,-1] - h.z[-1,1])/(4.*Delta);
   return (hxx*(1. + sq(hy)) + hyy*(1. + sq(hx)) - 2.*hxy*hx*hy)/
     pow(1. + sq(hx) + sq(hy), 3/2.);
 }
 
 foreach_dimension()
-static coord normal_z (Point point, vector h) {
-  coord n = {nodata, nodata, nodata};
-  assert (false); // not implemented yet
+static coord normal2_z (Point point, vector h)
+{
+  scalar hz = h.z;
+  if (hz[] == nodata)
+    return (coord){nodata, nodata, nodata};
+  int ori = orientation(hz[]);
+  double a = ori ? -1. : 1.;
+  coord n;
+  n.z = a;
+  foreach_dimension(2) {
+    if (allocated(-1) && hz[-1] != nodata && orientation(hz[-1]) == ori) {
+      if (allocated(1) && hz[1] != nodata && orientation(hz[1]) == ori)
+	n.x = a*(hz[-1] - hz[1])/2.;
+      else
+	n.x = a*(hz[-1] - hz[]);
+    }
+    else if (allocated(1) && hz[1] != nodata && orientation(hz[1]) == ori)
+      n.x = a*(hz[] - hz[1]);
+    else
+      n.x = nodata;
+  }
   return n;
+}
+
+foreach_dimension()
+static coord normal_z (Point point, vector h) {
+  coord n = normal2_z (point, h);
+  double nn = fabs(n.x) + fabs(n.y) + fabs(n.z);
+  if (nn < nodata) {
+    foreach_dimension()
+      n.x /= nn;
+    return n;
+  }
+  return (coord){nodata, nodata, nodata};
 }
 #endif
 
@@ -246,6 +292,28 @@ coord height_normal (Point point, scalar c, vector h)
   
   return normal;
 }
+
+/**
+In three dimensions, these functions return the (two) components of
+the normal projected onto the $(x,y)$ plane (respectively). */
+
+#if dimension == 3
+foreach_dimension()
+coord height_normal_z (Point point, vector h)
+{
+  coord nx = normal2_x (point, h);
+  coord ny = normal2_y (point, h);
+  if (fabs(nx.y) < fabs(ny.x)) {
+    normalize (&nx);
+    return nx;
+  }
+  else if (ny.x != nodata) {
+    normalize (&ny);
+    return ny;
+  }
+  return (coord){nodata, nodata, nodata};
+}
+#endif
 
 /**
 ## Parabolic fit of "mixed" height-functions
@@ -477,7 +545,7 @@ cstats curvature (struct Curvature p)
 {
   scalar c = p.c, kappa = p.kappa;
   double sigma = p.sigma ? p.sigma : 1.;
-  cstats s = {0,0,0,0};
+  int sh = 0, sf = 0, sa = 0, sc = 0;
   vector ch = c.height, h = automatic (ch);
   if (!ch.x.i)
     heights (c, h);
@@ -498,7 +566,7 @@ cstats curvature (struct Curvature p)
   scalar k[];
   scalar_clone (k, kappa);
 
-  foreach() {
+  foreach(reduction(+:sh) reduction(+:sf)) {
 
     /**
     If we are not in an interfacial cell, we set $\kappa$ to *nodata*. */
@@ -511,13 +579,13 @@ cstats curvature (struct Curvature p)
     the "mixed heights" HF curvature second. */ 
     
     else if ((k[] = height_curvature (point, c, h)) != nodata)
-      s.h++;
+      sh++;
     else if ((k[] = height_curvature_fit (point, c, h)) != nodata)
-      s.f++;
+      sf++;
   }
   boundary ({k});
 
-  foreach() {
+  foreach (reduction(+:sa) reduction(+:sc)) {
     
     /**
     We then construct the final curvature field using either the
@@ -537,13 +605,13 @@ cstats curvature (struct Curvature p)
 	if (k[] < nodata)
 	  sk += k[], a++;
       if (a > 0.)
-	kf = sigma*sk/a, s.a++;
+	kf = sigma*sk/a, sa++;
       else
 
 	/**
 	Empty neighborhood: we try centroids as a last resort. */
-	
-	kf = sigma*centroids_curvature_fit (point, c), s.c++;
+
+	kf = sigma*centroids_curvature_fit (point, c), sc++;
     }
     else
       kf = nodata;
@@ -560,7 +628,7 @@ cstats curvature (struct Curvature p)
   }
   boundary ({kappa});
 
-  return s;
+  return (cstats){sh, sf, sa, sc};
 }
 
 /**
