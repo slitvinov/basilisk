@@ -233,7 +233,7 @@ void display_omega (int width, int height)
   draw_vof ("cs", filled = -1, fc = {1,1,1});
   draw_vof ("cs");
   squares ("omega", min = -12, max = 12, linear = 1, map = cool_warm);
-  mirror ({-1}) {
+  mirror ({0,1}) {
     draw_vof ("cs");
     squares (color = "level", min = 6, max = maxlevel);
   }

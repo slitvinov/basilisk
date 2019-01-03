@@ -154,7 +154,7 @@ event viewing (i += 10) {
   draw_vof ("f", lw = 2);
   squares ("u.x", linear = true);
   box (notics = true);
-  mirror ({-1}) {
+  mirror ({0,1}) {
     draw_vof ("f", lw = 2);
     squares ("u.y", linear = true);
     box (notics = true);

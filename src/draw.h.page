@@ -609,6 +609,7 @@ bool draw_vof (struct _draw_vof p)
 #if dimension == 2
   if (p.filled) {
     glColor3f (p.fc[0], p.fc[1], p.fc[2]);
+    glNormal3d (0, 0, view->reversed ? -1 : 1);
     foreach_visible (view) {
       if ((p.filled > 0 && c[] >= 1.) || (p.filled < 0 && c[] <= 0.)) {
 	glBegin (GL_QUADS);
@@ -915,6 +916,7 @@ bool squares (struct _squares p)
   if (p.linear) {
     colorize() {
 #if dimension == 2
+      glNormal3d (0, 0, view->reversed ? -1 : 1);
       foreach_visible (view)
         if (f[] != nodata) {
 	  glBegin (GL_TRIANGLE_FAN);
@@ -965,6 +967,7 @@ bool squares (struct _squares p)
   }
   else { // !p.linear
 #if dimension == 2
+    glNormal3d (0, 0, view->reversed ? -1 : 1);
     glBegin (GL_QUADS);
     foreach_visible (view)
       if (f[] != nodata) {
