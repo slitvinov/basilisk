@@ -14,12 +14,21 @@
 
 @if _OPENMP
 @ include <omp.h>
+@ define OMP(x) Pragma(#x)
 @elif _MPI
+
+@ define OMP(x)
+
 @ include <mpi.h>
 static int mpi_rank, mpi_npe;
 @ define tid() mpi_rank
 @ define pid() mpi_rank
 @ define npe() mpi_npe
+
+@else // not MPI, not OpenMP
+
+@ define OMP(x)
+
 @endif // _MPI
 
 @if _CADNA
@@ -157,19 +166,22 @@ static void * pmfunc_alloc (pmdata * d, size_t size,
 			    char c)
 {
   assert (d != NULL);
-  d->id = pmfunc_index(func, file, line);
-  d->size = size;
-  pmfunc * f = &pmfuncs[d->id - 1];
-  f->total += size;
-  if (f->total > f->max)
-    f->max = f->total;
-  pmtrace.total += size;
-  pmtrace.overhead += sizeof(pmdata);
-  if (pmtrace.total > pmtrace.max) {
-    pmtrace.max = pmtrace.total;
-    pmtrace.maxoverhead = pmtrace.overhead;
+  OMP (omp critical)
+  {
+    d->id = pmfunc_index(func, file, line);
+    d->size = size;
+    pmfunc * f = &pmfuncs[d->id - 1];
+    f->total += size;
+    if (f->total > f->max)
+      f->max = f->total;
+    pmtrace.total += size;
+    pmtrace.overhead += sizeof(pmdata);
+    if (pmtrace.total > pmtrace.max) {
+      pmtrace.max = pmtrace.total;
+      pmtrace.maxoverhead = pmtrace.overhead;
+    }
+    pmfunc_trace (f, c);
   }
-  pmfunc_trace (f, c);
   return ((char *)d) + sizeof(pmdata);
 }
 
@@ -188,7 +200,9 @@ static void * pmfunc_free (void * ptr, char c)
     abort();
     return ptr;
   }
-  else {
+  else
+  OMP (omp critical)
+  {
     pmfunc * f = &pmfuncs[d->id - 1];
     if (f->total < d->size) {
       fprintf (stderr, "*** MTRACE: ERROR!: %ld < %ld: corrupted free()?\n",
@@ -209,8 +223,8 @@ static void * pmfunc_free (void * ptr, char c)
     d->id = 0;
     d->size = 0;
     pmfunc_trace (f, c);
-    return d;
   }
+  return d;
 }
 
 static void * pmalloc (size_t size,
@@ -626,7 +640,6 @@ static void trace_off()
   
 @if _OPENMP
 
-@define OMP(x) Pragma(#x)
 @define tid() omp_get_thread_num()
 @define pid() 0
 @define npe() omp_get_num_threads()
@@ -634,8 +647,6 @@ static void trace_off()
 @define mpi_all_reduce_double(v,op)
 
 @elif _MPI
-
-@define OMP(x)
 
 static bool in_prof = false;
 static double prof_start, _prof;
@@ -760,7 +771,6 @@ void mpi_init()
 
 @else // not MPI, not OpenMP
 
-@define OMP(x)
 @define tid() 0
 @define pid() 0
 @define npe() 1
