@@ -6,7 +6,7 @@ interfaces described using a [VOF](vof.h) tracer and [height
 functions](heights.h).
 
 We first overload the default function used to compute the normal,
-defined in [fractions.h]. */
+defined in [fractions.h](). */
 
 coord interface_normal (Point point, scalar c);
 #define interface_normal(point, c) interface_normal (point, c)

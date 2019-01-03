@@ -11,7 +11,7 @@ V = \frac{\pi}{3}R^3(2+\cos\theta)(1-\cos\theta)^2
 $$
 or equivalently
 $$
-\frac{R}{R_0} = \left(\frac{1}{4}(2+\cos\theta)(1-\cos\theta)^2\right)^{-1./3.}
+\frac{R}{R_0} = \left(\frac{1}{4}(2+\cos\theta)(1-\cos\theta)^2\right)^{-1/3}
 $$
 with $R_0$ the equivalent radius of the droplet
 $$
@@ -26,7 +26,7 @@ the interface is close to constant.
 ![Relaxation toward a $30^\circ$ contact angle.](sessile3D/movie.mp4)
 
 Note that shallower angles are [not accessible
-yet](/src/heights.h#contact-angle). */
+yet](/src/contact.h). */
 
 #include "grid/octree.h"
 #include "navier-stokes/centered.h"
