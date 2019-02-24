@@ -469,7 +469,7 @@ static FILE * fopen_prefix (FILE * fp, const char * name, char * prefix)
 
 void debug_mpi (FILE * fp1)
 {
-  void output_cells (FILE * fp);
+  void output_cells_internal (FILE * fp);
 
   char prefix[80];
   FILE * fp;
@@ -504,7 +504,7 @@ void debug_mpi (FILE * fp1)
 
   if (!fp1) {
     fp = fopen_prefix (fp1, "cells", prefix);
-    output_cells (fp);
+    output_cells_internal (fp);
     fclose (fp);
   }
   
@@ -1032,7 +1032,7 @@ static void check_depth()
     }
     fclose (fp);
     fp = fopen ("colls", "w");
-    output_cells (fp);
+    output_cells_internal (fp);
     fclose (fp);
     assert (false);
   }

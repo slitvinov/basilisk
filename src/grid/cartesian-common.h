@@ -426,36 +426,58 @@ tensor cartesian_init_tensor (tensor t, const char * name)
   return t;
 }
 
-void output_cells (FILE * fp)
+struct OutputCells {
+  FILE * fp;
+  coord c;
+  double size;
+};
+
+void output_cells (struct OutputCells p)
 {
+  if (!p.fp) p.fp = stdout;
   foreach() {
-    Delta /= 2.;
-    #if dimension == 1
-      fprintf (fp, "%g 0\n%g 0\n\n", x - Delta, x + Delta);
-    #elif dimension == 2
-      fprintf (fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
+    bool inside = true;
+    coord o = {x,y,z};
+    foreach_dimension()
+      if (inside && p.size > 0. &&
+	  (o.x > p.c.x + p.size || o.x < p.c.x - p.size))
+	inside = false;
+    if (inside) {
+      Delta /= 2.;
+#if dimension == 1
+      fprintf (p.fp, "%g 0\n%g 0\n\n", x - Delta, x + Delta);
+#elif dimension == 2
+      fprintf (p.fp, "%g %g\n%g %g\n%g %g\n%g %g\n%g %g\n\n",
 	       x - Delta, y - Delta,
 	       x - Delta, y + Delta,
 	       x + Delta, y + Delta,
 	       x + Delta, y - Delta,
 	       x - Delta, y - Delta);
-    #else // dimension == 3
+#else // dimension == 3
       for (int i = -1; i <= 1; i += 2) {
-	fprintf (fp, "%g %g %g\n%g %g %g\n%g %g %g\n%g %g %g\n%g %g %g\n\n",
+	fprintf (p.fp, "%g %g %g\n%g %g %g\n%g %g %g\n%g %g %g\n%g %g %g\n\n",
 		 x - Delta, y - Delta, z + i*Delta,
 		 x - Delta, y + Delta, z + i*Delta,
 		 x + Delta, y + Delta, z + i*Delta,
 		 x + Delta, y - Delta, z + i*Delta,
 		 x - Delta, y - Delta, z + i*Delta);
 	for (int j = -1; j <= 1; j += 2)
-	  fprintf (fp, "%g %g %g\n%g %g %g\n\n",
+	  fprintf (p.fp, "%g %g %g\n%g %g %g\n\n",
 		   x + i*Delta, y + j*Delta, z - Delta,
 		   x + i*Delta, y + j*Delta, z + Delta);
       }
-    #endif
+#endif
+    }
   }
-  fflush (fp);
+  fflush (p.fp);
 }
+
+#if _MPI
+static void output_cells_internal (FILE * fp)
+{
+  output_cells (fp);
+}
+#endif
 
 static char * replace_ (const char * vname)
 {
@@ -496,7 +518,7 @@ void cartesian_debug (Point point)
   if (pid() > 0)
     sprintf (name, "cells-%d", pid());
   FILE * fp = fopen (name, "w");
-  output_cells (fp);
+  output_cells (fp, (coord){x,y,z}, 4.*Delta);
   fclose (fp);
 
   char stencil[80] = "stencil";
