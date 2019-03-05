@@ -2483,11 +2483,29 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
 	     fname, line, s, s1, s2, return_type);
 }
 
+{ID}{WS}*[(]{WS}*[)] {
+  // function call with no 'args' assignment
+  if (inarg)
+    REJECT;
+  char * s = yytext; while (!strchr(" \t\v\n\f(", *s)) s++;
+  int len = s - yytext, i;
+  for (i = 0; i < nargs && !inarg; i++)
+    if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {
+      if (debug)
+	fprintf (stderr, "%s:%d: no argument '%s'\n", fname, line, args[i]);
+      fprintf (yyout, "%s ((struct %s){0})", args[i], argss[i]);
+      inarg = 1;
+    }
+  if (!inarg)
+    REJECT;
+  inarg = 0;
+}
+
 {ID}{WS}*[(]{WS}*{ID}{WS}*[)] {
   // function call with a single 'args' assignment
   if (inarg)
     REJECT;
-  char * s = yytext; space (s);
+  char * s = yytext; while (!strchr(" \t\v\n\f(", *s)) s++;
   int len = s - yytext, i;
   for (i = 0; i < nargs && !inarg; i++) {
     if (strlen(args[i]) == len && !strncmp (args[i], yytext, len)) {
