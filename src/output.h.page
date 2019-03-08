@@ -992,7 +992,7 @@ default is "dump".
 *fp*
 : a file pointer. Default is stdout.
 
-*buffered*
+*unbuffered*
 : whether to use a file buffer. Default is false.
 */
 
@@ -1000,7 +1000,7 @@ struct Dump {
   char * file;
   scalar * list;
   FILE * fp;
-  bool buffered;
+  bool unbuffered;
 };
 
 struct DumpHeader {
@@ -1058,7 +1058,7 @@ void dump (struct Dump p)
   if (file) {
     name = (char *) malloc (strlen(file) + 2);
     strcpy (name, file);
-    if (p.buffered)
+    if (!p.unbuffered)
       strcat (name, "~");
     if ((fp = fopen (name, "w")) == NULL) {
       perror (name);
@@ -1094,7 +1094,7 @@ void dump (struct Dump p)
   free (list);
   if (file) {
     fclose (fp);
-    if (p.buffered)
+    if (!p.unbuffered)
       rename (name, file);
     free (name);
   }
@@ -1113,7 +1113,7 @@ void dump (struct Dump p)
 
   char name[strlen(file) + 2];
   strcpy (name, file);
-  if (p.buffered)
+  if (!p.unbuffered)
     strcat (name, "~");
   FILE * fh = fopen (name, "w");
   if (fh == NULL) {
@@ -1165,7 +1165,7 @@ void dump (struct Dump p)
   
   free (list);
   fclose (fh);
-  if (p.buffered && pid() == 0)
+  if (!p.unbuffered && pid() == 0)
     rename (name, file);
 }
 @endif // _MPI
