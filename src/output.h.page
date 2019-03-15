@@ -1144,6 +1144,7 @@ void dump (struct Dump p)
   int sizeofheader = sizeof(header) + 4*sizeof(double);
   for (scalar s in list)
     sizeofheader += sizeof(unsigned) + sizeof(char)*strlen(s.name);
+  long pos = pid() ? 0 : sizeofheader;
   
   subtree_size (size, false);
   
@@ -1151,11 +1152,15 @@ void dump (struct Dump p)
     // fixme: this won't work when combining MPI and mask()
     if (is_local(cell)) {
       long offset = sizeofheader + index[]*cell_size;
-      fseek (fh, offset, SEEK_SET);
+      if (pos != offset) {
+	fseek (fh, offset, SEEK_SET);
+	pos = offset;
+      }
       unsigned flags = is_leaf(cell) ? leaf : 0;
       fwrite (&flags, 1, sizeof(unsigned), fh);
       for (scalar s in list)
 	fwrite (&s[], 1, sizeof(double), fh);
+      pos += cell_size;
     }
     if (is_leaf(cell))
       continue;
