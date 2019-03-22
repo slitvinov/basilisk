@@ -68,7 +68,8 @@ angles. */
 #if dimension == 2
 
 #define contact_angle(theta)					\
-  (val(_s) == nodata ? nodata : val(_s) + 1./tan(theta))
+  (val(_s) == nodata ? nodata : val(_s) +			\
+   (orientation(val(_s)) ? -1. : 1.)/tan(theta))
 
 /**
 ## Three-dimensional implementation
