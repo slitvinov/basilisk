@@ -147,7 +147,7 @@ relaxes towards its desired value (*ref*). */
 An array of *Gauge* structures passed to *output_gauges()* will create
 a file (called *name*) for each gauge. Each time *output_gauges()* is
 called a line will be appended to the file. The line contains the time
-and the value of each scalar in *list* in the (wet) cell containing
+and the value of each scalar in *list* in the cell containing
 *(x,y)*. The *desc* field can be filled with a longer description of
 the gauge. */
 
@@ -160,10 +160,6 @@ typedef struct {
 
 void output_gauges (Gauge * gauges, scalar * list)
 {
-  scalar * list1 = list_append (NULL, h);
-  for (scalar s in list)
-    list1 = list_append (list1, s);
-
   int n = 0;
   for (Gauge * g = gauges; g->name; g++, n++);
   coord a[n];
@@ -173,9 +169,9 @@ void output_gauges (Gauge * gauges, scalar * list)
     unmap (&xp, &yp);
     a[n].x = xp, a[n].y = yp;
   }
-  int len = list_len(list1);
+  int len = list_len(list);
   double v[n*len];
-  interpolate_array (list1, a, n, v, false);
+  interpolate_array (list, a, n, v, false);
 
   if (pid() == 0) {
     n = 0;
@@ -185,9 +181,8 @@ void output_gauges (Gauge * gauges, scalar * list)
 	if (g->desc)
 	  fprintf (g->fp, "%s\n", g->desc);
       }
-      if (v[n] != nodata && v[n] > dry) {
+      if (v[n] != nodata) {
 	fprintf (g->fp, "%g", t);
-	n++;
 	for (scalar s in list)
 	  fprintf (g->fp, " %g", v[n++]);
 	fputc ('\n', g->fp);
@@ -197,6 +192,4 @@ void output_gauges (Gauge * gauges, scalar * list)
 	n += len;
     }
   }
-
-  free (list1);
 }
