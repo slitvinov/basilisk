@@ -461,11 +461,11 @@ void distance (scalar d, coord * p)
   surface.refine = no_restriction; // handled by refine_distance()
   d.prolongation = refine_bilinear;
   d.refine = refine_distance;  
+  d.coarsen = coarsen_distance;
 #endif
   d.surface = surface;
   d.delete = delete_distance;
   d.restriction = restriction_distance;
-  d.coarsen = coarsen_distance;
 
   Array * a = array_new();
   while (p->x != nodata) {
