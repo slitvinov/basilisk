@@ -1129,6 +1129,7 @@ bool box (struct _box p)
 
 * *f*: the name (as a string) of the field.
 * *v*: the value of the isosurface.
+* *edges*: whether to draw the edges of isosurface facets.
 * *color*: use this field to color each interface fragment.
 
 The *min*, *max*, *spread*, *map* etc.  arguments work as described in
@@ -1137,12 +1138,13 @@ The *min*, *max*, *spread*, *map* etc.  arguments work as described in
 struct _isosurface {
   char * f;
   double v;
-
+  bool edges;
+  
   char * color;
   double min, max, spread;
   bool linear;
   colormap map;
-  float fc[3], lc[3];
+  float fc[3], lc[3], lw;
 };
 
 trace
@@ -1166,7 +1168,7 @@ bool isosurface (struct _isosurface p)
   vector n[];
   foreach()
     foreach_dimension()
-      n.x[] = (f[1] - f[-1])/(2.*Delta);
+      n.x[] = center_gradient(f);
   boundary ((scalar *){n});
 
   bview * view = draw();
@@ -1195,6 +1197,26 @@ bool isosurface (struct _isosurface p)
       }
     }
   }
+  if (p.edges)
+    draw_lines (view, p.lc, p.lw) {
+      foreach_visible (view) {
+	double val[8] = {
+	  v[0,0,0], v[1,0,0], v[1,0,1], v[0,0,1],
+	  v[0,1,0], v[1,1,0], v[1,1,1], v[0,1,1]
+	};
+	double t[5][3][3];
+	int nt = polygonize (val, p.v, t);
+	for (int i = 0; i < nt; i++) {
+	  glBegin (GL_LINE_LOOP);
+	  for (int j = 0; j < 3; j++) {
+	    coord v = {t[i][j][0], t[i][j][1], t[i][j][2]};
+	    glvertex3d (view, x + v.x*Delta, y + v.y*Delta, z + v.z*Delta);
+	  }	
+	  glEnd ();
+	  view->ni++;
+	}
+      }
+    }
 #endif // dimension > 2
   return true;
 }
