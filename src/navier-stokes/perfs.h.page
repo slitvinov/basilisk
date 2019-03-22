@@ -8,10 +8,10 @@ event perfs (i += 1) {
   static FILE * fp = fopen ("perfs", "w");
   if (i == 0)
     fprintf (fp,
-	     "t dt mgp.i mgp.nrelax mgu.i mgu.nrelax "
+	     "t dt mgp.i mgp.nrelax mgpf.i mgpf.nrelax mgu.i mgu.nrelax "
 	     "grid->tn perf.t perf.speed npe\n");
-  fprintf (fp, "%g %g %d %d %d %d %ld %g %g %d\n", 
-	   t, dt, mgp.i, mgp.nrelax, mgu.i, mgu.nrelax,
+  fprintf (fp, "%g %g %d %d %d %d %d %d %ld %g %g %d\n", 
+	   t, dt, mgp.i, mgp.nrelax, mgpf.i, mgpf.nrelax, mgu.i, mgu.nrelax,
 	   grid->tn, perf.t, perf.speed, npe());
   fflush (fp);
 }
