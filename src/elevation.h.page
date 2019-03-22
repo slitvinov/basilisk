@@ -12,6 +12,8 @@ depth $h$ so that the water surface elevation $\eta$ is conserved.
 We start with the reconstruction of fine "wet" cells: */
 
 #if TREE
+static const double default_sea_level = 0.;
+
 static void refine_elevation (Point point, scalar h)
 {
   // reconstruction of fine cells using elevation (rather than water depth)
@@ -54,10 +56,9 @@ static void refine_elevation (Point point, scalar h)
     else
 
       /**
-      If none of the surrounding cells is wet, we assume a default sealevel
-      at zero. */
+      If none of the surrounding cells is wet, we set a default sealevel. */
 
-      eta = 0.;
+      eta = default_sea_level;
 
     /**
     We then reconstruct the water depth in each child using $\eta$ (of the
