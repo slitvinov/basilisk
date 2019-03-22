@@ -70,8 +70,10 @@ Note that only the documented test cases appear in the list below
 ## Embedded boundaries
 
 * [Poisson equation on complex domains](neumann.c)
+* [Poisson equation on complex domains in 3D](neumann3D.c)
 * [Stability of the embedded face velocity interpolation](uf.c)
 * [Hydrostatic balance with refined embedded boundaries](hydrostatic2.c)
+* [Hydrostatic balance with refined embedded boundaries in 3D](hydrostatic3.c)
 
 ### Stokes
 
@@ -79,7 +81,9 @@ Note that only the documented test cases appear in the list below
 * [Couette flow between rotating cylinders](couette.c)
 * [Wannier flow between rotating excentric cylinders](wannier.c)
 * [Stokes flow past a periodic array of cylinders](cylinders.c)
+* [Stokes flow past a periodic array of spheres](spheres.c)
 * [Stokes flow through a complex porous medium](porous.c)
+* [Stokes flow through a complex porous medium, randomly refined](porous1.c)
 
 ### Navier--Stokes
 

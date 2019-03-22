@@ -527,7 +527,7 @@ void reset (void * alist, double val)
   
 @define neighborp(k,l,o) neighbor(k,l,o)
 
-static double periodic_bc (Point point, Point neighbor, scalar s);
+static double periodic_bc (Point point, Point neighbor, scalar s, void * data);
 			
 static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 {
@@ -561,7 +561,7 @@ static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 	      // normal component of face vector
 	      if (layer == 1)
 		s[(ig + 1)/2,(jg + 1)/2,(kg + 1)/2] =
-		  sb.boundary[d] (point, neighborp(ig,jg,kg), s);
+		  sb.boundary[d] (point, neighborp(ig,jg,kg), s, NULL);
 	    }
 	    else
 	      // tangential component of face vector or centered
@@ -569,7 +569,7 @@ static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 		sb.boundary[d] (neighborp((1 - layer)*ig,
 					  (1 - layer)*jg,
 					  (1 - layer)*kg),
-				neighborp(layer*ig,layer*jg,layer*kg), s);
+				neighborp(layer*ig,layer*jg,layer*kg), s, NULL);
 	  }
 	}
 	free (list);

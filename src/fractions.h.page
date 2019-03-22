@@ -273,7 +273,17 @@ void fractions (struct Fractions a)
       or empty (*ni == 0*) and we look at the line fractions to
       decide. */
 
-      s_z[] = ni ? line_area (n.x, n.y, alpha/ni) : max (p.x[], p.y[]);
+      if (ni == 0)
+	s_z[] = max (p.x[], p.y[]);
+      else if (ni != 4)
+	s_z[] = line_area (n.x, n.y, alpha/ni);
+      else {
+#if dimension == 3
+	s_z[] = (p.x[] + p.x[0,1] + p.y[] + p.y[1] > 2.);
+#else
+	s_z[] = 0.;
+#endif
+      }
     }
   }
 
@@ -318,28 +328,21 @@ void fractions (struct Fractions a)
 
       /**
       Finally we compute the volume fraction. */
-      
-      c[] = ni ? plane_volume (n, alpha/ni) : s.x[];
+
+      if (ni == 0)
+	c[] = s.x[];
+      else if (ni < 3 || ni > 6)
+	c[] = 0.; // this is important for robustness of embedded boundaries
+      else
+	c[] = plane_volume (n, alpha/ni);
     }
   }
-#endif
+#endif // dimension == 3
   
   /**
   We apply the boundary conditions. */
 
   boundary ({c});
-
-  /**
-  We enforce the consistency of face and cell fractions for marginal
-  cases. */
-
-  if (a.s.x.i) {
-    face vector s = a.s;
-    foreach_face()
-      if (!c[] || !c[-1])
-	s.x[] = 0.;
-    boundary ((scalar *){c, s});
-  }
 }
 
 /**

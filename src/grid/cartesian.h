@@ -153,7 +153,7 @@ static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
 	Point neighbor = {point.i + ig, point.j + jg};
 	for (scalar s in list) {
 	  scalar b = s.v.x;
-	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s, NULL);
 	}
       }
   }
@@ -177,7 +177,7 @@ static void box_boundary_level_tangent (const Boundary * b,
 	Point neighbor = {point.i + ig, point.j + jg};
 	for (scalar s in list) {
 	  scalar b = s.v.y;
-	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s, NULL);
 	}
       }
   }
@@ -224,7 +224,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 		      s.i == s.v.x.i && d < top ? s.v.x :
 		      s.i == s.v.y.i && d >= top ? s.v.x :
 		      s.v.y);
-	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s);
+	  val(s,ig,jg) = b.boundary[d] (point, neighbor, s, NULL);
 	}
       }
   }

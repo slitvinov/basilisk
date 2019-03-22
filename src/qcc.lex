@@ -1497,7 +1497,7 @@ map{WS}+"{" {
     fputs (" return 0.; } ", yyout);
     fprintf (yyout, 
 	     "static %s _boundary%d_homogeneous "
-	     "(Point point, Point neighbor, scalar _s) {",
+	     "(Point point, Point neighbor, scalar _s, void * data) {",
 	     doubletype, nboundary);
     boundary_staggering (yyout);
     fputs (" POINT_VARIABLES; ", yyout);
@@ -1923,10 +1923,9 @@ val{WS}*[(]    {
 	(dimension < 3 || (strcmp(boundarydir, "front") &&
 			   strcmp(boundarydir, "back"))))
       REJECT;
-#if DEBUG
-    fprintf (stderr, "%s:%d: boundarydir: %s yytext: %s\n",
-	     fname, line, boundarydir, yytext);
-#endif
+    if (debug)
+      fprintf (stderr, "%s:%d: boundarydir: %s yytext: %s\n",
+               fname, line, boundarydir, yytext);
     boundarycomponent = boundary_component (boundaryvar);
     if (!var->face)
       boundarycomponent = 0;
@@ -1936,8 +1935,8 @@ val{WS}*[(]    {
     fprintf (yyout,
 	     "#line %d \"%s\"\n"
 	     "static %s _boundary%d"
-	     " (Point point, Point neighbor, scalar _s) {",
-	     line, fname, doubletype, nboundary);
+             " (Point point, Point neighbor, scalar _s, void * data) {",
+             line, fname, doubletype, nboundary);
     boundary_staggering (yyout);
     fputs (" POINT_VARIABLES; ", yyout);
     maps (line - 1);
@@ -1972,10 +1971,9 @@ val{WS}*[(]    {
 	(dimension < 3 && (!strcmp(boundarydir, "front") ||
 			   !strcmp(boundarydir, "back"))))
       REJECT;
-#if DEBUG
-    fprintf (stderr, "%s:%d: boundarydir: %s yytext: %s\n",
-	     fname, line, boundarydir, yytext);
-#endif
+    if (debug)
+      fprintf (stderr, "%s:%d: boundarydir: %s yytext: %s\n",
+               fname, line, boundarydir, yytext);
     boundarycomponent = boundary_component (boundaryvar);
     if (!var->face)
       boundarycomponent = 0;
@@ -2922,9 +2920,9 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
     if (!periodic[i])
       fprintf (fout, 
 	       "static %s _boundary%d (Point point, Point neighbor,"
-	       " scalar _s);\n"
+	       " scalar _s, void * data);\n"
 	       "static %s _boundary%d_homogeneous (Point point,"
-	       " Point neighbor, scalar _s);\n", 
+	       " Point neighbor, scalar _s, void * data);\n", 
 	       doubletype, i, doubletype, i);
   fclose (fout);
 

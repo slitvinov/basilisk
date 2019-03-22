@@ -407,31 +407,17 @@ double line_length_center (coord m, double alpha, coord * p)
 #else // dimension == 3
 double plane_area_center (coord m, double alpha, coord * p)
 {
-  if (fabs (m.x) < 1e-4) {
-    coord n, q;
-    n.x = m.y;
-    n.y = m.z;
-    double length = line_length_center (n, alpha, &q);
-    p->x = 0.;
-    p->y = q.x;
-    p->z = q.y;
-    return sq(length);
-  }
-  if (fabs (m.y) < 1e-4) {
-    coord n, q;
-    n.x = m.z;
-    n.y = m.x;
-    double length = line_length_center (n, alpha, &q);
-    p->x = q.y;
-    p->y = 0.;
-    p->z = q.x;
-    return sq(length);
-  }
-  if (fabs (m.z) < 1e-4) {
-    double length = line_length_center (m, alpha, p);
-    p->z = 0.;
-    return sq(length);
-  }
+  foreach_dimension()
+    if (fabs (m.x) < 1e-4) {
+      coord n, q;
+      ((double *)&n)[0] = m.y;
+      ((double *)&n)[1] = m.z;
+      double length = line_length_center (n, alpha, &q);
+      p->x = 0.;
+      p->y = ((double *)&q)[0];
+      p->z = ((double *)&q)[1];
+      return length;
+    }
 
   alpha += (m.x + m.y + m.z)/2.;
   coord n = m;
@@ -537,3 +523,70 @@ void line_center (coord m, double alpha, double a, coord * p)
     p->x = sign(m.x)*(p->x - 0.5);
   }
 }
+
+/**
+This function fills the coordinates *p* of the centroid of the
+fraction *a* of a cubic cell lying under the plane $(m,alpha)$. */
+
+#if dimension == 2
+#define plane_center(m,alpha,a,p) line_center(m,alpha,a,p)
+#else // dimension == 3
+void plane_center (coord m, double alpha, double a, coord * p)
+{
+  foreach_dimension()
+    if (fabs (m.x) < 1e-4) {
+      coord n, q;
+      ((double *)&n)[0] = m.y;
+      ((double *)&n)[1] = m.z;
+      line_center (n, alpha, a, &q);
+      p->x = 0.;
+      p->y = ((double *)&q)[0];
+      p->z = ((double *)&q)[1];
+      return;
+    }
+
+  alpha += (m.x + m.y + m.z)/2.;
+  coord n = m;
+  foreach_dimension()
+    if (n.x < 0.) {
+      alpha -= n.x;
+      n.x = - n.x;
+    }
+
+  if (alpha <= 0. || a == 0.) {
+    p->x = p->y = p->z = -0.5;
+    return;
+  }
+
+  if (alpha >= n.x + n.y + n.z || a == 1.) {
+    p->x = p->y = p->z = 0.;
+    return;
+  }
+
+  p->x = p->y = p->z = sq(sq(alpha));
+  foreach_dimension() {
+    double b = alpha - n.x;
+    if (b > 0.) {
+      p->x -= cube(b)*(3.*n.x + alpha);
+      p->y -= sq(sq(b));
+      p->z -= sq(sq(b));
+    }
+  }
+
+  double amax = alpha - (n.x + n.y + n.z);
+  foreach_dimension() {
+    double b = amax + n.z;
+    if (b > 0.) {
+      p->x += cube(b)*(3.*n.x + alpha - n.y);
+      p->y += cube(b)*(3.*n.y + alpha - n.x);
+      p->z += sq(sq(b));
+    }
+  }
+
+  double b = 24.*n.x*n.y*n.z*a;
+  foreach_dimension() {
+    p->x /= b*n.x;
+    p->x = sign(m.x)*(p->x - 0.5);
+  }
+}
+#endif // dimension == 3

@@ -168,7 +168,7 @@ static void apply_bc (Rcv * rcv, scalar * list, scalar * listv,
     for (vector v in listf)
       foreach_dimension() {
 	v.x[] = *b++;
-	if (allocated(1))
+	if (*b != nodata && allocated(1))
 	  v.x[1] = *b;
 	b++;
       }
@@ -372,7 +372,7 @@ static void rcv_pid_send (RcvPid * m, scalar * list, scalar * listv,
 	for (vector v in listf)
 	  foreach_dimension() {
 	    *b++ = v.x[];
-	    *b++ = allocated(1) ? v.x[1] : undefined;
+	    *b++ = allocated(1) ? v.x[1] : nodata;
 	  }
 	for (scalar s in listv) {
 	  for (int i = 0; i <= 1; i++)

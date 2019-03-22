@@ -7,7 +7,7 @@ solver](/src/navier-stokes/centered.h#viscous-term), an instability
 can appear, due to the amplifications of velocity perturbations by the
 third-order Dirichlet interpolation used to compute viscous fluxes.
 
-This problem is avoided by using a embedded-fraction-weighted
+This problem is avoided by using an embedded-fraction-weighted
 interpolation of the face velocities (see [/src/embed.h]()). */
 
 #include "embed.h"
@@ -43,8 +43,8 @@ event init (t = 0)
   /**
   The boundary condition is zero velocity on the embedded boundary. */
 
-  u.n[embed] = dirichlet_embed(0);
-  u.t[embed] = dirichlet_embed(0);
+  u.n[embed] = dirichlet(0);
+  u.t[embed] = dirichlet(0);
 
   foreach()
     u.y[] = 1.;
@@ -61,16 +61,13 @@ event logfile (i++; i <= 100)
 
   foreach()
     if (x < -L0/2. + L0/N)
-      printf ("%g %g %g %g\n", y, u.y[], p[], g.y[]);
+      printf ("%g %g %g %g %g\n", y, u.y[], p[], g.y[], cs[]);
   printf ("\n");
 }
 
 event profile (t = end)
 {
-  assert (normf(u.y).max < 1e-8);
-  
-  scalar p1[];
-  foreach()
-    p1[] = p[];
+  p.nodump = false;
   dump();
+  assert (normf(u.y).max < 1e-3);
 }

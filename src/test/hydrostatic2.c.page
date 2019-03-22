@@ -14,12 +14,12 @@ prolongation operators used close to embedded boundaries. */
 #include "view.h"
 
 /**
-We use the same porous medium as in [porous.c]() but with 200 random
+We use a similar porous medium as in [porous.c]() but with enough
 disks so that the pores are entirely closed. */
 
 void porous (scalar cs, face vector fs)
 {
-  int ns = 200; // 160, 80
+  int ns = 200;
   double xc[ns], yc[ns], R[ns];
   srand (0);
   for (int i = 0; i < ns; i++)
@@ -34,7 +34,9 @@ void porous (scalar cs, face vector fs)
 	  phi[] = intersection (phi[], (sq(x + xp - xc[i]) +
 					sq(y + yp - yc[i]) - sq(R[i])));
   }
+  boundary ({phi});
   fractions (phi, cs, fs);
+  fractions_cleanup (cs, fs);
 }
 
 int main()
@@ -46,14 +48,23 @@ int main()
   /**
   The events of the Navier-Stokes solver are called "by hand". */
   
-  event ("defaults");
   event ("metric");
+  event ("defaults");
 
   porous (cs, fs);
+#if 0
   refine (level < 8 && cs[] > 0 && cs[] < 1);
   porous (cs, fs);
-
-  const face vector G[] = {1.,1.};
+#else
+  adapt_wavelet ({cs}, (double[]){0.01}, 8, 6);
+  porous (cs, fs);
+  adapt_wavelet ({cs}, (double[]){0.01}, 8, 6);
+  porous (cs, fs);
+  adapt_wavelet ({cs}, (double[]){0.01}, 8, 6);
+  porous (cs, fs);
+#endif
+  
+  const face vector G[] = {1.,2.};
   a = G;
 
   /**
@@ -83,8 +94,10 @@ int main()
   
   trash ({g});
   foreach()
-    foreach_dimension()
+    foreach_dimension() {
       g.x[] = (gf.x[] + gf.x[1])/(fm.x[] + fm.x[1] + SEPS);
+      //      assert (fabs(g.x[]) < 1e-6);
+    }
   boundary ((scalar *){g});
 
   correction (dt);
@@ -94,8 +107,8 @@ int main()
   We check the convergence rate and the norms of the velocity field
   (which should be negligible). */
   
-  fprintf (stderr, "mgp %g %g %d %d\n", mgp.resb, mgp.resa, mgp.i, mgp.minlevel);
-  fprintf (stderr, "umax %g %g\n", normf(u.x).max, normf(u.y).max);
+  fprintf (ferr, "mgp %g %g %d %d\n", mgp.resb, mgp.resa, mgp.i, mgp.minlevel);
+  fprintf (ferr, "umax %g %g\n", normf(u.x).max, normf(u.y).max);
 
   /**
   The pressure is hydrostatic, in each of the pores. 
@@ -108,8 +121,9 @@ int main()
   squares ("p", spread = -1);
   save ("p.png");
 
-  scalar p1[];
+  p.nodump = false;
+  scalar pid[];
   foreach()
-    p1[] = p[];
+    pid[] = pid();
   dump();
 }

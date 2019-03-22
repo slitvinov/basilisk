@@ -78,11 +78,11 @@ static void box_boundary_level_normal (const Boundary * b, scalar * list, int l)
   Point neighbor = {point.i + ig};
   for (scalar s in list) {
     scalar b = s.v.x;
-    val(s,ig) = b.boundary[d] (point, neighbor, s);
+    val(s,ig) = b.boundary[d] (point, neighbor, s, NULL);
   }
 }
 
-static double periodic_bc (Point point, Point neighbor, scalar s);
+static double periodic_bc (Point point, Point neighbor, scalar s, void * data);
 
 static void box_boundary_level (const Boundary * b, scalar * list, int l)
 {
@@ -110,7 +110,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
     point.i = d == right ? point.n + GHOSTS - 1 : GHOSTS;
     Point neighbor = {point.i + ig};
     for (scalar s in centered)
-      val(s,ig) = s.boundary[d] (point, neighbor, s);
+      val(s,ig) = s.boundary[d] (point, neighbor, s, NULL);
     free (centered);
   }
     

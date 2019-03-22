@@ -7,7 +7,7 @@ struct Viscosity {
   double dt;
   int nrelax;
   scalar * res;
-  bool (* embed_flux) (Point, scalar, vector, bool, double *);
+  double (* embed_flux) (Point, scalar, vector, double *);
 };
 
 #if AXI
@@ -35,23 +35,21 @@ static void relax_diffusion (scalar * a, scalar * b, int l, void * data)
   double dt = p->dt;
   vector u = vector(a[0]), r = vector(b[0]);
 
-  bool (* embed_flux) (Point, scalar, vector, bool, double *) = p->embed_flux;
+  double (* embed_flux) (Point, scalar, vector, double *) = p->embed_flux;
   foreach_level_or_leaf (l) {
     double avgmu = 0.;
     foreach_dimension()
       avgmu += mu.x[] + mu.x[1];
     avgmu = dt*avgmu + SEPS;
     foreach_dimension() {
+      double c = 0.;
+      double d = embed_flux ? embed_flux (point, u.x, mu, &c) : 0.;
       scalar s = u.x;
       double a = 0.;
       foreach_dimension()
 	a += mu.x[1]*s[1] + mu.x[]*s[-1];
-      double c = 0.;
-      if (embed_flux && !embed_flux (point, u.x, mu, true, &c))
-	u.x[] = 0.;
-      else
-	u.x[] = (dt*a + (r.x[] - dt*c)*sq(Delta))/
-	  (sq(Delta)*rho[]*lambda.x + avgmu);
+      u.x[] = (dt*a + (r.x[] - dt*c)*sq(Delta))/
+	(sq(Delta)*(rho[]*lambda.x + dt*d) + avgmu);
     }
   }
   
@@ -74,7 +72,7 @@ static double residual_diffusion (scalar * a, scalar * b, scalar * resl,
   (const) face vector mu = p->mu;
   (const) scalar rho = p->rho;
   double dt = p->dt;
-  bool (* embed_flux) (Point, scalar, vector, bool, double *) = p->embed_flux;
+  double (* embed_flux) (Point, scalar, vector, double *) = p->embed_flux;
   vector u = vector(a[0]), r = vector(b[0]), res = vector(resl[0]);
   double maxres = 0.;
 #if TREE
@@ -91,11 +89,8 @@ static double residual_diffusion (scalar * a, scalar * b, scalar * resl,
 	a += g.x[] - g.x[1];
       res.x[] = r.x[] - rho[]*lambda.x*u.x[] - dt*a/Delta;
       if (embed_flux) {
-	double c;
-	if (embed_flux (point, u.x, mu, false, &c))
-	  res.x[] -= dt*c;
-	else
-	  u.x[] = c, res.x[] = 0.;
+	double c, d = embed_flux (point, u.x, mu, &c);
+	res.x[] -= dt*(c + d*u.x[]);
       }
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);
@@ -112,11 +107,8 @@ static double residual_diffusion (scalar * a, scalar * b, scalar * resl,
 	a += mu.x[0]*face_gradient_x (s, 0) - mu.x[1]*face_gradient_x (s, 1);
       res.x[] = r.x[] - rho[]*lambda.x*u.x[] - dt*a/Delta;
       if (embed_flux) {
-	double c;
-	if (embed_flux (point, u.x, mu, false, &c))
-	  res.x[] -= dt*c;
-	else
-	  u.x[] = c, res.x[] = 0.;
+	double c, d = embed_flux (point, u.x, mu, &c);
+	res.x[] -= dt*(c + d*u.x[]);
       }
       if (fabs (res.x[]) > maxres)
 	maxres = fabs (res.x[]);

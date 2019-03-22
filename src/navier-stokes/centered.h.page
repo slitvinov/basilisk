@@ -81,7 +81,12 @@ means that, at the boundary, the acceleration $\mathbf{a}$ must be
 balanced by the pressure gradient. Taking care of boundary orientation
 and staggering of $\mathbf{a}$, this can be written */
 
-#define neumann_pressure(i) (a.n[i]*fm.n[i]/(alpha.n[i] + SEPS))
+#if EMBED
+# define neumann_pressure(i) (alpha.n[i] ? a.n[i]*fm.n[i]/alpha.n[i] :	\
+			      a.n[i]*rho[]/(cm[] + SEPS))
+#else
+# define neumann_pressure(i) (a.n[i]*fm.n[i]/alpha.n[i])
+#endif
 
 p[right] = neumann (neumann_pressure(ghost));
 p[left]  = neumann (- neumann_pressure(0));
@@ -101,6 +106,19 @@ p[front]  = neumann (neumann_pressure(ghost));
 p[back]   = neumann (- neumann_pressure(0));
 #  endif
 #endif // !AXI
+
+/**
+For [embedded boundaries on trees](/src/embed-tree.h), we need to
+define the pressure gradient for prolongation of pressure close to
+embedded boundaries. */
+
+#if TREE && EMBED
+void pressure_embed_gradient (Point point, scalar p, coord * g)
+{
+  foreach_dimension()
+    g->x = rho[]/(cm[] + SEPS)*(a.x[] + a.x[1])/2.;
+}
+#endif // TREE && EMBED
 
 /**
 ## Initial conditions */
@@ -140,11 +158,16 @@ event defaults (i = 0)
   When using [embedded boundaries](/src/embed.h), the restriction and
   prolongation operators need to take the boundary into account. */
 
-#if EMBED  
+#if EMBED
+  uf.x.refine = refine_face;
+  foreach_dimension()
+    uf.x.prolongation = refine_embed_face_x;
   for (scalar s in {p, pf, u, g}) {
     s.restriction = restriction_embed_linear;
     s.refine = s.prolongation = refine_embed_linear;
   }
+  for (scalar s in {p, pf})
+    s.embed_gradient = pressure_embed_gradient;
 #endif // EMBED
 #endif // TREE
 }
@@ -160,7 +183,7 @@ event init (i = 0)
   boundary ((scalar *){u});
   trash ({uf});
   foreach_face()
-    uf.x[] = fm.x[]*(u.x[] + u.x[-1])/2.;
+    uf.x[] = fm.x[]*face_value (u.x, 0);
   boundary ((scalar *){uf});
 
   /**
@@ -228,12 +251,24 @@ void prediction()
 
   if (u.x.gradient)
     foreach()
-      foreach_dimension()
-        du.x[] = u.x.gradient (u.x[-1], u.x[], u.x[1])/Delta;
+      foreach_dimension() {
+#if EMBED
+        if (!fs.x[] || !fs.x[1])
+	  du.x[] = 0.;
+	else
+#endif
+	  du.x[] = u.x.gradient (u.x[-1], u.x[], u.x[1])/Delta;
+      }
   else
     foreach()
-      foreach_dimension()
-        du.x[] = center_gradient (u.x);
+      foreach_dimension() {
+#if EMBED
+        if (!fs.x[] || !fs.x[1])
+	  du.x[] = 0.;
+	else
+#endif
+	  du.x[] = (u.x[1] - u.x[-1])/(2.*Delta);
+    }
   boundary ((scalar *){du});
 
   trash ({uf});
@@ -398,10 +433,19 @@ event end_timestep (i++, last);
 /**
 ## Adaptivity
 
-After mesh adaptation fluid properties need to be updated. */
+After mesh adaptation fluid properties need to be updated. When using
+[embedded boundaries](/src/embed.h) the fluid fractions and face
+fluxes need to be checked for inconsistencies. */
 
 #if TREE
 event adapt (i++,last) {
+#if EMBED
+  fractions_cleanup (cs, fs);
+  foreach_face()
+    if (uf.x[] && !fs.x[])
+      uf.x[] = 0.;
+  boundary ((scalar *){uf});
+#endif
   event ("properties");
 }
 #endif

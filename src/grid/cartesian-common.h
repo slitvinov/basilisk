@@ -169,8 +169,8 @@ vector new_const_vector (const char * name, int i, double * val)
 void scalar_clone (scalar a, scalar b)
 {
   char * name = a.name;
-  double (** boundary) (Point, Point, scalar) = a.boundary;
-  double (** boundary_homogeneous) (Point, Point, scalar) =
+  double (** boundary) (Point, Point, scalar, void *) = a.boundary;
+  double (** boundary_homogeneous) (Point, Point, scalar, void *) =
     a.boundary_homogeneous;
   _attribute[a.i] = _attribute[b.i];
   a.name = name;
@@ -307,17 +307,17 @@ void cartesian_boundary_flux (vector * list)
   // nothing to do
 }
 
-static double symmetry (Point point, Point neighbor, scalar s)
+static double symmetry (Point point, Point neighbor, scalar s, void * data)
 {
   return s[];
 }
 
-static double antisymmetry (Point point, Point neighbor, scalar s)
+static double antisymmetry (Point point, Point neighbor, scalar s, void * data)
 {
   return -s[];
 }
 
-double (* default_scalar_bc[]) (Point, Point, scalar) = {
+double (* default_scalar_bc[]) (Point, Point, scalar, void *) = {
   symmetry, symmetry, symmetry, symmetry, symmetry, symmetry
 };
 
@@ -337,9 +337,9 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   _attribute[s.i] = (const _Attributes){0};
   s.name = pname;
   /* set default boundary conditions */
-  s.boundary = (double (**)(Point, Point, scalar))
+  s.boundary = (double (**)(Point, Point, scalar, void *))
     malloc (nboundary*sizeof (void (*)()));
-  s.boundary_homogeneous = (double (**)(Point, Point, scalar))
+  s.boundary_homogeneous = (double (**)(Point, Point, scalar, void *))
     malloc (nboundary*sizeof (void (*)()));
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] =
@@ -362,7 +362,7 @@ scalar cartesian_init_vertex_scalar (scalar s, const char * name)
   return s;
 }
   
-double (* default_vector_bc[]) (Point, Point, scalar) = {
+double (* default_vector_bc[]) (Point, Point, scalar, void *) = {
   antisymmetry, antisymmetry,
   antisymmetry, antisymmetry,
   antisymmetry, antisymmetry
@@ -696,9 +696,9 @@ bid new_bid()
 {
   int b = nboundary++;
   for (scalar s in all) {
-    s.boundary = (double (**)(Point, Point, scalar))
+    s.boundary = (double (**)(Point, Point, scalar, void *))
       realloc (s.boundary, nboundary*sizeof (void (*)()));
-    s.boundary_homogeneous = (double (**)(Point, Point, scalar))
+    s.boundary_homogeneous = (double (**)(Point, Point, scalar, void *))
       realloc (s.boundary_homogeneous, nboundary*sizeof (void (*)()));
   }
   for (scalar s in all) {
@@ -717,7 +717,7 @@ bid new_bid()
 
 // Periodic boundary conditions
 
-static double periodic_bc (Point point, Point neighbor, scalar s)
+static double periodic_bc (Point point, Point neighbor, scalar s, void * data)
 {
   return nodata; // should not be used
 }

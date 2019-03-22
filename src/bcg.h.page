@@ -42,16 +42,16 @@ void tracer_fluxes (scalar f,
 
     #if dimension > 1
     if (fm.y[i] && fm.y[i,1]) {
-      double vn = uf.y[i]/fm.y[i] + uf.y[i,1]/fm.y[i,1];
+      double vn = (uf.y[i] + uf.y[i,1])/(fm.y[i] + fm.y[i,1]);
       double fyy = vn < 0. ? f[i,1] - f[i] : f[i] - f[i,-1];
-      f2 -= dt*vn*fyy/(4.*Delta);
+      f2 -= dt*vn*fyy/(2.*Delta);
     }
     #endif
     #if dimension > 2
     if (fm.z[i] && fm.z[i,0,1]) {
-      double wn = uf.z[i]/fm.z[i] + uf.z[i,0,1]/fm.z[i,0,1];
+      double wn = (uf.z[i] + uf.z[i,0,1])/(fm.z[i] + fm.z[i,0,1]);
       double fzz = wn < 0. ? f[i,0,1] - f[i] : f[i] - f[i,0,-1];
-      f2 -= dt*wn*fzz/(4.*Delta);
+      f2 -= dt*wn*fzz/(2.*Delta);
     }
     #endif
 
@@ -98,7 +98,7 @@ void advection (struct Advection p)
 #if !EMBED
     foreach()
       foreach_dimension()
-        f[] += p.dt*(flux.x[] - flux.x[1])/(Delta*cm[] + SEPS);
+        f[] += p.dt*(flux.x[] - flux.x[1])/(Delta*cm[]);
 #else // EMBED
     update_tracer (f, p.u, flux, p.dt);
 #endif // EMBED

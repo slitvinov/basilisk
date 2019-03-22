@@ -101,8 +101,8 @@ event init (t = 0) {
   The outer cylinder is fixed and the inner cylinder is rotating with
   a tangential velocity unity. */
   
-  u.n[embed] = dirichlet_embed (x*x + y*y > 1.5*sq(R1) ? 0. : - y/R1);
-  u.t[embed] = dirichlet_embed (x*x + y*y > 1.5*sq(R1) ? 0. :   x/R1);
+  u.n[embed] = dirichlet (x*x + y*y > 1.5*sq(R1) ? 0. : - y/R1);
+  u.t[embed] = dirichlet (x*x + y*y > 1.5*sq(R1) ? 0. :   x/R1);
 
   /**
   We initialize the reference field. */

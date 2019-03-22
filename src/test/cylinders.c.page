@@ -43,6 +43,7 @@ void cylinder (scalar cs, face vector fs)
   vertex scalar phi[];
   foreach_vertex()
     phi[] = sq(x) + sq(y) - sq(radius);
+  boundary ({phi});
   fractions (phi, cs, fs);
 }
 
@@ -103,8 +104,8 @@ event init (t = 0)
   /**
   The boundary condition is zero velocity on the embedded boundary. */
 
-  u.n[embed] = dirichlet_embed(0);
-  u.t[embed] = dirichlet_embed(0);
+  u.n[embed] = dirichlet(0);
+  u.t[embed] = dirichlet(0);
   
   /**
   We initialize the reference velocity. */

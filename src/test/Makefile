@@ -84,10 +84,6 @@ implicit.tst: explicit.tst
 
 bore.tst: bore1.tst
 
-dirichlet.tst: CFLAGS += -DDIRICHLET=1
-dirichlet.c: neumann.c
-	ln -s neumann.c.page dirichlet.c
-
 explosion3D.tst: CFLAGS=-grid=multigrid3D
 
 explosion3D.c: explosion.c
@@ -321,6 +317,17 @@ periodic3.tst: CFLAGS += -grid=octree -DTRASH=1
 
 # Embedded boundary tests
 
+dirichlet.tst: CFLAGS += -DDIRICHLET=1
+dirichlet.c: neumann.c
+	ln -s neumann.c.page dirichlet.c
+
+dirichlet3D.tst: CFLAGS += -DDIRICHLET=1
+dirichlet3D.c: neumann3D.c
+	ln -s neumann3D.c.page dirichlet3D.c
+
+hydrostatic2.tst: CC = mpicc -D_MPI=8
+
 embed-tests: neumann.tst dirichlet.tst poiseuille45.tst \
 	couette.tst wannier.tst hydrostatic2.tst cylinders.tst \
-	porous.tst uf.tst starting.tst
+	porous.tst porous1.tst uf.tst starting.tst \
+	neumann3D.tst dirichlet3D.tst hydrostatic3.tst spheres.tst

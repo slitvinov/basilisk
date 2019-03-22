@@ -22,6 +22,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
   Instability](swasi.c)
 * [Two-phase flow around RV Tangaroa](tangaroa.c)
 * [Flow in a rotating bottom-driven cylindrical container](yang.c)
+* [Stokes flow through a complex 3D porous medium](porous3D.c)
 
 ## Python interface
 

@@ -24,7 +24,11 @@ refining cells. */
 #if TREE
 event defaults (i = 0) {
   for (scalar s in tracers) {
+#if EMBED
+    s.refine = s.prolongation = refine_embed_linear;
+#else
     s.refine  = refine_linear;
+#endif
     s.restriction = restriction_volume_average;
   }
 }

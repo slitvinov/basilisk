@@ -123,13 +123,13 @@ void lambda2 (const vector u, scalar l2)
     scalar s = u.x;
     int i = 0;
     foreach_dimension()
-      JJ[0][i++] = (s[1] - s[-1])/(2.*Delta);
+      JJ[0][i++] = center_gradient (s);
     s = u.y; i = 0;
     foreach_dimension()
-      JJ[1][i++] = (s[1] - s[-1])/(2.*Delta);
+      JJ[1][i++] = center_gradient (s);
     s = u.z; i = 0;
     foreach_dimension()
-      JJ[2][i++] = (s[1] - s[-1])/(2.*Delta);
+      JJ[2][i++] = center_gradient (s);
     double S2O2[dimension][dimension];
     for (int i = 0; i < dimension; i++)
       for (int j = 0; j < dimension; j++) {

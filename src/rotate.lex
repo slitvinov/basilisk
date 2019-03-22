@@ -115,7 +115,7 @@ back {
 {ID}+   ECHO;
 
 val_{ID}*{WS}*\( |
-(val|fine|coarse|allocated|neighbor|neighborp|aparent){WS}*\( {
+(val|fine|coarse|allocated|allocated_child|neighbor|neighborp|aparent){WS}*\( {
   int para = 1;
   char * index[5];
   int len[5], i = 0, c = input(), j;

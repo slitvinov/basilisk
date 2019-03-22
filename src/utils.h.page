@@ -142,8 +142,8 @@ norm normf (scalar f)
       rms    += dv()*sq(v);
     }
   norm n;
-  n.avg = avg/volume;
-  n.rms = sqrt(rms/volume);
+  n.avg = volume ? avg/volume : 0.;
+  n.rms = volume ? sqrt(rms/volume) : 0.;
   n.max = max;
   n.volume = volume;
   return n;
@@ -243,15 +243,21 @@ void gradients (scalar * f, vector * g)
       if (s.gradient)
 	foreach_dimension() {
 #if EMBED
-	  if (!cs[-1] || !cs[] || !cs[1])
+	  if (!fs.x[] || !fs.x[1])
 	    v.x[] = 0.;
 	  else
 #endif
 	    v.x[] = s.gradient (s[-1], s[], s[1])/Delta;
 	}
       else // centered
-	foreach_dimension()
-	  v.x[] = center_gradient (s);
+	foreach_dimension() {
+#if EMBED
+	  if (!fs.x[] || !fs.x[1])
+	    v.x[] = 0.;
+	  else
+#endif
+	    v.x[] = (s[1] - s[-1])/(2.*Delta);
+	}
     }
   }
   boundary ((scalar *) g);
@@ -268,29 +274,29 @@ $$ */
 
 void vorticity (const vector u, scalar omega)
 {
-  #if dimension == 2
   struct { double x, y; } a = {1., -1.};
   foreach() {
     omega[] = 0.;
-    foreach_dimension()
+    foreach_dimension(2)
       omega[] += a.x*center_gradient (u.y);
   }
   boundary ({omega});
-  #endif
 }
 
 /**
-Given two scalar fields *v* and *vn* this function returns the maximum
+Given two scalar fields *s* and *sn* this function returns the maximum
 of their absolute difference. */
 
-double change (scalar v, scalar vn)
+double change (scalar s, scalar sn)
 {
   double max = 0.;
   foreach(reduction(max:max)) {
-    double dv = fabs (v[] - vn[]);
-    if (dv > max)
-      max = dv;
-    vn[] = v[];
+    if (dv() > 0.) {
+      double ds = fabs (s[] - sn[]);
+      if (ds > max)
+	max = ds;
+    }
+    sn[] = s[];
   }
   return max;
 }
