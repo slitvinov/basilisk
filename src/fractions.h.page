@@ -350,6 +350,7 @@ field directly from a function. */
     vertex scalar phi[];			\
     foreach_vertex()				\
       phi[] = func;				\
+    boundary ({phi});				\
     fractions (phi, f);				\
   } while(0)
 

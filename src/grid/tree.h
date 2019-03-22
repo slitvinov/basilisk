@@ -47,6 +47,7 @@ enum {
 @define is_coarse()      ((cell).neighbors > 0)
 @define is_border(cell)  ((cell).flags & border)
 @define is_local(cell)   ((cell).pid == pid())
+@define is_vertex(cell)  ((cell).flags & vertex)
 
 // Caches
 
@@ -649,12 +650,12 @@ static inline void cache_append_face (Point point, unsigned short flags)
   Tree * q = tree;
   cache_append (&q->faces, point, flags);
 #if dimension == 2
-  if (!(cell.flags & vertex)) {
+  if (!is_vertex(cell)) {
     cache_append (&q->vertices, point, 0);
     cell.flags |= vertex;
   }
   foreach_dimension()
-    if ((flags & face_y) && !(neighbor(1).flags & vertex)) {
+    if ((flags & face_y) && !is_vertex(neighbor(1))) {
       cache_append (&q->vertices, neighborp(1), 0);
       neighbor(1).flags |= vertex;
     }
@@ -663,7 +664,7 @@ static inline void cache_append_face (Point point, unsigned short flags)
     if (flags & face_x)
       for (int i = 0; i <= 1; i++)
 	for (int j = 0; j <= 1; j++)
-	  if (!(neighbor(0,i,j).flags & vertex)) {
+	  if (!is_vertex(neighbor(0,i,j))) {
 	    cache_append (&q->vertices, neighborp(0,i,j), 0);
 	    neighbor(0,i,j).flags |= vertex;
 	  }
@@ -777,7 +778,7 @@ static void update_cache_f (void)
           #if dimension >= 3
 	    for (int k = 0; k <= 1; k++)
 	  #endif
-	      if (!(neighbor(i,j,k).flags & vertex)) {
+	      if (!is_vertex(neighbor(i,j,k))) {
 		cache_append (&q->vertices, neighborp(i,j,k), 0);
 		neighbor(i,j,k).flags |= vertex;
 	      }
@@ -866,7 +867,7 @@ static void update_cache_f (void)
 # define foreach_edge()				\
     foreach_vertex()				\
       foreach_dimension()			\
-        if (neighbor(1).flags & vertex)
+        if (is_vertex(neighbor(1)))
 #else // dimension < 3
 # define foreach_edge() foreach_face(y,x)
 #endif
@@ -1377,7 +1378,7 @@ static void box_boundary_level (const Boundary * b, scalar * list, int l)
 	else
 	  vectors = vectors_add (vectors, s.v);
       }
-      else if (s.v.x.i < 0)
+      else if (s.v.x.i < 0 && s.boundary[0])
 	scalars = list_add (scalars, s);
     }
   

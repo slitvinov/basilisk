@@ -62,6 +62,20 @@ static inline void restriction_face (Point point, scalar s)
   face_average (point, s.v);
 }
 
+static inline void restriction_vertex (Point point, scalar s)
+{
+  for (int i = 0; i <= 1; i++) {
+    s[i] = fine(s,2*i);
+#if dimension >= 2  
+    s[i,1] = fine(s,2*i,2);
+#endif
+#if dimension >= 3
+    for (int j = 0; j <= 1; j++)
+      s[i,j,1] = fine(s,2*i,2*j,2);
+#endif
+  }
+}
+
 static inline void no_restriction (Point point, scalar s) {}
 
 static inline void no_data (Point point, scalar s) {
@@ -110,13 +124,13 @@ void inverse_wavelet (scalar s, scalar w)
 static inline double bilinear (Point point, scalar s)
 {
   #if dimension == 1
-    return (3.*coarse(s,0) + coarse(s,child.x))/4.;
+    return (3.*coarse(s) + coarse(s,child.x))/4.;
   #elif dimension == 2
-    return (9.*coarse(s,0) + 
+    return (9.*coarse(s) + 
 	    3.*(coarse(s,child.x) + coarse(s,0,child.y)) + 
 	    coarse(s,child.x,child.y))/16.;
   #else // dimension == 3
-    return (27.*coarse(s,0) + 
+    return (27.*coarse(s) + 
 	    9.*(coarse(s,child.x) + coarse(s,0,child.y) +
 		coarse(s,0,0,child.z)) + 
 	    3.*(coarse(s,child.x,child.y) + coarse(s,child.x,0,child.z) +
@@ -214,6 +228,13 @@ static scalar multigrid_init_scalar (scalar s, const char * name)
   s = cartesian_init_scalar (s, name);
   s.prolongation = refine_bilinear;
   s.restriction = restriction_average;
+  return s;
+}
+
+static scalar multigrid_init_vertex_scalar (scalar s, const char * name)
+{
+  s = cartesian_init_vertex_scalar (s, name);
+  s.restriction = restriction_vertex;
   return s;
 }
 
@@ -382,10 +403,11 @@ static void multigrid_restriction (scalar * list)
 void multigrid_methods()
 {
   cartesian_methods();
-  debug            = multigrid_debug;
-  init_scalar      = multigrid_init_scalar;
-  init_face_vector = multigrid_init_face_vector;
-  restriction      = multigrid_restriction;
+  debug              = multigrid_debug;
+  init_scalar        = multigrid_init_scalar;
+  init_vertex_scalar = multigrid_init_vertex_scalar;
+  init_face_vector   = multigrid_init_face_vector;
+  restriction        = multigrid_restriction;
 }
 
 /**

@@ -405,6 +405,47 @@ static scalar tree_init_scalar (scalar s, const char * name)
   return s;
 }
 
+static void prolongation_vertex (Point point, scalar s)
+{
+#if dimension == 2
+  fine(s,1,1) = (s[] + s[1] + s[0,1] + s[1,1])/4.;
+#else // dimension == 3
+  fine(s,1,1,1) = (s[] + s[1] + s[0,1] + s[1,1] +
+		   s[0,0,1] + s[1,0,1] + s[0,1,1] + s[1,1,1])/8.;
+#endif
+  
+  for (int i = 0; i <= 1; i++) {
+    for (int j = 0; j <= 1; j++)
+#if dimension == 3
+      for (int k = 0; k <= 1; k++)
+#endif // dimension == 3
+	if (allocated_child(2*i,2*j,2*k))
+	  fine(s,2*i,2*j,2*k) = s[i,j,k];
+    
+    foreach_dimension()
+      if (neighbor(i).neighbors) {
+#if dimension == 2
+	fine(s,2*i,1) = (s[i,0] + s[i,1])/2.;
+#elif dimension == 3
+	fine(s,2*i,1,1) = (s[i,0,0] + s[i,1,0] + s[i,0,1] + s[i,1,1])/4.;
+	fine(s,2*i,1,0) = (s[i,0,0] + s[i,1,0])/2.;
+	fine(s,2*i,0,1) = (s[i,0,0] + s[i,0,1])/2.;
+	if (allocated_child(2*i,1,2))
+	  fine(s,2*i,1,2) = (s[i,0,1] + s[i,1,1])/2.;
+	if (allocated_child(2*i,2,1))
+	  fine(s,2*i,2,1) = (s[i,1,0] + s[i,1,1])/2.;
+#endif // dimension == 3
+      }
+  }
+}
+
+static scalar tree_init_vertex_scalar (scalar s, const char * name)
+{
+  s = multigrid_init_vertex_scalar (s, name);
+  s.refine = s.prolongation = prolongation_vertex;
+  return s;
+}
+
 foreach_dimension()
 static void refine_face_x (Point point, scalar s)
 {
@@ -517,7 +558,7 @@ static void tree_boundary_level (scalar * list, int l)
     return;
   }
 
-  scalar * listdef = NULL, * listc = NULL, * list2 = NULL;
+  scalar * listdef = NULL, * listc = NULL, * list2 = NULL, * vlist = NULL;
   for (scalar s in list) 
     if (!is_constant (s)) {
       if (s.restriction == restriction_average) {
@@ -529,10 +570,71 @@ static void tree_boundary_level (scalar * list, int l)
 	if (s.face)
 	  foreach_dimension()
 	    list2 = list_add (list2, s.v.x);
-	else
+	else {
 	  list2 = list_add (list2, s);
+	  if (s.restriction == restriction_vertex)
+	    vlist = list_add (vlist, s);
+	}
       }
     }
+
+  if (vlist) // vertex scalars
+#if dimension == 1
+    foreach_vertex()
+      if (is_refined(cell) || is_refined(neighbor(-1)))
+	for (scalar s in vlist)
+	  s[] = is_vertex (child(0)) ? fine(s) : nodata;
+#elif dimension == 2
+    foreach_vertex() {
+      if (is_refined(cell) || is_refined(neighbor(-1)) ||
+	  is_refined(neighbor(0,-1)) || is_refined(neighbor(-1,-1))) {
+	// corner
+	for (scalar s in vlist)
+	  s[] = is_vertex (child(0)) ? fine(s) : nodata;
+      }
+      else
+	foreach_dimension()
+	  if (child.y == 1 &&
+	      (is_prolongation(cell) || is_prolongation(neighbor(-1)))) {
+	    // center of refined edge
+	    for (scalar s in vlist)
+	      s[] = is_vertex(neighbor(0,-1)) && is_vertex(neighbor(0,1)) ?
+		(s[0,-1] + s[0,1])/2. : nodata;
+	  }
+    }
+#else // dimension == 3
+    foreach_vertex() {
+      if (is_refined(cell) || is_refined(neighbor(-1)) ||
+	  is_refined(neighbor(0,-1)) || is_refined(neighbor(-1,-1)) ||
+	  is_refined(neighbor(0,0,-1)) || is_refined(neighbor(-1,0,-1)) ||
+	  is_refined(neighbor(0,-1,-1)) || is_refined(neighbor(-1,-1,-1))) {
+	// corner
+	for (scalar s in vlist)
+	  s[] = is_vertex (child(0)) ? fine(s) : nodata;
+      }
+      else
+	foreach_dimension() {
+	  if (child.y == 1 && child.z == 1 &&
+	      (is_prolongation(cell) || is_prolongation(neighbor(-1)))) {
+	    // center of refined face
+	    for (scalar s in vlist)
+	      s[] = is_vertex(neighbor(0,-1,-1)) && is_vertex(neighbor(0,1,-1))
+		&& is_vertex(neighbor(0,-1,1)) && is_vertex(neighbor(0,1,1)) ?
+		(s[0,-1,-1] + s[0,1,-1] + s[0,-1,1] + s[0,1,1])/4. : nodata;
+	  }
+	  else if (child.x == -1 && child.z == -1 && child.y == 1 &&
+		   (is_prolongation(cell) || is_prolongation(neighbor(-1)) ||
+		    is_prolongation(neighbor(0,0,-1)) ||
+		    is_prolongation(neighbor(-1,0,-1)))) {
+	    // center of refined edge
+	    for (scalar s in vlist)
+	      s[] = is_vertex(neighbor(0,-1)) && is_vertex(neighbor(0,1)) ?
+		(s[0,-1] + s[0,1])/2. : nodata;
+	  }
+	}
+    }
+#endif // dimension == 3
+  free (vlist);
 
   if (listdef || listc) {
     boundary_iterate (restriction, list2, depth);
@@ -661,9 +763,10 @@ static void tree_restriction (scalar * list) {
 void tree_methods()
 {
   multigrid_methods();
-  init_scalar      = tree_init_scalar;
-  init_face_vector = tree_init_face_vector;
-  boundary_level   = tree_boundary_level;
-  boundary_flux    = halo_flux;
-  restriction      = tree_restriction;
+  init_scalar        = tree_init_scalar;
+  init_vertex_scalar = tree_init_vertex_scalar;
+  init_face_vector   = tree_init_face_vector;
+  boundary_level     = tree_boundary_level;
+  boundary_flux      = halo_flux;
+  restriction        = tree_restriction;
 }

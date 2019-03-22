@@ -71,6 +71,7 @@ int main()
   foreach_vertex()
     phi[] = (d[] + d[-1] + d[0,-1] + d[-1,-1] +
 	     d[0,0,-1] + d[-1,0,-1] + d[0,-1,-1] + d[-1,-1,-1])/8.;
+  boundary ({phi});
   scalar f[];
   face vector s[];
   fractions (phi, f, s);
@@ -79,7 +80,7 @@ int main()
   Finally we display the surface reconstructed from volume fractions. */
 
   clear();
-  draw_vof ("f", edges = true, lw = 0.5);
+  draw_vof ("f", "s", edges = true, lw = 0.5);
   save ("vof.png");
 }
 

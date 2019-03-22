@@ -71,6 +71,7 @@ void fraction_from_stl (scalar f, FILE * fp, double eps, int maxlevel)
   foreach_vertex()
     phi[] = (d[] + d[-1] + d[0,-1] + d[-1,-1] +
 	     d[0,0,-1] + d[-1,0,-1] + d[0,-1,-1] + d[-1,-1,-1])/8.;
+  boundary ({phi});
   fractions (phi, f);
 }
 

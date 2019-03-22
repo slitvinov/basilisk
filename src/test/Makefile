@@ -205,7 +205,8 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	gfsi.tst gfs.tst \
 	load-balancing \
 	mpi-grid.tst mpi-periodic-3D.tst \
-	source.tst tag.tst tag1.tst view.tst view.3D.tst
+	source.tst tag.tst tag1.tst view.tst view.3D.tst \
+	boundary_vertex.tst boundary_vertex3D.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3
@@ -236,6 +237,9 @@ source.tst: CC = mpicc -D_MPI=7
 
 tag.tst: CC = mpicc -D_MPI=7
 tag1.tst: CC = mpicc -D_MPI=7
+
+boundary_vertex.tst: CC = mpicc -D_MPI=7
+boundary_vertex3D.tst: CC = mpicc -D_MPI=7
 
 # parallel dump()/restore()
 

@@ -25,6 +25,7 @@ int main()
   face vector s[];
   foreach_vertex()
     phi[] = sq(0.3) - sq(x) - sq(y);
+  boundary ({phi});
   fractions (phi, c, s);
 
   /**

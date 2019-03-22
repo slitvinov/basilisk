@@ -67,6 +67,7 @@ int main()
       phi[] = r - (0.25 + 0.05*cos(6.*theta));
 #endif
     }
+    boundary ({phi});
     fractions (phi, cs, fs);  
 #if TREE
     cs.refine = cs.prolongation = fraction_refine;

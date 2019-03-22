@@ -94,6 +94,7 @@ event init (t = 0) {
   foreach_vertex()
     phi[] = difference (sq(R2) - sq(x) - sq(y - ECC),
 			sq(R1) - sq(x) - sq(y));
+  boundary ({phi});
   fractions (phi, cs, fs);
   
   /**

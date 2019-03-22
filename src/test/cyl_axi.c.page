@@ -69,6 +69,7 @@ event init (t = 0) {
   vertex scalar psi[];
   foreach_vertex ()
     psi[] = cylinder(y);
+  boundary ({psi});
   fractions (psi, f, s);
   foreach()
     rhoe[] = rhoini*f[];

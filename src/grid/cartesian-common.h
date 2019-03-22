@@ -62,10 +62,7 @@ scalar new_scalar (const char * name)
 
 scalar new_vertex_scalar (const char * name)
 {
-  scalar s = new_scalar (name);
-  foreach_dimension()
-    s.d.x = -1;
-  return s;
+  return init_vertex_scalar (new_scalar (name), name);
 }
 
 static vector alloc_vector (const char * name)
@@ -356,6 +353,15 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   return s;
 }
 
+scalar cartesian_init_vertex_scalar (scalar s, const char * name)
+{
+  foreach_dimension()
+    s.d.x = -1;
+  for (int d = 0; d < nboundary; d++)
+    s.boundary[d] = s.boundary_homogeneous[d] = NULL;
+  return s;
+}
+  
 double (* default_vector_bc[]) (Point, Point, scalar) = {
   antisymmetry, antisymmetry,
   antisymmetry, antisymmetry,
@@ -601,13 +607,14 @@ void cartesian_debug (Point point)
 
 void cartesian_methods()
 {
-  init_scalar      = cartesian_init_scalar;
-  init_vector      = cartesian_init_vector;
-  init_tensor      = cartesian_init_tensor;
-  init_face_vector = cartesian_init_face_vector;
-  boundary_level   = cartesian_boundary_level;
-  boundary_flux    = cartesian_boundary_flux;
-  debug            = cartesian_debug;
+  init_scalar        = cartesian_init_scalar;
+  init_vertex_scalar = cartesian_init_vertex_scalar;
+  init_vector        = cartesian_init_vector;
+  init_tensor        = cartesian_init_tensor;
+  init_face_vector   = cartesian_init_face_vector;
+  boundary_level     = cartesian_boundary_level;
+  boundary_flux      = cartesian_boundary_flux;
+  debug              = cartesian_debug;
 }
 
 struct _interpolate {

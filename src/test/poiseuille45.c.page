@@ -44,6 +44,7 @@ event init (t = 0) {
   foreach_vertex()
     phi[] = difference (union (y - x - EPS, x - y - 0.5 + EPS),
 			y - x - 0.5 + EPS);
+  boundary ({phi});
   fractions (phi, cs, fs);
 
   /**

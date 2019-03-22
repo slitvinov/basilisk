@@ -1107,10 +1107,11 @@ scalar * all = NULL; // all the fields
 
 // basic methods
 
-scalar (* init_scalar)      (scalar, const char *);
-vector (* init_vector)      (vector, const char *);
-tensor (* init_tensor)      (tensor, const char *);
-vector (* init_face_vector) (vector, const char *);
+scalar (* init_scalar)        (scalar, const char *);
+scalar (* init_vertex_scalar) (scalar, const char *);
+vector (* init_vector)        (vector, const char *);
+tensor (* init_tensor)        (tensor, const char *);
+vector (* init_face_vector)   (vector, const char *);
 
 #define vector(x) (*((vector *)&(x)))
 

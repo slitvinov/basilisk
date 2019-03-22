@@ -158,20 +158,31 @@ static Boundary * mpi_boundary = NULL;
 
 void debug_mpi (FILE * fp1);
 
-static void apply_bc (Rcv * rcv, scalar * list, vector * listf, int l,
-		      MPI_Status s)
+static void apply_bc (Rcv * rcv, scalar * list, scalar * listv,
+		      vector * listf, int l, MPI_Status s)
 {
   double * b = rcv->buf;
   foreach_cache_level(rcv->halo[l], l) {
     for (scalar s in list)
       s[] = *b++;
-    for (vector v in listf) {
+    for (vector v in listf)
       foreach_dimension() {
 	v.x[] = *b++;
 	if (allocated(1))
 	  v.x[1] = *b;
 	b++;
       }
+    for (scalar s in listv) {
+      for (int i = 0; i <= 1; i++)
+	for (int j = 0; j <= 1; j++)
+#if dimension == 3
+	  for (int k = 0; k <= 1; k++)
+#endif
+	    {
+	      if (*b != nodata && allocated(i,j,k))
+		s[i,j,k] = *b;
+	      b++;
+	    }
     }
   }
   size_t size = b - (double *) rcv->buf;
@@ -275,14 +286,16 @@ static int mpi_waitany (int count, MPI_Request array_of_requests[], int *indx,
   return MPI_Waitany (count, array_of_requests, indx, status);
 }
 
-static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
+static void rcv_pid_receive (RcvPid * m, scalar * list, scalar * listv,
+			     vector * listf, int l)
 {
   if (m->npid == 0)
     return;
   
   prof_start ("rcv_pid_receive");
 
-  int len = list_len (list) + 2*dimension*vectors_len (listf);
+  int len = list_len (list) + 2*dimension*vectors_len (listf) +
+    (1 << dimension)*list_len (listv);
 
   MPI_Request r[m->npid];
   Rcv * rrcv[m->npid]; // fixme: using NULL requests should be OK
@@ -305,7 +318,7 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
       MPI_Status s;
       mpi_recv_check (rcv->buf, rcv->halo[l].n*len, MPI_DOUBLE, rcv->pid,
 		      BOUNDARY_TAG(l), MPI_COMM_WORLD, &s, "rcv_pid_receive");
-      apply_bc (rcv, list, listf, l, s);
+      apply_bc (rcv, list, listf, listv, l, s);
 #endif
     }
   }
@@ -319,7 +332,7 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, vector * listf, int l)
       Rcv * rcv = rrcv[i];
       assert (l <= rcv->depth && rcv->halo[l].n > 0);
       assert (rcv->buf);
-      apply_bc (rcv, list, listf, l, s);
+      apply_bc (rcv, list, listv, listf, l, s);
       mpi_waitany (nr, r, &i, &s);
     }
   }
@@ -335,14 +348,16 @@ static void rcv_pid_wait (RcvPid * m)
     rcv_free_buf (&m->rcv[i]);
 }
 
-static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
+static void rcv_pid_send (RcvPid * m, scalar * list, scalar * listv,
+			  vector * listf, int l)
 {
   if (m->npid == 0)
     return;
 
   prof_start ("rcv_pid_send");
 
-  int len = list_len (list) + 2*dimension*vectors_len (listf);
+  int len = list_len (list) + 2*dimension*vectors_len (listf) +
+    (1 << dimension)*list_len (listv);
 
   /* send ghost values */
   for (int i = 0; i < m->npid; i++) {
@@ -359,6 +374,14 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
 	    *b++ = v.x[];
 	    *b++ = allocated(1) ? v.x[1] : undefined;
 	  }
+	for (scalar s in listv) {
+	  for (int i = 0; i <= 1; i++)
+	    for (int j = 0; j <= 1; j++)
+#if dimension == 3
+	      for (int k = 0; k <= 1; k++)
+#endif
+		*b++ = allocated(i,j,k) ? s[i,j,k] : nodata;
+	}
       }
 #if 0
       fprintf (stderr, "%s sending %d doubles to %d level %d\n",
@@ -376,20 +399,23 @@ static void rcv_pid_send (RcvPid * m, scalar * list, vector * listf, int l)
 
 static void rcv_pid_sync (SndRcv * m, scalar * list, int l)
 {
-  scalar * listr = NULL;
+  scalar * listr = NULL, * listv = NULL;
   vector * listf = NULL;
   for (scalar s in list)
     if (!is_constant(s)) {
       if (s.face)
 	listf = vectors_add (listf, s.v);
+      else if (s.restriction == restriction_vertex)
+	listv = list_add (listv, s);
       else
 	listr = list_add (listr, s);
     }
-  rcv_pid_send (m->snd, listr, listf, l);
-  rcv_pid_receive (m->rcv, listr, listf, l);
+  rcv_pid_send (m->snd, listr, listv, listf, l);
+  rcv_pid_receive (m->rcv, listr, listv, listf, l);
   rcv_pid_wait (m->snd);
   free (listr);
   free (listf);
+  free (listv);
 }
 
 static void snd_rcv_destroy (SndRcv * m)
@@ -480,6 +506,7 @@ void debug_mpi (FILE * fp1)
     sprintf (name, "halo-%d", pid()); remove (name);
     sprintf (name, "cells-%d", pid()); remove (name);
     sprintf (name, "faces-%d", pid()); remove (name);
+    sprintf (name, "vertices-%d", pid()); remove (name);
     sprintf (name, "neighbors-%d", pid()); remove (name);
     sprintf (name, "mpi-level-rcv-%d", pid()); remove (name);
     sprintf (name, "mpi-level-snd-%d", pid()); remove (name);
@@ -498,7 +525,7 @@ void debug_mpi (FILE * fp1)
   for (int l = 0; l < depth(); l++)
     foreach_halo (prolongation, l)
       foreach_child()
-      fprintf (fp, "%s%g %g %g %d\n", prefix, x, y, z, level);
+        fprintf (fp, "%s%g %g %g %d\n", prefix, x, y, z, level);
   if (!fp1)
     fclose (fp);
 
@@ -510,6 +537,12 @@ void debug_mpi (FILE * fp1)
   
   fp = fopen_prefix (fp1, "faces", prefix);
   foreach_face()
+    fprintf (fp, "%s%g %g %g %d\n", prefix, x, y, z, level);
+  if (!fp1)
+    fclose (fp);
+
+  fp = fopen_prefix (fp1, "vertices", prefix);
+  foreach_vertex()
     fprintf (fp, "%s%g %g %g %d\n", prefix, x, y, z, level);
   if (!fp1)
     fclose (fp);
