@@ -36,7 +36,7 @@ clean:
 
 %.3D.tst: %.3D.s %.3D.c
 	@CFLAGS="$(CFLAGS) -grid=octree" LIBS="$(LIBS)" OPENGLIBS="$(OPENGLIBS)"\
-		$(BASILISK)/runtest $@
+		GDB="$(GDB)" $(BASILISK)/runtest $@
 
 %.CADNA.c: %.c
 	ln -s $< $@

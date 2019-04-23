@@ -3,6 +3,7 @@
 FILE="$1"
 test="${FILE%.*}"
 ext="${FILE##*.}"
+
 case $ext in
     ctst) log=clog; out=cout; ref=cref; ;;
     *)    log=log;  out=out; ref=ref; ;;
@@ -18,6 +19,15 @@ for opt in $CFLAGS; do
     esac
 done
 
+case $OSTYPE in
+    *darwin*) ;;
+    *)
+	if test -z "$GDB"; then
+	    GDB=`which gdb`
+	fi
+	;;
+esac
+
 script()
 {
     rm -f $test.c
@@ -29,17 +39,17 @@ script()
 
     pass=true
     rm -f log-* stencil stencil-* fine fine-* coarse coarse-*
-    if test -n "$EXEC" -o -z "`which gdb`"; then
+   if test -n "$EXEC" -o -z "$GDB"; then
 	if ! $EXEC ./$test 2> $log > $out; then
 	    pass=false
-	    if test "$EXEC" = " " -a -f core -a -n "`which gdb`"; then
+	    if test "$EXEC" = " " -a -f core -a -n "$GDB"; then
 		cat $log
 		xterm -e "gnuplot plot -" &
-		gdb -q ./$test core
+		$GDB -q ./$test core
 	    fi
 	fi
-    else
-	if ! gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log 2> gdb.err; then
+   else
+	if ! $GDB -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log 2> gdb.err; then
 	    pass=false
 	    awk '
      {
