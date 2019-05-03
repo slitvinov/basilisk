@@ -7,8 +7,8 @@ showfiles()
     else
 	ROOT=`darcs show repo | grep Root | awk '{print $2}'`
 	DIR=`echo $PWD | sed "s|$ROOT|.|"`
-	darcs show files | grep $DIR'/[^/]*\.'$1'$' | \
-	    sed 's|'$DIR'/\(.*\)|	\1 \\|g'
+	darcs show files | grep '\'$DIR'/[^/ ]*\.'$1'$' | \
+	    sed -e 's|'$DIR'/\(.*\)|	\1 \\|g'
     fi
 }
 
@@ -35,7 +35,6 @@ done
 (
     echo "# Automatically generated using 'make Makefile.tests'"
     echo "# DO NOT EDIT, edit 'Makefile' instead"
-    DIR=`basename $PWD`
     echo "ALLTESTS = \\"
     (showfiles c
      showfiles 'c\.page' | sed 's/\.page / /g'
