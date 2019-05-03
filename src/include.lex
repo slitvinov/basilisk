@@ -197,10 +197,7 @@ FDECL     {ID}+{SP}*\(
 "}" {
   scope--;
   if (scope < 0) {
-    if (!ftags)
-      return yyerror ("mismatched '}'");
-    else
-      fprintf (stderr, "%s:%d: warning: mismatched '}'\n", fname, yylineno);
+    fprintf (stderr, "%s:%d: warning: mismatched '}'\n", fname, yylineno);
     scope = 0;
   }
 }
@@ -292,18 +289,18 @@ FDECL     {ID}+{SP}*\(
       if (s)
 	check_tag (id);
     }
-    s = id;
+    s = strdup (id);
     if (!fstatic && !keywords_only && strcmp(s, "if")) {
       //      fprintf (stderr, "id: '%s'\n", s);
       Tag t = { s, fname, yylineno - nl, FUNCTION};
       int p = 0, para = 1, c;
-      while (para > p && (c = input()) != EOF) {
+      while (para > p && (c = input())) {
 	echo_c (c);
 	if (c == '(') para++;
 	else if (c == ')') para--;
       }
       if (c == ')') {
-	while ((c = input()) != EOF) {
+	while ((c = input())) {
 	  echo_c (c);
 	  if (c == '{' || c == ';')
 	    break;
@@ -324,6 +321,7 @@ FDECL     {ID}+{SP}*\(
 	}
       }
     }
+    free (s);
   }
 }
 
@@ -400,8 +398,8 @@ static int comment(void)
 	break;
     }
   }
-  fprintf (stderr, "%s:%d: error: unterminated comment\n", fname, lineno);
-  return 1;
+  fprintf (stderr, "%s:%d: warning: unterminated comment\n", fname, lineno);
+  return 0;
 }
 
 void stripname (char * path)
