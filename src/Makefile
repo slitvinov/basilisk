@@ -15,7 +15,7 @@ libkdt:
 	cd kdt && make
 
 literatec:
-	cd plugins && make literate-c codeblock
+	cd darcsit && make literate-c codeblock pagemagic urldecode
 
 qcc: qcc.c include.o rotate.o config
 	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
@@ -99,11 +99,10 @@ checklinks:
 		tee checklinks.log
 
 checklinksfast:
-	wget --spider -nd -nv -r					\
-		-X sandbox -X src/cgi-bin				\
-			$(BASILISK_URL)/src/README 			\
-			$(BASILISK_URL)/src/test/README 		\
-			$(BASILISK_URL)/src/examples/README 2>&1 | 	\
+	wget --spider -nd -nv -r \
+		--reject-regex '.*[?]changes=.*' \
+		--reject-regex '.*[?]history' \
+		$(BASILISK_URL) 2>&1 | \
 		grep -v ^unlink: | tee checklinks.log
 
 changelog:

@@ -2,10 +2,10 @@
 
 usage()
 {
-    cat <<EOF
+    cat <<EOF > /dev/stderr
 usage: page2html -url URL -ext EXT -refresh SEC FILE.([ch]|page)
 
-  If -url is not specified it is set $BASILISK_URL (if defined) or to
+  If -url is not specified it is set to $BASE_URL (if defined) or to
   http://basilisk.fr
 
   The EXT extension (typically .html) is added to page links.
@@ -19,7 +19,7 @@ while test $# -gt 0; do
     case $1 in
 	-url)
 	    shift
-	    BASILISK_URL="$1"
+	    BASE_URL="$1"
 	    ;;
 	-ext)
 	    shift
@@ -33,7 +33,13 @@ while test $# -gt 0; do
 	    usage
 	    ;;
 	*.page)  page="$1" ;;
-	*.[ch])  page="$1" ;;
+	*.c) page="$1"; javascripts="<script src=\"/js/status.js\" type=\"text/javascript\"></script>";;
+	*.h) page="$1" ;;
+	*)
+	    if test -f $1.page; then
+		page="$1.page"
+	    fi
+	;;
     esac
     shift
 done
@@ -53,11 +59,13 @@ fi
 
 basename=`echo $page | sed 's/\.page$//'`
 title=""
-case $PWD in
-    $BASILISK*)
-	title=`echo $PWD | sed "s|$BASILISK|src|"`/
-	;;
-esac
+if darcs show repo > /dev/null 2>&1; then
+    ROOT=`darcs show repo | grep Root | awk '{print $2}'`
+    DIR=`echo $PWD | sed -e "s|$ROOT||" -e "s|^/||"`
+    if test -n "$DIR"; then
+	title="$DIR/"
+    fi
+fi
 case $basename in
     /*)
 	basename=`basename $basename`
@@ -71,14 +79,15 @@ case $basename in
 	;;
 esac
 
-if test -z "$BASILISK_URL"; then
-    BASILISK_URL="http://basilisk.fr"
+if test -z "$BASE_URL"; then
+    BASE_URL="http://basilisk.fr"
 fi
 
 cpreproc()
 {
     echo ~~~ {.c .numberLines .lineAnchors}
     cat $1
+    echo
     echo ~~~
 }
 
@@ -92,22 +101,46 @@ cpostproc()
 
 pagepreproc()
 {
-    $BASILISK/plugins/literate-c '???' $1 | sed 's/~~~literatec/~~~c/g'
+    $BASILISK/darcsit/literate-c $1 | sed 's/~~~literatec/~~~c/g'
 }
 
 pagepostproc()
 {
-    $BASILISK/plugins/codeblock "$BASILISK_URL" $1 $2
+    $BASILISK/darcsit/codeblock "$BASE_URL" $1 $2
+}
+
+pagetitle()
+{
+    awk '{
+    	if ($1 == "---")
+	  inheader = 1;
+	else if (inheader && $1 == "title:") {
+	  sub("title: *", "");
+	  print $0;
+          exit(0);
+	}
+	else if ($1 == "...")
+	  exit (0);
+    }'
 }
 
 case $page in
     *.page)
 	PREPROC="pagepreproc $basename"
 	POSTPROC="pagepostproc $basename $ext"
+	headertitle=`pagetitle < $page`
+	if test -n "$headertitle"; then
+	    title=$headertitle
+	fi
 	;;
     *)
-	PREPROC="cpreproc $page"
-	POSTPROC="cpostproc"
+	if $BASILISK/darcsit/pagemagic < $page; then
+	    PREPROC="pagepreproc $page"
+	    POSTPROC="pagepostproc $page $ext"
+	else
+	    PREPROC="cpreproc $page"
+	    POSTPROC="cpostproc"
+	fi
 	;;
 esac
 
@@ -119,17 +152,34 @@ else
     PANDOC="pandoc -f markdown+smart"
 fi
 
+tabs="<li class=selected><a href=\"$url\">view</a></li>"
+if test -n "$USERS"; then
+    tabs="$tabs<li><a href=\"/_edit$url\">edit</a></li>"
+fi
+tabs="$tabs<li><a href=\"$url?history\">history</a></li>"
+
+if test -n "$DOCUMENT_ROOT" -a -r "$DOCUMENT_ROOT/static/templates/page.static"; then
+    template="$DOCUMENT_ROOT/static/templates/page.static"
+else
+    template="$BASILISK/darcsit/templates/page.static"
+fi
+
+if test -z "WIKI_TITLE"; then
+    WIKI_TITLE=Basilisk
+fi
+
 $PREPROC | $PANDOC -s --mathml --toc --preserve-tabs            \
-	   -V wikititle=Basilisk				\
-	   -V base=http://basilisk.fr				\
+	   -V wikititle="$WIKI_TITLE"				\
+	   -V base="$BASE_URL"				        \
 	   -V pageUrl="$url"			                \
 	   -V pagetitle="$title" 			        \
 	   -V wikiupload=true					\
 	   -V sitenav=true					\
 	   -V pagetools=true					\
-	   -V usecache=true					\
-	   -V tabs=true                                         \
+	   -V tabs="$tabs"                                      \
+	   -V javascripts="$javascripts"                        \
+	   -V users="$USERS"                                    \
 	   $refresh                                             \
-	   --template=$BASILISK/templates/page.static	 	\
-    | sed 's/__ESCAPEDDOLLAR__/$$/g'			        \
+	   --template="$template"	                        \
+    | sed 's/__ESCAPEDDOLLAR__/$/g'			        \
     | $POSTPROC
