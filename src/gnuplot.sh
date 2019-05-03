@@ -1,7 +1,11 @@
 SVG="svg enhanced font ',11'"
 if ! gnuplot -e "batch=1; PNG=\"$PNG\"; SVG=\"$SVG\"; set macros; set term $SVG;" \
-    plots > /dev/null 2> gnuplot.log; then
-    gawk -v test=`basename $PWD` '
+     plots > /dev/null 2> gnuplot.log; then
+    test=$1
+    if test -z "$test"; then
+	test=`basename $PWD`
+    fi
+    gawk -v test="$test" '
     /line [0-9]+:/ {
       match ($0, "line ([0-9]+):(.*)", a);
       print test ".c:" a[1] ": warning: gnuplot:" a[2];

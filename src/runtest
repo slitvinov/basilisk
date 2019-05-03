@@ -7,7 +7,6 @@ case $ext in
     ctst) log=clog; out=cout; ref=cref; ;;
     *)    log=log;  out=out; ref=ref; ;;
 esac
-dir=`echo $PWD | sed "s:$BASILISK_WIKI/::"`
 
 case $CC in
     *-D_MPI=*) test -z "$EXEC" && EXEC="mpirun -np "`echo $CC | sed 's/.*-D_MPI=\([0-9]*\).*/\1/'`;
@@ -81,34 +80,60 @@ script()
     touch pass
 }
 
-expirecache()
-{
-    rm -f $BASILISK_WIKI/cache/$dir/$test.c.page
-}
-
 # run locally
 locally()
 {
     echo \[$test.$ext\]
-    qcc -autolink $CFLAGS -o $test/$test $test.c $LIBS -lm > $test/warn 2>&1 \
+    $BASILISK/qcc -autolink $CFLAGS -o $test/$test $test.c $LIBS -lm > $test/warn 2>&1 \
 	|| mv -f $test/warn $test/fail
     cd $test
     script
-    expirecache
     cd ..
+}
+
+# run untrusted code using the 'basilisk-untrusted' user if it exists
+run_untrusted()
+{
+    status=0
+    if grep -q basilisk-untrusted /etc/passwd; then
+	notrust=/tmp/$chksum
+	if ! sudo -n -u basilisk-untrusted -- \
+	     bash -c "mkdir $notrust && cp -arf * $notrust && cd $notrust && $1"; then
+	    status=1
+	fi
+	if ! cp -arf $notrust/* .; then
+	    status=1
+	fi
+	sudo -n -u basilisk-untrusted -- rm -rf $notrust
+    else
+	echo "Could not find the 'basilisk-untrusted' user" >2
+	status=1
+    fi
+    return $status
+}
+
+doplots()
+{
+    if ! run_untrusted "sh $BASILISK/gnuplot.sh $1 > tmp 2>&1"; then
+	cat tmp >> warn
+    fi
+    if ! run_untrusted "MPLBACKEND=Agg python plots.py > tmp 2>&1"; then
+	cat tmp >> warn
+    fi
+    rm -f tmp
 }
 
 # compile/run on a remote "sandbox"
 remotely()
 {
     rhost=$1
-    autolink=`qcc -autolink -source $CFLAGS $test.c`
-    chksum=`$GENSUM $test.s | cut -d' ' -f1`.$ext
+    autolink=`$BASILISK/qcc -autolink -progress -source $CFLAGS $test.c`
+    chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
     mkdir $test/$chksum
     mv -f _$test.c $test/$test.c
     cd $test
     cp -f $test.* $chksum 2> /dev/null || true
-    rm -f $chksum/$test.c.page
+    rm -f $chksum/$test.c.page $chksum/$test.c.html
     PCC="\$CC99"
     case "$CFLAGS" in
 	*-cadna*) PCC="\$CADNACC" ;;
@@ -116,21 +141,37 @@ remotely()
     PCFLAGS=`echo $CFLAGS | sed -e 's/-grid=[^-]*//' -e 's/-cadna//'`
     NCORES=`echo $EXEC | awk 'BEGIN{ np = 1 }{
       if ($1 == "mpirun") np = $3; }END{ print np;}'`
-    cat <<EOF >$chksum/$test.sh
+    cat <<EOF >$chksum/$chksum.sh
 #!/bin/sh
-$PCC $PCFLAGS -I\$HOME/include -o $test $test.c -L\$HOME/lib $LIBS $autolink -lm > warn 2>&1 || mv -f warn fail
+
+run_untrusted()
+{
+  status=0
+  notrust=/tmp/$chksum
+  if ! sudo -n -u basilisk-untrusted -- bash -c "source \$HOME/.bashrc && mkdir \$notrust && cp -arf * \$notrust && cd \$notrust && \$1"; then
+     status=1
+  fi
+  if ! cp -arf \$notrust/* .; then
+     status=1
+  fi
+  sudo -n -u basilisk-untrusted -- rm -rf \$notrust/
+  return \$status
+}
+
+$PCC $PCFLAGS -I\$HOME/include -o $chksum $test.c -L\$HOME/lib $LIBS $autolink -lm > warn 2>&1 || mv -f warn fail
 rm -f $test.c
 if ! test -f fail; then
   test -s warn || rm -f warn
 
   pass=true
   if test -n "$EXEC" -o -z "`which gdb`"; then
-    if ! timeout 1h $EXEC ./$test 2> $log > $out; then
+    if ! run_untrusted "timeout 1h $EXEC ./$chksum 2> $log > $out"; then
        pass=false
     fi
   else
-    if ! timeout 1h gdb -batch -return-child-result -ex "run 2> $log > $out" ./$test > gdb.log 2> gdb.err; then
+    if ! run_untrusted "timeout 1h gdb -batch -return-child-result -ex \"run 2> $log > $out\" $chksum > gdb.log 2> gdb.err" > gdb.log 2> gdb.err; then
        pass=false
+       cat gdb.err >> $log
        awk '
        {
          if (NF > 0)
@@ -143,7 +184,7 @@ if ! test -f fail; then
        ' < gdb.log >> $log
     fi
     rm -f gdb.log
-  fi
+  fi    
 
   if test -f log-1; then
       mv -f $log log-0
@@ -162,25 +203,28 @@ if ! test -f fail; then
         rm -f $test.\$ref
     fi
   else
+    if ! test -s $log; then
+       echo "The code timed out after one hour." > $log
+    fi
     cp -f $log fail
   fi
   if ! test -f fail; then
     touch pass
   fi
 fi
-rm -f $test $test.c $test.sh $test.*ref
+rm -f $chksum $test.c $chksum.sh $test.*ref
 tar czf \$HOME/$chksum.tgz *
 rm -r -f \$HOME/$chksum
 EOF
     tar czf $chksum.tgz $chksum
-    rm -r -f $chksum
+    rm -r -f $chksum/
 
     if ! ( scp $chksum.tgz $rhost: && rm -f $chksum.tgz && \
-	ssh $rhost bash -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -N \$(test \$(tsp -S) -le $NCORES && echo \$(tsp -S) || echo $NCORES) -n nice -19 sh $test.sh\" && sleep 0 && tsp -p && tsp -w" > tspid.$ext && \
-	scp -q $rhost:$chksum.tgz $chksum.tgz && \
-	ssh $rhost rm -r -f $chksum.tgz && \
-	tar xmzf $chksum.tgz && \
-	rm -f $chksum.tgz $test.c $test.*ref ) > /dev/null 2>> ssh.log;
+	       ssh $rhost bash -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -N \$(test \$(tsp -S) -le $NCORES && echo \$(tsp -S) || echo $NCORES) -n nice -19 sh $chksum.sh\" && sleep 0 && echo $chksum && tsp -w" > tspid.$ext && \
+	       scp -q $rhost:$chksum.tgz $chksum.tgz && \
+	       ssh $rhost rm -r -f $chksum.tgz && \
+	       tar xmzf $chksum.tgz && \
+	       rm -f $chksum.tgz $test.c $test.*ref ) > /dev/null 2>> ssh.log;
     then
 	cat ssh.log >> fail
     fi
@@ -191,36 +235,20 @@ EOF
 	echo
 	echo \[$test.$ext\]
 	cat fail
-	if test -n "$MAINTAINER"; then
-	    (
-		echo Latest change:
-		echo
-		darcs changes --last=1
-		echo
-		if test -f ../$test.c.page; then
-		    cat <<EOF
-See http://basilisk.fr/$dir/$test.c
-EOF
-		else
-		    cat fail
-		fi 
-	    ) | mail -s "basilisk: $test.$ext failed" $MAINTAINER
-	fi
     fi
-    cd ..
     # generate graphics
-    if test -f $test.plot -o -f $test.plot.page; then
-	if ! make $test/plot.png > $test/.tmp 2>&1; then
-	    cat $test/.tmp >> warn
-	fi
-    fi
-    cd $test
-    if ! sh $BASILISK/gnuplot.sh > .tmp; then
-	cat .tmp >> warn
-    fi
+    # this is obsolete and a security risk
+    # (
+    # 	cd ..
+    # 	if test -f $test.plot -o -f $test.plot.page; then
+    # 	    if ! make $test/plot.png > $test/.tmp 2>&1; then
+    # 		cat $test/.tmp >> $test/warn
+    # 	    fi
+    # 	fi
+    # )
+    doplots "$test"
     # Complete
-    rm -f *pid.$ext .tmp
-    expirecache
+    rm -f *pid.$ext
 }
 
 checksum()
@@ -238,37 +266,53 @@ if ! test -f $test.$ext || ! checksum $test.c $test.$ext; then
     source_modified=true
 fi
 
+killchildren()
+{
+    p=$1
+    c=`ps -o pid= --ppid $p`
+    kill $p
+    while test -n "$c"; do
+	p=$c
+	c=`ps -o pid= --ppid $p`
+	kill $p
+    done
+}
+
 # check sum for test.s
 if test -f $test.$ext && checksum $test.s $test.$ext; then
     touch $test.$ext
     echo "make: '$test.$ext' is up to date."
-    if test -n "$SANDBOX" && $source_modified; then
-	rm -f $test/warn && make $test/plots
+    if $source_modified; then
+	if test -n "$SANDBOX"; then
+	    rm -f $test/warn
+	    awk -f $BASILISK/gnuplot.awk < $test.c > $test/plots
+	    awk -f $BASILISK/python.awk < $test.c > $test/plots.py
+	    chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
+	    cd $test
+	    doplots "$test"
+	    cd ..
+	fi
+	$GENSUM $test.c $test.s > $test.$ext
     fi
 # check sum for test.s in fail.tst
 elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
     if test -n "$SANDBOX" -a -f $test/pid.$ext; then
-	echo Killing `cat $test/pid.$ext`
-	kill `cat $test/pid.$ext`
-	ssh $SANDBOX kill `cat $test/tspid.$ext`
+	killchildren `cat $test/pid.$ext`
+	if test -f $test/tspid.$ext; then
+	    ssh $SANDBOX killtest `cat $test/tspid.$ext`
+	fi
 	rm -f $test/*pid.$ext
     fi
 
     rm -f $test.$ext $test/pass \
 	$test/fail $test/fail.* $test/warn $test/plot.png $test/plots $test/core
     $GENSUM $test.c $test.s > $test.$ext
-    expirecache
 
     mkdir -p $test && cp -f $test.c $test
     awk -f $BASILISK/gnuplot.awk < $test.c > $test/plots
+    awk -f $BASILISK/python.awk < $test.c > $test/plots.py
     cp -f $test.* $test 2> /dev/null || true
     rm -f $test/*.[sd] $test/*.*tst $test/$test.c.page 2> /dev/null || true
-    if test -d $BASILISK_WIKI/static -a -f $test.c.page; then
-	if test ! -L $BASILISK_WIKI/static/$dir/$test; then
-	    mkdir -p $BASILISK_WIKI/static/$dir
-	    ln -s $PWD/$test $BASILISK_WIKI/static/$dir/$test
-	fi
-    fi
 
     if test -n "$SANDBOX"; then
         ( remotely $SANDBOX ) &
@@ -282,7 +326,13 @@ fi
 
 if test -f $test/fail; then
     cat $test/fail
-    rm -f $test.$ext
+    if test -f $test.$ext; then
+	if test -n "$SANDBOX"; then
+	    mv -f $test.$ext $test/fail.tst
+	else
+	    rm -f $test.$ext $test/fail.tst
+	fi
+    fi
     exit 1
 elif test -f $test/pid.$ext; then
     echo \[$test.$ext on $SANDBOX \(`cat $test/pid.$ext`\)\]
