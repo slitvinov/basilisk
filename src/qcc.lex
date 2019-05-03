@@ -525,7 +525,7 @@
 
   void endtrace() {
     fprintf (yyout, " end_trace(\"%s\", \"%s\", %d); ",
-	     tracefunc, fname, nolineno ? 0 : line);
+	     tracefunc, nolineno ? "" : fname, nolineno ? 0 : line);
   }
 
   void endevent() {
@@ -1256,7 +1256,7 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
 	     "static int %s (const int i, const %s t, Event * _ev) { "
 	     "trace (\"%s\", \"%s\", %d); ",
 	     eventfunc[nevents], doubletype,
-	     eventfunc[nevents], fname, nolineno ? 0 : line);
+	     eventfunc[nevents], nolineno ? "" : fname, nolineno ? 0 : line);
     free (tracefunc);
     tracefunc = strdup (eventfunc[nevents]);
     intrace = 2; traceon = 0;
@@ -1301,7 +1301,7 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
   }
   if (intrace == 1 && scope == 0) {
     fprintf (yyout, " trace (\"%s\", \"%s\", %d);",
-	     tracefunc, fname, nolineno ? 0 : line - 1);
+	     tracefunc, nolineno ? "" : fname, nolineno ? 0 : line - 1);
     intrace = 2;
   }
   scope++;
@@ -2896,7 +2896,7 @@ void write_event (int i, FILE * fout)
     fprintf (fout, "%s_array,\n", func);
   else
     fprintf (fout, "((%s *)0),\n", doubletype);
-  fprintf (fout, "    \"%s\", %d, \"%s\"});\n", eventfile[i], 
+  fprintf (fout, "    \"%s\", %d, \"%s\"});\n", nolineno ? "" : eventfile[i], 
 	   nolineno ? 0 : eventline[i], eventid[i]);
 }
 
