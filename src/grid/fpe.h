@@ -3,7 +3,7 @@
 @include <signal.h>
 @include <unistd.h>
 
-static void gdb()
+static int gdb()
 {
   if (last_point.level >= 0) {
     debug (last_point);
@@ -13,7 +13,7 @@ static void gdb()
   char command[80];
   sprintf (command, "exec xterm -e 'gdb -p %d' & xterm -e 'gnuplot plot -'",
 	   getpid());
-  system (command);
+  return system (command);
 }
 
 static void caught_abort (int sig)
