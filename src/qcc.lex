@@ -17,7 +17,7 @@
 
   int dimension = 2, bghosts = 0;
   
-  int debug = 0, catch = 0, cadna = 0, nolineno = 0, events = 0;
+  int debug = 0, catch = 0, cadna = 0, nolineno = 0, events = 0, progress = 0;
   char dir[] = ".qccXXXXXX";
 
   char * autolink = NULL;
@@ -2990,6 +2990,8 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	   nvar + 1, nolineno ? "0" : "__LINE__", nvar, nvar);
   if (catch)
     fputs ("  catch_fpe();\n", fout);
+  if (progress)
+    fputs ("  last_events();\n", fout);
   fprintf (fout, "  %s_methods();\n", grid);
   for (i = varstack; i >= 0; i--) {
     var_t var = _varstack[i];
@@ -3109,6 +3111,8 @@ int main (int argc, char ** argv)
       source = 1;
     else if (!strcmp (argv[i], "-autolink"))
       autolinks = 1;
+    else if (!strcmp (argv[i], "-progress"))
+      progress = 1;
     else if (!strcmp (argv[i], "-Wall")) {
       char * s = strchr (command, ' ');
       if (s) {
@@ -3284,6 +3288,8 @@ int main (int argc, char ** argv)
       }
       if (swigfp)
 	fputs ("#include \"python.h\"\n", fout);
+      if (progress)
+	fputs ("#include \"grid/progress.h\"\n", fout);
       fclose (fout);
       fclose (fin);
       fout = dopen (file, "w");
