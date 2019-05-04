@@ -1,4 +1,4 @@
 # -*-Makefile-*-
 
 all:
-	chmod 700 darcsit
+	chmod 755 darcsit

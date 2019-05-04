@@ -76,8 +76,8 @@ PANDOCT="$PANDOC --template=$template"
 
 ################### Are we logged in? ####################
 
-if [[ -n "$USERS" && "$HTTP_COOKIE" == "SSID="* ]]; then
-    cookie=$(echo ${HTTP_COOKIE##SSID=} | decode)
+if [[ -n "$USERS" && "$HTTP_COOKIE" == *"SSID="* ]]; then
+    cookie=$(echo ${HTTP_COOKIE##*SSID=} | decode)
     server=${cookie%%/*}
     if [[ "$SERVER_NAME" == "$server" ]]; then
 	cookie=${cookie#*/}
@@ -656,7 +656,8 @@ function debug()
 
 function has_plots()
 {
-    if grep -E -q '[ \t]*~~~[a-zA-Z_]*plot([ \t]|$)'; then
+    if grep -E -q -e '[ \t]*~~~[a-zA-Z_]*plot([ \t]|$)' \
+	          -e '\]\([ \t]*'$1'/'; then
 	return 0
     fi
     return 1
@@ -732,7 +733,7 @@ if [[ "$REQUEST_URI" == *.c\?status ]]; then
 	    fi
 	fi
     fi
-    if has_plots < "$DOCUMENT_ROOT/$dirname/$basename.c"; then
+    if has_plots "${basename##\~}" < "$DOCUMENT_ROOT/$dirname/$basename.c"; then
 	debug "need to run"
 	status_run "$dirname/$basename.c" "$edit"
     else

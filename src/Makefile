@@ -15,7 +15,7 @@ libkdt:
 	cd kdt && make
 
 literatec:
-	cd darcsit && make literate-c codeblock pagemagic urldecode
+	cd darcsit && make && cd cgi-bin && make
 
 qcc: qcc.c include.o rotate.o config
 	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" \

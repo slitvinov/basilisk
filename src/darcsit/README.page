@@ -181,7 +181,6 @@ Be careful if you have your own '*.html' files for some reason.
 
 * Reset password link does not work.
 * History does not work if the file name changes.
-* Generated mp4/movies do not refresh in preview.
 
 ## TODO
 

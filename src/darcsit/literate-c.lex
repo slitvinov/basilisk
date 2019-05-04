@@ -399,6 +399,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     }
     output_s ("controls><source src=\"");
     output_s (link);
+    fprintf (yyextra->out, "?%ld", time (NULL));
     output_s ("\" type = \"video/");
     output_s (!strcmp(link + strlen(link) - 4, ".mp4") ? "mp4" : "ogg");
     output_s ("\">Your browser does not support the video tag.</video>");
@@ -413,6 +414,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     output_s (yytext);
     output_s ("](");
     output_s (link);
+    fprintf (yyextra->out, "?%ld", time (NULL));
     output_c (')');
   }
   free (link);
