@@ -550,11 +550,12 @@ function status_warning()
 <div class=message id=warning>
 <div id=msg_logo><img src=/img/warning.png></div>
 <div id=msg_label>
-Please check the code for warnings.
 EOF
-	msg=$(sed -e "/^[~]*$1\.c:*/d" -e 's/$/<br>/g' < "$1/warn")
+	msg=$(sed -e "s|$DOCUMENT_ROOT\(/[^:]*\):\([0-9]*\):|<a href=\"\1#\2\">\1:\2</a>:|g"  \
+	          -e "s|^[~]*$1\.c:\([0-9]*\):|$1.c:<a href=\"#\1\">\1</a>:|g"   \
+		  -e 's/$/<br>/g' < "$1/warn")
 	if [[ "$msg" ]]; then
-	    echo "<br>$msg"
+	    echo "$msg"
 	fi
 cat <<EOF
 </div></div>

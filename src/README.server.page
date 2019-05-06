@@ -33,7 +33,7 @@ export TS_SLOTS=8
 export PATH=$PATH:$HOME/bin
 
 # howto compile C99 programs
-export CC99="gcc -O2 -Wall -std=c99 -D_GNU_SOURCE=1"
+export CC99="gcc -O2 -Wall -fno-diagnostics-show-caret -Wno-unused-result -std=c99 -D_GNU_SOURCE=1"
 
 # howto compile CADNA programs
 export CADNACC="clang -D_CADNA=1 -x c++ -m64 \

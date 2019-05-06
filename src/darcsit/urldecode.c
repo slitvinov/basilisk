@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-int main()
+void main()
 {
   int c = getchar(), c1 = getchar(), c2 = getchar();
   while (c != EOF) {

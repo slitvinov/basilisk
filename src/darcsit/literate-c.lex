@@ -24,7 +24,7 @@
 
   struct MyScanner {
     FILE * in, * out;
-    char * page, * basename, * gnuplot, * gnuplot_output, * type;
+    char * page, * basename, * gnuplot, * gnuplot_output, * type, * plotype;
     int i, ncodes, incode, first, line, indent;
     FILE * inbibtex;
     Error * error;
@@ -37,21 +37,21 @@
 #define output_s(s) output_s1(yyextra, s)
   
   static void error_start (struct MyScanner * scan) {
-    output_s1 (scan,
-	       "<div class=error>"
-	       "<div id=msg_logo>"
-	       "<img src=/img/error.png>"
-	       "</div>"
-	       "<div id=msg_label>");
+    fprintf (scan->out,
+	     "<div class=error id=%d>"
+	     "<div id=msg_logo>"
+	     "<img src=/img/error.png>"
+	     "</div>"
+	     "<div id=msg_label>", scan->line);
   }
 
   static void warning_start (struct MyScanner * scan) {
-    output_s1 (scan,
-	       "<div class=message>"
-	       "<div id=msg_logo>"
-	       "<img src=/img/warning.png>"
-	       "</div>"
-	       "<div id=msg_label>");
+    fprintf (scan->out,
+	     "<div class=message id=%d>"
+	     "<div id=msg_logo>"
+	     "<img src=/img/warning.png>"
+	     "</div>"
+	     "<div id=msg_label>", scan->line + 1);
   }
 
   static void error_end (struct MyScanner * scan) {
@@ -62,7 +62,7 @@
     if (scan->line < scan->nerror) {
       Error * e = &scan->error[scan->line];
       if (e->error || e->warning) {
-	if (!scan->first && scan->incode)
+	if (!scan->first && (scan->incode || scan->plotype))
 	  output_s1 (scan, "~~~\n");
 	if (e->error) {
 	  error_start (scan);
@@ -77,6 +77,11 @@
 	error_end (scan);
 	if (!scan->first && scan->incode && scan->type) {
 	  output_s1 (scan, scan->type);
+	  output_c1 (scan, '\n');
+	}
+	else if (scan->plotype) {
+	  output_c1 (scan, '\n');
+	  output_s1 (scan, scan->plotype);
 	  output_c1 (scan, '\n');
 	}
       }
@@ -280,7 +285,9 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   if (yyextra->incode)
     REJECT;
   yyextra->gnuplot = strdup (strstr (yytext, "gnuplot") + 7);
-  printf ("~~~ {#plot%d .bash}", yyextra->nplots);
+  printf ("<div id=\"plot%d\">\n", yyextra->nplots);
+  yyextra->plotype = strdup ("~~~ {.bash}");
+  fputs (yyextra->plotype, stdout);
   uline();
 }
 
@@ -288,7 +295,9 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
   if (yyextra->incode)
     REJECT;
   yyextra->gnuplot = strdup (strstr (yytext, "pythonplot") + 10);
-  printf ("~~~ {#plot%d .python}", yyextra->nplots);
+  printf ("<div id=\"plot%d\">", yyextra->nplots);
+  yyextra->plotype = strdup ("~~~ {.python}");
+  fputs (yyextra->plotype, stdout);
   uline();
 }
 
@@ -333,7 +342,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
       sprintf (name, "_plot%d.svg", yyextra->nplots);
       yyextra->gnuplot_output = strdup (name);
     }
-    output_s ("~~~\n\n");
+    output_s ("~~~\n</div>\n");
     output_s ("![");
     output_s (yyextra->gnuplot);
     printf (" (<a href=\"#\" id=\"buttonplot%d\">script</a>)", yyextra->nplots);
@@ -349,6 +358,8 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     yyextra->gnuplot = NULL;
     free (yyextra->gnuplot_output);
     yyextra->gnuplot_output = NULL;
+    free (yyextra->plotype);
+    yyextra->plotype = NULL;
     yyextra->nplots++;
   }
   else if (yyextra->inbibtex) {
@@ -625,6 +636,7 @@ void literate (FILE * fp, const char * page)
   sdata.in = fp;
   sdata.inbibtex = NULL;
   sdata.type = NULL;
+  sdata.plotype = NULL;
   sdata.indent = 0;
   sdata.out = stdout;
   sdata.i = 0;
