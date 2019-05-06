@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-void main()
+int main()
 {
   int c = getchar(), c1 = getchar(), c2 = getchar();
   while (c != EOF) {
@@ -30,4 +30,5 @@ void main()
       c = c1, c1 = c2, c2 = getchar();
     }
   }
+  return 0;
 }
