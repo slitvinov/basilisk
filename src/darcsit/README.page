@@ -80,6 +80,29 @@ ln -s $BASILISK/darcsit/static/js
 ln -s $BASILISK/darcsit/static/img
 ~~~
 
+To be able to use [codemirror](https://codemirror.net/) instead of the
+default basic text editor, it needs to be installed in `static/`
+using:
+
+~~~bash
+cd ~darcsit/wiki/static/
+wget https://codemirror.net/codemirror.zip
+unzip codemirror.zip
+rm codemirror.zip
+mv codemirror-* codemirror
+~~~
+
+To add support for "Basilisk C" syntax in codemirror, we need to apply
+a patch, like this:
+
+~~~bash
+cd ~darcsit/wiki/static/
+patch -p0 < $BASILISK/darcsit/codemirror.patch
+~~~
+
+Note that the patch was made for version 5.46 of codemirror and may
+need to be adapted for later versions.
+
 ## Apache configuration file for the wiki
 
 We now need to setup the Apache configuration for the wiki. This can
@@ -92,6 +115,9 @@ cp $BASILISK/darcsit/darcsit.conf /etc/apache2/sites-enabled/mywiki.conf
 The top part of `miwiki.conf` must then be edited to configure the
 wiki. The available options are commented in the file. Just follow the
 instructions there.
+
+You also need to make sure that eveything is setup so that you can
+[generate local HTML pages](/src/Contributing#generating-local-html-pages).
 
 Once this is done use:
 
@@ -167,6 +193,11 @@ rm -f `find . -name '*.html'`
 ~~~
 
 Be careful if you have your own '*.html' files for some reason.
+
+# Troubleshooting
+
+* If "history" or "Recent activity" do not work, make sure that the
+  version of darcs on the server is greater than 2.12.
 
 # Notes
 
