@@ -643,7 +643,9 @@ function status_running()
 <div id=msg_logo><img src=/img/gears.gif></div>
 <div id=msg_label>
 EOF
-    ssh "$HTTP_SANDBOX" statustest $(cat $1)
+    if [[ ! "$ministatus" ]]; then
+	ssh "$HTTP_SANDBOX" statustest $(cat $1)
+    fi
     cat <<EOF
 </div></div>
 EOF
@@ -664,35 +666,35 @@ function has_plots()
     return 1
 }
 
-if [[ "$REQUEST_URI" == *.c\?status ]]; then
-    basename="${REQUEST_URI%%\?status}"
-    basename="${basename%%.c}"
-    dirname="${basename%/*}"
+function status()
+{
+    local basename="${1%%.c}"
+    local dirname="${basename%/*}"
+    local ministatus="$2"
     basename="${basename##*/}"
-    echo -e "Content-type: text/plain; charset=utf-8\n"
     if [[ "$dirname/" == /_edit/* ]]; then
-	edit=true
+	local edit=true
 	dirname="${dirname##/_edit}"
 	basename="~$basename"
     fi
     if [[ -d "$DOCUMENT_ROOT/$dirname/$basename" ]] && cd "$DOCUMENT_ROOT/$dirname"; then
-	tst=$(ls "$basename/fail".*tst 2> /dev/null)
+	local tst=$(ls "$basename/fail".*tst 2> /dev/null)
 	tst=${tst##*\.}
 	if [[ "$tst" ]]; then
 	    if [[ -f "$basename/fail" ]]; then
 		if is_up_to_date "$basename.c" "$basename/fail.$tst"; then
 		    status_fail "$basename" "${REQUEST_URI%%\?status}"
-		    exit 0
+		    return
 		else
 		    debug "need to rerun 5"
 		    rm -f "$basename/fail" "$basename.c.html"
 		    status_rerun "$dirname/$basename.c" "$edit"
-		    exit 0		
+		    return
 		fi
 	    else
 		debug "need to rerun 4"
 		status_rerun "$dirname/$basename.c" "$edit"
-		exit 0
+		return
 	    fi
 	else
 	    tst=$(ls "$basename".*tst 2> /dev/null)
@@ -702,35 +704,35 @@ if [[ "$REQUEST_URI" == *.c\?status ]]; then
 		   is_up_to_date "$basename.s" "$basename.$tst" ; then
 		if [[ -f "$basename/pass" ]]; then
 		    debug "pass"
-		    if [[ "$edit" ]]; then
+		    if [[ "$edit" || "$ministatus" ]]; then
 			status_pass "$basename"
 		    else
 			status_warning "$basename"
 		    fi
-		    exit 0
+		    return
 		else
 		    if [[ "$(find $basename/pid.* 2> /dev/null)" ]]; then
 			if [[ "$(find $basename/pid.* -mmin +60 2> /dev/null)" ]]; then
 			    rm -f "$basename.$tst"
 			    debug "need to rerun 1"
 			    status_rerun "$dirname/$basename.c" "$edit"
-			    exit 0
+			    return
 			else
 			    debug "running"
-			    status_running "$basename/tspid."*
-			    exit 0
+			    status_running "$basename/tspid."* "$ministatus"
+			    return
 			fi
 		    else
 			rm -f "$basename.$tst"
 			debug "need to rerun 2"
 			status_rerun "$dirname/$basename.c" "$edit"
-			exit 0
+			return
 		    fi
 		fi
 	    else
 		debug "need to rerun 3"
 		status_rerun "$dirname/$basename.c" "$edit"
-		exit 0
+		return
 	    fi
 	fi
     fi
@@ -740,6 +742,11 @@ if [[ "$REQUEST_URI" == *.c\?status ]]; then
     else
 	debug "not run"
     fi
+}
+
+if [[ "$REQUEST_URI" == *.c\?status ]]; then
+    echo -e "Content-type: text/plain; charset=utf-8\n"
+    status "${REQUEST_URI%%\?status}"
     exit 0
 fi
 
@@ -1184,9 +1191,36 @@ dirpreproc()
 	echo -n "<a class=\"updir\" href=\"$path\">"$d/"</a>"
     done
     echo '<ul class="index">'
-    darcs show files --no-pending --no-directories | grep '^\.'$1'[^/]*$' | \
-	sed -e 's|^\.\(.*\)/\([^/]*\)\.page$|<li class="page"><a href="\1/\2">\2</a></li>|g' \
-	    -e 's|^\.\(.*\)/\([^/]*\)$|<li class="upload"><a href="\1/\2">\2</a></li>|g'
+    files=$(darcs show files --no-pending --no-directories | grep '^\.'$1'[^/]*$')
+    for f in $files; do
+	if [[ "$f" == *.page ]]; then
+	    echo -n "<li class=\"page\">"
+	else
+	    echo -n "<li class=\"upload\">"
+	fi
+	basename=${f%%.page}
+	dirname=${f%/*}
+	echo -n "<a href=\"${dirname#\.}/${basename##*/}\">"
+	if [[ "$f" == *.c || "$f" == *.c.page ]]; then
+	    status=$(status $basename true)
+	    color="black"
+	    if [[ "$status" == *"id=running"* ]]; then
+		color="blue"
+	    elif [[ "$status" == *"id="*"run"* ]]; then
+		color="orange"
+	    elif [[ "$status" == *"id=error"* ]]; then
+		color="red"
+	    elif [[ "$status" == *"id=warning"* ]]; then
+		color="orange"
+	    elif [[ "$status" == *"id=pass"* ]]; then
+		color="green"
+	    fi
+	    echo -n "<div style=\"color:$color\">${basename##*/}</div>"
+	else
+	    echo -n "${basename##*/}"
+	fi
+	echo "</a></li>"
+    done
     darcs show files --no-pending --no-files | grep '^\.'$1'[^/]*$' | \
 	sed 's|^\.\(.*\)/\([^/]*\)$|<li class="folder"><a href="\1/\2/">\2</a></li>|g'
     echo '</ul>'
