@@ -5,14 +5,16 @@ static double tlast = -1;
 
 static void last_events()
 {
+  disable_fpe (FE_DIVBYZERO|FE_INVALID);
   t = 0., iter = 0;
   double dt = 1e-6;
-  while (events (false) && t < HUGE) {
+  while (events (false) && t < 1e10) {
     dtnext (dt);
     dt *= 2.;
     iter = inext, t = tnext;
   }
   ilast = iter, tlast = t;
+  enable_fpe (FE_DIVBYZERO|FE_INVALID);
 }
 
 event progress (i += 5)
