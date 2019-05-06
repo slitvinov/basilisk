@@ -114,7 +114,7 @@ run_untrusted()
 
 doplots()
 {
-    if ! run_untrusted "sh $BASILISK/gnuplot.sh $1 > tmp 2>&1"; then
+    if ! run_untrusted "PNG=$PNG sh $BASILISK/gnuplot.sh $1 > tmp 2>&1"; then
 	cat tmp >> warn
     fi
     if ! run_untrusted "MPLBACKEND=Agg python plots.py > tmp 2>&1"; then
