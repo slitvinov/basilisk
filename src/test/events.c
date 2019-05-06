@@ -21,6 +21,7 @@ event event8 (i = end)
 
 int main (int argc, char * argv[])
 {
+  iter = 0, t = 0.;
   while (events (true))
     iter = inext, t = tnext;
 }
