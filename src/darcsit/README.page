@@ -177,6 +177,8 @@ Be careful if you have your own '*.html' files for some reason.
 * "printable version" is gone.
 * Button to hide/show gnuplot scripts.
 * Progress bar when running code.
+* Status of running codes when listing directories.
+* .page extension is not required anymore for documented .[ch] source code.
 
 ## Known bugs
 
@@ -185,14 +187,13 @@ Be careful if you have your own '*.html' files for some reason.
 
 ## TODO
 
-* https for login/register page
-* secure Cookies
+* https for login/register page.
+* Secure Cookies.
 
 ## Improvements
 
-* side-by-side edit view
+* Side-by-side edit view.
 
 ## Broken pages
 
-* http://basilisk.dalembert.upmc.fr/Basilisk%20C?changes=94d206fcf06d36420bb06aa825a48ef7b2001671
-
+* http://basilisk.dalembert.upmc.fr/Basilisk%20C?changes=94d206fcf06d36420bb06aa825a48ef7b2001671 (example of broken history due to name change).
