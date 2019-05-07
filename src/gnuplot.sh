@@ -10,7 +10,7 @@ if ! gnuplot -e "batch=1; PNG=\"$PNG\"; SVG=\"$SVG\"; set macros; set term $SVG;
       match ($0, "line ([0-9]+):(.*)", a);
       print test ".c:" a[1] ": warning: gnuplot:" a[2];
     }' < gnuplot.log
-    rm -f gnuplot.log
+    rm -f gnuplot.log `find . -name '_plot*.svg' -size 0`
     exit 1;
 fi
-rm -f gnuplot.log
+rm -f gnuplot.log `find . -name '_plot*.svg' -size 0`

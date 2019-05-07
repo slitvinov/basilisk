@@ -95,19 +95,24 @@ locally()
 run_untrusted()
 {
     status=0
-    if grep -q basilisk-untrusted /etc/passwd; then
-	notrust=/tmp/$chksum
-	if ! sudo -n -u basilisk-untrusted -- \
-	     bash -c "mkdir $notrust && cp -arf * $notrust && cd $notrust && $1"; then
+    if test -n "$chksum"; then
+	if grep -q basilisk-untrusted /etc/passwd; then
+	    if ! mkdir -m 777 ../$chksum; then
+		return 1
+	    fi
+	    if ! sudo -n -u basilisk-untrusted -- \
+		 bash -c "cp -arf * ../$chksum && cd ../$chksum && $1"; then
+		status=1
+	    fi
+	    if ! cp -arf ../$chksum/* .; then
+		status=1
+	    fi
+	    sudo -n -u basilisk-untrusted -- rm -rf ../$chksum/*
+	    rm -r -f ../$chksum
+	else
+	    echo "Could not find the 'basilisk-untrusted' user" >2
 	    status=1
 	fi
-	if ! cp -arf $notrust/* .; then
-	    status=1
-	fi
-	sudo -n -u basilisk-untrusted -- rm -rf $notrust
-    else
-	echo "Could not find the 'basilisk-untrusted' user" >2
-	status=1
     fi
     return $status
 }
@@ -130,10 +135,17 @@ remotely()
     autolink=`$BASILISK/qcc -autolink -progress -source $CFLAGS $test.c`
     chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
     mkdir $test/$chksum
-    mv -f _$test.c $test/$test.c
     cd $test
     cp -f $test.* $chksum 2> /dev/null || true
     rm -f $chksum/$test.c.page $chksum/$test.c.html
+    if test `echo "$test" | sed 's/^~//'` != "$test"; then
+	cd $chksum
+	for f in "$test".*; do
+	    mv -f "$f" `echo "$f" | sed 's/^~//'`
+	done
+	cd ..
+    fi
+    mv -f ../_$test.c $chksum/$test.c
     PCC="\$CC99"
     case "$CFLAGS" in
 	*-cadna*) PCC="\$CADNACC" ;;
@@ -148,7 +160,7 @@ run_untrusted()
 {
   status=0
   notrust=/tmp/$chksum
-  if ! sudo -n -u basilisk-untrusted -- bash -c "source \$HOME/.bashrc && mkdir \$notrust && cp -arf * \$notrust && cd \$notrust && \$1"; then
+  if ! sudo -n -u basilisk-untrusted -- bash -c "source \$HOME/.bashrc && mkdir \$notrust && cp -arf * \$notrust && cd \$notrust && rm -f complete && \$1 && touch complete"; then
      status=1
   fi
   if ! cp -arf \$notrust/* .; then
@@ -224,7 +236,7 @@ EOF
 	       scp -q $rhost:$chksum.tgz $chksum.tgz && \
 	       ssh $rhost rm -r -f $chksum.tgz && \
 	       tar xmzf $chksum.tgz && \
-	       rm -f $chksum.tgz $test.c $test.*ref ) > /dev/null 2>> ssh.log;
+	       rm -f $chksum.tgz $test.c $test.*ref progress complete) > /dev/null 2>> ssh.log;
     then
 	cat ssh.log >> fail
     fi

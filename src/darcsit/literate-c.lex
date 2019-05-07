@@ -42,7 +42,7 @@
 	     "<div id=msg_logo>"
 	     "<img src=/img/error.png>"
 	     "</div>"
-	     "<div id=msg_label>", scan->line);
+	     "<div id=msg_label>", scan->line + 1);
   }
 
   static void warning_start (struct MyScanner * scan) {
@@ -310,6 +310,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     s++;
     yyextra->gnuplot_output = strdup (s);
     yyextra->gnuplot_output[strlen(s) - 1] = '\0';
+    output_s (yytext);
     uline();
   }
   else
@@ -434,8 +435,6 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
 
 \[[^\[]*\]\({SP}*\) {
   // empty link e.g. [Tutorial]()
-  if (yyextra->incode)
-    REJECT;
   uline();
   char * s = strchr (yytext, ']');
   *s = '\0';
@@ -640,7 +639,7 @@ void literate (FILE * fp, const char * page)
   sdata.indent = 0;
   sdata.out = stdout;
   sdata.i = 0;
-  sdata.incode = 0;
+  sdata.incode = 1;
   sdata.ncodes = 0;
   sdata.first = 0;
   sdata.error = NULL;

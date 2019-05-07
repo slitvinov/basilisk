@@ -23,7 +23,8 @@ function defaults()
 	else if (match (output, ".*\\.svg"))
 	    fixfonts(output);
 	else if (output == "")
-	    fixfonts("_plot" nplots++ ".svg");
+	    fixfonts("_plot" nplots ".svg");
+	nplots++;
     }
 }
 
@@ -35,8 +36,13 @@ function defaults()
 	    defaults();
 	}
 	else {
-	    if (match($0, "^[ \t]*set[ \t]+output[ \t]+(.*)", a))
+	    if (match($0, "^[ \t]*set[ \t]+output[ \t]+(.*)", a)) {
 		output = a[1];
+		if (term == "" && match (output, ".*\\.png"))
+		    printf ("set term PNG enhanced font \",10\"; ");
+	    }
+	    else if (match($0, "^[ \t]*set[ \t]+term"))
+		term = $0;
 	    print $0;
 	}
     }

@@ -551,9 +551,7 @@ function status_warning()
 <div id=msg_logo><img src=/img/warning.png></div>
 <div id=msg_label>
 EOF
-	msg=$(sed -e "s|$DOCUMENT_ROOT\(/[^:]*\):\([0-9]*\):|<a href=\"\1#\2\">\1:\2</a>:|g"  \
-	          -e "s|^[~]*$1\.c:\([0-9]*\):|$1.c:<a href=\"#\1\">\1</a>:|g"   \
-		  -e 's/$/<br>/g' < "$1/warn")
+	msg=$(parse_errors "$1" < "$1/warn")
 	if [[ "$msg" ]]; then
 	    echo "$msg"
 	fi
@@ -561,6 +559,14 @@ cat <<EOF
 </div></div>
 EOF
     fi
+}
+
+function parse_errors()
+{
+    uniq | sed -e "s|$DOCUMENT_ROOT/\([^:]*\):\([0-9]*\):|<a href=\"/\1#\2\">\1:\2</a>:|g"  \
+	-e "s|^\./\([^:]*\):\([0-9]*\):|<a href=\"./\1#\2\">\1:\2</a>:|g"                   \
+	-e "s|^[~]*$1\.c:\([0-9]*\):|$1.c:<a href=\"$2#\1\">\1</a>:|g"                      \
+	-e 's/$/<br>/g'
 }
 
 function status_fail()
@@ -571,17 +577,16 @@ function status_fail()
 <div id=msg_logo><img src=/img/error.png></div>
 <div id=msg_label>
 EOF
+    local short=${1##\~}
+    msg=$(head -n 20 "$1/fail" | sed -r -e "s/$1/$short/g" | parse_errors "$short" "$2")
     if $BASILISK/darcsit/pagemagic < "$1.c"; then
-	msg=$(head -n 20 "$1/fail" | sed -e "/^$1\.c:*/d" -e 's/$/<br>/g')
 	if [[ ! "$msg" ]]; then
 	    head -n 20 "$1/fail" | sed 's/.*\(Program received signal.*\)/\1/;t;d'
 	else
 	    echo "$msg"
 	fi
     else
-	local short=${1##\~}
-	head -n 20 "$1/fail" | \
-	    sed -r -e "s/$1/$short/g" -e "s|^$short\.c:([0-9]+):*|<a href=\"$2#\1\">$short.c:\1:</a>|g" -e 's/$/<br>/g'
+	echo "$msg"
     fi
     cat <<EOF
 </div></div>
@@ -799,11 +804,20 @@ function copy_test_dir()
     if [[ -d "$1" ]]; then
 	if [[ ! -d "$2" ]]; then
 	    mkdir "$2"
+	    local warn=1
+	    local fail=1
+	else
+	    [ -f "$2/warn" ]
+	    local warn=$?
+	    [ -f "$2/fail" ]
+	    local fail=$?
 	fi
 	cp -f "$1/"* "$2/"
-	cp -f "$1.s" "$2.s"
+	if [[ -f "$1.s" ]]; then
+	    cp -f "$1.s" "$2.s"
+	fi
 	if [[ -f "$1/warn" ]]; then
-	    if [[ -f "$2/warn" ]]; then
+	    if (( warn == 0)); then
 		sed "s/$1/$2/g" < "$1/warn" > "$2/warn.tmp"
 		if diff -q "$2/warn" "$2/warn.tmp" > /dev/null; then
 		    rm -f "$2/warn.tmp"
@@ -815,16 +829,22 @@ function copy_test_dir()
 		sed "s/$1/$2/g" < "$1/warn" > "$2/warn"
 		rm -f "$2.c.html"
 	    fi
-	elif [[ -f "$2/warn" ]]; then
+	elif (( warn == 0 )); then
 	    rm -f "$2/warn" "$2.c.html"
 	fi
 	if [[ -f "$1/fail.tst" ]]; then
 	    sed "s/$1/$2/g" < "$1/fail.tst" > "$2/fail.tst"
 	    sed "s/$1/$2/g" < "$1/fail" > "$2/fail"
+	    if (( fail == 1 )); then
+		rm -f "$2.c.html"
+	    fi
 	    rm -f "$2.*tst"
 	elif [[ -f "$1.tst" ]]; then
 	    sed "s/$1/$2/g" < "$1.tst" > "$2.tst"
 	    rm -f "$2/fail.tst" "$2/fail"
+	    if (( fail == 0 )); then
+		rm -f "$2.c.html"
+	    fi
 	    if [[ "$(find $1/pid.* 2> /dev/null)" ]]; then
 		rm -f "$2/pass"
 	    fi
@@ -1040,8 +1060,10 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 		    basename="${file##*/}"
 		    basename="${basename%%.c}"
 		    cd $dirname
+		    for f in "$basename".*; do
+			cp -f "$f" "~$f"
+		    done
 		    get_edited_text > "~$basename.c"
-		    cp -f "~$basename.c" "run~$basename.c"
 		    if [[ ! -d "~$basename" && -d "$basename" ]]; then
 			copy_test_dir "$basename" "~$basename"
 		    fi
@@ -1053,7 +1075,7 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 		    rm -f "$basename.log"
 		    if ( make -f "$makefile" "$basename.s" ) > "$basename.log" 2>&1; then
 			if rm -f "$basename/fail.tst" && \
-				SANDBOX="$HTTP_SANDBOX" CFLAGS="-O2" \
+				SANDBOX="$HTTP_SANDBOX" CFLAGS="-O2 -DMTRACE=3" \
 				       make -f "$makefile" "$basename.tst" > "$basename.log"; then
 			    rm -f "$basename.log"
 			fi
@@ -1240,7 +1262,8 @@ if test -d $file; then
     tabs="$tabs<li><a href=\"${REQUEST_URI}?history\">history</a></li>"
     $PREPROC | $PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
 		       -V base=$BASE_URL			    \
-		       -V pagetitle=Contents 			    \
+		       -V pagetitle="$REQUEST_URI"		    \
+		       -V notitle=true                              \
 		       -V sitenav=true				    \
 		       -V tabs="$tabs"                              \
 		       -V users="$USERS"                            \

@@ -51,37 +51,39 @@ killtest()
 {
     chksum=$1
     if test -z "$chksum"; then
-        return 1
+		return 1
     fi
-    if test -x /tmp/$chksum/$chksum; then
-        # running
-        sudo -n -u basilisk-untrusted -- killall /tmp/$chksum/$chksum
+    if [[ -x /tmp/$chksum/$chksum ]]; then
+		# running
+		sudo -n -u basilisk-untrusted -- killall /tmp/$chksum/$chksum
     else
-        # queued
-	id=`tsp | sed "s/\([0-9]*\)  queued  .*$chksum\.sh/\1/;t;d"`
-        if test -n "$id"; then
-            tsp -r $id
-        fi
+		# queued
+		id=$(tsp | sed "s/\([0-9]*\)  queued  .*$chksum\.sh/\1/;t;d")
+		if [[ -n "$id" ]]; then
+			tsp -r $id
+		fi
     fi
     rm -r -f ./$chksum*
     sudo -n -u basilisk-untrusted -- rm -r -f /tmp/$chksum*
 }
 
-# status of running tests
-
 statustest()
 {
     chksum=$1
-    if test -x /tmp/$chksum/$chksum; then
-        echo -n "The code is running.";
-        if test -s /tmp/$chksum/progress; then
-            echo -n " "
-            tr '\r' '\n' < /tmp/$chksum/progress | tail -n 1
-        else
-            echo
-	fi
+    if [[ -x /tmp/$chksum/$chksum ]]; then
+		echo -n "The code is running.";
+		if [[ -s /tmp/$chksum/progress ]]; then
+			echo -n " "
+			tr '\r' '\n' < /tmp/$chksum/progress | tail -n 1
+		else
+			echo
+		fi
     else
-        echo "The code is waiting to run.";
+		if [[ -f "$chksum/complete" ]]; then
+			echo "The code has finished running.";
+		else
+			echo "The code is waiting to run.";
+		fi
     fi
 }
 ~~~
