@@ -17,6 +17,9 @@ CFLAGS += -g -Wall -pipe
 # if gnuplot supports pngcairo, otherwise comment this out
 # PNG = pngcairo
 
+# If you have managed to make gdb work (congratulations!), uncomment this
+# GDB = gdb
+
 # if you don't have md5sum, replace it with something equivalent
 GENSUM = shasum
 CHECKSUM = shasum -c --status

@@ -20,7 +20,7 @@ for opt in $CFLAGS; do
 done
 
 case $OSTYPE in
-    *darwin*) ;;
+    *darwin*) ;; # gdb is (often) broken on Apple OSX
     *)
 	if test -z "$GDB"; then
 	    GDB=`which gdb`

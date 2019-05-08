@@ -43,21 +43,21 @@ clean:
 
 %.CADNA.tst: %.CADNA.s %.CADNA.c
 	@CFLAGS="$(CFLAGS) -cadna" LIBS="$(LIBS) $(CADNALIBS)" OPENGLIBS="$(OPENGLIBS)"\
-		$(BASILISK)/runtest $@
+		GDB="$(GDB)" $(BASILISK)/runtest $@
 
 %.tst: %.s %.c
 	@PNG=$(PNG) LIBS="$(LIBS)" OPENGLIBS="$(OPENGLIBS)" \
-		$(BASILISK)/runtest $@
+		GDB="$(GDB)" $(BASILISK)/runtest $@
 
 %.ctst: %.s %.c
 	@PNG=$(PNG) LIBS="$(LIBS)" OPENGLIBS="$(OPENGLIBS)" \
 		CFLAGS="-grid=multigrid $(CFLAGS)" \
-		$(BASILISK)/runtest $@
+		GDB="$(GDB)" $(BASILISK)/runtest $@
 
 %.vtst: %.s %.c
 	@PNG=$(PNG) LIBS="$(LIBS)" OPENGLIBS="$(OPENGLIBS)" \
 		EXEC="$(VALGRIND)" \
-		$(BASILISK)/runtest $@
+		GDB="$(GDB)" $(BASILISK)/runtest $@
 
 %.h: %.h.page
 	ln -s -f $< $@
