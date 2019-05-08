@@ -169,7 +169,9 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	$(CC) -shared $*.o $*_wrap.o -o _$*.so
 
 # HTML
-%.html: %.page %.tags $(BASILISK)/Makefile.defs 	  \
+%.html: %.page %.tags $(BASILISK)/Makefile.defs           \
+		$(BASILISK)/darcsit/basilisk.conf         \
+		$(BASILISK)/darcsit/darcsit.conf 	  \
 		$(BASILISK)/darcsit/templates/page.static \
 		$(BASILISK)/darcsit/literate-c		  \
 		$(BASILISK)/darcsit/codeblock		  \
@@ -177,7 +179,9 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	$(BASILISK)/page2html $< > $@
 	@test -s $@ || exit 1
 
-%.c.html: %.c %.c.tags $(BASILISK)/Makefile.defs 	   \
+%.c.html: %.c %.c.tags $(BASILISK)/Makefile.defs           \
+		$(BASILISK)/darcsit/basilisk.conf          \
+		$(BASILISK)/darcsit/darcsit.conf 	   \
 		$(BASILISK)/darcsit/templates/page.static  \
 		$(BASILISK)/darcsit/literate-c		   \
 		$(BASILISK)/darcsit/codeblock		   \
@@ -186,6 +190,8 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	@test -s $@ || exit 1
 
 %.h.html: %.h %.h.tags $(BASILISK)/Makefile.defs 	   \
+		$(BASILISK)/darcsit/basilisk.conf          \
+		$(BASILISK)/darcsit/darcsit.conf 	   \
 		$(BASILISK)/darcsit/templates/page.static  \
 		$(BASILISK)/darcsit/literate-c		   \
 		$(BASILISK)/darcsit/codeblock		   \
@@ -193,7 +199,9 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	$(BASILISK)/page2html $< > $@
 	@test -s $@ || exit 1
 
-%.m.html: %.m $(BASILISK)/Makefile.defs 	   \
+%.m.html: %.m $(BASILISK)/Makefile.defs 	           \
+		$(BASILISK)/darcsit/basilisk.conf          \
+		$(BASILISK)/darcsit/darcsit.conf 	   \
 		$(BASILISK)/darcsit/templates/page.static  \
 		$(BASILISK)/darcsit/literate-c		   \
 		$(BASILISK)/darcsit/codeblock		   \

@@ -186,6 +186,9 @@ remotely()
     PCFLAGS=`echo $CFLAGS | sed -e 's/-grid=[^-]*//' -e 's/-cadna//'`
     NCORES=`echo $EXEC | awk 'BEGIN{ np = 1 }{
       if ($1 == "mpirun") np = $3; }END{ print np;}'`
+    case "$CFLAGS" in
+	*-fopenmp*) NCORES=1000 ;;
+    esac
     cat <<EOF >$chksum/$chksum.sh
 #!/bin/sh
 
