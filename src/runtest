@@ -4,6 +4,15 @@ FILE="$1"
 test="${FILE%.*}"
 ext="${FILE##*.}"
 
+if test -f $test.c; then
+    src=$test.c
+elif test -f $test.m; then
+    src=$test.m
+else
+    echo "No source file found for $test" >&2
+    exit 1
+fi
+
 case $ext in
     ctst) log=clog; out=cout; ref=cref; ;;
     *)    log=log;  out=out; ref=ref; ;;
@@ -30,7 +39,7 @@ esac
 
 script()
 {
-    rm -f $test.c
+    rm -f $src
     if test -f fail; then
 	return 1
     fi
@@ -90,14 +99,27 @@ script()
     touch pass
 }
 
-# run locally
+# run locally (C code)
 locally()
 {
     echo \[$test.$ext\]
-    $BASILISK/qcc -autolink $CFLAGS -o $test/$test $test.c $LIBS -lm > $test/warn 2>&1 \
+    $BASILISK/qcc -autolink $CFLAGS -o $test/$test $src $LIBS -lm > $test/warn 2>&1 \
 	|| mv -f $test/warn $test/fail
     cd $test
     script
+    cd ..
+}
+
+# run locally (Octave code)
+locally_octave()
+{
+    echo \[$test.$ext\]
+    cd $test
+    if octave-cli --path .. -W -H -q $src 2> $log > $out; then
+	touch pass
+    else
+	cp -f $log fail
+    fi
     cd ..
 }
 
@@ -139,15 +161,16 @@ doplots()
 }
 
 # compile/run on a remote "sandbox"
+# NOTE: update remotely_octave() when changing this
 remotely()
 {
     rhost=$1
-    autolink=`$BASILISK/qcc -autolink -progress -source $CFLAGS $test.c`
+    autolink=`$BASILISK/qcc -autolink -progress -source $CFLAGS $src`
     chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
     mkdir $test/$chksum
     cd $test
     cp -f $test.* $chksum 2> /dev/null || true
-    rm -f $chksum/$test.c.page $chksum/$test.c.html
+    rm -f $chksum/$src.page $chksum/$src.html
     if test `echo "$test" | sed 's/^~//'` != "$test"; then
 	cd $chksum
 	for f in "$test".*; do
@@ -155,7 +178,7 @@ remotely()
 	done
 	cd ..
     fi
-    mv -f ../_$test.c $chksum/$test.c
+    mv -f ../_$src $chksum/$src
     PCC="\$CC99"
     case "$CFLAGS" in
 	*-cadna*) PCC="\$CADNACC" ;;
@@ -180,8 +203,8 @@ run_untrusted()
   return \$status
 }
 
-$PCC $PCFLAGS -I\$HOME/include -o $chksum $test.c -L\$HOME/lib $LIBS $autolink -lm > warn 2>&1 || mv -f warn fail
-rm -f $test.c
+$PCC $PCFLAGS -I\$HOME/include -o $chksum $src -L\$HOME/lib $LIBS $autolink -lm > warn 2>&1 || mv -f warn fail
+rm -f $src
 if ! test -f fail; then
   test -s warn || rm -f warn
 
@@ -234,7 +257,7 @@ if ! test -f fail; then
     touch pass
   fi
 fi
-rm -f $chksum $test.c $chksum.sh $test.*ref
+rm -f $chksum $src $chksum.sh $test.*ref
 tar czf \$HOME/$chksum.tgz *
 rm -r -f \$HOME/$chksum
 EOF
@@ -246,7 +269,7 @@ EOF
 	       scp -q $rhost:$chksum.tgz $chksum.tgz && \
 	       ssh $rhost rm -r -f $chksum.tgz && \
 	       tar xmzf $chksum.tgz && \
-	       rm -f $chksum.tgz $test.c $test.*ref progress complete) > /dev/null 2>> ssh.log;
+	       rm -f $chksum.tgz $src $test.*ref progress complete) > /dev/null 2>> ssh.log;
     then
 	cat ssh.log >> fail
     fi
@@ -273,6 +296,95 @@ EOF
     rm -f *pid.$ext
 }
 
+# compile/run on a remote "sandbox" (OCTAVE)
+remotely_octave()
+{
+    rhost=$1
+    chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
+    mkdir $test/$chksum
+    cd $test
+    cp -f $test.* $chksum 2> /dev/null || true
+    rm -f $chksum/$src.page $chksum/$src.html
+    if test `echo "$test" | sed 's/^~//'` != "$test"; then
+	cd $chksum
+	for f in "$test".*; do
+	    mv -f "$f" `echo "$f" | sed 's/^~//'`
+	done
+	cd ..
+    fi
+    mkdir $chksum/lib/
+    cp -f ../*.m $chksum/lib/
+    cp -f ../$src $chksum/$src
+    cat <<EOF >$chksum/$chksum.sh
+#!/bin/sh
+
+run_untrusted()
+{
+  status=0
+  notrust=/tmp/$chksum
+  if ! sudo -n -u basilisk-untrusted -- bash -c "source \$HOME/.bashrc && mkdir \$notrust && cp -arf * \$notrust && cd \$notrust && rm -f complete && \$1 && touch complete"; then
+     status=1
+  fi
+  if ! cp -arf \$notrust/* .; then
+     status=1
+  fi
+  sudo -n -u basilisk-untrusted -- rm -rf \$notrust/
+  return \$status
+}
+
+pass=true
+if ! run_untrusted "timeout 1h octave-cli --path lib -W -H -q $src 2> $log > $out"; then
+    pass=false
+fi
+
+if \$pass; then
+    if test -f $test.$ref; then
+      ref=$ref
+    else
+      ref=ref
+    fi
+    if test -f $test.\$ref; then
+        echo diff $log $test.\$ref > fail
+        diff $log $test.\$ref >> fail && rm -f fail
+        rm -f $test.\$ref
+    fi
+else
+    if ! test -s $log; then
+       echo "The code timed out after one hour." > $log
+    fi
+    cp -f $log fail
+fi
+if ! test -f fail; then
+    touch pass
+fi
+rm -r -f $chksum $src $chksum.sh $test.*ref lib/
+tar czf \$HOME/$chksum.tgz *
+rm -r -f \$HOME/$chksum
+EOF
+    tar czf $chksum.tgz $chksum
+    rm -r -f $chksum/
+
+    if ! ( scp $chksum.tgz $rhost: && rm -f $chksum.tgz && \
+	       ssh $rhost bash -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -n nice -19 sh $chksum.sh\" && sleep 0 && echo $chksum && tsp -w" > tspid.$ext && \
+	       scp -q $rhost:$chksum.tgz $chksum.tgz && \
+	       ssh $rhost rm -r -f $chksum.tgz && \
+	       tar xmzf $chksum.tgz && \
+	       rm -f $chksum.tgz $src $test.*ref progress complete) > /dev/null 2>> ssh.log;
+    then
+	cat ssh.log >> fail
+    fi
+    rm -f ssh.log
+
+    if test -f fail; then
+	mv -f ../$test.$ext fail.$ext
+	echo
+	echo \[$test.$ext\]
+	cat fail
+    fi
+    # Complete
+    rm -f *pid.$ext
+}
+
 checksum()
 {
     if grep $1 $2 | $CHECKSUM; then 
@@ -282,9 +394,9 @@ checksum()
     fi
 }
 
-# check sum for test.c
+# check sum for $src
 source_modified=false
-if ! test -f $test.$ext || ! checksum $test.c $test.$ext; then
+if ! test -f $test.$ext || ! checksum $src $test.$ext; then
     source_modified=true
 fi
 
@@ -307,14 +419,14 @@ if test -f $test.$ext && checksum $test.s $test.$ext; then
     if $source_modified; then
 	if test -n "$SANDBOX"; then
 	    rm -f $test/warn
-	    awk -f $BASILISK/gnuplot.awk < $test.c > $test/plots
-	    awk -f $BASILISK/python.awk < $test.c > $test/plots.py
+	    awk -f $BASILISK/gnuplot.awk < $src > $test/plots
+	    awk -f $BASILISK/python.awk < $src > $test/plots.py
 	    chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
 	    cd $test
 	    doplots "$test"
 	    cd ..
 	fi
-	$GENSUM $test.c $test.s > $test.$ext
+	$GENSUM $src $test.s > $test.$ext
     fi
 # check sum for test.s in fail.tst
 elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
@@ -328,21 +440,27 @@ elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
 
     rm -f $test.$ext $test/pass \
 	$test/fail $test/fail.* $test/warn $test/plot.png $test/plots $test/core
-    $GENSUM $test.c $test.s > $test.$ext
+    $GENSUM $src $test.s > $test.$ext
 
-    mkdir -p $test && cp -f $test.c $test
-    awk -f $BASILISK/gnuplot.awk < $test.c > $test/plots
-    awk -f $BASILISK/python.awk < $test.c > $test/plots.py
+    mkdir -p $test && cp -f $src $test
+    awk -f $BASILISK/gnuplot.awk < $src > $test/plots
+    awk -f $BASILISK/python.awk < $src > $test/plots.py
     cp -f $test.* $test 2> /dev/null || true
-    rm -f $test/*.[sd] $test/*.*tst $test/$test.c.page 2> /dev/null || true
+    rm -f $test/*.[sd] $test/*.*tst $test/$src.page 2> /dev/null || true
 
     if test -n "$SANDBOX"; then
-        ( remotely $SANDBOX ) &
+	case "$src" in
+	    *.c) ( remotely $SANDBOX ) & ;;
+	    *.m) ( remotely_octave $SANDBOX ) & ;;
+	esac
 	echo $! > $test/pid.$ext
 	sleep 1
     else
-	locally
-	rm -f $test/plots
+	case "$src" in
+	    *.c) locally ;;
+	    *.m) locally_octave ;;
+	esac
+	rm -f $test/plots $test/plots.py
     fi
 fi
 

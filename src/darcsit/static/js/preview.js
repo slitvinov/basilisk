@@ -51,7 +51,7 @@ function updatePreviewPane(nostatus) {
 	function(data) {
             $('#previewpane').html(data);
 	    hide_plots();
-	    if (!nostatus && location.pathname.endsWith (".c")) {
+	    if (!nostatus && location.pathname.match ("\.[cm]$")) {
 		var url = location.pathname.concat("?status");
 		$('#status').load(url, function(data) { checkRunning (url, 1000); });
 	    }

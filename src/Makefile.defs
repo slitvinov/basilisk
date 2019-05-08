@@ -151,6 +151,14 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		grep 'not whitelisted' && rm -f $@ ) || cp -f $< $@
 	@test -f $@
 
+# Octave code
+
+%.s: %.m
+	ln -s -f $< $@
+
+%.tst: %.s %.m
+	$(BASILISK)/runtest $@
+
 # python modules
 %.i: %.c $(QCC) $(BASILISK)/python.h
 	$(QCC) $(CFLAGS) -python -c $(MDFLAGS) -I$(PYTHONINCLUDE) $<
@@ -178,6 +186,14 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	@test -s $@ || exit 1
 
 %.h.html: %.h %.h.tags $(BASILISK)/Makefile.defs 	   \
+		$(BASILISK)/darcsit/templates/page.static  \
+		$(BASILISK)/darcsit/literate-c		   \
+		$(BASILISK)/darcsit/codeblock		   \
+		$(BASILISK)/page2html
+	$(BASILISK)/page2html $< > $@
+	@test -s $@ || exit 1
+
+%.m.html: %.m $(BASILISK)/Makefile.defs 	   \
 		$(BASILISK)/darcsit/templates/page.static  \
 		$(BASILISK)/darcsit/literate-c		   \
 		$(BASILISK)/darcsit/codeblock		   \

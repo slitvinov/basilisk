@@ -320,7 +320,7 @@ fi
 mimetype()
 {
     case "$1" in
-	*.[ch]|*.lex)
+	*.[chm]|*.lex)
 	    echo "Content-type: text/plain; charset=utf-8"
 	    echo -e "Content-Disposition: inline\n"
 	    ;;
@@ -406,7 +406,7 @@ EOF
 
 function runnable()
 {
-    if [[ -r "$USERS" && -r "$HTTP_RUNNERS" && -n "$HTTP_SANDBOX" && "$1" == *.c ]]; then
+    if [[ -r "$USERS" && -r "$HTTP_RUNNERS" && -n "$HTTP_SANDBOX" && "$1" == *.[cm] ]]; then
 	return 0;
     else
 	return 1;
@@ -483,8 +483,8 @@ if [[ "$REQUEST_URI" == *\?delete ]]; then
 	    if [[ "$(echo ${post[filetodelete]} | urldecode)" == "$shortname" ]]; then
 		if cd "$DOCUMENT_ROOT" && [[ "$(echo ${post[confirm]} | urldecode)" == "Yes, delete it!" ]]; then
 		    rm -f "$basename" "$basename.html" "$basename.tags"*
-		    if [[ "$basename" == *.[ch] ]]; then
-			s=${basename%%.[ch]}
+		    if [[ "$basename" == *.[chm] ]]; then
+			s=${basename%%.[chm]}
 			rm -f "$s.log" "$s.s" "$s.s.d" "$s."*tst
 		    fi
 		    if [[ -r "$basename.page" ]]; then
@@ -543,15 +543,24 @@ function is_up_to_date()
     return 1
 }
 
+function parse_errors()
+{
+    uniq | sed -e "s|$DOCUMENT_ROOT/\([^:]*\):\([0-9]*\):|<a href=\"/\1#\2\">\1:\2</a>:|g"  \
+	-e "s|^\./\([^:]*\):\([0-9]*\):|<a href=\"./\1#\2\">\1:\2</a>:|g"                   \
+	-e "s|^[~]*$1:\([0-9]*\):|$1:<a href=\"$2#\1\">\1</a>:|g"                           \
+	-e 's/$/<br>/g'
+}
+
 function status_warning()
 {
-    if [[ -s "$1/warn" ]]; then
+    local basename=${1%%.?}
+    if [[ -s "$basename/warn" ]]; then
 	cat <<EOF
 <div class=message id=warning>
 <div id=msg_logo><img src=/img/warning.png></div>
 <div id=msg_label>
 EOF
-	msg=$(parse_errors "$1" < "$1/warn")
+	msg=$(parse_errors "$1" < "$basename/warn")
 	if [[ "$msg" ]]; then
 	    echo "$msg"
 	fi
@@ -559,14 +568,6 @@ cat <<EOF
 </div></div>
 EOF
     fi
-}
-
-function parse_errors()
-{
-    uniq | sed -e "s|$DOCUMENT_ROOT/\([^:]*\):\([0-9]*\):|<a href=\"/\1#\2\">\1:\2</a>:|g"  \
-	-e "s|^\./\([^:]*\):\([0-9]*\):|<a href=\"./\1#\2\">\1:\2</a>:|g"                   \
-	-e "s|^[~]*$1\.c:\([0-9]*\):|$1.c:<a href=\"$2#\1\">\1</a>:|g"                      \
-	-e 's/$/<br>/g'
 }
 
 function status_fail()
@@ -577,11 +578,11 @@ function status_fail()
 <div id=msg_logo><img src=/img/error.png></div>
 <div id=msg_label>
 EOF
-    local short=${1##\~}
-    msg=$(head -n 20 "$1/fail" | sed -r -e "s/$1/$short/g" | parse_errors "$short" "$2")
-    if $BASILISK/darcsit/pagemagic < "$1.c"; then
+    local basename=${1%%.?}
+    msg=$(tail -n 20 "$basename/fail" | sed -r -e "s/$basename/${basename##\~}/g" | parse_errors "${1##\~}" "$2")
+    if $BASILISK/darcsit/pagemagic < "$1"; then
 	if [[ ! "$msg" ]]; then
-	    head -n 20 "$1/fail" | sed 's/.*\(Program received signal.*\)/\1/;t;d'
+	    tail -n 20 "$basename/fail" | sed 's/.*\(Program received signal.*\)/\1/;t;d'
 	else
 	    echo "$msg"
 	fi
@@ -673,13 +674,15 @@ function has_plots()
 
 function status()
 {
-    local basename="${1%%.c}"
+    local filename="${1##*/}"
+    local basename="${1%%.?}"
     local dirname="${basename%/*}"
     local ministatus="$2"
     basename="${basename##*/}"
     if [[ "$dirname/" == /_edit/* ]]; then
 	local edit=true
 	dirname="${dirname##/_edit}"
+	filename="~$filename"
 	basename="~$basename"
     fi
     if [[ -d "$DOCUMENT_ROOT/$dirname/$basename" ]] && cd "$DOCUMENT_ROOT/$dirname"; then
@@ -687,32 +690,32 @@ function status()
 	tst=${tst##*\.}
 	if [[ "$tst" ]]; then
 	    if [[ -f "$basename/fail" ]]; then
-		if is_up_to_date "$basename.c" "$basename/fail.$tst"; then
-		    status_fail "$basename" "${REQUEST_URI%%\?status}"
+		if is_up_to_date "$filename" "$basename/fail.$tst"; then
+		    status_fail "$filename" "${REQUEST_URI%%\?status}"
 		    return
 		else
 		    debug "need to rerun 5"
-		    rm -f "$basename/fail" "$basename.c.html"
-		    status_rerun "$dirname/$basename.c" "$edit"
+		    rm -f "$basename/fail" "$filename.html"
+		    status_rerun "$dirname/$filename" "$edit"
 		    return
 		fi
 	    else
 		debug "need to rerun 4"
-		status_rerun "$dirname/$basename.c" "$edit"
+		status_rerun "$dirname/$filename" "$edit"
 		return
 	    fi
 	else
 	    tst=$(ls "$basename".*tst 2> /dev/null)
 	    tst=${tst##*\.}
 	    if [[ "$tst" ]] &&
-		   is_up_to_date "$basename.c" "$basename.$tst" &&
+		   is_up_to_date "$filename" "$basename.$tst" &&
 		   is_up_to_date "$basename.s" "$basename.$tst" ; then
 		if [[ -f "$basename/pass" ]]; then
 		    debug "pass"
 		    if [[ "$edit" || "$ministatus" ]]; then
-			status_pass "$basename"
+			status_pass "$filename"
 		    else
-			status_warning "$basename"
+			status_warning "$filename"
 		    fi
 		    return
 		else
@@ -720,7 +723,7 @@ function status()
 			if [[ "$(find $basename/pid.* -mmin +60 2> /dev/null)" ]]; then
 			    rm -f "$basename.$tst"
 			    debug "need to rerun 1"
-			    status_rerun "$dirname/$basename.c" "$edit"
+			    status_rerun "$dirname/$filename" "$edit"
 			    return
 			else
 			    debug "running"
@@ -730,26 +733,26 @@ function status()
 		    else
 			rm -f "$basename.$tst"
 			debug "need to rerun 2"
-			status_rerun "$dirname/$basename.c" "$edit"
+			status_rerun "$dirname/$filename" "$edit"
 			return
 		    fi
 		fi
 	    else
 		debug "need to rerun 3"
-		status_rerun "$dirname/$basename.c" "$edit"
+		status_rerun "$dirname/$filename" "$edit"
 		return
 	    fi
 	fi
     fi
-    if has_plots "${basename##\~}" < "$DOCUMENT_ROOT/$dirname/$basename.c"; then
+    if has_plots "${basename##\~}" < "$DOCUMENT_ROOT/$dirname/$filename"; then
 	debug "need to run"
-	status_run "$dirname/$basename.c" "$edit"
+	status_run "$dirname/$filename" "$edit"
     else
 	debug "not run"
     fi
 }
 
-if [[ "$REQUEST_URI" == *.c\?status ]]; then
+if [[ "$REQUEST_URI" == *.[cm]\?status ]]; then
     echo -e "Content-type: text/plain; charset=utf-8\n"
     status "${REQUEST_URI%%\?status}"
     exit 0
@@ -823,27 +826,27 @@ function copy_test_dir()
 		    rm -f "$2/warn.tmp"
 		else
 		    mv -f "$2/warn.tmp" "$2/warn"
-		    rm -f "$2.c.html"
+		    rm -f $2.?.html
 		fi
 	    else
 		sed "s/$1/$2/g" < "$1/warn" > "$2/warn"
-		rm -f "$2.c.html"
+		rm -f $2.?.html
 	    fi
 	elif (( warn == 0 )); then
-	    rm -f "$2/warn" "$2.c.html"
+	    rm -f "$2/warn" $2.?.html
 	fi
 	if [[ -f "$1/fail.tst" ]]; then
 	    sed "s/$1/$2/g" < "$1/fail.tst" > "$2/fail.tst"
 	    sed "s/$1/$2/g" < "$1/fail" > "$2/fail"
 	    if (( fail == 1 )); then
-		rm -f "$2.c.html"
+		rm -f $2.?.html
 	    fi
 	    rm -f "$2.*tst"
 	elif [[ -f "$1.tst" ]]; then
 	    sed "s/$1/$2/g" < "$1.tst" > "$2.tst"
 	    rm -f "$2/fail.tst" "$2/fail"
 	    if (( fail == 0 )); then
-		rm -f "$2.c.html"
+		rm -f $2.?.html
 	    fi
 	    if [[ "$(find $1/pid.* 2> /dev/null)" ]]; then
 		rm -f "$2/pass"
@@ -855,10 +858,10 @@ function copy_test_dir()
 function update_test()
 {
     local basename="${1%%.page}"
-    if [[ "$basename" == *.c ]]; then
+    if [[ "$basename" == *.[cm] ]]; then
 	local dirname="${basename%/*}"
 	basename="${basename##*/}"
-	basename="${basename%%.c}"
+	basename="${basename%%.?}"
 	if cd "$DOCUMENT_ROOT/$dirname"; then
 	    copy_test_dir "~$basename" "$basename"
 	    if [[ "$(find ~$basename/pid.* 2> /dev/null)" ]]; then
@@ -899,11 +902,11 @@ EOF
 		
 	    ######################## Discard ############################
 	    if [[ "${post[cancel]}" == "Discard" ]]; then
-		basename="${file##*/}"
-		basename="${basename%%.c}"
+		filename="${file##*/}"
+		basename="${filename%%.?}"
 		if cd "$DOCUMENT_ROOT/$dirname"; then
 		    if [[ -d "~$basename" ]]; then
-			if diff -q "~$basename.c" "$basename.c" > /dev/null; then
+			if diff -q "~$filename" "$filename" > /dev/null; then
 			    copy_test_dir "~$basename" "$basename"
 			    if [[ "$(find ~$basename/pid.* 2> /dev/null)" ]]; then
 				# We are still running so we need to keep the directory alive
@@ -1014,7 +1017,7 @@ if [[ -n "$USERS" && "$REQUEST_URI" == /_save/* ]]; then
 		    if messages=$(mkpath "$basename"); then
 			get_edited_text > "$basename"
 			case "$basename" in
-			    *.[ch]) ;;
+			    *.[chm]) ;;
 			    *.page) ;;
 			    *) mv -f "$basename" "$basename.page"; basename="$basename.page";;
 			esac
@@ -1057,16 +1060,17 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 		cd $DOCUMENT_ROOT
 		if messages=$(mkpath "$basename"); then
 		    messages=""
-		    basename="${file##*/}"
-		    basename="${basename%%.c}"
+		    filename="${file##*/}"
+		    basename="${filename%%.?}"
 		    cd $dirname
-		    for f in "$basename".*; do
-			cp -f "$f" "~$f"
-		    done
-		    get_edited_text > "~$basename.c"
 		    if [[ ! -d "~$basename" && -d "$basename" ]]; then
+			for f in "$basename".*; do
+			    cp -f "$f" "~$f"
+			done
 			copy_test_dir "$basename" "~$basename"
 		    fi
+		    get_edited_text > "~$filename"
+		    filename="~$filename"
 		    basename="~$basename"
 		    makefile="$BASILISK/Makefile.defs"
 		    if [[ -r Makefile ]]; then
@@ -1128,19 +1132,19 @@ function filterdir()
 
 function setproc()
 {
-    if [[ "$1" == *.c ]]; then
-	local dir="${1%%.c}"
+    if [[ "$1" == *.[cm] ]]; then
+	local dir="${1%%.?}"
 	local target="${dir##\~}"
 	if [[ ! -d "$dir" && -d "$target" ]]; then
 	    copy_test_dir "$target" "$dir"
 	fi
     fi
     case $1 in
-	*.[ch])
+	*.[cmh])
 	    if $BASILISK/darcsit/pagemagic < $1; then
 		PREPROC="pagepreproc $1"
-		if [[ "$1" == *.c ]]; then
-		    local dir="${1%%.c}"
+		if [[ "$1" == *.[cm] ]]; then
+		    local dir="${1%%.?}"
 		    dir="${dir##\~}"
 		    PREPROC="$PREPROC | filterdir $dir"
 		fi
@@ -1189,7 +1193,7 @@ fi
 
 ################### Formatted page #######################
 
-if [[ -r "$file.page" || (-r "$file" && "$file" == *.[ch]) ]] ; then
+if [[ -r "$file.page" || (-r "$file" && "$file" == *.[chm]) ]] ; then
     if cd $dirname &&  \
       make -f $BASILISK/Makefile.defs $basename.html > $basename.log 2>&1; then
 	login_timeout
@@ -1223,7 +1227,7 @@ dirpreproc()
 	basename=${f%%.page}
 	dirname=${f%/*}
 	echo -n "<a href=\"${dirname#\.}/${basename##*/}\">"
-	if [[ "$f" == *.c || "$f" == *.c.page ]]; then
+	if [[ "$f" == *.[cm] || "$f" == *.[cm].page ]]; then
 	    status=$(status $basename true)
 	    color="black"
 	    if [[ "$status" == *"id=running"* ]]; then

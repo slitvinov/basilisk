@@ -18,7 +18,7 @@ function checkRunning(url, sec) {
 
 $(document).ready(function() {
     hide_plots();
-    if (location.pathname.endsWith (".c")) {
+    if (location.pathname.match ("\.[cm]$")) {
 	var url = location.pathname.concat("?status");
 	$('#status').load(url, function(data) { checkRunning (url, 1000); });
     }
