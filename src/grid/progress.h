@@ -6,7 +6,7 @@ static void last_events()
 {
   disable_fpe (FE_DIVBYZERO|FE_INVALID);
   t = 0., iter = 0;
-  double dt = 1e-6;
+  double dt = 1e-5;
   while (events (false) && t < HUGE) {
     dtnext (dt);
     dt *= 2.;

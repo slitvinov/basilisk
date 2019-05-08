@@ -650,10 +650,9 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   }
   
   OMP_PARALLEL() {
-    Point point;
+    Point point = {0};
     point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
 #if dimension == 2  
-    point.i = point.j = 0;
     int j;
     OMP(omp for schedule(static))
       for (j = 0; j < point.n + 2*GHOSTS; j++) {
@@ -665,7 +664,6 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 	    s[i,j] = s[i - point.n,j];
       }
 #else // dimension == 3
-    point.i = point.j = point.k = 0;
     int j;
     OMP(omp for schedule(static))
       for (j = 0; j < point.n + 2*GHOSTS; j++)
