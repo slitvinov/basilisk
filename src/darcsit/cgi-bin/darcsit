@@ -456,78 +456,6 @@ if [[ "$REQUEST_URI" == "/_search?"* ]]; then
     exit 0
 fi
 
-################### ?delete ###########################
-
-function delete_page()
-{
-    cat <<EOF
-<form action="" method="post">
-<p>Are you sure you want to delete this page?</p>
-<input type="text" name="filetodelete" style="display: none;" value="$1"/>
-<input type="submit" name="confirm" id="confirm" value="Yes, delete it!"/> 
-<input type="submit" name="cancel" id="cancel" value="No, keep it!"/><br/>
-</form>
-EOF
-}
-
-if [[ "$REQUEST_URI" == *\?delete ]]; then
-    if [[ "$username" ]]; then
-	basename=".${REQUEST_URI%%\?*}"
-	shortname=$(echo "$basename" | sed -e 's|^./||' -e 's/%20/ /g' -e 's|\.page||g')
-	# check whether data has been posted
-	if [[ "$REQUEST_METHOD" == "POST" ]]; then
-	    cgi_get_post_vars
-	    if [[ "$(echo ${post[filetodelete]} | urldecode)" == "$shortname" ]]; then
-		if cd "$DOCUMENT_ROOT" && [[ "$(echo ${post[confirm]} | urldecode)" == "Yes, delete it!" ]]; then
-		    rm -f "$basename" "$basename.html" "$basename.tags"*
-		    if [[ "$basename" == *.[chm] ]]; then
-			s=${basename%%.[chm]}
-			rm -f "$s.log" "$s.s" "$s.s.d" "$s."*tst
-		    fi
-		    if [[ -r "$basename.page" ]]; then
-			rm -f "$basename.page"*
-			basename="$basename.page"
-		    fi
-		    author="$username"
-		    if [[ "$email" ]]; then
-			author="$author <$email>"
-		    fi
-		    if (darcs record -a -q -A "$author" -m "Deleted using web interface" "$basename") > "$basename.log" 2>&1;
-		    then
-			rm -f "$basename.log"
-			echo -e "Location: $BASE_URL\n"
-			exit 0
-		    else
-			dirname="$DOCUMENT_ROOT"
-			internal_error "$basename.log"
-			exit 1
-		    fi
-		else
-		    echo -e "Location: $BASE_URL${REQUEST_URI%%\?*}\n"
-		fi
-	    fi
-	else
-	    echo -e "Content-type: text/html; charset=utf-8\n"
-	    tabs="<li class=selected><a href=\"${REQUEST_URI%%\?*}\">view</a></li>"
-	    if [[ -n "$USERS" && ! -d "$DOCUMENT_ROOT/$basename" ]]; then
-		tabs="$tabs<li><a href=\"/_edit${REQUEST_URI%%\?*}\">edit</a></li>"
-	    fi
-	    tabs="$tabs<li><a href=\"${REQUEST_URI}\">history</a></li>"	
-	    delete_page "$shortname" |                              \
-		$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
-			-V base=$BASE_URL			    \
-			-V pagetitle="Delete $shortname?" 	    \
-			-V sitenav=true				    \
-			-V tabs="$tabs"                             \
-			-V users="$USERS"                           \
-		| sed 's/__ESCAPEDDOLLAR__/$/g'
-	fi
-    else
-	echo -e "Location: $BASE_URL/_login?destination=$BASE_URL$REQUEST_URI\n"
-    fi
-    exit 0
-fi
-
 ######################## ?status ############################
 
 function is_up_to_date()
@@ -542,10 +470,12 @@ function is_up_to_date()
 
 function parse_errors()
 {
-    uniq | sed -e "s|$DOCUMENT_ROOT/\([^:]*\):\([0-9]*\):|<a href=\"/\1#\2\">\1:\2</a>:|g"  \
-	-e "s|^\./\([^:]*\):\([0-9]*\):|<a href=\"./\1#\2\">\1:\2</a>:|g"                   \
-	-e "s|^[~]*$1:\([0-9]*\):|$1:<a href=\"$2#\1\">\1</a>:|g"                           \
-	-e 's/$/<br>/g'
+    uniq | sed                                                                                      \
+	       -e "s|$3|${3##\~}|g"                                                                 \
+	       -e "s|$DOCUMENT_ROOT/\([^:]*\):\([0-9]*\):|<a href=\"/\1#\2\">\1:\2</a>:|g"          \
+	       -e "s|^\./\([^:]*\):\([0-9]*\):|<a href=\"./\1#\2\">\1:\2</a>:|g"                    \
+	       -e "s|^[~]*$1:\([0-9]*\):|$1:<a href=\"$2#\1\">\1</a>:|g"                            \
+	       -e 's/$/<br>/g'
 }
 
 function status_warning()
@@ -557,7 +487,7 @@ function status_warning()
 <div id=msg_logo><img src=/img/warning.png></div>
 <div id=msg_label>
 EOF
-	msg=$(parse_errors "$1" < "$basename/warn")
+	msg=$(parse_errors "${1##\~}" "$2" "$basename" < "$basename/warn")
 	if [[ "$msg" ]]; then
 	    echo "$msg"
 	fi
@@ -576,7 +506,7 @@ function status_fail()
 <div id=msg_label>
 EOF
     local basename=${1%%.?}
-    msg=$(tail -n 20 "$basename/fail" | sed -r -e "s/$basename/${basename##\~}/g" | parse_errors "${1##\~}" "$2")
+    msg=$(tail -n 20 "$basename/fail" | parse_errors "${1##\~}" "$2" "$basename")
     if $BASILISK/darcsit/pagemagic < "$1"; then
 	if [[ ! "$msg" ]]; then
 	    tail -n 20 "$basename/fail" | sed 's/.*\(Program received signal.*\)/\1/;t;d'
@@ -589,7 +519,7 @@ EOF
     cat <<EOF
 </div></div>
 EOF
-    status_warning "$1"
+    status_warning "$1" "$2"
 }
 
 function status_rerun()
@@ -635,7 +565,7 @@ function status_pass()
 The results are up to date.
 </div></div>
 EOF
-    status_warning "$1"
+    status_warning "$1" "$2"
 }
 
 function status_running()
@@ -710,9 +640,9 @@ function status()
 		if [[ -f "$basename/pass" ]]; then
 		    debug "pass"
 		    if [[ "$edit" || "$ministatus" ]]; then
-			status_pass "$filename"
+			status_pass "$filename" "${REQUEST_URI%%\?status}"
 		    else
-			status_warning "$filename"
+			status_warning "$filename" "${REQUEST_URI%%\?status}"
 		    fi
 		    return
 		else
@@ -1380,6 +1310,78 @@ EOF
 		-V messages="$messages"                     \
 	| sed 's/__ESCAPEDDOLLAR__/$/g'
     messages=""
+    exit 0
+fi
+
+################### ?delete ###########################
+
+function delete_page()
+{
+    cat <<EOF
+<form action="" method="post">
+<p>Are you sure you want to delete this page?</p>
+<input type="text" name="filetodelete" style="display: none;" value="$1"/>
+<input type="submit" name="confirm" id="confirm" value="Yes, delete it!"/> 
+<input type="submit" name="cancel" id="cancel" value="No, keep it!"/><br/>
+</form>
+EOF
+}
+
+if [[ "$REQUEST_URI" == *\?delete ]]; then
+    if [[ "$username" ]]; then
+	basename=".${REQUEST_URI%%\?*}"
+	shortname=$(echo "$basename" | sed -e 's|^./||' -e 's/%20/ /g' -e 's|\.page||g')
+	# check whether data has been posted
+	if [[ "$REQUEST_METHOD" == "POST" ]]; then
+	    cgi_get_post_vars
+	    if [[ "$(echo ${post[filetodelete]} | urldecode)" == "$shortname" ]]; then
+		if cd "$DOCUMENT_ROOT" && [[ "$(echo ${post[confirm]} | urldecode)" == "Yes, delete it!" ]]; then
+		    rm -f "$basename" "$basename.html" "$basename.tags"*
+		    if [[ "$basename" == *.[chm] ]]; then
+			s=${basename%%.[chm]}
+			rm -f "$s.log" "$s.s" "$s.s.d" "$s."*tst
+		    fi
+		    if [[ -r "$basename.page" ]]; then
+			rm -f "$basename.page"*
+			basename="$basename.page"
+		    fi
+		    author="$username"
+		    if [[ "$email" ]]; then
+			author="$author <$email>"
+		    fi
+		    if (darcs record -a -q -A "$author" -m "Deleted using web interface" "$basename") > "$basename.log" 2>&1;
+		    then
+			rm -f "$basename.log"
+			echo -e "Location: $BASE_URL\n"
+			exit 0
+		    else
+			dirname="$DOCUMENT_ROOT"
+			internal_error "$basename.log"
+			exit 1
+		    fi
+		else
+		    echo -e "Location: $BASE_URL${REQUEST_URI%%\?*}\n"
+		fi
+	    fi
+	else
+	    echo -e "Content-type: text/html; charset=utf-8\n"
+	    tabs="<li class=selected><a href=\"${REQUEST_URI%%\?*}\">view</a></li>"
+	    if [[ -n "$USERS" && ! -d "$DOCUMENT_ROOT/$basename" ]]; then
+		tabs="$tabs<li><a href=\"/_edit${REQUEST_URI%%\?*}\">edit</a></li>"
+	    fi
+	    tabs="$tabs<li><a href=\"${REQUEST_URI}\">history</a></li>"	
+	    delete_page "$shortname" |                              \
+		$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
+			-V base=$BASE_URL			    \
+			-V pagetitle="Delete $shortname?" 	    \
+			-V sitenav=true				    \
+			-V tabs="$tabs"                             \
+			-V users="$USERS"                           \
+		| sed 's/__ESCAPEDDOLLAR__/$/g'
+	fi
+    else
+	echo -e "Location: $BASE_URL/_login?destination=$BASE_URL$REQUEST_URI\n"
+    fi
     exit 0
 fi
 
