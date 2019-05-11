@@ -353,7 +353,7 @@ scalar|vector|tensor {
 {ID}+                                 echo();
 .                                     echo();
 \n                                    echo();
-({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+  { echo(); /* STRING_LITERAL */ }
+\"([^\"\\\n]|{ES})*\"  { echo(); /* STRING_LITERAL */ }
 
 %%
 

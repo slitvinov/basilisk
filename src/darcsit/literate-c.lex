@@ -414,7 +414,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     fprintf (yyextra->out, "?%ld", time (NULL));
     output_s ("\" type = \"video/");
     output_s (!strcmp(link + strlen(link) - 4, ".mp4") ? "mp4" : "ogg");
-    output_s ("\">Your browser does not support the video tag.</video>");
+    output_s ("\"/>Your browser does not support the video tag.</video>");
     if (caption[0] != '\0') {
       output_s ("<p class=\"caption\">");
       output_s (caption);
@@ -456,7 +456,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
   uline();
 }
 
-({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+  {
+\"([^\"\\\n]|{ES})*\" {
   /* STRING_LITERAL */
   output_s (yytext);
   uline();
@@ -628,7 +628,7 @@ static void usage (struct MyScanner * scan)
   free (s);
 }
 
-void literate (FILE * fp, const char * page)
+void literate (FILE * fp, const char * page, int debug)
 {
   yyscan_t scanner;
   struct MyScanner sdata;
@@ -689,6 +689,7 @@ void literate (FILE * fp, const char * page)
 
   yylex_init_extra (&sdata, &scanner);
   yyset_out (stdout, scanner);
+  yyset_debug (debug, scanner);
   yylex (scanner);
   yylex_destroy (scanner);
 
@@ -716,8 +717,8 @@ void literate (FILE * fp, const char * page)
 
 int main (int argc, char * argv[])
 {
-  if (argc != 2) {
-    fprintf (stderr, "usage: ./literate FILE\n");
+  if (argc < 2) {
+    fprintf (stderr, "usage: ./literate FILE [DEBUG]\n");
     return 1;
   }
   char * name = acat (argv[1], ".page", NULL);
@@ -730,7 +731,7 @@ int main (int argc, char * argv[])
   }
   free (name);
 
-  literate (f, argv[1]);
+  literate (f, argv[1], argc > 2);
   return 0;
 }
 

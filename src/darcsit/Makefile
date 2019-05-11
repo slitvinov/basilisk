@@ -3,7 +3,7 @@ all: literate-c codeblock pagemagic sanitize urldecode
 CFLAGS += -Wall -Wno-unused -g -O2
 
 %.c: %.lex
-	flex $<
+	flex -d $<
 	@sed -e 's/^[ \t]*int \(yy[a-z_]*[ \t]*(\)/static int \1/g' \
 	    -e 's/^[ \t]*YY_BUFFER_STATE \(yy[a-z_]*[ \t]*(\)/static YY_BUFFER_STATE \1/g' \
 	    -e 's/^[ \t]*YY_EXTRA_TYPE \(yy[a-z_]*[ \t]*(\)/static YY_EXTRA_TYPE \1/g' \

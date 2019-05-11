@@ -34,7 +34,7 @@ ES     (\\([\'\"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
 
 %%
 
-({SP}?\"([^\"\\\n]|{ES})*\"{WS}*)+  echo(); /* STRING_LITERAL */
+\"([^\"\\\n]|{ES})*\"  echo(); /* STRING_LITERAL */
 
 {WS}*\/[*][*]{SP}* {
   // start of C documentation comment i.e. "/**"
