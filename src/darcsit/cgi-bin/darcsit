@@ -12,6 +12,9 @@ CHECKSUM="md5sum -c --status"
 
 PANDOC="pandoc -f markdown --smart --mathml --preserve-tabs"
 
+COOKIE_OPTS="path=/; HttpOnly; SameSite=Lax"
+MAX_LOGIN_AGE=43200
+
 passfile()
 {
     local PASSFILE=$(eval echo ~$(whoami))/.darcsit
@@ -73,10 +76,12 @@ if [[ ! -r "$template" ]]; then
 fi
 PANDOCT="$PANDOC --template=$template"
 
+COOKIE_OPTS="$COOKIE_OPTS; domain=${BASE_URL##http://}"
+
 ################### Are we logged in? ####################
 
-if [[ -n "$USERS" && "$HTTP_COOKIE" == *"SSID="* ]]; then
-    cookie=$(echo ${HTTP_COOKIE##*SSID=} | decode)
+if [[ -n "$USERS" && "$HTTP_COOKIE" == *"darcsit_ssid="* ]]; then
+    cookie=$(echo ${HTTP_COOKIE##*darcsit_ssid=} | decode)
     server=${cookie%%/*}
     if [[ "$SERVER_NAME" == "$server" ]]; then
 	cookie=${cookie#*/}
@@ -92,9 +97,9 @@ function login_timeout()
 {
     if [[ "$username" ]]; then
 	now=$(date +%s)
-	if (( now > tstamp + 86400 )); then
+	if (( now > tstamp + $MAX_LOGIN_AGE )); then
 	    # the cookie is older than 24 hours -> logout
-	    echo "Set-Cookie: SSID=bar; max-age=0; HttpOnly"
+	    echo "Set-Cookie: darcsit_ssid=bar; max-age=0; $COOKIE_OPTS"
 	    username=""
 	    email=""
 	fi
@@ -138,7 +143,7 @@ fi
 ################### _logout ##############################
 
 if [[ "$REQUEST_URI" == "/_logout" ]]; then
-    echo "Set-Cookie: SSID=bar; max-age=0; HttpOnly"
+    echo "Set-Cookie: darcsit_ssid=bar; max-age=0; $COOKIE_OPTS"
     echo -e "Location: $HTTP_REFERER\n"
     exit 0
 fi
@@ -1229,8 +1234,12 @@ if [[ "$REQUEST_URI" == "/_login"* && -n "$USERS" ]]; then
 		email=${login%%	*}
 		cookie="$SERVER_NAME/$bogoid/$email/"$(date +%s)
 		cookie=$(echo $cookie | encode)
-		echo "Set-Cookie: SSID=$cookie; HttpOnly"
-	        echo -e "Location: $destination\n"
+		echo "Set-Cookie: darcsit_ssid=$cookie; max-age=$MAX_LOGIN_AGE; $COOKIE_OPTS"
+		if [[ "$destination" ]]; then
+	            echo -e "Location: $destination\n"
+		else
+	            echo -e "Location: $BASE_URL\n"
+		fi
 		exit 0
 	    fi
 	fi
@@ -1287,7 +1296,7 @@ if [[ "$REQUEST_URI" == "/_register"* && -n "$USERS" ]]; then
 	    echo "$bogoid"$'\t'"$salt"$'\t'"$hash"$'\t'"$email" >> "$USERS"
 	    cookie="$SERVER_NAME/$bogoid/$email/"$(date +%s)
 	    cookie=$(echo $cookie | encode)
-	    echo "Set-Cookie: SSID=$cookie; HttpOnly"
+	    echo "Set-Cookie: darcsit_ssid=$cookie; max-age=$MAX_LOGIN_AGE; $COOKIE_OPTS"
 	    # echo -e "Content-type: text/plain\n"
 	    echo -e "Location: $destination\n"
 	    exit 0	    
