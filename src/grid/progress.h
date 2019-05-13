@@ -24,11 +24,15 @@ event progress (i += 5)
   static FILE * fp = fopen ("progress", "w");
   double peri = ilast ? i/(double)ilast : 1.,
     pert = tlast ? t/tlast : 1., per = min(peri, pert);
-  double rem = per ? timer_elapsed (progresst)*(1. - per)/per : 0.;
-  fprintf (fp, "%2.0f%% done", per*100.);
-  if (rem > 0.) {
-    int min = rem/60;
-    fprintf (fp, ", %02d:%02d remaining\r", min, (int)rem - 60*min);
+  if (per > 0.01 && per < 1.) {
+    fprintf (fp, "%2.0f%% done", floor(per*100.));
+    double rem = per ? timer_elapsed (progresst)*(1. - per)/per : 0.;
+    if (rem > 0.) {
+      double min = floor(rem/60.);
+      fprintf (fp, ", %02.0f:%02.0f remaining\r", min, rem - 60.*min);
+    }
+    else
+      fputc ('\r', fp);    
   }
   else
     fputc ('\r', fp);
