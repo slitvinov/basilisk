@@ -1,7 +1,7 @@
 # How to configure a Basilisk server
 
 ~~~bash
-sudo apt install task-spooler make gcc
+sudo apt install task-spooler make gcc openmpi-bin libopenmpi-dev clang
 ~~~
 
 Install the KDT library, [OpenGL utility libraries](gl/INSTALL) and
@@ -30,10 +30,10 @@ Append this to the start of `.bashrc`
 export TS_SLOTS=8
 
 # path to local binaries
-export PATH=$PATH:$HOME/bin
+export PATH=$PATH:/home/basilisk/bin
 
 # howto compile C99 programs
-export CC99="gcc -O2 -Wall -fno-diagnostics-show-caret -Wno-unused-result -std=c99 -D_GNU_SOURCE=1"
+export CC99="mpicc -O2 -Wall -fno-diagnostics-show-caret -Wno-unused-result -std=c99 -D_XOPEN_SOURCE=700 -DHAVE_GETOPT_H=1 -D_GNU_SOURCE=1"
 
 # howto compile CADNA programs
 export CADNACC="clang -D_CADNA=1 -x c++ -m64 \
@@ -91,7 +91,7 @@ statustest()
 If you also intend to generate graphics etc... on the server, do
 
 ~~~bash
-sudo apt-get install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle
+sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind gifsicle libglu1-mesa-dev libosmesa6-dev
 ~~~
 
 ## Creating the untrusted user
