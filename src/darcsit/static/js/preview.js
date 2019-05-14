@@ -64,7 +64,8 @@ $(document).ready(function() {
     $("#previewButton").show();
     var url = location.pathname.replace(/_edit\//,"") + "?raw";
     $.post (url, function(data) {
-	$("#editedText").attr("value", data);
+	if (!data.match("^<h1>404 Not Found</h1>"))
+	    $("#editedText").attr("value", data);
 	setup_codemirror();
 	$("#editedText").focus();
 	updatePreviewPane();
