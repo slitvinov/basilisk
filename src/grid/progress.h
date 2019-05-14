@@ -5,16 +5,18 @@ static timer progresst;
 static void last_events()
 {
   disable_fpe (FE_DIVBYZERO|FE_INVALID);
+  t = 0., iter = 0.;
+  while (events (false) && iter < 1<<16)
+    iter = inext;
+  ilast = iter < 1<<16 ? iter : 0;
+  
   t = 0., iter = 0;
   double dt = 1e-5;
   while (events (false) && t < HUGE) {
-    dtnext (dt);
-    dt *= 2.;
-    iter = inext, t = tnext;
+    dt = dtnext (dt)*1.1;
+    t = tnext;
   }
-  ilast = iter, tlast = t;
-  if (tlast > 1e10)
-    tlast = 0.;
+  tlast = t < HUGE ? t : 0;
   enable_fpe (FE_DIVBYZERO|FE_INVALID);
   progresst = timer_start();
 }
@@ -32,9 +34,9 @@ event progress (i += 5)
       fprintf (fp, ", %02.0f:%02.0f remaining\r", min, rem - 60.*min);
     }
     else
-      fputc ('\r', fp);    
+      fputc ('\r', fp);
   }
-  else
+  else if (per >= 1.)
     fputc ('\r', fp);
   fflush (fp);
 }
