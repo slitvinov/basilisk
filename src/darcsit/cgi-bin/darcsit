@@ -1016,12 +1016,17 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 			copy_test_dir "$basename" "~$basename"
 		    fi
 		    get_edited_text > "~$filename"
-		    filename="~$filename"
-		    basename="~$basename"
 		    makefile="$BASILISK/Makefile.defs"
 		    if [[ -r Makefile ]]; then
-			: # makefile="Makefile" # User Makefile disabled for security reasons
+			makefile=$(mktemp)
+			echo "include $BASILISK/Makefile.defs" >> $makefile
+			# we only allow .tst dependencies in user-provided
+			# Makefiles to provide some security
+			sed -n 's/^[ \t]*'$basename'.tst[ \t]*:/~'$basename'.tst:/p' Makefile >> $makefile
+			cat $makefile >&2
 		    fi
+		    filename="~$filename"
+		    basename="~$basename"
 		    rm -f "$basename.log"
 		    if ( make -f "$makefile" "$basename.s" ) > "$basename.log" 2>&1; then
 			if rm -f "$basename/fail.tst" && \
