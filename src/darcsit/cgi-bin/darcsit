@@ -59,7 +59,7 @@ if test -n "$HTTP_LOGFILE"; then
     exec 2>> "$HTTP_LOGFILE"
 fi
 # use set -x or set +x
-# echo "${REQUEST_URI}" >&2
+echo "${REQUEST_URI}" >&2
 
 ################## End of configuration ##################
 
@@ -177,7 +177,8 @@ if [[ "$REQUEST_URI" == *\?changes=* ]]; then
     login_timeout
     echo -e "Content-type: text/html; charset=utf-8\n"
     basename1=$(echo $basename | sed 's/%20/ /g')
-    ( cd $DOCUMENT_ROOT && darcs changes --verbose --hash="$hash" \
+    # replace --match "date $hash with --hash=$hash for darcs version 2.12
+    ( cd $DOCUMENT_ROOT && darcs changes --verbose --match "date $hash" \
 				 --repodir=$DOCUMENT_ROOT ) | \
 	awk -v basename="$basename1" -f $BASILISK/darcsit/changes2html.awk |   \
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
@@ -194,23 +195,6 @@ fi
 dhistory()
 {
     awk -v file=$1 '
-    /^Author:/ {
-      author = $2;
-      for (i = 3; i < NF; i++)
-	 author = author " " $i;
-    }
-    /^Date:/ {
-      date = $2;
-      for (i = 3; i <= NF; i++)
-	 date = date " " $i;
-    }
-    /^ *hunk */ {
-      files[$2]++;
-      nfiles++;
-    }
-    /^  [*] / {
-      title = substr($0,4);
-    }
     function output()
     {
       	 split(date,a," ");
@@ -231,6 +215,9 @@ dhistory()
       	 hour = a[4]
       	 tz = a[5]
       	 year = a[6]
+	 split(hour,b,":");
+	 # Comment out the following line for darcs version 2.12
+	 hash = strftime ("%Y%m%d%H%M%S", mktime (year " " month " " day " " b[1] " " b[2] " " b[3]), 1);
       	 printf ("* %4d-%02d-%02d %s %s ([%s](_activity?forUser=%s)): ", 
       	         year, month, day, hour, tz, author, author);
 	 if (file)
@@ -255,7 +242,35 @@ dhistory()
       	 delete files;
       	 nfiles = 0;
     }
-    /^patch [^ ]*/ {
+    /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/ { # for darcs version 2.8.5
+      if (hash)
+        output();
+      date = $1;
+      for (i = 2; i <= 6; i++)
+	 date = date " " $i;
+      author = $7;
+      for (i = 8; i < NF; i++)
+	 author = author " " $i;
+    }
+    /^Author:/ { # for darcs version 2.12
+      author = $2;
+      for (i = 3; i < NF; i++)
+	 author = author " " $i;
+    }
+    /^Date:/ { # for darcs version 2.12
+      date = $2;
+      for (i = 3; i <= NF; i++)
+	 date = date " " $i;
+    }
+    /^ *hunk */ {
+      files[$2]++;
+      nfiles++;
+    }
+    /^  [*] / {
+      title = substr($0,4);
+      hash = title; # comment this out for darcs version 2.12
+    }
+    /^patch [^ ]*/ { # for darcs version 2.12
       if (hash)
       	 output();
       hash = $2;
