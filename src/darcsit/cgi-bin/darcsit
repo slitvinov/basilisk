@@ -9,6 +9,7 @@ export LANG=en_US.UTF-8
 
 # Need to match that in $BASILISK/Makefile.defs
 CHECKSUM="md5sum -c --status"
+GENSUM="md5sum"
 
 PANDOC="pandoc -f markdown --smart --mathml --preserve-tabs"
 
@@ -1031,8 +1032,13 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 		    if ( make -f "$makefile" "$basename.s" ) > "$basename.log" 2>&1; then
 			if rm -f "$basename/fail.tst" && \
 				SANDBOX="$HTTP_SANDBOX" CFLAGS="-O2 -DMTRACE=3" \
-				       make -f "$makefile" "$basename.tst" > "$basename.log"; then
-			    rm -f "$basename.log"
+				       make -f "$makefile" "$basename.tst" > "$basename.log" 2> "$basename.make.log"; then
+			    rm -f "$basename.log" "$basename.make.log"
+			else
+			    mkdir -p "$basename"
+			    cat "$basename.make.log" >> "$basename/fail"
+			    rm -f "$basename.make.log"
+			    $GENSUM "$filename" "$basename.s" > "$basename/fail.tst"
 			fi
 		    fi
 		fi
