@@ -159,6 +159,9 @@ run_untrusted()
 
 doplots()
 {
+    if test -f "$1".plot && ! run_untrusted 'gnuplot -e "batch=1; PNG=\"'$PNG'\"; set term '$PNG' enhanced font \",10\"; set output \"plot.png\"; set macros;" '$1'.plot > tmp 2>&1;'; then
+        cat tmp >> warn
+    fi
     if ! run_untrusted "PNG=$PNG sh $BASILISK/gnuplot.sh $1 > tmp 2>&1"; then
 	cat tmp >> warn
     fi
@@ -298,15 +301,6 @@ EOF
 	cat fail
     fi
     # generate graphics
-    # this is obsolete and a security risk
-    # (
-    # 	cd ..
-    # 	if test -f $test.plot -o -f $test.plot.page; then
-    # 	    if ! make $test/plot.png > $test/.tmp 2>&1; then
-    # 		cat $test/.tmp >> $test/warn
-    # 	    fi
-    # 	fi
-    # )
     doplots "$test"
     # Complete
     rm -f *pid.$ext
