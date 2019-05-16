@@ -1038,9 +1038,7 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 		    if [[ -r Makefile ]]; then
 			makefile=$(mktemp)
 			echo "include $BASILISK/Makefile.defs" >> $makefile
-			# we only allow .tst dependencies in user-provided
-			# Makefiles to provide some security
-			sed -n 's/^[ \t]*'$basename'.tst[ \t]*:/~'$basename'.tst:/p' Makefile >> $makefile
+			awk -f $BASILISK/darcsit/filter-makefile.awk Makefile >> $makefile
 			cat $makefile >&2
 		    fi
 		    filename="~$filename"
