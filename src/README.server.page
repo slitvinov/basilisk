@@ -79,11 +79,7 @@ statustest()
 			echo
 		fi
     else
-		if [[ -f "$chksum/complete" ]]; then
-			echo "The code has finished running.";
-		else
-			echo "The code is waiting to run.";
-		fi
+		echo "The code is waiting to run.";
     fi
 }
 ~~~
@@ -91,7 +87,7 @@ statustest()
 If you also intend to generate graphics etc... on the server, do
 
 ~~~bash
-sudo apt-get install gnuplot imagemagick ffmpeg smpeg-plaympeg graphviz valgrind gifsicle libglu1-mesa-dev libosmesa6-dev
+sudo apt-get install gnuplot gnuplot-nox imagemagick ffmpeg smpeg-plaympeg graphviz valgrind gifsicle libglu1-mesa-dev libosmesa6-dev
 ~~~
 
 ## Creating the untrusted user

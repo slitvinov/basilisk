@@ -606,6 +606,17 @@ EOF
 EOF
 }
 
+function status_completing()
+{
+    cat <<EOF
+<div class=message id=running>
+<div id=msg_logo><img src=/img/gears.gif></div>
+<div id=msg_label>
+The code is generating graphics.
+</div></div>
+EOF
+}
+
 function debug()
 {
     # echo $@ >&2
@@ -674,6 +685,10 @@ function status()
 			    rm -f "$basename.$tst" "$basename/pid.*tst" "$basename/tspid.*tst"
 			    debug "need to rerun 1"
 			    status_rerun "$dirname/$filename" "$edit"
+			    return
+			elif [[ -f "$basename/completing" ]]; then
+			    debug "completing"
+			    status_completing
 			    return
 			else
 			    debug "running"
