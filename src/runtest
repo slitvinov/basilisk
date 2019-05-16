@@ -180,6 +180,10 @@ remotely()
     chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
     mkdir $test/$chksum
     cd $test
+    run=`echo $test | sed 's/^~//'`
+    if test "$run" != "$test"; then
+	cp -f $run.* $chksum 2> /dev/null || true
+    fi
     cp -f $test.* $chksum 2> /dev/null || true
     rm -f $chksum/$src.page $chksum/$src.html
     if test `echo "$test" | sed 's/^~//'` != "$test"; then
@@ -313,6 +317,10 @@ remotely_octave()
     chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
     mkdir $test/$chksum
     cd $test
+    run=`echo $test | sed 's/^~//'`
+    if test "$run" != "$test"; then
+	cp -f $run.* $chksum 2> /dev/null || true
+    fi
     cp -f $test.* $chksum 2> /dev/null || true
     rm -f $chksum/$src.page $chksum/$src.html
     if test `echo "$test" | sed 's/^~//'` != "$test"; then
@@ -461,6 +469,10 @@ elif ! test -f $test/fail.$ext || ! checksum $test.s $test/fail.$ext; then
     awk -f $BASILISK/gnuplot.awk < $src > $test/plots
     awk -f $BASILISK/python.awk < $src > $test/plots.py
     cp -f $test.* $test 2> /dev/null || true
+    run=`echo $test | sed 's/^~//'`
+    if test "$run" != "$test"; then
+	cp -f $run.* $test 2> /dev/null || true
+    fi
     rm -f $test/*.[sd] $test/*.*tst $test/$src.page 2> /dev/null || true
 
     if test -n "$SANDBOX"; then
