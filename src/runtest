@@ -4,6 +4,14 @@ FILE="$1"
 test="${FILE%.*}"
 ext="${FILE##*.}"
 
+if test -n "$HTTP_LOGFILE"; then
+    exec 2>> "$HTTP_LOGFILE"
+fi
+
+# for debugging
+# BASH_XTRACEFD=2
+# set -x
+
 if test -f $test.c; then
     src=$test.c
 elif test -f $test.m; then
@@ -279,7 +287,12 @@ EOF
     rm -f ssh.log
 
     if test -f fail; then
-	mv -f ../$test.$ext fail.$ext
+	if test -f ../$test.$ext; then
+	    mv -f ../$test.$ext fail.$ext
+	else
+	    short=`echo $test | sed 's/^~//'`
+	    test -f ../$short.$ext && mv -f ../$short.$ext fail.$ext
+	fi
 	echo
 	echo \[$test.$ext\]
 	cat fail
@@ -379,7 +392,12 @@ EOF
     rm -f ssh.log
 
     if test -f fail; then
-	mv -f ../$test.$ext fail.$ext
+	if test -f ../$test.$ext; then
+	    mv -f ../$test.$ext fail.$ext
+	else
+	    short=`echo $test | sed 's/^~//'`
+	    test -f ../$short.$ext && mv -f ../$short.$ext fail.$ext
+	fi
 	echo
 	echo \[$test.$ext\]
 	cat fail

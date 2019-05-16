@@ -70,6 +70,7 @@ export BASE_URL="$HTTP_BASE_URL"
 export USERS="$HTTP_USERS"
 export WIKI_TITLE="$HTTP_WIKI_TITLE"
 export DOCUMENT_ROOT
+export HTTP_LOGFILE
 
 template="$DOCUMENT_ROOT/static/templates/page.static"
 if [[ ! -r "$template" ]]; then
