@@ -668,9 +668,10 @@ function status()
 		    fi
 		    return
 		else
-		    if [[ "$(find $basename/pid.* 2> /dev/null)" ]]; then
-			if [[ "$(find $basename/pid.* -mmin +60 2> /dev/null)" ]]; then
-			    rm -f "$basename.$tst"
+		    if [[ "$(find $basename/pid.*tst 2> /dev/null)" ]]; then
+			if [[ "$(find $basename/pid.*tst -mmin +60 2> /dev/null)" ]]; then
+			    # pid.*tst is older than 60 minutes -> stalled calculation
+			    rm -f "$basename.$tst" "$basename/pid.*tst" "$basename/tspid.*tst"
 			    debug "need to rerun 1"
 			    status_rerun "$dirname/$filename" "$edit"
 			    return
@@ -797,7 +798,7 @@ function copy_test_dir()
 	    if (( fail == 0 )); then
 		rm -f $2.?.html
 	    fi
-	    if [[ "$(find $1/pid.* 2> /dev/null)" ]]; then
+	    if [[ "$(find $1/pid.*tst 2> /dev/null)" ]]; then
 		rm -f "$2/pass"
 	    fi
 	fi
@@ -813,7 +814,7 @@ function update_test()
 	basename="${basename%%.?}"
 	if cd "$DOCUMENT_ROOT/$dirname"; then
 	    copy_test_dir "~$basename" "$basename"
-	    if [[ "$(find ~$basename/pid.* 2> /dev/null)" ]]; then
+	    if [[ "$(find ~$basename/pid.*tst 2> /dev/null)" ]]; then
 		# We are still running so we need to keep the directory alive
 		cp -ar "$basename"/* "~$basename"
 		rm -rf "$basename"
@@ -856,17 +857,17 @@ EOF
 		    if [[ -d "~$basename" ]]; then
 			if diff -q "~$filename" "$filename" > /dev/null; then
 			    copy_test_dir "~$basename" "$basename"
-			    if [[ "$(find ~$basename/pid.* 2> /dev/null)" ]]; then
+			    if [[ "$(find ~$basename/pid.*tst 2> /dev/null)" ]]; then
 				# We are still running so we need to keep the directory alive
 				cp -ar "$basename"/* "~$basename"
 				rm -rf "$basename"
 				mv -f "~$basename" "$basename"
 			    fi
-			elif [[ "$(find ~$basename/pid.* 2> /dev/null)" ]]; then
+			elif [[ "$(find ~$basename/pid.*tst 2> /dev/null)" ]]; then
 			    # we stop the running calculation
-			    killchildren $(cat ~$basename/pid.*)
+			    killchildren $(cat ~$basename/pid.*tst)
 			    if [[ "$HTTP_SANDBOX" ]]; then
-				ssh "$HTTP_SANDBOX" killtest $(cat ~$basename/tspid.*)
+				ssh "$HTTP_SANDBOX" killtest $(cat ~$basename/tspid.*tst)
 			    fi
 			fi
 		    fi
@@ -1164,6 +1165,45 @@ if [[ -r "$file.page" || (-r "$file" && "$file" == *.[chm]) ]] ; then
     exit 0
 fi
 
+################### _running  ###################
+
+running_preproc()
+{
+    cd $DOCUMENT_ROOT
+    path="/"
+    echo -n "<a class=\"updir\" href=\"$path\">"/"</a>"
+    for d in $(echo $1 | sed 's/\// /g'); do
+	path=$path$d"/"
+	echo -n "<a class=\"updir\" href=\"$path?running\">"$d/"</a>"
+    done
+    if cd $DOCUMENT_ROOT/$1; then
+	echo '<ul class="index">'
+	    files=$(find . -name 'pid.*tst')
+	    for f in $files; do
+		basename=${f%%/pid.*tst}
+		basename=${basename##./}
+		filename=$(ls $basename.[cm] 2> /dev/null)
+		if [[ -n "$filename" && $(status $1$filename true) == *"id=running"* ]]; then
+		    echo -n "<li class=\"upload\"><a href=\"$filename\">"
+		    echo -n "<div style=\"color:blue\">$filename</div>"
+		    echo "</a></li>"
+		fi
+	    done
+	echo '</ul>'
+    fi
+}
+
+if [[ "$REQUEST_URI" == *\?running ]]; then
+    echo -e "Content-type: text/html; charset=utf-8\n"
+    running_preproc ${REQUEST_URI%%\?running} | $PANDOCT -s -V wikititle="$WIKI_TITLE"	    \
+		       -V base=$BASE_URL			    \
+		       -V pagetitle="Codes currently running in ${REQUEST_URI%%\?running}"	    \
+		       -V sitenav=true				    \
+		       -V users="$USERS"                            \
+	| sed 's/__ESCAPEDDOLLAR__/$/g'
+    exit 0
+fi
+
 ################### Directory listing  ###################
 
 dirpreproc()
@@ -1210,7 +1250,7 @@ dirpreproc()
     echo '</ul>'
 }
 
-if test -d $file; then
+if [[ -d $file ]]; then
     cd $DOCUMENT_ROOT
 
     PREPROC="dirpreproc $REQUEST_URI"
