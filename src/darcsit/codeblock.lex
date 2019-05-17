@@ -122,6 +122,12 @@
     return tmp;
   }
 
+  static char * append_s (char * tmp, char * s) {
+    while (*s)
+      tmp = append_c (tmp, *s++);
+    return tmp;
+  }
+
   #define nonspace(s) { while (strchr(" \t\v\n\f", *s)) s++; }
   #define space(s) { while (!strchr(" \t\v\n\f", *s)) s++; }
   static void comment(yyscan_t scanner);
@@ -135,20 +141,32 @@ WS  [ \t\v\n\f]
 
 %%
 
-"<code class=\"sourceCode c\">"  {
-  yyextra->incode = 1; echo();
-}
-
-"</code>"                        {
-  yyextra->incode = 0; echo();
+\v[^\v]*\v {
+  // code line numbers
+  output_s ("<span id=");
+  char * s = yytext;
+  while (*s) {
+    if (strchr ("0123456789", *s))
+      output_c (*s);
+    s++;
+  }
+  output_s ("></span>");
 }
 
 ^{SP}*"@def"{SP} {
   yyextra->incode = 0; echo();
 }
 
-^{SP}*"@"{SP}*$ {
+^{SP}*"@"{SP}* {
   yyextra->incode = 1; echo();
+}
+
+"<code class=\"sourceCode c\">"  {
+  yyextra->incode = 1; echo();
+}
+
+"</code>"                        {
+  yyextra->incode = 0; echo();
 }
 
 \&quot;({ID}|[-/])+\.h\&quot; |
@@ -210,11 +228,21 @@ WS  [ \t\v\n\f]
   }
   else {
     while ((c1 = input(yyscanner)) != EOF) {
-      tmp = append_c (tmp, c1);
-      if (c1 == '{' || c1 == ';')
-	break;
-      if (!strchr(" \t\v\n\f", c1))
-	break;
+      if (c1 == '\v') {
+	// line number
+	tmp = append_s (tmp, "<span id=");
+	while ((c1 = input(yyscanner)) != EOF && c1 != '\v')
+	  if (strchr ("0123456789", c1))
+	    tmp = append_c (tmp, c1);
+	tmp = append_s (tmp, "></span>");
+      }
+      else {
+	tmp = append_c (tmp, c1);
+	if (c1 == '{' || c1 == ';')
+	  break;
+	if (!strchr(" \t\v\n\f", c1))
+	  break;
+      }
     }
     if (c1 != '{') {
       output_s (s);

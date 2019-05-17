@@ -58,12 +58,13 @@
     output_s1 (scan, "</div></div>");
   }
 
-  static void check_error (struct MyScanner * scan) {
+  static int check_error (struct MyScanner * scan) {
+    int found = 0;
     if (scan->line < scan->nerror) {
       Error * e = &scan->error[scan->line];
       if (e->error || e->warning) {
 	if (!scan->first && (scan->incode || scan->plotype))
-	  output_s1 (scan, "~~~\n");
+	  output_s1 (scan, "\n~~~\n");
 	if (e->error) {
 	  error_start (scan);
 	  output_s1 (scan, e->error);
@@ -75,17 +76,17 @@
 	  free (e->warning); e->warning = NULL;
 	}
 	error_end (scan);
+	found = 1;
 	if (!scan->first && scan->incode && scan->type) {
 	  output_s1 (scan, scan->type);
-	  output_c1 (scan, '\n');
 	}
 	else if (scan->plotype) {
 	  output_c1 (scan, '\n');
 	  output_s1 (scan, scan->plotype);
-	  output_c1 (scan, '\n');
 	}
       }
     }
+    return found;
   }
 
   static int spacenb (char * s) {
@@ -124,7 +125,9 @@
   {
     while (*s != '\0')
       if (*s++ == '\n') {
-	check_error (scan);
+	if (!check_error (scan) && scan->incode && !scan->first &&
+	    scan->line > 2)
+	  fprintf (scan->out, "\v%d\v", scan->line);
 	scan->line++;
       }
   }
@@ -150,16 +153,17 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 
 {WS}*\/[*][*]{SP}* {
   // start of C documentation comment i.e. "/**"
+  uline();
   if (yyextra->ncodes > 0 && !yyextra->first)
     output_s ("\n~~~\n");
   output_c ('\n');
   yyextra->incode = 0;
   yyextra->indent = spacenb (yytext);
-  yyextra->type = C;  
-  uline();
+  yyextra->type = C;
 }
 
 {SP}*[*]\/{SP}* {
+  uline();
   // end of any C comment block i.e. "*/"
   if (yyextra->incode)
     // end of standard comment
@@ -171,10 +175,10 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     yyextra->incode = 1;
     yyextra->first = 1;
   }
-  uline();
 }
 
 {WS}*\"\"\"{SP}* {
+  uline();
   if (yyextra->incode) {
     // start of Python documentation comment i.e. """
     if (yyextra->ncodes > 0 && !yyextra->first)
@@ -191,11 +195,11 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     yyextra->incode = 1;
     yyextra->first = 1;
   }
-  uline();
 }
 
 ^{WS}*%\{{WS}*$ {
   if (yyextra->incode) {
+    uline();
     // start of Octave documentation comment i.e. "%{"
     if (yyextra->ncodes > 0 && !yyextra->first)
       output_s ("\n~~~\n");
@@ -203,7 +207,6 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     yyextra->incode = 0;
     yyextra->indent = spacenb (yytext);
     yyextra->type = Octave;
-    uline();
   }
   else
     REJECT;
@@ -211,12 +214,12 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 
 ^{WS}*%\}{WS}*$ {
   if (!yyextra->incode) {
+    uline();
     // end of Octave documentation comment i.e. "%}"
     output_s ("\n");
     yyextra->ncodes++;
     yyextra->incode = 1;
     yyextra->first = 1;
-    uline();
   }
   else
     REJECT;
@@ -230,6 +233,7 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 
 ^:<<'DOC'{WS}*$ {
   if (yyextra->incode) {
+    uline();
     // start of Bash documentation comment i.e. ":<<'DOC'"
     if (yyextra->ncodes > 0 && !yyextra->first)
       output_s ("\n~~~\n");
@@ -237,7 +241,6 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     yyextra->incode = 0;
     yyextra->indent = spacenb (yytext);
     yyextra->type = Bash;
-    uline();
   }
   else
     REJECT;
@@ -258,17 +261,18 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
 
 ^{SP}*[\v\n\f] {
   // empty line
+  uline();
   if (!yyextra->incode || !yyextra->first)
     output_s (yytext);
-  uline();
 }
 
 ^{SP}* {
+  uline();
   // spaces at the beginning of a line
   if (yyextra->incode) {
     if (yyextra->first && yyextra->type) {
       output_s (yyextra->type);
-      output_c ('\n');
+      output_c ('\n');      
       yyextra->first = 0;
     }
     output_s (yytext);
@@ -278,32 +282,32 @@ SCALAR [a-zA-Z_0-9]+[.xyz]*
     while (ns-- > 0)
       output_c (' ');
   }
-  uline();
 }
 
 ^{SP}*~~~gnuplot.*$ {
   if (yyextra->incode)
     REJECT;
+  uline();
   yyextra->gnuplot = strdup (strstr (yytext, "gnuplot") + 7);
   printf ("<div id=\"plot%d\">\n", yyextra->nplots);
   yyextra->plotype = strdup ("~~~ {.bash}");
   fputs (yyextra->plotype, stdout);
-  uline();
 }
 
 ^{SP}*~~~pythonplot.*$ {
   if (yyextra->incode)
     REJECT;
+  uline();
   yyextra->gnuplot = strdup (strstr (yytext, "pythonplot") + 10);
   printf ("<div id=\"plot%d\">", yyextra->nplots);
   yyextra->plotype = strdup ("~~~ {.python}");
   fputs (yyextra->plotype, stdout);
-  uline();
 }
 
 set{SP}+output{SP}*['"][^'"]+['"] |
 savefig{SP}*[(]{SP}*['"][^'"]+['"] {
   if (yyextra->gnuplot) {
+    uline();
     char * s = strchr (yytext, '\'');
     if (!s)
       s = strchr (yytext, '"');
@@ -311,7 +315,6 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     yyextra->gnuplot_output = strdup (s);
     yyextra->gnuplot_output[strlen(s) - 1] = '\0';
     output_s (yytext);
-    uline();
   }
   else
     REJECT;
@@ -320,6 +323,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
 ^{SP}*~~~bib{SP}*$ {
   if (yyextra->inbibtex || yyextra->incode)
     REJECT;
+  uline();
   // bibtex file
   char * command = acat ("bibtex2html -a -use-keys -nodoc -noheader -q | ",
 			 "sed -e 's|</table>.*|</table>|' -e '/<\\/table>/q' > ",
@@ -333,10 +337,10 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
   }
   free (command);
   yyextra->out = yyextra->inbibtex;
-  uline();
 }
 
 ^{SP}*~~~{SP}*$ {
+  uline();
   if (!yyextra->incode && yyextra->gnuplot) {
     if (!yyextra->gnuplot_output) {
       char name[30];
@@ -384,13 +388,13 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
   }
   else
     output_s (yytext);
-  uline();
 }
   
 !\[[^\]]*\][(][^)]+\.(png|gif|jpg|mp4|ogv)[)](\([^)]*\))? {
   if (yyextra->incode)
     REJECT;
 
+  uline();
   char * end = strchr (yytext, ']');
   char * name = strchr (end, '(') + 1;
 
@@ -430,7 +434,6 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     output_c (')');
   }
   free (link);
-  uline();
 }
 
 \[[^\[]*\]\({SP}*\) {
@@ -442,24 +445,24 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
 }
 
 \n {
-  output_s (yytext);
   uline();
+  output_s (yytext);
 }
 
 . {
+  uline();
   if (yyextra->incode && yyextra->first && yyextra->type) {
     output_s (yyextra->type);
     output_c ('\n');
     yyextra->first = 0;
   }
   output_s (yytext);
-  uline();
 }
 
 \"([^\"\\\n]|{ES})*\" {
   /* STRING_LITERAL */
-  output_s (yytext);
   uline();
+  output_s (yytext);
 }
 
 %%
@@ -628,7 +631,7 @@ static void usage (struct MyScanner * scan)
   free (s);
 }
 
-void literate (FILE * fp, const char * page, int debug)
+void literate (FILE * fp, const char * page, int code, int debug)
 {
   yyscan_t scanner;
   struct MyScanner sdata;
@@ -639,7 +642,7 @@ void literate (FILE * fp, const char * page, int debug)
   sdata.indent = 0;
   sdata.out = stdout;
   sdata.i = 0;
-  sdata.incode = 1;
+  sdata.incode = code;
   sdata.ncodes = 0;
   sdata.first = 0;
   sdata.error = NULL;
@@ -717,8 +720,8 @@ void literate (FILE * fp, const char * page, int debug)
 
 int main (int argc, char * argv[])
 {
-  if (argc < 2) {
-    fprintf (stderr, "usage: ./literate FILE [DEBUG]\n");
+  if (argc < 3) {
+    fprintf (stderr, "usage: ./literate FILE CODE [DEBUG]\n");
     return 1;
   }
   char * name = acat (argv[1], ".page", NULL);
@@ -731,7 +734,7 @@ int main (int argc, char * argv[])
   }
   free (name);
 
-  literate (f, argv[1], argc > 2);
+  literate (f, argv[1], atoi(argv[2]), argc > 2);
   return 0;
 }
 

@@ -1089,7 +1089,7 @@ function cpostproc()
 
 function pagepreproc()
 {
-    $BASILISK/darcsit/literate-c $1 | sed -e 's/~~~literatec/~~~c/g'
+    $BASILISK/darcsit/literate-c $1 $2 | sed -e 's/~~~literatec/~~~c/g'
 }
 
 function pagepostproc()
@@ -1114,7 +1114,7 @@ function setproc()
     case $1 in
 	*.[cmh])
 	    if $BASILISK/darcsit/pagemagic < $1; then
-		PREPROC="pagepreproc $1"
+		PREPROC="pagepreproc $1 1"
 		if [[ "$1" == *.[cm] ]]; then
 		    local dir="${1%%.?}"
 		    dir="${dir##\~}"
@@ -1127,7 +1127,7 @@ function setproc()
 	    fi
 	    ;;
 	*)
-	    PREPROC="pagepreproc ${1%%.page}"
+	    PREPROC="pagepreproc ${1%%.page} 0"
 	    POSTPROC="pagepostproc ${1%%.page}"
 	    ;;
     esac

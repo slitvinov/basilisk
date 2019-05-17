@@ -101,7 +101,7 @@ cpostproc()
 
 pagepreproc()
 {
-    $BASILISK/darcsit/literate-c $1 | sed 's/~~~literatec/~~~c/g'
+    $BASILISK/darcsit/literate-c $1 $2 | sed 's/~~~literatec/~~~c/g'
 }
 
 pagepostproc()
@@ -126,7 +126,11 @@ pagetitle()
 
 case $page in
     *.page)
-	PREPROC="pagepreproc $basename"
+	if $BASILISK/darcsit/pagemagic < $page; then
+	    PREPROC="pagepreproc $basename 1"
+	else
+	    PREPROC="pagepreproc $basename 0"
+	fi
 	POSTPROC="pagepostproc $basename $ext"
 	headertitle=`pagetitle < $page`
 	if test -n "$headertitle"; then
@@ -135,7 +139,7 @@ case $page in
 	;;
     *)
 	if $BASILISK/darcsit/pagemagic < $page; then
-	    PREPROC="pagepreproc $page"
+	    PREPROC="pagepreproc $page 1"
 	    POSTPROC="pagepostproc $page $ext"
 	else
 	    PREPROC="cpreproc $page"
