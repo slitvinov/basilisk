@@ -271,7 +271,7 @@ if ! test -f fail; then
     if ! test -s $log; then
        echo "The code timed out after one hour." > $log
     fi
-    cp -f $log fail
+    sed "s/^$chksum: //g" $log > fail
   fi
 fi
 rm -f $chksum $src $chksum.sh $test.*ref
