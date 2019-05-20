@@ -83,7 +83,8 @@ COOKIE_OPTS="$COOKIE_OPTS; domain=${BASE_URL##http://}"
 ################### Are we logged in? ####################
 
 if [[ -n "$USERS" && "$HTTP_COOKIE" == *"darcsit_ssid="* ]]; then
-    cookie=$(echo ${HTTP_COOKIE##*darcsit_ssid=} | decode)
+    cookie=${HTTP_COOKIE##*darcsit_ssid=}
+    cookie=$(echo ${cookie%%;*} | decode)
     server=${cookie%%/*}
     if [[ "$SERVER_NAME" == "$server" ]]; then
 	cookie=${cookie#*/}
