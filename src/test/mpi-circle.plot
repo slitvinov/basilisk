@@ -1,5 +1,5 @@
 # generate results for Curie
-cd '../curie'
+cd 'curie'
 
 # generate weak scaling curves
 ! bash weak.sh > weak

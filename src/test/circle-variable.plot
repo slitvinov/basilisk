@@ -7,6 +7,7 @@ fit f(x) '< grep "max error" log' u (log(2**$3)):(log($4)) via a,b
 set xlabel 'Maximum resolution'
 set ylabel 'Maximum error'
 set logscale
+set cbrange [1:2]
 set xrange [64:2048]
 set xtics 64,2,2048
 set grid ytics

@@ -200,7 +200,7 @@ remotely()
     case "$CFLAGS" in
 	*-cadna*) PCC="\$CADNACC" ;;
     esac
-    PCFLAGS=`echo $CFLAGS | sed -e 's/-grid=[^-]*//' -e 's/-cadna//'`
+    PCFLAGS=`echo $CFLAGS | sed -e 's/-grid=[^-]*//' -e 's/-cadna//' -e 's/-progress//'`
     NCORES=`echo $EXEC | awk 'BEGIN{ np = 1 }{
       if ($1 == "mpirun") np = $3; }END{ print np;}'`
     case "$CFLAGS" in
@@ -477,7 +477,7 @@ elif ! test -f $test/fail.$ext || ! test -f $test/fail || ! checksum $test.s $te
     if test "$run" != "$test"; then
 	cp -f $run.* $test 2> /dev/null || true
     fi
-    rm -f $test/*.[sd] $test/*.*tst $test/$src.page 2> /dev/null || true
+    rm -f $test/*.[sd] $test/*.*tst $test/$src.page $test/$src.html 2> /dev/null || true
 
     if test -n "$SANDBOX"; then
 	case "$src" in

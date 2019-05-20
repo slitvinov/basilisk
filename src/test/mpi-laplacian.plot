@@ -1,5 +1,5 @@
-# generate results for Curie
-cd '../occigen/3D'
+# generate results for Occigen
+cd 'occigen/3D'
 
 # generate weak scaling curves
 ! bash weak.sh > weak

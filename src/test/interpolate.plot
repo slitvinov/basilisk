@@ -7,6 +7,7 @@ fit f(x) 'log' u (log($1)):(log($2)) via a,b
 set xlabel 'Maximum resolution'
 set ylabel 'Maximum error'
 set logscale
+set cbrange [1:2]
 set xrange [16:512]
 set xtics 16,2,512
 set grid ytics

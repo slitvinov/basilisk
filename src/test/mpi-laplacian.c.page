@@ -226,7 +226,8 @@ On Occigen one can then compile the code using
 ~~~bash
 module load bullxmpi
 module load intel
-mpicc -Wall -std=c99 -O2 -D_MPI=1 -D_GNU_SOURCE=1 _mpi-laplacian.c -o mpi-laplacian -lm
+mpicc -Wall -std=c99 -O2 -D_MPI=1 -D_GNU_SOURCE=1 _mpi-laplacian.c \
+     -o mpi-laplacian -lm
 ~~~
 
 The following script (*run.sh*) can then be used to run the code
@@ -285,7 +286,7 @@ The memory usage per core is given below. The increase for a large number
 of cores corresponds to the memory overhead of communication buffers
 etc...
 
-![Memory usage on Occigen](occigen/3D/memory.png)
+![Memory usage on Occigen](mpi-laplacian/occigen/3D/memory.png)
 
 The wall-clock time for one iteration of the multigrid Poisson solver
 is given below.
@@ -296,26 +297,28 @@ size and the number of cores. The ideal weak scaling would give
 horizontal lines (i.e. constant computation time for
 proportionally-increasing problem sizes and number of cores).
 
-![Wall-clock time on Occigen for the Poisson solver](occigen/3D/poisson.png)
+![Wall-clock time on Occigen for the Poisson
+ solver](mpi-laplacian/occigen/3D/poisson.png)
 
 The time spent in communication routines is illustrated below.
 
 ![Communication time on Occigen for the Poisson
- solver](occigen/3D/poisson-mpi.png)
+ solver](mpi-laplacian/occigen/3D/poisson-mpi.png)
 
 Similar results are obtained for a pure Laplacian.
 
-![Wall-clock time on Occigen for the Laplacian](occigen/3D/laplacian.png)
+![Wall-clock time on Occigen for the
+ Laplacian](mpi-laplacian/occigen/3D/laplacian.png)
 
 ![Communication time on Occigen for the
- Laplacian](occigen/3D/laplacian-mpi.png)
+ Laplacian](mpi-laplacian/occigen/3D/laplacian-mpi.png)
 
 And for the restriction operator.
 
 ![Wall-clock time on Occigen for the restriction
- operator](occigen/3D/restriction.png)
+ operator](mpi-laplacian/occigen/3D/restriction.png)
 
 ![Communication time on Occigen for the restriction
- operator](occigen/3D/restriction-mpi.png)
+ operator](mpi-laplacian/occigen/3D/restriction-mpi.png)
 
 */

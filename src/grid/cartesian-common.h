@@ -478,7 +478,7 @@ void output_cells (struct OutputCells p)
   fflush (p.fp);
 }
 
-#if _MPI
+#if TREE && _MPI
 static void output_cells_internal (FILE * fp)
 {
   output_cells (fp);

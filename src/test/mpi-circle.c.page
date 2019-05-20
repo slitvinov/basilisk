@@ -219,7 +219,7 @@ The memory usage per core is given below. The curves are a model (see
 for a large number of cores corresponds to the memory overhead of
 communication buffers etc...
 
-![Memory usage on Curie](curie/memory.png)
+![Memory usage on Curie](mpi-circle/curie/memory.png)
 
 The wall-clock time for one iteration of the multigrid Poisson solver
 is given below. The red lines are a model of strong scaling. For a low
@@ -232,27 +232,31 @@ the number of cores. The ideal weak scaling would give horizontal
 lines (i.e. constant computation time for proportionally-increasing
 problem sizes and number of cores).
 
-![Wall-clock time on Curie for the Poisson solver](curie/poisson.png)
+![Wall-clock time on Curie for the Poisson solver](mpi-circle/curie/poisson.png)
 
 The time spent in communication routines is illustrated below,
 together with the model (corresponding to the communication part of
 the total time in the previous figure).
 
-![Communication time on Curie for the Poisson solver](curie/poisson-mpi.png)
+![Communication time on Curie for the Poisson
+ solver](mpi-circle/curie/poisson-mpi.png)
 
 Similar results are obtained for a pure Laplacian with a best fit
 speed of order 25 million grid points/core. This speed is larger than
 for the Poisson solver and hence does not scale as well.
 
-![Wall-clock time on Curie for the Laplacian](curie/laplacian.png)
+![Wall-clock time on Curie for the Laplacian](mpi-circle/curie/laplacian.png)
 
-![Communication time on Curie for the Laplacian](curie/laplacian-mpi.png)
+![Communication time on Curie for the
+ Laplacian](mpi-circle/curie/laplacian-mpi.png)
 
 Similarly, the pure restriction operator scales quite well, with a
 best fit speed of around 30 million grid points/core.
 
-![Wall-clock time on Curie for the restriction operator](curie/restriction.png)
+![Wall-clock time on Curie for the restriction
+ operator](mpi-circle/curie/restriction.png)
 
-![Communication time on Curie for the restriction operator](curie/restriction-mpi.png)
+![Communication time on Curie for the restriction
+ operator](mpi-circle/curie/restriction-mpi.png)
 
 */

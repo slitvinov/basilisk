@@ -165,7 +165,7 @@ view.tst: view.3D.tst
 
 view.3D.tst: CC = mpicc -D_MPI=4
 
-coarsen.tst: CFLAGS=-DMTRACE=3
+coarsen.vtst: CFLAGS = -DMTRACE=3 -progress
 
 # Axisymmetric tests
 
@@ -250,8 +250,6 @@ pdump-multigrid.tst: pdump.c
 pdump-multigrid.tst: CFLAGS = -grid=multigrid
 pdump-multigrid.tst: CC = mpicc -D_MPI=16
 
-restore-multigrid.c: restore.c
-	ln -s restore.c restore-multigrid.c
 restore-multigrid.dump: pdump-multigrid.tst
 	rm -f restore-multigrid.dump; ln -s pdump-multigrid/restore.dump \
 		restore-multigrid.dump
@@ -259,8 +257,6 @@ restore-multigrid.tst: restore-multigrid.dump
 restore-multigrid.tst: CFLAGS = -grid=multigrid
 restore-multigrid.tst: CC = mpicc -D_MPI=16
 
-restore-tree.c: restore.c
-	ln -s restore.c restore-tree.c
 restore-tree.dump: pdump.tst
 	rm -f restore-tree.dump; ln -s pdump/restore.dump restore-tree.dump
 restore-tree.tst: restore-tree.dump
