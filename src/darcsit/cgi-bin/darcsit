@@ -776,9 +776,9 @@ function copy_test_dir()
 	    [ -f "$2/fail" ]
 	    local fail=$?
 	fi
-	cp -f "$1/"* "$2/"
+	cp -af "$1/"* "$2/"
 	if [[ -f "$1.s" ]]; then
-	    cp -f "$1.s" "$2.s"
+	    cp -af "$1.s" "$2.s"
 	fi
 	if [[ -f "$1/warn" ]]; then
 	    if (( warn == 0)); then
@@ -1030,7 +1030,7 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 		    cd $dirname
 		    if [[ ! -d "~$basename" && -d "$basename" ]]; then
 			for f in "$basename".*; do
-			    cp -f "$f" "~$f"
+			    cp -af "$f" "~$f"
 			done
 			copy_test_dir "$basename" "~$basename"
 		    fi
