@@ -52,7 +52,7 @@
 	      <div id="editcontainer">
 		<div id="status"></div>
 		<div id="changes-box">
-		  $messages()$
+<ul class="messages" id="messages">$messages$</ul>
 		  <label>Description of changes:</label><br/>
 		  <input type="text" name="logMsg" id="logMsg" value="$logMsg$"/><br/>
 		  $checkboxes$
@@ -119,7 +119,10 @@
 	  </div>
 	  $body$
 	</div>
-	$footer()$	  
+<div id="footer">
+inspired by <a href="http://github.com/jgm/gitit/tree/master/">gitit</a>,
+powered by <a href="/src/darcsit/README">darcsit</a>
+</div>
       </div>
     </div>
     $javascripts$

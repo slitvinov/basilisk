@@ -7,11 +7,7 @@
     <h1 class="pageTitle"><a href="$pageUrl$">$pagetitle$</a></h1>
   $endif$
   $messages()$
-  $if(editable)$
-    $edit()$
-  $else$
-    <div id="status"></div>
-  $endif$
+  <div id="status"></div>
   $if(login)$
     $login()$
   $endif$

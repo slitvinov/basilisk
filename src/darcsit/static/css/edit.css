@@ -1,0 +1,31 @@
+/* Side-by-side edit and preview */
+#editcontainer {
+    display: grid;
+    grid-template-columns: auto 43em;
+    grid-template-rows: minmax(min-content, max-content) auto;
+    height: 85vh;
+}
+#status {
+/*    align-self: center; */
+    box-sizing: border-box;
+    width: 98%;
+}
+#preview {
+    overflow-y: auto;
+    margin-right: 0.3em;
+    margin-top: 0.3em;
+}
+#editor {    
+    overflow-y: auto;
+    margin-top: 0.3em;
+}
+#editform textarea {
+    /* height: 25em; width: 98%; */
+    font-family: monospace; font-size: 93%;
+}
+#editform #logMsg {
+    box-sizing: border-box;
+    width: 98%;
+    margin-right: 1em;
+    margin-bottom: 0.3em;
+}
