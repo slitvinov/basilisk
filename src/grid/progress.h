@@ -40,7 +40,7 @@ static void last_events()
 #endif
 }
 
-event progress (i += 5)
+event _progress (i += 5)
 {
   static FILE * fp = fopen ("progress", "w");
   double peri = _ilast ? i/(double)_ilast : 1.,

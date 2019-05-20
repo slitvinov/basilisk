@@ -19,7 +19,7 @@ G(T) =\sinh(\beta_n T/2) + \frac{\gamma_n}{\beta_n} \cosh(\beta_n T/2)
 $$
 with 
 $$
-\beta_n = \sqrt{\alpha_n^2 - E \, n^2} \quad \mbox{and} \quad 
+\beta_n = \sqrt{\alpha_n^2 - E \, n^2} \quad \mathrm{and} \quad 
 \gamma_n = 1 - \frac{2-\beta}{4} \,E \, n^2
 $$
 

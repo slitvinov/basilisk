@@ -4,7 +4,7 @@
 The [Green-Naghdi](/src/green-naghdi.h) system of equations admits
 solitary wave solutions of the form
 $$
-\eta(\psi) = ah_0\mbox{sech}^2\left(\psi\frac{\sqrt{3ah_0}}
+\eta(\psi) = ah_0\mathrm{sech}^2\left(\psi\frac{\sqrt{3ah_0}}
  {2h_0\sqrt{h_0(1+a)}}\right)
 $$
 $$

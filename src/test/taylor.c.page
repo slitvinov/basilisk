@@ -27,12 +27,12 @@ expressions for the radial and azimuthal velocities as functions of
 the dimensionless radius $r$ and the azimuthal coordinate $\theta$.
 For $r < 1$ this gives,
 $$
-v_r =  Ar(1-r^2)(3\cos^2 \theta -1)  \quad \mbox {and} \quad  
+v_r =  Ar(1-r^2)(3\cos^2 \theta -1)  \quad \mathrm{and} \quad  
 v_\theta = 3Ar/2 \left( 1-5r^2/3 \right)\cos 2\theta
 $$
 and for $r \ge 1$,
 $$
-v_r = A(r^{-4}-r^{-2})(3\cos^2 \theta -1) \quad \mbox{and} \quad
+v_r = A(r^{-4}-r^{-2})(3\cos^2 \theta -1) \quad \mathrm{and} \quad
 v_\theta = -Ar^{-4} \sin 2\theta
 $$
 with

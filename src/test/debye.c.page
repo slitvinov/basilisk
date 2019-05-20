@@ -14,7 +14,7 @@ Poisson-Nernst-Planck equations are,
 
 $$
 0 = \nabla \cdot (e \omega_i Z_i c_i \nabla \phi) + \nabla \cdot 
-(\omega_i k_B T \nabla c_i) \quad \mbox{with} \quad 
+(\omega_i k_B T \nabla c_i) \quad \mathrm{with} \quad 
 \nabla \cdot (\epsilon \nabla \phi) = \sum_i e c_i
 $$
 
@@ -28,7 +28,7 @@ case of a fully dissolved binary system in a planar geometry to,
 
 $$
 \hat{c}_+ = exp (-\hat{\phi}), \, \hat{c}_- = exp (\hat{\phi}) 
-\quad \mbox{with} \quad (\hat{\phi})_{xx} = 2 \sinh (\hat{\phi}).   
+\quad \mathrm{with} \quad (\hat{\phi})_{xx} = 2 \sinh (\hat{\phi}).   
 $$
 */
 

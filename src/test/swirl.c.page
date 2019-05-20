@@ -13,11 +13,11 @@ U=\sqrt{\nu \Omega} F(\zeta) \quad V=\Omega r H(\zeta)
 $$
 the Navier-Stokes equations reduce to a couple of ODEs:
 $$
-F'''-F\, F'' +F'^2/2 +2G^2  = 0 \quad \mbox{and} \quad G''-F\,G'+G\,F' = 0
+F'''-F\, F'' +F'^2/2 +2G^2  = 0 \quad \mathrm{and} \quad G''-F\,G'+G\,F' = 0
 $$
 with boundary conditions
 $$
-F(0)=F'(0)=0 \: G(0)=1. \quad \mbox{and} \quad F'(\infty)=G(\infty)=0.
+F(0)=F'(0)=0 \: G(0)=1. \quad \mathrm{and} \quad F'(\infty)=G(\infty)=0.
 $$
 where the prime denotes differentiation with respect to $\zeta$.
 

@@ -26,7 +26,7 @@ mgstats mgd;
 /**
 A "crystal growth" boundary condition of the form
 $$
-\frac{\partial c}{\partial y} = bi\; c \;\;\mbox{on}\;\; y=0 
+\frac{\partial c}{\partial y} = bi\; c \;\;\mathrm{on}\;\; y=0 
 $$
 
 is imposed for $-1 < x < 1$ and $y = 0$, where $bi$ is a kind of Biot

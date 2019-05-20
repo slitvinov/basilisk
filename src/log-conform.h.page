@@ -115,7 +115,7 @@ The log-conformation tensor, $\Psi$, is related to the
 polymeric stress tensor $\mathbf{\tau}_p$, by the strain function 
 $\mathbf{f}_s (\mathbf{A})$
 $$ 
-\Psi = \log \, \mathbf{A} \quad \mbox{and} \quad \mathbf{\tau}_p =
+\Psi = \log \, \mathbf{A} \quad \mathrm{and} \quad \mathbf{\tau}_p =
 \frac{\mu_p}{\lambda} \mathbf{f}_s (\mathbf{A})
 $$
 where $Tr$ denotes the trace of the tensor and $L$ is an additional
@@ -305,7 +305,7 @@ event tracer_advection (i++)
       /**
       In the axisymmetric case, $\Psi_{\theta \theta} = \log A_{\theta
       \theta}$. Therefore $\Psi_{\theta \theta} = \log [ ( 1 + fa 
-      \tau_p_{\theta \theta})/\nu]$. */
+      \tau_{p_{\theta \theta}})/\nu]$. */
 
 #if AXI
       double Aqq = (1. + fa*tau_qq[])/nu;
@@ -526,8 +526,8 @@ The viscoelastic stress tensor $\mathbf{\tau}_p$ is defined at cell centers
 while the corresponding force (acceleration) will be defined at cell
 faces. Two terms contribute to each component of the momentum
 equation. For example the $x$-component in Cartesian coordinates has
-the following terms: $\partial_x \mathbf{\tau}_p_{xx} + \partial_y
-\mathbf{\tau}_p_{xy}$. The first term is easy to compute since it can be
+the following terms: $\partial_x \mathbf{\tau}_{p_{xx}} + \partial_y
+\mathbf{\tau}_{p_{xy}}$. The first term is easy to compute since it can be
 calculated directly from center values of cells sharing the face. The
 other one is harder. It will be computed from vertex values. The
 vertex values are obtained by averaging centered values.  Note that as
