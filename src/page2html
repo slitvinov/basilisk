@@ -172,7 +172,7 @@ if test -z "WIKI_TITLE"; then
     WIKI_TITLE=Basilisk
 fi
 
-$PREPROC | $PANDOC -s --mathml --toc --preserve-tabs            \
+$PREPROC | $PANDOC -s --katex --toc --preserve-tabs            \
 	   -V wikititle="$WIKI_TITLE"				\
 	   -V base="$BASE_URL"				        \
 	   -V pageUrl="$url"			                \

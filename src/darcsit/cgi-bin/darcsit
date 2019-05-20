@@ -11,7 +11,7 @@ export LANG=en_US.UTF-8
 CHECKSUM="md5sum -c --status"
 GENSUM="md5sum"
 
-PANDOC="pandoc -f markdown --smart --mathml --preserve-tabs"
+PANDOC="pandoc -f markdown --smart --katex --preserve-tabs"
 
 COOKIE_OPTS="path=/; HttpOnly; SameSite=Lax"
 MAX_LOGIN_AGE=43200

@@ -4,10 +4,10 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     $if(refresh)$
-    <meta http-equiv="refresh" content="$refresh$">
+    <meta http-equiv="refresh" content="$refresh$"/>
     $endif$
     $if(basepage)$
-    <base href="$base$/$basepage$/">
+    <base href="$base$/$basepage$/"/>
     $endif$
     $if(feed)$
     <link href="$base$/_feed/" type="application/atom+xml" rel="alternate" title="Sitewide ATOM Feed" />
@@ -25,9 +25,7 @@
     <script src="/js/jquery.min.js" type="text/javascript"></script>
     <script src="/js/jquery-ui.packed.js" type="text/javascript"></script>
     <script src="/js/plots.js" type="text/javascript"></script>
-    <script type="text/javascript" async
-	    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=MML_HTML">
-    </script>
+    $math()$
   </head>
   <body>
     <div id="doc3" class="yui-t1">

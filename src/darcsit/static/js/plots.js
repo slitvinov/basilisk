@@ -14,3 +14,12 @@ function hide_plots()
 	});
     });
 }
+
+/* Call katex to render math */
+$( function() {
+    $('.math').each(function() {
+	katex.render($(this).text(), $(this)[0], {
+	    throwOnError: false
+	});
+    });
+});
