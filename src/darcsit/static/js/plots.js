@@ -16,10 +16,12 @@ function hide_plots()
 }
 
 /* Call katex to render math */
-$( function() {
+function render_math()
+{
     $('.math').each(function() {
 	katex.render($(this).text(), $(this)[0], {
 	    throwOnError: false
 	});
     });
-});
+}
+$(function() { render_math(); });
