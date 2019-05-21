@@ -204,7 +204,10 @@ remotely()
     NCORES=`echo $EXEC | awk 'BEGIN{ np = 1 }{
       if ($1 == "mpirun") np = $3; }END{ print np;}'`
     case "$CFLAGS" in
-	*-fopenmp*) NCORES=8 ;;
+	*-fopenmp*)
+	    NCORES=8
+	    TIMEOUT="OMP_NUM_THREADS=8 $TIMEOUT"
+	    ;;
     esac
     cat <<EOF >$chksum/$chksum.sh
 #!/bin/sh
