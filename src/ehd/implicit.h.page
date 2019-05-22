@@ -6,7 +6,7 @@ the electric Poisson equation and the ohmic conduction term of the
 charge density conservation (the advection term is computed elsewhere
 using a tracer advection scheme),
 $$
-\nabla \cdot( \epsilon \nabla  \phi^{n+1}) = -\rho_e^{n+1} \quad \mbox{and}
+\nabla \cdot( \epsilon \nabla  \phi^{n+1}) = -\rho_e^{n+1} \quad \mathrm{and}
 \quad (\rho_e^{n+1}-\rho_e^n) = \Delta t\nabla \cdot (K\nabla \phi^{n+1})
 $$ 
 where $\rho_e$ is the charge density, and $\phi$ is the electric potential.
