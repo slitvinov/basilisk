@@ -2,12 +2,12 @@
 # Azimuthal velocity for axisymmetric flows
 
 The [centered Navier--Stokes solver](centered.h) can be
-combined with the [axisymmetric metric](axi.h) but assumes zero
+combined with the [axisymmetric metric](/src/axi.h) but assumes zero
 azimuthal velocity ("swirl"). This file adds this azimuthal velocity
 component: the $w$ field.
 
 Assuming that $x$ is the axial direction and $y$ the radial direction,
-as in [axi.h](axi.h), the incompressible, variable-density and
+as in [axi.h](/src/axi.h), the incompressible, variable-density and
 viscosity, axisymmetric Navier--Stokes equations (with swirl) can be
 written
 $$
@@ -72,8 +72,8 @@ event acceleration (i++)
 }
 
 /**
-The advection of $w$ is done by the [tracer](tracer.h) solver, but we
-need to add diffusion. Using the [diffusion](diffusion.h) solver, we
+The advection of $w$ is done by the [tracer](/src/tracer.h) solver, but we
+need to add diffusion. Using the [diffusion](/src/diffusion.h) solver, we
 solve
 $$
 \theta\partial_tw = \nabla\cdot(D\nabla w) + \beta w
@@ -87,9 +87,8 @@ $$
 \end{aligned}
 $$
 Note that the *rho* and *mu* fields (defined by the [Navier--Stokes
-solver](navier-stokes/centered.h)) already include the metric
-(i.e. are $\rho y$ and $\mu y$), which explains the divisions by $y$
-in the code below. */
+solver](centered.h)) already include the metric (i.e. are $\rho y$ and
+$\mu y$), which explains the divisions by $y$ in the code below. */
 
 event tracer_diffusion (i++)
 {
