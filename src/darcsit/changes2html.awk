@@ -17,8 +17,8 @@ BEGIN {
 	output = 1;
 	sub("^\\.","",$2)
 	sub("\\.page","",$2)
-	printf $1 " <a href=\"" $2 "\">." $2 "</a>"
-	for (i = 3; i <= NF; i++)
+	printf $1 " <a href=\"" $2 "#" $3 "\">." $2 " " $3 "</a>"
+	for (i = 4; i <= NF; i++)
 	    printf " " $i;
 	printf ("\n");
     }
