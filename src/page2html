@@ -79,7 +79,7 @@ case $basename in
 	;;
 esac
 
-if test -z "$BASE_URL"; then
+if test -z "$BASE_URL" -a -z "$DOCUMENT_ROOT"; then
     BASE_URL="http://basilisk.fr"
 fi
 

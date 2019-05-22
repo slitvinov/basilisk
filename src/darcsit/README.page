@@ -197,7 +197,7 @@ Be careful if you have your own '*.html' files for some reason.
 # Troubleshooting
 
 * If "history" or "Recent activity" do not work, make sure that the
-  version of darcs on the server is greater than 2.12.
+  version of darcs on the server is less than 2.8.5.
 
 # Notes
 

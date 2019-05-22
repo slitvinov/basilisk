@@ -66,7 +66,6 @@ echo "${REQUEST_URI}" >&2
 
 file="$DOCUMENT_ROOT$REQUEST_URI"
 export BASILISK="$HTTP_BASILISK"
-export BASE_URL="$HTTP_BASE_URL"
 export USERS="$HTTP_USERS"
 export WIKI_TITLE="$HTTP_WIKI_TITLE"
 export DOCUMENT_ROOT
@@ -78,7 +77,7 @@ if [[ ! -r "$template" ]]; then
 fi
 PANDOCT="$PANDOC --template=$template"
 
-COOKIE_OPTS="$COOKIE_OPTS; domain=${BASE_URL##http://}"
+COOKIE_OPTS="$COOKIE_OPTS; Domain=${HTTP_DOMAIN}"
 
 ################### Are we logged in? ####################
 
@@ -124,7 +123,6 @@ file: $file
 basename: $basename
 dirname: $dirname
 BASILISK: $BASILISK
-BASE_URL: $BASE_URL
 </pre>
 EOF
 
@@ -147,6 +145,7 @@ fi
 
 if [[ "$REQUEST_URI" == "/_logout" ]]; then
     echo "Set-Cookie: darcsit_ssid=bar; max-age=0; $COOKIE_OPTS"
+    echo "Status: 302 Found"
     echo -e "Location: $HTTP_REFERER\n"
     exit 0
 fi
@@ -185,7 +184,6 @@ if [[ "$REQUEST_URI" == *\?changes=* ]]; then
 				 --repodir=$DOCUMENT_ROOT ) | \
 	awk -v basename="$basename1" -f $BASILISK/darcsit/changes2html.awk |   \
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
-		-V base=$BASE_URL			    \
 		-V pagetitle="Changes to $shortname" 	    \
 		-V sitenav=true				    \
 		-V users="$USERS"                           \
@@ -302,7 +300,6 @@ if [[ "$REQUEST_URI" == *\?history ]]; then
 	--max-count=50 --repodir=$DOCUMENT_ROOT $basename ) | \
 	dhistory ${REQUEST_URI%%\?*} |                        \
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
-		-V base=$BASE_URL			    \
 		-V pagetitle="Changes to $shortname" 	    \
 		-V sitenav=true				    \
 		-V tabs="$tabs"                             \
@@ -329,7 +326,6 @@ if [[ "$basename" == _activity* ]]; then
 	    --match "author \"$user\" && date \"in the last month\"" \
 	    --max-count=50 --verbose --repodir="$DOCUMENT_ROOT" ) | dhistory ) |\
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		      \
-		-V base="$BASE_URL"			      \
 		-V pagetitle="Recent changes" 		      \
 		-V sitenav=true				      \
 		-V users="$USERS"                             \
@@ -471,7 +467,6 @@ if [[ "$REQUEST_URI" == "/_search?"* ]]; then
     echo -e "Content-type: text/html\n"
     searchpreproc "$patterns" | iconv -f utf-8 -t utf-8 -c |  \
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		      \
-		 -V base="$BASE_URL"			      \
 		 -V pagetitle="Search results" 		      \
 		 -V sitenav=true			      \
 		 -V users="$USERS"                            \
@@ -883,7 +878,8 @@ EOF
 			fi
 		    fi
 		    rm -r -f "~$basename" "~$basename".*
-		    echo -e "Location: $BASE_URL/${REQUEST_URI##/_edit/}\n"
+		    echo "Status: 302 Found"
+		    echo -e "Location: /${REQUEST_URI##/_edit/}\n"
 		    exit 0
 		else
 		    internal_error "cannot cd to $dirname"
@@ -916,7 +912,6 @@ EOF
 	fi
 	echo | $PANDOC --template=$template -s                      \
 		       -V wikititle="$WIKI_TITLE"		    \
-		       -V base="$BASE_URL"			    \
 		       -V basepage="${dirname##./}"                 \
 		       -V pagetitle="Editing $shortname" 	    \
 		       -V markuphelp=true			    \
@@ -930,7 +925,8 @@ EOF
 		       -V pageUrl="${REQUEST_URI}"                  \
 	    | sed -e 's/__ESCAPEDDOLLAR__/$/g'
     else
-	echo -e "Location: $BASE_URL/_login?destination=$BASE_URL$REQUEST_URI\n"
+	echo "Status: 302 Found"
+	echo -e "Location: /_login?destination=$REQUEST_URI\n"
     fi
     exit 0
 fi
@@ -1002,7 +998,8 @@ if [[ -n "$USERS" && "$REQUEST_URI" == /_save/* ]]; then
 	echo -e "Content-type: text/html; charset=utf-8\n"
 	echo -n "$messages"
     else
-	echo -e "Location: $BASE_URL/_login?destination=$BASE_URL$REQUEST_URI\n"
+	echo "Status: 302 Found"
+	echo -e "Location: /_login?destination=$REQUEST_URI\n"
     fi
     exit 0
 fi
@@ -1065,7 +1062,8 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 	echo -e "Content-type: text/html; charset=utf-8\n"
 	echo -n "$messages"
     else
-	echo -e "Location: $BASE_URL/_login?destination=$BASE_URL$REQUEST_URI\n"
+	echo "Status: 302 Found"
+	echo -e "Location: /_login?destination=$REQUEST_URI\n"
     fi
     exit 0
 fi
@@ -1095,7 +1093,7 @@ function pagepreproc()
 
 function pagepostproc()
 {
-    $BASILISK/darcsit/codeblock "$BASE_URL" $1 $2
+    $BASILISK/darcsit/codeblock "" $1 $2
 }
 
 function filterdir()
@@ -1159,7 +1157,8 @@ if [[ -n "$USERS" && "$REQUEST_URI" == /_preview/* ]]; then
         rm -f "$dirname/$log"
 	exit 1
     else
-	echo -e "Location: $BASE_URL/_login?destination=$BASE_URL$REQUEST_URI\n"
+	echo "Status: 302 Found"
+	echo -e "Location: /_login?destination=$REQUEST_URI\n"
     fi
     exit 0
 fi
@@ -1210,7 +1209,6 @@ running_preproc()
 if [[ "$REQUEST_URI" == *\?running ]]; then
     echo -e "Content-type: text/html; charset=utf-8\n"
     running_preproc ${REQUEST_URI%%\?running} | $PANDOCT -s -V wikititle="$WIKI_TITLE"	    \
-		       -V base=$BASE_URL			    \
 		       -V pagetitle="Codes currently running in ${REQUEST_URI%%\?running}"	    \
 		       -V sitenav=true				    \
 		       -V users="$USERS"                            \
@@ -1277,7 +1275,6 @@ if [[ -d $file ]]; then
     tabs="<li class=selected><a href=\"${REQUEST_URI}\">view</a></li>"
     tabs="$tabs<li><a href=\"${REQUEST_URI}?history\">history</a></li>"
     $PREPROC | $PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
-		       -V base=$BASE_URL			    \
 		       -V pagetitle="$REQUEST_URI"		    \
 		       -V notitle=true                              \
 		       -V sitenav=true				    \
@@ -1316,10 +1313,11 @@ if [[ "$REQUEST_URI" == "/_login"* && -n "$USERS" ]]; then
 		cookie="$SERVER_NAME/$bogoid/$email/"$(date +%s)
 		cookie=$(echo $cookie | encode)
 		echo "Set-Cookie: darcsit_ssid=$cookie; max-age=$MAX_LOGIN_AGE; $COOKIE_OPTS"
+		echo "Status: 302 Found"
 		if [[ "$destination" ]]; then
 	            echo -e "Location: $destination\n"
 		else
-	            echo -e "Location: $BASE_URL\n"
+	            echo -e "Location: /\n"
 		fi
 		exit 0
 	    fi
@@ -1330,7 +1328,6 @@ if [[ "$REQUEST_URI" == "/_login"* && -n "$USERS" ]]; then
     echo -e "Content-type: text/html; charset=utf-8\n"
     echo |                         \
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
-		-V base=$BASE_URL			    \
 		-V pagetitle="Login" 			    \
 		-V sitenav=true				    \
 		-V login=true                               \
@@ -1379,6 +1376,7 @@ if [[ "$REQUEST_URI" == "/_register"* && -n "$USERS" ]]; then
 	    cookie=$(echo $cookie | encode)
 	    echo "Set-Cookie: darcsit_ssid=$cookie; max-age=$MAX_LOGIN_AGE; $COOKIE_OPTS"
 	    # echo -e "Content-type: text/plain\n"
+	    echo "Status: 302 Found"
 	    echo -e "Location: $destination\n"
 	    exit 0	    
 	fi
@@ -1392,7 +1390,6 @@ Cache-Control: no-cache
 EOF
     echo |                         \
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
-		-V base=$BASE_URL			    \
 		-V pagetitle="Register for an account" 	    \
 		-V sitenav=true				    \
 		-V register=true                            \
@@ -1442,7 +1439,8 @@ if [[ "$REQUEST_URI" == *\?delete ]]; then
 		    if (darcs record -a -q -A "$author" -m "Deleted using web interface" "$basename") > "$basename.log" 2>&1;
 		    then
 			rm -f "$basename.log"
-			echo -e "Location: $BASE_URL\n"
+			echo "Status: 302 Found"
+			echo -e "Location: /\n"
 			exit 0
 		    else
 			dirname="$DOCUMENT_ROOT"
@@ -1450,7 +1448,8 @@ if [[ "$REQUEST_URI" == *\?delete ]]; then
 			exit 1
 		    fi
 		else
-		    echo -e "Location: $BASE_URL${REQUEST_URI%%\?*}\n"
+		    echo "Status: 302 Found"
+		    echo -e "Location: ${REQUEST_URI%%\?*}\n"
 		fi
 	    fi
 	else
@@ -1462,7 +1461,6 @@ if [[ "$REQUEST_URI" == *\?delete ]]; then
 	    tabs="$tabs<li><a href=\"${REQUEST_URI}\">history</a></li>"	
 	    delete_page "$shortname" |                              \
 		$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
-			-V base=$BASE_URL			    \
 			-V pagetitle="Delete $shortname?" 	    \
 			-V sitenav=true				    \
 			-V tabs="$tabs"                             \
@@ -1470,7 +1468,8 @@ if [[ "$REQUEST_URI" == *\?delete ]]; then
 		| sed 's/__ESCAPEDDOLLAR__/$/g'
 	fi
     else
-	echo -e "Location: $BASE_URL/_login?destination=$BASE_URL$REQUEST_URI\n"
+	echo "Status: 302 Found"
+	echo -e "Location: /_login?destination=$REQUEST_URI\n"
     fi
     exit 0
 fi
@@ -1496,9 +1495,8 @@ elif [[ -n "$USERS" && ! "$file" =~ .*\.(png|gif|jpg|mp4|ogv) ]]; then
     title=${title##/}
     login_timeout
     echo -e "Content-type: text/html; charset=utf-8\n"
-    echo "There is no page '$title'. You may create the page by [clicking here]($BASE_URL/_edit$REQUEST_URI)." | \
+    echo "There is no page '$title'. You may create the page by [clicking here](/_edit$REQUEST_URI)." | \
     	$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
-    		-V base=$BASE_URL			    \
     		-V pagetitle="Create $title?"               \
     		-V sitenav=true				    \
 		-V users="$USERS"                           \
