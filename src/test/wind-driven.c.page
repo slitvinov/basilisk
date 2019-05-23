@@ -5,7 +5,7 @@ This is a simple test case of a wind-driven lake where we can compare
 results with an analytical solution. For the bottom of the domain we
 impose *no-slip* condition (that is the default), for the top we
 impose a Neumann condition (see [viscous friction between
-layers](http://www.basilisk.fr/src/multilayer.h#viscous-friction-between-layers)
+layers](/src/multilayer.h#viscous-friction-between-layers)
 for details). */
 
 #include "grid/cartesian1D.h"

@@ -5,7 +5,7 @@ Debugging for Numerical Applications) library estimates round-off
 errors in numerical simulations.
 
 See the documentation in
-[doc/ug_cadna.pdf](http://basilisk.fr/src/ug_cadna.pdf) in the CADNA
+[doc/ug_cadna.pdf](/src/ug_cadna.pdf) in the CADNA
 [source code](http://cadna.lip6.fr/Download_Dir/register.php)
 distribution for details.
 
@@ -58,7 +58,7 @@ have installed CADNA in a non-standard location (e.g. not
 ## Usage
 
 To compile and run with CADNA support, you can use the default
-[Makefile](http://basilisk.fr/Tutorial#using-makefiles) recipe:
+[Makefile](/Tutorial#using-makefiles) recipe:
 
 ~~~bash
 make mytest.CADNA.tst
@@ -79,7 +79,7 @@ The [printf()](http://man7.org/linux/man-pages/man3/printf.3.html)
 formatting of the floating-point results is changed to reflect the
 number of significant digits, and CADNA diagnostics are written on
 standard output. See the
-[documentation](http://basilisk.fr/src/ug_cadna.pdf) for details.
+[documentation](/src/ug_cadna.pdf) for details.
 
 ## Known bugs
 
