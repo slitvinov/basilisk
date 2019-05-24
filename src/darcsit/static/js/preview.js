@@ -52,7 +52,7 @@ function updatePreviewPane(nostatus) {
             $('#previewpane').html(data);
 	    hide_plots();
 	    render_math();
-	    if (!nostatus && location.pathname.match ("\.[cm]$")) {
+	    if (!nostatus && location.pathname.match ("[.][cm]$")) {
 		var url = location.pathname.concat("?status");
 		$('#status').load(url, function(data) { checkRunning (url, 1000); });
 	    }
