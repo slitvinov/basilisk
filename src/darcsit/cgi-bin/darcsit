@@ -227,7 +227,9 @@ dhistory()
 	      for (f in files) {
 	    	if (!fl)
 		  printf (", ");
-	    	printf ("[%s](%s?changes=%s)", f, f, hash);
+		shortname = f
+		gsub (".*/", "", shortname);
+	    	printf ("[%s](%s?changes=%s)", shortname, f, hash);
 		fl = 0;
 	      }
               printf (")");
