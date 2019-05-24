@@ -670,9 +670,10 @@ function status()
 		    fi
 		    return
 		else
-		    if [[ "$(find $basename/pid.*tst 2> /dev/null)" ]]; then
-			if [[ "$(find $basename/pid.*tst -mmin +60 2> /dev/null)" ]]; then
-			    # pid.*tst is older than 60 minutes -> stalled calculation
+		    local pid=$(find $basename/pid.*tst 2> /dev/null)
+		    if [[ "$pid" ]]; then
+			if [[ "$(find $basename/pid.*tst -mmin +60 2> /dev/null)" ]] || ! kill -0 `cat "$pid"` 2> /dev/null; then
+			    # pid.*tst is older than 60 minutes or is not running -> stalled calculation
 			    rm -f "$basename.$tst" "$basename/pid.*tst" "$basename/tspid.*tst"
 			    debug "need to rerun 1"
 			    status_rerun "$dirname/$filename" "$edit"
