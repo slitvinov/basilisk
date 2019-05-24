@@ -352,25 +352,29 @@ scalar|vector|tensor {
 
 %%
 
-static int getput(yyscan_t scanner)
-{
-  int c = input(scanner);
-  output_c (c);
-  return c;
-}
-
 static void comment(yyscan_t scanner)
 {
   int c;
-  while ((c = getput(scanner)) > 0) {
+  while ((c = input(scanner)) > 0) {
     if (c == '*') {
-      while ((c = getput(scanner)) == '*')
-	;
+      output_c (c);
+      while ((c = input(scanner)) == '*')
+	output_c (c);
+      output_c (c);
       if (c == '/')
 	return;
       if (c == 0)
 	break;
     }
+    else if (c == '\v') {
+      // line number
+      output_s ("<span id=");
+      while ((c = input(scanner)) && strchr ("0123456789", c))
+	output_c (c);
+      output_s ("></span>");
+    }
+    else
+      output_c (c);
   }
   fprintf (stderr, "codeblock: warning: %s: unterminated comment\n", 
 	   yyget_extra(scanner)->page);

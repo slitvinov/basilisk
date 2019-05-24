@@ -235,59 +235,6 @@ event fault5 (t = 1273./60.)
 }
 
 /**
-To test fault_centroid comment out the above five faults and uncomment these faults below */
-/*
-event fault1 (i = 0)
-{
-    fault_centroid (x = 94.57, y = 3.83,
-	   depth = 25.e3,
-	   strike = 323, dip = 12, rake = 90,
-	   length = 220e3, width = 130e3,
-	   U = 18,
-	   iterate = adapt);
-}
-
-event fault2 (t = 272./60.)
-{
-  fault_centroid  (x = 93.90, y = 5.22,
-	 depth = 25.e3,
-	 strike = 348, dip = 12, rake = 90,
-	 length = 150e3, width = 130e3,
-	 U = 23,
-	 iterate = adapt);
-}
-
-event fault3 (t = 588./60.)
-{
-  fault_centroid (x = 93.21, y = 7.41,
-	 depth = 25.e3,
-	 strike = 338, dip = 12, rake = 90,
-	 length = 390e3, width = 120e3,
-	 U = 12,
-	 iterate = adapt);
-}
-
-event fault4 (t = 913./60.)
-{
-  fault_centroid (x = 92.60, y = 9.70,
-	 depth = 25.e3,
-	 strike = 356, dip = 12, rake = 90,
-	 length = 150e3, width = 95e3,
-	 U = 12,
-	 iterate = adapt);
-}
-
-event fault5 (t = 1273./60.)
-{
-  fault_centroid (x = 92.87, y = 11.70,
-	 depth = 25.e3,
-	 strike = 10, dip = 12, rake = 90,
-	 length = 350e3, width = 95e3,
-	 U = 12,
-	 iterate = adapt);
-}
-*/
-/**
 ## Outputs
 
 ### At each timestep
