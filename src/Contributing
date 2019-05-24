@@ -148,7 +148,7 @@ support for [inline plots](test/README#inline-plots).
 
 Documented source files included in patches pushed to the wiki will
 automatically be rendered as HTML. Before pushing a patch, it is
-important to check that the Mardown documentation is formatted and
+important to check that the Markdown documentation is formatted and
 renders properly in HTML (and also that links to images and other
 content are not broken etc.).
 
@@ -156,7 +156,7 @@ A simple, but cumbersome way to do this is to cut-and-paste the entire
 source file into a temporary page, created using the web interface of
 the wiki, and use the "Preview" button. Repeat until satisfied and
 then cut-and-paste from the web interface back into the local
-file. Then use the "Cancel" button.
+file. Then use the "Discard" button.
 
 A better way to do this is to generate a local HTML file and open it
 with your web browser. To do this, you first need to
