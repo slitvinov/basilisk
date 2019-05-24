@@ -12,7 +12,6 @@ export CHECKSUM
 export CC99
 export CFLAGS
 export CC
-
 QCC = $(BASILISK)/qcc
 
 check: $(subst .c,.tst,$(filter-out $(TESTS),$(filter-out $(EXCLUDE),$(ALLTESTS)))) Makefile.deps
@@ -21,11 +20,8 @@ tags: $(subst .page,.tags,$(ALLPAGES))
 
 itags: $(subst .page,.itags,$(filter %.h.page, $(ALLPAGES)))
 
-links:
-	sh $(BASILISK)/links.sh
-
 clean:
-	rm -f *.o *.s *.*tst *.d *.prof Makefile.deps
+	rm -f *.o *.s *.*tst *.d *.prof *.tags *.itags Makefile.deps Makefile.tests
 
 .PRECIOUS: %.prof %.s %.c %.h %.plot
 
@@ -120,9 +116,6 @@ endef
 %.tags: % $(QCC)
 	$(QCC) -tags $<
 
-%.tags: %.page $(QCC)
-	$(QCC) -tags $<
-
 %.itags: %.tags $(subst .page,.tags,$(ALLPAGES)) $(BASILISK)/includedin.sh
 	sh $(BASILISK)/includedin.sh $* > $@
 	rm -f $*.html
@@ -152,9 +145,6 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 
 # python modules
 
-%.py: %.py.page
-	ln -s $< $@
-
 %.i: %.c $(QCC) $(BASILISK)/python.h
 	$(QCC) $(CFLAGS) -python -c $(MDFLAGS) -I$(PYTHONINCLUDE) $<
 
@@ -164,42 +154,13 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	$(CC) -shared $*.o $*_wrap.o -o _$*.so
 
 # HTML
-%.html: %.page %.tags $(BASILISK)/Makefile.defs           \
+%.html: % %.tags $(BASILISK)/Makefile.defs                \
 		$(BASILISK)/darcsit/basilisk.conf         \
 		$(BASILISK)/darcsit/darcsit.conf 	  \
 		$(BASILISK)/darcsit/templates/page.static \
 		$(BASILISK)/darcsit/literate-c		  \
 		$(BASILISK)/darcsit/codeblock		  \
-		$(BASILISK)/page2html
-	$(BASILISK)/page2html $< > $@
-	@test -s $@ || exit 1
-
-%.c.html: %.c %.c.tags $(BASILISK)/Makefile.defs           \
-		$(BASILISK)/darcsit/basilisk.conf          \
-		$(BASILISK)/darcsit/darcsit.conf 	   \
-		$(BASILISK)/darcsit/templates/page.static  \
-		$(BASILISK)/darcsit/literate-c		   \
-		$(BASILISK)/darcsit/codeblock		   \
-		$(BASILISK)/page2html
-	$(BASILISK)/page2html $< > $@
-	@test -s $@ || exit 1
-
-%.h.html: %.h %.h.tags $(BASILISK)/Makefile.defs 	   \
-		$(BASILISK)/darcsit/basilisk.conf          \
-		$(BASILISK)/darcsit/darcsit.conf 	   \
-		$(BASILISK)/darcsit/templates/page.static  \
-		$(BASILISK)/darcsit/literate-c		   \
-		$(BASILISK)/darcsit/codeblock		   \
-		$(BASILISK)/page2html
-	$(BASILISK)/page2html $< > $@
-	@test -s $@ || exit 1
-
-%.m.html: %.m $(BASILISK)/Makefile.defs 	           \
-		$(BASILISK)/darcsit/basilisk.conf          \
-		$(BASILISK)/darcsit/darcsit.conf 	   \
-		$(BASILISK)/darcsit/templates/page.static  \
-		$(BASILISK)/darcsit/literate-c		   \
-		$(BASILISK)/darcsit/codeblock		   \
+		$(BASILISK)/darcsit/filetype		  \
 		$(BASILISK)/page2html
 	$(BASILISK)/page2html $< > $@
 	@test -s $@ || exit 1
@@ -221,9 +182,6 @@ Makefile.tests: $(BASILISK)/tests.sh
 
 %.tags.d: % $(QCC)
 	$(QCC) -MD -tags -o $@ $<
-
-%.tags.d: %.page $(QCC)
-	$(QCC) -MD -tags $<
 
 Makefile.deps: 	Makefile.tests \
 		$(subst .c,.s.d,$(wildcard $(filter-out $(EXCLUDE),$(ALLTESTS) $(TESTS)))) \

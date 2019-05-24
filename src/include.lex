@@ -36,17 +36,6 @@
     return NULL;
   }
 
-  static int is_page (const char * fname) {
-    char * page = malloc (strlen (fname) + strlen (".page") + 1);
-    strcpy (page, fname);
-    strcat (page, ".page");
-    FILE * fp = fopen (page, "r");
-    if (fp)
-      fclose (fp);
-    free (page);
-    return (fp != NULL);
-  }
-  
   static FILE * fdepend = NULL, * ftags = NULL, * myout = NULL;
   static char * fname;
   
@@ -123,12 +112,8 @@
 		     fname, yylineno, text);
 	  break;
 	}
-	if (is_page (t->file))
-	  fprintf (ftags, "call %s %s %s\n", 
-		   t->id, shortpath (t->file), t->id);
-	else
-	  fprintf (ftags, "call %s %s %d\n", 
-		   t->id, shortpath (t->file), t->line);
+	fprintf (ftags, "call %s %s %s\n", 
+		 t->id, shortpath (t->file), t->id);
       }
     }
   }

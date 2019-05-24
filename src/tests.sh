@@ -50,29 +50,18 @@ s/\\\n//g
 }
 
 echo "updating Makefile.tests"
-# create symbolic links between pages and sources if necessary
-# Note: this is obsolete
-for f in `showfiles '[ch]\.page'` \\; do
-    if test "$f" != "\\"; then
-	short=`echo $f | sed 's/\.\([ch]\)\.page/\.\1/'`
-	if test ! -f $short; then
-	    ln -s $f $short
-	fi
-    fi
-done
 (
     echo "# Automatically generated using 'make Makefile.tests'"
     echo "# DO NOT EDIT, edit 'Makefile' instead"
     echo "ALLTESTS = \\"
     (showfiles c
-     showfiles 'c\.page' | sed 's/\.page / /g' # obsolete
      grep '^[a-zA-Z_0-9-]*\.*tst[ ]*:' Makefile | \
 	 sed -n 's/\(^[a-zA-Z_0-9-]*\)\.*tst[ ]*:.*/	\1.c \\/p'
     ) | sort | uniq
     echo ""
     echo "plots: \\"
     showfiles plot | sed 's/\(.*\)\.plot/\1\/plot.png/g'
-    showpages '.c' | sed 's/\(.*\)\.c.page/\1\/plots/g'
+    showpages '.c' | sed 's/\(.*\)\.c/\1\/plots/g'
     echo ""
     echo "TESTS = \\"
     singleline < Makefile | 		                   \

@@ -3,18 +3,20 @@
 usage()
 {
     cat <<EOF > /dev/stderr
-usage: page2html -url URL -ext EXT -refresh SEC FILE.([ch]|page)
+usage: page2html -url URL -ext EXT -type TYPE FILE
 
   If -url is not specified it is set to $BASE_URL (if defined) or to
   http://basilisk.fr
 
   The EXT extension (typically .html) is added to page links.
+
+  TYPE is the file type, either "page" or the pandoc language hightlight type
+  (as listed by 'pandoc --list-highlight-languages').
 EOF
     exit 1
 }
 
 ext=""
-refresh=""
 while test $# -gt 0; do
     case $1 in
 	-url)
@@ -25,21 +27,19 @@ while test $# -gt 0; do
 	    shift
 	    ext="$1"
 	    ;;
-	-refresh)
+	-type)
 	    shift
-	    refresh="-V refresh=$1"
+	    TYPE="$1"
 	    ;;
 	-*)
 	    usage
 	    ;;
-	*.page)  page="$1" ;;
-	*.[cm]) page="$1"; javascripts="<script src=\"/js/status.js\" type=\"text/javascript\"></script>";;
-	*.h) page="$1" ;;
+	*.[cm])
+	    page="$1";
+	    javascripts="<script src=\"/js/status.js\" type=\"text/javascript\"></script>";;
 	*)
-	    if test -f $1.page; then
-		page="$1.page"
-	    fi
-	;;
+	    page="$1";
+	    ;;
     esac
     shift
 done
@@ -53,14 +53,20 @@ if test ! -f $page; then
     exit 1
 fi
 
-if test -f $page.page; then
-    page=$page.page
-fi
+darcsroot()
+{
+    d=`pwd`
+    while ! test -d _darcs; do
+	cd ..
+    done
+    pwd
+    cd "$d"
+}
 
-basename=`echo $page | sed 's/\.page$//'`
+basename="$page"
 title=""
 if darcs show repo > /dev/null 2>&1; then
-    ROOT=`darcs show repo | grep Root | awk '{print $2}'`
+    ROOT=`darcsroot`
     DIR=`echo $PWD | sed -e "s|$ROOT||" -e "s|^/||"`
     if test -n "$DIR"; then
 	title="$DIR/"
@@ -85,7 +91,7 @@ fi
 
 cpreproc()
 {
-    echo ~~~ {.c .numberLines .lineAnchors}
+    echo ~~~ {$2 .numberLines .lineAnchors}
     cat $1
     echo
     echo ~~~
@@ -124,29 +130,54 @@ pagetitle()
     }'
 }
 
-case $page in
-    *.page)
-	if $BASILISK/darcsit/pagemagic < $page; then
+if test -n "$TYPE"; then
+    case $TYPE in
+	page-magic)
 	    PREPROC="pagepreproc $basename 1"
-	else
+	    POSTPROC="pagepostproc $basename $ext"
+	    ;;
+	page)
 	    PREPROC="pagepreproc $basename 0"
-	fi
-	POSTPROC="pagepostproc $basename $ext"
-	headertitle=`pagetitle < $page`
-	if test -n "$headertitle"; then
-	    title=$headertitle
-	fi
-	;;
-    *)
-	if $BASILISK/darcsit/pagemagic < $page; then
-	    PREPROC="pagepreproc $page 1"
-	    POSTPROC="pagepostproc $page $ext"
-	else
-	    PREPROC="cpreproc $page"
+	    POSTPROC="pagepostproc $basename $ext"
+	    headertitle=`pagetitle < $page`
+	    if test -n "$headertitle"; then
+		title=$headertitle
+	    fi
+	    ;;
+	*)
+	    PREPROC="cpreproc $page .$TYPE"
 	    POSTPROC="cpostproc"
-	fi
-	;;
-esac
+	    ;;
+    esac
+else
+    case $page in
+	*.py | *.[chm])
+	    if $BASILISK/darcsit/pagemagic < $page; then
+		PREPROC="pagepreproc $page 1"
+		POSTPROC="pagepostproc $page $ext"
+	    else
+		case $page in
+		    *.py)   PREPROC="cpreproc $page .python" ;;
+		    *.[ch]) PREPROC="cpreproc $page .c" ;;
+		    *.m)    PREPROC="cpreproc $page .octave" ;;
+		esac
+		POSTPROC="cpostproc"
+	    fi
+	    ;;
+	*)
+	    if $BASILISK/darcsit/pagemagic < $page; then
+		PREPROC="pagepreproc $basename 1"
+	    else
+		PREPROC="pagepreproc $basename 0"
+	    fi
+	    POSTPROC="pagepostproc $basename $ext"
+	    headertitle=`pagetitle < $page`
+	    if test -n "$headertitle"; then
+		title=$headertitle
+	    fi
+	    ;;
+    esac
+fi
 
 # Test whether pandoc supports the --smart option
 if echo "" | pandoc --smart > /dev/null 2>&1; then
@@ -183,7 +214,6 @@ $PREPROC | $PANDOC -s --katex --toc --preserve-tabs            \
 	   -V tabs="$tabs"                                      \
 	   -V javascripts="$javascripts"                        \
 	   -V users="$USERS"                                    \
-	   $refresh                                             \
 	   --template="$template"	                        \
     | sed 's/__ESCAPEDDOLLAR__/$/g'			        \
     | $POSTPROC

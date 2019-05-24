@@ -3,9 +3,9 @@ CFLAGS += -O2
 # these are not tests
 EXCLUDE = qcc.c include.c rotate.c qplot.c bview-server.c
 
-all: links qcc qplot libkdt literatec draw_get.h
+all: qcc qplot libkdt literatec draw_get.h
 	@chmod +x ppm2mpeg ppm2mp4 ppm2ogv ppm2gif runtest \
-		sequence bview.page bppm page2html
+		sequence bview bppm page2html
 	@test -f xyz2kdt || ln -s kdt/xyz2kdt
 	@test -f kdtquery || ln -s kdt/kdtquery
 
@@ -60,10 +60,10 @@ bview-server3D: bview-server.c bview-server3D.d draw_get.h
 		-Lgl -lglutils $(OPENGLIBS) -lm
 
 bview2D:
-	ln -s bview.page bview2D
+	ln -s bview bview2D
 
 bview3D:
-	ln -s bview.page bview3D
+	ln -s bview bview3D
 
 include.c: include.lex
 	flex -P inc -o include.c include.lex
@@ -85,12 +85,6 @@ alltags:
 
 etags:
 	etags *.h grid/*.h
-
-allhtml: alltags
-	for f in `find . -name '*.page'`; do 				\
-		( cd `dirname $$f` && make -f $(BASILISK)/Makefile.defs \
-			`basename $$f .page`.html ); 			\
-	done;
 
 checklinks:
 	$(LINKCHECKER) 	$(BASILISK_URL)/src/README 		\

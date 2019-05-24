@@ -171,11 +171,8 @@ fi
 
 if [[ "$REQUEST_URI" == *\?changes=* ]]; then
     basename=".${REQUEST_URI%%\?*}"
-    shortname=$(echo "$basename" | sed -e 's|^./||' -e 's/%20/ /g' -e 's|\.page||g')
+    shortname=$(echo "$basename" | sed -e 's|^./||' -e 's/%20/ /g')
     hash=${REQUEST_URI##*\?changes=}
-    if [[ -r "$DOCUMENT_ROOT/$basename.page" ]]; then
-	basename="$basename.page"
-    fi
     login_timeout
     echo -e "Content-type: text/html; charset=utf-8\n"
     basename1=$(echo $basename | sed 's/%20/ /g')
@@ -231,9 +228,7 @@ dhistory()
 	      for (f in files) {
 	    	if (!fl)
 		  printf (", ");
-		shortname = f
-		gsub ("(.*/)|.page", "", shortname);
-	    	printf ("[%s](%s?changes=%s)", shortname, f, hash);
+	    	printf ("[%s](%s?changes=%s)", f, f, hash);
 		fl = 0;
 	      }
               printf (")");
@@ -286,9 +281,6 @@ dhistory()
 if [[ "$REQUEST_URI" == *\?history ]]; then
     basename=.${REQUEST_URI%%\?*}
     shortname=$(echo $basename | sed -e 's|^./||' -e 's/%20/ /g')
-    if [[ -r "$DOCUMENT_ROOT/$basename.page" ]]; then
-	basename=$basename.page
-    fi
     login_timeout
     echo -e "Content-type: text/html; charset=utf-8\n"
     tabs="<li><a href=\"${REQUEST_URI%%\?*}\">view</a></li>"
@@ -351,17 +343,13 @@ mimetype()
 if [[ "$QUERY_STRING" == "raw" ]] ; then
     file=${file%\?raw}
     if [[ ! -r "$file" ]]; then
-	if [[ ! -r "$file.page" ]]; then
-	        cat <<EOF
+	cat <<EOF
 Content-Type: text/html; charset=utf-8
 
 <h1>404 Not Found</h1>
 While retrieving URL $REQUEST_URI on $SERVER_NAME.
 EOF
-		exit 0
-	else
-	    file="$file.page"
-	fi
+	exit 0
     fi
     mimetype $file
     cat $file
@@ -814,7 +802,7 @@ function copy_test_dir()
 
 function update_test()
 {
-    local basename="${1%%.page}"
+    local basename="$1"
     if [[ "$basename" == *.[cm] ]]; then
 	local dirname="${basename%/*}"
 	basename="${basename##*/}"
@@ -845,9 +833,6 @@ EOF
     if [[ "$username" ]]; then
 	basename=.${REQUEST_URI##/_edit}
 	shortname=$(echo $basename | sed -e 's|^./||' -e 's/%20/ /g')
-	if [[ -r "$DOCUMENT_ROOT/$basename.page" ]]; then
-	    basename=$basename.page
-	fi
 	dirname="${basename%/*}"
 	messages=""
 	logMsg=""
@@ -943,9 +928,6 @@ if [[ -n "$USERS" && "$REQUEST_URI" == /_save/* ]]; then
     if [[ "$username" ]]; then
 	basename=.${REQUEST_URI##/_save}
 	shortname=$(echo $basename | sed -e 's|^./||' -e 's/%20/ /g')
-	if [[ -r "$DOCUMENT_ROOT/$basename.page" ]]; then
-	    basename=$basename.page
-	fi
 	dirname="${basename%/*}"
 	# check whether data has been posted
 	messages=""
@@ -978,11 +960,6 @@ if [[ -n "$USERS" && "$REQUEST_URI" == /_save/* ]]; then
 		    cd $DOCUMENT_ROOT
 		    if messages=$(mkpath "$basename"); then
 			get_edited_text > "$basename"
-			case "$basename" in
-			    *.[chm]) ;;
-			    *.page) ;;
-			    *) mv -f "$basename" "$basename.page"; basename="$basename.page";;
-			esac
 			if (darcs add -q "$basename" &&
 				darcs record -a -q -A "$author" -m "$logMsg" "$basename") \
 				    > "$DOCUMENT_ROOT/$basename.log" 2>&1;
@@ -1010,9 +987,6 @@ fi
 if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
     if [[ "$username" ]]; then
 	basename=.${REQUEST_URI##/_run}
-	if [[ -r "$DOCUMENT_ROOT/$basename.page" ]]; then
-	    basename=$basename.page
-	fi
 	dirname="${basename%/*}"
 	messages=""
 	# check whether data has been posted
@@ -1073,7 +1047,7 @@ fi
 
 function cpreproc()
 {
-    echo ~~~ {.c .numberLines .lineAnchors}
+    echo ~~~ {$2 .numberLines .lineAnchors}
     cat $1
     echo
     echo ~~~
@@ -1102,6 +1076,8 @@ function filterdir()
     sed -r 's|([^~a-zA-Z_\-]+)'$1'/|\1~'$1'/|g'
 }
 
+source $BASILISK/darcsit/filetype
+
 function setproc()
 {
     if [[ "$1" == *.[cm] ]]; then
@@ -1122,13 +1098,26 @@ function setproc()
 		fi
 		POSTPROC="pagepostproc $1"
 	    else
-		PREPROC="cpreproc $1"
+		if [[ $1 == *.[ch] ]]; then
+		    PREPROC="cpreproc $1 c"
+		else
+		    PREPROC="cpreproc $1 octave"
+		fi
 		POSTPROC="cpostproc ${1##\~} $2"
 	    fi
 	    ;;
 	*)
-	    PREPROC="pagepreproc ${1%%.page} 0"
-	    POSTPROC="pagepostproc ${1%%.page}"
+	    local type=$(filetype "$1")
+	    case $type in
+		page)
+		    PREPROC="pagepreproc $1 0"
+		    POSTPROC="pagepostproc $1"
+		    ;;
+		*)
+		    PREPROC="cpreproc $1 .$type"
+		    POSTPROC="cpostproc ${1##\~} $2"
+		    ;;
+	    esac
 	    ;;
     esac
 }
@@ -1166,17 +1155,20 @@ fi
 
 ################### Formatted page #######################
 
-if [[ -r "$file.page" || (-r "$file" && "$file" == *.[chm]) ]] ; then
-    if cd $dirname &&  \
-      make -f $BASILISK/Makefile.defs $basename.html > $basename.log 2>&1; then
-	login_timeout
-	echo -e "Content-type: text/html; charset=utf-8\n"
-	cat $basename.html
-    else
-	internal_error $basename.log
+if [[ -r "$file" ]] ; then
+    type=$(filetype "$file")
+    if [[ "$type" != */* ]]; then
+	if cd $dirname &&  \
+		TYPE="$type" make -f $BASILISK/Makefile.defs $basename.html > $basename.log 2>&1; then
+	    login_timeout
+	    echo -e "Content-type: text/html; charset=utf-8\n"
+	    cat $basename.html
+	else
+	    internal_error $basename.log
+	fi
+	rm -f $basename.log
+	exit 0
     fi
-    rm -f $basename.log
-    exit 0
 fi
 
 ################### _running  ###################
@@ -1230,15 +1222,11 @@ dirpreproc()
     echo '<ul class="index">'
     files=$(darcs show files --no-pending --no-directories | grep '^\.'$1'[^/]*$')
     for f in $files; do
-	if [[ "$f" == *.page ]]; then
-	    echo -n "<li class=\"page\">"
-	else
-	    echo -n "<li class=\"upload\">"
-	fi
-	basename=${f%%.page}
+	echo -n "<li class=\"upload\">"
+	basename=${f}
 	dirname=${f%/*}
 	echo -n "<a href=\"${dirname#\.}/${basename##*/}\">"
-	if [[ "$f" == *.[cm] || "$f" == *.[cm].page ]]; then
+	if [[ "$f" == *.[cm] ]]; then
 	    status=$(status $basename true)
 	    color="black"
 	    if [[ "$status" == *"id=running"* ]]; then
@@ -1418,7 +1406,7 @@ EOF
 if [[ "$REQUEST_URI" == *\?delete ]]; then
     if [[ "$username" ]]; then
 	basename=".${REQUEST_URI%%\?*}"
-	shortname=$(echo "$basename" | sed -e 's|^./||' -e 's/%20/ /g' -e 's|\.page||g')
+	shortname=$(echo "$basename" | sed -e 's|^./||' -e 's/%20/ /g')
 	# check whether data has been posted
 	if [[ "$REQUEST_METHOD" == "POST" ]]; then
 	    cgi_get_post_vars
@@ -1428,10 +1416,6 @@ if [[ "$REQUEST_URI" == *\?delete ]]; then
 		    if [[ "$basename" == *.[chm] ]]; then
 			s=${basename%%.[chm]}
 			rm -f "$s.log" "$s.s" "$s.s.d" "$s."*tst
-		    fi
-		    if [[ -r "$basename.page" ]]; then
-			rm -f "$basename.page"*
-			basename="$basename.page"
 		    fi
 		    author="$username"
 		    if [[ "$email" ]]; then
