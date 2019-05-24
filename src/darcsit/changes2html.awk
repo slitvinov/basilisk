@@ -12,12 +12,16 @@ BEGIN {
     next
 }
 /^ *(hunk|addfile) / {
-    gsub("\\\\32\\\\"," ",$2)
-    if (index ($2, basename) == 1 || index($2 ".page", basename) == 1) {
+    basename1 = basename    
+    gsub("%20", "\\32\\", basename1)
+    if (index ($2, basename) == 1 || index($2 ".page", basename) == 1 ||
+	index ($2, basename1) == 1 || index($2 ".page", basename1) == 1) {
 	output = 1;
 	sub("^\\.","",$2)
 	sub("\\.page","",$2)
-	printf $1 " <a href=\"" $2 "#" $3 "\">." $2 " " $3 "</a>"
+	name = basename
+	gsub("%20", " ", name)
+	printf $1 " <a href=\"" $2 "#" $3 "\">." name " " $3 "</a>"
 	for (i = 4; i <= NF; i++)
 	    printf " " $i;
 	printf ("\n");

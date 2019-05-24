@@ -175,11 +175,10 @@ if [[ "$REQUEST_URI" == *\?changes=* ]]; then
     hash=${REQUEST_URI##*\?changes=}
     login_timeout
     echo -e "Content-type: text/html; charset=utf-8\n"
-    basename1=$(echo $basename | sed 's/%20/ /g')
     # replace --match "date $hash with --hash=$hash for darcs version 2.12
     ( cd $DOCUMENT_ROOT && darcs changes --verbose --match "date $hash" \
 				 --repodir=$DOCUMENT_ROOT ) | \
-	awk -v basename="$basename1" -f $BASILISK/darcsit/changes2html.awk |   \
+	awk -v basename="$basename" -f $BASILISK/darcsit/changes2html.awk |   \
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
 		-V pagetitle="Changes to $shortname" 	    \
 		-V sitenav=true				    \
