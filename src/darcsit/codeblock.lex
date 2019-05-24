@@ -2,6 +2,9 @@
 %{
   #include <stdlib.h>
    
+  #undef YY_BUF_SIZE
+  #define YY_BUF_SIZE 262144
+
   typedef struct {
     char id[80], file[512], line[80];
   } Tag;
@@ -202,7 +205,7 @@ WS  [ \t\v\n\f]
   *s1++ = '\0';
   char * tmp = malloc (sizeof(char)); *tmp = '\0';
   int p = 0, para = 1, c1;
-  while (para > p && (c1 = input(yyscanner)) != EOF) {
+  while (para > p && (c1 = input(yyscanner)) > 0) {
     tmp = append_c (tmp, c1);
     if (c1 == '(') para++;
     else if (c1 == ')') para--;
@@ -211,11 +214,11 @@ WS  [ \t\v\n\f]
     output_s (s);
   }
   else {
-    while ((c1 = input(yyscanner)) != EOF) {
+    while ((c1 = input(yyscanner)) > 0) {
       if (c1 == '\v') {
 	// line number
 	tmp = append_s (tmp, "<span id=");
-	while ((c1 = input(yyscanner)) != EOF && c1 != '\v')
+	while ((c1 = input(yyscanner)) > 0 && c1 != '\v')
 	  if (strchr ("0123456789", c1))
 	    tmp = append_c (tmp, c1);
 	tmp = append_s (tmp, "></span>");
