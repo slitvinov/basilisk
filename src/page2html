@@ -99,10 +99,7 @@ cpreproc()
 
 cpostproc()
 {
-    # add anchors since the .lineAnchors does not seem to work
-    # with pandoc 1.17.2
-    sed -e 's|<pre>1$|<pre><a id="1" href="#1">1</a>|' \
-	-e 's|^ *\([0-9]*\)$|<a id="\1" href="#\1">\1</a>|g'
+    awk -v tags="$1.tags" -f $BASILISK/darcsit/decl_anchors.awk
 }
 
 pagepreproc()
@@ -146,7 +143,7 @@ if test -n "$TYPE"; then
 	    ;;
 	*)
 	    PREPROC="cpreproc $page .$TYPE"
-	    POSTPROC="cpostproc"
+	    POSTPROC="cpostproc $page"
 	    ;;
     esac
 else
@@ -161,7 +158,7 @@ else
 		    *.[ch]) PREPROC="cpreproc $page .c" ;;
 		    *.m)    PREPROC="cpreproc $page .octave" ;;
 		esac
-		POSTPROC="cpostproc"
+		POSTPROC="cpostproc $page"
 	    fi
 	    ;;
 	*)

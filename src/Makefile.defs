@@ -21,7 +21,7 @@ tags: $(subst .page,.tags,$(ALLPAGES))
 itags: $(subst .page,.itags,$(filter %.h.page, $(ALLPAGES)))
 
 clean:
-	rm -f *.o *.s *.*tst *.d *.prof *.tags *.itags Makefile.deps Makefile.tests
+	rm -f *.o *.s *.*tst *.d *.prof *.itags Makefile.deps Makefile.tests
 
 .PRECIOUS: %.prof %.s %.c %.h %.plot
 
@@ -161,6 +161,7 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(BASILISK)/darcsit/literate-c		  \
 		$(BASILISK)/darcsit/codeblock		  \
 		$(BASILISK)/darcsit/filetype		  \
+		$(BASILISK)/darcsit/decl_anchors.awk	  \
 		$(BASILISK)/page2html
 	$(BASILISK)/page2html $< > $@
 	@test -s $@ || exit 1
