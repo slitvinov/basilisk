@@ -1,8 +1,8 @@
-## Getting the source code
+# Getting the source code
 
 You have two ways of getting the most recent source code:
 
-### Using [darcs](http://darcs.net)
+## Using [darcs](http://darcs.net)
 
 This is the recommended way of installing Basilisk.
 
@@ -40,7 +40,7 @@ make
 Note that the [Basilisk View installation](#visualisation) may also
 need separate recompilation.
 
-### Using a tarball
+## Using a tarball
 
 If for some reason you can't use darcs, you can use this instead. You
 will get exactly the same version as with darcs, but the code will not
@@ -55,7 +55,7 @@ If you don't have `wget`, just follow the
 [link](/basilisk/basilisk.tar.gz), save the file or
 extract the archive where you want to install it.
 
-## Compilation
+# Compilation
 
 For compilation, the only requirement is a C99-compliant compiler and
 the `make` utility (a version of `make` compatible with GNU make is
@@ -98,7 +98,7 @@ echo "export BASILISK=$PWD" >> ~/.bashrc
 echo "export PATH=\$PATH:$BASILISK" >> ~/.bashrc
 ~~~
 
-## Useful additional packages
+# Useful additional packages
 
 - gnuplot (> 4.2)
 - imagemagick
@@ -116,7 +116,7 @@ Debian-like system (i.e. Debian, Ubuntu, Mint etc...) you just need to do
 sudo apt-get install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle
 ~~~
 
-## Visualisation
+# Visualisation
 
 Online visualisation with [Basilisk View](view.h) requires a separate
 [installation](gl/INSTALL).
@@ -125,17 +125,17 @@ Offline (interactive) [visualisation](bview) requires the
 [installation](bview-server.c#installation) of the [Basilisk View
 servers](bview-server.c).
 
-## Using Basilisk with python
+# Using Basilisk with python
 
 You will need [SWIG](http://www.swig.org/) which can easily be installed with
 
 ~~~bash
-sudo apt-get install swig
+sudo apt-get install swig libpython-dev
 ~~~
 
 You also need to setup the *MDFLAGS* and *PYTHONINCLUDE* variables in your
 *config* file.
 
-## Getting started
+# Getting started
 
 The best place to start is the [tutorial](/Tutorial).
