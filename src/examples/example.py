@@ -8,6 +8,10 @@ language](http://en.wikipedia.org/wiki/Python_%28programming_language%29).
 This example documents how to use this interface to setup the
 [decaying two-dimensional turbulence](turbulence.c) simulation.
 
+First check that Basilisk is [configured
+properly](/src/INSTALL#using-basilisk-with-python) for use with
+Python.
+
 ## Basilisk python module
 
 The first step is to create a python module importing the necessary
@@ -32,10 +36,11 @@ make stream.py
 ## Python program
 
 The next step is to create the python program itself, let's call it
-*turbulence.py*.
+*example.py*.
 
 We first import [matplotib](http://matplotlib.org/),
 [numpy](http://www.numpy.org/) and our Basilisk module.
+
 """
 
 from __future__ import print_function

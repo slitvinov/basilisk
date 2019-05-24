@@ -3,7 +3,7 @@
 
 In this example we access lower-level Basilisk functions from Python.
 
-As in the [2D turbulence example](turbulence.py), we import
+As in the [2D turbulence example](example.py), we import
 matplotlib, numpy and the *stream* Basilisk module. We also use math
 functions."""
 

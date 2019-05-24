@@ -26,7 +26,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 
 ## Python interface
 
-* [Decaying two-dimensional turbulence](turbulence.py)
+* [Decaying two-dimensional turbulence](example.py)
 * [Poisson problem](poisson.py)
 
 ## See also
