@@ -1,15 +1,42 @@
 #!/bin/sh
 
+darcsroot()
+{
+    d=`pwd`
+    while ! test -d _darcs; do
+	cd ..
+    done
+    pwd
+    cd "$d"
+}
+
 showfiles()
 {
     if ! darcs show files > /dev/null 2>&1; then
 	ls *.$1 2> /dev/null | sed 's/\(.*\)/	\1 \\/g'
     else
-	ROOT=`darcs show repo | grep Root | awk '{print $2}'`
+	ROOT=`darcsroot`
 	DIR=`echo $PWD | sed "s|$ROOT|.|"`
 	darcs show files | grep '\'$DIR'/[^/ ]*\.'$1'$' | \
 	    sed -e 's|'$DIR'/\(.*\)|	\1 \\|g'
     fi
+}
+
+showpages()
+{
+    if ! darcs show files > /dev/null 2>&1; then
+	files=`ls *$1 2> /dev/null`
+    else
+	ROOT=`darcsroot`
+	DIR=`echo $PWD | sed "s|$ROOT|.|"`
+	files=`darcs show files | grep '\'$DIR'/[^/ ]*'$1'$' | sed "s|$DIR/||g"`
+    fi
+    for f in $files; do
+	case "$f" in
+	    *.page) echo "$f" ;;
+	    *.[chm]) $BASILISK/darcsit/pagemagic < "$f" && echo "$f.page" ;;
+	esac
+    done | sed 's/\(.*\)/	\1 \\/g'
 }
 
 # join lines delimited by \\n characters
@@ -24,6 +51,7 @@ s/\\\n//g
 
 echo "updating Makefile.tests"
 # create symbolic links between pages and sources if necessary
+# Note: this is obsolete
 for f in `showfiles '[ch]\.page'` \\; do
     if test "$f" != "\\"; then
 	short=`echo $f | sed 's/\.\([ch]\)\.page/\.\1/'`
@@ -37,14 +65,14 @@ done
     echo "# DO NOT EDIT, edit 'Makefile' instead"
     echo "ALLTESTS = \\"
     (showfiles c
-     showfiles 'c\.page' | sed 's/\.page / /g'
+     showfiles 'c\.page' | sed 's/\.page / /g' # obsolete
      grep '^[a-zA-Z_0-9-]*\.*tst[ ]*:' Makefile | \
 	 sed -n 's/\(^[a-zA-Z_0-9-]*\)\.*tst[ ]*:.*/	\1.c \\/p'
     ) | sort | uniq
     echo ""
     echo "plots: \\"
     showfiles plot | sed 's/\(.*\)\.plot/\1\/plot.png/g'
-    showfiles 'c.page' | sed 's/\(.*\)\.c\.page/\1\/plots/g'
+    showpages '.c' | sed 's/\(.*\)\.c.page/\1\/plots/g'
     echo ""
     echo "TESTS = \\"
     singleline < Makefile | 		                   \
@@ -61,7 +89,7 @@ done
 	sort | uniq | sed 's/\(.*\)/	\1 \\/g'
     echo ""
     echo "ALLPAGES = \\"
-    showfiles 'page'
+    showpages ''
     echo ""
 ) > Makefile.tests
 

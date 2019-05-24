@@ -19,7 +19,7 @@ check: $(subst .c,.tst,$(filter-out $(TESTS),$(filter-out $(EXCLUDE),$(ALLTESTS)
 
 tags: $(subst .page,.tags,$(ALLPAGES))
 
-itags: $(subst .h.page,.h.itags,$(ALLPAGES))
+itags: $(subst .page,.itags,$(filter %.h.page, $(ALLPAGES)))
 
 links:
 	sh $(BASILISK)/links.sh
@@ -58,15 +58,6 @@ clean:
 	@PNG=$(PNG) LIBS="$(LIBS)" OPENGLIBS="$(OPENGLIBS)" \
 		EXEC="$(VALGRIND)" \
 		GDB="$(GDB)" $(BASILISK)/runtest $@
-
-%.h: %.h.page
-	ln -s -f $< $@
-
-%.c: %.c.page
-	ln -s -f $< $@
-
-%.plot: %.plot.page
-	ln -s -f $< $@
 
 define compile_failed =
 (mkdir -p $* && 										\
@@ -126,10 +117,10 @@ endef
 %.pdf: %.c
 	pandoc -o $@ $<
 
-%.tags: %.page $(QCC)
+%.tags: % $(QCC)
 	$(QCC) -tags $<
 
-%.tags: % $(QCC)
+%.tags: %.page $(QCC)
 	$(QCC) -tags $<
 
 %.itags: %.tags $(subst .page,.tags,$(ALLPAGES)) $(BASILISK)/includedin.sh
@@ -160,6 +151,10 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	$(BASILISK)/runtest $@
 
 # python modules
+
+%.py: %.py.page
+	ln -s $< $@
+
 %.i: %.c $(QCC) $(BASILISK)/python.h
 	$(QCC) $(CFLAGS) -python -c $(MDFLAGS) -I$(PYTHONINCLUDE) $<
 
@@ -224,12 +219,15 @@ Makefile.tests: $(BASILISK)/tests.sh
 %.s.d: %.c $(QCC)
 	$(QCC) -MD -o $@ $<
 
+%.tags.d: % $(QCC)
+	$(QCC) -MD -tags -o $@ $<
+
 %.tags.d: %.page $(QCC)
 	$(QCC) -MD -tags $<
 
 Makefile.deps: 	Makefile.tests \
 		$(subst .c,.s.d,$(wildcard $(filter-out $(EXCLUDE),$(ALLTESTS) $(TESTS)))) \
-		$(subst .page,.tags.d,$(wildcard $(ALLPAGES)))
+		$(subst .page,.tags.d,$(ALLPAGES))
 	@echo "updating Makefile.deps"
 	@cat /dev/null $^ > Makefile.deps
 

@@ -6,6 +6,8 @@ grep "incl .*/"$src \
     $BASILISK/test/*.tags | \
     awk -v basilisk=$BASILISK '
             function title(fname) {
+	      if (getline <fname < 0)
+	        fname = fname ".page";
               while ($1 != "#") {
                 if (getline <fname == 0)
                   return fname;
@@ -20,5 +22,5 @@ grep "incl .*/"$src \
               gsub(".tags:.*", "", $1);
               used = "/src" $1;
               lineno = $4;
-              print "used " title(basilisk $1 ".page") "\t" used " " lineno;
+              print "used " title(basilisk $1) "\t" used " " lineno;
             }'

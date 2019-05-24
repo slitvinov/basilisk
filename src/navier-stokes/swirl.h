@@ -31,7 +31,7 @@ $$
   \frac{\mu}{y} + \partial_y \mu \right) \right] }
 $$
 where the terms in blue are the missing "swirl" terms.
-We will thus need to solve and advection-diffusion equation for $w$. */
+We will thus need to solve an advection-diffusion equation for $w$. */
 
 #include "tracer.h"
 #include "diffusion.h"

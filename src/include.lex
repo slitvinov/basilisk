@@ -550,7 +550,7 @@ int includes (int argc, char ** argv, char ** out,
     else if (!strcmp (argv[i], "-debug"))
       debug = 1;
     else if (!strcmp (argv[i], "-o"))
-      output = argv[i + 1];
+      output = argv[++i];
     else if (argv[i][0] != '-' && \
 	     (tags || !strcmp (&argv[i][strlen(argv[i]) - 2], ".c"))) {
       if (file) {

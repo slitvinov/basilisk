@@ -315,11 +315,11 @@ periodic3.tst: CFLAGS += -grid=octree -DTRASH=1
 
 dirichlet.tst: CFLAGS += -DDIRICHLET=1
 dirichlet.c: neumann.c
-	ln -s neumann.c.page dirichlet.c
+	ln -s neumann.c dirichlet.c
 
 dirichlet3D.tst: CFLAGS += -DDIRICHLET=1
 dirichlet3D.c: neumann3D.c
-	ln -s neumann3D.c.page dirichlet3D.c
+	ln -s neumann3D.c dirichlet3D.c
 
 hydrostatic2.tst: CC = mpicc -D_MPI=8
 
