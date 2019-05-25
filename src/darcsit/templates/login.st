@@ -13,5 +13,5 @@
 <p>If you do not have an account,
   <a href="/_register?destination=$referer$">click here to get one.</a>
 </p>
-<p>If you forgot your password,
-  <a href="/_resetPassword">click here to get a new one.</a></p>
+<!-- <p>If you forgot your password, -->
+<!--   <a href="/_resetPassword">click here to get a new one.</a></p> -->
