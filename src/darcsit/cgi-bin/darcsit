@@ -690,7 +690,7 @@ function status()
 	    fi
 	fi
     fi
-    if has_plots "${basename##\~}" < "$DOCUMENT_ROOT/$dirname/$filename"; then
+    if [[ -f "$DOCUMENT_ROOT/$dirname/$filename" ]] && has_plots "${basename##\~}" < "$DOCUMENT_ROOT/$dirname/$filename"; then
 	debug "need to run"
 	status_run "$dirname/$filename" "$edit"
     else
@@ -966,6 +966,7 @@ if [[ -n "$USERS" && "$REQUEST_URI" == /_save/* ]]; then
 				    > "$DOCUMENT_ROOT/$basename.log" 2>&1;
 			then
 			    update_test "$basename"
+			    messages=""
 			else
 			    messages="<li>"$(< "$DOCUMENT_ROOT/$basename.log")"</li>"
 			fi
@@ -1013,7 +1014,7 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 			makefile=$(mktemp)
 			echo "include $BASILISK/Makefile.defs" >> $makefile
 			awk -f $BASILISK/darcsit/filter-makefile.awk Makefile >> $makefile
-			cat $makefile >&2
+			# cat $makefile >&2
 		    fi
 		    filename="~$filename"
 		    basename="~$basename"
@@ -1029,6 +1030,11 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 			    rm -f "$basename.make.log"
 			    $GENSUM "$filename" "$basename.s" > "$basename/fail.tst"
 			fi
+		    else
+			mkdir -p "$basename"
+			cat "$basename.log" >> "$basename/fail"
+			rm -f "$basename.log"
+			$GENSUM "$filename" > "$basename/fail.tst"
 		    fi
 		fi
 	    else ##### Not allowed
@@ -1088,39 +1094,45 @@ function setproc()
 	    copy_test_dir "$target" "$dir"
 	fi
     fi
-    case $1 in
-	*.[cmh])
-	    if $BASILISK/darcsit/pagemagic < $1; then
-		PREPROC="pagepreproc $1 1"
-		if [[ "$1" == *.[cm] ]]; then
-		    local dir="${1%%.?}"
-		    dir="${dir##\~}"
-		    PREPROC="$PREPROC | filterdir $dir"
-		fi
-		POSTPROC="pagepostproc $1"
-	    else
-		if [[ $1 == *.[ch] ]]; then
-		    PREPROC="cpreproc $1 c"
-		else
-		    PREPROC="cpreproc $1 octave"
-		fi
-		POSTPROC="cpostproc ${1##\~} $2"
-	    fi
-	    ;;
-	*)
-	    local type=$(filetype "$1")
-	    case $type in
-		page)
-		    PREPROC="pagepreproc $1 0"
+    if [[ -s "$1" ]]; then
+	case "$1" in
+	    *.[cmh])
+		if $BASILISK/darcsit/pagemagic < "$1"; then
+		    PREPROC="pagepreproc $1 1"
+		    if [[ "$1" == *.[cm] ]]; then
+			local dir="${1%%.?}"
+			dir="${dir##\~}"
+			PREPROC="$PREPROC | filterdir $dir"
+		    fi
 		    POSTPROC="pagepostproc $1"
-		    ;;
-		*)
-		    PREPROC="cpreproc $1 .$type"
+		else
+		    if [[ $1 == *.[ch] ]]; then
+			PREPROC="cpreproc $1 .c"
+		    else
+			PREPROC="cpreproc $1 .octave"
+		    fi
 		    POSTPROC="cpostproc ${1##\~} $2"
-		    ;;
-	    esac
-	    ;;
-    esac
+		fi
+		;;
+	    *)
+		local type=$(filetype "$1")
+		case $type in
+		    page)
+			PREPROC="pagepreproc $1 0"
+			POSTPROC="pagepostproc $1"
+			;;
+		    *)
+			PREPROC="cpreproc $1 .$type"
+			POSTPROC="cpostproc ${1##\~} $2"
+			;;
+		esac
+		;;
+	esac
+    else
+	# empty file
+	PREPROC="echo"
+	POSTPROC="cat"
+    fi
 }
 
 if [[ -n "$USERS" && "$REQUEST_URI" == /_preview/* ]]; then

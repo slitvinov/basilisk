@@ -161,6 +161,7 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(BASILISK)/darcsit/literate-c		  \
 		$(BASILISK)/darcsit/codeblock		  \
 		$(BASILISK)/darcsit/filetype		  \
+		$(BASILISK)/darcsit/pagemagic		  \
 		$(BASILISK)/darcsit/decl_anchors.awk	  \
 		$(BASILISK)/page2html
 	$(BASILISK)/page2html $< > $@
