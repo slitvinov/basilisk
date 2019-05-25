@@ -174,6 +174,7 @@ if [[ "$REQUEST_URI" == *\?changes=* ]]; then
     shortname=$(echo "$basename" | sed -e 's|^./||' -e 's/%20/ /g')
     hash=${REQUEST_URI##*\?changes=}
     login_timeout
+    echo "X-Robots-Tag: noindex"
     echo -e "Content-type: text/html; charset=utf-8\n"
     # replace --match "date $hash with --hash=$hash for darcs version 2.12
     ( cd $DOCUMENT_ROOT && darcs changes --verbose --match "date $hash" \
@@ -283,6 +284,7 @@ if [[ "$REQUEST_URI" == *\?history ]]; then
     basename=.${REQUEST_URI%%\?*}
     shortname=$(echo $basename | sed -e 's|^./||' -e 's/%20/ /g')
     login_timeout
+    echo "X-Robots-Tag: noindex"
     echo -e "Content-type: text/html; charset=utf-8\n"
     tabs="<li><a href=\"${REQUEST_URI%%\?*}\">view</a></li>"
     if [[ -n "$USERS" && ! -d "$DOCUMENT_ROOT/$basename" ]]; then
@@ -306,6 +308,7 @@ fi
 
 if [[ "$basename" == _activity* ]]; then
     login_timeout
+    echo "X-Robots-Tag: noindex"
     echo -e "Content-type: text/html; charset=utf-8\n"
     ( user=${basename##_activity?forUser=}
       if [[ "$user" == "_activity" ]]; then
@@ -453,6 +456,7 @@ searchpreproc()
 
 if [[ "$REQUEST_URI" == "/_search?"* ]]; then
     patterns=${REQUEST_URI##/_search\?patterns=}
+    echo "X-Robots-Tag: noindex"
     echo -e "Content-type: text/html\n"
     searchpreproc "$patterns" | iconv -f utf-8 -t utf-8 -c |  \
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		      \
@@ -881,6 +885,7 @@ EOF
 	    fi
 	fi
 	no_cache
+	echo "X-Robots-Tag: noindex"
 	echo -e "Content-type: text/html; charset=utf-8\n"
 	tabs="<li><a href=\"${REQUEST_URI##/_edit}\">view</a></li>"
 	tabs="$tabs<li class=selected><a href=\"${REQUEST_URI}\">edit</a></li>"
@@ -1271,6 +1276,7 @@ if [[ -d $file ]]; then
 
     if test -n "$REQUEST_URI"; then
 	login_timeout
+	echo "X-Robots-Tag: noindex"
 	echo -e "Content-type: text/html; charset=utf-8\n"
     fi
 
@@ -1327,6 +1333,7 @@ if [[ "$REQUEST_URI" == "/_login"* && -n "$USERS" ]]; then
 	messages="<li style=\"color:red;\">Invalid username or password.</li>"
     fi
     no_cache
+    echo "X-Robots-Tag: noindex"
     echo -e "Content-type: text/html; charset=utf-8\n"
     echo |                         \
 	$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
@@ -1451,6 +1458,7 @@ if [[ "$REQUEST_URI" == *\?delete ]]; then
 		fi
 	    fi
 	else
+	    echo "X-Robots-Tag: noindex"
 	    echo -e "Content-type: text/html; charset=utf-8\n"
 	    tabs="<li class=selected><a href=\"${REQUEST_URI%%\?*}\">view</a></li>"
 	    if [[ -n "$USERS" && ! -d "$DOCUMENT_ROOT/$basename" ]]; then
@@ -1492,6 +1500,7 @@ elif [[ -n "$USERS" && ! "$file" =~ .*\.(png|gif|jpg|mp4|ogv) ]]; then
     title=${REQUEST_URI//%20/ }
     title=${title##/}
     login_timeout
+    echo "X-Robots-Tag: noindex"
     echo -e "Content-type: text/html; charset=utf-8\n"
     echo "There is no page '$title'. You may create the page by [clicking here](/_edit$REQUEST_URI)." | \
     	$PANDOCT -s -V wikititle="$WIKI_TITLE"		    \
