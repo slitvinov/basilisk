@@ -8,8 +8,11 @@ grep "incl .*/"$src \
             function title(fname) {
 	      if (getline <fname < 0)
 	        fname = fname ".page";
-              while ($1 != "#") {
-                if (getline <fname == 0)
+	      if (getline <fname < 0)
+	        return "";
+	      while ($1 != "#") {
+	        status = getline <fname;
+                if (status == 0)
                   return fname;
               }
               gsub("# ", "", $0);
@@ -22,5 +25,7 @@ grep "incl .*/"$src \
               gsub(".tags:.*", "", $1);
               used = "/src" $1;
               lineno = $4;
-              print "used " title(basilisk $1) "\t" used " " lineno;
+	      t = title(basilisk $1);
+	      if (t != "")
+	        print "used " t "\t" used " " lineno;
             }'
