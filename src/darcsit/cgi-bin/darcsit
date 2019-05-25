@@ -513,7 +513,7 @@ function status_fail()
 EOF
     local basename=${1%%.?}
     msg=$(tail -n 20 "$basename/fail" | parse_errors "${1##\~}" "$2" "$basename")
-    if $BASILISK/darcsit/pagemagic < "$1"; then
+    if $BASILISK/darcsit/pagemagic "$1"; then
 	if [[ ! "$msg" ]]; then
 	    tail -n 20 "$basename/fail" | sed 's/.*\(Program received signal.*\)/\1/;t;d'
 	else
@@ -1097,7 +1097,7 @@ function setproc()
     if [[ -s "$1" ]]; then
 	case "$1" in
 	    *.[cmh])
-		if $BASILISK/darcsit/pagemagic < "$1"; then
+		if $BASILISK/darcsit/pagemagic "$1"; then
 		    PREPROC="pagepreproc $1 1"
 		    if [[ "$1" == *.[cm] ]]; then
 			local dir="${1%%.?}"

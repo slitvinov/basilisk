@@ -149,7 +149,7 @@ if test -n "$TYPE"; then
 else
     case $page in
 	*.py | *.[chm])
-	    if $BASILISK/darcsit/pagemagic < $page; then
+	    if $BASILISK/darcsit/pagemagic $page; then
 		PREPROC="pagepreproc $page 1"
 		POSTPROC="pagepostproc $page $ext"
 	    else
@@ -162,7 +162,7 @@ else
 	    fi
 	    ;;
 	*)
-	    if $BASILISK/darcsit/pagemagic < $page; then
+	    if $BASILISK/darcsit/pagemagic $page; then
 		PREPROC="pagepreproc $basename 1"
 	    else
 		PREPROC="pagepreproc $basename 0"

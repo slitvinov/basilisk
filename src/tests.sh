@@ -34,7 +34,7 @@ showpages()
     for f in $files; do
 	case "$f" in
 	    *.page) echo "$f" ;;
-	    *.[chm]) $BASILISK/darcsit/pagemagic < "$f" && echo "$f.page" ;;
+	    *.[chm]) $BASILISK/darcsit/pagemagic "$f" && echo "$f.page" ;;
 	esac
     done | sed 's/\(.*\)/	\1 \\/g'
 }

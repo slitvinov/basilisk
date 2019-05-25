@@ -9,7 +9,7 @@ function filetype()
     elif [[ "$1" == */log || "$1" == */out ]]; then
 	echo "text/plain"
     elif [[ "$1" == *.[chm] || "$1" == *.py ]]; then
-	if $BASILISK/darcsit/pagemagic < "$1"; then
+	if $BASILISK/darcsit/pagemagic "$1"; then
 	    echo page-magic
 	else
 	    if [[ "$1" == *.[ch] ]]; then
@@ -23,7 +23,7 @@ function filetype()
     else
 	local type=$(file -b -L --mime-type "$1")
 	if [[ "$type" == text/x-shellscript || "$1" == *.sh ]]; then
-	    if $BASILISK/darcsit/pagemagic < "$1"; then
+	    if $BASILISK/darcsit/pagemagic "$1"; then
 		echo page-magic
 	    else
 		echo bash

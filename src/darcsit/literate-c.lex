@@ -631,20 +631,36 @@ static void usage (struct MyScanner * scan)
   free (s);
 }
 
-void literate (FILE * fp, const char * page, int code, int debug)
+void literate (FILE * fp, const char * page, int code)
 {
   yyscan_t scanner;
   struct MyScanner sdata;
   sdata.in = fp;
   sdata.inbibtex = NULL;
-  sdata.type = NULL;
+
+  if (code) {
+    if (tail_is (page, ".c") || tail_is (page, ".h"))
+      sdata.type = C;
+    else if (tail_is (page, ".m"))
+      sdata.type = Octave;
+    else if (tail_is (page, ".py"))
+      sdata.type = Python;
+    else
+      sdata.type = Bash;
+    sdata.first = 1;
+    sdata.ncodes = 1;
+  }
+  else {
+    sdata.type = NULL;
+    sdata.first = 0;
+    sdata.ncodes = 0;
+  }
+  sdata.incode = code;
+
   sdata.plotype = NULL;
   sdata.indent = 0;
   sdata.out = stdout;
   sdata.i = 0;
-  sdata.incode = code;
-  sdata.ncodes = 0;
-  sdata.first = 0;
   sdata.error = NULL;
   sdata.nerror = sdata.nplots = 0;
   sdata.line = 1;
@@ -692,7 +708,7 @@ void literate (FILE * fp, const char * page, int code, int debug)
 
   yylex_init_extra (&sdata, &scanner);
   yyset_out (stdout, scanner);
-  yyset_debug (debug, scanner);
+  yyset_debug (2, scanner);
   yylex (scanner);
   yylex_destroy (scanner);
 
@@ -720,8 +736,8 @@ void literate (FILE * fp, const char * page, int code, int debug)
 
 int main (int argc, char * argv[])
 {
-  if (argc < 3) {
-    fprintf (stderr, "usage: ./literate FILE CODE [DEBUG]\n");
+  if (argc != 3) {
+    fprintf (stderr, "usage: ./literate FILE CODE\n");
     return 1;
   }
   char * name = acat (argv[1], ".page", NULL);
@@ -734,7 +750,7 @@ int main (int argc, char * argv[])
   }
   free (name);
 
-  literate (f, argv[1], atoi(argv[2]), argc > 2);
+  literate (f, argv[1], atoi(argv[2]));
   return 0;
 }
 

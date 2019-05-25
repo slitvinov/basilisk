@@ -3,53 +3,48 @@
 #include <stdio.h>
 #include <string.h>
 
-int main()
+static int pattern (FILE * fp, char * pat)
 {
-  int c;
-  do
-    c = getchar();
-  while (c != EOF && strchr(" \t\v\n\f", c));
-  if (c == '/') {
-    c = getchar();
-    if (c != '*')
-      return 1;
-    c = getchar();
-    if (c != '*')
-      return 1;
-  }
-  else if (c == '%') {
-    c = getchar();
-    if (c != '{')
-      return 1;    
-  }
-  else if (c == '"') {
-    c = getchar();
-    if (c != '"')
-      return 1;    
-    c = getchar();
-    if (c != '"')
-      return 1;    
-  }
-  else if (c == '#') {
-    do
-      c = getchar();
-    while (c != EOF && c != '\n');
-    do
-      c = getchar();
-    while (c != EOF && strchr(" \t\v\n\f", c));
-    char * s = ":<<'DOC'";
-    while (*s) {
-      if (c != *s)
-	return 1;
-      s++;
-      if (*s)
-	c = getchar();
+  int c = fgetc (fp);
+  do {
+    while (c != EOF && strchr(" \t", c))
+      c = fgetc (fp);
+    char * s = pat;
+    while (*s != '\0' && c == *s++)
+      c = fgetc (fp);
+    if (*s == '\0') {
+      while (c != EOF && strchr(" \t", c))
+	c = fgetc (fp);
+      if (strchr("\v\n\f\r", c))
+	return 0;      
     }
+    while (c != EOF && !strchr("\v\n\f\r", c))
+      c = fgetc (fp);
+    c = fgetc (fp);
+  } while (c != EOF);
+  return 1;
+}
+    
+int main (int argc, char * argv[])
+{
+  if (argc != 2) {
+    fprintf (stderr, "usage: pagemagic FILE\n");
+    return 1;
   }
+  FILE * fp = fopen (argv[1], "r");
+  if (fp == NULL) {
+    perror (argv[1]);
+    return 1;
+  }
+  int len = strlen(argv[1]);
+  if (len > 2 && (!strcmp (argv[1] + len - 2, ".c") ||
+		  !strcmp (argv[1] + len - 2, ".h")))
+    return pattern (fp, "/**");
+  else if (len > 2 && !strcmp (argv[1] + len - 2, ".m"))
+    return pattern (fp, "%{");
+  else if (len > 3 && !strcmp (argv[1] + len - 3, ".py"))
+    return pattern (fp, "\"\"\"");
   else
-    return 1;  
-  do
-    c = getchar();
-  while (c != EOF && strchr(" \t", c));
-  return strchr("\v\n\f\r", c) == NULL;
+    return pattern (fp, ":<<'DOC'");
+  return 1;
 }
