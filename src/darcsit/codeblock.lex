@@ -206,9 +206,19 @@ WS  [ \t\v\n\f]
   char * tmp = malloc (sizeof(char)); *tmp = '\0';
   int p = 0, para = 1, c1;
   while (para > p && (c1 = input(yyscanner)) > 0) {
-    tmp = append_c (tmp, c1);
-    if (c1 == '(') para++;
-    else if (c1 == ')') para--;
+    if (c1 == '\v') {
+      // line number
+      tmp = append_s (tmp, "<span id=");
+      while ((c1 = input(yyscanner)) > 0 && c1 != '\v')
+	if (strchr ("0123456789", c1))
+	  tmp = append_c (tmp, c1);
+      tmp = append_s (tmp, "></span>");
+    }
+    else {
+      tmp = append_c (tmp, c1);
+      if (c1 == '(') para++;
+      else if (c1 == ')') para--;
+    }
   }
   if (c1 != ')') {
     output_s (s);
