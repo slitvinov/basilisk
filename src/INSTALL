@@ -20,7 +20,7 @@ sudo apt-get install darcs flex make
 To get the latest Basilisk source code do
 
 ~~~bash
-darcs get http://basilisk.fr/basilisk
+darcs get --lazy http://basilisk.fr/basilisk
 ~~~
 
 If later you want to update the source code, you just need to do

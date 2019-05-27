@@ -198,33 +198,3 @@ Be careful if you have your own '*.html' files for some reason.
 
 * If "history" or "Recent activity" do not work, make sure that the
   version of darcs on the server is less than 2.8.5.
-
-# Notes
-
-## Features
-
-* "discuss" is gone.
-* File upload is disabled.
-* "printable version" is gone.
-* Button to hide/show gnuplot scripts.
-* Progress bar when running code.
-* Status of running codes when listing directories.
-* .page extension is not required anymore for documented .[ch] source code.
-
-## Known bugs
-
-* Reset password link does not work.
-* History does not work if the file name changes.
-
-## TODO
-
-* https for login/register page.
-* Secure Cookies.
-
-## Improvements
-
-* Side-by-side edit view.
-
-## Broken pages
-
-* http://basilisk.dalembert.upmc.fr/Basilisk%20C?changes=94d206fcf06d36420bb06aa825a48ef7b2001671 (example of broken history due to name change).
