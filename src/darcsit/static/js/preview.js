@@ -1,3 +1,9 @@
+function toline(line)
+{
+    var t = editor.charCoords ({line: line - 1, ch: 0}, "local").top; 
+    editor.scrollTo (null, t);
+}
+
 function check_path() {
     checked = true;
     $('input[type=checkbox]').each(function () {

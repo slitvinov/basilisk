@@ -5,9 +5,10 @@
     height: 85vh;
 }
 #left-column {
+    min-width: 0; /* weird fix: see https://moduscreate.com/blog/how-to-fix-overflow-issues-in-css-flex-layouts/ */
+    flex: 1;
     display: flex;
     flex-direction: column;
-    flex: 1;
 }
 #preview {
     margin-right: 0.3em;

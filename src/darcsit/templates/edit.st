@@ -81,10 +81,11 @@
 	      </div>
 	    </form>
 	    <script type="text/javascript">
+	      var editor;
 	      function setup_codemirror() {
 	      CodeMirror.keyMap.emacs.Enter = "newlineAndIndent";
 	      CodeMirror.extendMode("clike", {electricChars: "{};"});
-	      var editor = 
+	      editor = 
     	      CodeMirror.fromTextArea(document.getElementById("editedText"), {
 	        matchBrackets: true,
 	        mode: "text/x-basiliskc",
