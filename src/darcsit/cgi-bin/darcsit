@@ -463,7 +463,8 @@ searchpreproc()
 	echo "### No match found for ''"
     else
 	(
-	    # searchrepo $BASILISK/..   "$1"
+	    # The line below should be removed for standard sites
+	    searchrepo $BASILISK/..   "$1"
 	    searchrepo "$DOCUMENT_ROOT" "$1"
 	) | awk -v string="`echo $1 | urldecode`" -f $BASILISK/darcsit/search.awk
     fi
@@ -496,9 +497,11 @@ function is_up_to_date()
 
 function parse_errors()
 {
+    # Note: the line with $BASILISK should be removed for standard sites
     uniq | sed                                                                                      \
 	       -e "s|[~]*$3|${3##\~}|g"                                                             \
 	       -e "s|$DOCUMENT_ROOT/\([^:]*\):\([0-9]*\):|<a href=\"/\1#\2\"\">\1:\2</a>:|g"        \
+	       -e "s|$BASILISK/\([^:]*\):\([0-9]*\):|<a href=\"/src/\1#\2\"\">src/\1:\2</a>:|g"     \
 	       -e "s|^\./\([^:]*\):\([0-9]*\):|<a href=\"./\1#\2\"\">\1:\2</a>:|g"                  \
 	       -e "s|^[~]*$1:\([0-9]*\):|$1:<a href=\"$2#\1\" onclick=\"toline(\1)\">\1</a>:|g"     \
 	       -e 's/$/<br>/g'
