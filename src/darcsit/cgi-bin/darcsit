@@ -482,7 +482,7 @@ function is_up_to_date()
 function parse_errors()
 {
     uniq | sed                                                                                      \
-	       -e "s|$3|${3##\~}|g"                                                                 \
+	       -e "s|[~]*$3|${3##\~}|g"                                                                 \
 	       -e "s|$DOCUMENT_ROOT/\([^:]*\):\([0-9]*\):|<a href=\"/\1#\2\">\1:\2</a>:|g"          \
 	       -e "s|^\./\([^:]*\):\([0-9]*\):|<a href=\"./\1#\2\">\1:\2</a>:|g"                    \
 	       -e "s|^[~]*$1:\([0-9]*\):|$1:<a href=\"$2#\1\">\1</a>:|g"                            \
@@ -674,10 +674,12 @@ function status()
 			elif [[ -f "$basename/completing" ]]; then
 			    debug "completing"
 			    status_completing
+			    status_warning "$filename" "${REQUEST_URI%%\?status}"
 			    return
 			else
 			    debug "running"
 			    status_running "$basename/tspid."* "$ministatus"
+			    status_warning "$filename" "${REQUEST_URI%%\?status}"
 			    return
 			fi
 		    else

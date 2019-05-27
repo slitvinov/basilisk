@@ -56,28 +56,30 @@ clean:
 		GDB="$(GDB)" $(BASILISK)/runtest $@
 
 define compile_failed =
-(mkdir -p $* && 										\
-	echo "qcc -autolink $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm" > $*/fail &&			\
-	cat $*.log~ >> $*/fail &&								\
-	echo "make: *** [$*.s] Error 1" >> $*/fail &&						\
-	rm -f $*.*tst &&									\
-	$(GENSUM) $*.c > $*/fail.tst &&								\
-	cat $*/fail 2> /dev/stderr &&								\
+(mkdir -p $* && 								\
+	echo "qcc -autolink $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm" > $*/fail &&	\
+	cat $*.log~ >> $*/fail &&						\
+	echo "make: *** [$*.s] Error 1" >> $*/fail &&				\
+	rm -f $*.*tst &&							\
+	$(GENSUM) $*.c > $*/fail.tst &&						\
+	cat $*/fail 2> /dev/stderr &&						\
 	exit 1)
 endef
 
 %.3D.s: %.3D.c $(QCC)
 	@echo qcc -autolink $(CFLAGS) -grid=octree -o $*/$* $*.c $(LIBS) -lm
-	@rm -f $*/fail
-	@OPENGLIBS="$(OPENGLIBS)" $(QCC) -autolink -nolineno $(STRIPFLAGS) $(subst -g ,,$(subst -O2 ,,$(CFLAGS) -grid=octree)) $< -o $@ $(LIBS) -lm 2> $*.log~ || $(compile_failed)
+	@rm -f $*/fail $*/warn
+	@OPENGLIBS="$(OPENGLIBS)" $(QCC) -autolink -nolineno $(STRIPFLAGS) $(subst -g ,,$(subst -O2 ,,$(CFLAGS) -grid=octree)) $< -o $@ $(LIBS) -lm 2> $@.log~ || $(compile_failed)
 	@chmod -x $@
+	@test ! -s $*.log~ || mkdir -p $* && cat $*.log~ > $*/warn
 	@rm -f $*.log~ $*/fail
 
 %.s: %.c $(QCC)
 	@echo qcc -autolink $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm
-	@rm -f $*/fail
+	@rm -f $*/fail $*/warn
 	@OPENGLIBS="$(OPENGLIBS)" $(QCC) -autolink -nolineno $(STRIPFLAGS) $(subst -g ,,$(subst -O2 ,,$(CFLAGS))) $< -o $@ $(LIBS) -lm 2> $*.log~ ||  $(compile_failed)
 	@chmod -x $@
+	@test ! -s $*.log~ || mkdir -p $* && cat $*.log~ > $*/warn
 	@rm -f $*.log~ $*/fail
 
 %.prof: %.c
@@ -154,6 +156,7 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 	$(CC) -shared $*.o $*_wrap.o -o _$*.so
 
 # HTML
+.SECONDEXPANSION:
 %.html: % %.tags $(BASILISK)/Makefile.defs                \
 		$(BASILISK)/darcsit/basilisk.conf         \
 		$(BASILISK)/darcsit/darcsit.conf 	  \
@@ -163,7 +166,10 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 		$(BASILISK)/darcsit/filetype		  \
 		$(BASILISK)/darcsit/pagemagic		  \
 		$(BASILISK)/darcsit/decl_anchors.awk	  \
-		$(BASILISK)/page2html
+		$(BASILISK)/page2html			  \
+		$$(wildcard $$(subst .c,,%)/warn)	  \
+		$$(wildcard $$(subst .c,,%)/fail)	  \
+		$$(wildcard $$(subst .c,,%)/pass)
 	$(BASILISK)/page2html $< > $@
 	@test -s $@ || exit 1
 

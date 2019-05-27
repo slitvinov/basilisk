@@ -469,7 +469,7 @@ elif ! test -f $test/fail.$ext || ! test -f $test/fail || ! checksum $test.s $te
     fi
 
     rm -f $test.$ext $test/pass \
-	$test/fail $test/fail.* $test/warn $test/plot.png $test/plots $test/core
+	$test/fail $test/fail.* $test/plot.png $test/plots $test/core
     $GENSUM $src $test.s > $test.$ext
 
     mkdir -p $test && cp -f $src $test
