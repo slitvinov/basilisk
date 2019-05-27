@@ -1038,7 +1038,8 @@ if [[ "$REQUEST_URI" == /_run/* ]] && runnable "$REQUEST_URI"; then
 		    if [[ -r Makefile ]]; then
 			makefile=$(mktemp)
 			echo "include $BASILISK/Makefile.defs" >> $makefile
-			awk -f $BASILISK/darcsit/filter-makefile.awk Makefile >> $makefile
+			sed "s/$basename.tst/~$basename.tst/g" < Makefile | \
+			    awk -f $BASILISK/darcsit/filter-makefile.awk >> $makefile
 			# cat $makefile >&2
 		    fi
 		    filename="~$filename"

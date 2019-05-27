@@ -1,12 +1,12 @@
 # provides some security by allowing only certain user Makefile patterns
 
 # simple target lines are allowed
-/^[a-zA-Z0-9_\-.]+:.*\\$/ { # target line with a continuation character
+/^[~a-zA-Z0-9_\-.]+:.*\\$/ { # target line with a continuation character
     print $0;
     cont = 1;
     next
 }
-/^[a-zA-Z0-9_\-.]+:/ { # simple line
+/^[~a-zA-Z0-9_\-.]+:/ { # simple line
     print $0;
     next
 }

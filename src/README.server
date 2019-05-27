@@ -1,7 +1,7 @@
 # How to configure a Basilisk server
 
 ~~~bash
-sudo apt install task-spooler make gcc openmpi-bin libopenmpi-dev clang
+sudo apt install task-spooler make gcc openmpi-bin libopenmpi-dev clang psmisc
 ~~~
 
 Install the KDT library, [OpenGL utility libraries](gl/INSTALL) and
