@@ -77,7 +77,7 @@ if [[ ! -r "$template" ]]; then
 fi
 PANDOCT="$PANDOC --template=$template"
 
-COOKIE_OPTS="$COOKIE_OPTS; Domain=${HTTP_DOMAIN}"
+# COOKIE_OPTS="$COOKIE_OPTS; Domain=${HTTP_DOMAIN}"
 
 ################### Are we logged in? ####################
 
