@@ -56,31 +56,35 @@
 	    <form action="$pageUrl$" method="post" id="editform"
 		  enctype="application/x-www-form-urlencoded">
 	      <div id="editcontainer">
-		<div id="status"></div>
-		<div id="changes-box">
+		<div id="left-column">
+		  <div id="preview">
+		    <div id="previewpane"></div>
+		  </div>
+		  <div id="status"></div>
+		</div>
+		<div id="right-column">
+		  <div id="editor">
+		    <textarea cols="80" name="editedText" id="editedText">
+		      $if(edit)$
+		      $edit$
+		      $endif$
+		    </textarea>
+		  </div>
+		  <div id="changes-box">
 <ul class="messages" id="messages">$messages$</ul>
-		  <label>Description of changes:</label><br/>
-		  <input type="text" name="logMsg" id="logMsg" value="$logMsg$"/><br/>
-		  $checkboxes$
-		  <input type="button" class="editButton" id="update"
-  			 onClick="save();" value="Save"/>
-		  &nbsp;<input type="submit" name="cancel" id="cancel" value="Discard"/>
-		  &nbsp;<input type="button" class="editButton" id="previewButton"
-			       onClick="updatePreviewPane();" style="display: none;"
-			       value="Preview"/>
-		  &nbsp;<input type="button" class="editButton" id="runButton"
-			       onClick="run();" style="display: none;"
-			       value="Run"/>
-		</div>
-		<div id="preview">
-		  <div id="previewpane"></div>
-		</div>
-		<div id="editor">
-		  <textarea cols="80" name="editedText" id="editedText">
-		    $if(edit)$
-		    $edit$
-		    $endif$
-		  </textarea>
+		    <label>Description of changes:</label><br/>
+		    <input type="text" name="logMsg" id="logMsg" value="$logMsg$"/><br/>
+		    $checkboxes$
+		    <input type="button" class="editButton" id="update"
+  			   onClick="save();" value="Save"/>
+		    &nbsp;<input type="submit" name="cancel" id="cancel" value="Discard"/>
+		    &nbsp;<input type="button" class="editButton" id="previewButton"
+				 onClick="updatePreviewPane();" style="display: none;"
+				 value="Preview"/>
+		    &nbsp;<input type="button" class="editButton" id="runButton"
+				 onClick="run();" style="display: none;"
+				 value="Run"/>
+		  </div>
 		</div>
 	      </div>
 	    </form>
