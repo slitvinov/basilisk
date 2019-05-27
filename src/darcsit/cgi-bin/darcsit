@@ -160,7 +160,22 @@ fi
 
 ################### _index ###############################
 
-if [[ "$basename" == "_index" ]]; then
+function is_not_bot()
+{
+    # try to guess whether the client is an indexing robot
+    if [[ "$HTTP_USER_AGENT" =~ [Bb]ot[s]*[^a-zA-Z] ]]; then
+	echo "Access denied for bot: $HTTP_USER_AGENT" >&2
+	cat <<EOF
+Status: 403 Read access forbidden
+Content-Type: text/html; charset=utf-8
+
+<h1>403 Read access forbidden</h1>
+EOF
+	exit 0
+    fi
+}
+
+if [[ "$basename" == "_index" && is_not_bot ]]; then
     basename=""
     file="$dirname"
     REQUEST_URI="/"
@@ -169,7 +184,7 @@ fi
 
 ################### ?changes ###########################
 
-if [[ "$REQUEST_URI" == *\?changes=* ]]; then
+if [[ "$REQUEST_URI" == *\?changes=* && is_not_bot ]]; then
     basename=".${REQUEST_URI%%\?*}"
     shortname=$(echo "$basename" | sed -e 's|^./||' -e 's/%20/ /g')
     hash=${REQUEST_URI##*\?changes=}
@@ -280,7 +295,7 @@ dhistory()
     '
 }
 
-if [[ "$REQUEST_URI" == *\?history ]]; then
+if [[ "$REQUEST_URI" == *\?history && is_not_bot ]]; then
     basename=.${REQUEST_URI%%\?*}
     shortname=$(echo $basename | sed -e 's|^./||' -e 's/%20/ /g')
     login_timeout
@@ -306,7 +321,7 @@ fi
 
 ################### Recent activity ######################
 
-if [[ "$basename" == _activity* ]]; then
+if [[ "$basename" == _activity* && is_not_bot ]]; then
     login_timeout
     echo "X-Robots-Tag: noindex"
     echo -e "Content-type: text/html; charset=utf-8\n"
@@ -454,7 +469,7 @@ searchpreproc()
     fi
 }
 
-if [[ "$REQUEST_URI" == "/_search?"* ]]; then
+if [[ "$REQUEST_URI" == "/_search?"* && is_not_bot ]]; then
     patterns=${REQUEST_URI##/_search\?patterns=}
     echo "X-Robots-Tag: noindex"
     echo -e "Content-type: text/html\n"
@@ -827,7 +842,7 @@ function update_test()
     fi
 }
 
-if [[ -n "$USERS" && "$REQUEST_URI" == /_edit/* ]]; then
+if [[ -n "$USERS" && "$REQUEST_URI" == /_edit/* && is_not_bot ]]; then
     if [[ "$REQUEST_URI" == /_edit/static/* ]]; then
 		cat <<EOF
 Content-Type: text/html; charset=utf-8
@@ -1271,7 +1286,7 @@ dirpreproc()
     echo '</ul>'
 }
 
-if [[ -d $file ]]; then
+if [[ -d $file && is_not_bot ]]; then
     cd $DOCUMENT_ROOT
 
     PREPROC="dirpreproc $REQUEST_URI"
@@ -1296,7 +1311,7 @@ fi
 
 ################### _login ################################
 
-if [[ "$REQUEST_URI" == "/_login"* && -n "$USERS" ]]; then
+if [[ "$REQUEST_URI" == "/_login"* && -n "$USERS" && is_not_bot ]]; then
     destination=${REQUEST_URI##*\?destination=}
     if [[ "$destination" == "$REQUEST_URI" ]]; then
 	destination="$HTTP_REFERER"
@@ -1351,7 +1366,7 @@ fi
 
 ################### _register ############################
 
-if [[ "$REQUEST_URI" == "/_register"* && -n "$USERS" ]]; then
+if [[ "$REQUEST_URI" == "/_register"* && -n "$USERS" && is_not_bot ]]; then
     destination=${REQUEST_URI##*\?destination=}
     if [[ "$destination" == "$REQUEST_URI" ]]; then
 	destination="$HTTP_REFERER"
@@ -1425,7 +1440,7 @@ function delete_page()
 EOF
 }
 
-if [[ "$REQUEST_URI" == *\?delete ]]; then
+if [[ "$REQUEST_URI" == *\?delete && is_not_bot ]]; then
     if [[ "$username" ]]; then
 	basename=".${REQUEST_URI%%\?*}"
 	shortname=$(echo "$basename" | sed -e 's|^./||' -e 's/%20/ /g')
