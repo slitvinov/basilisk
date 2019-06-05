@@ -66,20 +66,16 @@ define compile_failed =
 	exit 1)
 endef
 
-%.3D.s: %.3D.c $(QCC)
-	@echo qcc -autolink $(CFLAGS) -grid=octree -o $*/$* $*.c $(LIBS) -lm
-	@rm -f $*/fail $*/warn
-	@OPENGLIBS="$(OPENGLIBS)" $(QCC) -autolink -nolineno $(STRIPFLAGS) $(subst -g ,,$(subst -O2 ,,$(CFLAGS) -grid=octree)) $< -o $@ $(LIBS) -lm 2> $@.log~ || $(compile_failed)
-	@chmod -x $@
-	@test ! -s $*.log~ || mkdir -p $* && cat $*.log~ > $*/warn
-	@rm -f $*.log~ $*/fail
-
 %.s: %.c $(QCC)
-	@echo qcc -autolink $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm
+	@echo qcc -autolink $(CFLAGS) $(subst .3D_,-grid=octree,$(findstring .3D_,$*_)) \
+		-o $*/$* $*.c $(LIBS) -lm
 	@rm -f $*/fail $*/warn
-	@OPENGLIBS="$(OPENGLIBS)" $(QCC) -autolink -nolineno $(STRIPFLAGS) $(subst -g ,,$(subst -O2 ,,$(CFLAGS))) $< -o $@ $(LIBS) -lm 2> $*.log~ ||  $(compile_failed)
+	@OPENGLIBS="$(OPENGLIBS)" $(QCC) -autolink -nolineno $(STRIPFLAGS) 	\
+		$(subst -g ,,$(subst -O2 ,,$(CFLAGS))) 				\
+		$(subst .3D_,-grid=octree,$(findstring .3D_,$*_)) 		\
+		$< -o $@ $(LIBS) -lm 2> $*.log~ ||  $(compile_failed)
 	@chmod -x $@
-	@test ! -s $*.log~ || mkdir -p $* && cat $*.log~ > $*/warn
+	@test ! -s $*.log~ || ( mkdir -p $* && cat $*.log~ > $*/warn )
 	@rm -f $*.log~ $*/fail
 
 %.prof: %.c
