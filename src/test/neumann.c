@@ -186,10 +186,7 @@ int main()
 
     // FIXME: need to set minlevel to 4
     timer t = timer_start();
-    mgstats s = poisson (a, b, alpha = fs,
-			 embed_flux =
-			 a.boundary[embed] != symmetry ? embed_flux : NULL,
-			 tolerance = 1e-6, minlevel = 4);
+    mgstats s = poisson (a, b, alpha = fs, tolerance = 1e-6, minlevel = 4);
     double dt = timer_elapsed (t);
     printf ("%d %g %d %d\n", N, dt, s.i, s.nrelax);
 

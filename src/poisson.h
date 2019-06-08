@@ -423,6 +423,10 @@ mgstats poisson (struct Poisson p)
     TOLERANCE = p.tolerance;
 
   scalar a = p.a, b = p.b;
+#if EMBED
+  if (!p.embed_flux && a.boundary[embed] != symmetry)
+    p.embed_flux = embed_flux;
+#endif // EMBED
   mgstats s = mg_solve ({a}, {b}, residual, relax,
 			&p, p.nrelax, p.res, minlevel = max(1, p.minlevel));
 
