@@ -89,11 +89,23 @@ the overhead is relatively larger for the simpler operations (e.g. sum
 of all elements). This graph is quite sensitive to the exact machine
 architecture (cache hierarchy etc...).
 
-![Relative speed of simple operations on a tree mesh](laplacian/plot.png)
+~~~gnuplot Relative speed of simple operations on a tree mesh
+set xlabel 'Level'
+set ylabel 'Cartesian speed / Quadtree speed'
+set key center right
+plot '< paste out cout | grep lap' u 2:($3/$6) w lp t '5-points Laplacian', \
+     '< paste out cout | grep sum' u 2:($3/$7) w lp t 'Sum', \
+     '< paste out cout | grep res' u 2:($3/$7) w lp t 'Restriction'         
+~~~
 
 The absolute speed for the Laplacian operator on both grid
 implementations is shown below. Note that Cartesian meshes are fast!
 (i.e. hundreds of million of grid points per second).
 
-![Absolute speed of the 5-points Laplacian on Cartesian and tree
- meshes](laplacian/speed.png) */
+~~~gnuplot Absolute speed of the 5-points Laplacian on Cartesian and tree meshes
+set ylabel 'nanoseconds per grid point'
+set yrange [0:]
+plot '< grep lap out' u 2:3 w lp t 'Quadtree', \
+     '< grep lap cout' u 2:3 w lp t 'Cartesian'
+~~~
+*/
