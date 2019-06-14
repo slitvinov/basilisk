@@ -9,7 +9,7 @@
    Revised:  18 Oct-12 (chnaged char* to const char * on line 228, by R. Booth)
    Revised: 17 Feb-15 (changed asm to __asm for being both C99 and
    GNU99 compliant, by G. Kirstetter)
-
+   Revised: 14 Jun-18 (changed the defined() test condition, by G. Kirstetter)
 
 This code is an example of alternate, nondefault handling of
 IEEE 754 floating-point exceptions in OS X and Linux, based on
@@ -83,8 +83,13 @@ http://graphviz.sourcearchive.com/documentation/2.16/gvrender__pango_8c-source.h
 
 #include <fenv.h>
 
-#define DEFINED_PPC      (defined(__ppc__) || defined(__ppc64__))
-#define DEFINED_INTEL    (defined(__i386__) || defined(__x86_64__))
+#if defined(__ppc__) || defined(__ppc64__)
+#define DEFINED_PPC
+#endif
+
+#if defined(__i386__) || defined(__x86_64__)
+#define DEFINED_INTEL 1
+#endif
 
 #ifndef LINUX
 #if DEFINED_PPC
@@ -149,7 +154,7 @@ fedisableexcept (unsigned int excepts)
   return ( fesetenv (&fenv) ? -1 : old_excepts );
 }
 
-#elif DEFINED_INTEL
+#elif (DEFINED_INTEL == 1)
 
 int
 fegetexcept (void)
