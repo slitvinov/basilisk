@@ -449,8 +449,8 @@ if test -f $test.$ext && checksum $test.s $test.$ext; then
     if $source_modified; then
 	if test -n "$SANDBOX"; then
 	    rm -f $test/warn
-	    awk -f $BASILISK/gnuplot.awk < $src > $test/plots
-	    awk -f $BASILISK/python.awk < $src > $test/plots.py
+	    gawk -f $BASILISK/gnuplot.awk < $src > $test/plots
+	    gawk -f $BASILISK/python.awk < $src > $test/plots.py
 	    chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
 	    cd $test
 	    doplots "$test"
@@ -473,8 +473,8 @@ elif ! test -f $test/fail.$ext || ! test -f $test/fail || ! checksum $test.s $te
     $GENSUM $src $test.s > $test.$ext
 
     mkdir -p $test && cp -f $src $test
-    awk -f $BASILISK/gnuplot.awk < $src > $test/plots
-    awk -f $BASILISK/python.awk < $src > $test/plots.py
+    gawk -f $BASILISK/gnuplot.awk < $src > $test/plots
+    gawk -f $BASILISK/python.awk < $src > $test/plots.py
     cp -f $test.* $test 2> /dev/null || true
     run=`echo $test | sed 's/^~//'`
     if test "$run" != "$test"; then

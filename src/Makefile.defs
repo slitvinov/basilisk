@@ -55,17 +55,6 @@ clean:
 		EXEC="$(VALGRIND)" \
 		GDB="$(GDB)" $(BASILISK)/runtest $@
 
-define compile_failed =
-(mkdir -p $* && 								\
-	echo "qcc -autolink $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm" > $*/fail &&	\
-	cat $*.log~ >> $*/fail &&						\
-	echo "make: *** [$*.s] Error 1" >> $*/fail &&				\
-	rm -f $*.*tst &&							\
-	$(GENSUM) $*.c > $*/fail.tst &&						\
-	cat $*/fail 2> /dev/stderr &&						\
-	exit 1)
-endef
-
 %.s: %.c $(QCC)
 	@echo qcc -autolink $(CFLAGS) $(subst .3D_,-grid=octree,$(findstring .3D_,$*_)) \
 		-o $*/$* $*.c $(LIBS) -lm
@@ -73,7 +62,15 @@ endef
 	@OPENGLIBS="$(OPENGLIBS)" $(QCC) -autolink -nolineno $(STRIPFLAGS) 	\
 		$(subst -g ,,$(subst -O2 ,,$(CFLAGS))) 				\
 		$(subst .3D_,-grid=octree,$(findstring .3D_,$*_)) 		\
-		$< -o $@ $(LIBS) -lm 2> $*.log~ ||  $(compile_failed)
+		$< -o $@ $(LIBS) -lm 2> $*.log~ || 				\
+	(mkdir -p $* && 							\
+	 echo "qcc -autolink $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm" > $*/fail &&	\
+	 cat $*.log~ >> $*/fail &&						\
+	 echo "make: *** [$*.s] Error 1" >> $*/fail &&				\
+	 rm -f $*.*tst &&							\
+	 $(GENSUM) $*.c > $*/fail.tst &&					\
+	 cat $*/fail 2> /dev/stderr &&						\
+	 exit 1)
 	@chmod -x $@
 	@test ! -s $*.log~ || ( mkdir -p $* && cat $*.log~ > $*/warn )
 	@rm -f $*.log~ $*/fail
@@ -96,9 +93,9 @@ endef
 # warning: if this recipe is changed, runtest needs to be updated
 %/plots: %.c $(BASILISK)/gnuplot.awk $(BASILISK)/python.awk \
 		$(BASILISK)/gnuplot.sh
-	cd $* && awk -f $(BASILISK)/gnuplot.awk < ../$*.c > plots && \
+	cd $* && gawk -f $(BASILISK)/gnuplot.awk < ../$*.c > plots && \
 	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh || rm -f plots
-	cd $* && awk -f $(BASILISK)/python.awk < ../$*.c > plots.py && \
+	cd $* && gawk -f $(BASILISK)/python.awk < ../$*.c > plots.py && \
 	python plots.py || rm -f plots
 	@test -f $*/plots || exit 1
 
@@ -136,7 +133,7 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 # Octave code
 
 %.s: %.m
-	touch $@
+	ln -s -f $< $@
 
 %.tst: %.s %.m
 	$(BASILISK)/runtest $@
