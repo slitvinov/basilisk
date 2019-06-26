@@ -107,13 +107,14 @@ echo "export PATH=\$PATH:$BASILISK" >> ~/.bashrc
 - graphviz
 - valgrind
 - gifsicle
+- pstoedit
 
 and also
 [gprof2dot](http://code.google.com/p/jrfonseca/wiki/Gprof2Dot). On a
 Debian-like system (i.e. Debian, Ubuntu, Mint etc...) you just need to do
 
 ~~~bash
-sudo apt-get install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle
+sudo apt-get install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle pstoedit
 ~~~
 
 # Visualisation
@@ -124,6 +125,16 @@ Online visualisation with [Basilisk View](view.h) requires a separate
 Offline (interactive) [visualisation](bview) requires the
 [installation](bview-server.c#installation) of the [Basilisk View
 servers](bview-server.c).
+
+A short recipe for installation of both the interactive and non-interactive
+versions of Basilisk View is:
+
+~~~bash
+cd $BASILISK/gl
+make
+cd ..
+make bview-servers
+~~~
 
 # Using Basilisk with python
 
