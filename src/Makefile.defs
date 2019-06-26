@@ -133,7 +133,7 @@ whitelist: $(subst .c,.exe,$(filter-out $(EXCLUDE),$(ALLTESTS))) \
 # Octave code
 
 %.s: %.m
-	ln -s -f $< $@
+	cp -f $< $@
 
 %.tst: %.s %.m
 	$(BASILISK)/runtest $@
