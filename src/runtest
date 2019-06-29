@@ -315,12 +315,24 @@ EOF
     rm -f *pid.$ext completing
 }
 
+octave_deps()
+{
+    path=`dirname $1`" "`grep --only-matching 'addpath[ \t]*( *"[^"]*" *)' $1 | sed -e 's/addpath[ \t]*( *"\([^"]*\)" *)/\1/g' -e "s|^~|$HOME|g"`
+    for i in `grep -E --only-matching -h '[a-zA-Z_0-9]+[ \t]*\(' $1 | sort | uniq | sed 's/(//g'`; do
+	for p in $path; do
+	    test -f "$p/$i.m" -a "$p/$i.m" != "$1" && echo "$p/$i.m" && octave_deps "$p/$i.m" && break;
+	done
+    done | sort | uniq
+}
+
 # compile/run on a remote "sandbox" (OCTAVE)
 remotely_octave()
 {
     rhost=$1
     chksum=`(cat $test.s && pwd && echo $test) | $GENSUM | cut -d' ' -f1`.$ext
     mkdir $test/$chksum
+    mkdir $test/$chksum/lib/
+    cp -f $test.m `octave_deps ./$test.m` $test/$chksum/lib/
     cd $test
     run=`echo $test | sed 's/^~//'`
     if test "$run" != "$test"; then
@@ -335,8 +347,6 @@ remotely_octave()
 	done
 	cd ..
     fi
-    mkdir $chksum/lib/
-    cp -f ../*.m $chksum/lib/
     cp -f ../$src $chksum/$src
     cat <<EOF >$chksum/$chksum.sh
 #!/bin/sh
