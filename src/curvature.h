@@ -605,13 +605,13 @@ cstats curvature (struct Curvature p)
 	if (k[] < nodata)
 	  sk += k[], a++;
       if (a > 0.)
-	kf = sigma*sk/a, sa++;
+	kf = sk/a, sa++;
       else
 
 	/**
 	Empty neighborhood: we try centroids as a last resort. */
 
-	kf = sigma*centroids_curvature_fit (point, c), sc++;
+	kf = centroids_curvature_fit (point, c), sc++;
     }
     else
       kf = nodata;

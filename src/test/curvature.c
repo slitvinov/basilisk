@@ -78,7 +78,7 @@ void sample_circles (int nr, double R, int levelmax, norm * n, cstats * sc)
     for (int l = levelmax; l >= 3; l--) {
       unrefine (level >= l || c[] <= 0. || c[] >= 1.);
       
-      cstats s = curvature (c, kappa);
+      cstats s = curvature (c, kappa, sigma = 2.);
       
       /**
       We store statistics on the methods used for curvature
@@ -91,7 +91,7 @@ void sample_circles (int nr, double R, int levelmax, norm * n, cstats * sc)
           /**
 	  ...and error statistics (for a given level of refinement *l*). */
            
-	  double e = fabs(kappa[] - (dimension - 1)/R)*R/(dimension - 1);
+	  double e = fabs(kappa[]/2. - (dimension - 1)/R)*R/(dimension - 1);
 	  n[l].volume += dv();
 	  n[l].avg += dv()*e;
 	  n[l].rms += dv()*e*e;
