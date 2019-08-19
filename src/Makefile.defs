@@ -55,24 +55,6 @@ clean:
 		EXEC="$(VALGRIND)" \
 		GDB="$(GDB)" $(BASILISK)/runtest $@
 
-define compile_failed =
-(mkdir -p $* && 								\
-	echo "qcc -autolink $(CFLAGS) -o $*/$* $*.c $(LIBS) -lm" > $*/fail &&	\
-	cat $*.log~ >> $*/fail &&						\
-	echo "make: *** [$*.s] Error 1" >> $*/fail &&				\
-	rm -f $*.*tst &&							\
-	$(GENSUM) $*.c > $*/fail.tst &&						\
-	cat $*/fail 2> /dev/stderr &&						\
-	exit 1)
-endef
-
-%.3D.s: %.3D.c $(QCC)
-	@echo qcc -autolink $(CFLAGS) -grid=octree -o $*/$* $*.c $(LIBS) -lm
-	@rm -f $*/fail $*/warn
-	@OPENGLIBS="$(OPENGLIBS)" $(QCC) -autolink -nolineno $(STRIPFLAGS) $(subst -g ,,$(subst -O2 ,,$(CFLAGS) -grid=octree)) $< -o $@ $(LIBS) -lm 2> $@.log~ || $(compile_failed)
-	@chmod -x $@
-	@rm -f $*.log~ $*/fail
-
 %.s: %.c $(QCC)
 	@echo qcc -autolink $(CFLAGS) $(subst .3D_,-grid=octree,$(findstring .3D_,$*_)) \
 		-o $*/$* $*.c $(LIBS) -lm
@@ -90,6 +72,7 @@ endef
 	 cat $*/fail 2> /dev/stderr &&						\
 	 exit 1)
 	@chmod -x $@
+	@test ! -s $*.log~ || ( mkdir -p $* && cat $*.log~ > $*/warn )
 	@rm -f $*.log~ $*/fail
 
 %.prof: %.c
