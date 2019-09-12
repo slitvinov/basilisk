@@ -6,10 +6,19 @@ al, 1994](/src/references.bib#luth1994) studied experimentally the
 transformation of sinusoidal waves propagating over a submerged bar
 (or reef). This is a good test case for dispersive models as higher
 harmonics are nonlinearly generated and released with phase shifts
-corresponding to the dispersion relation. */
+corresponding to the dispersion relation. 
+
+This test case is discussed in [Popinet, 2015](/Bibliography#popinet2015).
+*/
 
 #include "grid/multigrid1D.h"
-#include "green-naghdi.h"
+#if ML
+  #include "layered/hydro.h"
+  #include "layered/nh-box.h"
+  #include "layered/remap.h"
+#else
+  #include "green-naghdi.h"
+#endif
 
 /**
 The basin needs to be long enough so as to minimise the influence of
@@ -20,6 +29,9 @@ int main() {
   N = 2048;
   L0 = 50;
   G = 9.81;
+#if ML
+  nl = 2;
+#endif
   run();
 }
 
@@ -31,10 +43,17 @@ desired sinusoidal wave form. We have to tune the amplitude to obtain
 the required amplitude as measured in the experiment at gauge 4. The
 period of 2.02 seconds matches that of the experiment. */
 
-u.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
-u.n[right] = + radiation (0);
-
 event init (i = 0) {
+
+#if ML
+  for (vector q in ql) {
+    q.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
+    q.n[right] = + radiation (0);
+  }
+#else
+  u.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
+  u.n[right] = + radiation (0);  
+#endif
   
   /**
   Here we define the bathymetry, see e.g. Figure 3 of [Yamazaki et al,
@@ -46,7 +65,13 @@ event init (i = 0) {
 	    x < 14 ? -0.1 :
 	    x < 17 ? -0.1 - (x - 14.)/3.*0.3 :
 	    -0.4);
+#if ML
+    int l = 0;
+    for (scalar h in hl)
+      h[] = beta[l++]*max(- zb[], 0.);
+#else
     h[] = - zb[];
+#endif
   }
 }
 
@@ -62,8 +87,16 @@ void plot_profile (double t, FILE * fp)
   fprintf (fp,
 	   "set title 't = %.2f'\n"
 	   "p [0:25][-0.12:0.04]'-' u 1:3:2 w filledcu lc 3 t ''\n", t);
-  foreach()
+  foreach() {
+#if ML
+    double eta = zb[];
+    for (scalar h in hl)
+      eta += h[];
+    fprintf (fp, "%g %g %g\n", x, eta, zb[]);
+#else
     fprintf (fp, "%g %g %g\n", x, eta[], zb[]);
+#endif
+  }
   fprintf (fp, "e\n\n");
   fflush (fp);
 }
@@ -71,6 +104,15 @@ void plot_profile (double t, FILE * fp)
 event profiles (t += 0.05) {
   static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
   plot_profile (t, fp);
+#if ML
+  scalar eta[];
+  foreach() {
+    eta[] = zb[];
+    for (scalar h in hl)
+      eta[] += h[];
+  }
+  boundary ({eta});
+#endif
   fprintf (stderr, "%g %f\n", t, interpolate (eta, 17.3, 0.));
 }
 
@@ -100,8 +142,21 @@ Gauge gauges[] = {
   {NULL}
 };
 
+#if ML
+event output (i += 2; t <= 40) {
+  scalar eta[];
+  foreach() {
+    eta[] = zb[];
+    for (scalar h in hl)
+      eta[] += h[];
+  }
+  boundary ({eta});
+  output_gauges (gauges, {eta});
+}
+#else
 event output (i += 5; t <= 40)
   output_gauges (gauges, {eta});
+#endif
 
 /**
 The modelled and experimental (circles) timeseries compare quite

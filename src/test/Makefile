@@ -193,6 +193,11 @@ dispersion-gn.tst: CFLAGS += -DGN=1
 
 dispersion.tst: dispersion-gn.tst
 
+bar-ml.c: bar.c
+	ln -s bar.c bar-ml.c 
+bar-ml.tst: bar-ml.s
+bar-ml.tst: CFLAGS += -DML=1
+
 ## MPI tests
 
 # bump2Dp.tst crashes with -DDEBUGCOND=1 but works with -DDEBUGCOND=0

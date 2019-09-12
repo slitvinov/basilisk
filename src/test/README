@@ -42,6 +42,7 @@ Note that only the documented test cases appear in the list below
 ## Multilayer model
 
 * [Dispersion relation](dispersion.c)
+* [Sinusoidal wave propagation over a bar](bar-ml.c)
 
 ## Volume-Of-Fluid
 
