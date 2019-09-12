@@ -39,6 +39,10 @@ Note that only the documented test cases appear in the list below
 * [Wind-driven lake](wind-driven.c)
 * [Lake flowing into itself](lake-tr.c)
 
+## Multilayer model
+
+* [Dispersion relation](dispersion.c)
+
 ## Volume-Of-Fluid
 
 * [Computation of volume fractions from a levelset function](fractions.c)

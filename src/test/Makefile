@@ -184,6 +184,15 @@ curvature-tests: hf.tst hf3D.tst hf.ctst hf.3D.tst hf1.tst hf-mask.tst \
 
 hf-mask.tst: CFLAGS = -DTRASH=1
 
+# Multilayer tests
+
+dispersion-gn.c: dispersion.c
+	ln -s dispersion.c dispersion-gn.c 
+dispersion-gn.tst: dispersion-gn.s
+dispersion-gn.tst: CFLAGS += -DGN=1
+
+dispersion.tst: dispersion-gn.tst
+
 ## MPI tests
 
 # bump2Dp.tst crashes with -DDEBUGCOND=1 but works with -DDEBUGCOND=0
