@@ -198,6 +198,18 @@ bar-ml.c: bar.c
 bar-ml.tst: bar-ml.s
 bar-ml.tst: CFLAGS += -DML=1
 
+wind-driven-nh.c: wind-driven.c
+	ln -s wind-driven.c wind-driven-nh.c 
+wind-driven-nh.tst: wind-driven-nh.s
+wind-driven-nh.tst: CFLAGS += -DNH=1
+
+wind-driven-stvt.c: wind-driven.c
+	ln -s wind-driven.c wind-driven-stvt.c 
+wind-driven-stvt.tst: wind-driven-stvt.s
+wind-driven-stvt.tst: CFLAGS += -DSTVT=1
+
+wind-driven.tst: wind-driven-stvt.tst wind-driven-nh.tst
+
 ## MPI tests
 
 # bump2Dp.tst crashes with -DDEBUGCOND=1 but works with -DDEBUGCOND=0

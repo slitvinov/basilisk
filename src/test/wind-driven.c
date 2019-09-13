@@ -6,17 +6,56 @@ results with an analytical solution. For the bottom of the domain we
 impose *no-slip* condition (that is the default), for the top we
 impose a Neumann condition (see [viscous friction between
 layers](/src/multilayer.h#viscous-friction-between-layers)
-for details). */
+for details). 
 
-#include "grid/cartesian1D.h"
-#include "saint-venant.h"
+We run the test case for three different solvers: multilayer
+Saint-Venant, layered hydrostatic, layered non-hydrostatic. */
 
-int main() {
-  L0 = 1.;
-  G = 100.;
+#include "grid/multigrid1D.h"
+#if STVT
+  #include "saint-venant.h"
+#else
+  #include "layered/hydro.h"
+#if NH
+  #include "layered/nh-box.h"
+#endif
+  #include "layered/remap.h"
+#endif
+
+/**
+There are five parameters $L$, $h$, $g$, $\dot{u}$, $\nu$. Only three are
+independent e.g.
+$$
+  a = \frac{L}{h},
+$$
+$$
+  \text{Re} = \frac{\dot{u} h^2}{\nu} = s \frac{gh^3}{\nu^2},
+$$
+$$
+  s = \frac{\dot{u} \nu}{gh} = \frac{\dot{u}^2 h}{\text{Re} g}
+$$
+where $a$ is the aspect ratio, Re the Reynolds number and $s$ the slope of the
+free-surface. A characteristic time scale is
+$$
+t_{\nu} = \frac{h^2}{\nu}
+$$
+We choose a small Reynolds number and a small slope. */
+
+double Re = 10.;
+double s = 1./1000.;
+
+double du0;
+scalar duv[];
+
+int main()
+{
+  L0 = 10.;
+  X0 = -L0/2.;
+  G = 9.81;
   N = 64;
-  nu = 1.;
-  dut = unity;
+  nu = sqrt(s*G/Re);
+  du0 = sqrt(s*Re*G);
+  dut = duv;
 
   /**
   We vary the number of layers. */
@@ -26,52 +65,94 @@ int main() {
 }
 
 /**
-We set the initial water level to 1 and we allocate a scalar field
-*uc* to check the convergence of the velocity in the first layer.*/
-
-scalar uc[];
+We set the initial water level to 1 and set the surface stress. */
 
 event init (i = 0) {
-  vector u0 = ul[0];
   foreach() {
+#if STVT
     h[] = 1.;
-    uc[] = u0.x[];
+#else
+    int l = 0;
+    for (scalar h in hl)
+      h[] = beta[l++];
+#endif
+    duv[] = du0*(1. - pow(2.*x/L0,10));
   }
-}
-
-/**
-We check for convergence. */
-
-event logfile (t += 0.1; i <= 100000) {
-  vector u0 = ul[0];
-  double du = change (u0.x, uc);
-  if (i > 0 && du < 1e-5)
-    return 1;
 }
 
 /**
 We compute the error between the numerical solution and the analytical
 solution. */
 
-#define uan(z)  ((z)/4.*(3.*(z) - 2.))
+#define uan(z)  (du0*(z)/4.*(3.*(z) - 2.))
 
-event error (t = end) {
+event error (t = 10./nu)
+{
   int i = 0;
   foreach() {
     if (i++ == N/2) {
-      double sumh = zb[], emax = 0.;
+      double z = zb[], emax = 0.;
+#if STVT
       int l = 0;
       for (vector u in ul) {
-	double z = sumh + h[]*layer[l]/2.;
-	double e = fabs(u.x[] - uan (z));
+	double e = fabs(u.x[] - uan (z + h[]*layer[l]/2.));
 	if (e > emax) 
 	  emax = e;
-	sumh += h[]*layer[l++];
+	z += h[]*layer[l++];
       }
+#else
+      scalar h;
+      vector q;      
+      for (q,h in ql,hl) {
+	double e = fabs(q.x[]/h[] - uan (z + h[]/2.));
+	if (e > emax)
+	  emax = e;
+	z += h[];
+      }
+#endif
       fprintf (stderr, "%d %g\n", nl, emax);
     }
   }
 }
+
+/**
+Uncomment this part if you want on-the-fly animation. */
+
+#if 0
+event gnuplot (i += 20) {
+  static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
+  if (i == 0)
+    fprintf (fp, "set term x11\n");
+  fprintf (fp,
+	   "set title 'nl = %d, t = %.2f'\n"
+	   "p [%g:%g][0:]'-' u 1:3:2 w filledcu lc 3 t '',"
+	   " '' u 1:(-1):3 t '' w filledcu lc -1", nl, t,
+	   X0, X0 + L0);
+#if STVT
+  fprintf (fp, "\n");
+  foreach()
+    fprintf (fp, "%g %g %g\n", x, zb[] + h[], zb[]);
+#else
+  int i = 4;
+  for (scalar h in hl)
+    fprintf (fp, ", '' u 1:%d w l lw 2 t ''", i++);
+  fprintf (fp, "\n");
+  foreach() {
+    double H = 0.;
+    for (scalar h in hl)
+      H += h[];
+    fprintf (fp, "%g %g %g", x, zb[] + H, zb[]);
+    double z = zb[];
+    for (scalar h in hl)
+      fprintf (fp, " %g", z += h[]);
+    fprintf (fp, "\n");
+  }
+#endif  
+  fprintf (fp, "e\n\n");
+  //  fprintf (fp, "pause 0.05\n");
+  fflush (fp);
+}
+#endif
 
 /**
 We save the horizontal velocity profile at the center of the domain
@@ -83,27 +164,62 @@ event output (t = end) {
   sprintf (name, "uprof-%d", nl);
   FILE * fp = fopen (name, "w");
   int i = 0;
+#if !NH && !STVT
+  scalar * qzl = NULL;
+  for (scalar h in hl) {
+    scalar qz = new scalar;
+    qzl = list_append (qzl, qz);
+  }
+  vertical_velocity (qzl);
+  foreach() {
+    double wm = 0.;
+    scalar h, qz;
+    for (h,qz in hl,qzl) {
+      double w = qz[];
+      qz[] = h[]*(w + wm)/2.;
+      wm = w;
+    }
+  }
+  boundary (qzl);
+#endif
   foreach() {
     if (i++ == N/2) {
+#if STVT
       int l = 0;
       double z = zb[] + h[]*layer[l]/2.;
       for (vector u in ul)
-	fprintf (fp, "%g %g\n", z, u.x[]), z += h[]*layer[l];
+	fprintf (fp, "%g %g\n", z, u.x[]), z += h[]*layer[l++];
+#else
+      double z = zb[];
+      scalar h;
+      vector q;
+      for (q,h in ql,hl)
+	fprintf (fp, "%g %g\n", z + h[]/2., q.x[]/h[]), z += h[];
+#endif
     }
     if (nl == 32) {
-      double sumh = zb[];
+      double z = zb[];
+#if STVT
       int l = 0;
       scalar w;
       vector u;
       for (w,u in wl,ul) {
-	double z = sumh + h[]*layer[l]/2.;
-	printf ("%g %g %g %g\n", x, z, u.x[], w[]);
-	sumh += layer[l++]*h[];
+	printf ("%g %g %g %g\n", x, z + h[]*layer[l]/2., u.x[], w[]);
+	z += layer[l++]*h[];
       }
+#else
+      scalar qz, h;
+      vector q;
+      for (h,qz,q in hl,qzl,ql)
+	printf ("%g %g %g %g\n", x, z + h[]/2., q.x[]/h[], qz[]/h[]), z += h[];
+#endif
       printf ("\n");
     }
   }
   fclose (fp);
+#if !NH && !STVT
+  delete (qzl), free (qzl);
+#endif
 }
 
 /**
@@ -114,7 +230,11 @@ set xr [0:1]
 set xl 'z'
 set yl 'u'
 set key left top
-plot [0:1]x/4.*(3.*x-2.) t 'analytical', \
+G = 9.81
+s = 1./1000.
+Re = 10.
+du0 = sqrt(s*Re*G)
+plot [0:1]du0*x/4.*(3.*x-2.) t 'analytical', \
           'uprof-4' t '4 layers', \
           'uprof-8' t '8 layers', \
           'uprof-16' t '16 layers', \
@@ -139,10 +259,11 @@ reset
 unset key
 set xlabel 'x'
 set ylabel 'z'
-plot [0:1][0:1]'out' u 1:2:($3/5.):($4/5.) w vectors
+scale = 10.
+plot [-5:5][0:1]'out' u 1:2:($3*scale):($4*scale) w vectors
 ~~~
 
 ## See also
 
-* [Same test with Gerris](http://gerris.dalembert.upmc.fr/gerris/tests/tests/lake.html#river)
+* [Similar test with Gerris](http://gerris.dalembert.upmc.fr/gerris/tests/tests/lake.html#river)
 */
