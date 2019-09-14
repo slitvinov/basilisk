@@ -52,10 +52,31 @@ The code below locates the time of zero "up-crossing" of the amplitude
 in the middle of the wave and computes the corresponding averaged
 wave period. */
 
-double Tm = 0.;
+double Tm = 0., Es = 1., Ee = 1.;
 int nm = 0;
 
 event logfile (i++) {
+  double pe = 0., ke = 0.;
+#if NL  
+  foreach() {
+    scalar h, qz;
+    vector q;
+    double H = 0.;
+    for (h,q,qz in hl,ql,qzl) {
+      ke += Delta*(sq(q.x[]) + sq(qz[]))/(2.*h[]);
+      H += h[];
+    }
+    pe += Delta*G*sq(H - h0)/2.;
+  }
+#else
+  foreach() {
+    int l = 0;
+    for (vector u in ul)
+      ke += Delta*layer[l++]*h[]*sq(u.x[])/2.;
+    pe += Delta*G*sq(h[] - h0)/2.;
+  }
+#endif
+  
   Point point = locate (L0/2.);
 #if NL
   double H = 0.;
@@ -63,20 +84,27 @@ event logfile (i++) {
     H += h[];
   double dh = (H - h0)/h0;
 #else
-  double dh = (h[] - h0)/h0;
+  double H = h[];
+  double dh = (H - h0)/h0;
 #endif
-  //  static FILE * fp = fopen ("timeseries", "w");
-  //  fprintf (fp, "%g %g %g\n", t, H, dh);
-  static double told = 0., hold = 0., tsold = -1;
+#if 0
+  static FILE * fp = fopen ("timeseries", "w");
+  fprintf (fp, "%g %g %g %g %g\n", t, H, dh, ke, pe);
+#endif
+  static double told = 0., hold = 0., eold = 0., tsold = -1;
   if (i == 0) {
     Tm = 0., nm = 0;
+    Es = 0.;
     told = 0., hold = 0., tsold = -1;
   }
   else {
     if (i > 1 && hold < 0. && dh > 0.) {
       // this is an (upward) zero-crossing at time ts
       double ts = told - hold*(t - told)/(dh - hold);
-      //      fprintf (fp, "ts %g 0\n", ts);
+      Ee = eold - hold*(ke + pe - eold)/(dh - hold);
+      if (Es == 0.)
+	Es = Ee;
+      //      fprintf (fp, "ts %g 0 %g\n", ts, Ee);
       if (tsold > 0. && nm < 4) {
 	// we average the periods
 	Tm += ts - tsold;
@@ -86,6 +114,7 @@ event logfile (i++) {
     }
     told = t;
     hold = dh;
+    eold = ke + pe;
   }
 }
 
@@ -140,11 +169,13 @@ event movie (i += 1) {
 #endif
 
 /**
-We output the wave period and compute the relative error `emax`. */
+We output the wave period and relative energy variation and compute the
+relative error `emax`. */
 
 event end (t = end)
 {
-  fprintf (stderr, "%g %g %g\n", h0, sqrt(tanh(h0)), 2.*pi/(Tm/nm));
+  fprintf (stderr, "%g %g %g %g\n",
+	   h0, sqrt(tanh(h0)), 2.*pi/(Tm/nm), (Ee - Es)/Es);
   fflush (stderr);
   emax = 2.*pi/(Tm/nm)/sqrt(tanh(h0));
 }
@@ -227,5 +258,18 @@ plot  omega1_keller(x)/sqrt(tanh(x)) t '1 layer', \
       'log-opt' u ($1):($3/sqrt(tanh($1))) t '' pt 15 lc 0, \
       omega_gn(1,x)/sqrt(tanh(x)) t 'Green-Naghdi (1 layer)' lc 4, \
       '../dispersion-gn/log' u ($1):($3/sqrt(tanh($1))) t ''
+~~~
+
+~~~gnuplot Relative energy evolution
+set ylabel 'Energy variation per period (%)'
+set yr [*:*]
+set key top right
+plot  'log-1' u ($1):($4*10.) t '1 layer' pt 5 lt 2, \
+      'log-2' u ($1):($4*10.) t '2 layers' pt 7 lt 4, \
+      'log-3' u ($1):($4*10.) t '3 layers' pt 9 lt 6, \
+      'log-4' u ($1):($4*10.) t '4 layers' pt 11 lt 8, \
+      'log-5' u ($1):($4*10.) t '5 layers' pt 13 lt 10, \
+      'log-opt' u ($1):($4*10.) t 'Optimised 3 layers' pt 15 lc 0, \
+      '../dispersion-gn/log' u ($1):($4*10.) pt 14 lt 14 t 'Optimised Green-Naghdi'
 ~~~
 */
