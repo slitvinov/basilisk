@@ -86,12 +86,16 @@ event init (i = 0)
 
 event set_dtmax (i++,last) dtmax = DT;
 
-event stability (i++,last) {
+static bool non_hydro = false;
+
+event stability (i++,last)
+{
   foreach_face(reduction(min:dtmax)) {
-    double cp = 0.;
+    double H = 0.;
     for (scalar h in hl)
-      cp += h[] + h[-1];
-    cp = sqrt(G*cp/2.);
+      H += h[] + h[-1];
+    H /= 2.;
+    double cp = non_hydro ? sqrt(G*Delta*tanh(H/Delta)) : sqrt(G*H);
     for (vector uf in ufl) {
       double c = cp + fabs(uf.x[]);
       if (c > 0.) {
