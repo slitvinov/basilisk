@@ -15,9 +15,9 @@ Saint-Venant, layered hydrostatic, layered non-hydrostatic. */
 #if STVT
   #include "saint-venant.h"
 #else
-  #include "layered/hydro.h"
+  #include "layered/hydro1.h"
 #if NH
-  #include "layered/nh-box.h"
+  #include "layered/nh-box1.h"
 #endif
   #include "layered/remap.h"
 #endif
@@ -101,10 +101,10 @@ event error (t = 10./nu)
 	z += h[]*layer[l++];
       }
 #else
+      vector u;
       scalar h;
-      vector q;      
-      for (q,h in ql,hl) {
-	double e = fabs(q.x[]/h[] - uan (z + h[]/2.));
+      for (u,h in ul,hl) {
+	double e = fabs(u.x[] - uan (z + h[]/2.));
 	if (e > emax)
 	  emax = e;
 	z += h[];
@@ -165,23 +165,23 @@ event output (t = end) {
   FILE * fp = fopen (name, "w");
   int i = 0;
 #if !NH && !STVT
-  scalar * qzl = NULL;
+  scalar * wl = NULL;
   for (scalar h in hl) {
-    scalar qz = new scalar;
-    qzl = list_append (qzl, qz);
+    scalar w = new scalar;
+    wl = list_append (wl, w);
   }
-  vertical_velocity (qzl);
+  vertical_velocity (wl);
   foreach() {
     double wm = 0.;
-    scalar h, qz;
-    for (h,qz in hl,qzl) {
-      double w = qz[];
-      qz[] = h[]*(w + wm)/2.;
-      wm = w;
+    scalar h, w;
+    for (h,w in hl,wl) {
+      double w1 = w[];
+      w[] = (w1 + wm)/2.;
+      wm = w1;
     }
   }
-  boundary (qzl);
-#endif
+  boundary (wl);
+#endif // !NH && !STVT
   foreach() {
     if (i++ == N/2) {
 #if STVT
@@ -192,9 +192,9 @@ event output (t = end) {
 #else
       double z = zb[];
       scalar h;
-      vector q;
-      for (q,h in ql,hl)
-	fprintf (fp, "%g %g\n", z + h[]/2., q.x[]/h[]), z += h[];
+      vector u;
+      for (u,h in ul,hl)
+	fprintf (fp, "%g %g\n", z + h[]/2., u.x[]), z += h[];
 #endif
     }
     if (nl == 32) {
@@ -208,17 +208,17 @@ event output (t = end) {
 	z += layer[l++]*h[];
       }
 #else
-      scalar qz, h;
-      vector q;
-      for (h,qz,q in hl,qzl,ql)
-	printf ("%g %g %g %g\n", x, z + h[]/2., q.x[]/h[], qz[]/h[]), z += h[];
+      scalar w, h;
+      vector u;
+      for (h,w,u in hl,wl,ul)
+	printf ("%g %g %g %g\n", x, z + h[]/2., u.x[], w[]), z += h[];
 #endif
       printf ("\n");
     }
   }
   fclose (fp);
 #if !NH && !STVT
-  delete (qzl), free (qzl);
+  delete (wl), free (wl);
 #endif
 }
 
@@ -235,10 +235,10 @@ s = 1./1000.
 Re = 10.
 du0 = sqrt(s*Re*G)
 plot [0:1]du0*x/4.*(3.*x-2.) t 'analytical', \
-          'uprof-4' t '4 layers', \
-          'uprof-8' t '8 layers', \
-          'uprof-16' t '16 layers', \
-          'uprof-32' t '32 layers'
+          'uprof-4' pt 5 t '4 layers', \
+          'uprof-8' pt 6 t '8 layers', \
+          'uprof-16' pt 9 t '16 layers', \
+          'uprof-32' pt 10 t '32 layers'
 ~~~
 
 ~~~gnuplot Convergence of the error between the numerical and analytical solution with the number of layers.
@@ -251,7 +251,7 @@ set xtics 4,2,32
 set grid
 fit a*x+b 'log' u (log($1)):(log($2)) via a,b
 plot [3:36]'log' u 1:2 pt 7 t '', \
-     exp(b)*x**a t sprintf("%.2f/N^{%4.2f}", exp(b), -a)
+     exp(b)*x**a t sprintf("%.2f/N^{%4.2f}", exp(b), -a) lt 1
 ~~~
 
 ~~~gnuplot Velocity field (32 layers).
