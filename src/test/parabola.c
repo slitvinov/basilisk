@@ -10,11 +10,17 @@ generalised to the (linearly) damped case by [Sampson, Easton, Singh,
 2006](/src/references.bib#sampson2006). */
 
 #include "grid/multigrid1D.h"
+#if ML
+# include "layered/hydro1.h"
+scalar h;
+vector u;
+#else // !ML
 #if EXPLICIT
 # include "saint-venant.h"
 #else
 # include "saint-venant-implicit.h"
 #endif
+#endif // !ML
 
 double e1 = 0., e2 = 0., emax = 0.;
 int ne = 0;
@@ -30,7 +36,7 @@ int main()
   size (10000);
   G = 9.81;
   DT = 10.;
-#if !EXPLICIT
+#if !EXPLICIT && !ML
   dry = 1e-6;
   CFLa = 0.25;
 #endif
@@ -54,6 +60,10 @@ double Psi (double x, double t)
 
 event init (i = 0)
 {
+#if ML
+  h = hl[0];
+  u = ul[0];
+#endif
   foreach() {
     zb[] = h0*sq(x/A);
     h[] = max(h0 + Psi(x,0) - zb[], 0.);
@@ -61,7 +71,7 @@ event init (i = 0)
 }
 
 event friction (i++) {
-#if EXPLICIT
+#if EXPLICIT || ML
   // linear friction (implicit scheme)
   foreach()
     u.x[] /= 1. + tau*dt;
@@ -90,7 +100,7 @@ event error (i++) {
 
 event field (t = 1500) {
   if (N == 64) {
-#if EXPLICIT
+#if EXPLICIT || ML
     foreach()
       printf ("p %g %g %g %g %g\n", x, h[], u.x[], zb[], e[]);
 #else
@@ -105,7 +115,7 @@ event umean (t += 50; t <= 6000) {
   if (N == 128) {
     double sq = 0., sh = 0.;
     foreach() {
-#if EXPLICIT
+#if EXPLICIT || ML
       sq += Delta*h[]*u.x[];
 #else
       sq += Delta*q.x[];
@@ -115,6 +125,20 @@ event umean (t += 50; t <= 6000) {
     printf ("s %g %g %f\n", t, sq/sh, sh);
   }
 }
+
+#if 0
+event gnuplot (i += 10) {
+  static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
+  fprintf (fp,
+	   "set title 't = %.2f'\n"
+	   "p [-5000:5000]'-' u 1:3:2 w filledcu lc 3 t '',"
+	   " '' u 1:(-1):3 t '' w filledcu lc -1\n", t);
+  foreach()
+    fprintf (fp, "%g %g %g\n", x, zb[] + h[], zb[]);
+  fprintf (fp, "e\n\n");
+  //  fprintf (fp, "pause 0.02\n");
+}
+#endif
 
 /**
 ~~~gnuplot Free surface and topography at $t=1500$ for $N=64$ grid points.
@@ -148,7 +172,8 @@ set ylabel 'u0'
 set xlabel 'Time'
 plot u0(x) t 'analytical', \
      '< grep ^s out' u 2:3 every 2 w p t 'Implicit', \
-     '< grep ^s ../parabola-explicit/out' u 2:3 every 2 w p t 'Explicit'
+     '< grep ^s ../parabola-explicit/out' u 2:3 every 2 w p t 'Explicit', \
+     '< grep ^s ../parabola-ml/out' u 2:3 every 2 w p t 'Multilayer'
 ~~~
 
 ~~~gnuplot Convergence of the error on the free surface position
@@ -175,7 +200,10 @@ plot exp (f1(log(x))) t ftitle(a1,b1), \
      'log' u 1:4 t '|h|_{max}' lc 0, \
      '../parabola-explicit/log' u 1:2 t '|h|_1 (explicit)', \
      '../parabola-explicit/log' u 1:3 t '|h|_2 (explicit)', \
-     '../parabola-explicit/log' u 1:4 t '|h|_{max} (explicit)'
+     '../parabola-explicit/log' u 1:4 t '|h|_{max} (explicit)', \
+     '../parabola-ml/log' u 1:2 t '|h|_1 (multilayer)', \
+     '../parabola-ml/log' u 1:3 t '|h|_2 (multilayer)', \
+     '../parabola-ml/log' u 1:4 t '|h|_{max} (multilayer)'
 ~~~
 
 ## See also
