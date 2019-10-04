@@ -9,6 +9,8 @@ $$
 c_e = \sqrt{gk\tanh(kh)}
 $$
 
+More details can be found in [Popinet (2019)](/Bibliography#popinet2019).
+
 We use a 1D grid and either the Green-Naghdi solver or the multi-layer
 solver. */
 
@@ -17,8 +19,8 @@ solver. */
   #include "green-naghdi.h"
 #else
   #define NL 1
-  #include "layered/hydro.h"
-  #include "layered/nh-box.h"
+  #include "layered/hydro1.h"
+  #include "layered/nh-box1.h"
   // necessary for stability at high h0 of the box scheme
   #include "layered/remap.h"
 #endif
@@ -59,11 +61,11 @@ event logfile (i++) {
   double pe = 0., ke = 0.;
 #if NL  
   foreach() {
-    scalar h, qz;
-    vector q;
+    scalar h, w;
+    vector u;
     double H = 0.;
-    for (h,q,qz in hl,ql,qzl) {
-      ke += Delta*(sq(q.x[]) + sq(qz[]))/(2.*h[]);
+    for (h,u,w in hl,ul,wl) {
+      ke += Delta*(sq(u.x[]) + sq(w[]))/2.;
       H += h[];
     }
     pe += Delta*G*sq(H - h0)/2.;
@@ -158,12 +160,6 @@ event movie (i += 1) {
   fprintf (fp, "e\n\n");
   fflush (fp);
 
-  scalar eta[];
-  foreach() {
-    eta[] = zb[];
-    for (scalar h in hl)
-      eta[] += h[];
-  }
   fprintf (stderr, "%g %g\n", t, statsf(eta).max); 
 }
 #endif
@@ -215,9 +211,9 @@ int main()
 
 /**
 Note that the standard Green-Naghdi model has a [2,2] Padé approximant
-dispersion relation (see e.g. Clamond, Dutykh, Mitsotakis, 2016). The
-same as Nwogu (1993). Here we used the optimized version of Chazel et
-al. (2011).
+dispersion relation (see e.g. [Clamond et al. (2017)](#clamond2017)). The
+same as [Nwogu (1993)](#nwogu1993). Here we used the optimized version
+of [Chazel et al. (2011)](#chazel2011).
 
 ~~~gnuplot Dispersion relation
 g = 1.
@@ -246,18 +242,18 @@ set grid
 plot  omega1_keller(x)/sqrt(tanh(x)) t '1 layer', \
       'log-1' u ($1):($3/sqrt(tanh($1))) t '' pt 5, \
       omega2_keller(x/2.,x/2.)/sqrt(tanh(x)) t '2 layers', \
-      'log-2' u ($1):($3/sqrt(tanh($1))) t '' pt 7, \
+      'log-2' u ($1):($3/sqrt(tanh($1))) t '' pt 6, \
       omega3_keller(x/3.,x/3.,x/3.)/sqrt(tanh(x)) t '3 layers', \
       'log-3' u ($1):($3/sqrt(tanh($1))) t '' pt 9, \
       omega4_keller(x/4.,x/4.,x/4.,x/4.)/sqrt(tanh(x)) t '4 layers', \
-      'log-4' u ($1):($3/sqrt(tanh($1))) t '' pt 11, \
+      'log-4' u ($1):($3/sqrt(tanh($1))) t '' pt 10, \
       omega5_keller(x/5.,x/5.,x/5.,x/5.,x/5.)/sqrt(tanh(x)) t '5 layers', \
       'log-5' u ($1):($3/sqrt(tanh($1))) t '' pt 13, \
       omega3_keller(0.68*x,0.265*x,0.055*x)/sqrt(tanh(x)) \
           t 'Optimised 3 layers' lc 0, \
-      'log-opt' u ($1):($3/sqrt(tanh($1))) t '' pt 15 lc 0, \
+      'log-opt' u ($1):($3/sqrt(tanh($1))) t '' pt 14 lc 0, \
       omega_gn(1,x)/sqrt(tanh(x)) t 'Green-Naghdi (1 layer)' lc 4, \
-      '../dispersion-gn/log' u ($1):($3/sqrt(tanh($1))) t ''
+      '../dispersion-gn/log' u ($1):($3/sqrt(tanh($1))) pt 15 t ''
 ~~~
 
 ~~~gnuplot Relative energy evolution
@@ -265,11 +261,50 @@ set ylabel 'Energy variation per period (%)'
 set yr [*:*]
 set key top right
 plot  'log-1' u ($1):($4*10.) t '1 layer' pt 5 lt 2, \
-      'log-2' u ($1):($4*10.) t '2 layers' pt 7 lt 4, \
+      'log-2' u ($1):($4*10.) t '2 layers' pt 6 lt 4, \
       'log-3' u ($1):($4*10.) t '3 layers' pt 9 lt 6, \
-      'log-4' u ($1):($4*10.) t '4 layers' pt 11 lt 8, \
+      'log-4' u ($1):($4*10.) t '4 layers' pt 10 lt 8, \
       'log-5' u ($1):($4*10.) t '5 layers' pt 13 lt 10, \
-      'log-opt' u ($1):($4*10.) t 'Optimised 3 layers' pt 15 lc 0, \
-      '../dispersion-gn/log' u ($1):($4*10.) pt 14 lt 14 t 'Optimised Green-Naghdi'
+      'log-opt' u ($1):($4*10.) t 'Optimised 3 layers' pt 14 lc 0, \
+      '../dispersion-gn/log' u ($1):($4*10.) pt 15 lt 14 t 'Optimised Green-Naghdi'
+~~~
+
+## References
+
+~~~bib
+@article{nwogu1993,
+  title={Alternative form of Boussinesq equations for nearshore 
+         wave propagation},
+  author={Nwogu, Okey},
+  journal={Journal of waterway, port, coastal, and ocean engineering},
+  volume={119},
+  number={6},
+  pages={618--638},
+  year={1993},
+  publisher={American Society of Civil Engineers}
+}
+
+@article{clamond2017,
+  title={Conservative modified Serre--Green--Naghdi equations with 
+         improved dispersion characteristics},
+  author={Clamond, Didier and Dutykh, Denys and Mitsotakis, Dimitrios},
+  journal={Communications in Nonlinear Science and Numerical Simulation},
+  volume={45},
+  pages={245--257},
+  year={2017},
+  publisher={Elsevier}
+}
+
+@article{chazel2011,
+  title={Numerical simulation of strongly nonlinear and dispersive waves 
+         using a Green--Naghdi model},
+  author={Chazel, Florent and Lannes, David and Marche, Fabien},
+  journal={Journal of Scientific Computing},
+  volume={48},
+  number={1-3},
+  pages={105--116},
+  year={2011},
+  publisher={Springer}
+}
 ~~~
 */
