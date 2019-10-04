@@ -2,13 +2,14 @@
 # Runup of a solitary wave on a conical island
 
 In this test case, we compare experimental data with solutions of the
-[Saint-Venant](/src/saint-venant.h) and
-[Green-Naghdi](/src/green-naghdi.h) equations. For details on the test
+[Saint-Venant](/src/saint-venant.h),
+[Green-Naghdi](/src/green-naghdi.h) and
+[layered](/src/layered/hydro.h) equations. For details on the test
 case and experimental data many references are available (e.g. [Hou el
 al, 2013](/src/references.bib#hou2013), [Nikolos and Delis,
 2009](/src/references.bib#nikolos2009), [Lannes and Marche,
 2014](/src/references.bib#lannes2014), [Kazolea et al,
-2012](/src/references.bib#kazolea2012) etc...). 
+2012](/src/references.bib#kazolea2012) etc...).
 
 We also test both the explicit and the implicit versions of the
 Saint-Venant solver. */
@@ -20,6 +21,12 @@ Saint-Venant solver. */
 #  include "saint-venant.h"
 # endif
 # define MGD 0
+#elif ML
+# include "layered/hydro1.h"
+# include "layered/nh-box1.h"
+ // fixme: remap does not work
+ // # include "layered/remap.h"
+# define MGD mgp.i
 #else
 # include "green-naghdi.h"
 # define MGD mgD.i
@@ -46,6 +53,12 @@ int main()
   CFLa = 0.25;
 #endif
 
+#if ML
+  breaking = 0.07;
+  filter = 0.;
+  nl = 1;
+#endif
+  
   init_grid (1 << MAXLEVEL);
   run();
 }
@@ -76,19 +89,6 @@ double uleft (double t)
 }
 
 /**
-We use the definition of the solitary wave to impose conditions on the
-left side (i.e. the "wave paddle"). */
-
-h[left] = H0 + eta0(t);
-#if IMPLICIT
-q.n[left] = (H0 + eta0(t))*uleft (t);
-q.t[left] = 0.;
-#else
-u.n[left] = uleft (t);
-u.t[left] = 0.;
-#endif
-
-/**
 This is the definition of the topography of the conical island. */
 
 double island (double x, double y)
@@ -113,6 +113,31 @@ void refine_zb (Point point, scalar zb)
 
 event init (i = 0)
 {
+  
+  /**
+  We use the definition of the solitary wave to impose conditions on the
+  left side (i.e. the "wave paddle"). */
+
+#if ML
+  eta[left] = H0 + eta0(t);
+  for (scalar h in hl) {
+    h[left] = (H0 + eta0(t))/nl;
+  }
+  for (vector u in ul) {
+    u.n[left] = uleft (t)/nl;
+    u.t[left] = 0.;
+  }
+#else
+  h[left] = H0 + eta0(t);
+#if IMPLICIT
+  q.n[left] = (H0 + eta0(t))*uleft (t);
+  q.t[left] = 0.;
+#else
+  u.n[left] = uleft (t);
+  u.t[left] = 0.;
+#endif
+#endif
+  
 #if TREE
   /**
   We setup the refinement function and choose to conserve surface
@@ -128,7 +153,12 @@ event init (i = 0)
 
   foreach() {
     zb[] = island (x, y);
+#if ML
+    for (scalar h in hl)
+      h[] = max(0., H0 - zb[])/nl;
+#else
     h[] = max(0., H0 - zb[]);
+#endif
   }
 }
 
@@ -152,6 +182,15 @@ event outputfile (t = {9, 12, 13, 14, 20})
 {
   static int nf = 0;
   printf ("file: conical-%d\n", nf);
+#if ML
+  scalar h[];
+  foreach() {
+    h[] = 0.;
+    for (scalar s in hl)
+      h[] += s[];
+  }
+  boundary ({h});
+#endif
   output_field ({h,zb}, stdout, N, linear = true);
 
   /**
@@ -190,13 +229,21 @@ set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1, \
 0.75 1 0.4392 0, 0.875 0.9333 0 0, 1 0.498 0 0 )
   
 set multiplot layout 4,2 scale 1.35,1.35
+set cbrange [0.3:0.4]
 splot './conical-0' u 1:2:($3>dry?$3+$4:1e1000)
+set cbrange [4:8]
 splot './level-0'
+set cbrange [0.3:0.4]
 splot './conical-1' u 1:2:($3>dry?$3+$4:1e1000)
+set cbrange [4:8]
 splot './level-1'
+set cbrange [0.3:0.4]
 splot './conical-2' u 1:2:($3>dry?$3+$4:1e1000)
+set cbrange [4:8]
 splot './level-2'
+set cbrange [0.3:0.4]
 splot './conical-3' u 1:2:($3>dry?$3+$4:1e1000)
+set cbrange [4:8]
 splot './level-3'
 unset multiplot
 ~~~
@@ -207,9 +254,20 @@ event logfile (i++) {
   /**
   We output various diagnostics. */
 
+#if ML
+  scalar h[];
+  foreach() {
+    h[] = 0.;
+    for (scalar s in hl)
+      h[] += s[];
+  }
+  boundary ({h});
+#endif
   stats s = statsf (h);
 
-  #if IMPLICIT
+  #if ML
+  norm n = normf (ul[nl-1].x);
+  #elif IMPLICIT
   scalar u[];
   foreach()
     u[] = h[] > dry ? q.x[]/h[] : 0.;
@@ -237,16 +295,16 @@ event logfile (i++) {
 }
 
 /**
-... and compare it with experimental data for the Green-Naghdi
-solver (blue) and the Saint-Venant solver (magenta). The results for
-the Green-Naghdi solver are very similar to those of [Kazolea et al,
-2012](/src/references.bib#kazolea2012), Figure 14 and [Lannes and
-Marche, 2014](/src/references.bib#lannes2014), Figure 20 and
-significantly better than the results of the Saint-Venant solver
-(see also e.g. Figure 18 of [Hou et al,
-2013](/src/references.bib#hou2013) and Figure 19 of [Nikolos and
-Delis, 2009](/src/references.bib#nikolos2009)) which have too sharp
-fronts.
+... and compare it with experimental data for the Green-Naghdi solver
+(blue), the Saint-Venant solver (magenta) and layered solver
+(black). The results for the Green-Naghdi solver are very similar to
+those of [Kazolea et al, 2012](/src/references.bib#kazolea2012),
+Figure 14 and [Lannes and Marche,
+2014](/src/references.bib#lannes2014), Figure 20 and significantly
+better than the results of the Saint-Venant solver (see also
+e.g. Figure 18 of [Hou et al, 2013](/src/references.bib#hou2013) and
+Figure 19 of [Nikolos and Delis,
+2009](/src/references.bib#nikolos2009)) which have too sharp fronts.
 
 ~~~gnuplot Timeseries of surface elevation. Numerical results and experimental data (symbols).
 reset
@@ -259,23 +317,28 @@ h0=0.32
 plot '../ts2b.txt' u ($1-t0):($4-0.001) pt 7 ps 0.25 t 'WG3',	\
 '../conicalsv/WG3' u 1:($2-h0) w l lt 4 t 'Saint-Venant explicit',	\
 '../conical-implicit/WG3' u 1:($2-h0) w l lt 5 t 'Saint-Venant implicit', \
-'./WG3' u 1:($2-h0) w l lw 2 lt 3 t 'Green-Naghdi'
+'./WG3' u 1:($2-h0) w l lt 3 t 'Green-Naghdi', \
+'../conical-ml/WG3' u 1:($2-h0) w l lw 2 lt -1 t 'layered'
 plot '../ts2b.txt' u ($1-t0):($6-0.0004) pt 7 ps 0.25 t 'WG6',	\
 '../conicalsv/WG6' u 1:($2-h0) w l lt 4 t '',			\
 '../conical-implicit/WG6' u 1:($2-h0) w l lt 5 t '',		\
-'./WG6' u 1:($2-h0) w l lw 2 lt 3 t ''
+'./WG6' u 1:($2-h0) w l lt 3 t '', \
+'../conical-ml/WG6' u 1:($2-h0) w l lw 2 lt -1 t ''
 plot '../ts2b.txt' u ($1-t0):($7) pt 7 ps 0.25 t 'WG9',	\
 '../conicalsv/WG9' u 1:($2-h0) w l lt 4 t '',		\
 '../conical-implicit/WG9' u 1:($2-h0) w l lt 5 t '',	\
-'./WG9' u 1:($2-h0) w l lw 2 lt 3 t ''
+'./WG9' u 1:($2-h0) w l lt 3 t '', \
+'../conical-ml/WG9' u 1:($2-h0) w l lw 2 lt -1 t ''
 plot '../ts2b.txt' u ($1-t0):($8-0.0017) pt 7 ps 0.25 t 'WG16',	\
 '../conicalsv/WG16' u 1:($2-h0) w l lt 4 t '',		\
 '../conical-implicit/WG16' u 1:($2-h0) w l lt 5 t '',		\
-'./WG16' u 1:($2-h0) w l lw 2 lt 3 t ''
+'./WG16' u 1:($2-h0) w l lt 3 t '', \
+'../conical-ml/WG16' u 1:($2-h0) w l lw 2 lt -1 t ''
 plot '../ts2b.txt' u ($1-t0):($9+0.0015) pt 7 ps 0.25 t '',	\
 '../conicalsv/WG22' u 1:($2-h0) w l lt 4 t 'WG22',		\
 '../conical-implicit/WG22' u 1:($2-h0) w l lt 5 t '',	\
-'./WG22' u 1:($2-h0) w l lw 2 lt 3 t ''
+'./WG22' u 1:($2-h0) w l lt 3 t '', \
+'../conical-ml/WG22' u 1:($2-h0) w l lw 2 lt -1 t ''
 unset multiplot
   
 ! rm -f conical-?
@@ -286,12 +349,20 @@ surface elevation. */
 
 #if TREE
 event adapt (i++) {
-  scalar eta[];
-  foreach()
-    eta[] = h[] > dry ? h[] + zb[] : 0.;
-  boundary ({eta});
+  scalar eta1[];
+  foreach() {
+#if ML
+    double H = 0.;
+    for (scalar h in hl)
+      H += h[];
+    eta1[] = H > dry ? zb[] + H : 0.;
+#else
+    eta1[] = h[] > dry ? zb[] + h[] : 0.;
+#endif
+  }
+  boundary ({eta1});
 
-  astats s = adapt_wavelet ({eta}, (double[]){3e-4}, MAXLEVEL, MINLEVEL);
+  astats s = adapt_wavelet ({eta1}, (double[]){3e-4}, MAXLEVEL, MINLEVEL);
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }
 #endif

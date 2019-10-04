@@ -71,7 +71,7 @@ conical-implicit.c: conical.c
 conical-implicit.tst: conical.s
 conical-implicit.tst: CFLAGS += -DSAINT_VENANT=1 -DIMPLICIT=1
 
-conical.tst: conicalsv.tst conical-implicit.tst
+conical.tst: conicalsv.tst conical-implicit.tst conical-ml.tst
 
 curvature.tst: curvature.3D.tst
 
