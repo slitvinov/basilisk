@@ -25,7 +25,7 @@ void vertical_remapping (scalar * hl, scalar ** tracers)
 	int i = nvar*l;
 	scalar * list = tracers[l] + 1;
 	for (scalar s in list)
-	  fdat[i++] = h[] > dry ? s[]/h[] : 0.;
+	  fdat[i++] = s[];
 #if 1
 	h[] = beta[l]*H;
 #else
@@ -54,7 +54,7 @@ void vertical_remapping (scalar * hl, scalar ** tracers)
 	int i = nvar*l;
 	scalar * list = tracers[l] + 1;
 	for (scalar s in list)
-	  s[] = h[]*fnew[i++];
+	  s[] = fnew[i++];
 	l++;
       }
     }
