@@ -1,12 +1,19 @@
 /**
 # Solitary wave run-up on a plane beach
 
-We use the [Green-Naghdi](/src/green-naghdi.h) solver to reproduce
-this classical test case based on the experiments of [Synolakis,
+We use the [Green-Naghdi](/src/green-naghdi.h) or the
+[layered](/src/layered/hydro.h) solver to reproduce this classical test
+case based on the experiments of [Synolakis,
 1987](/src/references.bib#synolakis1987). */
 
 #include "grid/multigrid1D.h"
-#include "green-naghdi.h"
+#if ML
+#  include "layered/hydro1.h"
+#  include "layered/nh-box1.h"
+#  include "layered/remap.h"
+#else
+#  include "green-naghdi.h"
+#endif
 
 /**
 The problem is non-dimensionalised by the water depth $h_0$ and the
@@ -27,6 +34,10 @@ int main() {
   L0 = 6.*L;
   N = 1024;
   G = 1.;
+#if ML
+  nl = 2;
+  breaking = 0.07;
+#else
   alpha_d = 1.;
   
   /**
@@ -34,7 +45,8 @@ int main() {
   $t=20$. */
   
   breaking = 0.4;
-  run();
+#endif
+  run();  
 }
 
 /**
@@ -64,8 +76,15 @@ event init (i = 0)
   foreach() {
     double eta = soliton (x + h0/slope + L/2., t);
     zb[] = max (slope*x, -h0);
+#if ML
+    for (scalar h in hl)
+      h[] = beta[h.l]*max (0., eta - zb[]);
+    for (vector u in ul)
+      u.x[] = c*eta/(h0 + eta);
+#else
     h[] = max (0., eta - zb[]);
     u.x[] = c*eta/(h0 + eta);
+#endif
   }
 }
 
@@ -76,9 +95,20 @@ obtain a runup comparable with the experiment. */
 
 event friction (i++) {
   foreach() {
+#if ML
+    double Q = 0., H = 0.;
+    scalar h;
+    vector u;
+    for (h,u in hl,ul)
+      H += h[], Q += h[]*u.x[];
+    double a = H < dry ? HUGE : 1. + 5e-3*dt*fabs(Q)/sq(H);
+    for (vector u in ul)
+      u.x[] /= a;
+#else
     double a = h[] < dry ? HUGE : 1. + 5e-3*dt*norm(u)/h[];
     foreach_dimension()
       u.x[] /= a;
+#endif
   }
 }
 
@@ -92,10 +122,14 @@ event gnuplot (i += 5) {
 	   "set title 't = %.2f'\n"
 	   "p [-20:12][-0.2:0.6]'-' u 1:3:2 w filledcu lc 3 t '',"
 	   " '' u 1:(-1):3 t '' w filledcu lc -1\n", t);
-  foreach()
+  foreach()    
     fprintf (fp, "%g %g %g\n", x, eta[], zb[]);
   fprintf (fp, "e\n\n");
+#if ML
+  fprintf (stderr, "%.3f %.3f\n", t, statsf(ul[0].x).max);
+#else
   fprintf (stderr, "%.3f %.3f\n", t, statsf(u.x).max);
+#endif
 }
 
 /**
