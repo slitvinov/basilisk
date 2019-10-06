@@ -210,6 +210,8 @@ wind-driven-stvt.tst: CFLAGS += -DSTVT=1
 
 wind-driven.tst: wind-driven-stvt.tst wind-driven-nh.tst
 
+jet.tst: jet-ns.tst
+
 ## MPI tests
 
 # bump2Dp.tst crashes with -DDEBUGCOND=1 but works with -DDEBUGCOND=0
