@@ -21,8 +21,8 @@ More details are given in [Popinet (2019)](/Bibliography#popinet2019). */
 #endif // !STVT
 
 /**
-The primary parameters are flow rate, water level, viscosity and bump
-amplitudes. */
+The primary parameters are the flow rate, water level, viscosity and bump
+amplitude. */
 
 #define QL 1.
 #define HR 0.6
@@ -287,6 +287,7 @@ event output (t = end)
 #if HYDRO
   delete (wl), free (wl);
 #endif
+  printf ("# end = %g\n", t);
 }
 
 /**
@@ -300,7 +301,7 @@ solver](/src/layered/hydro.h) and those obtained with the
 set yr [0.5:1.2]
 set xlabel 'x'
 set ylabel 'z'
-plot '../gaussian-hydro/log' u 1:2 w l t 'Current', \
+plot '../gaussian-hydro/log' u 1:2 w l t 'Multilayer', \
      '../gaussian-stvt/log' u 1:2 w l t 'De Vita et al.'
 ~~~
 
@@ -308,6 +309,20 @@ The results which follow are obtained with the non-hydrostatic solver.
 
 ~~~gnuplot Evolution of the free surface (non-hydrostatic)
 plot 'log' u 1:2 w l t ''
+~~~
+
+We compare the results obtained with the layered solver to those
+obtained with the Navier-Stokes VOF solver (and without metric).
+
+~~~gnuplot Evolution of the free surface for both solvers
+plot 'log' w l t 'Multilayer', \
+     '../../examples/gaussian-ns/log' w l t 'Navier-Stokes VOF'
+~~~
+
+~~~gnuplot Final free surface profiles
+plot 'log' index 13 w l t 'Multilayer', \
+     '../../examples/gaussian-ns/log' index 'prof70' w l t 'Navier-Stokes VOF', \
+     'gaussian.nometric' w l t 'no metric'
 ~~~
 
 ~~~gnuplot Horizontal velocity field { width=100% }
@@ -336,24 +351,6 @@ set term PNG enhanced font ",15" size 2048,512
 set output 'phi.png'
 # set cbrange [-0.2:0.35]
 splot 'out' u 1:2:5
-~~~
-
-Metric terms are important.
-
-~~~gnuplot Final free surface with and without metric terms
-reset
-set yr [0.5:1.2]
-set xlabel 'x'
-set ylabel 'z'
-plot 'log' index 13 w l t '', 'gaussian.nometric' w l t 'no metric'
-~~~
-
-Finally we compare the results obtained with the layered solver to
-those obtained with the Navier-Stokes VOF solver.
-
-~~~gnuplot Final free surface profiles
-plot 'log' index 13 w l t 'Multilayer', \
-     '../../examples/gaussian-ns/log' index 'prof100' w l t 'Navier-Stokes VOF'
 ~~~
 
 ## See also
