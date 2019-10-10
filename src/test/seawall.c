@@ -4,15 +4,20 @@
 This test case seeks to reproduce the experimental data of [Hsiao and
 Lin, 2010](/src/references.bib#hsiao2010) for a solitary wave
 overtopping a seawall. It was also studied by [Lannes and Marche,
-2014](/src/references.bib#lannes2014). 
-Both nonlinear and dispersive effects are important. To illustrate
-this, we model the wave both with non-dispersive [Saint-Venant
-equations](/src/saint-venant.h) and with the dispersive [Green-Naghdi
-equations](/src/green-naghdi.h) in one dimension. */
+2014](/src/references.bib#lannes2014).  Both nonlinear and dispersive
+effects are important. To illustrate this, we model the wave both with
+non-dispersive [Saint-Venant equations](/src/saint-venant.h) and with
+the dispersive [Green-Naghdi equations](/src/green-naghdi.h) or
+[layered model](/src/layered/hydro.h) in one dimension. */
 
 #include "grid/multigrid1D.h"
 #if SAINT_VENANT
 # include "saint-venant.h"
+#elif ML
+# include "layered/hydro1.h"
+# include "layered/nh-box1.h"
+scalar h;
+vector u;
 #else
 # include "green-naghdi.h"
 #endif
@@ -27,6 +32,9 @@ int main()
   L0 = 15.;
   G = 9.81;
   N = 1 << 11;
+#if ML
+  breaking = 0.15;
+#endif
   run();
 }
 
@@ -52,6 +60,10 @@ double soliton (double x, double t)
 
 event init (i = 0)
 {
+#if ML
+  h = hl[0];
+  u = ul[0];
+#endif
   double c = sqrt(G*(1. + a)*h0);
   foreach() {
     double eta = soliton (x - 5.9, t);
@@ -95,7 +107,7 @@ event timeseries (i++; t <= 12) {
   /**
   The coordinates of the various gauges are given in the legend of
   Figure 8 of Hsiao and Lin. */
-  
+
   static FILE * fp0 = fopen ("g0", "w");
   fprintf (fp0, "%g %g\n", t, interpolate (eta, 5.9, 0));
   fprintf (stderr, "%g %g\n", t, interpolate (eta, 7.6, 0));
@@ -133,24 +145,31 @@ set pointsize 0.5
 
 plot [-2:2]'../wg1' pt 7 t 'WG1', \
            '../seawallsv/g0' w l lt 4 lw 1 t '', \
+           '../seawall-ml/g0' w l lt 6 lw 1 t '', \
            'g0' w l lt 3 lw 2 t ''
 plot [0:10]'../wg3' pt 7 t 'WG3', \
            '../seawallsv/log' w l lt 4 lw 1 t '', \
+           '../seawall-ml/log' w l lt 6 lw 1 t '', \
            'log' w l lt 3 lw 2 t ''
 plot [2:12]'../wg10' pt 7 t 'WG10', \
            '../seawallsv/g10' w l lt 4 lw 1 t '', \
+           '../seawall-ml/g10' w l lt 6 lw 1 t '', \
            'g10' w l lt 3 lw 2 t ''
 plot [2:12]'../wg22' pt 7 t 'WG22', \
            '../seawallsv/g22' w l lt 4 lw 1 t '', \
+           '../seawall-ml/g22' w l lt 6 lw 1 t '', \
            'g22' w l lt 3 lw 2 t ''
 plot [2:12]'../wg28' pt 7 t 'WG28', \
            '../seawallsv/g28' w l lt 4 lw 1 t '', \
+           '../seawall-ml/g28' w l lt 6 lw 1 t '', \
            'g28' w l lt 3 lw 2 t ''
 plot [2:12]'../wg37' pt 7 t 'WG37', \
            '../seawallsv/g37' w l lt 4 lw 1 t '', \
+           '../seawall-ml/g37' w l lt 6 lw 1 t '', \
            'g37' w l lt 3 lw 2 t ''
 plot [2:12]'../wg40' pt 7 t 'WG40', \
            '../seawallsv/g40' w l lt 4 lw 1 t '', \
+           '../seawall-ml/g40' w l lt 6 lw 1 t '', \
            'g40' w l lt 3 lw 2 t ''
 unset multiplot
 ~~~
@@ -162,7 +181,8 @@ Marche, 2014](/src/references.bib#lannes2014) (Figure 10). Dispersive
 effects are particularly clear for gauge 3 after 6 seconds and are
 well reproduced by the model.
 
-The results for the Saint-Venant solver are the thin magenta lines.
+The results for the Saint-Venant solver are the thin magenta lines and
+the results for the layered model are the thin dark blue lines.
 
 We also output wave profiles at times corresponding to those of Figure
 2 of Hsiao and Lin. */
@@ -176,7 +196,7 @@ event profile (t = {2.63,2.89,3.01,3.19,3.35,3.71}) {
 }
 
 /**
-~~~gnuplot
+~~~gnuplot Green-Naghdi (left column) versus Saint-Venant (right column)
 reset
 
 set term svg enhanced font ",10" size 640,800
@@ -222,4 +242,47 @@ The results are displayed both for the Green-Naghdi solver (left
 column) and for the Saint-Venant solver (right column).  The
 Green-Naghdi results are again remarkably similar to the experimental
 snapshots of Hsiao and Lin (Figure 2) despite the complexity of the wave
-breaking process. */
+breaking process. 
+
+~~~gnuplot Green-Naghdi (left column) versus layered (right column)
+reset
+
+set term svg enhanced font ",10" size 640,800
+set multiplot layout 6,2
+set rmargin 2.
+set lmargin 4.
+set tmargin 0.
+set bmargin 0.
+set yrange [-0.1:0.2]
+set ytics -0.1,0.1,0.2
+set size ratio -1
+unset key
+
+plot [9.6:10.6]'p-2.63' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [9.6:10.6]'../seawall-ml/p-2.63' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [9.6:10.6]'p-2.89' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [9.6:10.6]'../seawall-ml/p-2.89' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [10.2:11.2]'p-3.01' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [10.2:11.2]'../seawall-ml/p-3.01' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [10.2:11.2]'p-3.19' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [10.2:11.2]'../seawall-ml/p-3.19' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [10.2:11.2]'p-3.35' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [10.2:11.2]'../seawall-ml/p-3.35' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [10.2:11.2]'p-3.71' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+plot [10.2:11.2]'../seawall-ml/p-3.71' u 1:($2+$4) w l lc -1 lw 2, \
+     '' u 1:4 w filledcu x1 lc -1
+
+unset multiplot
+~~~
+*/

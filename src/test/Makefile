@@ -59,7 +59,7 @@ seawallsv.c: seawall.c
 seawallsv.tst: seawall.s
 seawallsv.tst: CFLAGS += -DSAINT_VENANT=1
 
-seawall.tst: seawallsv.tst
+seawall.tst: seawallsv.tst seawall-ml.tst
 
 conicalsv.c: conical.c
 	ln -s conical.c conicalsv.c 
