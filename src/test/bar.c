@@ -8,13 +8,15 @@ transformation of sinusoidal waves propagating over a submerged bar
 harmonics are nonlinearly generated and released with phase shifts
 corresponding to the dispersion relation. 
 
-This test case is discussed in [Popinet, 2015](/Bibliography#popinet2015).
-*/
+This test case is discussed in [Popinet
+(2015)](/Bibliography#popinet2015) for the Green-Naghdi version and
+[Popinet (2019)](/Bibliography#popinet2019) for the layered
+version. */
 
 #include "grid/multigrid1D.h"
 #if ML
-  #include "layered/hydro.h"
-  #include "layered/nh-box.h"
+  #include "layered/hydro1.h"
+  #include "layered/nh-box1.h"
   #include "layered/remap.h"
 #else
   #include "green-naghdi.h"
@@ -31,6 +33,7 @@ int main() {
   G = 9.81;
 #if ML
   nl = 2;
+  breaking = 0.1;
 #endif
   run();
 }
@@ -46,9 +49,9 @@ period of 2.02 seconds matches that of the experiment. */
 event init (i = 0) {
 
 #if ML
-  for (vector q in ql) {
-    q.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
-    q.n[right] = + radiation (0);
+  for (vector u in ul) {
+    u.n[left]  = - radiation (0.021*sin(2.*pi*t/2.02));
+    u.n[right] = + radiation (0);
   }
 #else
   u.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
@@ -87,16 +90,8 @@ void plot_profile (double t, FILE * fp)
   fprintf (fp,
 	   "set title 't = %.2f'\n"
 	   "p [0:25][-0.12:0.04]'-' u 1:3:2 w filledcu lc 3 t ''\n", t);
-  foreach() {
-#if ML
-    double eta = zb[];
-    for (scalar h in hl)
-      eta += h[];
-    fprintf (fp, "%g %g %g\n", x, eta, zb[]);
-#else
+  foreach()
     fprintf (fp, "%g %g %g\n", x, eta[], zb[]);
-#endif
-  }
   fprintf (fp, "e\n\n");
   fflush (fp);
 }
@@ -104,15 +99,6 @@ void plot_profile (double t, FILE * fp)
 event profiles (t += 0.05) {
   static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
   plot_profile (t, fp);
-#if ML
-  scalar eta[];
-  foreach() {
-    eta[] = zb[];
-    for (scalar h in hl)
-      eta[] += h[];
-  }
-  boundary ({eta});
-#endif
   fprintf (stderr, "%g %f\n", t, interpolate (eta, 17.3, 0.));
 }
 
@@ -142,21 +128,8 @@ Gauge gauges[] = {
   {NULL}
 };
 
-#if ML
-event output (i += 2; t <= 40) {
-  scalar eta[];
-  foreach() {
-    eta[] = zb[];
-    for (scalar h in hl)
-      eta[] += h[];
-  }
-  boundary ({eta});
+event output (i += 2; t <= 40)
   output_gauges (gauges, {eta});
-}
-#else
-event output (i += 5; t <= 40)
-  output_gauges (gauges, {eta});
-#endif
 
 /**
 The modelled and experimental (circles) timeseries compare quite
@@ -180,29 +153,29 @@ set tmargin 0.5
 unset xtics
 # t0 is a tunable parameter
 t0 = -0.24
-plot 'WG4' u ($1+t0):($2*100.) w l lw 2 t 'gauge 4', \
+plot 'WG4' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 4', \
      '../gauge-4' pt 6 lc -1 t ''
 unset ytics
-plot 'WG5' u ($1+t0):($2*100.) w l lw 2 t 'gauge 5', \
+plot 'WG5' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 5', \
      '../gauge-5' pt 6 lc -1 t ''
 set ytics -2,2,6
-plot 'WG6' u ($1+t0):($2*100.) w l lw 2 t 'gauge 6', \
+plot 'WG6' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 6', \
      '../gauge-6' pt 6 lc -1 t ''
 unset ytics
-plot 'WG7' u ($1+t0):($2*100.) w l lw 2 t 'gauge 7', \
+plot 'WG7' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 7', \
      '../gauge-7' pt 6 lc -1 t ''
 set ytics -2,2,6
-plot 'WG8' u ($1+t0):($2*100.) w l lw 2 t 'gauge 8', \
+plot 'WG8' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 8', \
      '../gauge-8' pt 6 lc -1 t ''
 unset ytics
-plot 'WG9' u ($1+t0):($2*100.) w l lw 2 t 'gauge 9', \
+plot 'WG9' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 9', \
      '../gauge-9' pt 6 lc -1 t ''
 set xtics
 set ytics -2,2,6
-plot 'WG10' u ($1+t0):($2*100.) w l lw 2 t 'gauge 10', \
+plot 'WG10' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 10', \
      '../gauge-10' pt 6 lc -1 t ''
 unset ytics
-plot 'WG11' u ($1+t0):($2*100.) w l lw 2 t 'gauge 11', \
+plot 'WG11' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 11', \
      '../gauge-11' pt 6 lc -1 t ''
 unset multiplot
 ~~~
