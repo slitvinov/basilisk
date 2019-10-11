@@ -170,15 +170,21 @@ relative error `emax`. */
 
 event end (t = end)
 {
-  fprintf (stderr, "%g %g %g %g\n",
-	   h0, sqrt(tanh(h0)), 2.*pi/(Tm/nm), (Ee - Es)/Es);
+  fprintf (stderr, "%g %g %g %g %d %d %d\n",
+	   h0, sqrt(tanh(h0)), 2.*pi/(Tm/nm), (Ee - Es)/Es,
+#if GN
+	   mgD.i, mgD.nrelax
+#else	   
+	   mgp.i, mgp.nrelax
+#endif
+	   , i);
   fflush (stderr);
   emax = 2.*pi/(Tm/nm)/sqrt(tanh(h0));
 }
 
 /**
-We run for several layers and many water depths, stopping when the
-error becomes too large. */
+We run for several numbers of layers and many water depths, stopping
+when the error becomes too large. */
 
 int main()
 {
@@ -186,6 +192,7 @@ int main()
   size (2.*pi);
   N = 128;
 #if NL
+  TOLERANCE = 1e-6;
   for (nl = 1; nl <= 5; nl++) {
     char name[80];
     sprintf (name, "log-%d", nl);

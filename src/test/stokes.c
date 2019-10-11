@@ -27,6 +27,7 @@ discussion and [stokes-ns.c]() for the Navier-Stokes/VOF code. */
 #include "layered/hydro1.h"
 #include "layered/nh-box1.h"
 #include "layered/remap.h"
+#include "layered/perfs.h"
 
 double ak = 0.35;
 double RE = 40000.;
@@ -44,8 +45,6 @@ int main()
   nl = 60;
   G = g_;
   nu = 1./RE;
-  TOLERANCE = HUGE;
-  NITERMIN = 1;
   run();
 }
 

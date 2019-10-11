@@ -18,6 +18,7 @@ More details are given in [Popinet (2019)](/Bibliography#popinet2019). */
 #   include "layered/nh-box1.h"
 # endif
 # include "layered/remap.h"
+# include "layered/perfs.h"
 #endif // !STVT
 
 /**
