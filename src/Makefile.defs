@@ -86,6 +86,9 @@ clean:
 %.dot.png: %.dot
 	dot -Tpng -o $@ < $<
 
+%.dot.svg: %.dot
+	dot -Tsvg -o $@ < $<
+
 # fixme: this is obsolete
 %/plot.png: %.plot
 	cd $* && gnuplot -e "batch=1; PNG=\"$(PNG)\"; set term $(PNG) enhanced font \",10\"; set output 'plot.png'; set macros;" ../$< || rm -f plot.png
