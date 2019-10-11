@@ -38,6 +38,13 @@ scalar * wl = NULL;
 double * layer;
 
 /**
+The index of the layer is set as a field attribute. */
+
+attribute {
+  int l;
+}
+
+/**
 ## Viscous friction between layers
 
 Boundary conditions on the top and bottom layers need to be added to close the

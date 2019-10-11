@@ -132,7 +132,7 @@ static void advance_saint_venant (scalar * output, scalar * input,
 /**
 When using an adaptive discretisation (i.e. a tree)., we need
 to make sure that $\eta$ is maintained as $z_b + h$ whenever cells are
-refined or restrictioned. */
+refined or restricted. */
 
 #if TREE
 static void refine_eta (Point point, scalar eta)
@@ -347,6 +347,9 @@ event defaults (i = 0)
   for (int l = 1; l < nl; l++) {
     scalar w = new scalar;
     vector u = new vector;
+    foreach_dimension()
+      u.x.l = l;
+    w.l = l;
     ul = vectors_append (ul, u);
     wl = list_append (wl, w);
   }
@@ -403,4 +406,15 @@ event cleanup (i = end, last) {
   free (wl), wl = NULL;
 }
 
+/**
+# "Radiation" boundary conditions
+
+This can be used to implement open boundary conditions at low
+[Froude numbers](http://en.wikipedia.org/wiki/Froude_number). The idea
+is to set the velocity normal to the boundary so that the water level
+relaxes towards its desired value (*ref*). */
+
+#define radiation(ref) (sqrt (G*max(h[],0.)) - sqrt(G*max((ref) - zb[], 0.)))
+
 #include "elevation.h"
+#include "gauges.h"

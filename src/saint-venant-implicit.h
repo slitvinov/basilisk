@@ -248,3 +248,4 @@ are using. */
 double (* gradient)  (double, double, double) = minmod2;
 
 #include "elevation.h"
+#include "gauges.h"
