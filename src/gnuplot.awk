@@ -1,6 +1,12 @@
 # parser for gnuplot commands in Literate C pages
 
-BEGIN { nplots = 0 }
+BEGIN {
+    nplots = 0
+    if (pdf)
+	ext = ".pdf";
+    else
+	ext = ".svg";
+}
 
 # This works around a bug in gnuplot 5, where font units are missing
 function fixfonts(output)
@@ -20,10 +26,10 @@ function defaults()
 	print "set output";
 	if (match (output, ".*\\.png"))
 	    print "! mogrify -trim" output;
-	else if (match (output, ".*\\.svg"))
+	else if (match (output, ".*\\" ext))
 	    fixfonts(output);
 	else if (output == "")
-	    fixfonts("_plot" nplots ".svg");
+	    fixfonts("_plot" nplots ext);
 	nplots++;
     }
 }
@@ -32,8 +38,13 @@ function defaults()
     if (gnuplot) {
 	if (match($0, "^[ \t]*reset")) {
 	    printf "reset; ";
+	    if (ext == ".pdf")
+		printf ("set term PDF; ");
+	    else
+		printf ("set term SVG; ");
 #	    printf "load '~/.gnuplot'; ";
 	    defaults();
+	    term = ""
 	}
 	else {
 	    if (match($0, "^[ \t]*set[ \t]+output[ \t]+(.*)", a)) {
@@ -52,6 +63,6 @@ function defaults()
 
 /^[ \t]*~~~gnuplot/ {
     gnuplot = 1; output = "";
-    printf "set output '_plot" nplots ".svg'; ";
+    printf "set output '_plot" nplots ext "'; ";
     defaults();
 }

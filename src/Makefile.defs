@@ -102,6 +102,13 @@ clean:
 	python plots.py || rm -f plots
 	@test -f $*/plots || exit 1
 
+%/pdf-plots: %.c $(BASILISK)/gnuplot.awk $(BASILISK)/python.awk \
+		$(BASILISK)/gnuplot.sh
+	cd $* && \
+	gawk -v pdf=true -f $(BASILISK)/gnuplot.awk < ../$*.c > pdf-plots && \
+	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh pdf-plots || rm -f pdf-plots
+	@test -f $*/pdf-plots || exit 1
+
 %.gnu: %.eps
 	pstoedit -f gnuplot -flat 0.1 $< $@
 
