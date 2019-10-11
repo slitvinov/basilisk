@@ -105,6 +105,13 @@ static double dtheta (double theta1, double theta2)
   return d;
 }
 
+typedef struct {
+  double depth, x, y;
+  double strike, dip, rake;
+  double length, width, U;
+  double vU[3];
+} Fault;
+
 struct Okada {
   scalar d;
   double x, y, depth;
@@ -114,6 +121,7 @@ struct Okada {
   double R;
   int (* iterate) (void);
   bool flat, centroid;
+  Fault * faults;
 };
 
 void okada (struct Okada p)
@@ -123,42 +131,52 @@ void okada (struct Okada p)
   if (p.lambda == 0.) p.lambda = 1.;
   if (p.R == 0.)      p.R = 6371220.; /* Earth radius (metres) */
 
-  double dtr = pi/180.;
-  if (p.centroid)
-    p.depth -= p.width*fabs (sin (p.dip*dtr))/2.;
-  if (p.rake != nodata) {
-    p.vU[0] = p.U*cos (p.rake*dtr);
-    p.vU[1] = p.U*sin (p.rake*dtr);
+  Fault faults[2] = {0};
+  if (p.faults == NULL) {
+    faults[0] = (Fault) {p.depth, p.x, p.y,
+			 p.strike, p.dip, p.rake,
+			 p.length, p.width, p.U};
+    p.faults = faults;
   }
-  double sina = sin ((90. - p.strike)*dtr);
-  double cosa = cos ((90. - p.strike)*dtr);
-  double sind = sin (p.dip*dtr);
-  /* depth of Okada origin */
-  double depth = sind > 0. ? p.depth + p.width*sind : p.depth;
-  /* origin to the centroid */
-  double x0 = p.length/2., y0 = p.width/2.*cos (p.dip*dtr);
-  
   foreach() {
-    if (p.flat) {
-      x -= p.x;
-      y -= p.y;
+    val(p.d) = 0.;
+    for (Fault * f = p.faults; f && f->depth > 0.; f++) {
+      double depth = f->depth, dtr = pi/180.;
+      if (p.centroid)
+	depth -= f->width*fabs (sin (f->dip*dtr))/2.;
+      if (f->rake != nodata) {
+	f->vU[0] = f->U*cos (f->rake*dtr);
+	f->vU[1] = f->U*sin (f->rake*dtr);
+      }
+      double sina = sin ((90. - f->strike)*dtr);
+      double cosa = cos ((90. - f->strike)*dtr);
+      double sind = sin (f->dip*dtr);
+      /* depth of Okada origin */
+      depth = sind > 0. ? depth + f->width*sind : depth;
+      /* origin to the centroid */
+      double x0 = f->length/2., y0 = f->width/2.*cos (f->dip*dtr);
+
+      double xc, yc;
+      if (p.flat) {
+	xc = x - f->x;
+	yc = y - f->y;
+      }
+      else {
+	xc = p.R*cos(y*dtr)*dtheta(x, f->x)*dtr;
+	yc = p.R*dtheta(y, f->y)*dtr;
+      }
+      double x1 =   cosa*xc + sina*yc;
+      double y1 = - sina*xc + cosa*yc;
+      double oka[3];
+      okada_rectangular_source (f->vU, f->length, f->width, depth, 
+				f->dip*dtr,
+				p.mu/p.lambda,
+				x0 + x1, y0 + y1,
+				oka);
+      val(p.d) += oka[2];
     }
-    else {
-      x = p.R*cos(y*dtr)*dtheta(x, p.x)*dtr;
-      y = p.R*dtheta(y, p.y)*dtr;
-    }
-    double x1 =   cosa*x + sina*y;
-    double y1 = - sina*x + cosa*y;
-    double oka[3];
-    okada_rectangular_source (p.vU, p.length, p.width, depth, 
-			      p.dip*dtr,
-			      p.mu/p.lambda,
-			      x0 + x1, y0 + y1,
-			      oka);
-    val(p.d) = oka[2];
   }
 }
-
 
 /**
 ## User interface
@@ -188,6 +206,11 @@ to the fault parameters:
   latitude (default).
 * *centroid*: assumes that depth is measured to the centroid of the
   fault, not the top edge.
+* *faults*: if non-NULL, this defines an array of several fault
+  parameters which will be used instead of the parameters for a single
+  fault above. This is useful to efficiently define a deformation
+  composed of many Okada subfaults. Note that the array must be
+  terminated by a "dummy fault" of depth smaller than or equal to zero. 
 */
 
 void fault (struct Okada p)
