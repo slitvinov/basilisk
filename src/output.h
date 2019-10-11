@@ -577,6 +577,7 @@ void output_ppm (struct OutputPPM p)
   double fn = p.n;
   double Delta = (p.box[1][0] - p.box[0][0])/fn;
   int ny = (p.box[1][1] - p.box[0][1])/Delta;
+  if (ny % 2) ny++;
   
   color ** ppm = (color **) matrix_new (ny, p.n, sizeof(color));
   double cmap[NCMAP][3];
