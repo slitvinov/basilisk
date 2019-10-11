@@ -349,7 +349,9 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     }
     output_s ("~~~\n</div>\n");
     output_s ("![");
-    output_s (yyextra->gnuplot);
+    char * s = yyextra->gnuplot;
+    while (*s != '{' && *s != '\0')
+      output_c(*s++);
     printf (" (<a href=\"#\" id=\"buttonplot%d\">script</a>)", yyextra->nplots);
     output_s ("](");
     char timestamp[80];
@@ -358,6 +360,11 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     output_s (name);
     free (name);
     output_s(")");
+    if (*s == '{') {
+      while (*s != '}' && *s != '\0')
+	output_c(*s++);
+      output_c ('}');
+    }
     printf ("\n\n<div class=\"plot-script\" id=\"afterplot%d\"></div>", yyextra->nplots);
     free (yyextra->gnuplot);
     yyextra->gnuplot = NULL;
