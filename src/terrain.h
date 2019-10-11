@@ -95,11 +95,22 @@ void terrain (scalar zb, ...)
       zb.kdt[i] = qrealloc (kdt, nt + 2, Kdt *);
       kdt[nt] = kdt_new();
       kdt[nt + 1] = NULL;
-      if (kdt_open (kdt[nt], name)) {
+      char * fname = name;
+      if (name[0] == '~') {
+	char * home = getenv ("HOME");
+	if (home != NULL) {
+	  fname = malloc(sizeof(char)*(strlen(home) + strlen(name)));
+	  strcpy (fname, home);
+	  strcat (fname, name + 1);
+	}
+      }
+      if (kdt_open (kdt[nt], fname)) {	
 	fprintf (stderr, "terrain: could not open terrain database '%s'\n", 
-		 name);
+		 fname);
 	exit (1);
       }
+      if (fname != name)
+	free (fname);
     }
     nt++;
   }
