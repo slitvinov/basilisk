@@ -12,7 +12,7 @@ This test case was proposed by [Rossmanith et al,
 
 #include "spherical.h"
 #if ML
-# include "layered/hydro1.h"
+# include "layered/hydro.h"
 scalar h;
 vector u;
 #else

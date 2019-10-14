@@ -19,7 +19,7 @@ solver. */
   #include "green-naghdi.h"
 #else
   #define NL 1
-  #include "layered/hydro1.h"
+  #include "layered/hydro.h"
   #include "layered/nh-box1.h"
   // necessary for stability at high h0 of the box scheme
   #include "layered/remap.h"
@@ -38,11 +38,9 @@ event init (i = 0)
 #if NL
   if (nl == 3 && emax == 1.5)
     beta[0] = 0.68, beta[1] = 0.265, beta[2] = 0.055;
-  foreach() {
-    int l = 0;
+  foreach()
     for (scalar h in hl)
-      h[] = beta[l++]*h0*(1. + 0.001*cos(x));
-  }
+      h[] = beta[h.l]*h0*(1. + 0.001*cos(x));
 #else
   foreach()
     h[] = h0*(1. + 0.001*cos(x));

@@ -15,7 +15,7 @@ version. */
 
 #include "grid/multigrid1D.h"
 #if ML
-  #include "layered/hydro1.h"
+  #include "layered/hydro.h"
   #include "layered/nh-box1.h"
   #include "layered/remap.h"
 #else
@@ -69,9 +69,8 @@ event init (i = 0) {
 	    x < 17 ? -0.1 - (x - 14.)/3.*0.3 :
 	    -0.4);
 #if ML
-    int l = 0;
     for (scalar h in hl)
-      h[] = beta[l++]*max(- zb[], 0.);
+      h[] = max(- zb[], 0.)/nl;
 #else
     h[] = - zb[];
 #endif

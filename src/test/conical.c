@@ -22,7 +22,7 @@ Saint-Venant solver. */
 # endif
 # define MGD 0
 #elif ML
-# include "layered/hydro1.h"
+# include "layered/hydro.h"
 # include "layered/nh-box1.h"
  // fixme: remap does not work
  // # include "layered/remap.h"
@@ -55,7 +55,6 @@ int main()
 
 #if ML
   breaking = 0.07;
-  filter = 0.;
   nl = 1;
 #endif
   

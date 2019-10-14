@@ -9,6 +9,7 @@ mgstats mgp;
 event defaults (i = 0)
 {
   non_hydro = true;
+  mgp.nrelax = 4;
   
   assert (wl == NULL && phil == NULL);
   assert (nl > 0);
@@ -145,24 +146,28 @@ static double residual_nh (scalar * phil, scalar * rhsl,
 
 double breaking = HUGE;
 
+#define slope_limited(dz) (fabs(dz) < 1. ? (dz) : ((dz) > 0. ? 1. : -1.))
+ 
 event pressure (i++)
 {
+  double h1 = 0., v1 = 0.;
   scalar * rhsl = list_clone (phil);
-  foreach() {
+  foreach (reduction(+:h1) reduction(+:v1)) {
     scalar rhs, h, w;
     vector uf;
     int l = 0;
-    coord zl, zr;
+    coord dz;
     foreach_dimension()
-      zl.x = zb[-1], zr.x = zb[1];
+      dz.x = zb[1] - zb[-1];
     for (rhs,h,w,uf in rhsl,hl,wl,ufl) {
       rhs[] = 2.*h[]*w[];
       foreach_dimension()
-	rhs[] -= h[]*(uf.x[] + uf.x[1])*(zr.x + h[1] - zl.x - h[-1])/(4.*Delta);
+	rhs[] -= h[]*(uf.x[] + uf.x[1])/2.*
+	slope_limited((dz.x + h[1] - h[-1])/(2.*Delta));
       if (l > 0) {
 	vector ufm = ufl[l-1];
 	foreach_dimension()
-	  rhs[] += h[]*(ufm.x[] + ufm.x[1])*(zr.x - zl.x)/(4.*Delta);
+	  rhs[] += h[]*(ufm.x[] + ufm.x[1])/2.*slope_limited(dz.x/(2.*Delta));
       }
       foreach_dimension()
 	rhs[] += h[]*((h[] + h[1])*uf.x[1] - (h[] + h[-1])*uf.x[])/(2.*Delta);
@@ -172,14 +177,22 @@ event pressure (i++)
       }
       rhs[] *= 2./dt;
       foreach_dimension()
-	zl.x += h[-1], zr.x += h[1];
+	dz.x += h[1] - h[-1];
+      h1 += dv()*h[];
+      v1 += dv();
       l++;
     }
   }
   
   restriction (hl);
   mgp = mg_solve (phil, rhsl, residual_nh, relax_nh, NULL,
-		  nrelax = 4, res = NULL, minlevel = 1, tolerance = TOLERANCE);
+		  nrelax = 4, res = NULL, minlevel = 1,
+#if 0
+		  tolerance = TOLERANCE
+#else
+		  tolerance = TOLERANCE*sq(h1/(dt*v1))
+#endif
+		  );
   delete (rhsl), free (rhsl);
   
   foreach_face() {
@@ -192,38 +205,40 @@ event pressure (i++)
       scalar phi, h;
       vector uf, a;
       int l = 0;
-      double zr = zb[], zl = zb[-1];
+      double dz = zb[] - zb[-1];
       for (phi,h,uf,a in phil,hl,ufl,al) {
 	if (h[] + h[-1] > dry) {
 	  double ax;
 #if 0
 	  if (l == nl - 1)
 	    ax = sq(fm.x[])*(h[]*phi[] - h[-1]*phi[-1] +
-			     (phi[] + phi[-1])*(zr - zl))
+			     (phi[] + phi[-1])*dz)
 	      /((cm[] + cm[-1])*Delta/2.*(h[] + h[-1]));
 	  else {
 	    scalar phip = phil[l+1];
 	    ax = sq(fm.x[])*(h[]*(phi[] + phip[]) - h[-1]*(phi[-1] + phip[-1])
-			     - ((phip[] + phip[-1])*(zr + h[] - zl - h[-1]) -
-				(phi[] + phi[-1])*(zr - zl)))
+			     - ((phip[] + phip[-1])*(dz + h[] - h[-1]) -
+				(phi[] + phi[-1])*dz))
 	      /((cm[] + cm[-1])*Delta/2.*(h[] + h[-1]));
 	  }
 #else
 	  if (l == nl - 1)
-	    ax = fm.x[]*(h[]*phi[] - h[-1]*phi[-1] +
-			 (phi[] + phi[-1])*(zr - zl))/(Delta*(h[] + h[-1]));
+	    ax = fm.x[]*((h[]*phi[] - h[-1]*phi[-1])/Delta +
+			 (phi[] + phi[-1])*slope_limited(dz/Delta))
+	      /(h[] + h[-1]);
 	  else {
 	    scalar phip = phil[l+1];
-	    ax = fm.x[]*(h[]*(phi[] + phip[]) - h[-1]*(phi[-1] + phip[-1])
-			     - ((phip[] + phip[-1])*(zr + h[] - zl - h[-1]) -
-				(phi[] + phi[-1])*(zr - zl)))
-	      /(Delta*(h[] + h[-1]));
+	    ax = fm.x[]*
+	      ((h[]*(phi[] + phip[]) - h[-1]*(phi[-1] + phip[-1]))/Delta
+	       - ((phip[] + phip[-1])*slope_limited((dz + h[] - h[-1])/Delta) -
+		  (phi[] + phi[-1])*slope_limited(dz/Delta)))
+	      /(h[] + h[-1]);
 	  }
 #endif
 	  uf.x[] -= dt*ax;
 	  a.x[] -= ax;
 	}
-	l++, zr += h[], zl += h[-1];
+	l++, dz += h[] - h[-1];
       }
     }
   }

@@ -15,7 +15,7 @@ Saint-Venant, layered hydrostatic, layered non-hydrostatic. */
 #if STVT
   #include "saint-venant.h"
 #else
-  #include "layered/hydro1.h"
+  #include "layered/hydro.h"
 #if NH
   #include "layered/nh-box1.h"
 #endif
@@ -72,9 +72,8 @@ event init (i = 0) {
 #if STVT
     h[] = 1.;
 #else
-    int l = 0;
     for (scalar h in hl)
-      h[] = beta[l++];
+      h[] = 1./nl;
 #endif
     duv[] = du0*(1. - pow(2.*x/L0,10));
   }

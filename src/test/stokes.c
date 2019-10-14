@@ -24,7 +24,7 @@ See [Popinet (2019)](/Bibliography#popinet2019) for a more detailed
 discussion and [stokes-ns.c]() for the Navier-Stokes/VOF code. */
 
 #include "grid/multigrid1D.h"
-#include "layered/hydro1.h"
+#include "layered/hydro.h"
 #include "layered/nh-box1.h"
 #include "layered/remap.h"
 #include "layered/perfs.h"
@@ -55,12 +55,11 @@ event init (i = 0)
   foreach() {
     zb[] = -0.5;
     double H = wave(x, 0) - zb[];
-    int l = 0;
     double z = zb[];
     vector u;
     scalar h, w;
     for (h,u,w in hl,ul,wl) {
-      h[] = beta[l++]*H;
+      h[] = H/nl;
       z += h[]/2.;
       u.x[] = u_x(x, z);
       w[] = u_y(x, z);

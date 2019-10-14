@@ -1,4 +1,4 @@
-#include "ppr.h"
+#include "ppr/ppr.h"
 
 // int edge_meth = p1e_method, cell_meth = plm_method, cell_lim = null_limit;
 int edge_meth = p3e_method, cell_meth = ppm_method, cell_lim = null_limit;

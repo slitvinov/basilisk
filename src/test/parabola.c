@@ -11,7 +11,7 @@ generalised to the (linearly) damped case by [Sampson, Easton, Singh,
 
 #include "grid/multigrid1D.h"
 #if ML
-# include "layered/hydro1.h"
+# include "layered/hydro.h"
 scalar h;
 vector u;
 #else // !ML

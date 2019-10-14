@@ -398,18 +398,16 @@ event advection_term (i++,last)
 
 double filter = 0.;
 
-scalar filtered[];
-
 event viscous_term (i++,last)
 {
 #if 1
   if (filter > 0.) {
-    assert (nl == 1); // fixme
-    scalar h = hl[0];
-    reset ({filtered}, 0);
     foreach()
-      foreach_dimension()
-        if (h[-1] > dry && h[] > dry && h[1] > dry) {
+      foreach_dimension() {
+        double Hm = 0., H = 0., Hp = 0.;
+	for (scalar h in hl)
+	  Hm += h[-1], H += h[], Hp += h[1];
+        if (Hm > dry && H > dry && Hp > dry) {
 	  double Dp = eta[1] - eta[], Dm = eta[] - eta[-1];
 	  if (Dp*Dm < 0. && ((eta[2] + eta[] - 2.*eta[1])*
 			     (eta[-1] + eta[1] - 2.*eta[]) < 0. ||
@@ -426,18 +424,22 @@ event viscous_term (i++,last)
 	    }
 	    double d = min(dm, dp/2.);
 	    double a = Dp > 0. ? 1. : -1.;
-	    filtered[] = d;
-#if 1	    
+#if 1
 	    eta[] += min(dt/filter, 1.)*a*d;
-	    h[] = max(eta[] - zb[], 0.);
-            if (h[] < dry) // fixme for multiple layers
-	      for (int l = 0; l < nl; l++) // fixme for multiple layers
+	    double Hnew = eta[] - zb[];
+	    if (Hnew > dry) {
+	      for (scalar h in hl)
+		h[] *= Hnew/H;
+	    }
+	    else
+	      for (int l = 0; l < nl; l++)
 		for (scalar s in tracers[l])
 		  s[] = 0.;
 #endif
 	  }
 	}
-    boundary ({eta, h});
+      }
+    boundary ({eta});
     for (int l = 0; l < nl; l++)
       boundary (tracers[l]);
   }

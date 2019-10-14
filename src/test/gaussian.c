@@ -13,7 +13,7 @@ More details are given in [Popinet (2019)](/Bibliography#popinet2019). */
 #if STVT
 # include "saint-venant.h"
 #else // !STVT
-# include "layered/hydro1.h"
+# include "layered/hydro.h"
 # if !HYDRO
 #   include "layered/nh-box1.h"
 # endif
@@ -337,13 +337,18 @@ unset key
 set palette defined ( 0 0 0 0.5647, 0.125 0 0.05882 1, 0.25 0 0.5647 1,	\
 0.375 0.05882 1 0.9333, 0.5 0.5647 1 0.4392, 0.625 1 0.9333 0, 0.75 1 0.4392 0,	\
 0.875 0.9333 0 0, 1 0.498 0 0 )
-splot 'out' u 1:2:3
+set contour base
+set cntrparam levels discrete 0
+set cntrlabel onecolor
+set cntrparam bspline
+splot 'out' u 1:2:3 lt 3 lc rgb "#ffffff" lw 2
 ~~~
 
 ~~~gnuplot Vertical velocity field { width=100% }
 set term PNG enhanced font ",15" size 2048,512
 set output 'w.png'
 # set cbrange [-0.1:0.1]
+unset contour
 splot 'out' u 1:2:4
 ~~~
 

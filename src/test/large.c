@@ -31,7 +31,7 @@ plot 'out' u 1:2 w l t 'Maximum vertical velocity', \
 */
 
 #include "grid/multigrid1D.h"
-#include "layered/hydro1.h"
+#include "layered/hydro.h"
 #include "layered/nh-box1.h"
 #include "layered/remap.h"
 
@@ -47,9 +47,8 @@ event init (i = 0)
 {
   foreach() {
     zb[] = - 0.5;
-    int l = 0;
     for (scalar h in hl)
-      h[] = beta[l++]*(0.07*cos(2.*pi*x) - zb[]);
+      h[] = (0.07*cos(2.*pi*x) - zb[])/nl;
   }
 }
 

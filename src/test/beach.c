@@ -8,7 +8,7 @@ case based on the experiments of [Synolakis,
 
 #include "grid/multigrid1D.h"
 #if ML
-#  include "layered/hydro1.h"
+#  include "layered/hydro.h"
 #  include "layered/nh-box1.h"
 #  include "layered/remap.h"
 #else
@@ -78,7 +78,7 @@ event init (i = 0)
     zb[] = max (slope*x, -h0);
 #if ML
     for (scalar h in hl)
-      h[] = beta[h.l]*max (0., eta - zb[]);
+      h[] = max (0., eta - zb[])/nl;
     for (vector u in ul)
       u.x[] = c*eta/(h0 + eta);
 #else

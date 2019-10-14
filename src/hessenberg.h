@@ -1,3 +1,29 @@
+/**
+# A solver for Hessenberg systems
+
+An [Hessenberg
+matrix](https://en.wikipedia.org/wiki/Hessenberg_matrix) is an "almost
+triangular" matrix i.e. the sum of a triangular matrix and a
+tridiagonal matrix.
+
+The function below solves $Hx=b$ where $H$ is an upper Hessenberg
+matrix of rank $n$. The right-hand side $b$ is given as vector $x$ and
+is replaced by the solution. $H$ is given as a one dimensional array
+where each matrix element is indexed as $H_{ij} = H[in+j]$.
+
+## References
+
+~~~bib
+@book{henry1994,
+  title={The shifted Hessenberg system solve computation},
+  author={Henry, Greg},
+  year={1994},
+  publisher={Cornell Theory Center, Cornell University},
+  url={https://pdfs.semanticscholar.org/df75/8d16317f246ac4049a1569b6f56510a4add7.pdf}
+}
+~~~
+*/
+
 #define sign(a,b) ((b) > 0. ? ((a) > 0. ? (a) : -(a)) : ((a) > 0. ? -(a) : (a)))
 
 static inline void givens (double x, double y, double * c, double * s)
@@ -23,7 +49,6 @@ static inline void givens (double x, double y, double * c, double * s)
 #endif
 }
 
-/** Henry 1994 algorithm */
 void solve_hessenberg (double * H, double * x, int n)
 {
   double v[n], c[n], s[n];

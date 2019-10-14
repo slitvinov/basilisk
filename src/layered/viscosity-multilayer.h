@@ -1,9 +1,38 @@
-// see src/multilayer.h
+/**
+# Viscous friction between layers
+
+Boundary conditions on the top and bottom layers need to be added to close the
+system for the viscous stresses. We chose to impose a Neumann condition on the
+top boundary i.e.
+$$
+\partial_z u |_t = \dot{u}_t
+$$
+and a Navier slip condition on the bottom i.e.
+$$
+u|_b = u_b + \lambda_b \partial_z u|_b
+$$
+By default the viscosity is zero and we impose free-slip on the top
+boundary and no-slip on the bottom boundary i.e. $\dot{u}_t = 0$,
+$\lambda_b = 0$, $u_b = 0$. */
 
 double nu = 0.;
 (const) scalar lambda_b = zeroc, dut = zeroc, u_b = zeroc;
 
-// fixme: using ql instead of sl triggers a qcc bug
+/**
+For stability, we discretise the viscous friction term implicitly as
+$$
+\frac{(hu_l)_{n + 1} - (hu_l)_{\star}}{\Delta t} =
+\frac{\nu}{\mathrm{layer}_l}  \left( \frac{u_{l + 1} - u_l}{h_{l + 1 / 2}} -
+\frac{u_l - u_{l - 1}}{h_{l - 1 / 2}} \right)_{n + 1}
+$$
+which can be expressed as the linear system
+$$
+\mathbf{Mu}_{n + 1} = \mathrm{rhs}
+$$
+where $\mathbf{M}$ is a 
+[tridiagonal matrix](https://en.wikipedia.org/wiki/Tridiagonal_matrix). 
+The lower, principal and upper diagonals are *a*, *b* and *c* respectively. */
+
 void vertical_viscosity (Point point, scalar * hl, scalar * sl, double dt)
 {
   if (nu == 0.)
