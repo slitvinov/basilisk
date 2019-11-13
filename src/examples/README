@@ -5,6 +5,7 @@ creating test cases (and
 examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 
 * [The 2004 Indian Ocean tsunami](tsunami.c)
+* [The 2011 Tohoku tsunami](tohoku.c)
 * [Coupled reaction–diffusion equations: the Brusselator](brusselator.c)
 * [The complex Ginzburg--Landau equation](ginzburg-landau.c)
 * [Decaying two-dimensional turbulence](turbulence.c)

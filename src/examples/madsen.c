@@ -59,7 +59,7 @@ event plot (t = {35, 90, 700, 2000}) {
   char name[80];
   sprintf (name, "t-%g", t);
   FILE * fp = fopen (name, "w");
-  foreach()
+  foreach_leaf() // fixme: should be automatic
     fprintf (fp, "%g %g\n", x - b - t, eta[]);
   fclose (fp);
 }
