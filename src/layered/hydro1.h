@@ -11,7 +11,6 @@ vector * ul = NULL;
 double G = 1., dry = 1e-6;
 
 int nl = 1;
-double * beta = NULL;
 double (* gradient) (double, double, double) = minmod2;
 
 scalar ** tracers = NULL;
@@ -173,12 +172,6 @@ event defaults0 (i = 0)
   reset (hl, 0.);
   reset ({zb}, 0.);
 
-  if (!beta) {
-    beta = malloc (nl*sizeof(double));
-    for (int l = 0; l < nl; l++)
-      beta[l] = 1./nl;
-  }
-
   assert (!tracers);
   tracers = calloc (nl, sizeof(scalar *));
 
@@ -262,7 +255,7 @@ event init (i = 0)
 
 event set_dtmax (i++,last) dtmax = DT;
 
-static bool non_hydro = false;
+static bool hydrostatic = true;
 
 scalar dtmin[];
 
@@ -297,7 +290,7 @@ event stability (i++,last)
       H += h[] + h[-1];
     if (H > 0.) {
       H /= 2.;
-      double cp = non_hydro ? sqrt(G*Delta*tanh(H/Delta)) : sqrt(G*H);
+      double cp = hydrostatic ? sqrt(G*H) :  sqrt(G*Delta*tanh(H/Delta));
       for (vector uf in ufl) {
 	double c = fm.x[]*cp + fabs(uf.x[]);
 	if (c > 0.) {
@@ -545,7 +538,6 @@ event adapt (i++,last) {
 
 event cleanup (i = end, last)
 {
-  free (beta), beta = NULL;
   for (int l = 0; l < nl; l++)
     free (tracers[l]);
   free (tracers), tracers = NULL;
