@@ -101,6 +101,7 @@ event pictures (t = end)
   draw_vof ("cs", filled = -1, fc = {1,1,1});
   draw_vof ("f", filled = 1, fc = {1,1,1});
   squares ("u.x", min = -0.5, max = 4, linear = true);
+  isoline ("u.x", 0., lc = {1,1,1}, lw = 2);
   save ("u.x.png");
 
   draw_vof ("cs", filled = -1, fc = {1,1,1});
