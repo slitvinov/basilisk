@@ -28,13 +28,18 @@ The arguments and their default values are:
 : number of points along each dimension. Default is *N*.
 
 *linear*
-: use first-order (default) or bilinear interpolation. */
+: use first-order (default) or bilinear interpolation. 
+
+*box*
+: the lower-left and upper-right coordinates of the domain to consider.
+ Default is the entire domain. */
 
 struct OutputField {
   scalar * list;
   FILE * fp;
   int n;
   bool linear;
+  double box[2][2];
 };
 
 trace
@@ -44,15 +49,20 @@ void output_field (struct OutputField p)
   if (p.n == 0) p.n = N;
   if (!p.fp) p.fp = stdout;
   p.n++;
+  if (p.box[0][0] == 0. && p.box[0][1] == 0. && 
+      p.box[1][0] == 0. && p.box[1][1] == 0.) {
+    p.box[0][0] = X0;      p.box[0][1] = Y0;
+    p.box[1][0] = X0 + L0; p.box[1][1] = Y0 + L0;
+  }
   
   int len = list_len(p.list);
-  double ** field = (double **) matrix_new (p.n, p.n, len*sizeof(double));
-  
-  double Delta = 0.999999*L0/(p.n - 1);
+  double Delta = 0.999999*(p.box[1][0] - p.box[0][0])/(p.n - 1);
+  int ny = (p.box[1][1] - p.box[0][1])/Delta + 1;
+  double ** field = (double **) matrix_new (p.n, ny, len*sizeof(double));
   for (int i = 0; i < p.n; i++) {
-    double x = Delta*i + X0;
-    for (int j = 0; j < p.n; j++) {
-      double y = Delta*j + Y0;
+    double x = Delta*i + p.box[0][0];
+    for (int j = 0; j < ny; j++) {
+      double y = Delta*j + p.box[0][1];
       if (p.linear) {
 	int k = 0;
 	for (scalar s in p.list)
@@ -69,7 +79,7 @@ void output_field (struct OutputField p)
 
   if (pid() == 0) { // master
 @if _MPI
-    MPI_Reduce (MPI_IN_PLACE, field[0], len*p.n*p.n, MPI_DOUBLE, MPI_MIN, 0,
+    MPI_Reduce (MPI_IN_PLACE, field[0], len*p.n*ny, MPI_DOUBLE, MPI_MIN, 0,
 		MPI_COMM_WORLD);
 @endif
     fprintf (p.fp, "# 1:x 2:y");
@@ -78,9 +88,9 @@ void output_field (struct OutputField p)
       fprintf (p.fp, " %d:%s", i++, s.name);
     fputc('\n', p.fp);
     for (int i = 0; i < p.n; i++) {
-      double x = Delta*i + X0;
-      for (int j = 0; j < p.n; j++) {
-	double y = Delta*j + Y0;
+      double x = Delta*i + p.box[0][0];
+      for (int j = 0; j < ny; j++) {
+	double y = Delta*j + p.box[0][1];
 	//	map (x, y);
 	fprintf (p.fp, "%g %g", x, y);
 	int k = 0;
@@ -94,7 +104,7 @@ void output_field (struct OutputField p)
   }
 @if _MPI
   else // slave
-    MPI_Reduce (field[0], NULL, len*p.n*p.n, MPI_DOUBLE, MPI_MIN, 0,
+    MPI_Reduce (field[0], NULL, len*p.n*ny, MPI_DOUBLE, MPI_MIN, 0,
 		MPI_COMM_WORLD);
 @endif
 
