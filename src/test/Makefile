@@ -52,7 +52,7 @@ parabola-explicit.c: parabola.c
 parabola-explicit.tst: parabola.s
 parabola-explicit.tst: CFLAGS += -DEXPLICIT=1
 
-parabola.tst: parabola-explicit.tst
+parabola.tst: parabola-explicit.tst parabola-ml.tst
 
 seawallsv.c: seawall.c
 	ln -s seawall.c seawallsv.c 
@@ -186,6 +186,10 @@ hf-mask.tst: CFLAGS = -DTRASH=1
 
 # Multilayer tests
 
+multilayer-tests: dispersion.tst beach-ml.tst seawall-ml.tst conical-ml.tst \
+	bar-ml.tst parabola-ml.tst lonlat-ml.tst wind-driven-nh.tst \
+        large.tst gaussian.tst stokes.tst
+
 dispersion-gn.c: dispersion.c
 	ln -s dispersion.c dispersion-gn.c 
 dispersion-gn.tst: dispersion-gn.s
@@ -210,7 +214,46 @@ wind-driven-stvt.tst: CFLAGS += -DSTVT=1
 
 wind-driven.tst: wind-driven-stvt.tst wind-driven-nh.tst
 
-jet.tst: jet-ns.tst
+large.tst: large-ns.tst
+
+gaussian-hydro.c: gaussian.c
+	ln -s gaussian.c gaussian-hydro.c 
+gaussian-hydro.tst: gaussian-hydro.s
+gaussian-hydro.tst: CFLAGS += -DHYDRO=1
+
+gaussian-stvt.c: gaussian.c
+	ln -s gaussian.c gaussian-stvt.c 
+gaussian-stvt.tst: gaussian-stvt.s
+gaussian-stvt.tst: CFLAGS += -DSTVT=1
+
+gaussian.tst: gaussian-hydro.tst gaussian-stvt.tst
+
+parabola-ml.c: parabola.c
+	ln -s parabola.c parabola-ml.c 
+parabola-ml.tst: parabola-ml.s
+parabola-ml.tst: CFLAGS += -DML=1
+
+seawall-ml.c: seawall.c
+	ln -s seawall.c seawall-ml.c 
+seawall-ml.tst: seawall.s
+seawall-ml.tst: CFLAGS += -DML=1
+
+beach-ml.c: beach.c
+	ln -s beach.c beach-ml.c 
+beach-ml.tst: beach.s
+beach-ml.tst: CFLAGS += -DML=1
+
+conical-ml.c: conical.c
+	ln -s conical.c conical-ml.c 
+conical-ml.tst: conical.s
+conical-ml.tst: CFLAGS += -DML=1
+
+lonlat-ml.c: lonlat.c
+	ln -s lonlat.c lonlat-ml.c 
+lonlat-ml.tst: lonlat.s
+lonlat-ml.tst: CFLAGS += -DML=1
+
+stokes.tst: stokes-ns.tst
 
 ## MPI tests
 

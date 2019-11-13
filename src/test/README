@@ -42,8 +42,16 @@ Note that only the documented test cases appear in the list below
 ## Multilayer model
 
 * [Dispersion relation](dispersion.c)
+* [Solitary wave run-up on a plane beach](beach-ml.c)
+* [Solitary wave overtopping a seawall](seawall.c)
+* [Runup of a solitary wave on a conical island](conical.c)
 * [Sinusoidal wave propagation over a bar](bar-ml.c)
-* [Wind-driven lake](wind-driven-nh.c)
+* [Oscillations in a parabolic container](parabola.c)
+* [Circular dam break on a sphere](lonlat-ml.c)
+* [Wind-driven lake](wind-driven.c)
+* [Large-amplitude standing wave](large.c)
+* [Transcritical flow over a bump with multiple layers](gaussian.c)
+* [Breaking Stokes wave](stokes.c)
 
 ## Volume-Of-Fluid
 
