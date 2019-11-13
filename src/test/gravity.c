@@ -99,9 +99,6 @@ event amplitude (t += 0.00225584983639310905; t <= 1.66481717925811447992) {
 
   if (N == 64)
     output_facets (f, stdout);
-
-  sprintf (name, "wave-%d.gfs", i);
-  output_gfs (file = name);
 }
 
 /**
@@ -111,13 +108,6 @@ error. */
 
 event error (t = end)
   fprintf (stderr, "%g %g\n", N/L0, sqrt(se/ne)/0.01);
-
-#if 0
-event gfsview (i += 1) {
-  static FILE * fp = popen ("gfsview2D -s gravity.gfv", "w");
-  output_gfs (fp);
-}
-#endif
 
 /**
 ## Results
