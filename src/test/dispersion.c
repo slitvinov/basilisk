@@ -89,7 +89,9 @@ event logfile (i++) {
 #endif
 #if 0
   static FILE * fp = fopen ("timeseries", "w");
-  fprintf (fp, "%g %g %g %g %g\n", t, H, dh, ke, pe);
+  scalar w = wl[nl-1];
+  fprintf (fp, "%g %g %g %g %g %g\n", t/(2.*pi/sqrt(tanh(h0))),
+	   H, dh, ke, pe, w[]);
 #endif
   static double told = 0., hold = 0., eold = 0., tsold = -1;
   if (i == 0) {
@@ -117,6 +119,29 @@ event logfile (i++) {
     eold = ke + pe;
   }
 }
+
+/**
+After 9.25 (exact) wave periods, we dump the vertical velocity
+profiles. */
+
+#if NL
+event profile (t = 9.25*2.*pi/sqrt(tanh(h0)))
+{
+  if (nl == 5) {
+    char name[80];
+    sprintf (name, "profile-%g", h0);
+    FILE * fp = fopen (name, "w");
+    Point point = locate (L0/2.);
+    scalar h, w, phi;
+    double zl = zb[];
+    for (h,w,phi in hl,wl,phil) {
+      fprintf (fp, "%g %g %g\n", zl + h[]/2., w[], phi[]);
+      zl += h[];
+    }
+    fclose (fp);
+  }
+}
+#endif // NL
 
 /**
 After ten (exact) wave periods, we stop and dump the solution. */
@@ -220,6 +245,9 @@ dispersion relation (see e.g. [Clamond et al. (2017)](#clamond2017)). The
 same as [Nwogu (1993)](#nwogu1993). Here we used the optimized version
 of [Chazel et al. (2011)](#chazel2011).
 
+The discrete dispersion relations can be computed using [this Maxima
+script](dispersion.mac).
+
 ~~~gnuplot Dispersion relation
 g = 1.
 k = 1.
@@ -237,7 +265,7 @@ omega5_keller(h_0,h_1,h_2,h_3,h_4)=sqrt((((((4*h_0*h_1**2+4*h_0**2*h_1)*h_2**2+4
 alpha=1.159
 omega_gn(k,h)=sqrt(g*h*k**2*(1.+(alpha-1.)*(k*h)**2/3.)/(1.+alpha*(k*h)**2/3.))
 
-set xlabel 'kh'
+set xlabel 'kH'
 set ylabel 'c/c_e'
 set key bottom left
 set xr [0.1:100]
@@ -272,6 +300,25 @@ plot  'log-1' u ($1):($4*10.) t '1 layer' pt 5 lt 2, \
       'log-5' u ($1):($4*10.) t '5 layers' pt 13 lt 10, \
       'log-opt' u ($1):($4*10.) t 'Optimised 3 layers' pt 14 lc 0, \
       '../dispersion-gn/log' u ($1):($4*10.) pt 15 lt 14 t 'Optimised Green-Naghdi'
+~~~
+
+~~~gnuplot Vertical profiles of vertical velocity at $t=37/4T$
+reset
+g = 1
+k = 1
+A = 1e-3
+omega(H) = sqrt(g*H*k**2*tanh(k*H)/(k*H))
+wmax(H) = A*H*g*k/omega(H)*sinh(k*H)/cosh(k*H)
+ws(x,z,t,H) = - A*H*g*k/omega(H)*sinh(k*z)/cosh(k*H)*sin(omega(H)*t - k*x)
+set xlabel 'z/H'
+set ylabel 'w/w_{max}'
+set key top left
+range = "1.06045 2.32981 5.11859 24.7065"
+plot [0:1][:1]							   \
+  for [H in range]						   \
+    ws(pi,x*H,9.25*2.*pi/omega(H),H)/wmax(H) w l t 'kH = '.H,	   \
+  for [H in range]						   \
+    'profile-'.H u ($1/H):($2/wmax(H)) w p t ''
 ~~~
 
 ## References
