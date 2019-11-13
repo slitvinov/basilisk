@@ -367,7 +367,7 @@ event advection_term (i++,last)
 /**
 Vertical diffusion (including viscosity) is added by this code. */
 
-#include "viscosity-multilayer.h"
+#include "diffusion.h"
 
 /**
 ## Acceleration
