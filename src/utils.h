@@ -301,4 +301,30 @@ double change (scalar s, scalar sn)
   return max;
 }
 
+/**
+These functions return the scalar/vector fields called *name*, or
+-1 if they don't exist. */
+
+scalar lookup_field (const char * name)
+{
+  if (name)
+    for (scalar s in all)
+      if (!strcmp (s.name, name))
+	return s;
+  return (scalar){-1};
+}
+
+vector lookup_vector (const char * name)
+{
+  if (name) {
+    char component[strlen(name) + 3];
+    strcpy (component, name);
+    strcat (component, ".x");
+    for (scalar s in all)
+      if (!strcmp (s.name, component))
+	return s.v;
+  }
+  return (vector){{-1}};
+}
+
 #include "output.h"
