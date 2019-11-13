@@ -92,7 +92,7 @@ static double residual_nh (scalar * phil, scalar * rhsl,
 			   scalar * resl, void * data)
 {
   double maxres = 0.;
-#if TREE
+#if 0 // TREE
   /* conservative coarse/fine discretisation (2nd order) */
   assert (false);
   face vector g[];
@@ -140,7 +140,9 @@ static double residual_nh (scalar * phil, scalar * rhsl,
   boundary (resl);
   return maxres;
 }
-  
+
+double breaking = HUGE;
+
 event pressure (i++)
 {
   scalar * rhsl = list_clone (phil);
@@ -148,13 +150,17 @@ event pressure (i++)
     scalar rhs, h, qz;
     vector uf;
     int l = 0;
-    double zl = zb[-1], zr = zb[1];
+    coord zl, zr;
+    foreach_dimension()
+      zl.x = zb[-1], zr.x = zb[1];
     for (rhs,h,qz,uf in rhsl,hl,qzl,ufl) {
-      rhs[] = 2.*qz[] -
-	h[]*(uf.x[] + uf.x[1])*(zr + h[1] - zl - h[-1])/(4.*Delta);
+      rhs[] = 2.*qz[];
+      foreach_dimension()
+	rhs[] -= h[]*(uf.x[] + uf.x[1])*(zr.x + h[1] - zl.x - h[-1])/(4.*Delta);
       if (l > 0) {
 	vector ufm = ufl[l-1];
-	rhs[] += h[]*(ufm.x[] + ufm.x[1])*(zr - zl)/(4.*Delta);
+	foreach_dimension()
+	  rhs[] += h[]*(ufm.x[] + ufm.x[1])*(zr.x - zl.x)/(4.*Delta);
       }
       foreach_dimension()
 	rhs[] += h[]*((h[] + h[1])*uf.x[1] - (h[] + h[-1])*uf.x[])/(2.*Delta);
@@ -164,7 +170,9 @@ event pressure (i++)
 	  rhs[] += 4.*s*h[]*qk[]/hk[];
       }
       rhs[] *= 2./dt;
-      l++, zl += h[-1], zr += h[1];
+      foreach_dimension()
+	zl.x += h[-1], zr.x += h[1];
+      l++;
     }
   }
   
@@ -174,39 +182,69 @@ event pressure (i++)
   delete (rhsl), free (rhsl);
   
   foreach_face() {
-    scalar phi, h;
-    vector uf, a;
-    int l = 0;
-    double zr = zb[], zl = zb[-1];
-    for (phi,h,uf,a in phil,hl,ufl,al) {
-      double ax;
-      if (l == nl - 1)
-	ax = fm.x[]*(h[]*phi[] - h[-1]*phi[-1] +
-		     (phi[] + phi[-1])*(zr - zl))/(Delta*(h[] + h[-1]));
-      else {
-	scalar phip = phil[l+1];
-	ax = fm.x[]*(h[]*(phi[] + phip[]) - h[-1]*(phi[-1] + phip[-1])
-		     - ((phip[] + phip[-1])*(zr + h[] - zl - h[-1]) -
-			(phi[] + phi[-1])*(zr - zl)))/(Delta*(h[] + h[-1]));
+    double H = 0., Hm = 0.;
+    for (scalar h in hl)
+      H += h[], Hm += h[-1];
+    if ((H > dry && Hm > dry) ||
+	(H > dry && eta[] >= zb[-1]) ||
+	(Hm > dry && eta[-1] >= zb[])) {
+      scalar phi, h;
+      vector uf, a;
+      int l = 0;
+      double zr = zb[], zl = zb[-1];
+      for (phi,h,uf,a in phil,hl,ufl,al) {
+	if (h[] + h[-1] > dry) {
+	  double ax;
+#if 0
+	  if (l == nl - 1)
+	    ax = sq(fm.x[])*(h[]*phi[] - h[-1]*phi[-1] +
+			     (phi[] + phi[-1])*(zr - zl))
+	      /((cm[] + cm[-1])*Delta/2.*(h[] + h[-1]));
+	  else {
+	    scalar phip = phil[l+1];
+	    ax = sq(fm.x[])*(h[]*(phi[] + phip[]) - h[-1]*(phi[-1] + phip[-1])
+			     - ((phip[] + phip[-1])*(zr + h[] - zl - h[-1]) -
+				(phi[] + phi[-1])*(zr - zl)))
+	      /((cm[] + cm[-1])*Delta/2.*(h[] + h[-1]));
+	  }
+#else
+	  if (l == nl - 1)
+	    ax = fm.x[]*(h[]*phi[] - h[-1]*phi[-1] +
+			 (phi[] + phi[-1])*(zr - zl))/(Delta*(h[] + h[-1]));
+	  else {
+	    scalar phip = phil[l+1];
+	    ax = fm.x[]*(h[]*(phi[] + phip[]) - h[-1]*(phi[-1] + phip[-1])
+			     - ((phip[] + phip[-1])*(zr + h[] - zl - h[-1]) -
+				(phi[] + phi[-1])*(zr - zl)))
+	      /(Delta*(h[] + h[-1]));
+	  }
+#endif
+	  uf.x[] -= dt*ax;
+	  a.x[] -= ax;
+	}
+	l++, zr += h[], zl += h[-1];
       }
-      uf.x[] -= dt*ax;
-      a.x[] -= ax;
-      l++, zr += h[], zl += h[-1];
     }
   }
   boundary ((scalar *)ufl);
   boundary_flux (al);
 
   foreach() {
-    scalar phi, qz;
+    double wmax = 0.;
+    for (scalar h in hl)
+      wmax += h[];
+    wmax = wmax > 0. ? breaking*sqrt(G*wmax) : 0.;
+    scalar phi, qz, h;
     int l = 0;
-    for (phi,qz in phil,qzl) {
+    for (phi,qz,h in phil,qzl,hl) {
       if (l == nl - 1)
 	qz[] += dt*phi[];
       else {
 	scalar phip = phil[l+1];
 	qz[] -= dt*(phip[] - phi[]);
       }
+      if (fabs(qz[]) > h[]*wmax)
+	qz[] = (qz[] > 0. ? 1. : -1.)*h[]*wmax;
       l++;
     }
   }
