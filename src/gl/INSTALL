@@ -117,7 +117,7 @@ these libraries directly from source. Something like the following
 recipe should work on most UNIX systems:
 
 ~~~bash
-wget mesa.freedesktop.org/archive/mesa-17.2.4.tar.gz
+wget http://basilisk.fr/src/gl/mesa-17.2.4.tar.gz
 tar xzvf mesa-17.2.4.tar.gz
 cd mesa-17.2.4
 ./configure --prefix=/home/popinet/local --enable-osmesa \
@@ -126,7 +126,7 @@ cd mesa-17.2.4
 make
 make install
 
-wget ftp://ftp.freedesktop.org/pub/mesa/glu/glu-9.0.0.tar.gz
+wget http://basilisk.fr/src/gl/glu-9.0.0.tar.gz
 tar xzvf glu-9.0.0.tar.gz
 cd glu-9.0.0
 make
