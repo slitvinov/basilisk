@@ -23,7 +23,7 @@ Saint-Venant solver. */
 # define MGD 0
 #elif ML
 # include "layered/hydro.h"
-# include "layered/nh-box1.h"
+# include "layered/nh.h"
  // fixme: remap does not work
  // # include "layered/remap.h"
 # define MGD mgp.i

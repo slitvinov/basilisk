@@ -9,7 +9,7 @@ case based on the experiments of [Synolakis,
 #include "grid/multigrid1D.h"
 #if ML
 #  include "layered/hydro.h"
-#  include "layered/nh-box1.h"
+#  include "layered/nh.h"
 #  include "layered/remap.h"
 #else
 #  include "green-naghdi.h"

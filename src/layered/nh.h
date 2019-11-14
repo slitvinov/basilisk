@@ -1,14 +1,51 @@
-#define NH 1
-#define BOX 1 // fixme
+/**
+# Non-hydrostatic extension of the multilayer solver
 
+This adds the non-hydrostatic terms of the [vertically-Lagrangian
+multilayer solver for free-surface flows](hydro.h) described in
+[Popinet, 2019](/Bibliography#popinet2019). The corresponding system
+of equations is
+$$
+\begin{aligned}
+  \partial_t h_k + \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k & =
+  0,\\
+  \partial_t \left( h \mathbf{u} \right)_k + \mathbf{{\nabla}} \cdot \left(
+  h \mathbf{u}  \mathbf{u} \right)_k & = - gh_k  \mathbf{{\nabla}} (\eta) 
+  {\color{blue} - \mathbf{{\nabla}} (h \phi)_k + \left[ \phi 
+      \mathbf{{\nabla}} z \right]_k},\\
+  {\color{blue} \partial_t (hw)_k + \mathbf{{\nabla}} \cdot 
+  \left( hw \mathbf{u} \right)_k} & {\color{blue} = - [\phi]_k,}\\
+  {\color{blue} \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k + 
+  \left[ w - \mathbf{u} \cdot \mathbf{{\nabla}} z \right]_k} & 
+  {\color{blue} = 0},
+\end{aligned}
+$$
+where the terms in blue are non-hydrostatic.
+
+The additional $w_k$ and $\phi_k$ fields are stored in two additional
+lists: *wl* and *phil*. The convergence statistics of the multigrid
+solver are stored in *mgp*. 
+
+Wave breaking is parameterised usng the *breaking* parameter, which is
+turned off by default (see Section 3.6.4 in [Popinet,
+2019](/Bibliography#popinet2019)). */
+
+#define NH 1
 #include "poisson.h"
 
 scalar * wl = NULL, * phil = NULL;
 mgstats mgp;
+double breaking = HUGE;
+
+/**
+## Setup
+
+The $w_k$ and $\phi_k$ scalar fields are allocated and the $w_k$ are
+added to the list of advected tracers. */
 
 event defaults (i = 0)
 {
-  non_hydro = true;
+  hydrostatic = false;
   mgp.nrelax = 4;
   
   assert (wl == NULL && phil == NULL);
@@ -22,17 +59,18 @@ event defaults (i = 0)
   reset (wl, 0.);
   reset (phil, 0.);
 
-#if 0  
-  if (!tracers)
-    tracers = calloc (nl, sizeof(scalar *));
-#endif
-  
   int l = 0;
   for (scalar w in wl) {
     tracers[l] = list_append (tracers[l], w);
     l++;
   }
 }
+
+/**
+## Viscous term
+
+Vertical diffusion is added to the vertical component of velocity
+$w$. */
 
 event viscous_term (i++)
 {
@@ -41,12 +79,35 @@ event viscous_term (i++)
     scalar lb = lambda_b, d = dut, u = u_b;
     lambda_b = dut = u_b = zeroc;
     foreach()
-      // fixme: BCs should be different from those of horizontal velocity
       vertical_viscosity (point, hl, (scalar *) wl, dt);
     boundary (wl);
     lambda_b = lb; dut = d; u_b = u;
   }
 }
+
+/**
+## Assembly of the Hessenberg matrix
+
+For the Keller box scheme, the linear system of equations verified by
+the non-hydrostatic pressure $\phi$ is expressed as an [Hessenberg
+matrix](https://en.wikipedia.org/wiki/Hessenberg_matrix) for each column.
+
+The Hessenberg matrix $\mathbf{H}$ for a column at a particular *point* is
+stored in a one-dimensional array with `nl*nl` elements. It encodes
+the coefficients of the left-hand-side of the Poisson equation as
+$$
+\begin{aligned}
+  (\mathbf{H}\mathbf{\phi} - \mathbf{d})_l & =
+  - \text{rhs}_l +
+  h_l \partial_x \partial_x (h_l \phi_{l - 1 / 2}) + 
+  h_l \partial_x \partial_x (h_l \phi_{l + 1 / 2}) +\\
+  & 4 (\phi_{l + 1 / 2} - \phi_{l - 1 / 2}) + 8 h_l \sum^{l - 1}_{k = 0}
+  (- 1)^{l + k}  \frac{\phi_{k + 1 / 2} - \phi_{k - 1 / 2}}{h_k}
+\end{aligned}
+$$
+where $\mathbf{\phi}$ is the vector of $\phi_l$ for this column and
+$\mathbf{d}$ is a vector dependent only on the values of $\phi$ in the
+neighboring columns. */
 
 static void box_matrix (Point point, scalar * phil, scalar * rhsl,
 			double * H, double * d)
@@ -75,6 +136,16 @@ static void box_matrix (Point point, scalar * phil, scalar * rhsl,
   }
 }
 
+/**
+## Relaxation operator
+
+The updated values of $\phi$ in a column are obtained as
+$$
+\mathbf{\phi} = \mathbf{H}^{-1}\mathbf{b}
+$$
+were $\mathbf{H}$ and $\mathbf{b}$ are the Hessenberg matrix and
+vector constructed by the function above. */
+
 #include "hessenberg.h"
 
 trace
@@ -89,6 +160,21 @@ static void relax_nh (scalar * phil, scalar * rhsl, int lev, void * data)
       phi[] = b[l--];
   }
 }
+
+/**
+## Residual computation
+
+The residual is computed as
+$$
+\begin{aligned}
+  \text{res}_l = & \text{rhs}_l -
+  h_l \partial_x \partial_x (h_l \phi_{l - 1 / 2}) -
+  h_l \partial_x \partial_x (h_l \phi_{l + 1 / 2}) -\\
+  & 4 (\phi_{l + 1 / 2} - \phi_{l - 1 / 2}) - 8 h_l \sum^{l - 1}_{k = 0}
+  (- 1)^{l + k}  \frac{\phi_{k + 1 / 2} - \phi_{k - 1 / 2}}{h_k}
+\end{aligned}
+$$
+*/
 
 trace
 static double residual_nh (scalar * phil, scalar * rhsl,
@@ -144,7 +230,17 @@ static double residual_nh (scalar * phil, scalar * rhsl,
   return maxres;
 }
 
-double breaking = HUGE;
+/**
+## Pressure solution
+
+We first define a slope-limiting function and then compute the
+right-hand-side of the Poisson equation as
+$$
+\text{rhs}_l = \frac{2 h_l}{\Delta t}  \left( \partial_x (hu)^{\star}_l 
+  - [u^{\star} \partial_x z]_l +
+    2 w^{\star}_l + 4 \sum^{l - 1}_{k = 0} (- 1)^{l + k} w^{\star}_k \right)
+$$
+*/
 
 #define slope_limited(dz) (fabs(dz) < 1. ? (dz) : ((dz) > 0. ? 1. : -1.))
  
@@ -183,17 +279,32 @@ event pressure (i++)
       l++;
     }
   }
+
+  /**
+  We then call the multigrid solver, using the relaxation and residual
+  functions defined above, to get the non-hydrostatic pressure
+  $\phi$. */
   
   restriction (hl);
   mgp = mg_solve (phil, rhsl, residual_nh, relax_nh, NULL,
 		  nrelax = 4, res = NULL, minlevel = 1,
-#if 0
-		  tolerance = TOLERANCE
-#else
-		  tolerance = TOLERANCE*sq(h1/(dt*v1))
-#endif
-		  );
+		  tolerance = TOLERANCE*sq(h1/(dt*v1)));
   delete (rhsl), free (rhsl);
+
+  /**
+  The non-hydrostatic pressure gradient is added to the acceleration
+  and to the face velocities as 
+  $$
+  \begin{aligned}
+  \alpha_{i + 1 / 2, l} \leftarrow & 2 \frac{\partial_x
+  (h \phi)_{i + 1 / 2, l} - [\phi \partial_x z]_{i + 1 / 2,
+  l}}{h_{i + 1, l}^{n + 1} + h_{i, l}^{n + 1}}\\
+  u_{i + 1 / 2, l} \leftarrow & u_{i + 1 / 2, l} - \alpha_{i + 1 / 2, l}\\
+  a_{i + 1 / 2, l} \leftarrow & a_{i + 1 / 2, l} - \alpha_{i + 1 / 2, l}
+  \Delta t
+  \end{aligned}
+  $$
+  */
   
   foreach_face() {
     double H = 0., Hm = 0.;
@@ -209,7 +320,7 @@ event pressure (i++)
       for (phi,h,uf,a in phil,hl,ufl,al) {
 	if (h[] + h[-1] > dry) {
 	  double ax;
-#if 0
+#if 0 // metric terms (do not seem to work yet)
 	  if (l == nl - 1)
 	    ax = sq(fm.x[])*(h[]*phi[] - h[-1]*phi[-1] +
 			     (phi[] + phi[-1])*dz)
@@ -245,6 +356,24 @@ event pressure (i++)
   boundary ((scalar *)ufl);
   boundary_flux (al);
 
+  /**
+  The maximum allowed vertical velocity is computed as
+  $$
+  w_\text{max} = b \sqrt{g | H |_{\infty}}
+  $$
+  with $b$ the breaking parameter.
+
+  The vertical pressure gradient is added to the vertical velocity as 
+  $$
+  w^{n + 1}_l = w^{\star}_l - \Delta t \frac{[\phi]_l}{h^{n+1}_l}
+  $$
+  and the vertical velocity is limited by $w_\text{max}$ as 
+  $$
+  w^{n + 1}_l \leftarrow \text{sign} (w^{n + 1}_l) 
+  \min \left( | w^{n + 1}_l |, w_\text{max} \right)
+  $$
+  */
+  
   foreach() {
     double wmax = 0.;
     for (scalar h in hl)
@@ -269,6 +398,11 @@ event pressure (i++)
   boundary (wl);
 }
 
+/**
+## Cleanup
+
+The *wl* and *phil* fields and lists are freed. */
+      
 event cleanup (i = end, last) {
   delete (wl), free (wl), wl = NULL;
   delete (phil), free (phil), phil = NULL;

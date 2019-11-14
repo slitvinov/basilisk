@@ -15,7 +15,7 @@ the dispersive [Green-Naghdi equations](/src/green-naghdi.h) or
 # include "saint-venant.h"
 #elif ML
 # include "layered/hydro.h"
-# include "layered/nh-box1.h"
+# include "layered/nh.h"
 scalar h;
 vector u;
 #else

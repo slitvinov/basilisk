@@ -20,7 +20,7 @@ solver. */
 #else
   #define NL 1
   #include "layered/hydro.h"
-  #include "layered/nh-box1.h"
+  #include "layered/nh.h"
   // necessary for stability at high h0 of the box scheme
   #include "layered/remap.h"
 #endif

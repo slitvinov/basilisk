@@ -32,7 +32,7 @@ plot 'out' u 1:2 w l t 'Maximum vertical velocity', \
 
 #include "grid/multigrid1D.h"
 #include "layered/hydro.h"
-#include "layered/nh-box1.h"
+#include "layered/nh.h"
 #include "layered/remap.h"
 
 int main()

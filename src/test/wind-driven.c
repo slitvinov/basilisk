@@ -17,7 +17,7 @@ Saint-Venant, layered hydrostatic, layered non-hydrostatic. */
 #else
   #include "layered/hydro.h"
 #if NH
-  #include "layered/nh-box1.h"
+  #include "layered/nh.h"
 #endif
   #include "layered/remap.h"
 #endif

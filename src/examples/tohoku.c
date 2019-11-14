@@ -110,7 +110,7 @@ make tohoku.tst tohoku-gn.tst tohoku-hydro.tst
 # if HYDRO
 #   define MGD 0
 # else
-#   include "layered/nh-box1.h"
+#   include "layered/nh.h"
 #   define MGD mgp.i
 # endif
 # include "layered/filter.h"

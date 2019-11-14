@@ -49,6 +49,17 @@ b = \left[ \frac{g}{\alpha} \nabla \eta +\mathcal{Q}_1 \left( u \right)
 \right]
 $$
 
+* [Multilayer hydrostatic](layered/hydro.h)
+
+$$
+\begin{aligned}
+  \partial_t h_k + \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k & =
+  0,\\
+  \partial_t \left( h \mathbf{u} \right)_k + \mathbf{{\nabla}} \cdot \left(
+  h \mathbf{u}  \mathbf{u} \right)_k & = - gh_k  \mathbf{{\nabla}} (\eta) 
+\end{aligned}
+$$
+
 ## [Systems of conservation laws](conservation.h)
 $$
 \partial_t\left(\begin{array}{c}
@@ -98,6 +109,23 @@ $$
 * [Two-phase interfacial flows](two-phase.h)
     + [Momentum conservation option](navier-stokes/conserving.h)
 * [Momentum-conserving two-phase interfacial flows](momentum.h)
+* [Multilayer incompressible Euler/Navier-Stokes equations
+   with a free-surface](layered/nh.h)
+
+$$
+\begin{aligned}
+  \partial_t h_k + \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k & =
+  0,\\
+  \partial_t \left( h \mathbf{u} \right)_k + \mathbf{{\nabla}} \cdot \left(
+  h \mathbf{u}  \mathbf{u} \right)_k & = - gh_k  \mathbf{{\nabla}} (\eta) 
+  - \mathbf{{\nabla}} (h \phi)_k + \left[ \phi 
+      \mathbf{{\nabla}} z \right]_k,\\
+  \partial_t (hw)_k + \mathbf{{\nabla}} \cdot 
+  \left( hw \mathbf{u} \right)_k & = - [\phi]_k,\\
+  \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k + 
+  \left[ w - \mathbf{u} \cdot \mathbf{{\nabla}} z \right]_k &  = 0
+\end{aligned}
+$$
 
 ## Electrohydrodynamics
 
@@ -172,6 +200,7 @@ $$
 $$
 * [Signed distance field](distance.h)
 * [Okada fault model](okada.h)
+* [Hessenberg systems](hessenberg.h)
 
 # General orthogonal coordinates
 

@@ -7,10 +7,10 @@ incompressible fluid pictured below is modelled as the set of
 (hydrostatic) equations:
 $$
 \begin{aligned}
-  \partial_t h_k + \mathbf{{\nabla}}_H \cdot \left( h \mathbf{u} \right)_k & =
+  \partial_t h_k + \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k & =
   0,\\
-  \partial_t \left( h \mathbf{u} \right)_k + \mathbf{{\nabla}}_H \cdot \left(
-  h \mathbf{u}  \mathbf{u} \right)_k & = - gh_k  \mathbf{{\nabla}}_H (\eta)
+  \partial_t \left( h \mathbf{u} \right)_k + \mathbf{{\nabla}} \cdot \left(
+  h \mathbf{u}  \mathbf{u} \right)_k & = - gh_k  \mathbf{{\nabla}} (\eta)
 \end{aligned}
 $$
 with $\mathbf{u}_k$ the velocity vector, $h_k$ the layer thickness,
@@ -260,11 +260,11 @@ event stability (i++,last)
 This section first solves
 $$
 \begin{aligned}
-  \partial_t h_k + \mathbf{{\nabla}}_H \cdot \left( h \mathbf{u} \right)_k & =
+  \partial_t h_k + \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k & =
   0,\\
-  \partial_t \left( h \mathbf{u} \right)_k + \mathbf{{\nabla}}_H \cdot \left(
+  \partial_t \left( h \mathbf{u} \right)_k + \mathbf{{\nabla}} \cdot \left(
   h \mathbf{u}  \mathbf{u} \right)_k & = 0, \\
-  \partial_t \left( h s \right)_k + \mathbf{{\nabla}}_H \cdot \left(
+  \partial_t \left( h s \right)_k + \mathbf{{\nabla}} \cdot \left(
   h s  \mathbf{u} \right)_k & = 0,
 \end{aligned}
 $$
@@ -485,8 +485,8 @@ For the hydrostatic solver, the vertical velocity is not defined by
 default since it is usually not required. The function below can be
 applied to compute it using the (diagnostic) incompressibility condition
 $$
-\mathbf{{\nabla}}_H \cdot \left( h \mathbf{u} \right)_k + \left[ w -
-\mathbf{u} \cdot \mathbf{{\nabla}}_H (z) \right]_k = 0
+\mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k + \left[ w -
+\mathbf{u} \cdot \mathbf{{\nabla}} (z) \right]_k = 0
 $$
 Note that the `wl` list must first be allocated separately. */
 

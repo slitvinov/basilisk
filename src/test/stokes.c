@@ -25,7 +25,7 @@ discussion and [stokes-ns.c]() for the Navier-Stokes/VOF code. */
 
 #include "grid/multigrid1D.h"
 #include "layered/hydro.h"
-#include "layered/nh-box1.h"
+#include "layered/nh.h"
 #include "layered/remap.h"
 #include "layered/perfs.h"
 
