@@ -326,7 +326,7 @@ event snapshots (t += 15) {
 event flooding (t = 390)
 {
   FILE * fp = fopen ("flooding", "w");
-  output_field ({h,zb,hmax}, fp,
+  output_field ({h,zb,etamax}, fp,
 		box = {{140.4,37.01},{142.44,39.11}},
 		n = 512, linear = true);
 }
