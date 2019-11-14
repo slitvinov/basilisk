@@ -1,5 +1,5 @@
 all: check 3D-tests mpi-tests load-balancing curvature-tests axi-tests \
-	cadna-tests embed-tests
+	cadna-tests embed-tests multilayer-tests
 
 include $(BASILISK)/Makefile.defs
 
