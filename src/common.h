@@ -6,7 +6,9 @@
 @include <string.h>
 @include <float.h>
 @include <limits.h>
-@include <assert.h>
+@ifndef assert
+@ include <assert.h>
+@endif
 @include <math.h>
 @include <time.h>
 @include <sys/time.h>

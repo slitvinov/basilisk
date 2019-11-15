@@ -3137,8 +3137,10 @@ int main (int argc, char ** argv)
       dimension = 1 + argv[i][12] - '1';
     else if (catch && !strncmp (argv[i], "-O", 2))
       ;
-    else if (!strcmp (argv[i], "-nolineno"))
+    else if (!strcmp (argv[i], "-nolineno")) {
       nolineno = 1;
+      strcat (command1, " -D'assert(x)=((void)(x))'");
+    }
     else if (!strcmp (argv[i], "-o")) {
       strcat (command1, " ");
       strcat (command1, argv[i++]);
@@ -3321,8 +3323,6 @@ int main (int argc, char ** argv)
       }
       else
 	strcat (preproc, cppcommand);
-      if (nolineno)
-	strcat (preproc, " -D'assert(x)=((void)(x))'");
       strcat (preproc, " -I. -I");
       strcat (preproc, LIBDIR);
       strcat (preproc, " ");
