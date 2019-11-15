@@ -124,6 +124,6 @@ event moviemaker (t = end)
 {
   system ("rm -f movie.mp4 && "
 	  "ffmpeg -r 25 -f image2 -i plot%04d.png "
-	  "-vcodec libx264 movie.mp4 2> /dev/null && "
+	  "-vcodec libx264 -vf format=yuv420p movie.mp4 2> /dev/null && "
 	  "rm -f plot*.png");
 }
