@@ -106,7 +106,7 @@ clean:
 		$(BASILISK)/gnuplot.sh
 	cd $* && \
 	gawk -v pdf=true -f $(BASILISK)/gnuplot.awk < ../$*.c > pdf-plots && \
-	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh pdf-plots || rm -f pdf-plots
+	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh . pdf-plots || rm -f pdf-plots
 	@test -f $*/pdf-plots || exit 1
 
 %.gnu: %.eps

@@ -1,11 +1,11 @@
 SVG="svg enhanced font ',11'"
 PDF="pdf mono enhanced font ',12' size 6,4"
-if test -z "$1"; then
+if test -z "$2"; then
     TERM="$SVG"
     PLOTS=plots
 else
     TERM="$PDF"
-    PLOTS="$1"
+    PLOTS="$2"
 fi
 
 if ! gnuplot -e "batch=1; PNG=\"$PNG\"; SVG=\"$SVG\"; PDF=\"$PDF\"; set macros; set term $TERM;" $PLOTS > /dev/null 2> gnuplot.log; then
