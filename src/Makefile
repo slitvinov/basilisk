@@ -78,6 +78,7 @@ alltags:
 	cd test && make tags
 	make tags
 	cd navier-stokes && make itags
+	cd layered && make itags
 	cd ehd && make itags
 	cd examples && make itags
 	cd test && make itags

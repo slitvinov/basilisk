@@ -1,5 +1,5 @@
 /**
-# Transcritical flow over a bump with multiple layers
+# Transcritical flow over a bump
 
 This is the Navier-Stokes/VOF version of [this test
 case](/src/test/gaussian.c). A viscous fluid is injected to the left
