@@ -39,9 +39,9 @@ function defaults()
 	if (match($0, "^[ \t]*reset")) {
 	    printf "reset; ";
 	    if (ext == ".pdf")
-		printf ("set term PDF; ");
+		printf ("set term @PDF; ");
 	    else
-		printf ("set term SVG; ");
+		printf ("set term @SVG; ");
 #	    printf "load '~/.gnuplot'; ";
 	    defaults();
 	    term = ""
@@ -50,7 +50,7 @@ function defaults()
 	    if (match($0, "^[ \t]*set[ \t]+output[ \t]+(.*)", a)) {
 		output = a[1];
 		if (term == "" && match (output, ".*\\.png"))
-		    printf ("set term PNG enhanced font \",10\"; ");
+		    printf ("set term @PNG enhanced font \",10\"; ");
 	    }
 	    else if (match($0, "^[ \t]*set[ \t]+term"))
 		term = $0;
