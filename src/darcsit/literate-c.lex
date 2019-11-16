@@ -420,7 +420,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
       output_s (options);
       output_c (' ');
     }
-    output_s ("controls><source src=\"");
+    output_s ("controls preload=\"metadata\"><source src=\"");
     output_s (link);
     fprintf (yyextra->out, "?%ld", time (NULL));
     output_s ("\" type = \"video/");

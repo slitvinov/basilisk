@@ -1506,8 +1506,42 @@ fi
 if [[ -f "${file%%\?*}" ]]; then
     file="${file%%\?*}"
     if [[ $(find "$file" -perm -004 2> /dev/null) ]]; then
-	mimetype "$file"
-	cat "$file"
+ 	type=$(mimetype "$file")
+	if [[ "$type" == "Content-type: video/"* ]]; then
+	    size=$(stat --printf="%s" "$file")
+	    start=0
+	    let end=$size-1
+	    if [ -n "$HTTP_RANGE" ]; then
+		bytes="${HTTP_RANGE##*=}"
+		start="${bytes%%-*}"
+		end="${bytes##*-}"
+		if [ -z "$end" ]; then
+		    let end=$size-1
+		fi
+		if (( $start > $end || $start > $size - 1 || $end >= $size)); then
+		    echo "Status: 416 Requested Range Not Satisfiable"
+ 		    echo "$type"
+		    echo "Accept-Ranges: 0-$size"
+		    let end=$size-1
+                    echo "Content-Range: bytes 0-$end/$size"
+                    exit 0;
+		fi
+	    fi
+	    let length=$end-$start+1
+	    if (( $length < $size )); then
+		echo "Status: 206 Partial Content"
+	    fi
+ 	    echo "$type"
+	    echo "Accept-Ranges: 0-$size"
+	    echo "Content-Range: bytes $start-$end/$size"
+            echo "Content-Length: $length"
+	    echo	    
+	    tail -c +$start "$file" 2> /dev/null | head -c $length
+	else
+ 	    echo "$type"
+	    echo
+	    cat "$file"
+	fi
     else
 	cat <<EOF
 Content-Type: text/html; charset=utf-8
