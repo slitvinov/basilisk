@@ -44,7 +44,7 @@ else
 fi
 
 # we reformat to create a standard (and more compressed) mp4 file
-if $AVCONV -i "$file" $log.mp4 2> $log; then
+if $AVCONV -i "$file" -movflags +faststart $log.mp4 2> $log; then
     mv -f $log.mp4 "$file"
 else
     cat $log >&2
