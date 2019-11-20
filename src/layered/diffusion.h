@@ -141,17 +141,24 @@ acceleration. */
 event viscous_term (i++,last)
 {
   if (nu > 0.) {
+    struct { scalar * x, * y; } list = {NULL, NULL};
+    foreach_dimension()
+      for (vector u in ul)
+	list.x = list_append (list.x, u.x);
     foreach() {
       vector a, u;
       for (a,u in al,ul)
 	foreach_dimension()
 	  u.x[] += dt*(a.x[] + a.x[1])/(fm.x[] + fm.x[1] + SEPS);
-      vertical_viscosity (point, hl, (scalar *) ul, dt);
+      foreach_dimension()
+	vertical_viscosity (point, hl, list.x, dt);
       for (a,u in al,ul)
 	foreach_dimension()
 	  u.x[] -= dt*(a.x[] + a.x[1])/(fm.x[] + fm.x[1] + SEPS);
     }
     boundary ((scalar *) ul);
+    foreach_dimension()
+      free (list.x);
   }
 }
 
