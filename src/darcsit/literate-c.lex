@@ -325,7 +325,9 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     REJECT;
   uline();
   // bibtex file
-  char * command = acat ("bibtex2html -a -use-keys -nodoc -noheader -q | ",
+  char * command = acat ("bibtex2html -a -d -r "
+			 "-no-keywords -noabstract -use-keys "
+			 "-nodoc -noheader -q | ",
 			 "sed -e 's|</table>.*|</table>|' -e '/<\\/table>/q' > ",
 			 yyextra->page, ".bib2html",
 			 NULL);
