@@ -25,6 +25,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [Flow in a rotating bottom-driven cylindrical container](yang.c)
 * [Stokes flow through a complex 3D porous medium](porous3D.c)
 * [Transcritical flow over a bump](gaussian-ns.c)
+* [3D breaking Stokes wave (multilayer solver)](breaking.c)
 
 ## Python interface
 
