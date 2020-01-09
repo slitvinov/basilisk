@@ -125,7 +125,8 @@ locally_octave()
 {
     echo \[$test.$ext\]
     cd $test
-    if octave-cli --path .. -W -H -q $src 2> $log > $out; then
+    if octave-cli --path .. -W -H -q $src 2> $log > $out && \
+	    ! grep -q '^error:' $log; then
 	touch pass
     else
 	cp -f $log fail
@@ -285,7 +286,7 @@ EOF
     rm -r -f $chksum/
 
     if ! ( scp $chksum.tgz $rhost: && rm -f $chksum.tgz && \
-	       ssh $rhost bash -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -N \$(test \$(tsp -S) -le $NCORES && echo \$(tsp -S) || echo $NCORES) -n nice -19 sh $chksum.sh\" && sleep 0 && echo $chksum && tsp -w" > tspid.$ext && \
+	       ssh $rhost bash -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -N \$(test \$(tsp -S) -le $NCORES && echo \$(tsp -S) || echo $NCORES) -n nice -19 bash $chksum.sh\" && sleep 0 && echo $chksum && tsp -w" > tspid.$ext && \
 	       scp -q $rhost:$chksum.tgz $chksum.tgz && \
 	       ssh $rhost rm -r -f $chksum.tgz && \
 	       tar xmzf $chksum.tgz && \
@@ -357,7 +358,7 @@ remotely_octave()
     fi
     cp -f ../$src $chksum/$src
     cat <<EOF >$chksum/$chksum.sh
-#!/bin/sh
+#!/bin/bash
 
 run_untrusted()
 {
@@ -373,9 +374,20 @@ run_untrusted()
   return \$status
 }
 
+# workaround for octave bug with ~ in file names
+src1="$src"
+if [[ "$src" = ~* ]]; then  
+  src1=_\${src1##\~};
+  ln -s -f "$src" "\$src1"
+fi
+
 pass=true
-if ! run_untrusted "$TIMEOUT octave-cli --path lib -W -H -q $src 2> $log > $out"; then
+if ! run_untrusted "$TIMEOUT octave-cli --path lib -W -H -q \$src1 2> $log > $out" || grep -q '^error:' $log; then
     pass=false
+fi
+
+if [[ "\$src1" != "$src" ]]; then
+   rm -f "\$src1"
 fi
 
 if \$pass; then
@@ -406,7 +418,7 @@ EOF
     rm -r -f $chksum/
 
     if ! ( scp $chksum.tgz $rhost: && rm -f $chksum.tgz && \
-	       ssh $rhost bash -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -n nice -19 sh $chksum.sh\" && sleep 0 && echo $chksum && tsp -w" > tspid.$ext && \
+	       ssh $rhost bash -c "\"tar xmzf $chksum.tgz && cd $chksum && tsp -n nice -19 bash $chksum.sh\" && sleep 0 && echo $chksum && tsp -w" > tspid.$ext && \
 	       scp -q $rhost:$chksum.tgz $chksum.tgz && \
 	       ssh $rhost rm -r -f $chksum.tgz && \
 	       tar xmzf $chksum.tgz && \
