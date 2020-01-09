@@ -11,6 +11,7 @@ The level of difficulty is indicated.
   2009](https://arxiv.org/abs/0901.3799) (and subsequent papers). (Hard)
 * Rewrite the Basilisk parser using a proper [yacc/bison
   grammar](https://en.wikipedia.org/wiki/GNU_bison). (Hard)
+* Interface Basilisk with [Kokkos](https://github.com/kokkos/kokkos). (hard)
 
 # Other
 
