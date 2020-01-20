@@ -49,13 +49,13 @@ draw_get.h: draw.h params.awk
 bview-server2D.d: bview-server.c qcc
 	qcc -MD -o $@ $<
 
-bview-server2D: bview-server.c bview-server2D.d draw_get.h
+bview-server2D: bview-server.c bview-server2D.d draw_get.h parse.h
 	qcc $(CFLAGS) bview-server.c -o $@ -Lgl -lglutils $(OPENGLIBS) -lm
 
 bview-server3D.d: bview-server.c qcc
 	qcc -grid=octree -MD -o $@ $<
 
-bview-server3D: bview-server.c bview-server3D.d draw_get.h
+bview-server3D: bview-server.c bview-server3D.d draw_get.h parse.h
 	qcc -grid=octree $(CFLAGS) bview-server.c -o $@ \
 		-Lgl -lglutils $(OPENGLIBS) -lm
 

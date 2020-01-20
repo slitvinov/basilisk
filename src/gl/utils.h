@@ -29,17 +29,6 @@ typedef struct {
 void gl_get_frustum (Frustum * f);
 int sphere_in_frustum (double x, double y, double z, double r, Frustum * f);
 float sphere_diameter (double x, double y, double z, double r, Frustum * f);
-
-enum ParamsType { pstring, pint, punsigned, pbool, pfloat, pdouble };
-
-typedef struct {
-  char * key;
-  enum ParamsType type;
-  void * val;
-  int n;
-} Params;
-
-int parse_params (Params * params);
 void gl_check_error();
 
 enum FeedbackFormat {
