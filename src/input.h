@@ -402,43 +402,43 @@ void input_grd (struct InputGRD p)
     for (int j = 0 ; j < nx; j++)
       fscanf (p.fp, "%lf ", &value[j + i*nx]);
 
-  double LGx0 = nx*DeltaGRD;
-  double LGy0 = ny*DeltaGRD;
-  bool warning = false;
-  
-  foreach() {
+  bool warning = false;  
+  foreach_leaf() {
     // Test if the point in the Basilisk area is included in the raster area
-    bool incl = (x >= XG0 - DeltaGRD/2. &&
-		 x <= XG0 + LGx0 + DeltaGRD/2. &&
-		 y >= YG0 - DeltaGRD/2. &&
-		 y <= YG0 + LGy0 + DeltaGRD/2.);
-    if (incl) {
+    int j = (x - XG0 + DeltaGRD/2.)/DeltaGRD;
+    int i = (y - YG0 + DeltaGRD/2.)/DeltaGRD;    
+    if (i >= 0 && i < ny && j >= 0 && j < nx) {
       double val;
       // Test if we are on the ring of data around the raster grid
-      bool ring = (x >= XG0 &&
-		   x <= XG0 + LGx0 &&
-		   y >= YG0 &&
-		   y <= YG0 + LGy0);      
-      if (p.linear && ring ) { // bi-linear interpolation
-	int j = (x - XG0)/DeltaGRD; int i = (y - YG0)/DeltaGRD;
-	double dx = x -(j*DeltaGRD + XG0); double dy = y - (i*DeltaGRD + YG0);
-	val = value[j + i*nx]
-	  + dx*(value[j + 1 + i*nx] - value[j + i*nx])/DeltaGRD
-	  + dy*(value[j + (i + 1)*nx] - value[j + i*nx])/DeltaGRD
-	  + dx*dy*(value[j + i*nx] + value[j +1 + (i+1)*nx]
-		   - value[j + (i + 1)*nx]-value[j + 1 + i*nx])/sq(DeltaGRD);
+      int j1 = (x - XG0)/DeltaGRD;
+      int i1 = (y - YG0)/DeltaGRD;
+      if (p.linear && i1 >= 0 && j1 >= 0 && i1 < ny - 1 && j1 < ny - 1 &&
+	  value[j1 + i1*nx] != ndv && value[j1 + 1 + i1*nx] != ndv &&
+	  value[j1 + (i1 + 1)*nx] != ndv && value[j1 + 1 + (i1 + 1)*nx] != ndv) {
+	// bi-linear interpolation
+	double dx = x - (j1*DeltaGRD + XG0);
+	double dy = y - (i1*DeltaGRD + YG0);
+	val = (value[j1 + i1*nx] +
+	       dx*(value[j1 + 1 + i1*nx] - value[j1 + i1*nx])/DeltaGRD +
+	       dy*(value[j1 + (i1 + 1)*nx] - value[j1 + i1*nx])/DeltaGRD +
+	       dx*dy*(value[j1 + i1*nx] + value[j1 + 1 + (i1 + 1)*nx] -
+		      value[j1 + (i1 + 1)*nx] - value[j1 + 1 + i1*nx])
+	       /sq(DeltaGRD));
       }
-      else { 
-	int j = (x - XG0 + DeltaGRD/2.)/DeltaGRD;
-	int i = (y - YG0 + DeltaGRD/2.)/DeltaGRD;
+      else
 	val = value[j + i*nx];
-      }
-      input[] = val;
       if (val == ndv)
-	input[] = p.nodatavalue;
+	input[] = nodata;
+      else {
+	input[] = val;
+	if (fabs (input[]) > 1e10) {
+	  fprintf (stderr, "%g %g\n", input[], ndv);
+	  assert (false);
+	}
+      }
     }
     else {
-      input[] = p.nodatavalue;
+      input[] = nodata;
       warning = true;
     }
   }
