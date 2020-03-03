@@ -51,6 +51,7 @@ scalar * hl = NULL, ** tracers = NULL;
 vector * ul = NULL;
 double G = 1., dry = 1e-6;
 double (* gradient) (double, double, double) = minmod2;
+bool linearised = false;
 
 vector * ufl = NULL, * al = NULL;
 
@@ -85,12 +86,35 @@ we need to make sure that the layer thicknesses and $\eta$ are
 allocated first (in the case where other layer fields are added, for
 example for the [non-hydrostatic extension](nh.h)). */
 
+static scalar new_layered_scalar (const char * name, int l)
+{
+  scalar s = new scalar;
+  char lname[80];
+  sprintf (lname, "%s%d", name, l);
+  free (s.name);
+  s.name = strdup (lname);
+  return s;
+}
+
+static vector new_layered_vector (const char * name, int l)
+{
+  vector v = new vector;
+  foreach_dimension() {
+    struct { char * x, * y; } c = {"x", "y"};
+    char lname[80];
+    sprintf (lname, "%s%d.%s", name, l, c.x);
+    free (v.x.name);
+    v.x.name = strdup (lname);
+  }
+  return v;
+}
+
 event defaults0 (i = 0)
 {
   assert (hl == NULL);
   assert (nl > 0);
   for (int l = 0; l < nl; l++) {
-    scalar h = new scalar;
+    scalar h = new_layered_scalar ("h", l);
     h.gradient = gradient;
 #if TREE    
     h.refine = h.prolongation = refine_linear;
@@ -128,7 +152,7 @@ event defaults (i = 0)
 {
   assert (ul == NULL && ufl == NULL && al == NULL);
   for (int l = 0; l < nl; l++) {
-    vector u = new vector;
+    vector u = new_layered_vector ("u", l);
     vector uf = new face vector;
     vector a = new face vector;
     ul = vectors_append (ul, u);
@@ -136,7 +160,8 @@ event defaults (i = 0)
     al = vectors_append (al, a);
     foreach_dimension() {
       u.x.l = uf.x.l = a.x.l = l;
-      tracers[l] = list_append (tracers[l], u.x);
+      if (!linearised)
+	tracers[l] = list_append (tracers[l], u.x);
     }
   }
   reset (ul, 0.);
