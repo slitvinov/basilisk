@@ -131,10 +131,15 @@ bview * bview_new() {
   p->samples = 4;
   p->width = 600*p->samples, p->height = 600*p->samples;
 
+  /* OpenGL somehow generates floating-point exceptions... turn them off */
+  disable_fpe (FE_DIVBYZERO|FE_INVALID);
+
   p->fb = framebuffer_new (p->width, p->height);
-  
+
   init_gl();
   p->active = false;
+  
+  enable_fpe (FE_DIVBYZERO|FE_INVALID);
   
   return p;
 }
