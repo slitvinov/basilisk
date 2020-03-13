@@ -273,7 +273,8 @@ mpi-tests: indexing.tst indexing.3D.tst \
 	load-balancing \
 	mpi-grid.tst mpi-periodic-3D.tst \
 	source.tst tag.tst tag1.tst view.tst view.3D.tst \
-	boundary_vertex.tst boundary_vertex3D.tst
+	boundary_vertex.tst boundary_vertex3D.tst \
+	foreach_bnd1.tst
 
 indexing.tst:		CC = mpicc -D_MPI=3
 indexing.3D.tst:	CC = mpicc -D_MPI=3
@@ -286,6 +287,7 @@ mpi-refine.3D.tst:	CC = mpicc -D_MPI=4
 mpi-laplacian.tst:	CC = mpicc -D_MPI=3
 mpi-laplacian.3D.tst:	CC = mpicc -D_MPI=3
 mpi-circle.tst:		CC = mpicc -D_MPI=5
+foreach_bnd1.tst:	CC = mpicc -D_MPI=4
 
 mpi-circle1.c: mpi-circle.c
 	ln -s mpi-circle.c mpi-circle1.c

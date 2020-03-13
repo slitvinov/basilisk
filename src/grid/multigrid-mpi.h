@@ -5,7 +5,7 @@ typedef struct {
   MPI_Comm cartcomm;
 } MpiBoundary;
 
-@define BUF void * // workaround for bug in qcc
+@define BUF void * // fixme: workaround for bug in qcc
 
 foreach_dimension()
 static BUF snd_x (int i, int dst, int tag, int l, scalar * list,

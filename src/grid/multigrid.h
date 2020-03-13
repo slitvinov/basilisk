@@ -520,8 +520,9 @@ void reset (void * alist, double val)
 #endif // dimension == 3
 
 @def foreach_boundary(b)
-  foreach_boundary_dir (depth(), b)
-    if (!is_boundary(point)) {
+  if (default_scalar_bc[b] != periodic_bc)
+    foreach_boundary_dir (depth(), b)
+      if (!is_boundary(point)) {
 @
 @define end_foreach_boundary() } end_foreach_boundary_dir()
   
