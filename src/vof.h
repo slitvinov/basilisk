@@ -78,7 +78,7 @@ automatically derive the corresponding functions along the other
 dimensions. */
 
 foreach_dimension()
-static void sweep_x (scalar c, scalar cc)
+static void sweep_x (scalar c, scalar cc, scalar * tcl)
 {
   vector n[];
   scalar alpha[], flux[];
@@ -264,9 +264,10 @@ static void sweep_x (scalar c, scalar cc)
 
   foreach() {
     c[] += dt*(flux[] - flux[1] + cc[]*(uf.x[1] - uf.x[]))/(cm[]*Delta + SEPS);
-    scalar t, tflux;
-    for (t, tflux in tracers, tfluxl)
-      t[] += dt*(tflux[] - tflux[1])/(cm[]*Delta + SEPS);
+    scalar t, tc, tflux;
+    for (t, tc, tflux in tracers, tcl, tfluxl)
+      t[] += dt*(tflux[] - tflux[1] + tc[]*(uf.x[1] - uf.x[]))/
+	(cm[]*Delta + SEPS);
   }
   boundary ({c});
   boundary (tracers);
@@ -291,21 +292,34 @@ void vof_advection (scalar * interfaces, int i)
     multi-dimensional advection scheme (provided the advection velocity
     field is exactly non-divergent). */
 
-    scalar cc[];
-    foreach()
+    scalar cc[], * tcl = NULL, * tracers = c.tracers;    
+    for (scalar t in tracers) {
+      scalar tc = new scalar;
+      tcl = list_append (tcl, tc);
+    }
+    foreach() {
       cc[] = (c[] > 0.5);
+      scalar t, tc;
+      for (t, tc in tracers, tcl) {
+	if (t.inverse)
+	  tc[] = c[] < 0.5 ? t[]/(1. - c[]) : 0.;
+	else
+	  tc[] = c[] > 0.5 ? t[]/c[] : 0.;
+      }
+    }
 
     /**
     We then apply the one-dimensional advection scheme along each
     dimension. To try to minimise phase errors, we alternate dimensions
     according to the parity of the iteration index `i`. */
 
-    void (* sweep[dimension]) (scalar, scalar);
+    void (* sweep[dimension]) (scalar, scalar, scalar *);
     int d = 0;
     foreach_dimension()
       sweep[d++] = sweep_x;
     for (d = 0; d < dimension; d++)
-      sweep[(i + d) % dimension] (c, cc);
+      sweep[(i + d) % dimension] (c, cc, tcl);
+    delete (tcl), free (tcl);
   }
 }
 
