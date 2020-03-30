@@ -41,3 +41,5 @@ bool    gl_feedback_end   (float * f,
 			   enum FeedbackFormat format);
 
 int polygonize (const double val[8], double isolevel, double triangles[5][3][3]);
+
+#include "parser.h"

@@ -660,7 +660,7 @@ static bool process_line (char * line, Array * history, FILE * interactive)
   if (line[0] == '\0')
     return true;
   char * buf = strdup (line);
-  char * s = strtok (remove_blanks (line), "(");
+  char * s = mystrtok (remove_blanks (line), "(");
   if (!s) {
     free (buf);
     return true;

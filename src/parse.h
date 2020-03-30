@@ -128,13 +128,31 @@ static char * find_comma (char * s)
   return NULL;
 }
 
+static char * mystrtok (char * str, const char * delim)
+{
+  static char * s = NULL;
+  char * start = str ? str : s;
+  bool string = false;
+  s = start;
+  while (*s != '\0') {
+    if (*s == '"')
+      string = !string;
+    if (!string && strchr(delim, *s))
+      break;
+    s++;
+  }
+  if (*s != '\0')
+    *s++ = '\0';
+  return start;
+}
+
 int parse_params (Params * params)
 {
   char * s;
   int i = 0, n = 0;
   Params * p = params;
   while (p->key) p++, n++;
-  if (!(s = strtok (NULL, ");")) || s[0] == '\n')
+  if (!(s = mystrtok (NULL, ");")) || s[0] == '\n')
     return false;
   while (s) {
     char * next = find_comma (s), * key = s;

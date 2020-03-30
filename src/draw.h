@@ -382,14 +382,138 @@ static inline double interp (Point point, coord p, scalar col) {
   return interpolate_linear (point, _r);
 }
 
+static double evaluate_expression (Point point, Node * n)
+{
+  assert (n);
+  switch (n->type) {
+  case '1': return n->d.value;
+  case '+': return (evaluate_expression (point, n->e[0]) +
+		    evaluate_expression(point, n->e[1]));
+  case '-': return (evaluate_expression (point, n->e[0]) -
+		    evaluate_expression(point, n->e[1]));
+  case '*': return (evaluate_expression (point, n->e[0]) *
+		    evaluate_expression(point, n->e[1]));
+  case '/': return (evaluate_expression (point, n->e[0]) /
+		    evaluate_expression(point, n->e[1]));
+  case '^': return pow (evaluate_expression (point, n->e[0]),
+			evaluate_expression(point, n->e[1]));
+  case '>': return (evaluate_expression (point, n->e[0]) >
+		    evaluate_expression(point, n->e[1]));
+  case '<': return (evaluate_expression (point, n->e[0]) <
+		    evaluate_expression(point, n->e[1]));
+  case 'L': return (evaluate_expression (point, n->e[0]) <=
+		    evaluate_expression(point, n->e[1]));
+  case 'G': return (evaluate_expression (point, n->e[0]) >=
+		    evaluate_expression(point, n->e[1]));
+  case '=': return (evaluate_expression (point, n->e[0]) ==
+		    evaluate_expression(point, n->e[1]));
+  case 'i': return (evaluate_expression (point, n->e[0]) !=
+		    evaluate_expression(point, n->e[1]));
+  case 'O': return (evaluate_expression (point, n->e[0]) ||
+		    evaluate_expression(point, n->e[1]));
+  case 'A': return (evaluate_expression (point, n->e[0]) &&
+		    evaluate_expression(point, n->e[1]));
+  case '?': return (evaluate_expression (point, n->e[0]) ?
+		    evaluate_expression(point, n->e[1]) :
+		    evaluate_expression(point, n->e[2]));
+  case 'm': return - evaluate_expression (point, n->e[0]);
+  case 'f': return n->d.func (evaluate_expression (point, n->e[0]));
+  case 'v': {
+    scalar s = {n->s};
+    int k[3] = {0,0,0};
+    for (int i = 0; i < 3; i++)
+      if (n->e[i])
+	k[i] = evaluate_expression (point, n->e[i]);
+    return s[k[0],k[1],k[2]];
+  }
+  case 'D': return Delta;
+  case 'x': return x;
+  case 'y': return y;
+  case 'z': return z;
+  default:
+    fprintf (stderr, "unknown operation type '%c'\n", n->type);
+    assert (false);
+  }
+}
+
+static bool assemble_node (Node * n)
+{
+  if (n->type == 'v') {
+    scalar s = lookup_field (n->d.id);
+    if (s.i >= 0)
+      n->s = s.i;
+    else {
+      n->s = -1;
+      if (!strcmp (n->d.id, "Delta"))
+	n->type = 'D';
+      else if (!strcmp (n->d.id, "x"))
+	n->type = 'x';
+      else if (!strcmp (n->d.id, "y"))
+	n->type = 'y';
+      else if (!strcmp (n->d.id, "z"))
+	n->type = 'z';
+      else {
+	typedef struct { char * name; double val; } Constant;
+	static Constant constants[] = {
+	  {"pi",     pi },
+	  {"nodata", nodata },
+	  {"HUGE",   HUGE },
+	  { NULL },
+	};
+	Constant * p = constants;
+	while (p->name) {
+	  if (!strcmp (p->name, n->d.id)) {
+	    n->type = '1';
+	    n->d.value = p->val;
+	    break;
+	  }
+	  p++;
+	}
+	if (n->type == 'v') {
+	  fprintf (stderr, "unknown identifier '%s'\n", n->d.id);
+	  return false;
+	}
+      }	
+    }
+  }
+  for (int i = 0; i < 3; i++)
+    if (n->e[i] && !assemble_node (n->e[i]))
+      return false;
+  return true;
+}
+
+static scalar compile_expression (char * expr, bool * isexpr)
+{
+  *isexpr = false;
+  Node * node = parse_node (expr);
+  if (node == NULL) {
+    fprintf (stderr, "'%s': syntax error\n", expr);
+    return (scalar){-1};
+  }
+  if (!assemble_node (node)) {
+    free_node (node);
+    return (scalar){-1};
+  }
+  if (node->type == 'v' && node->e[0] == NULL) {
+    scalar s = {node->s};
+    free_node (node);
+    return s;
+  }
+  scalar s = new scalar;
+  foreach()
+    s[] = evaluate_expression (point, node);
+  boundary ({s});
+  free_node (node);
+  *isexpr = true;
+  return s;
+}
+
 #define colorize_args(args)						\
   scalar col = {-1};							\
   if (args.color && strcmp (args.color, "level")) {			\
-    col = lookup_field (args.color);					\
-    if (col.i < 0) {							\
-      fprintf (stderr, "colorize_args(): no field named '%s'\n", args.color); \
+    col = compile_expression (args.color, &args.expr);			\
+    if (col.i < 0)							\
       return false;							\
-    }									\
   }									\
 									\
   double cmap[NCMAP][3];						\
@@ -504,6 +628,7 @@ struct _draw_vof {
   bool linear;
   colormap map;
   float fc[3], lc[3], lw;
+  bool expr;
 };
 
 /**
@@ -712,6 +837,7 @@ bool draw_vof (struct _draw_vof p)
   }
 #endif // TREE
 
+  if (p.expr) delete({col});
   return true;
 }
 
@@ -741,6 +867,7 @@ struct _isoline {
   bool linear;
   colormap map;
   float fc[3], lc[3], lw;
+  bool expr;
 };
 
 trace
@@ -764,6 +891,7 @@ bool isoline (struct _isoline p)
       draw_vof (a);
     }
   }
+  if (p.expr) delete({col});
 #else // dimension == 3
   assert (false);
 #endif // dimension == 3
@@ -878,6 +1006,7 @@ struct _squares {
   bool linear;
   colormap map;
   float fc[3], lc[3];
+  bool expr;
   
   coord n;
   double alpha;
@@ -974,6 +1103,7 @@ bool squares (struct _squares p)
       }
 #endif // dimension == 3
   }
+  if (p.expr) delete ({col});
   return true;
 }
 
@@ -1123,6 +1253,7 @@ struct _isosurface {
   bool linear;
   colormap map;
   float fc[3], lc[3], lw;
+  bool expr;
 };
 
 trace
@@ -1195,6 +1326,7 @@ bool isosurface (struct _isosurface p)
 	}
       }
     }
+  if (p.expr) delete ({col});
 #endif // dimension > 2
   return true;
 }

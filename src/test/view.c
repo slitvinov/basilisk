@@ -35,7 +35,11 @@ int main() {
   box();
   draw_vof ("f");
   cells();
-  squares ("f", min = 0, max = 1);
+  squares ("x < 0 && y < 0 ? sin(6*pi*x)*cos(8*pi*y) : nodata", spread = -1);
+  squares ("(f[0,1] - f[0,-1])/(2.*Delta)", spread = -1);
+#if dimension == 2  
+  isoline ("sqrt(x^2 + y^2)", n = 10, spread = -1, lc = {1,0,0});
+#endif
   save ("out.png");
 
   /**
