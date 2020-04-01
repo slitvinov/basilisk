@@ -24,6 +24,7 @@
       <li><a href="$base$/src/README">Solvers and functions</a></li>
       <li><a href="$base$/src/examples/README">Examples</a></li>
       <li><a href="http://groups.google.com/d/forum/basilisk-fr">User forum</a></li>
+      <li><a href="$base$/sandbox/documentation">More documentation</a></li>
     </ul>
   </fieldset>
   <fieldset>
@@ -33,6 +34,7 @@
       <li><a href="https://hub.darcs.net/basilisk/basilisk/browse/src">Darcs Hub</a></li>
       <li><a href="$base$/src/test/README">Test cases</a></li>
       <li><a href="$base$/sandbox/bugs/README">Bug reports</a></li>
+      <li><a href="$base$/src/Contributing">How to contribute</a></li>
       <li><a href="$base$/sandbox/">Play in the sandbox</a></li>
     </ul>
   </fieldset>
