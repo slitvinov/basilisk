@@ -130,7 +130,7 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
     return;
 
   Point point = *((Point *)grid);
-  point.i = 0;
+  point.i = 0, point.n = N;
   for (int i = 0; i < GHOSTS; i++)
     for (scalar s in list1)
       s[i] = s[i + point.n];
