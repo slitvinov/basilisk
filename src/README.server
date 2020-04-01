@@ -45,6 +45,9 @@ export CADNACC="clang -D_CADNA=1 -x c++ -m64 \
 # OpenGL libraries
 export OPENGLIBS="-lfb_osmesa -lGLU -lOSMesa"
 
+# Any option to be passed to mpirun
+# export MPIRUNOPTS="--oversubscribe"
+
 # howto kill tests
 
 killtest()

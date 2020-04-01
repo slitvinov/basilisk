@@ -29,7 +29,7 @@ case $ext in
 esac
 
 case $CC in
-    *-D_MPI=*) test -z "$EXEC" && EXEC="mpirun -np "`echo $CC | sed 's/.*-D_MPI=\([0-9]*\).*/\1/'`;
+    *-D_MPI=*) test -z "$EXEC" && EXEC="mpirun \$MPIRUNOPTS -np "`echo $CC | sed 's/.*-D_MPI=\([0-9]*\).*/\1/'`;
 esac
 
 for opt in $CFLAGS; do
