@@ -31,7 +31,7 @@ int main() {
   </table>
   */
   
-  view (width = 400, height = 400);
+  view (width = 400, height = 400, cache = 10);
   box();
   draw_vof ("f");
   cells();

@@ -388,6 +388,11 @@ void print_node (Node * n, FILE * fp)
       print_node (n->e[i], fp);
 }
 
+void reset_node_type (Node * n, char type)
+{
+  n->type = type; free (n->d.id);
+}
+
 #if STANDALONE
 int
 main (int argc, char * argv[])

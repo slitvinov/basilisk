@@ -41,6 +41,7 @@ void clear()
 * *camera*: predefined camera angles: "left", "right", "top",
    "bottom", "front", "back" and "iso".
 * *map*: an optional coordinate mapping function.
+* *cache*: the maximum number of cached compiled expressions.
 */
 
 struct _view_set {
@@ -55,6 +56,7 @@ struct _view_set {
   float res;
   char * camera;
   void (* map) (coord *);
+  int cache;
   float p1x, p1y, p2x, p2y; // for trackball
   bview * view;
 };
@@ -183,6 +185,11 @@ void view (struct _view_set p)
     init_gl();
   }
 
+  if (p.cache > 0) {
+    v->cache = calloc (1, sizeof (cexpr));
+    v->maxlen = p.cache;
+  }
+  
   clear();
 }
 
@@ -439,19 +446,20 @@ static double evaluate_expression (Point point, Node * n)
 static bool assemble_node (Node * n)
 {
   if (n->type == 'v') {
-    scalar s = lookup_field (n->d.id);
+    char * id = n->d.id;
+    scalar s = lookup_field (id);
     if (s.i >= 0)
       n->s = s.i;
     else {
       n->s = -1;
-      if (!strcmp (n->d.id, "Delta"))
-	n->type = 'D';
-      else if (!strcmp (n->d.id, "x"))
-	n->type = 'x';
-      else if (!strcmp (n->d.id, "y"))
-	n->type = 'y';
-      else if (!strcmp (n->d.id, "z"))
-	n->type = 'z';
+      if (!strcmp (id, "Delta"))
+	reset_node_type (n, 'D');
+      else if (!strcmp (id, "x"))
+	reset_node_type (n, 'x');
+      else if (!strcmp (id, "y"))
+	reset_node_type (n, 'y');
+      else if (!strcmp (id, "z"))
+	reset_node_type (n, 'z');
       else {
 	typedef struct { char * name; double val; } Constant;
 	static Constant constants[] = {
@@ -462,19 +470,19 @@ static bool assemble_node (Node * n)
 	};
 	Constant * p = constants;
 	while (p->name) {
-	  if (!strcmp (p->name, n->d.id)) {
-	    n->type = '1';
+	  if (!strcmp (p->name, id)) {
+	    reset_node_type (n, '1');
 	    n->d.value = p->val;
 	    break;
 	  }
 	  p++;
 	}
 	if (n->type == 'v') {
-	  fprintf (stderr, "unknown identifier '%s'\n", n->d.id);
+	  fprintf (stderr, "unknown identifier '%s'\n", id);
 	  return false;
 	}
       }	
-    }
+    }    
   }
   for (int i = 0; i < 3; i++)
     if (n->e[i] && !assemble_node (n->e[i]))
@@ -485,6 +493,11 @@ static bool assemble_node (Node * n)
 static scalar compile_expression (char * expr, bool * isexpr)
 {
   *isexpr = false;
+  bview * view = get_view();
+  scalar s;
+  if (view->cache && (s = get_cexpr (view->cache, expr)).i >= 0)
+    return s;
+  
   Node * node = parse_node (expr);
   if (node == NULL) {
     fprintf (stderr, "'%s': syntax error\n", expr);
@@ -499,12 +512,19 @@ static scalar compile_expression (char * expr, bool * isexpr)
     free_node (node);
     return s;
   }
-  scalar s = new scalar;
+  s = new scalar;
+  free (s.name);
+  s.name = strdup (expr);
   foreach()
     s[] = evaluate_expression (point, node);
   boundary ({s});
+  restriction ({s});
   free_node (node);
-  *isexpr = true;
+  
+  if (view->cache)
+    view->cache = add_cexpr (view->cache, view->maxlen, expr, s);
+  else
+    *isexpr = true;
   return s;
 }
 

@@ -14,3 +14,4 @@ struct _Node {
 Node * parse_node (char * code);
 void free_node (Node * n);
 void print_node (Node * n, FILE * fp);
+void reset_node_type (Node * n, char type);

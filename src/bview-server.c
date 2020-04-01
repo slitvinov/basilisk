@@ -60,7 +60,7 @@ int main (int argc, char * argv[])
 {
   Array * history = array_new();
   
-  view (samples = 1);
+  view (samples = 1, cache = 10);
 
   for (int i = 1; i < argc; i++) {
     if (strlen (argv[i]) >= 3 &&

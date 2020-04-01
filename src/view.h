@@ -75,6 +75,73 @@ or by the Basilisk libraries in gl/. */
 #include "input.h"
 
 /**
+## A cache of "compiled" expressions
+
+The cache has a maximum size and least-used expressions are discarded
+first. */
+
+typedef struct {
+  char * expr;
+  scalar s;
+} cexpr;
+
+static scalar get_cexpr (cexpr * cache, const char * expr)
+{
+  cexpr * c = cache;
+  while (c->expr) {
+    if (!strcmp (c->expr, expr)) {
+      // move this expression to the top of the cache.
+      // the "top" is the last element.
+      cexpr tmp = *c;
+      while ((c + 1)->expr)
+	*c = *(c + 1), c++;
+      *c = tmp;
+      return c->s;
+    }
+    c++;
+  }
+  return (scalar){-1};
+}
+
+static cexpr * add_cexpr (cexpr * cache, int maxlen,
+			  const char * expr, scalar s)
+{
+  cexpr * c = cache;
+  while (c->expr) c++;
+  int len = c - cache;
+  if (len < maxlen) {
+    cache = realloc (cache, sizeof(cexpr)*(len + 2));
+    c = &cache[len];
+  }
+  else {
+    // discard first expression
+    c = cache;
+    free (c->expr);
+    scalar s = c->s;
+    delete ({s});
+    // shift remaining expressions
+    while ((c + 1)->expr)
+      *c = *(c + 1), c++;
+  }
+  c->expr = strdup (expr);
+  c->s = s;
+  (c + 1)->expr = NULL;
+  return cache;
+}
+
+static void free_cexpr (cexpr * cache)
+{
+  cexpr * c = cache;
+  while (c->expr) {
+    free (c->expr);
+    scalar s = c->s;
+    delete ({s});
+    c++;
+  }
+  free (cache);
+}
+
+/**
 ## The *bview* class
 
 Contains the definition of the current view. */
@@ -100,8 +167,11 @@ struct _bview {
   void (* map) (coord *); // an optional mapping function
   
   int ni; // number of items drawn
-
+  
   bool active;
+
+  cexpr * cache; // a cache of compiled expressions
+  int maxlen; // the maximum number of cached expressions
 };
 
 typedef struct _bview bview;
@@ -109,7 +179,8 @@ typedef struct _bview bview;
 /**
 The allocator method. */
 
-bview * bview_new() {
+bview * bview_new()
+{
   bview * p = qcalloc (1, bview);
 
   p->tx = p->ty = 0;
@@ -150,6 +221,8 @@ The destructor method. */
 void bview_destroy (bview * p)
 {
   framebuffer_destroy (p->fb);
+  if (p->cache)
+    free_cexpr (p->cache);
   free (p);
 }
 
@@ -670,6 +743,11 @@ static bool process_line (char * line, Array * history, FILE * interactive)
     char * file = NULL;
     parse_params ((Params[]){{"file", pstring, &file}, {NULL}});
     if (file) {
+      bview * view = get_view();
+      if (view->cache) {
+	free_cexpr (view->cache);
+	view->cache = calloc (1, sizeof (cexpr));
+      }
       if (!restore (file = file, list = all))
 	fprintf (ferr, "could not restore from '%s'\n", file);
       else {
