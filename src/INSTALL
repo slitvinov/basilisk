@@ -14,7 +14,7 @@ On a Debian-like system (i.e. Debian, Ubuntu etc...) installing darcs
 is as easy as
 
 ~~~bash
-sudo apt-get install darcs flex make
+sudo apt-get install darcs flex bison make
 ~~~
 
 To get the latest Basilisk source code do
