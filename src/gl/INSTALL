@@ -12,7 +12,7 @@ libOSMesa are required.
 ## Debian-based systems (Debian, Ubuntu, etc.)
 
 ~~~bash
-sudo apt-get install libglu1-mesa-dev libosmesa6-dev
+sudo apt-get install bison libglu1-mesa-dev libosmesa6-dev
 ~~~
 
 to install the required system libraries (and their "development"
@@ -54,7 +54,7 @@ required.
 Use
 
 ~~~bash
-sudo apt-get install libglu1-mesa-dev libglew-dev libgl1-mesa-dev
+sudo apt-get install bison libglu1-mesa-dev libglew-dev libgl1-mesa-dev
 ~~~
 
 to install the required system libraries (and their "development"

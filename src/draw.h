@@ -441,6 +441,7 @@ static double evaluate_expression (Point point, Node * n)
     fprintf (stderr, "unknown operation type '%c'\n", n->type);
     assert (false);
   }
+  return undefined;
 }
 
 static bool assemble_node (Node * n)
