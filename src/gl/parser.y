@@ -340,7 +340,8 @@ Node * copy_node (Node * n)
   memcpy (a, n, sizeof (Node));
   if (a->type == 'v')
     a->d.id = strdup (n->d.id);
-  for (int i = 0; i < 3; i++)
+  int i;
+  for (i = 0; i < 3; i++)
     if (a->e[i])
       a->e[i] = copy_node (a->e[i]);
   return a;
@@ -361,7 +362,8 @@ Node * parse_node (char * code)
 
 void free_node (Node * n)
 {
-  for (int i = 0; i < 3; i++)
+  int i;
+  for (i = 0; i < 3; i++)
     if (n->e[i])
       free_node (n->e[i]);
   if (n->type == 'v')
@@ -380,10 +382,11 @@ void print_node (Node * n, FILE * fp)
     fprintf (fp, "[label=\"%p\"];\n", n->d.func);
   else
     fprintf (fp, "[label=\"%c\", shape=box];\n", n->type);
-  for (int i = 0; i < 3; i++)
+  int i;
+  for (i = 0; i < 3; i++)
     if (n->e[i])
       fprintf (fp, "n%p -> n%p;\n", n, n->e[i]);
-  for (int i = 0; i < 3; i++)
+  for (i = 0; i < 3; i++)
     if (n->e[i])
       print_node (n->e[i], fp);
 }
