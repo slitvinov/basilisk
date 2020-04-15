@@ -201,6 +201,7 @@ $$
 * [Signed distance field](distance.h)
 * [Okada fault model](okada.h)
 * [Hessenberg systems](hessenberg.h)
+* [Community Ocean Vertical Mixing (CVMix) interface](cvmix/cvmix.h)
 
 # General orthogonal coordinates
 
