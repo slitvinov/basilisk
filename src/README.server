@@ -32,6 +32,12 @@ export TS_SLOTS=8
 # path to local binaries
 export PATH=$PATH:/home/basilisk/bin
 
+# workaround for openmpi warning message
+export OMPI_MCA_btl=^openib
+
+# allow oversubscribing
+export OMPI_MCA_rmaps_base_oversubscribe=1
+
 # howto compile C99 programs
 export CC99="mpicc -O2 -Wall -fno-diagnostics-show-caret -Wno-unused-result -std=c99 -D_XOPEN_SOURCE=700 -DHAVE_GETOPT_H=1 -D_GNU_SOURCE=1"
 
@@ -44,9 +50,6 @@ export CADNACC="clang -D_CADNA=1 -x c++ -m64 \
 
 # OpenGL libraries
 export OPENGLIBS="-lfb_osmesa -lGLU -lOSMesa"
-
-# Any option to be passed to mpirun
-# export MPIRUNOPTS="--oversubscribe"
 
 # howto kill tests
 
