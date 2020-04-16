@@ -10,7 +10,51 @@ CVMix.
 Note that the layout mostly matches that of the [original Fortran90
 source](https://github.com/CVMix/CVMix-src/blob/master/src/drivers/cvmix_kpp_drv.F90)
 to simplify comparison of the C and Fortran versions. This is not
-meant as a "style guide" on how to write a clean C program... */
+meant as a "style guide" on how to write a clean C program... 
+
+## Figures
+
+~~~gnuplot Plots of the nondimensional flux profiles for momentum, $\Phi_m$, and for scalars, $\Phi_s$, as functions of the stability parameter $\zeta_s$ (Figure for test 3 aka Figure B1 of [Large et al, 1994](#large1994))
+
+set multiplot layout 1,2 margins 0.1, 0.9, 0.1, 0.9 spacing 0.0
+set label 'ζ = d/L = σ h/L' center at graph 1,-0.1
+unset key
+set yrange [0:2]
+set xtics -2,1,0
+set mxtics 5
+set label 'UNSTABLE' at -1,1 center
+set label 'Φ_m' at -1.45,0.5
+set label 'Φ_s' at -0.7,0.2
+set label 'ζ_s' at -1,1.85 center
+set label 'ζ_m' at -0.2,1.85
+plot [-2:0]'test3.out' u 1:2 w l lc rgb 'black', \
+            '' u 1:3 w l lc rgb 'black' dt 2
+unset ytics
+unset label
+set xtics 0,.1,0.2
+unset mxtics
+set label 'STABLE' at 0.1,1 center
+set label 'Φ_m = Φ_s' at 0.1,1.4
+plot [0:0.2]'test3.out' u 1:2 w l lc rgb 'black'
+unset multiplot
+~~~
+
+## References
+
+~~~bib
+@article{large1994,
+  title={Oceanic vertical mixing: A review and a model with a nonlocal 
+         boundary layer parameterization},
+  author={Large, William G and McWilliams, James C and Doney, Scott C},
+  journal={Reviews of Geophysics},
+  volume={32},
+  number={4},
+  pages={363--403},
+  year={1994},
+  publisher={Wiley Online Library}
+}
+~~~
+*/
 
 #include "cvmix/cvmix.h"
 #include "cvmix/kpp.h"
@@ -98,10 +142,9 @@ void test1()
   cvmix_1d Ri_bulk = cvmix_allocate_1d (nlev1);
 
   /**
-  Care must be taken for the fact that C-array indices start at one,
-  rather than zero in Fortran i.e. the code below uses
-  `layer_thick1*kw` rather than `layer_thick1*(kw-1)` in the original
-  code. 
+  Care must be taken that C-array indices start at zero, rather than
+  one in Fortran i.e. the code below uses `layer_thick1*kw` rather
+  than `layer_thick1*(kw-1)` in the original code.
 
   The data stored in a `cvmix_1d` array can be accessed through the
   `.a` element which is just a pointer to the array of `cvmix_r8` (aka
@@ -155,6 +198,7 @@ void test2()
 {
   // Test 2: Compute coefficients of shape function G(sigma) when G(1) = 0 and
   //         G'(1) = 0. Result should be G(sigma) = sigma - 2sigma^2 + sigma^3
+
   fprintf (stderr, "\nTest 2: Computing G(sigma)\n");
   fprintf (stderr, "----------\n");
 
@@ -206,7 +250,7 @@ void test3()
     fprintf (fp, "%.12e %.12e %.12e\n", zeta.a[i], 1./w_m[i], 1./w_s[i]);
   fclose (fp);
   fprintf (stderr,
-	   "Done! Data is stored in test3.out, run plot_flux_profiles.ncl\n"
+	   "Done! Data is stored in test3.out, run make cvmix/plots\n"
 	   "to see output.\n");
   cvmix_deallocate_1d (zeta);
 }

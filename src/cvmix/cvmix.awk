@@ -113,7 +113,7 @@ function structure()
 	if (!isprivate[args[i]] && type[args[i]] != "cvmix_nd") {
 	    printf ("extern void %s_set_%s_ (%s * p, %s * v);\n",
 		    sname, args[i], sname, type[args[i]]);
-	    printf ("inline void %s_set_%s (%s * p, %s v) {\n",
+	    printf ("static inline void %s_set_%s (%s * p, %s v) {\n",
 		    sname, args[i], sname, type[args[i]]);
 	    printf ("  %s_set_%s_ (p, &v);\n", sname, args[i]);
 	    printf ("}\n");

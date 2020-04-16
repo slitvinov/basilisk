@@ -15,7 +15,7 @@ a_m = 1.257361570184418
 c_m = 8.382410467896117
 a_s = -28.861739379323623
 c_s = 98.954535014823847
-Done! Data is stored in test3.out, run plot_flux_profiles.ncl
+Done! Data is stored in test3.out, run make cvmix/plots
 to see output.
 
 Test 4: Computing Diffusivity in boundary layer
