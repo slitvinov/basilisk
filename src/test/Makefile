@@ -1,5 +1,5 @@
 all: check 3D-tests mpi-tests load-balancing curvature-tests axi-tests \
-	cadna-tests embed-tests multilayer-tests
+	cadna-tests embed-tests multilayer-tests gotm-tests
 
 include $(BASILISK)/Makefile.defs
 
@@ -402,6 +402,8 @@ embed-tests: neumann.tst dirichlet.tst poiseuille45.tst \
 	neumann3D.tst dirichlet3D.tst hydrostatic3.tst spheres.tst
 
 # General Ocean Turbulence Model (GOTM) tests
+
+gotm-tests: couette-gotm.tst entrainment.tst ows_papa.tst
 
 ows_papa-kpp.c: ows_papa.c
 	ln -s ows_papa.c ows_papa-kpp.c 

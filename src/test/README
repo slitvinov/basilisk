@@ -126,6 +126,7 @@ Note that only the documented test cases appear in the list below
 
 ## General Ocean Turbulence Model (GOTM)
 
+* [Turbulent Couette flow](couette-gotm.c)
 * [Entrainment](entrainment.c)
 * [Ocean Weather Ship Papa](ows_papa.c)
 
