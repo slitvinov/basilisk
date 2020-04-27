@@ -291,7 +291,7 @@ event cleanup (t = end)
 ## Utility functions
 
 This function uses GOTM to initialize a vertical temperature profile
-corresponding to a buoyancy frequency `NN` for a given constant
+corresponding to a squared buoyancy frequency `NN` for a given constant
 salinity and top temperature. */
 
 void constant_NNT (double T_top, double S_const, double NN)

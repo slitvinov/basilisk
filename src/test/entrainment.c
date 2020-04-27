@@ -33,13 +33,13 @@ set yrange [-35:0]
 splot 'kepsilon' u ($1/3600.):2:3
 ~~~
 
-~~~gnuplot Evolution of the squared buoyancy frequency $N^2$ (s$^{-2}$) (x 10$^4$)
+~~~gnuplot Evolution of the squared buoyancy frequency $N^2$ (s^-2^) (x 10^4^)
 set output 'N2.png'
 set cbrange [*:*]
 splot 'kepsilon' u ($1/3600.):2:($5*1e4)
 ~~~
 
-~~~gnuplot Evolution of the (log of the) turbulent diffusivity $\nu_t^h$ (m$^2$s$^{-2}$)
+~~~gnuplot Evolution of the (log of the) turbulent diffusivity $\nu_t^h$ (m^2^/s)
 set output 'nut.png'
 set cbrange [-6:-2.5]
 splot 'kepsilon' u ($1/3600.):2:(log10($6))
@@ -233,8 +233,8 @@ int main()
 /**
 ## Initial conditions
 
-A constant temperature stratification with buoyancy frequency $N =
-10^{-4}$ s$^{-1}$, starting at 20$^\circ$C and with a constant
+A constant temperature stratification with buoyancy frequency $N^2 =
+10^{-4}$ s$^{-2}$, starting at 20$^\circ$C and with a constant
 background salinity of $20$ psu. 
 
 The depth is 50 metres and the layers are equal thickness. */
