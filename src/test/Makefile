@@ -400,3 +400,12 @@ embed-tests: neumann.tst dirichlet.tst poiseuille45.tst \
 	couette.tst wannier.tst hydrostatic2.tst cylinders.tst \
 	porous.tst porous1.tst uf.tst starting.tst \
 	neumann3D.tst dirichlet3D.tst hydrostatic3.tst spheres.tst
+
+# General Ocean Turbulence Model (GOTM) tests
+
+ows_papa-kpp.c: ows_papa.c
+	ln -s ows_papa.c ows_papa-kpp.c 
+ows_papa-kpp.tst: ows_papa.s
+ows_papa-kpp.tst: CFLAGS += -DKPP=1
+
+ows_papa.tst: ows_papa-kpp.tst

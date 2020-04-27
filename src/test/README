@@ -124,6 +124,11 @@ Note that only the documented test cases appear in the list below
 
 * [The SAG equation](sag.c)
 
+## General Ocean Turbulence Model (GOTM)
+
+* [Entrainment](entrainment.c)
+* [Ocean Weather Ship Papa](ows_papa.c)
+
 ## MPI
 
 * [Reduction operations](mpi-reduce.c)
