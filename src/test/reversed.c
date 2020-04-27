@@ -7,6 +7,9 @@ and the interface should come back to its original position. The
 difference between the initial and final shapes is a measure of the
 errors accumulated during advection.
 
+This also checks that a constant "VOF concentration" remains constant
+when it is advected with the VOF tracer.
+
 We will need the advection solver combined with the VOF advection
 scheme. */
 
@@ -18,16 +21,23 @@ The volume fraction is stored in scalar field `f` which is listed as
 an *interface* for the VOF solver. We do not advect any tracer with
 the default (diffusive) advection scheme of the advection solver. */
 
-scalar f[];
+scalar f[], cf[];
 scalar * interfaces = {f}, * tracers = NULL;
 int MAXLEVEL;
 
 /**
 We center the unit box on the origin and set a maximum timestep of 0.1 */
 
-int main() {
+int main()
+{
   origin (-0.5, -0.5);
   DT = .1;
+  
+  /**
+  The scalar field `cf` is a "vof concentration" associated with phase
+  `f`. */
+
+  f.tracers = {cf};
   
   /**
   We then run the simulation for different levels of refinement. */
@@ -53,8 +63,12 @@ strong stretching. Milder conditions can be obtained by decreasing it. */
 We define the levelset function $\phi$ on each vertex of the grid and
 compute the corresponding volume fraction field. */
 
-event init (i = 0) {
+event init (i = 0)
+{
   fraction (f, circle(x,y));
+  foreach()
+    cf[] = f[];
+  boundary ({cf});
 }
 
 event velocity (i++) {
@@ -65,10 +79,10 @@ event velocity (i++) {
   On trees we first adapt the grid so that the estimated error on
   the volume fraction is smaller than $5\times 10^{-3}$. We limit the
   resolution at `MAXLEVEL` and we only refine the volume fraction field
-  `f`. */
+  `f` and associated tracer `cf`. */
 
 #if TREE
-  adapt_wavelet ({f}, (double[]){5e-3}, MAXLEVEL, list = {f});
+  adapt_wavelet ({f}, (double[]){5e-3}, MAXLEVEL, list = {f, cf});
 #endif
 
   /**
@@ -99,7 +113,24 @@ zero and one. */
 
 event logfile (t = {0,T}) {
   stats s = statsf (f);
-  fprintf (stderr, "# %f %.12f %.9f %g\n", t, s.sum, s.min, s.max);
+
+  /**
+  We compute the minimum and maximum concentration. They should both
+  be equal to one. */
+  
+  stats sc = statsf (cf);
+  double cmin = HUGE, cmax = 0.;
+  foreach (reduction(min:cmin) reduction(max:cmax))
+    if (f[] > 1e-12) { // round-off errors are a problem
+      double c = cf[]/f[];
+      if (c < cmin) cmin = c;
+      if (c > cmax) cmax = c;
+    }
+  fprintf (stderr, "# t\t\tf.sum\t\tf.min\t\tf.max\n");
+  fprintf (stderr, "# %f %.12f %.f %g\n", t, s.sum, s.min, s.max);
+  fprintf (stderr, "# t\t\tcf.sum\t\tc.min - 1\tc.max - 1\n");
+  fprintf (stderr, "# %f %.12f %.11f %.11f\n",
+	   t, sc.sum, fabs(cmin - 1.), fabs(cmax - 1.));
 }
 
 /**
@@ -154,11 +185,35 @@ event movie (i += 10)
 /**
 ## Results
 
-We use gnuplot (see [reversed.plot]()) to compute the convergence rate
-of the error norms with and without adaptation. The convergence rates
-are comparable.
+We use gnuplot to compute the convergence rate of the error norms with
+and without adaptation. The convergence rates are comparable.
 
-![Convergence rates for constant- and adaptive grids.](reversed/plot.png)
+~~~gnuplot Convergence rates for constant- and adaptive grids.
+ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
+
+f(x)=a+b*x
+fit f(x) 'log' u (log($1)):(log($4)) via a,b
+f2(x)=a2+b2*x
+fit f2(x) 'log' u (log($1)):(log($2)) via a2,b2
+
+fc(x)=ac+bc*x
+fit fc(x) 'clog' u (log($1)):(log($4)) via ac,bc
+fc2(x)=ac2+bc2*x
+fit fc2(x) 'clog' u (log($1)):(log($2)) via ac2,bc2
+
+set xlabel 'Maximum resolution'
+set ylabel 'Maximum error'
+set key bottom left
+set logscale
+set xrange [16:256]
+set xtics 16,2,256
+set grid ytics
+set cbrange [1:1]
+plot 'log' u 1:4 t 'max (adaptive)', exp(f(log(x))) t ftitle(a,b), \
+     'clog' u 1:4 t 'max (constant)', exp(fc(log(x))) t ftitle(ac,bc), \
+     'log' u 1:2 t 'norm1 (adaptive)', exp(f2(log(x))) t ftitle(a2,b2), \
+     'clog' u 1:2 t 'norm1 (constant)', exp(fc2(log(x))) t ftitle(ac2,bc2)
+~~~
 
 The shapes of the interface at $t=0$, $t=T/4$, $t=T/2$, $t=3T/4$ and
 $t=T$ are displayed below for both sets of simulations (constant and
@@ -167,7 +222,10 @@ those for $t=3T/4$ and similarly for $t=0$ and $t=T$ (for which we
 measure the error). Note that the errors for $t=3T/4$ seem to be much
 larger than those for $t=T$.
 
-![Shapes of the interface for $t=0$, $t=T/4$, $t=T/2$, $t=3T/4$ and
-$t=T$ for two sets of simulations.](reversed/interface.png) 
+~~~gnuplot Shapes of the interface for $t=0$, $t=T/4$, $t=T/2$, $t=3T/4$ and $t=T$ for two sets of simulations.
+reset
+set size ratio -1
+plot [-0.5:0.5][-0.5:0.5]'out' w l t "adaptive", 'cout' w l t "constant"
+~~~
 
 ![Refinement levels for $t=T/2$ and $N=128$.](reversed/levels.png) */

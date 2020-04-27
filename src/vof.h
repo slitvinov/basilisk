@@ -10,8 +10,9 @@ where $c_i$ are volume fraction fields describing sharp interfaces.
 This can be done using a conservative, non-diffusive geometric VOF
 scheme.
 
-We also add the option to transport diffusive tracers confined to one
-side of the interface i.e. solve the equations
+We also add the option to transport diffusive tracers (aka "VOF
+concentrations") confined to one side of the interface i.e. solve the
+equations
 $$
 \partial_tt_{i,j} + \nabla\cdot(\mathbf{u}_ft_{i,j}) = 0
 $$
@@ -24,7 +25,7 @@ the *tracers* attribute. For each tracer, the "side" of the interface
 attribute). */
 
 attribute {
-  scalar * tracers;
+  scalar * tracers, c;
   bool inverse;
 }
 
@@ -45,14 +46,75 @@ extern face vector uf;
 extern double dt;
 
 /**
+The gradient of a VOF-concentration `t` is computed using a standard
+three-point scheme if we are far enough from the interface (as
+controlled by *cmin*), otherwise a two-point scheme biased away from
+the interface is used. */
+
+foreach_dimension()
+static double vof_concentration_gradient_x (Point point, scalar c, scalar t)
+{
+  static const double cmin = 0.5;
+  double cl = c[-1], cc = c[], cr = c[1];
+  if (t.inverse)
+    cl = 1. - cl, cc = 1. - cc, cr = 1. - cr;
+  if (cc >= cmin && t.gradient != zero) {
+    if (cr >= cmin) {
+      if (cl >= cmin) {
+	if (t.gradient)
+	  return t.gradient (t[-1]/cl, t[]/cc, t[1]/cr)/Delta;
+	else
+	  return (t[1]/cr - t[-1]/cl)/(2.*Delta);
+      }
+      else
+	return (t[1]/cr - t[]/cc)/Delta;
+    }
+    else if (cl >= cmin)
+      return (t[]/cc - t[-1]/cl)/Delta;
+  }
+  return 0.;
+}
+
+/**
+On trees, VOF concentrations need to be refined properly i.e. using
+volume-fraction-weighted linear interpolation of the concentration. */
+
+#if TREE
+static void vof_concentration_refine (Point point, scalar s)
+{
+  scalar f = s.c;
+  if ((!s.inverse && f[] <= 0.) || (s.inverse && f[] >= 1.))
+    foreach_child()
+      s[] = 0.;
+  else {
+    coord g;
+    foreach_dimension()
+      g.x = Delta*vof_concentration_gradient_x (point, f, s);
+    double sc = s.inverse ? s[]/(1. - f[]) : s[]/f[], cmc = 4.*cm[];
+    foreach_child() {
+      s[] = f[]*sc;
+      foreach_dimension()
+	s[] += f[]*child.x*g.x*cm[-child.x]/cmc;
+    }
+  }
+}
+#endif // TREE
+
+/**
 On trees, we need to setup the appropriate prolongation and
 refinement functions for the volume fraction fields. */
 
 event defaults (i = 0)
 {
 #if TREE
-  for (scalar c in interfaces)
+  for (scalar c in interfaces) {
     c.refine = c.prolongation = fraction_refine;
+    scalar * tracers = c.tracers;
+    for (scalar t in tracers) {
+      t.refine = t.prolongation = vof_concentration_refine;
+      t.c = c;
+    }
+  }
 #endif
 }
 
@@ -100,34 +162,12 @@ static void sweep_x (scalar c, scalar cc, scalar * tcl)
     }
 
     /**
-    The gradient is computed using a standard three-point scheme if we
-    are far enough from the interface (as controlled by *cmin*),
-    otherwise a two-point scheme biased away from the interface is
-    used. */
+    The gradient is computed using the "interface-biased" scheme above. */
     
     foreach() {
       scalar t, gf;
-      for (t,gf in tracers,gfl) {
-	double cl = c[-1], cc = c[], cr = c[1];
-	if (t.inverse)
-	  cl = 1. - cl, cc = 1. - cc, cr = 1. - cr;
-	gf[] = 0.;
-	static const double cmin = 0.5;
-	if (cc >= cmin && t.gradient != zero) {
-	  if (cr >= cmin) {
-	    if (cl >= cmin) {
-	      if (t.gradient)
-		gf[] = t.gradient (t[-1]/cl, t[]/cc, t[1]/cr)/Delta;
-	      else
-		gf[] = (t[1]/cr - t[-1]/cl)/(2.*Delta);
-	    }
-	    else
-	       gf[] = (t[1]/cr - t[]/cc)/Delta;
-	  }
-	  else if (cl >= cmin)
-	    gf[] = (t[]/cc - t[-1]/cl)/Delta;
-	}
-      }
+      for (t,gf in tracers,gfl)
+	gf[] = vof_concentration_gradient_x (point, c, t);
     }
     boundary (gfl);
   }
