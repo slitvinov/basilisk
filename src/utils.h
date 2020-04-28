@@ -333,28 +333,28 @@ mesh and spanning the [A:B] segment. The pair of coordinates defining
 the sub-segment contained in each cell are defined by `p[0]` and
 `p[1]`. */
 
-@def foreach_segment(S) {
-  coord t = {(S)[1].x - (S)[0].x, (S)[1].y - (S)[0].y};
+@def foreach_segment(_S,_p) {
+  coord t = {(_S)[1].x - (_S)[0].x, (_S)[1].y - (_S)[0].y};
   double norm = sqrt(sq(t.x) + sq(t.y));
   assert (norm > 0.);
   t.x = t.x/norm + 1e-6, t.y = t.y/norm - 1.5e-6;
-  double alpha = ((S)[0].x*((S)[1].y - (S)[0].y) -
-		  (S)[0].y*((S)[1].x - (S)[0].x))/norm;
+  double alpha = ((_S)[0].x*((_S)[1].y - (_S)[0].y) -
+		  (_S)[0].y*((_S)[1].x - (_S)[0].x))/norm;
   foreach()
     if (fabs(t.y*x - t.x*y - alpha) < 0.708*Delta) {
-      coord _o = {x,y}, p[2];
+      coord _o = {x,y}, _p[2];
       int _n = 0;
       foreach_dimension()
 	if (t.x)
 	  for (int _i = -1; _i <= 1 && _n < 2; _i += 2) {
-	    p[_n].x = _o.x + _i*Delta/2.;
-	    double a = (p[_n].x - (S)[0].x)/t.x;
-	    p[_n].y = (S)[0].y + a*t.y;
-	    if (fabs(p[_n].y - _o.y) <= Delta/2.) {
+	    _p[_n].x = _o.x + _i*Delta/2.;
+	    double a = (_p[_n].x - (_S)[0].x)/t.x;
+	    _p[_n].y = (_S)[0].y + a*t.y;
+	    if (fabs(_p[_n].y - _o.y) <= Delta/2.) {
 	      a = clamp (a, 0., norm);
-	      p[_n].x = (S)[0].x + a*t.x, p[_n].y = (S)[0].y + a*t.y;
-	      if (fabs(p[_n].x - _o.x) <= Delta/2. &&
-		  fabs(p[_n].y - _o.y) <= Delta/2.)
+	      _p[_n].x = (_S)[0].x + a*t.x, _p[_n].y = (_S)[0].y + a*t.y;
+	      if (fabs(_p[_n].x - _o.x) <= Delta/2. &&
+		  fabs(_p[_n].y - _o.y) <= Delta/2.)
 		_n++;
 	    }
 	  }
