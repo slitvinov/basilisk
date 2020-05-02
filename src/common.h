@@ -1333,3 +1333,7 @@ void matrix_free (void * m)
   free (((void **) m)[0]);
   free (m);
 }
+
+#if LAYERS
+# include "grid/layers.h"
+#endif
