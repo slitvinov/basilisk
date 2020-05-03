@@ -56,9 +56,7 @@ event init (i = 0)
     zb[] = -0.5;
     double H = wave(x, 0) - zb[];
     double z = zb[];
-    vector u;
-    scalar h, w;
-    for (h,u,w in hl,ul,wl) {
+    foreach_layer() {
       h[] = H/nl;
       z += h[]/2.;
       u.x[] = u_x(x, z);
@@ -71,7 +69,7 @@ event init (i = 0)
 event profiles (t += T0/4.; t <= 2.5*T0) {
   foreach_leaf() {
     double H = zb[];
-    for (scalar h in hl)
+    foreach_layer()
       H += h[];
     fprintf (stderr, "%g %g\n", x, H);
   }
@@ -82,10 +80,8 @@ event logfile (i++)
 {
   double ke = 0., gpe = 0.;
   foreach (reduction(+:ke) reduction(+:gpe)) {
-    scalar h, w;
-    vector u;
     double zc = zb[];
-    for (h,w,u in hl,wl,ul) {
+    foreach_layer() {
       double norm2 = sq(w[]);
       foreach_dimension()
 	norm2 += sq(u.x[]);
@@ -111,7 +107,7 @@ event movie (i += 3)
   fprintf (fp, "\n");
   foreach_leaf() {
     double H = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H += h[];
     fprintf (fp, "%g %g %g", x, zb[] + H, zb[]);
     fprintf (fp, "\n");

@@ -42,7 +42,7 @@ plot [0:0.05][-10:0]'log' u 3:1 w l t '' lw 2
 */
 
 #include "grid/multigrid1D.h"
-#include "layered/hydro-minimal.h"
+#include "layered/hydro.h"
 #include "layered/gotm.h"
 
 int main()
@@ -85,7 +85,7 @@ event init (i = 0)
 {
   foreach() {
     zb[] = -10.;
-    for (scalar h in hl)
+    foreach_layer()
       h[] = 10./nl;
   }
 }
@@ -100,13 +100,11 @@ interface](/src/gotm/common.h) of the corresponding Fortran field. */
 event profiles (t = 24*3600)
 {
   foreach() {
-    scalar h;
-    vector u;
     double z = zb[];
-    for (u,h in ul,hl)
+    foreach_layer()
       fprintf (stderr, "%g %g %g\n", z + h[]/2., u.x[],
-	       (turbulence_num.a[h.l] + turbulence_num.a[h.l + 1])/2.),
-	z += h[];
+	       (turbulence_num.a[point.l] + turbulence_num.a[point.l + 1])/2.),
+      z += h[];
   }
   fprintf (stderr, "\n");
 }

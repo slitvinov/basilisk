@@ -47,7 +47,7 @@ event init (i = 0)
 {
   foreach() {
     zb[] = - 0.5;
-    for (scalar h in hl)
+    foreach_layer()
       h[] = (0.07*cos(2.*pi*x) - zb[])/nl;
   }
 }
@@ -63,16 +63,16 @@ event gnuplot (i += 1) {
 	   " '' u 1:(-1):3 t '' w filledcu lc -1", nl, t,
 	   X0, X0 + L0);
   int i = 4;
-  for (scalar h in hl)
+  foreach_layer()
     fprintf (fp, ", '' u 1:%d w l lw 2 t ''", i++);
   fprintf (fp, "\n");
   foreach_leaf() {
     double H = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H += h[];
     fprintf (fp, "%g %g %g", x, zb[] + H, zb[]);
     double z = zb[];
-    for (scalar h in hl) {
+    foreach_layer() {
       fprintf (fp, " %g", z);
       z += h[];
     }
@@ -84,12 +84,12 @@ event gnuplot (i += 1) {
 }
 #endif
 
-event logfile (i++) {
+event logfile (i++)
+{
   double wmax = 0., smax = 0.;
   foreach (reduction (max:wmax) reduction (max:smax)) {
-    scalar w, h;
     double Hm = 0., Hp = 0.;
-    for (w,h in wl,hl) {
+    foreach_layer() {
       if (w[] > wmax)
 	wmax = w[];
       Hm += h[-1], Hp += h[1];
@@ -102,11 +102,7 @@ event logfile (i++) {
 
 event profiles (t = 0.1; t += 0.1; t <= 0.5)
 {
-  foreach() {
-    double eta = zb[];
-    for (scalar h in hl)
-      eta += h[];
-    fprintf (stderr, "%g %g\n", x, eta);
-  }
+  foreach()
+    fprintf (stderr, "%g %g\n", x, eta[]);
   fprintf (stderr, "\n");
 }

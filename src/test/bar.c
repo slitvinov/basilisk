@@ -12,7 +12,7 @@ This test case is discussed in [Popinet
 (2019)](/Bibliography#popinet2019) for the layered version. */
 
 #include "grid/multigrid1D.h"
-#if ML
+#if LAYERS
   #include "layered/hydro.h"
   #include "layered/nh.h"
   #include "layered/remap.h"
@@ -29,7 +29,7 @@ int main() {
   N = 2048;
   L0 = 50;
   G = 9.81;
-#if ML
+#if LAYERS
   nl = 2;
   breaking = 0.1;
 #endif
@@ -44,17 +44,15 @@ desired sinusoidal wave form. We have to tune the amplitude to obtain
 the required amplitude as measured in the experiment at gauge 4. The
 period of 2.02 seconds matches that of the experiment. */
 
-event init (i = 0) {
+event init (i = 0)
+{
 
-#if ML
-  for (vector u in ul) {
-    u.n[left]  = - radiation (0.021*sin(2.*pi*t/2.02));
-    u.n[right] = + radiation (0);
-  }
+#if LAYERS
+  u.n[left]  = - radiation (0.021*sin(2.*pi*t/2.02));
 #else
   u.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
-  u.n[right] = + radiation (0);  
 #endif
+  u.n[right] = + radiation (0);
   
   /**
   Here we define the bathymetry, see e.g. Figure 3 of [Yamazaki et al,
@@ -66,8 +64,8 @@ event init (i = 0) {
 	    x < 14 ? -0.1 :
 	    x < 17 ? -0.1 - (x - 14.)/3.*0.3 :
 	    -0.4);
-#if ML
-    for (scalar h in hl)
+#if LAYERS
+    foreach_layer()
       h[] = max(- zb[], 0.)/nl;
 #else
     h[] = - zb[];

@@ -83,7 +83,7 @@ splot 'kepsilon' u ($1/3600.):2:(log10($6))
 */
 
 #include "grid/multigrid.h"
-#include "layered/hydro-minimal.h"
+#include "layered/hydro.h"
 #include "layered/gotm.h"
 
 /**
@@ -91,16 +91,11 @@ We add the temperature field for each layer. */
 
 event defaults (i = 0)
 {
-  for (int l = 0; l < nl; l++) {
-    scalar T = new_layered_scalar ("T", l);
-    Tl = list_append (Tl, T);
-    tracers[l] = list_append (tracers[l], T);
-  }
-  reset (Tl, 0.);
+  T = new scalar[nl];
 }
 
 event cleanup (t = end) {
-  free (Tl), Tl = NULL;
+  delete ({T});
 }
 
 /**
@@ -244,10 +239,10 @@ event init (i = 0)
   turbulence_report_model();
   foreach() {
     zb[] = -50.;
-    for (scalar h in hl)
+    foreach_layer()
       h[] = 50./nl;
   }
-  constant_NNT (20, 0, 1e-4);
+  constant_NNT (20, 0, 1e-4, T);
 }
 
 /**
@@ -261,14 +256,12 @@ event timestep (t += 60);
 void profile (FILE * fp)
 {
   foreach() {
-    scalar h, T;
-    vector u;
     double z = zb[];
-    for (u,h,T in ul,hl,Tl)
+    foreach_layer()
       fprintf (fp, "%g %g %g %g %g %g\n", t, z + h[]/2.,
 	       u.x[], T[],
-	       meanflow_nn.a[h.l + 1], turbulence_nuh.a[h.l + 1]),
-	z += h[];
+	       meanflow_nn.a[point.l + 1], turbulence_nuh.a[point.l + 1]),
+      z += h[];
   }
   fprintf (fp, "\n");  
 }

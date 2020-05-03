@@ -66,16 +66,7 @@ splot '../ows_papa-kpp/out' u (start + $1):2:5
 */
 
 #include "grid/multigrid.h"
-
-/**
-This case depends on (0D) Coriolis terms. */
-
-#define F0() (2.*(2.*pi/86164.)*sin(2.*pi*y/360.))
-#if 0
 #include "layered/hydro.h"
-#else
-#include "layered/hydro-minimal.h" // fixme: temporary
-#endif
 #include "layered/gotm.h"
 
 /**
@@ -83,22 +74,30 @@ We add temperature and salinity fields for each layer. */
 
 event defaults (i = 0)
 {
-  for (int l = 0; l < nl; l++) {
-    scalar T = new_layered_scalar ("T", l);
-    Tl = list_append (Tl, T);
-    tracers[l] = list_append (tracers[l], T);
-
-    scalar S = new_layered_scalar ("S", l);
-    Sl = list_append (Sl, S);
-    tracers[l] = list_append (tracers[l], S);
-  }
-  reset (Tl, 0.);
-  reset (Sl, 0.);
+  T = new scalar[nl];
+  S = new scalar[nl];
 }
 
 event cleanup (i = end) {
-  free (Tl), Tl = NULL;
-  free (Sl), Sl = NULL;
+  delete ({T, S});
+}
+
+/**
+This case depends on (0D) Coriolis terms. */
+
+#define F0() (2.*(2.*pi/86164.)*sin(2.*pi*y/360.))
+
+event coriolis (i++)
+{
+  foreach() {
+    double cosomega = cos (F0()*dt);
+    double sinomega = sin (F0()*dt);
+    foreach_layer() {
+      double ua = u.x[];
+      u.x[] =   ua*cosomega + u.y[]*sinomega;
+      u.y[] = - ua*sinomega + u.y[]*cosomega;
+    }
+  }
 }
 
 /**
@@ -208,7 +207,7 @@ int main()
 A rough function to read GOTM-formatted data files. */
  
 void init_profile (Point point, const char * fname,
-		   int sy, int sm, int sd, scalar * sl)
+		   int sy, int sm, int sd, scalar s)
 {
   FILE * fp = fopen (fname, "r");
   if (!fp) {
@@ -237,8 +236,7 @@ void init_profile (Point point, const char * fname,
     exit (1);
   }
   double zc = zb[];
-  scalar h, s;
-  for (h, s in hl, sl) {
+  foreach_layer() {
     zc += h[]/2.;
     int i;
     for (i = 1; i < n && zd[i] >= zc; i++);
@@ -260,10 +258,10 @@ event init (i = 0)
     turbulence_report_model();
   foreach() {
     zb[] = - 250.;
-    for (scalar h in hl)
+    foreach_layer()
       h[] = 250./nl;
-    init_profile (point, "sprof.dat", syear, smonth, sday, Sl);
-    init_profile (point, "tprof.dat", syear, smonth, sday, Tl);
+    init_profile (point, "sprof.dat", syear, smonth, sday, S);
+    init_profile (point, "tprof.dat", syear, smonth, sday, T);
   }
 }
 
@@ -281,7 +279,8 @@ event timestep (t += 3600);
 
 vector tau[];
 
-event input_momentum_flux (i += 3) {
+event input_momentum_flux (i += 3)
+{
   static FILE * fp = fopen ("momentumflux.dat", "r");
   static coord hfp, hfn;    
   // the file is sampled at 3 hours intervals
@@ -308,7 +307,8 @@ event input_momentum_flux (i += 3) {
 
 scalar heat_flux[];
 
-event input_heat_flux (i += 1) {
+event input_heat_flux (i += 1)
+{
   static FILE * fp = fopen ("heatflux.dat", "r");
   static double hfp, hfn;    
   // the file is sampled at 3 hours intervals
@@ -339,7 +339,8 @@ it is not used by default. */
 
 scalar swr_flux[];
 
-event input_swr_flux (i += 1) {
+event input_swr_flux (i += 1)
+{
   static FILE * fp = fopen ("swr.dat", "r");
   static double hfp, hfn;    
   // the file is sampled at 3 hours intervals
@@ -385,14 +386,12 @@ event input_swr_flux (i += 1) {
 void profile (FILE * fp)
 {
   foreach() {
-    scalar h, T, S;
-    vector u;
     double z = zb[];
-    for (u,h,T,S in ul,hl,Tl,Sl)
+    foreach_layer()
       fprintf (fp, "%g %g %g %g %g %g %g %g\n", t, z + h[]/2.,
 	       u.x[], u.y[], T[], S[],
-	       meanflow_nn.a[h.l + 1], turbulence_nuh.a[h.l + 1]),
-	z += h[];
+	       meanflow_nn.a[point.l + 1], turbulence_nuh.a[point.l + 1]),
+      z += h[];
   }
   fprintf (fp, "\n");  
 }

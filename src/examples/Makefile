@@ -18,6 +18,10 @@ tohoku-gn.tst: CFLAGS += -DGN=1
 tohoku-hydro.c: tohoku.c
 	ln -s tohoku.c tohoku-hydro.c 
 tohoku-hydro.tst: tohoku.s
-tohoku-hydro.tst: CFLAGS += -DHYDRO=1
+tohoku-hydro.tst: CFLAGS += -DLAYERS=1 -DHYDRO=1
+
+tohoku.tst: CFLAGS += -DLAYERS=1
+
+breaking.tst: CFLAGS += -DLAYERS=1
 
 include $(BASILISK)/Makefile.defs

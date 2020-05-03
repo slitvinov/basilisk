@@ -13,7 +13,7 @@ the dispersive [Green-Naghdi equations](/src/green-naghdi.h) or
 #include "grid/multigrid1D.h"
 #if SAINT_VENANT
 # include "saint-venant.h"
-#elif ML
+#elif LAYERS
 # include "layered/hydro.h"
 # include "layered/nh.h"
 scalar h;
@@ -32,7 +32,7 @@ int main()
   L0 = 15.;
   G = 9.81;
   N = 1 << 11;
-#if ML
+#if LAYERS
   breaking = 0.15;
 #endif
   run();
@@ -44,7 +44,7 @@ a water depth of 0.2 metres and a relative soliton amplitude of 0.35
 (type 1 wave of [Hsiao and Lin,
 2010](/src/references.bib#hsiao2010)). */
 
-double h0 = 0.2, a = 0.35;
+double h0 = 0.2, A = 0.35;
 
 double sech2 (double x) {
   double a = 2./(exp(x) + exp(-x));
@@ -53,18 +53,14 @@ double sech2 (double x) {
 
 double soliton (double x, double t)
 {
-  double c = sqrt(G*(1. + a)*h0), psi = x - c*t;
-  double k = sqrt(3.*a*h0)/(2.*h0*sqrt(h0*(1. + a)));
-  return a*h0*sech2 (k*psi);
+  double c = sqrt(G*(1. + A)*h0), psi = x - c*t;
+  double k = sqrt(3.*A*h0)/(2.*h0*sqrt(h0*(1. + A)));
+  return A*h0*sech2 (k*psi);
 }
 
 event init (i = 0)
 {
-#if ML
-  h = hl[0];
-  u = ul[0];
-#endif
-  double c = sqrt(G*(1. + a)*h0);
+  double c = sqrt(G*(1. + A)*h0);
   foreach() {
     double eta = soliton (x - 5.9, t);
     

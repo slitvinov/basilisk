@@ -7,7 +7,7 @@ case based on the experiments of [Synolakis,
 1987](/src/references.bib#synolakis1987). */
 
 #include "grid/multigrid1D.h"
-#if ML
+#if LAYERS
 #  include "layered/hydro.h"
 #  include "layered/nh.h"
 #  include "layered/remap.h"
@@ -24,17 +24,18 @@ wavelength of the solitary wave (see section 4.3 of [Yamazaki et al,
 (*X0* and *L0*) so that the origin is the intersection of the beach
 with the water level. */
 
-double h0 = 1., a = 0.28, L;
+double h0 = 1., A = 0.28, L;
 double slope = 1./19.85;
 
-int main() {
-  double k = sqrt(3.*a/4/cube(h0));
+int main()
+{
+  double k = sqrt(3.*A/4/cube(h0));
   L = 2./k*acosh(sqrt(1./0.05));
   X0 = - h0/slope - L/2. - L;
   L0 = 6.*L;
   N = 1024;
   G = 1.;
-#if ML
+#if LAYERS
   nl = 2;
   breaking = 0.07;
 #else
@@ -60,9 +61,9 @@ double sech2 (double x) {
 
 double soliton (double x, double t)
 {
-  double c = sqrt(G*(1. + a)*h0), psi = x - c*t;
-  double k = sqrt(3.*a*h0)/(2.*h0*sqrt(h0*(1. + a)));
-  return a*h0*sech2 (k*psi);
+  double c = sqrt(G*(1. + A)*h0), psi = x - c*t;
+  double k = sqrt(3.*A*h0)/(2.*h0*sqrt(h0*(1. + A)));
+  return A*h0*sech2 (k*psi);
 }
 
 /**
@@ -72,15 +73,15 @@ bathymetry. */
 
 event init (i = 0)
 {
-  double c = sqrt(G*(1. + a)*h0);
+  double c = sqrt(G*(1. + A)*h0);
   foreach() {
     double eta = soliton (x + h0/slope + L/2., t);
     zb[] = max (slope*x, -h0);
-#if ML
-    for (scalar h in hl)
+#if LAYERS
+    foreach_layer() {
       h[] = max (0., eta - zb[])/nl;
-    for (vector u in ul)
       u.x[] = c*eta/(h0 + eta);
+    }
 #else
     h[] = max (0., eta - zb[]);
     u.x[] = c*eta/(h0 + eta);
@@ -95,14 +96,12 @@ obtain a runup comparable with the experiment. */
 
 event friction (i++) {
   foreach() {
-#if ML
+#if LAYERS
     double Q = 0., H = 0.;
-    scalar h;
-    vector u;
-    for (h,u in hl,ul)
+    foreach_layer()
       H += h[], Q += h[]*u.x[];
     double a = H < dry ? HUGE : 1. + 5e-3*dt*fabs(Q)/sq(H);
-    for (vector u in ul)
+    foreach_layer()
       u.x[] /= a;
 #else
     double a = h[] < dry ? HUGE : 1. + 5e-3*dt*norm(u)/h[];
@@ -125,11 +124,7 @@ event gnuplot (i += 5) {
   foreach()    
     fprintf (fp, "%g %g %g\n", x, eta[], zb[]);
   fprintf (fp, "e\n\n");
-#if ML
-  fprintf (stderr, "%.3f %.3f\n", t, statsf(ul[0].x).max);
-#else
   fprintf (stderr, "%.3f %.3f\n", t, statsf(u.x).max);
-#endif
 }
 
 /**

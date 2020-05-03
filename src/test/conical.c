@@ -21,7 +21,7 @@ Saint-Venant solver. */
 #  include "saint-venant.h"
 # endif
 # define MGD 0
-#elif ML
+#elif LAYERS
 # include "layered/hydro.h"
 # include "layered/nh.h"
  // fixme: remap does not work
@@ -53,7 +53,7 @@ int main()
   CFLa = 0.25;
 #endif
 
-#if ML
+#if LAYERS
   breaking = 0.07;
   nl = 1;
 #endif
@@ -117,15 +117,11 @@ event init (i = 0)
   We use the definition of the solitary wave to impose conditions on the
   left side (i.e. the "wave paddle"). */
 
-#if ML
+#if LAYERS
   eta[left] = H0 + eta0(t);
-  for (scalar h in hl) {
-    h[left] = (H0 + eta0(t))/nl;
-  }
-  for (vector u in ul) {
-    u.n[left] = uleft (t)/nl;
-    u.t[left] = 0.;
-  }
+  h[left] = (H0 + eta0(t))/nl;
+  u.n[left] = uleft (t)/nl;
+  u.t[left] = 0.;
 #else
   h[left] = H0 + eta0(t);
 #if IMPLICIT
@@ -152,8 +148,8 @@ event init (i = 0)
 
   foreach() {
     zb[] = island (x, y);
-#if ML
-    for (scalar h in hl)
+#if LAYERS
+    foreach_layer()
       h[] = max(0., H0 - zb[])/nl;
 #else
     h[] = max(0., H0 - zb[]);
@@ -181,16 +177,18 @@ event outputfile (t = {9, 12, 13, 14, 20})
 {
   static int nf = 0;
   printf ("file: conical-%d\n", nf);
-#if ML
-  scalar h[];
+#if LAYERS
+  scalar H[];
   foreach() {
-    h[] = 0.;
-    for (scalar s in hl)
-      h[] += s[];
+    H[] = 0.;
+    foreach_layer()
+      H[] += h[];
   }
-  boundary ({h});
+  boundary ({H});
+#else
+  scalar H = h;
 #endif
-  output_field ({h,zb}, stdout, N, linear = true);
+  output_field ({H,zb}, stdout, N, linear = true);
 
   /**
   Here we output the level of refinement of the grid. */
@@ -253,19 +251,21 @@ event logfile (i++) {
   /**
   We output various diagnostics. */
 
-#if ML
-  scalar h[];
+#if LAYERS
+  scalar H[];
   foreach() {
-    h[] = 0.;
-    for (scalar s in hl)
-      h[] += s[];
+    H[] = 0.;
+    foreach_layer()
+      H[] += h[];
   }
-  boundary ({h});
+  boundary ({H});
+#else
+  scalar H = h;
 #endif
-  stats s = statsf (h);
+  stats s = statsf (H);
 
-  #if ML
-  norm n = normf (ul[nl-1].x);
+  #if LAYERS
+  norm n = normf (u.x);
   #elif IMPLICIT
   scalar u[];
   foreach()
@@ -350,9 +350,9 @@ surface elevation. */
 event adapt (i++) {
   scalar eta1[];
   foreach() {
-#if ML
+#if LAYERS
     double H = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H += h[];
     eta1[] = H > dry ? zb[] + H : 0.;
 #else

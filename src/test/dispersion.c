@@ -15,10 +15,9 @@ We use a 1D grid and either the Green-Naghdi solver or the multi-layer
 solver. */
 
 #include "grid/multigrid1D.h"
-#if GN
+#if !LAYERS
   #include "green-naghdi.h"
 #else
-  #define NL 1
   #include "layered/hydro.h"
   #include "layered/nh.h"
   // necessary for stability at high h0 of the box scheme
@@ -35,12 +34,12 @@ three "optimised" non-uniform layer thicknesses. */
 
 event init (i = 0)
 {
-#if NL
+#if LAYERS
   if (nl == 3 && emax == 1.5)
     beta[0] = 0.68, beta[1] = 0.265, beta[2] = 0.055;
   foreach()
-    for (scalar h in hl)
-      h[] = beta[h.l]*h0*(1. + 0.001*cos(x));
+    foreach_layer()
+      h[] = beta[point.l]*h0*(1. + 0.001*cos(x));
 #else
   foreach()
     h[] = h0*(1. + 0.001*cos(x));
@@ -57,12 +56,10 @@ int nm = 0;
 
 event logfile (i++) {
   double pe = 0., ke = 0.;
-#if NL  
+#if LAYERS  
   foreach() {
-    scalar h, w;
-    vector u;
     double H = 0.;
-    for (h,u,w in hl,ul,wl) {
+    foreach_layer() {
       ke += Delta*(sq(u.x[]) + sq(w[]))/2.;
       H += h[];
     }
@@ -78,9 +75,9 @@ event logfile (i++) {
 #endif
   
   Point point = locate (L0/2.);
-#if NL
+#if LAYERS
   double H = 0.;
-  for (scalar h in hl)
+  foreach_layer()
     H += h[];
   double dh = (H - h0)/h0;
 #else
@@ -124,7 +121,7 @@ event logfile (i++) {
 After 9.25 (exact) wave periods, we dump the vertical velocity
 profiles. */
 
-#if NL
+#if LAYERS
 event profile (t = 9.25*2.*pi/sqrt(tanh(h0)))
 {
   if (nl == 5) {
@@ -132,16 +129,15 @@ event profile (t = 9.25*2.*pi/sqrt(tanh(h0)))
     sprintf (name, "profile-%g", h0);
     FILE * fp = fopen (name, "w");
     Point point = locate (L0/2.);
-    scalar h, w, phi;
     double zl = zb[];
-    for (h,w,phi in hl,wl,phil) {
+    foreach_layer() {
       fprintf (fp, "%g %g %g\n", zl + h[]/2., w[], phi[]);
       zl += h[];
     }
     fclose (fp);
   }
 }
-#endif // NL
+#endif // LAYERS
 
 /**
 After ten (exact) wave periods, we stop and dump the solution. */
@@ -195,7 +191,7 @@ event end (t = end)
 {
   fprintf (stderr, "%g %g %g %g %d %d %d\n",
 	   h0, sqrt(tanh(h0)), 2.*pi/(Tm/nm), (Ee - Es)/Es,
-#if GN
+#if !LAYERS
 	   mgD.i, mgD.nrelax
 #else	   
 	   mgp.i, mgp.nrelax
@@ -214,7 +210,7 @@ int main()
   periodic (right);
   size (2.*pi);
   N = 128;
-#if NL
+#if LAYERS
   TOLERANCE = 1e-6;
   for (nl = 1; nl <= 5; nl++) {
     char name[80];

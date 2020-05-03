@@ -10,16 +10,16 @@ the Navier-Stokes/VOF solver.
 More details are given in [Popinet (2019)](/Bibliography#popinet2019). */
 
 #include "grid/multigrid1D.h"
-#if STVT
+#if !LAYERS
 # include "saint-venant.h"
-#else // !STVT
+#else // LAYERS
 # include "layered/hydro.h"
 # if !HYDRO
 #   include "layered/nh.h"
 # endif
 # include "layered/remap.h"
 # include "layered/perfs.h"
-#endif // !STVT
+#endif // LAYERS
 
 /**
 The primary parameters are the flow rate, water level, viscosity and bump
@@ -61,7 +61,7 @@ The inflow is a parabolic profile with a total flow rate *Q*. The
 function below computes the height *zc* of the middle of the layer and
 returns the corresponding velocity. */
 
-#if STVT
+#if !LAYERS
 double uleft (Point point, scalar s, double Q)
 {
   double zc = zb[];
@@ -71,17 +71,22 @@ double uleft (Point point, scalar s, double Q)
   return 3./2.*Q/h[]*(1. - sq(zc/h[] - 1.));
 }
 #else
+
+/**
+For the multilayer solver, we need some trickery to define the inflow
+velocity profile as a function of $z$. We need to sum the layer
+thicknesses to get the total depth `H` and the height `zc` of the
+current layer (of index `point.l`). */
+
 double uleft (Point point, scalar s, double Q)
 {
   double H = 0.;
-  int l = 0;
   double zc = zb[];
-  for (scalar h in hl) {
-    H += h[];
-    if (l++ < s.l)
-      zc += h[];
+  for (int l = - point.l; l < nl - point.l; l++) {
+    H += h[0,0,l];
+    if (l < 0)
+      zc += h[0,0,l];
   }
-  scalar h = hl[s.l];
   zc += h[]/2.;
   return 3./2.*Q/H*(1. - sq(zc/H - 1.));
 }
@@ -94,10 +99,10 @@ event init (i = 0) {
   foreach() {
     zb[] = BA*exp(- sq(x - 10.)/5.);
     hc[] = HR - zb[];
-#if STVT
+#if !LAYERS
     h[] = hc[];
 #else
-    for (scalar h in hl)
+    foreach_layer()
       h[] = hc[]/nl;
 #endif
   }
@@ -112,26 +117,24 @@ event init (i = 0) {
   Boundary conditions are set for the inflow velocity and the outflow
   of each layer. */
   
+#if !LAYERS
   for (vector u in ul) {
     u.n[left] = dirichlet (uleft (point, _s, QL*(t < 10. ? t/10. : 1.)));
     u.n[right] = neumann(0.);
   }
-#if STVT
   h[right] = dirichlet(HR);
 #else
-  for (scalar h in hl) {
-    h[right]  = dirichlet (HR/nl);
-  }
+  u.n[left] = dirichlet (uleft (point, _s, QL*(t < 10. ? t/10. : 1.)));
+  u.n[right] = neumann(0.);
+  h[right] = dirichlet (HR/nl);
 #endif
 
   /**
   In the non-hydrostatic case, a boundary condition is required for
   the non-hydrostatic pressure $\phi$ of each layer. */
   
-#if !HYDRO && !STVT
-  for (scalar phi in phil) {
-    phi[right] = dirichlet(0.);
-  }
+#if !HYDRO && LAYERS
+  phi[right] = dirichlet(0.);
 #endif
 }
 
@@ -142,9 +145,7 @@ We can optionally add horizontal viscosity. */
 event viscous_term (i++)
 {
   // add horizontal viscosity (small influence)
-  vector u;
-  scalar w;
-  for (u,w in ul,wl) {
+  foreach_layer() {
     scalar d2u[];
     foreach()
       d2u[] = (u.x[1] + u.x[-1] - 2.*u.x[])/sq(Delta);
@@ -155,8 +156,7 @@ event viscous_term (i++)
     foreach()
       w[] += dt*nu*d2u[];
   }
-  boundary ((scalar *)ul);
-  boundary ((scalar *)wl);
+  boundary ({u, w});
 }
 #endif
 
@@ -164,13 +164,13 @@ event viscous_term (i++)
 We check for convergence. */
 
 event logfile (t += 0.1; i <= 100000) {
-#if STVT
+#if !LAYERS
   double dh = change (h, hc);
 #else
   scalar H[];
   foreach() {
     H[] = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H[] += h[];
   }
   double dh = change (H, hc);
@@ -193,16 +193,16 @@ event gnuplot (i += 20) {
 	   " '' u 1:(-1):3 t '' w filledcu lc -1", nl, t,
 	   X0, X0 + L0);
   int i = 4;
-  for (scalar h in hl)
+  foreach_layer()
     fprintf (fp, ", '' u 1:%d w l lw 2 t ''", i++);
   fprintf (fp, "\n");
   foreach_leaf() {
     double H = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H += h[];
     fprintf (fp, "%g %g %g", x, zb[] + H, zb[]);
     double z = zb[];
-    for (scalar h in hl) {
+    foreach_layer() {
       fprintf (fp, " %g", z);
       z += h[];
     }
@@ -222,11 +222,11 @@ At the end of the simulation we save the profiles. */
 event profiles (t += 5)
 {
   foreach_leaf() {
-#if STVT
+#if !LAYERS
     double H = h[];
 #else
     double H = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H += h[];
 #endif
     fprintf (stderr, "%g %g %g\n", x, zb[] + H, zb[]);
@@ -240,34 +240,28 @@ We also save the velocity and non-hydrostatic pressure fields. */
 event output (t = end)
 {
 #if HYDRO  
-  scalar * wl = NULL;
-  for (scalar h in hl) {
-    scalar w = new scalar;
-    wl = list_append (wl, w);
-  }
-  vertical_velocity (wl);
+  scalar w = new scalar[nl];
+  vertical_velocity (w);
   foreach() {
     double wm = 0.;
-    scalar h, w;
-    for (h,w in hl,wl) {
+    foreach_layer() {
       double w1 = w[];
       w[] = (w1 + wm)/2.;
       wm = w1;
     }
   }
-  boundary (wl);
+  boundary ({w});
 #endif // HYDRO
   foreach_leaf() {
     double z = zb[];
-    vector u = ul[0];
 #if HYDRO
-    scalar w = wl[0], h = hl[0];
     printf ("%g %g %g %g\n", x, z, u.x[], w[]);
-    for (u,h,w in ul,hl,wl) {
+    foreach_layer() {
       z += h[];
       printf ("%g %g %g %g\n", x, z, u.x[], w[]);
     }
-#elif STVT
+#elif !LAYERS
+    vector u = ul[0];
     scalar w = wl[0];
     printf ("%g %g %g %g\n", x, z, u.x[], w[]);
     int l = 0;
@@ -275,18 +269,17 @@ event output (t = end)
       z += layer[l++]*h[];
       printf ("%g %g %g %g\n", x, z, u.x[], w[]);
     }
-#else // !STVT
-    scalar w = wl[0], h = hl[0], phi = phil[0];
+#else // LAYERS
     printf ("%g %g %g %g %g\n", x, z, u.x[], w[], phi[]);
-    for (u,h,w,phi in ul,hl,wl,phil) {
+    foreach_layer() {
       z += h[];
       printf ("%g %g %g %g %g\n", x, z, u.x[], w[], phi[]);
     }
-#endif // !STVT   
+#endif // LAYERS   
     printf ("\n");
   }
 #if HYDRO
-  delete (wl), free (wl);
+  delete ({w});
 #endif
   printf ("# end = %g\n", t);
 }

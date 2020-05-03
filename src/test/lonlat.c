@@ -11,10 +11,8 @@ This test case was proposed by [Rossmanith et al,
 2004](/src/references.bib#rossmanith2004), Figures 5 and 6. */
 
 #include "spherical.h"
-#if ML
+#if LAYERS
 # include "layered/hydro.h"
-scalar h;
-vector u;
 #else
 # include "saint-venant.h"
 #endif
@@ -33,10 +31,6 @@ int main()
 
 event init (i = 0)
 {
-#if ML
-  h = hl[0];
-  u = ul[0];
-#endif
   
   /**
   To initialise an accurate, sharp initial dam, we use a volume

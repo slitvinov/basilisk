@@ -64,9 +64,7 @@ event init (i = 0)
     zb[] = - 0.5 + sin(pi*y)/4.;
     double H = wave(x, 0) - zb[];
     double z = zb[];
-    vector u;
-    scalar h, w;
-    for (h,u,w in hl,ul,wl) {
+    foreach_layer() {
       h[] = H/nl;
       z += h[]/2.;
       u.x[] = u_x(x, z);
@@ -90,10 +88,8 @@ event logfile (i++)
 {
   double ke = 0., gpe = 0.;
   foreach (reduction(+:ke) reduction(+:gpe)) {
-    scalar h, w;
-    vector u;
     double zc = zb[];
-    for (h,w,u in hl,wl,ul) {
+    foreach_layer() {
       double norm2 = sq(w[]);
       foreach_dimension()
 	norm2 += sq(u.x[]);
@@ -113,27 +109,31 @@ event movie (i += 5; t <= 6.*T0)
 {
   static FILE * fp = popen ("gnuplot", "w");
   if (i == 0)
-    fprintf (fp, "set term pngcairo font ',9' size 1024,768;"
+    fprintf (fp, "set term pngcairo font ',9' size 1024,900;"
 	     "unset key\n"
 	     "set pm3d interpolate 4,4 lighting specular 0.6\n"
-	     "set zrange [-0.35:0.15]\n"
+	     "set zrange [-0.75:0.15]\n"
 	     "set cbrange [-0.15:0.6]\n"
+	     "set hidden3d\n"
+	     "set isosamples 30\n"
+	     "set xyplane at -0.75\n"
 	     "set xlabel 'x'\n"
 	     "set ylabel 'y'\n"
+	     "set zlabel 'z'\n"
 	     );
   fprintf (fp,
 	   "set output 'plot%04d.png'\n"
 	   "set title 't = %.2f T0'\n"
-	   "splot '-' u 1:2:3:4 w pm3d\n",
+	   "splot '-' u 1:2:3:4 w pm3d, -0.5+sin(pi*y)/4. w l\n",
 	   i/3, t/T0);
   scalar H[];
   foreach() {
     H[] = zb[];
-    for (scalar h in hl)
+    foreach_layer()
       H[] += h[];
   }
   boundary ({H});
-  scalar ux = ul[nl-1].x;
+  scalar ux = {u.x.i + nl - 1};
   output_field ({H,ux}, fp, linear = true);
   fprintf (fp, "e\n\n");
   fflush (fp);

@@ -258,11 +258,6 @@ int main (int argc, char * argv[])
 
 event init (i = 0)
 {
-#if !GN
-  h = hl[0];
-  u = ul[0];
-#endif
-  
   terrain (zb, "~/terrain/etopo2", "~/terrain/srtm_japan", NULL);
 
   if (restore (file = "restart"))
