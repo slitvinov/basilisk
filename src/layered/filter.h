@@ -22,7 +22,7 @@ event viscous_term (i++)
     foreach()
       foreach_dimension() {
         double Hm = 0., H = 0., Hp = 0.;
-	for (scalar h in hl)
+	foreach_layer()
 	  Hm += h[-1], H += h[], Hp += h[1];
         if (Hm > dry && H > dry && Hp > dry) {
 	  double Dp = eta[1] - eta[], Dm = eta[] - eta[-1];
@@ -63,23 +63,21 @@ event viscous_term (i++)
 	    eta[] += min(dt/filter, 1.)*a*d;
 	    double Hnew = eta[] - zb[];
 	    if (Hnew > dry) {
-	      for (scalar h in hl)
+	      foreach_layer()
 		h[] *= Hnew/H;
 	    }
 	    else {
-	      for (int l = 0; l < nl; l++)
-		for (scalar s in tracers[l])
+	      for (scalar s in tracers)
+		foreach_layer()
 		  s[] = 0.;
 	    }
 	  }
 	}
       }
 
-    scalar * list = list_copy (hl);
-    for (int l = 0; l < nl; l++)
-      for (scalar s in tracers[l])
-	list = list_append (list, s);
-    list = list_append (list, eta);
+    scalar * list = list_copy ({h, eta});
+    for (scalar s in tracers)
+      list = list_append (list, s);
     boundary (list);
     free (list);
   }

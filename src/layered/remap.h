@@ -30,53 +30,44 @@ event defaults (i = 0)
 }
 
 /**
-The *vertical_remapping()* function takes a list of layer thicknesses
-and the corresponding array of lists of tracers for each layer and
-performs the remapping (defined by *beta*). */
+The *vertical_remapping()* function takes a (block) field of layer
+thicknesses and the corresponding list of tracer fields and performs
+the remapping (defined by *beta*). */
 
 trace
-void vertical_remapping (scalar * hl, scalar ** tracers)
+void vertical_remapping (scalar h, scalar * tracers)
 {
-  int nvar = list_len(tracers[0]), ndof = 1, npos = nl + 1;
+  int nvar = list_len(tracers), ndof = 1, npos = nl + 1;
   foreach() {
     double H = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H += h[];
 
     if (H > dry) {
       double zpos[npos], znew[npos];
       double fdat[nvar*nl], fnew[nvar*nl];
       zpos[0] = znew[0] = 0.;
-      int l = 0;
-      for (scalar h in hl) {
-	zpos[l+1] = zpos[l] + h[];
-	int i = nvar*l;
-	for (scalar s in tracers[l])
+      foreach_layer() {
+	zpos[point.l+1] = zpos[point.l] + h[];
+	int i = nvar*point.l;
+	for (scalar s in tracers)
 	  fdat[i++] = s[];
-	h[] = H*beta[l];
-	znew[l+1] = znew[l] + h[];
-	l++;
+	h[] = H*beta[point.l];
+	znew[point.l+1] = znew[point.l] + h[];
       }
 
       my_remap (&npos, &npos, &nvar, &ndof, zpos, znew, fdat, fnew,
 		&edge_meth, &cell_meth, &cell_lim);
 
-      l = 0;
-      for (scalar h in hl) {
-	int i = nvar*l;
-	for (scalar s in tracers[l])
+      foreach_layer() {
+	int i = nvar*point.l;
+	for (scalar s in tracers)
 	  s[] = fnew[i++];
-	l++;
       }
     }
   }
-  
-  scalar * list = list_copy (hl);
-  for (int l = 0; l < nl; l++)
-    for (scalar s in tracers[l])
-      list = list_append (list, s);
-  boundary (list);
-  free (list);
+  boundary ({h});
+  boundary (tracers);
 }
 
 /**
@@ -86,7 +77,7 @@ solver](hydro.h). */
 
 event viscous_term (i++) {
   if (nl > 1)
-    vertical_remapping (hl, tracers);
+    vertical_remapping (h, tracers);
 }
 
 /**

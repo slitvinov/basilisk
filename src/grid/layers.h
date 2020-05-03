@@ -1,7 +1,7 @@
 /**
 # Multiple "layers"
 
-This adds support or multiple "layers" i.e. a constant number `nl` of
+This adds support for multiple "layers" i.e. a constant number `nl` of
 contiguous scalar fields. 
 
 Note that codes using this header must be compiled with the

@@ -22,38 +22,31 @@ $w_k$ can be added using [the non-hydrostatic extension](nh.h).
 
 ## Fields and parameters
 
-The number of layers is stored in `nl`. Each scalar field has a new
-attribute `l` which can be used to access the index of the
-corresponding layer.
-
 The `zb` and `eta` fields define the bathymetry and free-surface
-height. The layer thicknesses and velocities for each layer are
-defined in the `hl` and `ul` scalar and vector lists.
-
-`tracers` is an array of lists of tracers for each layer. By default
-it contains only the components of velocity.
+height. The `h` and `u` fields define the layer thicknesses and velocities.
 
 The acceleration of gravity is `G` and `dry` controls the minimum
-layer thickness.
+layer thickness. The hydrostatic CFL criterion is defined by `CFL_H`.
 
 The `gradient` pointer gives the function used for limiting.
 
-The `ufl` and `al` lists contain the face velocity and face
-acceleration fields for each layer. */
+The `uf` and `a` fields define the face velocity and face acceleration
+for each layer. 
+
+`tracers` is a list of tracers for each layer. By default it contains
+only the components of velocity. */
 
 #include "run.h"
 #include "bcg.h"
 
-int nl = 1;
-attribute { int l; }
-scalar zb[], eta;
-scalar * hl = NULL, ** tracers = NULL;
-vector * ul = NULL;
-double G = 1., dry = 1e-6;
+scalar zb[], eta, h;
+vector u;
+double G = 1., dry = 1e-6, CFL_H = 1.;
 double (* gradient) (double, double, double) = minmod2;
 bool linearised = false;
 
-vector * ufl = NULL, * al = NULL;
+vector uf, a;
+scalar * tracers = NULL;
 
 /**
 ## Setup
@@ -67,7 +60,7 @@ static void refine_eta (Point point, scalar eta)
 {
   foreach_child() {
     eta[] = zb[];
-    for (scalar h in hl)
+    foreach_layer()
       eta[] += h[];
   }
 }
@@ -75,7 +68,7 @@ static void refine_eta (Point point, scalar eta)
 static void restriction_eta (Point point, scalar eta)
 {
   eta[] = zb[];
-  for (scalar h in hl)
+  foreach_layer()
     eta[] += h[];
 }
 #endif // TREE
@@ -86,46 +79,17 @@ we need to make sure that the layer thicknesses and $\eta$ are
 allocated first (in the case where other layer fields are added, for
 example for the [non-hydrostatic extension](nh.h)). */
 
-static scalar new_layered_scalar (const char * name, int l)
-{
-  scalar s = new scalar;
-  char lname[80];
-  sprintf (lname, "%s%d", name, l);
-  free (s.name);
-  s.name = strdup (lname);
-  return s;
-}
-
-static vector new_layered_vector (const char * name, int l)
-{
-  vector v = new vector;
-  foreach_dimension() {
-    struct { char * x, * y; } c = {"x", "y"};
-    char lname[80];
-    sprintf (lname, "%s%d.%s", name, l, c.x);
-    free (v.x.name);
-    v.x.name = strdup (lname);
-  }
-  return v;
-}
-
 event defaults0 (i = 0)
 {
-  assert (hl == NULL);
   assert (nl > 0);
-  for (int l = 0; l < nl; l++) {
-    scalar h = new_layered_scalar ("h", l);
-    h.gradient = gradient;
-#if TREE    
-    h.refine = h.prolongation = refine_linear;
-    h.restriction = restriction_volume_average;
+  h = new scalar[nl];
+  h.gradient = gradient;
+#if TREE
+  h.refine = h.prolongation = refine_linear;
+  h.restriction = restriction_volume_average;
 #endif
-    hl = list_append (hl, h);
-    h.l = l;
-  }
   eta = new scalar;
-  reset (hl, 0.);
-  reset ({zb}, 0.);
+  reset ({h, zb}, 0.);
 
   /**
   We set the proper gradient and refinement/restriction functions. */
@@ -139,9 +103,6 @@ event defaults0 (i = 0)
   eta.refine  = refine_eta;
   eta.restriction = restriction_eta;
 #endif // TREE
-
-  assert (!tracers);
-  tracers = calloc (nl, sizeof(scalar *));
 }
 
 /**
@@ -150,36 +111,26 @@ event. */
 
 event defaults (i = 0)
 {
-  assert (ul == NULL && ufl == NULL && al == NULL);
-  for (int l = 0; l < nl; l++) {
-    vector u = new_layered_vector ("u", l);
-    vector uf = new face vector;
-    vector a = new face vector;
-    ul = vectors_append (ul, u);
-    ufl = vectors_append (ufl, uf);
-    al = vectors_append (al, a);
-    foreach_dimension() {
-      u.x.l = uf.x.l = a.x.l = l;
-      if (!linearised)
-	tracers[l] = list_append (tracers[l], u.x);
-    }
-  }
-  reset (ul, 0.);
-  reset (ufl, 0.);
-  reset (al, 0.);
+  u = new vector[nl];
+  uf = new face vector[nl];
+  a = new face vector[nl];
+  reset ({u, uf, a}, 0.);
 
+  if (!linearised)
+    foreach_dimension()
+      tracers = list_append (tracers, u.x);
+  
   /**
   The gradient and prolongation/restriction functions are set for all
   tracer fields. */
 
-  for (int l = 0; l < nl; l++)
-    for (scalar s in tracers[l]) {
-      s.gradient = gradient;
+  for (scalar s in tracers) {
+    s.gradient = gradient;
 #if TREE
-      s.refine = s.prolongation = refine_linear;
-      s.restriction = restriction_volume_average;
+    s.refine = s.prolongation = refine_linear;
+    s.restriction = restriction_volume_average;
 #endif
-    }
+  }
 }
 
 /**
@@ -190,18 +141,15 @@ double dtmax;
 
 event init (i = 0)
 {
-  trash ((scalar *)ufl);
-  foreach_face() {
-    vector uf, u;
-    scalar h;
-    for (h,u,uf in hl,ul,ufl)
+  trash ({uf});
+  foreach_face()
+    foreach_layer()
       uf.x[] = fm.x[]*(h[]*u.x[] + h[-1]*u.x[-1])/(h[] + h[-1] + dry);
-  }
-  boundary ((scalar *)ufl);
+  boundary ((scalar *){uf});
  
   foreach() {
     eta[] = zb[];
-    for (scalar h in hl)
+    foreach_layer()
       eta[] += h[];
   }
   boundary (all);
@@ -238,12 +186,10 @@ event stability (i++,last)
   foreach_face (reduction (min:dtmax)) {
     double H = 0., Hm = 0.;
 #if !TREE
-    for (scalar h in hl)
+    foreach_layer()
       H += h[], Hm += h[-1];
 #else // TREE
-    scalar h;
-    vector uf;
-    for (h,uf in hl,ufl) {
+    foreach_layer() {
       H += h[], Hm += h[-1];
     
       /**
@@ -256,17 +202,17 @@ event stability (i++,last)
 	  (h[-1] < dry && uf.x[] > 0.))
 	uf.x[] = 0.;
     }
-    if (!face_is_wet()) {
-      for (vector uf in ufl)
+    if (!face_is_wet())
+      foreach_layer()
 	uf.x[] = 0.;
-    }
     else
 #endif // TREE
 
     if (H + Hm > 0.) {
       H = (H + Hm)/2.;
       double cp = hydrostatic ? sqrt(G*H) : sqrt(G*Delta*tanh(H/Delta));
-      for (vector uf in ufl) {
+      cp /= CFL_H;
+      foreach_layer() {
 	double c = fm.x[]*cp + fabs(uf.x[]);
 	if (c > 0.) {
 	  double dt = cm[]*Delta/c;
@@ -297,12 +243,12 @@ where $s_k$ is any other tracer field added to the `tracers` list. */
 
 event advection_term (i++,last)
 {
-  face vector F[], flux[];
+  if (grid->n == 1) // to optimise 1D-z models
+    return 0;
   
-  vector uf;
-  scalar h;
-  int l = 0;
-  for (uf,h in ufl,hl) {
+  face vector F[], flux[];
+
+  foreach_layer() {
 
     /**
     We first compute the "thickness flux" $F_{i+1/2,k}=(hu)_{i+1/2,k}$
@@ -314,7 +260,7 @@ event advection_term (i++,last)
     We then compute the flux $(sF)_{i+1/2,k}$ for each tracer $s$, also
     using a variant of the BCG scheme. */
     
-    for (scalar s in tracers[l]) {
+    for (scalar s in tracers) {
       foreach_face() {
 	double un = dt*uf.x[]/(fm.x[]*Delta + SEPS), a = sign(un);
 	int i = -(a + 1.)/2.;
@@ -359,32 +305,29 @@ event advection_term (i++,last)
       foreach_dimension()
 	h[] += dt*(F.x[] - F.x[1])/(Delta*cm[]);
       if (h[] < dry) {
-	for (scalar f in tracers[l])
+	for (scalar f in tracers)
 	  f[] = 0.;
       }
       else
-	for (scalar f in tracers[l])
+	for (scalar f in tracers)
 	  f[] /= h[];
     }
-    l++;
   }
-
+  
   /**
   Finally the free-surface height $\eta$ is updated and the boundary
   conditions are applied. */
   
   foreach() {
     double H = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H += h[];
     eta[] = zb[] + H;
   }
 
-  scalar * list = list_copy (hl);
-  for (int l = 0; l < nl; l++)
-    for (scalar s in tracers[l])
-      list = list_append (list, s);
-  list = list_append (list, eta);
+  scalar * list = list_copy ({h, eta});
+  for (scalar s in tracers)
+    list = list_append (list, s);
   boundary (list);
   free (list);
 }
@@ -422,28 +365,22 @@ is verified. */
 
 event acceleration (i++,last)
 {
-  trash (ufl);
+  trash ({uf});
   foreach_face() {
     double H = 0., Hm = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H += h[], Hm += h[-1];
-    scalar h;
-    face vector a, uf;
-    vector u;
-    if (face_is_wet()) {
-      for (h,a,uf,u in hl,al,ufl,ul) {
+    if (face_is_wet())
+      foreach_layer() {
         a.x[] = - sq(fm.x[])*G*(eta[] - eta[-1])/((cm[] + cm[-1])*Delta/2.);
         uf.x[] = fm.x[]*(h[]*u.x[] + h[-1]*u.x[-1])/(h[] + h[-1] + dry) +
-	  dt*a.x[];
+	  dt*a.x[];	
       }
-    }
-    else {
-      for (a,uf in al,ufl)
+    else
+      foreach_layer()
 	a.x[] = uf.x[] = 0.;
-    }
   }
-  boundary ((scalar *)ufl);
-  boundary ((scalar *)al);
+  boundary ((scalar *){uf, a});
 }
 
 /**
@@ -462,9 +399,8 @@ are also added here ([Popinet, 2011](/src/references.bib#popinet2011)). */
 
 event pressure (i++,last)
 {
-  foreach() {
-    vector a, u;
-    for (a,u in al,ul) {
+  foreach()
+    foreach_layer() {
       foreach_dimension()
         u.x[] += dt*(a.x[] + a.x[1])/(fm.x[] + fm.x[1]);
 #if dimension == 2
@@ -477,8 +413,7 @@ event pressure (i++,last)
       u.y[] -= dt*fG*ux;
 #endif // dimension == 2
     }
-  }
-  boundary ((scalar *) ul);
+  boundary ((scalar *) {u});
 }
 
 /**
@@ -493,14 +428,8 @@ event adapt (i++,last);
 
 event cleanup (i = end, last)
 {
-  for (int l = 0; l < nl; l++)
-    free (tracers[l]);
+  delete ({eta, h, u, uf, a});
   free (tracers), tracers = NULL;
-  delete ((scalar *) ul), free (ul), ul = NULL;
-  delete ((scalar *) ufl), free (ufl), ufl = NULL;
-  delete ((scalar *) al), free (al), al = NULL;
-  delete (hl), free (hl), hl = NULL;
-  delete ({eta});
 }
 
 /**
@@ -513,28 +442,24 @@ $$
 \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k + \left[ w -
 \mathbf{u} \cdot \mathbf{{\nabla}} (z) \right]_k = 0
 $$
-Note that the `wl` list must first be allocated separately. */
+*/
 
-void vertical_velocity (scalar * wl)
+void vertical_velocity (scalar w)
 {
   foreach() {
-    scalar h, w;
-    vector uf;
-    int l = 0;
     double dz = zb[1] - zb[-1];
     double wm = 0.;
-    for (h,w,uf in hl,wl,ufl) {
+    foreach_layer() {
       w[] = wm + (uf.x[] + uf.x[1])*(dz + h[1] - h[-1])/(4.*Delta);
-      if (l > 0) {
-	vector ufm = ufl[l-1];
-	w[] -= (ufm.x[] + ufm.x[1])*dz/(4.*Delta);
-      }
+      if (point.l > 0)
+	foreach_dimension()
+	  w[] -= (uf.x[0,0,-1] + uf.x[1,0,-1])*dz/(4.*Delta);
       foreach_dimension()
 	w[] -= ((h[] + h[1])*uf.x[1] - (h[] + h[-1])*uf.x[])/(2.*Delta);
-      l++, dz += h[1] - h[-1], wm = w[];
+      dz += h[1] - h[-1], wm = w[];
     }
   }
-  boundary (wl);
+  boundary ({w});
 }
 
 /**
@@ -548,7 +473,7 @@ relaxes towards its desired value (*ref*). */
 double _radiation (Point point, double ref, scalar s)
 {
   double H = 0.;
-  for (scalar h in hl)
+  foreach_layer()
     H += h[];
   return H > dry ? sqrt(G/H)*(zb[] + H - ref) : 0.;
 }

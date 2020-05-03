@@ -33,17 +33,15 @@ where $\mathbf{M}$ is a
 [tridiagonal matrix](https://en.wikipedia.org/wiki/Tridiagonal_matrix). 
 The lower, principal and upper diagonals are *a*, *b* and *c* respectively. */
 
-void vertical_viscosity (Point point, scalar * hl, scalar * sl, double dt)
+void vertical_viscosity (Point point, scalar h, scalar s, double dt)
 {
   double a[nl], b[nl], c[nl], rhs[nl];
 
   /**
   The *rhs* of the tridiagonal system is $h_lu_l$. */
       
-  int l = 0;
-  scalar s, h;
-  for (s,h in sl,hl)
-    rhs[l++] = s[]*h[];
+  foreach_layer()
+    rhs[layer] = s[]*h[];
 
   /**
   The lower, principal and upper diagonals $a$, $b$ and $c$ are given by
@@ -58,12 +56,11 @@ void vertical_viscosity (Point point, scalar * hl, scalar * sl, double dt)
   b_{0 < l < \mathrm{nl} - 1} = h_l^{n + 1} - a_l - c_l
   $$
   */
-  
-  for (l = 1; l < nl - 1; l++) {
-    scalar hm = hl[l-1], h = hl[l], hp = hl[l+1];
-    a[l] = - 2.*nu*dt/(hm[] + h[]);
-    c[l] = - 2.*nu*dt/(h[] + hp[]);
-    b[l] = h[] - a[l] - c[l];
+
+  for (int l = 1; l < nl - 1; l++) {
+    a[l] = - 2.*nu*dt/(h[0,0,l-1] + h[0,0,l]);
+    c[l] = - 2.*nu*dt/(h[0,0,l] + h[0,0,l+1]);
+    b[l] = h[0,0,l] - a[l] - c[l];
   }
     
   /**
@@ -83,9 +80,8 @@ void vertical_viscosity (Point point, scalar * hl, scalar * sl, double dt)
   $$
   */
 
-  scalar hm = hl[nl-2]; h = hl[nl-1];
-  a[nl-1] = - 2.*nu*dt/(hm[] + h[]);
-  b[nl-1] = h[] - a[nl-1];
+  a[nl-1] = - 2.*nu*dt/(h[0,0,nl-2] + h[0,0,nl-1]);
+  b[nl-1] = h[0,0,nl-1] - a[nl-1];
   rhs[nl-1] += nu*dt*dut[];
 
   /**
@@ -105,29 +101,26 @@ void vertical_viscosity (Point point, scalar * hl, scalar * sl, double dt)
   $$
   */
 
-  scalar h1 = hl[1], h0 = hl[0];
-  double den = h[0]*(8.*h[1]*lambda_b[] + sq(h1[])) +
-    sq(h0[])*(6.*lambda_b[] + 3.*h[1]) +
-    2.*(sq(h[1])*lambda_b[] + cube(h0[]));
-  b[0] = h0[] + 2.*dt*nu*(1./(h0[] + h1[]) +
-			  (sq(h1[]) + 4.*h[0]*h[1] + 4.*sq(h0[]))/den);
-  c[0] = - 2.*dt*nu*(1./(h0[] + h1[]) + sq(h0[])/den);
-  rhs[0] += 2.*dt*nu*u_b[]*(sq(h1[]) + 4.*h[0]*h[1] + 3.*sq(h[0]))/den;
+  double den = h[]*h[0,0,1]*(8.*lambda_b[] + h[0,0,1]) +
+    sq(h[])*(6.*lambda_b[] + 3.*h[0,0,1]) +
+    2.*(sq(h[0,0,1])*lambda_b[] + cube(h[]));
+  b[0] = h[] + 2.*dt*nu*(1./(h[] + h[0,0,1]) +
+			  (sq(h[0,0,1]) + 4.*h[]*h[0,0,1] + 4.*sq(h[]))/den);
+  c[0] = - 2.*dt*nu*(1./(h[] + h[0,0,1]) + sq(h[])/den);
+  rhs[0] += 2.*dt*nu*u_b[]*(sq(h[0,0,1]) + 4.*h[]*h[0,0,1] + 3.*sq(h[0]))/den;
   
   /**
   We can now solve the tridiagonal system using the [Thomas
   algorithm](https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm). */
   
-  for (l = 1; l < nl; l++) {
+  for (int l = 1; l < nl; l++) {
     b[l] -= a[l]*c[l-1]/b[l-1];
     rhs[l] -= a[l]*rhs[l-1]/b[l-1];
   }
   a[nl-1] = rhs[nl-1]/b[nl-1];
-  s = sl[nl-1]; s[] = a[nl-1];
-  for (l = nl - 2; l >= 0; l--) {
-    s = sl[l];
-    s[] = a[l] = (rhs[l] - c[l]*a[l+1])/b[l];
-  }
+  s[0,0,nl-1] = a[nl-1];
+  for (int l = nl - 2; l >= 0; l--)
+    s[0,0,l] = a[l] = (rhs[l] - c[l]*a[l+1])/b[l];
 }
 
 /**
@@ -141,24 +134,17 @@ acceleration. */
 event viscous_term (i++,last)
 {
   if (nu > 0.) {
-    struct { scalar * x, * y; } list = {NULL, NULL};
-    foreach_dimension()
-      for (vector u in ul)
-	list.x = list_append (list.x, u.x);
     foreach() {
-      vector a, u;
-      for (a,u in al,ul)
+      foreach_layer()
 	foreach_dimension()
 	  u.x[] += dt*(a.x[] + a.x[1])/(fm.x[] + fm.x[1] + SEPS);
       foreach_dimension()
-	vertical_viscosity (point, hl, list.x, dt);
-      for (a,u in al,ul)
+	vertical_viscosity (point, h, u.x, dt);
+      foreach_layer()
 	foreach_dimension()
 	  u.x[] -= dt*(a.x[] + a.x[1])/(fm.x[] + fm.x[1] + SEPS);
     }
-    boundary ((scalar *) ul);
-    foreach_dimension()
-      free (list.x);
+    boundary ((scalar *) {u});
   }
 }
 

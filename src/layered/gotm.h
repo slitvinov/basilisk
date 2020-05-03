@@ -4,15 +4,14 @@
 This module interfaces the [multilayer solver](hydro.h) with
 [GOTM](http://gotm.net).
 
-In principle all the vertical diffusion processes of momentum,
-temperature and salinity are handled by GOTM.
+Vertical diffusion of momentum, temperature and salinity is handled
+by GOTM.
 
-Temperature and salinity need to be allocated by the calling solver
-and stored into these lists (but they can be omitted entirely). If
-they are defined, the corresponding GOTM vertical diffusion routines
-will be called. */
+The temperature and salinity fields are undefined by default. If the
+calling solver defines them, the corresponding GOTM vertical diffusion
+routines will be called. */
 
-scalar * Tl = NULL, * Sl = NULL;
+scalar T = {-1}, S = {-1};
 
 /**
 The surface fluxes of momentum, heat and short-wave radiation are
@@ -138,11 +137,11 @@ static void gotm_step (long n)
 		     &airsea_tx, &airsea_ty);
 
   //     update temperature and salinity
-  if (Sl)
+  if (S.i >= 0)
     meanflow_salinity (&nl, &dt, &gotm_cnpar,
 		       turbulence_nus.a, turbulence_gams.a);
   
-  if (Tl)
+  if (T.i >= 0)
     meanflow_temperature (&nl, &dt, &gotm_cnpar, &airsea_i_0, &airsea_heat,
 			  turbulence_nuh.a, turbulence_gamh.a, meanflow_rad.a);
   
@@ -248,34 +247,33 @@ event viscous_term (i++)
   struct { realtype * x, * y; } gotm_u = { meanflow_u.a, meanflow_v.a };
   struct { realtype * x, * y; } gotm_t = { &airsea_tx, &airsea_ty };
   foreach() {
-    scalar h;
-    vector u;
     double z = zb[];
-    for (h,u in hl,ul) {
-      meanflow_h.a[h.l + 1] = h[];
-      meanflow_z.a[h.l + 1] = z + h[]/2.;
+    foreach_layer() {
+      meanflow_h.a[point.l + 1] = h[];
+      meanflow_z.a[point.l + 1] = z + h[]/2.;
       foreach_dimension()
-	gotm_u.x[u.x.l + 1] = u.x[];
+	gotm_u.x[point.l + 1] = u.x[];
+      if (T.i >= 0)
+	meanflow_t.a[point.l + 1] = T[];
+      if (S.i >= 0)
+	meanflow_s.a[point.l + 1] = S[];      
       z += h[];
     }
-    for (scalar T in Tl)
-      meanflow_t.a[T.l + 1] = T[];
-    for (scalar S in Sl)
-      meanflow_s.a[S.l + 1] = S[];
-    
+
     foreach_dimension()
       *gotm_t.x = airsea_tau.x[];
     airsea_heat = airsea_heat_flux[];
     airsea_i_0 = airsea_swr_flux[];
     gotm_step (i);
     
-    for (vector u in ul)
+    foreach_layer() {
       foreach_dimension()
-	u.x[] = gotm_u.x[u.x.l + 1];
-    for (scalar T in Tl)
-      T[] = meanflow_t.a[T.l + 1];
-    for (scalar S in Sl)
-      S[] = meanflow_s.a[S.l + 1];
+        u.x[] = gotm_u.x[point.l + 1];
+      if (T.i >= 0)
+	T[] = meanflow_t.a[point.l + 1];
+      if (S.i >= 0)
+	S[] = meanflow_s.a[point.l + 1];
+    }
   }
 }
 
@@ -294,22 +292,21 @@ This function uses GOTM to initialize a vertical temperature profile
 corresponding to a squared buoyancy frequency `NN` for a given constant
 salinity and top temperature. */
 
-void constant_NNT (double T_top, double S_const, double NN)
+void constant_NNT (double T_top, double S_const, double NN,
+		   scalar T)
 {
   foreach() {
     double z = zb[];
-    for (scalar h in hl)
+    foreach_layer()
       z += h[];
-    scalar T = Tl[nl - 1];
-    T[] = T_top;
+    T[0,0,nl-1] = T_top;
     for (int l = nl - 2; l >= 0; l--) {
-      scalar T = Tl[l], Tp = Tl[l+1], h = hl[l];
-      double pFace = G*(z - h[]/2.);
-      double alpha = eqstate_eos_alpha (&S_const, &Tp[], &pFace, &G,
+      double pFace = G*(z - h[0,0,l]/2.);
+      double alpha = eqstate_eos_alpha (&S_const, &T[0,0,l+1], &pFace, &G,
 					&meanflow_rho_0);
-      T[] = Tp[] - 1./(G*alpha)*NN*h[];
-      z -= h[];
+      T[0,0,l] = T[0,0,l+1] - 1./(G*alpha)*NN*h[0,0,l];
+      z -= h[0,0,l];
     }
   }
-  boundary (Tl);
+  boundary ({T});
 }

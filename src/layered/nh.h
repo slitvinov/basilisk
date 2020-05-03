@@ -22,9 +22,8 @@ $$
 $$
 where the terms in blue are non-hydrostatic.
 
-The additional $w_k$ and $\phi_k$ fields are stored in two additional
-lists: *wl* and *phil*. The convergence statistics of the multigrid
-solver are stored in *mgp*. 
+The additional $w_k$ and $\phi_k$ fields are defined. The convergence
+statistics of the multigrid solver are stored in *mgp*.
 
 Wave breaking is parameterised usng the *breaking* parameter, which is
 turned off by default (see Section 3.6.4 in [Popinet,
@@ -33,7 +32,7 @@ turned off by default (see Section 3.6.4 in [Popinet,
 #define NH 1
 #include "poisson.h"
 
-scalar * wl = NULL, * phil = NULL;
+scalar w, phi;
 mgstats mgp;
 double breaking = HUGE;
 
@@ -48,22 +47,13 @@ event defaults (i = 0)
   hydrostatic = false;
   mgp.nrelax = 4;
   
-  assert (wl == NULL && phil == NULL);
   assert (nl > 0);
-  for (int l = 0; l < nl; l++) {
-    scalar w = new scalar;
-    scalar phi = new scalar;
-    wl = list_append (wl, w);
-    phil = list_append (phil, phi);
-  }
-  reset (wl, 0.);
-  reset (phil, 0.);
+  w = new scalar[nl];
+  phi = new scalar[nl];
+  reset ({w, phi}, 0.);
 
-  int l = 0;
-  for (scalar w in wl) {
-    tracers[l] = list_append (tracers[l], w);
-    l++;
-  }
+  if (!linearised)
+    tracers = list_append (tracers, w);
 }
 
 /**
@@ -79,8 +69,8 @@ event viscous_term (i++)
     scalar lb = lambda_b, d = dut, u = u_b;
     lambda_b = dut = u_b = zeroc;
     foreach()
-      vertical_viscosity (point, hl, (scalar *) wl, dt);
-    boundary (wl);
+      vertical_viscosity (point, h, w, dt);
+    boundary ({w});
     lambda_b = lb; dut = d; u_b = u;
   }
 }
@@ -109,28 +99,27 @@ where $\mathbf{\phi}$ is the vector of $\phi_l$ for this column and
 $\mathbf{d}$ is a vector dependent only on the values of $\phi$ in the
 neighboring columns. */
 
-static void box_matrix (Point point, scalar * phil, scalar * rhsl,
+static void box_matrix (Point point, scalar phi, scalar rhs,
 			double * H, double * d)
 {
   for (int l = 0, m = nl - 1; l < nl; l++, m--) {
-    scalar h = hl[m], rhs = rhsl[m], phi = phil[m];
-    d[l] = rhs[];
+    d[l] = rhs[0,0,m];
     foreach_dimension()
-      d[l] -= h[]*(h[-1]*phi[-1] + h[1]*phi[1])/sq(Delta);
+      d[l] -= h[0,0,m]*(h[-1,0,m]*phi[-1,0,m] + h[1,0,m]*phi[1,0,m])/sq(Delta);
     for (int k = 0; k < nl; k++)
       H[l*nl + k] = 0.;
-    H[l*nl + l] = - 2.*dimension*sq(h[])/sq(Delta) - 4.;
+    H[l*nl + l] = - 2.*dimension*sq(h[0,0,m])/sq(Delta) - 4.;
     if (l > 0) {
-      scalar phip = phil[m+1];
       foreach_dimension()
-	d[l] -= h[]*(h[-1]*phip[-1] + h[1]*phip[1])/sq(Delta);
-      H[l*(nl + 1) - 1] = - 2.*dimension*sq(h[])/sq(Delta) + 4.;
+	d[l] -= h[0,0,m]*(h[-1,0,m]*phi[-1,0,m+1] +
+			  h[1,0,m]*phi[1,0,m+1])/sq(Delta);
+      H[l*(nl + 1) - 1] = - 2.*dimension*sq(h[0,0,m])/sq(Delta) + 4.;
     }
     for (int k = l + 1, s = -1; k < nl; k++, s = -s) {
-      scalar hk = hl[nl-1-k];
-      if (hk[] > dry) {
-	H[l*nl + k] -= 8.*s*h[]/hk[];
-	H[l*nl + k - 1] += 8.*s*h[]/hk[];
+      double hk = h[0,0,nl-1-k];
+      if (hk > dry) {
+	H[l*nl + k] -= 8.*s*h[0,0,m]/hk;
+	H[l*nl + k - 1] += 8.*s*h[0,0,m]/hk;
       }
     }
   }
@@ -151,12 +140,13 @@ vector constructed by the function above. */
 trace
 static void relax_nh (scalar * phil, scalar * rhsl, int lev, void * data)
 {
+  scalar phi = phil[0], rhs = rhsl[0];
   foreach_level_or_leaf (lev) {
     double H[nl*nl], b[nl];
-    box_matrix (point, phil, rhsl, H, b);
+    box_matrix (point, phi, rhs, H, b);
     solve_hessenberg (H, b, nl);
     int l = nl - 1;
-    for (scalar phi in phil)
+    foreach_layer()
       phi[] = b[l--];
   }
 }
@@ -180,6 +170,7 @@ trace
 static double residual_nh (scalar * phil, scalar * rhsl,
 			   scalar * resl, void * data)
 {
+  scalar phi = phil[0], rhs = rhsl[0], res = resl[0];
   double maxres = 0.;
 #if 0 // TREE
   /* conservative coarse/fine discretisation (2nd order) */
@@ -195,24 +186,20 @@ static double residual_nh (scalar * phil, scalar * rhsl,
 #else // !TREE
   /* "naive" discretisation (only 1st order on trees) */
   foreach (reduction(max:maxres)) {
-    scalar phi, rhs, res, h;
-    int l = 0;
-    for (phi,rhs,res,h in phil,rhsl,resl,hl) {
+    foreach_layer() {
       res[] = rhs[] + 4.*phi[];
       foreach_dimension()
 	res[] -= h[]*(h[1]*phi[1] - 2.*h[]*phi[] + h[-1]*phi[-1])/sq(Delta);
-      if (l < nl - 1) {
-        scalar phip = phil[l+1];
-        res[] -= 4.*phip[];
+      if (point.l < nl - 1) {
+        res[] -= 4.*phi[0,0,1];
 	foreach_dimension()
-	  res[] -= h[]*(h[1]*phip[1] - 2.*h[]*phip[] + h[-1]*phip[-1])/sq(Delta);
+	  res[] -= h[]*(h[1]*phi[1,0,1] - 2.*h[]*phi[0,0,1] +
+			h[-1]*phi[-1,0,1])/sq(Delta);
       }
-      for (int k = l - 1, s = -1; k >= 0; k--, s = -s) {
-	scalar hk = hl[k];
-	if (hk[] > dry) {
-	  scalar phik = phil[k], phikp = phil[k+1];
-	  res[] += 8.*s*(phik[] - phikp[])*h[]/hk[];
-	}
+      for (int k = - 1, s = -1; k >= - point.l; k--, s = -s) {
+	double hk = h[0,0,k];
+	if (hk > dry)
+	  res[] += 8.*s*(phi[0,0,k] - phi[0,0,k+1])*h[]/hk;
       }
 #endif // !TREE    
 #if EMBED
@@ -223,13 +210,12 @@ static double residual_nh (scalar * phil, scalar * rhsl,
 #endif // EMBED    
       if (fabs (res[]) > maxres)
 	maxres = fabs (res[]);
-      l++;
     }
   }
-  boundary (resl);
+  boundary ({res});
   return maxres;
 }
-
+  
 /**
 ## Pressure solution
 
@@ -247,36 +233,29 @@ $$
 event pressure (i++)
 {
   double h1 = 0., v1 = 0.;
-  scalar * rhsl = list_clone (phil);
+  scalar rhs = new scalar[nl];
   foreach (reduction(+:h1) reduction(+:v1)) {
-    scalar rhs, h, w;
-    vector uf;
-    int l = 0;
     coord dz;
     foreach_dimension()
       dz.x = zb[1] - zb[-1];
-    for (rhs,h,w,uf in rhsl,hl,wl,ufl) {
+    foreach_layer() {
       rhs[] = 2.*h[]*w[];
       foreach_dimension()
 	rhs[] -= h[]*(uf.x[] + uf.x[1])/2.*
 	slope_limited((dz.x + h[1] - h[-1])/(2.*Delta));
-      if (l > 0) {
-	vector ufm = ufl[l-1];
+      if (point.l > 0)
 	foreach_dimension()
-	  rhs[] += h[]*(ufm.x[] + ufm.x[1])/2.*slope_limited(dz.x/(2.*Delta));
-      }
+	  rhs[] += h[]*(uf.x[0,0,-1] + uf.x[1,0,-1])/2.*
+	    slope_limited(dz.x/(2.*Delta));
       foreach_dimension()
 	rhs[] += h[]*((h[] + h[1])*uf.x[1] - (h[] + h[-1])*uf.x[])/(2.*Delta);
-      for (int k = l - 1, s = -1; k >= 0; k--, s = -s) {
-	scalar uk = wl[k];
-	rhs[] += 4.*s*h[]*uk[];
-      }
+      for (int k = - 1, s = -1; k >= - point.l; k--, s = -s)
+	rhs[] += 4.*s*h[]*w[0,0,k];
       rhs[] *= 2./dt;
       foreach_dimension()
 	dz.x += h[1] - h[-1];
       h1 += dv()*h[];
       v1 += dv();
-      l++;
     }
   }
 
@@ -285,11 +264,11 @@ event pressure (i++)
   functions defined above, to get the non-hydrostatic pressure
   $\phi$. */
   
-  restriction (hl);
-  mgp = mg_solve (phil, rhsl, residual_nh, relax_nh, NULL,
+  restriction ({h});
+  mgp = mg_solve ({phi}, {rhs}, residual_nh, relax_nh, NULL,
 		  nrelax = 4, res = NULL, minlevel = 1,
 		  tolerance = TOLERANCE*sq(h1/(dt*v1)));
-  delete (rhsl), free (rhsl);
+  delete ({rhs});
 
   /**
   The non-hydrostatic pressure gradient is added to the acceleration
@@ -308,53 +287,48 @@ event pressure (i++)
   
   foreach_face() {
     double H = 0., Hm = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       H += h[], Hm += h[-1];
     if ((H > dry && Hm > dry) ||
 	(H > dry && eta[] >= zb[-1]) ||
 	(Hm > dry && eta[-1] >= zb[])) {
-      scalar phi, h;
-      vector uf, a;
-      int l = 0;
       double dz = zb[] - zb[-1];
-      for (phi,h,uf,a in phil,hl,ufl,al) {
+      foreach_layer() {
 	if (h[] + h[-1] > dry) {
 	  double ax;
 #if 0 // metric terms (do not seem to work yet)
 	  if (l == nl - 1)
-	    ax = sq(fm.x[])*(h[]*phi[] - h[-1]*phi[-1] +
-			     (phi[] + phi[-1])*dz)
+	    ax = sq(fm.x[])*(h[]*phi[] - h[-1]*phi[-1] + (phi[] + phi[-1])*dz)
 	      /((cm[] + cm[-1])*Delta/2.*(h[] + h[-1]));
-	  else {
-	    scalar phip = phil[l+1];
-	    ax = sq(fm.x[])*(h[]*(phi[] + phip[]) - h[-1]*(phi[-1] + phip[-1])
-			     - ((phip[] + phip[-1])*(dz + h[] - h[-1]) -
+	  else
+	    ax = sq(fm.x[])*(h[]*(phi[] + phi[0,0,1]) -
+			     h[-1]*(phi[-1] + phi[-1,0,1])
+			     - ((phi[0,0,1] + phi[-1,0,1])*(dz + h[] - h[-1]) -
 				(phi[] + phi[-1])*dz))
 	      /((cm[] + cm[-1])*Delta/2.*(h[] + h[-1]));
-	  }
 #else
-	  if (l == nl - 1)
+	  if (point.l == nl - 1)
 	    ax = fm.x[]*((h[]*phi[] - h[-1]*phi[-1])/Delta +
 			 (phi[] + phi[-1])*slope_limited(dz/Delta))
 	      /(h[] + h[-1]);
-	  else {
-	    scalar phip = phil[l+1];
+	  else
 	    ax = fm.x[]*
-	      ((h[]*(phi[] + phip[]) - h[-1]*(phi[-1] + phip[-1]))/Delta
-	       - ((phip[] + phip[-1])*slope_limited((dz + h[] - h[-1])/Delta) -
+	      ((h[]*(phi[] + phi[0,0,1]) -
+		h[-1]*(phi[-1] + phi[-1,0,1]))/Delta
+	       - ((phi[0,0,1] + phi[-1,0,1])*
+		  slope_limited((dz + h[] - h[-1])/Delta) -
 		  (phi[] + phi[-1])*slope_limited(dz/Delta)))
 	      /(h[] + h[-1]);
-	  }
 #endif
 	  uf.x[] -= dt*ax;
 	  a.x[] -= ax;
 	}
-	l++, dz += h[] - h[-1];
+	dz += h[] - h[-1];
       }
     }
   }
-  boundary ((scalar *)ufl);
-  boundary_flux (al);
+  boundary ((scalar *){uf});
+  boundary_flux ({a});
 
   /**
   The maximum allowed vertical velocity is computed as
@@ -376,34 +350,28 @@ event pressure (i++)
   
   foreach() {
     double wmax = 0.;
-    for (scalar h in hl)
+    foreach_layer()
       wmax += h[];
     wmax = wmax > 0. ? breaking*sqrt(G*wmax) : 0.;
-    scalar phi, w, h;
-    int l = 0;
-    for (phi,w,h in phil,wl,hl) {
+    foreach_layer() {
       if (h[] > dry) {
-	if (l == nl - 1)
+	if (point.l == nl - 1)
 	  w[] += dt*phi[]/h[];
-	else {
-	  scalar phip = phil[l+1];
-	  w[] -= dt*(phip[] - phi[])/h[];
-	}
+	else
+	  w[] -= dt*(phi[0,0,1] - phi[])/h[];
 	if (fabs(w[]) > wmax)
 	  w[] = (w[] > 0. ? 1. : -1.)*wmax;
       }
-      l++;
     }
   }
-  boundary (wl);
+  boundary ({w});
 }
 
 /**
 ## Cleanup
 
-The *wl* and *phil* fields and lists are freed. */
+The *w* and *phi* fields are freed. */
       
 event cleanup (i = end, last) {
-  delete (wl), free (wl), wl = NULL;
-  delete (phil), free (phil), phil = NULL;
+  delete ({w, phi});
 }

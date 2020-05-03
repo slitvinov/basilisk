@@ -2,12 +2,13 @@
 # Conservation of water surface elevation 
 
 When using the default adaptive reconstruction of variables, the
-[Saint-Venant solver](saint-venant.h) will conserve the water depth
-when cells are refined or coarsened. However, this will not
-necessarily ensure that the "lake-at-rest" condition (i.e. a constant
-water surface elevation) is also preserved. In what follows, we
-redefine the *prolongation()* and *restriction()* methods of the water
-depth $h$ so that the water surface elevation $\eta$ is conserved.
+[Saint-Venant solver](saint-venant.h) or the [layered solver](hydro.h)
+will conserve the water depth when cells are refined or
+coarsened. However, this will not necessarily ensure that the
+"lake-at-rest" condition (i.e. a constant water surface elevation) is
+also preserved. In what follows, we redefine the *prolongation()* and
+*restriction()* methods of the water depth $h$ so that the water
+surface elevation $\eta$ is conserved.
 
 We start with the reconstruction of fine "wet" cells: */
 
