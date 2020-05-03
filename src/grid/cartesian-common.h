@@ -35,29 +35,60 @@ void (* debug)    (Point);
 
 @define end_foreach_face()
 
-scalar new_scalar (const char * name)
+static void init_block_scalar (scalar sb, const char * name, const char * ext,
+			       int n, int block)
+{
+  char bname[strlen(name) + strlen(ext) + 10];
+  if (n == 0) {
+    sprintf (bname, "%s%s", name, ext);
+    init_scalar (sb, bname);
+    sb.block = block;
+  }
+  else {
+    sprintf (bname, "%s%d%s", name, n, ext);
+    init_scalar (sb, bname);
+    sb.block = - n;
+  }
+  all = list_append (all, sb);
+}
+
+scalar new_block_scalar (const char * name, const char * ext, int block)
 {
   int nvar = datasize/sizeof(double);
-  scalar s;
-  for (s.i = 0; s.i < nvar; s.i++)
-    if (!list_lookup (all, s)) { // found a previously freed slot
-      init_scalar (s, name);
+
+  scalar s = {0};
+  while (s.i < nvar) {
+    int n = 0;
+    scalar sb = s;
+    while (sb.i < nvar && n < block && sb.freed)
+      n++, sb.i++;
+    if (n >= block) { // found n free slots
+      for (sb.i = s.i, n = 0; n < block; n++, sb.i++)
+	init_block_scalar (sb, name, ext, n, block);
       trash (((scalar []){s, {-1}}));
-      all = list_append (all, s);
       return s;
     }
+    s.i = sb.i + 1;
+  }
   
-  // need to allocate a new slot
-  assert (nvar < _NVARMAX);
-  datasize += sizeof(double); nvar++;
-  qrealloc (_attribute, nvar, _Attributes);
-  memset (&_attribute[nvar-1], 0, sizeof (_Attributes));
-  s = (scalar){nvar - 1};
-  realloc_scalar(); // allocate extra space on the grid
-  init_scalar (s, name);
+  // need to allocate new slots
+  s = (scalar){nvar};
+  assert (nvar + block <= _NVARMAX);
+  qrealloc (_attribute, nvar + block, _Attributes);
+  memset (&_attribute[nvar], 0, block*sizeof (_Attributes));
+  for (int n = 0; n < block; n++, nvar++) {
+    scalar sb = (scalar){nvar};
+    init_block_scalar (sb, name, ext, n, block);
+  }
+  // allocate extra space on the grid
+  realloc_scalar (block*sizeof(double));
   trash (((scalar []){s, {-1}}));
-  all = list_append (all, s);
   return s;
+}
+
+scalar new_scalar (const char * name)
+{
+  return new_block_scalar (name, "", 1);
 }
 
 scalar new_vertex_scalar (const char * name)
@@ -65,29 +96,58 @@ scalar new_vertex_scalar (const char * name)
   return init_vertex_scalar (new_scalar (name), name);
 }
 
-static vector alloc_vector (const char * name)
+static vector alloc_block_vector (const char * name, int block)
 {
   vector v;
-  char cname[strlen(name) + 3];
-  struct { char * x, * y, * z; } ext = {"%s.x", "%s.y", "%s.z"};
-  foreach_dimension() {
-    sprintf (cname, ext.x, name);
-    v.x = new_scalar (cname);
-  }
+  struct { char * x, * y, * z; } ext = {".x", ".y", ".z"};
+  foreach_dimension()
+    v.x = new_block_scalar (name, ext.x, block);
   return v;
 }
 
 vector new_vector (const char * name)
 {
-  vector v = alloc_vector (name);
+  vector v = alloc_block_vector (name, 1);
   init_vector (v, NULL);
   return v;
 }
 
 vector new_face_vector (const char * name)
 {
-  vector v = alloc_vector (name);
+  vector v = alloc_block_vector (name, 1);
   init_face_vector (v, NULL);
+  return v;
+}
+
+vector new_block_vector (const char * name, int block)
+{
+  vector v = alloc_block_vector (name, block);
+  for (int i = 0; i < block; i++) {
+    vector vb;
+    foreach_dimension()
+      vb.x.i = v.x.i + i;
+    init_vector (vb, NULL);
+    foreach_dimension()
+      vb.x.block = - i;
+  }
+  foreach_dimension()
+    v.x.block = block;
+  return v;
+}
+
+vector new_block_face_vector (const char * name, int block)
+{
+  vector v = alloc_block_vector (name, block);
+  for (int i = 0; i < block; i++) {
+    vector vb;
+    foreach_dimension()
+      vb.x.i = v.x.i + i;
+    init_face_vector (vb, NULL);
+    foreach_dimension()
+      vb.x.block = - i;
+  }
+  foreach_dimension()
+    v.x.block = block;  
   return v;
 }
 
@@ -172,6 +232,7 @@ void scalar_clone (scalar a, scalar b)
   double (** boundary) (Point, Point, scalar, void *) = a.boundary;
   double (** boundary_homogeneous) (Point, Point, scalar, void *) =
     a.boundary_homogeneous;
+  assert (b.block > 0 && a.block == b.block);
   _attribute[a.i] = _attribute[b.i];
   a.name = name;
   a.boundary = boundary;
@@ -189,7 +250,8 @@ scalar * list_clone (scalar * l)
   for (int i = 0; i < nvar; i++)
     map[i] = -1;
   for (scalar s in l) {
-    scalar c = new scalar;
+    scalar c = s.block > 1 ? new_block_scalar("c", "", s.block) :
+      new_scalar("c");
     scalar_clone (c, s);
     map[s.i] = c.i;
     list = list_append (list, c);
@@ -207,13 +269,17 @@ void delete (scalar * list)
     return;
 
   for (scalar f in list) {
-    if (f.delete)
-      f.delete (f);
-    free (f.name); f.name = NULL;
-    free (f.boundary); f.boundary = NULL;
-    free (f.boundary_homogeneous); f.boundary_homogeneous = NULL;
+    for (int i = 0; i < f.block; i++) {
+      scalar fb = {f.i + i};
+      if (f.delete)
+	f.delete (fb);
+      free (fb.name); fb.name = NULL;
+      free (fb.boundary); fb.boundary = NULL;
+      free (fb.boundary_homogeneous); fb.boundary_homogeneous = NULL;
+      fb.freed = true;
+    }
   }
-
+  
   if (list == all) {
     all[0].i = -1;
     return;
@@ -221,11 +287,15 @@ void delete (scalar * list)
 
   trash (list);
   for (scalar f in list) {
-    scalar * s = all;
-    for (; s->i >= 0 && s->i != f.i; s++);
-    if (s->i == f.i)
-      for (; s->i >= 0; s++)
-	s[0] = s[1];
+    if (f.block > 0) {
+      scalar * s = all;
+      for (; s->i >= 0 && s->i != f.i; s++);
+      if (s->i == f.i) {
+	for (; s[f.block].i >= 0; s++)
+	  s[0] = s[f.block];
+	s->i = -1;
+      }
+    }
   }
 }
 
@@ -288,7 +358,7 @@ void boundary (scalar * list)
     return;
   vector * listf = NULL;
   for (scalar s in list)
-    if (!is_constant(s) && s.face)
+    if (!is_constant(s) && s.block > 0 && s.face)
       listf = vectors_add (listf, s.v);
   if (listf) {
     boundary_flux (listf);
@@ -335,6 +405,7 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   free (s.boundary_homogeneous);
   // reset all attributes
   _attribute[s.i] = (const _Attributes){0};
+  s.block = 1;
   s.name = pname;
   /* set default boundary conditions */
   s.boundary = (double (**)(Point, Point, scalar, void *))

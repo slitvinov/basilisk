@@ -8,34 +8,42 @@ typedef struct {
 @define BUF void * // fixme: workaround for bug in qcc
 
 foreach_dimension()
-static BUF snd_x (int i, int dst, int tag, int l, scalar * list,
+static BUF snd_x (int i, int dst, int tag, int level, scalar * list,
 		  MPI_Request * req)
 {
   if (dst == MPI_PROC_NULL)
     return NULL;
-  int nl = (1 << l) + 2*GHOSTS;
-  size_t size = pow(nl, dimension - 1)*list_len(list)*GHOSTS*sizeof(double);
+  size_t size = 0;
+  for (scalar s in list)
+    size += s.block;
+  size *= pow((1 << level) + 2*GHOSTS, dimension - 1)*GHOSTS*sizeof(double);
   double * buf = (double *) malloc (size), * b = buf;
-  foreach_slice_x (i, i + GHOSTS, l)
-    for (scalar s in list)
-      *b++ = s[];
+  foreach_slice_x (i, i + GHOSTS, level)
+    for (scalar s in list) {
+      memcpy (b, &s[], sizeof(double)*s.block);
+      b += s.block;
+    }
   MPI_Isend (buf, size, MPI_BYTE, dst, tag, MPI_COMM_WORLD, req);
   return buf;
 }
 
 foreach_dimension()
-static void rcv_x (int i, int src, int tag, int l, scalar * list)
+static void rcv_x (int i, int src, int tag, int level, scalar * list)
 {
   if (src == MPI_PROC_NULL)
     return;
-  int nl = (1 << l) + 2*GHOSTS;
-  size_t size = pow(nl, dimension - 1)*list_len(list)*GHOSTS*sizeof(double);
+  size_t size = 0;
+  for (scalar s in list)
+    size += s.block;
+  size *= pow((1 << level) + 2*GHOSTS, dimension - 1)*GHOSTS*sizeof(double);
   double * buf = (double *) malloc (size), * b = buf;
   MPI_Status s;
   MPI_Recv (buf, size, MPI_BYTE, src, tag, MPI_COMM_WORLD, &s);
-  foreach_slice_x (i, i + GHOSTS, l)
-    for (scalar s in list)
-      s[] = *b++;
+  foreach_slice_x (i, i + GHOSTS, level)
+    for (scalar s in list) {
+      memcpy (&s[], b, sizeof(double)*s.block);
+      b += s.block;      
+    }
   free (buf);
 }
 
@@ -44,7 +52,7 @@ static void mpi_boundary_level (const Boundary * b, scalar * list, int level)
 {
   scalar * list1 = NULL;
   for (scalar s in list)
-    if (!is_constant(s))
+    if (!is_constant(s) && s.block > 0)
       list1 = list_add (list1, s);
   if (!list1)
     return;
@@ -59,13 +67,13 @@ static void mpi_boundary_level (const Boundary * b, scalar * list, int level)
     MPI_Cart_shift (mpi->cartcomm, dir.x, 1, &left, &right);  
     MPI_Request reqs[2];
     void * buf[2];
-    int nl = (1 << level) + 2*GHOSTS, nr = 0;
-    if ((buf[0] = snd_x (nl - 2*GHOSTS, right, 0, level, list1, &reqs[nr])))
+    int npl = (1 << level) + 2*GHOSTS, nr = 0;
+    if ((buf[0] = snd_x (npl - 2*GHOSTS, right, 0, level, list1, &reqs[nr])))
       nr++;
     if ((buf[1] = snd_x (2, left,  1, level, list1, &reqs[nr])))
       nr++;
     rcv_x (0, left,  0, level, list1);
-    rcv_x (nl - GHOSTS,   right, 1, level, list1);
+    rcv_x (npl - GHOSTS,   right, 1, level, list1);
     MPI_Status stats[nr];
     MPI_Waitall (nr, reqs, stats);
     free (buf[0]); free (buf[1]);

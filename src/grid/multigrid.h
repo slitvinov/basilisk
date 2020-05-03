@@ -27,6 +27,12 @@ struct _Point {
   int k;
 #endif
   int level, n;
+@ifdef foreach_block
+  int l;
+  @define _BLOCK_INDEX , point.l
+@else
+  @define _BLOCK_INDEX
+@endif
 };
 static Point last_point;
 
@@ -112,11 +118,11 @@ static size_t _size (size_t l)
 #if dimension == 1
 @def fine(a,k,l,m)
   ((double *)
-   &multigrid->d[point.level+1][(2*point.i-GHOSTS+k)*datasize])[a.i]
+   &multigrid->d[point.level+1][(2*point.i-GHOSTS+k)*datasize])[_index(a,m)]
 @
   @def coarse(a,k,l,m)
   ((double *)
-   &multigrid->d[point.level-1][((point.i+GHOSTS)/2+k)*datasize])[a.i]
+   &multigrid->d[point.level-1][((point.i+GHOSTS)/2+k)*datasize])[_index(a,m)]
 @
 @def POINT_VARIABLES
   VARIABLES
@@ -131,13 +137,13 @@ static size_t _size (size_t l)
   ((double *)
    &multigrid->d[point.level+1][((2*point.i-GHOSTS+k)*2*((1 << point.level) +
 							 GHOSTS) +
-			    (2*point.j-GHOSTS+l))*datasize])[a.i]
+				 (2*point.j-GHOSTS+l))*datasize])[_index(a,m)]
 @
 @def coarse(a,k,l,m)
   ((double *)
    &multigrid->d[point.level-1][(((point.i+GHOSTS)/2+k)*((1 << point.level)/2 +
 							 2*GHOSTS) +
-			    (point.j+GHOSTS)/2+l)*datasize])[a.i]
+				 (point.j+GHOSTS)/2+l)*datasize])[_index(a,m)]
 @
 @def POINT_VARIABLES
   VARIABLES
@@ -156,7 +162,7 @@ static size_t _size (size_t l)
 							  GHOSTS)) +
 			       (2*point.j-GHOSTS+m)*2*((1 << point.level) +
 						       GHOSTS) +
-			       (2*point.k-GHOSTS+o))*datasize])[a.i]
+			       (2*point.k-GHOSTS+o))*datasize])[_index(a,m)]
 @
 @def coarse(a,l,m,o)
 ((double *)
@@ -164,7 +170,7 @@ static size_t _size (size_t l)
 							 2*GHOSTS) +
 			       ((point.j+GHOSTS)/2+m)*((1 << point.level)/2 +
 						       2*GHOSTS) +
-			       (point.k+GHOSTS)/2+o)*datasize])[a.i]
+			       (point.k+GHOSTS)/2+o)*datasize])[_index(a,m)]
 @
 @def POINT_VARIABLES
   VARIABLES
@@ -185,7 +191,7 @@ static size_t _size (size_t l)
 @def foreach_level(l)
 OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
-  Point point;
+  Point point = {0};
   point.level = l; point.n = 1 << point.level;
   int _k;
   OMP(omp for schedule(static))
@@ -211,7 +217,7 @@ OMP_PARALLEL() {
 @def foreach()
   OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
-  Point point;
+  Point point = {0};
   point.level = depth(); point.n = 1 << point.level;
   int _k;
   OMP(omp for schedule(static))
@@ -249,7 +255,7 @@ OMP_PARALLEL() {
 @def foreach_face_generic()
   OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
-  Point point;
+  Point point = {0};
   point.level = depth(); point.n = 1 << point.level;
   int _k;
   OMP(omp for schedule(static))
@@ -386,17 +392,19 @@ void reset (void * alist, double val)
   p.level = depth(); p.n = 1 << p.level;
   for (; p.level >= 0; p.n /= 2, p.level--)
     for (int i = 0; i < dimpower(p.n + 2*GHOSTS); i++)
-      for (scalar s in list)
+      for (scalar s in list) {
 	if (!is_constant(s))
-	  ((double *)(&multigrid->d[p.level][i*datasize]))[s.i] = val;
+	  for (int b = 0; b < s.block; b++)
+	    ((double *)(&multigrid->d[p.level][i*datasize]))[s.i + b] = val;
+      }
 }
 
 // Boundaries
 
 #if dimension == 1
-  @def foreach_boundary_dir(l,d)
+@def foreach_boundary_dir(l,d)
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
-  Point point;
+  Point point = {0};
   point.level = l < 0 ? depth() : l;
   point.n = 1 << point.level;
   if (d == left) {
@@ -412,14 +420,14 @@ void reset (void * alist, double val)
 @
 @define end_foreach_boundary_dir() }
 
-@define neighbor(o,p,q) ((Point){point.i+o, point.level, point.n})
+@define neighbor(o,p,q) ((Point){point.i+o, point.level, point.n _BLOCK_INDEX})
 @define is_boundary(point) (point.i < GHOSTS || point.i >= point.n + GHOSTS)
 
 #elif dimension == 2
 @def foreach_boundary_dir(l,d)
   OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
-  Point point;
+  Point point = {0};
   point.level = l < 0 ? depth() : l;
   point.n = 1 << point.level;
   int * _i = &point.j;
@@ -454,7 +462,9 @@ void reset (void * alist, double val)
 }
 @
 
-@define neighbor(o,p,q) ((Point){point.i+o, point.j+p, point.level, point.n})
+@def neighbor(o,p,q)
+  ((Point){point.i+o, point.j+p, point.level, point.n _BLOCK_INDEX})
+@
 @def is_boundary(point) (point.i < GHOSTS || point.i >= point.n + GHOSTS ||
 			 point.j < GHOSTS || point.j >= point.n + GHOSTS)
 @
@@ -463,7 +473,7 @@ void reset (void * alist, double val)
 @def foreach_boundary_dir(l,d)
   OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
-  Point point;
+  Point point = {0};
   point.level = l < 0 ? depth() : l;
   point.n = 1 << point.level;
   int * _i = &point.j, * _j = &point.k;
@@ -510,7 +520,7 @@ void reset (void * alist, double val)
 @
 
 @def neighbor(o,p,q)
-  ((Point){point.i+o, point.j+p, point.k+q, point.level, point.n})
+  ((Point){point.i+o, point.j+p, point.k+q, point.level, point.n _BLOCK_INDEX})
 @
 @def is_boundary(point) (point.i < GHOSTS || point.i >= point.n + GHOSTS ||
 			 point.j < GHOSTS || point.j >= point.n + GHOSTS ||
@@ -533,12 +543,12 @@ static double periodic_bc (Point point, Point neighbor, scalar s, void * data);
 static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 {
   disable_fpe (FE_DIVBYZERO|FE_INVALID);
-  for (int layer = 1; layer <= BGHOSTS; layer++)
+  for (int bghost = 1; bghost <= BGHOSTS; bghost++)
     for (int d = 0; d < 2*dimension; d++) {
 
       scalar * list = NULL, * listb = NULL;
       for (scalar s in scalars)
-	if (!is_constant(s)) {
+	if (!is_constant(s) && s.block > 0) {
 	  scalar sb = s;
 #if dimension > 1
 	  if (s.v.x.i >= 0) {
@@ -560,17 +570,20 @@ static void box_boundary_level (const Boundary * b, scalar * scalars, int l)
 	  for (s,sb in list,listb) {
 	    if (s.face && sb.i == s.v.x.i) {
 	      // normal component of face vector
-	      if (layer == 1)
-		s[(ig + 1)/2,(jg + 1)/2,(kg + 1)/2] =
+	      if (bghost == 1)
+		foreach_block()
+		  s[(ig + 1)/2,(jg + 1)/2,(kg + 1)/2] =
 		  sb.boundary[d] (point, neighborp(ig,jg,kg), s, NULL);
 	    }
 	    else
 	      // tangential component of face vector or centered
-	      s[layer*ig,layer*jg,layer*kg] =
-		sb.boundary[d] (neighborp((1 - layer)*ig,
-					  (1 - layer)*jg,
-					  (1 - layer)*kg),
-				neighborp(layer*ig,layer*jg,layer*kg), s, NULL);
+	      foreach_block()
+		s[bghost*ig,bghost*jg,bghost*kg] =
+		sb.boundary[d] (neighborp((1 - bghost)*ig,
+					  (1 - bghost)*jg,
+					  (1 - bghost)*kg),
+				neighborp(bghost*ig,bghost*jg,bghost*kg),
+				s, NULL);
 	  }
 	}
 	free (list);
@@ -590,7 +603,7 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 {
   scalar * list1 = NULL;
   for (scalar s in list)
-    if (!is_constant(s) && s.boundary[right] == periodic_bc)
+    if (!is_constant(s) && s.block > 0 && s.boundary[right] == periodic_bc)
       list1 = list_add (list1, s);
   if (!list1)
     return;
@@ -598,9 +611,9 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   if (l == 0) {
     foreach_level(0)
       for (scalar s in list1) {
-	double v = s[];
+	double * v = &s[];
 	foreach_neighbor()
-	  s[] = v;
+	  memcpy (&s[], v, s.block*sizeof(double));
       }
     free (list1);
     return;
@@ -610,10 +623,10 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   point.level = l < 0 ? depth() : l; point.n = 1 << point.level;
   for (int i = 0; i < GHOSTS; i++)
     for (scalar s in list1)
-      s[i] = s[i + point.n];
+      memcpy (&s[i], &s[i + point.n], s.block*sizeof(double));
   for (int i = point.n + GHOSTS; i < point.n + 2*GHOSTS; i++)
     for (scalar s in list1)
-      s[i] = s[i - point.n];
+      memcpy (&s[i], &s[i - point.n], s.block*sizeof(double));
 
   free (list1);
 }
@@ -627,7 +640,7 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 {
   scalar * list1 = NULL;
   for (scalar s in list)
-    if (!is_constant(s)) {
+    if (!is_constant(s) && s.block > 0) {
       if (s.face) {
 	scalar vt = VT;
 	if (vt.boundary[right] == periodic_bc)
@@ -642,9 +655,9 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
   if (l == 0) {
     foreach_level(0)
       for (scalar s in list1) {
-	double v = s[];
+	double * v = &s[];
 	foreach_neighbor()
-	  s[] = v;
+	  memcpy (&s[], v, s.block*sizeof(double));
       }
     free (list1);
     return;
@@ -659,10 +672,10 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
       for (j = 0; j < point.n + 2*GHOSTS; j++) {
 	for (int i = 0; i < GHOSTS; i++)
 	  for (scalar s in list1)
-	    s[i,j] = s[i + point.n,j];
+	    memcpy (&s[i,j], &s[i + point.n,j], s.block*sizeof(double));
 	for (int i = point.n + GHOSTS; i < point.n + 2*GHOSTS; i++)
 	  for (scalar s in list1)
-	    s[i,j] = s[i - point.n,j];
+	    memcpy (&s[i,j], &s[i - point.n,j], s.block*sizeof(double));
       }
 #else // dimension == 3
     int j;
@@ -671,10 +684,10 @@ static void periodic_boundary_level_x (const Boundary * b, scalar * list, int l)
 	for (int k = 0; k < point.n + 2*GHOSTS; k++) {
 	  for (int i = 0; i < GHOSTS; i++)
 	    for (scalar s in list1)
-	      s[i,j,k] = s[i + point.n,j,k];
+	      memcpy (&s[i,j,k], &s[i + point.n,j,k], s.block*sizeof(double));
 	  for (int i = point.n + GHOSTS; i < point.n + 2*GHOSTS; i++)
 	    for (scalar s in list1)
-	      s[i,j,k] = s[i - point.n,j,k];
+	      memcpy (&s[i,j,k], &s[i - point.n,j,k], s.block*sizeof(double));
 	}
 #endif
   }
@@ -745,17 +758,17 @@ void init_grid (int n)
   reset (all, 0.);
 }
 
-void realloc_scalar (void)
+void realloc_scalar (int size)
 {
   Multigrid * p = multigrid;
-  size_t oldatasize = datasize - sizeof(double);
   for (int l = 0; l <= depth(); l++) {
     size_t len = _size(l);
-    qrealloc (p->d[l], len*datasize, char);
-    char * data = p->d[l] + (len - 1)*oldatasize;
-    for (int i = len - 1; i > 0; i--, data -= oldatasize)
-      memmove (data + i*sizeof(double), data, oldatasize);  
+    qrealloc (p->d[l], len*(datasize + size), char);
+    char * data = p->d[l] + (len - 1)*datasize;
+    for (int i = len - 1; i > 0; i--, data -= datasize)
+      memmove (data + i*size, data, datasize);  
   }
+  datasize += size;
 }
 
 #if _MPI
@@ -774,7 +787,8 @@ struct _locate { double x, y, z; };
 
 Point locate (struct _locate p)
 {
-  Point point = { .level = -1, .n = 1 << depth() };
+  Point point = {0};
+  point.level = -1, point.n = 1 << depth();
 #if _MPI
   point.i = (p.x - X0)/L0*point.n*mpi_dims[0] + GHOSTS - mpi_coords[0]*point.n;
   if (point.i < GHOSTS || point.i >= point.n + GHOSTS)
@@ -827,7 +841,7 @@ void dimensions (struct Dimensions p)
 @if dimension == 1
 
 @def foreach_slice_x(start, end, l) {
-  Point point;
+  Point point = {0};
   point.level = l; point.n = 1 << point.level;
   for (point.i = start; point.i < end; point.i++)
 @
@@ -836,7 +850,7 @@ void dimensions (struct Dimensions p)
 @elif dimension == 2
 
 @def foreach_slice_x(start, end, l) {
-  Point point;
+  Point point = {0};
   point.level = l; point.n = 1 << point.level;
   for (point.i = start; point.i < end; point.i++)
     for (point.j = 0; point.j < point.n + 2*GHOSTS; point.j++)
@@ -844,7 +858,7 @@ void dimensions (struct Dimensions p)
 @define end_foreach_slice_x() }
       
 @def foreach_slice_y(start, end, l) {
-  Point point;
+  Point point = {0};
   point.level = l; point.n = 1 << point.level;
   for (point.i = 0; point.i < point.n + 2*GHOSTS; point.i++)
     for (point.j = start; point.j < end; point.j++)
@@ -854,7 +868,7 @@ void dimensions (struct Dimensions p)
 @elif dimension == 3
 
 @def foreach_slice_x(start, end, l) {
-  Point point;
+  Point point = {0};
   point.level = l; point.n = 1 << point.level;
   for (point.i = start; point.i < end; point.i++)
     for (point.j = 0; point.j < point.n + 2*GHOSTS; point.j++)
@@ -863,7 +877,7 @@ void dimensions (struct Dimensions p)
 @define end_foreach_slice_x() }
       
 @def foreach_slice_y(start, end, l) {
-  Point point;
+  Point point = {0};
   point.level = l; point.n = 1 << point.level;
   for (point.i = 0; point.i < point.n + 2*GHOSTS; point.i++)
     for (point.j = start; point.j < end; point.j++)
@@ -872,7 +886,7 @@ void dimensions (struct Dimensions p)
 @define end_foreach_slice_y() }
 
 @def foreach_slice_z(start, end, l) {
-  Point point;
+  Point point = {0};
   point.level = l; point.n = 1 << point.level;
   for (point.i = 0; point.i < point.n + 2*GHOSTS; point.i++)
     for (point.j = 0; point.j < point.n + 2*GHOSTS; point.j++)

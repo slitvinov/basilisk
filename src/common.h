@@ -800,7 +800,8 @@ void init_solver()
 @define NOT_UNUSED(x) (void)(x)
 
 @define VARIABLES      _CATCH;
-@define val(a,k,l,m)   data(k,l,m)[a.i]
+@define _index(a,m)    (a.i)
+@define val(a,k,l,m)   data(k,l,m)[_index(a,m)]
 
 double _val_higher_dimension = 0.;
 @define _val_higher_dimension(x,a,b,c) _val_higher_dimension
@@ -957,8 +958,11 @@ attribute {
 #endif
   } d; // staggering
   vector v;
-  bool   face, nodump;
+  bool   face, nodump, freed;
+  int    block;
 }
+
+#define foreach_block() // treatment of block data is disabled by default
 
 // lists
 

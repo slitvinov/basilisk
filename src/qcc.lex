@@ -117,7 +117,7 @@
   #define floattype (cadna ? "float_st" : "float")
   
   typedef struct { 
-    char * v, * constant;
+    char * v, * constant, * block;
     int type, args, scope, automatic, symmetric, face, vertex, maybeconst;
     int wasmaybeconst;
     int i[9];
@@ -139,7 +139,7 @@
 	varstackmax += 100;
 	_varstack = realloc (_varstack, varstackmax*sizeof (var_t));
       }
-      _varstack[varstack] = (var_t) { f, NULL, type, na, scope, 
+      _varstack[varstack] = (var_t) { f, NULL, NULL, type, na, scope, 
 				      0, 0, 0, 0, maybeconst, 0, {-1} };
       v = &(_varstack[varstack]);
     }
@@ -921,10 +921,11 @@
     return list;
   }
 
-  void new_field (var_t * var) {
+  void new_field (var_t * var, char * block) {
     if (scope > 0) {
       // automatic variables
-      fprintf (yyout, " new_%s%s%s(\"%s\"",
+      fprintf (yyout, " new_%s%s%s%s(\"%s\"",
+	       block ? "block_" : "",
 	       var->constant ? "const_" : "",
 	       var->symmetric ? "symmetric_" : 
 	       var->face ? "face_" : 
@@ -935,7 +936,12 @@
 	       var->type == tensor ? "tensor" :
 	       "internal_error",
 	       var->v);
-      if (var->constant) {
+      if (block) {
+	if (var->type == scalar)
+	  fprintf (yyout, ", \"\"");
+	fprintf (yyout, ", %s", block);
+      }
+      else if (var->constant) {
 	if (var->type == scalar) {
 	  fprintf (yyout, ", %d, %s", nconst, var->constant);
 	  nconst++;
@@ -1054,7 +1060,7 @@
 	v->constant = strdup (varconst);
       fputs (text, yyout);
       fputc ('=', yyout);
-      new_field (v);
+      new_field (v, NULL);
     }
     else {
       char * start = strchr (text, '['), * end = strchr (text, ']');
@@ -1356,13 +1362,25 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
     infunctionproto = 0;
 }
 
-(foreach_child|foreach_child_direction|foreach_neighbor) {
+(foreach_child|foreach_child_direction|foreach_neighbor|foreach_block) {
   if (indef)
     REJECT;
-  fputs (" { ", yyout);
-  ECHO;
   foreach_child_t child = {scope, para};
-  strcpy (child.name, yytext);
+  fputs (" { ", yyout);
+  if (!strcmp(yytext, "foreach_block")) {
+    if (inforeach) {
+      fprintf (yyout, "foreach_block_inner");
+      strcpy (child.name, "foreach_block_inner");
+    }
+    else {
+      ECHO;
+      strcpy (child.name, yytext);
+    }      
+  }
+  else {
+    ECHO;
+    strcpy (child.name, yytext);
+  }
   stack_push (&foreach_child_stack, &child);
 }
 
@@ -1378,6 +1396,11 @@ foreach{ID}? {
   strcpy (foreachs, yytext);
   if (indef)
     REJECT;
+  if (inforeach) {
+    fprintf (stderr, "%s:%d: error: foreach* loops cannot be nested\n",
+	     fname, line);
+    return 1;    
+  }
   fputs (" { ", yyout);
   inforeach = 1; foreachscope = scope; foreachpara = para;
   free (foreachconst); 
@@ -1560,8 +1583,8 @@ map{WS}+"{" {
   invardecl = varmaybeconst = 0;
 }
 
-{ID}{WS}*[=]{WS}*new{WS}+(symmetric|face|vertex){0,1}*{WS}*(scalar|vector|tensor) |
-[=]{WS}*new{WS}+(symmetric|face|vertex){0,1}{WS}*(scalar|vector|tensor) {
+{ID}{WS}*[=]{WS}*new{WS}+(symmetric|face|vertex){0,1}*{WS}*(scalar|vector|tensor)({WS}*\[[^\]]*\]){0,1} |
+[=]{WS}*new{WS}+(symmetric|face|vertex){0,1}{WS}*(scalar|vector|tensor)({WS}*\[[^\]]*\]){0,1} {
   char * type = strchr (yytext, '=');
   type = strstr (type, "new"); space(type); nonspace(type);
   char * symmetric = strstr (type, "symmetric");
@@ -1575,6 +1598,14 @@ map{WS}+"{" {
   char * vertex = strstr (type, "vertex");
   if (vertex) {
     space(type); nonspace(type);
+  }
+  char * block = strchr (type, '[');
+  if (block) {
+    char * s = type;
+    while (s != block && !strchr(" \t\v\n\f", *s)) s++;
+    if (strchr(" \t\v\n\f", *s)) *s = '\0';
+    *block++ = '\0';
+    *strchr (block, ']') = '\0';
   }
   int newvartype = (!strcmp (type, "scalar") ? scalar :
 		    !strcmp (type, "vector") ? vector :
@@ -1602,7 +1633,7 @@ map{WS}+"{" {
   var->face   = (face != NULL);
   var->vertex = (vertex != NULL);
   fputc ('=', yyout);
-  new_field (var);
+  new_field (var, block);
   if (debug)
     fprintf (stderr, "%s:%d: new %s%s: %s\n", 
 	     fname, line, 
@@ -1640,7 +1671,7 @@ map{WS}+"{" {
 	     var->type == vector ? ".x" : var->type == tensor ? ".x.x" : "");
     fprintf (yyout, "= %s ? %s :", var->conditional, arg);
   }
-  new_field (var);
+  new_field (var, NULL);
 }
 
 \({WS}*const{WS}*\)    varmaybeconst = 1;

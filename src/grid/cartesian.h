@@ -273,15 +273,15 @@ void init_grid (int n)
   grid->n = grid->tn = sq(n);
 }
 
-void realloc_scalar (void)
+void realloc_scalar (int size)
 {
   Cartesian * p = cartesian;
-  size_t oldatasize = datasize - sizeof(double);
   size_t len = (p->n + 2)*(p->n + 2);
-  qrealloc (p->d, len*datasize, char);
-  char * data = p->d + (len - 1)*oldatasize;
-  for (int i = len - 1; i > 0; i--, data -= oldatasize)
-    memmove (data + i*sizeof(double), data, oldatasize);  
+  qrealloc (p->d, len*(datasize + size), char);
+  char * data = p->d + (len - 1)*datasize;
+  for (int i = len - 1; i > 0; i--, data -= datasize)
+    memmove (data + i*size, data, datasize);
+  datasize += size;
 }
 
 struct _locate { double x, y, z; };

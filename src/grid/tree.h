@@ -58,7 +58,7 @@ typedef struct {
 #endif
 #if dimension >= 3
   int k;
-#endif
+#endif  
 } IndexLevel;
 
 typedef struct {
@@ -262,6 +262,12 @@ struct _Point {
   int k;
 #endif
   int level;
+@ifdef foreach_block
+  int l;
+  @define _BLOCK_INDEX , point.l
+@else
+  @define _BLOCK_INDEX
+@endif
 };
 static Point last_point;
 
@@ -418,13 +424,15 @@ void cache_shrink (Cache * c)
 #if dimension >= 3
     point.k + n,
 #endif
-    point.level }
+    point.level
+    _BLOCK_INDEX
+}
 @
 			
 /***** Data macros *****/
 @define data(k,l,n)     ((double *) (NEIGHBOR(k,l,n) + sizeof(Cell)))
-@define fine(a,k,l,n)   ((double *) (CHILD(k,l,n) + sizeof(Cell)))[a.i]
-@define coarse(a,k,l,n) ((double *) (PARENT(k,l,n) + sizeof(Cell)))[a.i]
+@define fine(a,k,p,n)   ((double *) (CHILD(k,p,n) + sizeof(Cell)))[_index(a,n)]
+@define coarse(a,k,p,n) ((double *) (PARENT(k,p,n) + sizeof(Cell)))[_index(a,n)]
 
 @def POINT_VARIABLES
   VARIABLES
@@ -535,12 +543,13 @@ void cache_shrink (Cache * c)
 @def foreach_cache(_cache) {
   OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
-#if dimension == 1
-  Point point = {GHOSTS,0};
-#elif dimension == 2
-  Point point = {GHOSTS,GHOSTS,0};
-#else
-  Point point = {GHOSTS,GHOSTS,GHOSTS,0};
+  Point point = {0};
+  point.i = GHOSTS;
+#if dimension > 1
+  point.j = GHOSTS;
+#endif
+#if dimension > 2
+  point.k = GHOSTS;
 #endif
   int _k; unsigned short _flags; NOT_UNUSED(_flags);
   OMP(omp for schedule(static))
@@ -561,12 +570,13 @@ void cache_shrink (Cache * c)
 @def foreach_cache_level(_cache,_l) {
   OMP_PARALLEL() {
   int ig = 0, jg = 0, kg = 0; NOT_UNUSED(ig); NOT_UNUSED(jg); NOT_UNUSED(kg);
-#if dimension == 1
-  Point point = {GHOSTS,0};
-#elif dimension == 2
-  Point point = {GHOSTS,GHOSTS,0};
-#else
-  Point point = {GHOSTS,GHOSTS,GHOSTS,0};
+  Point point = {0};
+  point.i = GHOSTS;
+#if dimension > 1
+  point.j = GHOSTS;
+#endif
+#if dimension > 2
+  point.k = GHOSTS;
 #endif
   point.level = _l;
   int _k;
@@ -905,22 +915,28 @@ void reset (void * alist, double val)
     for (int i = 0; i < L->len; i++)
       if (L->m[i])
 #if dimension == 1
-	for (scalar s in list)
+	for (scalar s in list) {
 	  if (!is_constant(s))
-	    ((double *)(L->m[i] + sizeof(Cell)))[s.i] = val;
+	    for (int b = 0; b < s.block; b++)
+	      ((double *)(L->m[i] + sizeof(Cell)))[s.i + b] = val;
+	}
 #else // dimension >= 2
 	for (int j = 0; j < L->len; j++)
 	  if (L->m[i][j])
 #if dimension == 2
-	    for (scalar s in list)
+	    for (scalar s in list) {
 	      if (!is_constant(s))
-		((double *)(L->m[i][j] + sizeof(Cell)))[s.i] = val;
+		for (int b = 0; b < s.block; b++)
+		  ((double *)(L->m[i][j] + sizeof(Cell)))[s.i + b] = val;
+	    }
 #else // dimension == 3
           for (int k = 0; k < L->len; k++)
 	    if (L->m[i][j][k])
-	      for (scalar s in list)
+	      for (scalar s in list) {
   	        if (!is_constant(s))
-		  ((double *)(L->m[i][j][k] + sizeof(Cell)))[s.i] = val;
+		  for (int b = 0; b < s.block; b++)		    
+		    ((double *)(L->m[i][j][k] + sizeof(Cell)))[s.i + b] = val;
+	      }
 #endif
 #endif // dimension >= 2
   }
@@ -1135,12 +1151,13 @@ static void apply_periodic (Tree * q)
 #endif // dimension == 3
 }
  
-void realloc_scalar (void)
+void realloc_scalar (int size)
 {
   /* low-level memory management */
   Tree * q = tree;
-  size_t newlen = sizeof(Cell) + datasize;
-  size_t oldlen = newlen - sizeof(double);
+  size_t oldlen = sizeof(Cell) + datasize;
+  size_t newlen = oldlen + size;
+  datasize += size;
   /* the root level is allocated differently */
   Layer * L = q->L[0];
   int len = L->len;
@@ -1731,7 +1748,8 @@ struct _locate { double x, y, z; };
 Point locate (struct _locate p)
 {
   for (int l = depth(); l >= 0; l--) {
-    Point point = { .level = l };
+    Point point = {0};
+    point.level = l;
     int n = 1 << point.level;
     point.i = (p.x - X0)/L0*n + GHOSTS;
 #if dimension >= 2
@@ -1754,7 +1772,8 @@ Point locate (struct _locate p)
     else
       break;
   }
-  Point point = { .level = -1 };
+  Point point = {0};
+  point.level = -1;
   return point;
 }
 

@@ -54,7 +54,8 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
     if (l == minlevel)
       foreach_level_or_leaf (l)
 	for (scalar s in da)
-	  s[] = 0.;
+	  foreach_block()
+	    s[] = 0.;
 
     /**
     On all other grids, we take as initial guess the approximate solution
@@ -63,8 +64,9 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
     else
       foreach_level (l)
 	for (scalar s in da)
-	  s[] = bilinear (point, s);
-
+	  foreach_block()
+	    s[] = bilinear (point, s);
+    
     /**
     We then apply homogeneous boundary conditions and do several
     iterations of the relaxation function to refine the initial guess. */
@@ -82,7 +84,8 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
   foreach() {
     scalar s, ds;
     for (s, ds in a, da)
-      s[] += ds[];
+      foreach_block()
+	s[] += ds[];
   }
   boundary (a);
 }
@@ -143,10 +146,7 @@ mgstats mg_solve (struct MGSolve p)
 
   scalar * da = list_clone (p.a), * res = p.res;
   if (!res)
-    for (scalar s in p.a) {
-      scalar r = new scalar;
-      res = list_append (res, r);
-    }
+    res = list_clone (p.b);
 
   /**
   The boundary conditions for the correction fields are the

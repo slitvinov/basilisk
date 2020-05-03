@@ -66,7 +66,7 @@ void recursive (Point point)
 @def foreach_cell_root(root)
   {
     int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Point point;
+    Point point = {0};
 #if dimension == 1
     struct { int l, i, stage; } stack[STACKSIZE];
 #elif dimension == 2
@@ -135,7 +135,7 @@ void recursive (Point point)
 @define end_foreach_cell() end_foreach_cell_root() }
 
 @def foreach_cell_all() {
-  Point root = { .level = 0 };
+  Point root = {0};
   for (root.i = GHOSTS*Period.x; root.i <= GHOSTS*(2 - Period.x); root.i++)
 #if dimension >= 2
     for (root.j = GHOSTS*Period.y; root.j <= GHOSTS*(2 - Period.y); root.j++)
@@ -150,7 +150,7 @@ void recursive (Point point)
 @def foreach_cell_post_root(condition, root)
   {
     int ig = 0, jg = 0;	NOT_UNUSED(ig); NOT_UNUSED(jg);
-    Point point;
+    Point point = {0};
 #if dimension == 1
     struct { int l, i, stage; } stack[STACKSIZE];
 #elif dimension == 2
@@ -263,7 +263,7 @@ void recursive (Point point)
 @define end_foreach_cell_post() end_foreach_cell_post_root() }
 
 @def foreach_cell_post_all(condition) {
-  Point root = { .level = 0 };
+  Point root = {0};
   for (root.i = 0; root.i <= 2*GHOSTS; root.i++)
 #if dimension >= 2
     for (root.j = 0; root.j <= 2*GHOSTS; root.j++)

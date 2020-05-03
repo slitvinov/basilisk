@@ -418,9 +418,12 @@ static void prolongation_vertex (Point point, scalar s)
     for (int j = 0; j <= 1; j++)
 #if dimension == 3
       for (int k = 0; k <= 1; k++)
-#endif // dimension == 3
 	if (allocated_child(2*i,2*j,2*k))
 	  fine(s,2*i,2*j,2*k) = s[i,j,k];
+#else // dimension != 3
+      if (allocated_child(2*i,2*j))
+	fine(s,2*i,2*j) = s[i,j];
+#endif // dimension != 3
     
     foreach_dimension()
       if (neighbor(i).neighbors) {
@@ -450,6 +453,25 @@ foreach_dimension()
 static void refine_face_x (Point point, scalar s)
 {
   vector v = s.v;
+#if dimension <= 2
+  if (!is_refined(neighbor(-1)) &&
+      (is_local(cell) || is_local(neighbor(-1)))) {
+    double g1 = (v.x[0,+1] - v.x[0,-1])/8.;
+    for (int j = 0; j <= 1; j++)
+      fine(v.x,0,j) = v.x[] + (2*j - 1)*g1;
+  }
+  if (!is_refined(neighbor(1)) && neighbor(1).neighbors &&
+      (is_local(cell) || is_local(neighbor(1)))) {
+    double g1 = (v.x[1,+1] - v.x[1,-1])/8.;
+    for (int j = 0; j <= 1; j++)
+      fine(v.x,2,j) = v.x[1] + (2*j - 1)*g1;
+  }
+  if (is_local(cell)) {
+    double g1 = (v.x[0,+1] - v.x[0,-1] + v.x[1,+1] - v.x[1,-1])/16.;
+    for (int j = 0; j <= 1; j++)
+      fine(v.x,1,j) = (v.x[] + v.x[1])/2. + (2*j - 1)*g1;
+  }
+#else // dimension > 2
   if (!is_refined(neighbor(-1)) &&
       (is_local(cell) || is_local(neighbor(-1)))) {
     double g1 = (v.x[0,+1] - v.x[0,-1])/8.;
@@ -467,12 +489,13 @@ static void refine_face_x (Point point, scalar s)
 	fine(v.x,2,j,k) = v.x[1] + (2*j - 1)*g1 + (2*k - 1)*g2;
   }
   if (is_local(cell)) {
-    double g1 = (v.x[0,+1] + v.x[1,+1] - v.x[0,-1] - v.x[1,-1])/16.;
-    double g2 = (v.x[0,0,+1] + v.x[1,0,+1] - v.x[0,0,-1] - v.x[1,0,-1])/16.;
+    double g1 = (v.x[0,+1] - v.x[0,-1] + v.x[1,+1] - v.x[1,-1])/16.;
+    double g2 = (v.x[0,0,+1] - v.x[0,0,-1] + v.x[1,0,+1] - v.x[1,0,-1])/16.;
     for (int j = 0; j <= 1; j++)
       for (int k = 0; k <= 1; k++)
 	fine(v.x,1,j,k) = (v.x[] + v.x[1])/2. + (2*j - 1)*g1 + (2*k - 1)*g2;
   }
+#endif // dimension > 2
 }
 
 void refine_face (Point point, scalar s)
