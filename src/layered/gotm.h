@@ -247,33 +247,32 @@ event viscous_term (i++)
   struct { realtype * x, * y; } gotm_u = { meanflow_u.a, meanflow_v.a };
   struct { realtype * x, * y; } gotm_t = { &airsea_tx, &airsea_ty };
   foreach() {
-    double z = zb[];
+    memcpy (&meanflow_h.a[1], &h[], nl*sizeof(double));
+    foreach_dimension() {
+      *gotm_t.x = airsea_tau.x[];
+      memcpy (&gotm_u.x[1], &u.x[], nl*sizeof(double));
+    }
+    if (T.i >= 0)
+      memcpy (&meanflow_t.a[1], &T[], nl*sizeof(double));
+    if (S.i >= 0)
+      memcpy (&meanflow_s.a[1], &S[], nl*sizeof(double));
+    
+    double z = zb[];    
     foreach_layer() {
-      meanflow_h.a[point.l + 1] = h[];
       meanflow_z.a[point.l + 1] = z + h[]/2.;
-      foreach_dimension()
-	gotm_u.x[point.l + 1] = u.x[];
-      if (T.i >= 0)
-	meanflow_t.a[point.l + 1] = T[];
-      if (S.i >= 0)
-	meanflow_s.a[point.l + 1] = S[];      
       z += h[];
     }
 
-    foreach_dimension()
-      *gotm_t.x = airsea_tau.x[];
     airsea_heat = airsea_heat_flux[];
     airsea_i_0 = airsea_swr_flux[];
     gotm_step (i);
     
-    foreach_layer() {
-      foreach_dimension()
-        u.x[] = gotm_u.x[point.l + 1];
-      if (T.i >= 0)
-	T[] = meanflow_t.a[point.l + 1];
-      if (S.i >= 0)
-	S[] = meanflow_s.a[point.l + 1];
-    }
+    foreach_dimension()
+      memcpy (&u.x[], &gotm_u.x[1], nl*sizeof(double));
+    if (T.i >= 0)
+      memcpy (&T[], &meanflow_t.a[1], nl*sizeof(double));
+    if (S.i >= 0)
+      memcpy (&S[], &meanflow_s.a[1], nl*sizeof(double));
   }
 }
 
