@@ -92,13 +92,13 @@ static void vof_concentration_refine (Point point, scalar s)
       g.x = Delta*vof_concentration_gradient_x (point, f, s);
     double sc = s.inverse ? s[]/(1. - f[]) : s[]/f[], cmc = 4.*cm[];
     foreach_child() {
-      s[] = f[]*sc;
+      s[] = sc;
       foreach_dimension()
-	s[] += f[]*child.x*g.x*cm[-child.x]/cmc;
+	s[] += child.x*g.x*cm[-child.x]/cmc;
+      s[] *= s.inverse ? 1. - f[] : f[];
     }
   }
 }
-#endif // TREE
 
 /**
 On trees, we need to setup the appropriate prolongation and
@@ -106,7 +106,6 @@ refinement functions for the volume fraction fields. */
 
 event defaults (i = 0)
 {
-#if TREE
   for (scalar c in interfaces) {
     c.refine = c.prolongation = fraction_refine;
     scalar * tracers = c.tracers;
@@ -115,8 +114,8 @@ event defaults (i = 0)
       t.c = c;
     }
   }
-#endif
 }
+#endif // TREE
 
 /**
 We need to make sure that the CFL is smaller than 0.5 to ensure
