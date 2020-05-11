@@ -877,6 +877,13 @@ static bool process_line (char * line, Array * history, FILE * interactive)
     draw_append (buf, history, interactive);
   }
 
+  else if (!strcmp (s, "labels")) {
+    struct _labels p = {0};
+    _labels_get (&p);
+    labels (p);
+    draw_append (buf, history, interactive);
+  }
+
   else if (!strcmp (s, "display")) {
     if (interactive && history->len && load (buf = history))
       save (fp = interactive);

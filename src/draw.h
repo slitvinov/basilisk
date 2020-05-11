@@ -1453,3 +1453,46 @@ bool draw_string (struct _draw_string p)
 
   return true;
 }
+
+/**
+# *labels()*: displays label fields */
+
+struct _labels {
+  char * f;
+  float lc[3], lw; // the line color and width
+};
+
+trace
+bool labels (struct _labels p)
+{
+#if dimension == 2
+  bool expr = false;
+  scalar f = compile_expression (p.f, &expr);
+  if (f.i < 0)
+    return false;
+  bview * view = draw();
+  float width  = gl_StrokeWidth ('1'), height = gl_StrokeHeight();
+  float res = view->res;
+  if (view->res < 150*view->samples)
+    view->res = 150*view->samples;
+  draw_lines (view, p.lc, p.lw) {
+    glMatrixMode (GL_MODELVIEW);
+    foreach_visible (view)
+      if (f[] != nodata) {
+	glPushMatrix();
+	char s[80];
+	sprintf (s, "%g", f[]);
+	float scale = 0.8*Delta/(strlen(s)*width);
+	glTranslatef (x - 0.4*Delta, y - scale*height/3., 0.);
+	glScalef (scale, scale, 1.);
+	gl_StrokeString (s);
+	glPopMatrix();
+      }
+  }
+  view->res = res;
+  if (expr) delete ({f});
+#else // dimension == 3
+  assert (false); // not implemented yet
+#endif // dimension == 3
+  return true;
+}

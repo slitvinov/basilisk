@@ -160,8 +160,12 @@ int main()
 #endif
 #endif // !GN
 
+  //  gradient = zero;
+  
   run();
 }
+
+// event timestepping (t += 0.05);
 
 scalar etamax[];
 
@@ -260,8 +264,10 @@ event init (i = 0)
 {
   terrain (zb, "~/terrain/etopo2", "~/terrain/srtm_japan", NULL);
 
-  if (restore (file = "restart"))
+  if (restore (file = "restart")) {
+    event ("metric");
     conserve_elevation();
+  }
   else {
     conserve_elevation();
 
