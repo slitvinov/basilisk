@@ -137,12 +137,12 @@ event viscous_term (i++,last)
     foreach() {
       foreach_layer()
 	foreach_dimension()
-	  u.x[] += dt*(a.x[] + a.x[1])/(fm.x[] + fm.x[1] + SEPS);
+	  u.x[] += dt*(ha.x[] + ha.x[1])/(hf.x[] + hf.x[1] + dry);
       foreach_dimension()
 	vertical_viscosity (point, h, u.x, dt);
       foreach_layer()
 	foreach_dimension()
-	  u.x[] -= dt*(a.x[] + a.x[1])/(fm.x[] + fm.x[1] + SEPS);
+	  u.x[] -= dt*(ha.x[] + ha.x[1])/(hf.x[] + hf.x[1] + dry);
     }
     boundary ((scalar *) {u});
   }

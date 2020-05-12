@@ -30,8 +30,8 @@ layer thickness. The hydrostatic CFL criterion is defined by `CFL_H`.
 
 The `gradient` pointer gives the function used for limiting.
 
-The `uf` and `a` fields define the face velocity and face acceleration
-for each layer. 
+The `hu`, `ha` and `hf` fields define the face flux $hu$,
+height-weighted face acceleration and face height for each layer.
 
 `tracers` is a list of tracers for each layer. By default it contains
 only the components of velocity. */
@@ -45,7 +45,7 @@ double G = 1., dry = 1e-6, CFL_H = 1.;
 double (* gradient) (double, double, double) = minmod2;
 bool linearised = false;
 
-vector uf, a;
+vector hu, ha, hf;
 scalar * tracers = NULL;
 
 /**
@@ -112,10 +112,11 @@ event. */
 event defaults (i = 0)
 {
   u = new vector[nl];
-  uf = new face vector[nl];
-  a = new face vector[nl];
-  reset ({u, uf, a}, 0.);
-
+  hu = new face vector[nl];
+  ha = new face vector[nl];
+  hf = new face vector[nl];
+  reset ({u, hu, ha, hf}, 0.);
+    
   if (!linearised)
     foreach_dimension()
       tracers = list_append (tracers, u.x);
@@ -134,19 +135,13 @@ event defaults (i = 0)
 }
 
 /**
-After user initialisation, we define the initial face velocities `uf`
-and free-surface height $\eta$. */
+After user initialisation, we define the free-surface height $\eta$
+and initial acceleration. */
 
 double dtmax;
 
 event init (i = 0)
 {
-  trash ({uf});
-  foreach_face()
-    foreach_layer()
-      uf.x[] = fm.x[]*(h[]*u.x[] + h[-1]*u.x[-1])/(h[] + h[-1] + dry);
-  boundary ((scalar *){uf});
- 
   foreach() {
     eta[] = zb[];
     foreach_layer()
@@ -154,8 +149,11 @@ event init (i = 0)
   }
   boundary (all);
 
+  dt = 0;
+  event ("acceleration");
   dtmax = DT;
   event ("stability");
+  event ("acceleration");
 }
 
 /**
@@ -173,10 +171,6 @@ $$
 $$
 */
 
-#define face_is_wet() ((H > dry && Hm > dry) ||				\
-		       (H > dry && eta[] >= zb[-1]) ||			\
-		       (Hm > dry && eta[-1] >= zb[]))
-
 event set_dtmax (i++,last) dtmax = DT;
 
 static bool hydrostatic = true;
@@ -184,38 +178,17 @@ static bool hydrostatic = true;
 event stability (i++,last)
 {
   foreach_face (reduction (min:dtmax)) {
-    double H = 0., Hm = 0.;
-#if !TREE
+    double Hf = 0.;
     foreach_layer()
-      H += h[], Hm += h[-1];
-#else // TREE
-    foreach_layer() {
-      H += h[], Hm += h[-1];
-    
-      /**
-      We check and enforce that fluxes between dry and wet cells are
-      zero. This is necessary only when using adaptive refinement,
-      otherwise this is guaranteed by the way face velocities are
-      computed in the [acceleration section](#acceleration). */
-      
-      if ((h[] < dry && uf.x[] < 0.) ||
-	  (h[-1] < dry && uf.x[] > 0.))
-	uf.x[] = 0.;
-    }
-    if (!face_is_wet())
-      foreach_layer()
-	uf.x[] = 0.;
-    else
-#endif // TREE
-
-    if (H + Hm > 0.) {
-      H = (H + Hm)/2.;
-      double cp = hydrostatic ? sqrt(G*H) : sqrt(G*Delta*tanh(H/Delta));
+      Hf += hf.x[];
+    if (Hf > dry) {
+      Hf /= fm.x[];
+      double cp = hydrostatic ? sqrt(G*Hf) : sqrt(G*Delta*tanh(Hf/Delta));
       cp /= CFL_H;
       foreach_layer() {
-	double c = fm.x[]*cp + fabs(uf.x[]);
+	double c = hf.x[]*cp + fabs(hu.x[]);
 	if (c > 0.) {
-	  double dt = cm[]*Delta/c;
+	  double dt = hf.x[]/fm.x[]*cm[]*Delta/c;
 	  if (dt < dtmax)
 	    dtmax = dt;
 	}
@@ -246,43 +219,37 @@ event advection_term (i++,last)
   if (grid->n == 1) // to optimise 1D-z models
     return 0;
   
-  face vector F[], flux[];
-
+  face vector flux[];
+  
   foreach_layer() {
-
+    
     /**
-    We first compute the "thickness flux" $F_{i+1/2,k}=(hu)_{i+1/2,k}$
-    using the [Bell--Collela--Glaz](/src/bcg.h) scheme. */
-
-    tracer_fluxes (h, uf, F, dt, zeroc);
-
-    /**
-    We then compute the flux $(sF)_{i+1/2,k}$ for each tracer $s$, also
-    using a variant of the BCG scheme. */
+    We compute the flux $(shu)_{i+1/2,k}$ for each tracer $s$, using a
+    variant of the BCG scheme. */
     
     for (scalar s in tracers) {
       foreach_face() {
-	double un = dt*uf.x[]/(fm.x[]*Delta + SEPS), a = sign(un);
+	double un = dt*hu.x[]/(hf.x[]*Delta + dry), a = sign(un);
 	int i = -(a + 1.)/2.;
 	double g = s.gradient ?
 	  s.gradient (s[i-1], s[i], s[i+1])/Delta :
 	  (s[i+1] - s[i-1])/(2.*Delta);
 	double s2 = s[i] + a*(1. - a*un)*g*Delta/2.;
 #if dimension > 1
-	if (fm.y[i] && fm.y[i,1]) {
-	  double vn = (uf.y[i] + uf.y[i,1])/(fm.y[i] + fm.y[i,1]);
+	if (hf.y[i] + hf.y[i,1] > dry) {
+	  double vn = (hu.y[i] + hu.y[i,1])/(hf.y[i] + hf.y[i,1]);
 	  double syy = (s.gradient ? s.gradient (s[i,-1], s[i], s[i,1]) :
 			vn < 0. ? s[i,1] - s[i] : s[i] - s[i,-1]);
 	  s2 -= dt*vn*syy/(2.*Delta);
 	}
 #endif
-	flux.x[] = s2*F.x[];
+	flux.x[] = s2*hu.x[];
       }
       boundary_flux ({flux});
-
+      
       /**
       We compute $(hs)^\star_i = (hs)^n_i + \Delta t 
-      [(sF)_{i+1/2} -(sF)_{i-1/2}]/\Delta$. */
+      [(shu)_{i+1/2} -(shu)_{i-1/2}]/\Delta$. */
       
       foreach() {
 	s[] *= h[];
@@ -295,7 +262,7 @@ event advection_term (i++,last)
     We then obtain $h^{n+1}$ and $s^{n+1}$ using
     $$
     \begin{aligned}
-    h_i^{n+1} & = h_i^n + \Delta t \frac{F_{i+1/2} - F_{i-1/2}}{\Delta}, \\
+    h_i^{n+1} & = h_i^n + \Delta t \frac{(hu)_{i+1/2} - (hu)_{i-1/2}}{\Delta}, \\
     s_i^{n+1} & = \frac{(hs)^\star_i}{h_i^{n+1}}
     \end{aligned}
     $$
@@ -303,7 +270,7 @@ event advection_term (i++,last)
 
     foreach() {
       foreach_dimension()
-	h[] += dt*(F.x[] - F.x[1])/(Delta*cm[]);
+	h[] += dt*(hu.x[] - hu.x[1])/(Delta*cm[]);
       if (h[] < dry) {
 	for (scalar f in tracers)
 	  f[] = 0.;
@@ -317,14 +284,14 @@ event advection_term (i++,last)
   /**
   Finally the free-surface height $\eta$ is updated and the boundary
   conditions are applied. */
-  
+
   foreach() {
     double H = 0.;
     foreach_layer()
       H += h[];
     eta[] = zb[] + H;
   }
-
+  
   scalar * list = list_copy ({h, eta});
   for (scalar s in tracers)
     list = list_append (list, s);
@@ -333,62 +300,87 @@ event advection_term (i++,last)
 }
 
 /**
+[Vertical remapping](remap.h) is applied here if necessary. */
+
+event remap (i++, last);
+
+/**
 Vertical diffusion (including viscosity) is added by this code. */
 
 #include "diffusion.h"
 
 /**
-## Acceleration
+## Mesh adaptation
 
-We compute the acceleration as
-$$
-a_{i + 1 / 2, k} = - g \frac{\eta_{i + 1, k} - \eta_{i, k}}{\Delta}
-$$
-taking into account [metric
-terms](/src/README#general-orthogonal-coordinates), and the face
-velocity field as
-$$
-  u_{i + 1 / 2, k} = \frac{(hu)_{i + 1, k} + 
-  (hu)_{i, k}}{h_{i + 1, k} + h_{i, k}} + \Delta ta_{i + 1 / 2, k}
-$$
-provided the "wet condition"
-$$
-\begin{aligned}
-  H_i > \epsilon \quad &\text{and} \quad H_{i + 1} > \epsilon 
-  \quad \text{or} \\
-  H_i > \epsilon \quad &\text{and} \quad \eta_i \leq z_{i + 1, b} 
-  \quad \text{or} \\
-  H_{i + 1} > \epsilon \quad &\text{and} \quad \eta_{i + 1} \leq z_{i, b}
-\end{aligned}
-$$
-is verified. */
+Plugs itself here. */
+
+#if TREE
+event adapt (i++,last);
+#endif
+
+/**
+## Acceleration */
 
 event acceleration (i++,last)
 {
-  trash ({uf});
+  trash ({hu, ha, hf});
   foreach_face() {
-    double H = 0., Hm = 0.;
-    foreach_layer()
-      H += h[], Hm += h[-1];
-    if (face_is_wet())
-      foreach_layer() {
-        a.x[] = - sq(fm.x[])*G*(eta[] - eta[-1])/((cm[] + cm[-1])*Delta/2.);
-        uf.x[] = fm.x[]*(h[]*u.x[] + h[-1]*u.x[-1])/(h[] + h[-1] + dry) +
-	  dt*a.x[];	
+    
+    /**
+    We compute the acceleration as
+    $$
+    a_{i + 1 / 2, k} = - g \frac{\eta_{i + 1, k} - \eta_{i, k}}{\Delta}
+    $$
+    taking into account [metric
+    terms](/src/README#general-orthogonal-coordinates).*/
+    
+    double ax = - fm.x[]*G*(eta[] - eta[-1])/((cm[] + cm[-1])*Delta/2.);
+    foreach_layer() {
+
+      /**
+      The face velocity is first computed as
+      $$
+      u_{i + 1 / 2, k} = \frac{(hu)_{i + 1, k} + 
+      (hu)_{i, k}}{h_{i + 1, k} + h_{i, k}} + \Delta ta_{i + 1 / 2, k}
+      $$
+      with checks to avoid division by zero. */
+
+      double hl = h[-1] > dry ? h[-1] : 0.;
+      double hr = h[] > dry ? h[] : 0.;
+      hu.x[] = hl > 0. || hr > 0. ? (hl*u.x[-1] + hr*u.x[])/(hl + hr) : 0.;
+
+      /**
+      The face height `hf` is reconstructed using Bell-Collela-Glaz-style
+      upwinding. */
+	
+      double un = dt*(hu.x[] + dt*ax)/Delta, a = sign(un);
+      int i = - (a + 1.)/2.;
+      double g = h.gradient ? h.gradient (h[i-1], h[i], h[i+1])/Delta :
+	(h[i+1] - h[i-1])/(2.*Delta);
+      hf.x[] = h[i] + a*(1. - a*un)*g*Delta/2.;
+
+      /**
+      The height-weighted face acceleration $ha_{i+1/2}$ and
+      face flux $hu_{i+1/2}$ are computed as */
+
+      if (hf.x[] < dry)
+	ha.x[] = hu.x[] = hf.x[] = 0.;
+      else {
+	hf.x[] *= fm.x[];
+	ha.x[] = hf.x[]*ax;	
+	hu.x[] = hf.x[]*(hu.x[] + dt*ax);
       }
-    else
-      foreach_layer()
-	a.x[] = uf.x[] = 0.;
+    }
   }
-  boundary ((scalar *){uf, a});
+  boundary ((scalar *){hu, ha, hf});
 }
 
 /**
 Finally the acceleration is used to obtain the velocity field at time
 $n+1$ as
 $$
-u^{n + 1}_{i, k} \leftarrow u^{n + 1}_{i, k} + \Delta t \frac{a_{i + 1 / 2,
-k} + a_{i - 1 / 2, k}}{2}
+u^{n + 1}_{i, k} \leftarrow u^{n + 1}_{i, k} + \Delta t \frac{ha_{i + 1 / 2,
+k} + ha_{i - 1 / 2, k}}{h_{i + 1 / 2,k} + h_{i - 1 / 2, k}}
 $$
 The missing shallow-water metric terms $(f_G v, -f_G u)$, with
 $$
@@ -402,7 +394,7 @@ event pressure (i++,last)
   foreach()
     foreach_layer() {
       foreach_dimension()
-        u.x[] += dt*(a.x[] + a.x[1])/(fm.x[] + fm.x[1]);
+        u.x[] += dt*(ha.x[] + ha.x[1])/(hf.x[] + hf.x[1] + dry);
 #if dimension == 2
       // metric terms
       double dmdl = (fm.x[1,0] - fm.x[])/(cm[]*Delta);
@@ -417,18 +409,14 @@ event pressure (i++,last)
 }
 
 /**
-## Mesh adaptation and cleanup
+## Cleanup
 
-Adaptation plugs itself here. The fields and lists allocated in
-[`defaults()`](#defaults0) above must be freed at the end of the run. */
-
-#if TREE
-event adapt (i++,last);
-#endif
-
+The fields and lists allocated in [`defaults()`](#defaults0) above
+must be freed at the end of the run. */
+   
 event cleanup (i = end, last)
 {
-  delete ({eta, h, u, uf, a});
+  delete ({eta, h, u, hu, ha, hf});
   free (tracers), tracers = NULL;
 }
 
@@ -450,12 +438,14 @@ void vertical_velocity (scalar w)
     double dz = zb[1] - zb[-1];
     double wm = 0.;
     foreach_layer() {
-      w[] = wm + (uf.x[] + uf.x[1])*(dz + h[1] - h[-1])/(4.*Delta);
+      w[] = wm + (hu.x[] + hu.x[1])/(hf.x[] + hf.x[1] + dry)*
+	(dz + h[1] - h[-1])/(2.*Delta);
       if (point.l > 0)
 	foreach_dimension()
-	  w[] -= (uf.x[0,0,-1] + uf.x[1,0,-1])*dz/(4.*Delta);
+	  w[] -= (hu.x[0,0,-1] + hu.x[1,0,-1])
+	  /(hf.x[0,0,-1] + hf.x[1,0,-1] + dry)*dz/(2.*Delta);
       foreach_dimension()
-	w[] -= ((h[] + h[1])*uf.x[1] - (h[] + h[-1])*uf.x[])/(2.*Delta);
+	w[] -= (hu.x[1] - hu.x[])/Delta;
       dz += h[1] - h[-1], wm = w[];
     }
   }
@@ -480,5 +470,71 @@ double _radiation (Point point, double ref, scalar s)
   
 #define radiation(ref) _radiation(point, ref, _s)
 
+/**
+# Conservation of water surface elevation
+
+We re-use some generic functions. */
+
 #include "elevation.h"
+
+/**
+But we need to re-define the water depth refinement function. */
+
+#if TREE
+static void refine_layered_elevation (Point point, scalar h)
+{
+
+  /**
+  We first check whether we are dealing with "shallow cells". */
+  
+  bool shallow = zb[] > default_sea_level;
+  foreach_child()
+    if (zb[] > default_sea_level)
+      shallow = true, break;
+
+  /**
+  If we do, refined cells are just set to the default sea level. */
+  
+  if (shallow)
+    foreach_child()
+      h[] = max(0., default_sea_level - zb[]);
+
+  /**
+  Otherwise, we use the surface elevation of the parent cells to
+  reconstruct the water depth of the children cells. */
+  
+  else {
+    double eta = zb[] + h[];   // water surface elevation  
+    coord g; // gradient of eta
+    if (gradient)
+      foreach_dimension()
+	g.x = gradient (zb[-1] + h[-1], eta, zb[1] + h[1])/4.;
+    else
+      foreach_dimension()
+	g.x = (zb[1] + h[1] - zb[-1] - h[-1])/(2.*Delta);
+    // reconstruct water depth h from eta and zb
+    foreach_child() {
+      double etac = eta;
+      foreach_dimension()
+	etac += g.x*child.x;
+      h[] = max(0., etac - zb[]);
+    }  
+  }
+}
+
+/**
+We overload the `conserve_elevation()` function. */
+
+void conserve_layered_elevation (void)
+{
+  h.refine  = refine_layered_elevation;
+  h.prolongation = prolongation_elevation;
+  h.restriction = restriction_elevation;
+  boundary ({h});
+}
+
+#define conserve_elevation() conserve_layered_elevation()
+
+#endif // TREE
+
 #include "gauges.h"

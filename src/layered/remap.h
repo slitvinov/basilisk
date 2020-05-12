@@ -75,7 +75,7 @@ The remapping is applied at every timestep just before the vertical
 viscosity i.e. just after horizontal advection in the [multilayer
 solver](hydro.h). */
 
-event viscous_term (i++) {
+event remap (i++) {
   if (nl > 1)
     vertical_remapping (h, tracers);
 }

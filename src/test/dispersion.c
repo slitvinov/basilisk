@@ -288,7 +288,7 @@ plot  omega1_keller(x)/sqrt(tanh(x)) t '1 layer', \
 ~~~gnuplot Relative energy evolution
 set ylabel 'Energy variation per period (%)'
 set yr [*:*]
-set key top right
+set key bottom left
 plot  'log-1' u ($1):($4*10.) t '1 layer' pt 5 lt 2, \
       'log-2' u ($1):($4*10.) t '2 layers' pt 6 lt 4, \
       'log-3' u ($1):($4*10.) t '3 layers' pt 9 lt 6, \

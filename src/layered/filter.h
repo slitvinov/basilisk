@@ -1,6 +1,8 @@
 /**
 # Filter for grid-scale oscillations
 
+**Note that this is obsolete and is kept only for historical interest.**
+
 Because it is colocated, the [layered solver](hydro.h) can be prone to
 grid-scale oscillations. This noise is usually small but can be
 significant when gradients of bathymetry/wave fields are

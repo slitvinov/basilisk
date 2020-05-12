@@ -113,7 +113,6 @@ make tohoku.tst tohoku-gn.tst tohoku-hydro.tst
 #   include "layered/nh.h"
 #   define MGD mgp.i
 # endif
-# include "layered/filter.h"
 # include "layered/perfs.h"
 scalar h;
 vector u;
@@ -144,17 +143,13 @@ int main()
   multigrid solver to speed things up. This does not change the
   solution.
 
-  For the multilayer solver we use a grid-scale filter with a 3
-  minutes timescale. This is not strictly necessary but makes nicer
-  pictures (it damps grid-scale noise). In the non-hydrostatic case,
-  we add a cut-off breaking parameter ([Popinet,
-  2019](/src/references.bib#popinet2019)). */
+  In the non-hydrostatic case, we add a cut-off breaking parameter
+  ([Popinet, 2019](/src/references.bib#popinet2019)). */
   
 #if GN
   TOLERANCE = HUGE;
   NITERMIN = 1;
 #else // !GN
-  filter = 3.; // 3 minutes filter
 #if NH
   breaking = 0.07;
 #endif

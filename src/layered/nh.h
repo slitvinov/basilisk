@@ -241,14 +241,30 @@ event pressure (i++)
     foreach_layer() {
       rhs[] = 2.*h[]*w[];
       foreach_dimension()
-	rhs[] -= h[]*(uf.x[] + uf.x[1])/2.*
-	slope_limited((dz.x + h[1] - h[-1])/(2.*Delta));
+	rhs[] -= (hu.x[] + hu.x[1])/2.*
+	  slope_limited((dz.x + h[1] - h[-1])/(2.*Delta));
       if (point.l > 0)
 	foreach_dimension()
-	  rhs[] += h[]*(uf.x[0,0,-1] + uf.x[1,0,-1])/2.*
-	    slope_limited(dz.x/(2.*Delta));
+	  rhs[] += (hu.x[0,0,-1] + hu.x[1,0,-1])/2.*
+  	    slope_limited(dz.x/(2.*Delta));
+
+      /**
+      The simple and logical discretisation for the term below would be
+
+~~~literatec
+foreach_dimension()
+  rhs[] += h[]*(hu.x[1] - hu.x[])/Delta;
+~~~
+
+      however this is unstable for the supercitical [Gaussian
+      bump](/src/test/gaussian.c) test case. The filtering of heights
+      provided by the more complicated formulation below seems to be
+      necessary for stability. */
+      
       foreach_dimension()
-	rhs[] += h[]*((h[] + h[1])*uf.x[1] - (h[] + h[-1])*uf.x[])/(2.*Delta);
+	rhs[] += h[]*((h[] + h[1])*fm.x[1]*hu.x[1]/(hf.x[1] + dry) -
+		      (h[] + h[-1])*fm.x[]*hu.x[]/(hf.x[] + dry))/(2.*Delta);
+      
       for (int k = - 1, s = -1; k >= - point.l; k--, s = -s)
 	rhs[] += 4.*s*h[]*w[0,0,k];
       rhs[] *= 2./dt;
@@ -271,64 +287,59 @@ event pressure (i++)
   delete ({rhs});
 
   /**
-  The non-hydrostatic pressure gradient is added to the acceleration
-  and to the face velocities as 
+  The non-hydrostatic pressure gradient is added to the face-weighted
+  acceleration and to the face fluxes as
   $$
   \begin{aligned}
-  \alpha_{i + 1 / 2, l} \leftarrow & 2 \frac{\partial_x
-  (h \phi)_{i + 1 / 2, l} - [\phi \partial_x z]_{i + 1 / 2,
-  l}}{h_{i + 1, l}^{n + 1} + h_{i, l}^{n + 1}}\\
-  u_{i + 1 / 2, l} \leftarrow & u_{i + 1 / 2, l} - \alpha_{i + 1 / 2, l}\\
-  a_{i + 1 / 2, l} \leftarrow & a_{i + 1 / 2, l} - \alpha_{i + 1 / 2, l}
+  \alpha_{i + 1 / 2, l} \leftarrow & \partial_x
+  (h \phi)_{i + 1 / 2, l} - [\phi \partial_x z]_{i + 1 / 2, l}\\
+  hu_{i + 1 / 2, l} \leftarrow & hu_{i + 1 / 2, l} - \alpha_{i + 1 / 2, l}\\
+  ha_{i + 1 / 2, l} \leftarrow & ha_{i + 1 / 2, l} - \alpha_{i + 1 / 2, l}
   \Delta t
   \end{aligned}
   $$
   */
   
   foreach_face() {
-    double H = 0., Hm = 0.;
-    foreach_layer()
-      H += h[], Hm += h[-1];
-    if ((H > dry && Hm > dry) ||
-	(H > dry && eta[] >= zb[-1]) ||
-	(Hm > dry && eta[-1] >= zb[])) {
-      double dz = zb[] - zb[-1];
-      foreach_layer() {
-	if (h[] + h[-1] > dry) {
-	  double ax;
-#if 0 // metric terms (do not seem to work yet)
-	  if (l == nl - 1)
-	    ax = sq(fm.x[])*(h[]*phi[] - h[-1]*phi[-1] + (phi[] + phi[-1])*dz)
-	      /((cm[] + cm[-1])*Delta/2.*(h[] + h[-1]));
-	  else
-	    ax = sq(fm.x[])*(h[]*(phi[] + phi[0,0,1]) -
-			     h[-1]*(phi[-1] + phi[-1,0,1])
-			     - ((phi[0,0,1] + phi[-1,0,1])*(dz + h[] - h[-1]) -
-				(phi[] + phi[-1])*dz))
-	      /((cm[] + cm[-1])*Delta/2.*(h[] + h[-1]));
+    double dz = zb[] - zb[-1];
+    foreach_layer() {
+      if (hf.x[] > dry) {
+	double ax;
+	// fixme: metric terms are missing
+#if 0
+	if (point.l == nl - 1)
+	  ax = fm.x[]*((h[]*phi[] - h[-1]*phi[-1])/Delta +
+		       (phi[] + phi[-1])*slope_limited(dz/Delta))
+	    /(h[] + h[-1]);
+	else
+	  ax = fm.x[]*
+	    ((h[]*(phi[] + phi[0,0,1]) -
+	      h[-1]*(phi[-1] + phi[-1,0,1]))/Delta
+	     - ((phi[0,0,1] + phi[-1,0,1])*
+		slope_limited((dz + h[] - h[-1])/Delta) -
+		(phi[] + phi[-1])*slope_limited(dz/Delta)))
+	    /(h[] + h[-1]);
+	hu.x[] -= dt*hf.x[]*ax;
+	a.x[] -= hf.x[]*ax;
 #else
-	  if (point.l == nl - 1)
-	    ax = fm.x[]*((h[]*phi[] - h[-1]*phi[-1])/Delta +
-			 (phi[] + phi[-1])*slope_limited(dz/Delta))
-	      /(h[] + h[-1]);
-	  else
-	    ax = fm.x[]*
-	      ((h[]*(phi[] + phi[0,0,1]) -
-		h[-1]*(phi[-1] + phi[-1,0,1]))/Delta
-	       - ((phi[0,0,1] + phi[-1,0,1])*
-		  slope_limited((dz + h[] - h[-1])/Delta) -
-		  (phi[] + phi[-1])*slope_limited(dz/Delta)))
-	      /(h[] + h[-1]);
+	if (point.l == nl - 1)
+	  ax = fm.x[]*((h[]*phi[] - h[-1]*phi[-1])/Delta +
+		       (phi[] + phi[-1])*slope_limited(dz/Delta))/2.;
+	else
+	  ax = fm.x[]*((h[]*(phi[] + phi[0,0,1]) -
+			h[-1]*(phi[-1] + phi[-1,0,1]))/Delta
+		       - ((phi[0,0,1] + phi[-1,0,1])*
+			  slope_limited((dz + h[] - h[-1])/Delta) -
+			  (phi[] + phi[-1])*slope_limited(dz/Delta)))/2.;
+	hu.x[] -= dt*ax;
+	ha.x[] -= ax;
 #endif
-	  uf.x[] -= dt*ax;
-	  a.x[] -= ax;
-	}
-	dz += h[] - h[-1];
       }
+      dz += h[] - h[-1];
     }
   }
-  boundary ((scalar *){uf});
-  boundary_flux ({a});
+  boundary ((scalar *){hu});
+  boundary_flux ({ha});
 
   /**
   The maximum allowed vertical velocity is computed as

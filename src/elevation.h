@@ -13,7 +13,7 @@ surface elevation $\eta$ is conserved.
 We start with the reconstruction of fine "wet" cells: */
 
 #if TREE
-static const double default_sea_level = 0.;
+static double default_sea_level = 0.;
 
 static void refine_elevation (Point point, scalar h)
 {
@@ -127,6 +127,7 @@ void conserve_elevation (void)
   h.refine  = refine_elevation;
   h.prolongation = prolongation_elevation;
   h.restriction = restriction_elevation;
+  boundary ({h});
 }
 #else // Cartesian
 void conserve_elevation (void) {}
