@@ -12,7 +12,7 @@
 
 attribute {
   void ** kdt;
-  scalar n, dmin, dmax;
+  scalar nt, dmin, dmax;
 }
 
 static int includes (KdtRect rect, Point * p)
@@ -43,7 +43,7 @@ static void reconstruct_terrain (Point point, scalar zb)
 		   (KdtCheck) includes,
 		   (KdtCheck) intersects, &point,
 		   rect, &s);
-  scalar n = zb.n, dmin = zb.dmin, dmax = zb.dmax;
+  scalar n = zb.nt, dmin = zb.dmin, dmax = zb.dmax;
   n[] = s.n;
   if (s.w > 0.) {
     zb[] = s.H0/s.w;
@@ -119,7 +119,7 @@ void terrain (scalar zb, ...)
   scalar n = new scalar;
   scalar dmin = new scalar;
   scalar dmax = new scalar;
-  zb.n = n;
+  zb.nt = n;
   zb.dmin = dmin;
   zb.dmax = dmax;
 

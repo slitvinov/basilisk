@@ -19,7 +19,7 @@ int main ()
     if (l == 7)
       output_field ({zb, e}, stdout, n = 128);
     norm n = normf (e);
-    stats s = statsf (zb.n);
+    stats s = statsf (zb.nt);
     fprintf (stderr, "%d %.6f %.6f %.6f %g %g\n", l, n.avg, n.rms, n.max, 
 	     s.min, s.max);
   }
