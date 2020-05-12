@@ -192,15 +192,15 @@ static double generic_limiter (double r, double beta)
 }
 
 double minmod (double s0, double s1, double s2) {
-  return generic_limiter ((s2 - s1)/(s1 - s0), 1.)*(s1 - s0);
+  return s1 == s0 ? 0. : generic_limiter ((s2 - s1)/(s1 - s0), 1.)*(s1 - s0);
 }
 
 double superbee (double s0, double s1, double s2) {
-  return generic_limiter ((s2 - s1)/(s1 - s0), 2.)*(s1 - s0);
+  return s1 == s0 ? 0. : generic_limiter ((s2 - s1)/(s1 - s0), 2.)*(s1 - s0);
 }
 
 double sweby (double s0, double s1, double s2) {
-  return generic_limiter ((s2 - s1)/(s1 - s0), 1.5)*(s1 - s0);
+  return s1 == s0 ? 0. : generic_limiter ((s2 - s1)/(s1 - s0), 1.5)*(s1 - s0);
 }
 
 /**
