@@ -684,6 +684,16 @@ static bool cfilter (Point point, scalar c, double cmin)
   return max - min > 0.5;
 }
 
+static void glvertex3d (bview * view, double x, double y, double z) {
+  if (view->map) {
+    coord p = {x, y, z};
+    view->map (&p);
+    glVertex3d (p.x, p.y, p.z);
+  }
+  else
+    glVertex3d (x, y, z);
+}
+
 #if dimension <= 2
 static void glvertex2d (bview * view, double x, double y) {
   if (view->map) {
@@ -694,17 +704,17 @@ static void glvertex2d (bview * view, double x, double y) {
   else
     glVertex2d (x, y);
 }
-#else // dimension > 2
-static void glvertex3d (bview * view, double x, double y, double z) {
-  if (view->map) {
-    coord p = {x, y, z};
-    view->map (&p);
-    glVertex3d (p.x, p.y, p.z);
-  }
-  else
-    glVertex3d (x, y, z);
+
+static void glvertex_normal3d (bview * view, Point point, vector n,
+			       double xp, double yp, double zp)
+{
+  coord v = {xp, yp, zp}, np;
+  foreach_dimension()
+    np.x = interp (point, v, n.x);
+  glNormal3d (- np.x, - np.y, 1.);
+  glvertex3d (view, xp, yp, zp);
 }
-#endif // dimension > 2
+#endif // dimension <= 2
 
 trace
 bool draw_vof (struct _draw_vof p)
@@ -1024,6 +1034,9 @@ The field name is given by *color*. The *min*, *max*, *spread*, *map*
 etc.  arguments work as described in
 [draw_vof()](draw.h#draw_vof-displays-vof-reconstructed-interfaces).
 
+In 2D, if *z* is specified, and *linear* is the true, the corresponding
+expression is used as z-coordinate.
+
 In 3D the intersections of the field with a plane are displayed. The
 default plane is $z=0$. This can be changed by setting *n* and *alpha*
 which define the plane
@@ -1034,6 +1047,7 @@ $$
 
 struct _squares {
   char * color;
+  char * z;
   double min, max, spread;
   bool linear;
   colormap map;
@@ -1047,6 +1061,21 @@ struct _squares {
 trace
 bool squares (struct _squares p)
 {
+#if dimension == 2
+  scalar Z = {-1};
+  vector n;
+  bool zexpr = false;
+  if (p.z) {
+    Z = compile_expression (p.z, &zexpr);
+    if (Z.i < 0)
+      return false;
+    n = new vector;
+    foreach()
+      foreach_dimension()
+        n.x[] = center_gradient (Z);
+    boundary ((scalar *){n});
+  }
+#endif
   colorize_args (p);
   scalar f = col;
   
@@ -1055,27 +1084,55 @@ bool squares (struct _squares p)
   if (p.linear) {
     colorize() {
 #if dimension == 2
-      glNormal3d (0, 0, view->reversed ? -1 : 1);
-      foreach_visible (view)
-        if (f[] != nodata) {
-	  glBegin (GL_TRIANGLE_FAN);
-	  color_vertex (p, (4.*f[] +
-			    2.*(f[1] + f[-1] + f[0,1] + f[0,-1]) +
-			    f[-1,-1] + f[1,1] + f[-1,1] + f[1,-1])/16.);
-	  glvertex2d (view, x, y);
-	  color_vertex (p, (f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
-	  glvertex2d (view, x - Delta/2., y - Delta/2.);
-	  color_vertex (p, (f[] + f[1] + f[1,-1] + f[0,-1])/4.);
-	  glvertex2d (view, x + Delta/2., y - Delta/2.);
-	  color_vertex (p, (f[] + f[1] + f[1,1] + f[0,1])/4.);
-	  glvertex2d (view, x + Delta/2., y + Delta/2.);
-	  color_vertex (p, (f[] + f[-1] + f[-1,1] + f[0,1])/4.);
-	  glvertex2d (view, x - Delta/2., y + Delta/2.);
-	  color_vertex (p, (f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
-	  glvertex2d (view, x - Delta/2., y - Delta/2.);
-	  glEnd();
-	  view->ni++;
-	}
+      if (Z.i < 0) {
+	glNormal3d (0, 0, view->reversed ? -1 : 1);
+	foreach_visible (view)
+	  if (f[] != nodata) {
+	    glBegin (GL_TRIANGLE_FAN);
+	    color_vertex (p, (4.*f[] +
+			      2.*(f[1] + f[-1] + f[0,1] + f[0,-1]) +
+			      f[-1,-1] + f[1,1] + f[-1,1] + f[1,-1])/16.);
+	    glvertex2d (view, x, y);
+	    color_vertex (p, (f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
+	    glvertex2d (view, x - Delta/2., y - Delta/2.);
+	    color_vertex (p, (f[] + f[1] + f[1,-1] + f[0,-1])/4.);
+	    glvertex2d (view, x + Delta/2., y - Delta/2.);
+	    color_vertex (p, (f[] + f[1] + f[1,1] + f[0,1])/4.);
+	    glvertex2d (view, x + Delta/2., y + Delta/2.);
+	    color_vertex (p, (f[] + f[-1] + f[-1,1] + f[0,1])/4.);
+	    glvertex2d (view, x - Delta/2., y + Delta/2.);
+	    color_vertex (p, (f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
+	    glvertex2d (view, x - Delta/2., y - Delta/2.);
+	    glEnd();
+	    view->ni++;
+	  }
+      }
+      else // Z.i > 0
+	foreach_leaf() // fixme: foreach_visible() would be better
+	  if (f[] != nodata) {
+	    glBegin (GL_TRIANGLE_FAN);
+	    color_vertex (p, (4.*f[] +
+			      2.*(f[1] + f[-1] + f[0,1] + f[0,-1]) +
+			      f[-1,-1] + f[1,1] + f[-1,1] + f[1,-1])/16.);
+	    glvertex_normal3d (view, point, n, x, y, Z[]);
+	    color_vertex (p, (f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
+	    glvertex_normal3d (view, point, n, x - Delta/2., y - Delta/2.,
+			       (Z[] + Z[-1] + Z[-1,-1] + Z[0,-1])/4.);
+	    color_vertex (p, (f[] + f[1] + f[1,-1] + f[0,-1])/4.);
+	    glvertex_normal3d (view, point, n, x + Delta/2., y - Delta/2.,
+			       (Z[] + Z[1] + Z[1,-1] + Z[0,-1])/4.);
+	    color_vertex (p, (f[] + f[1] + f[1,1] + f[0,1])/4.);
+	    glvertex_normal3d (view, point, n, x + Delta/2., y + Delta/2.,
+			       (Z[] + Z[1] + Z[1,1] + Z[0,1])/4.);
+	    color_vertex (p, (f[] + f[-1] + f[-1,1] + f[0,1])/4.);
+	    glvertex_normal3d (view, point, n, x - Delta/2., y + Delta/2.,
+			       (Z[] + Z[-1] + Z[-1,1] + Z[0,1])/4.);
+	    color_vertex (p, (f[] + f[-1] + f[-1,-1] + f[0,-1])/4.);
+	    glvertex_normal3d (view, point, n, x - Delta/2., y - Delta/2.,
+			       (Z[] + Z[-1] + Z[-1,-1] + Z[0,-1])/4.);
+	    glEnd();
+	    view->ni++;	    
+	  }
 #else // dimension == 3
       foreach_visible_plane (view, p.n, p.alpha)
 	if (f[] != nodata) {
@@ -1136,6 +1193,10 @@ bool squares (struct _squares p)
 #endif // dimension == 3
   }
   if (p.expr) delete ({col});
+#if dimension == 2
+  if (zexpr) delete ({Z});
+  if (p.z) delete ((scalar *){n});
+#endif
   return true;
 }
 
