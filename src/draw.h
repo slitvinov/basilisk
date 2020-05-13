@@ -990,17 +990,28 @@ void vectors (struct _vectors p)
     u.x = lookup_field (name);
   }
   bview * view = draw();
+  float res = view->res;
+  if (view->res < 15*view->samples)
+    view->res = 15*view->samples;
   draw_lines (view, p.lc, p.lw) {
-    double scale = p.scale ? p.scale : 1.;
+    double scale = (p.scale ? p.scale : 1.)*view->res/view->samples;
     glBegin (GL_LINES);
     foreach_visible (view)
       if (u.x[] != nodata) {
+	coord f = { scale*u.x[], scale*u.y[] };
+	glvertex2d (view, x + f.x - (f.x - f.y/2.)/5.,
+		    y + f.y - (f.x/2. + f.y)/5.);
+	glvertex2d (view, x + f.x, y + f.y);
+	glvertex2d (view, x + f.x, y + f.y);
+	glvertex2d (view, x + f.x - (f.x + f.y/2.)/5.,
+		    y + f.y + (f.x/2. - f.y)/5.);
 	glvertex2d (view, x, y);
-	glvertex2d (view, x + scale*u.x[], y + scale*u.y[]);
+	glvertex2d (view, x + f.x, y + f.y);	
 	view->ni++;
       }
     glEnd();
   }
+  view->res = res;
 #else // dimension == 3
   assert (false); // not implemented yet
 #endif // dimension == 3
