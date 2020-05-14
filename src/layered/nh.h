@@ -226,9 +226,11 @@ $$
   - [u^{\star} \partial_x z]_l +
     2 w^{\star}_l + 4 \sum^{l - 1}_{k = 0} (- 1)^{l + k} w^{\star}_k \right)
 $$
-*/
+The default maximum slope is set to 30 degrees. */
 
-#define slope_limited(dz) (fabs(dz) < 1. ? (dz) : ((dz) > 0. ? 1. : -1.))
+double max_slope = 0.57735; // tan(30.*pi/180.)
+#define slope_limited(dz) (fabs(dz) < max_slope ? (dz) :		\
+			   ((dz) > 0. ? max_slope : - max_slope))
  
 event pressure (i++)
 {
@@ -249,22 +251,25 @@ event pressure (i++)
   	    slope_limited(dz.x/(2.*Delta));
 
       /**
-      The simple and logical discretisation for the term below would be
+      In the expression below, the simple and consistent
+      discretisation of the divergence is `rhsi`, unfortunately this
+      is unstable for high-Froude/high-slope cases such as the
+      [transcritical Gaussian bump](/src/test/gaussian.c).
 
-~~~literatec
-foreach_dimension()
-  rhs[] += h[]*(hu.x[1] - hu.x[])/Delta;
-~~~
+      To stabilise we use a slope-weighted sum with the more complex
+      'filtered' expression `rhsf`. The threshold slope for which only
+      the filtered expression is used is 0.1. */
 
-      however this is unstable for the supercitical [Gaussian
-      bump](/src/test/gaussian.c) test case. The filtering of heights
-      provided by the more complicated formulation below seems to be
-      necessary for stability. */
-      
-      foreach_dimension()
-	rhs[] += h[]*((h[] + h[1])*fm.x[1]*hu.x[1]/(hf.x[1] + dry) -
-		      (h[] + h[-1])*fm.x[]*hu.x[]/(hf.x[] + dry))/(2.*Delta);
-      
+      foreach_dimension() {
+	double slope = fabs(dz.x/(2.*Delta))/0.1;
+	double rhsf = ((h[] + h[1])*fm.x[1]*
+		       (hf.x[1] > dry ? hu.x[1]/hf.x[1] : 0.) -
+		       (h[] + h[-1])*fm.x[]*
+		       (hf.x[] > dry ? hu.x[]/hf.x[] : 0.))/(2.*Delta);
+	double rhsi = (hu.x[1] - hu.x[])/Delta;
+	rhs[] += h[]*(slope > 1. ? rhsf : rhsi + (rhsf - rhsi)*cube(slope));
+      }
+
       for (int k = - 1, s = -1; k >= - point.l; k--, s = -s)
 	rhs[] += 4.*s*h[]*w[0,0,k];
       rhs[] *= 2./dt;

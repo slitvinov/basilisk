@@ -41,7 +41,7 @@ only the components of velocity. */
 
 scalar zb[], eta, h;
 vector u;
-double G = 1., dry = 1e-6, CFL_H = 1.;
+double G = 1., dry = 1e-4, CFL_H = 1.;
 double (* gradient) (double, double, double) = minmod2;
 bool linearised = false;
 

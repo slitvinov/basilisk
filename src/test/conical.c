@@ -139,6 +139,7 @@ event init (i = 0)
   elevation rather than volume. */
 
   zb.refine = refine_zb;
+  default_sea_level = H0;
   conserve_elevation();
 #endif
 

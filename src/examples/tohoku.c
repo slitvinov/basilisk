@@ -155,12 +155,8 @@ int main()
 #endif
 #endif // !GN
 
-  //  gradient = zero;
-  
   run();
 }
-
-// event timestepping (t += 0.05);
 
 scalar etamax[];
 
@@ -259,10 +255,8 @@ event init (i = 0)
 {
   terrain (zb, "~/terrain/etopo2", "~/terrain/srtm_japan", NULL);
 
-  if (restore (file = "restart")) {
-    event ("metric");
+  if (restore (file = "restart"))
     conserve_elevation();
-  }
   else {
     conserve_elevation();
 
@@ -284,21 +278,10 @@ event init (i = 0)
   u.t[top]    = + radiation(0);
 }
 
-event logfile (i++) {
-  stats s = statsf (h);
-  norm n = normf (u.x);
-  if (i == 0)
-    fprintf (ferr,
-	     "t i h.min h.max h.sum u.x.rms u.x.max dt mgD.i speed tn\n");
-  fprintf (ferr, "%g %d %g %g %g %g %g %g %d %g %ld\n",
-	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, MGD,
-	   perf.speed, grid->tn);
-}
-
 /**
 ## Quadratic bottom friction */
 
-event viscous_term (i++)
+event friction (i++)
 {
   foreach() {
     double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(u)/h[];
@@ -312,6 +295,17 @@ event viscous_term (i++)
 
 /**
 ## Outputs */
+
+event logfile (i++) {
+  stats s = statsf (h);
+  norm n = normf (u.x);
+  if (i == 0)
+    fprintf (ferr,
+	     "t i h.min h.max h.sum u.x.rms u.x.max dt mgD.i speed tn\n");
+  fprintf (ferr, "%g %d %g %g %g %g %g %g %d %g %ld\n",
+	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, MGD,
+	   perf.speed, grid->tn);
+}
 
 event snapshots (t += 15) {
   char name[80];
@@ -369,8 +363,8 @@ event movies (t += 0.5)
 {
   scalar m[], etam[];
   foreach() {
-    etam[] = eta[]*(h[] > dry);
-    m[] = etam[] - zb[];
+    m[] = eta[]*(h[] > dry) - zb[];
+    etam[] = h[] < dry ? 0. : (zb[] > 0. ? eta[] - zb[] : eta[]);
   }
   boundary ({m, etam});
   output_ppm (etam, mask = m, min = -1, max = 2, 

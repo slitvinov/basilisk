@@ -40,6 +40,7 @@ int main()
   N = 512;
   G = 9.81;
   nl = 20;
+  max_slope = 1.; // a bit better than with the more dissipative default 0.5
   run();
 }
 

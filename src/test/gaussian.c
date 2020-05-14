@@ -126,7 +126,7 @@ event init (i = 0) {
 #else
   u.n[left] = dirichlet (uleft (point, _s, QL*(t < 10. ? t/10. : 1.)));
   u.n[right] = neumann(0.);
-  h[right] = dirichlet (HR/nl);
+  h[right] = HR/nl;
 #endif
 
   /**
