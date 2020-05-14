@@ -19,6 +19,7 @@ robustness and a degree of realism even for this complex case. Note
 also the interesting longitudinal "scars". */
 
 #include "grid/multigrid.h"
+#include "view.h"
 #include "layered/hydro.h"
 #include "layered/nh.h"
 #include "layered/remap.h"
@@ -102,95 +103,59 @@ event logfile (i++)
 }
 
 /**
-Note that the movie generation below is very expensive. */
+And generate the movie of the free surface (this is quite expensive). */
 
-#if 1
 event movie (i += 5; t <= 6.*T0)
 {
-  static FILE * fp = popen ("gnuplot", "w");
-  if (i == 0)
-    fprintf (fp, "set term pngcairo font ',9' size 1024,900;"
-	     "unset key\n"
-	     "set pm3d interpolate 4,4 lighting specular 0.6\n"
-	     "set zrange [-0.75:0.15]\n"
-	     "set cbrange [-0.15:0.6]\n"
-	     "set hidden3d\n"
-	     "set isosamples 30\n"
-	     "set xyplane at -0.75\n"
-	     "set xlabel 'x'\n"
-	     "set ylabel 'y'\n"
-	     "set zlabel 'z'\n"
-	     );
-  fprintf (fp,
-	   "set output 'plot%04d.png'\n"
-	   "set title 't = %.2f T0'\n"
-	   "splot '-' u 1:2:3:4 w pm3d, -0.5+sin(pi*y)/4. w l\n",
-	   i/3, t/T0);
-  scalar H[];
-  foreach() {
-    H[] = zb[];
-    foreach_layer()
-      H[] += h[];
-  }
-  boundary ({H});
-  scalar ux = {u.x.i + nl - 1};
-  output_field ({H,ux}, fp, linear = true);
-  fprintf (fp, "e\n\n");
-  fflush (fp);
+  view (fov = 17.3106, quat = {0.475152,0.161235,0.235565,0.832313},
+	tx = -0.0221727, ty = -0.0140227, width = 1200, height = 768);
+  char s[80];
+  sprintf (s, "t = %.2f T0", t/T0);
+  draw_string (s, size = 80);
+  for (double x = -1; x <= 1; x++)
+    translate (x)
+      squares ("u59.x", linear = true, z = "eta", min = -0.15, max = 0.6);
+  save ("movie.mp4");
 }
-
-event moviemaker (t = end)
-{
-  system ("for f in plot*.png; do convert $f ppm:-; done | ppm2mp4 movie.mp4");
-}
-#endif
 
 /**
 ## Parallel run
 
-The simulation was run in parallel on the [Jean Zay
-machine](http://www.idris.fr/jean-zay/) on 64 cores, using this script
+The simulation was run in parallel on the [Occigen
+machine](https://www.cines.fr/calcul/materiels/occigen/) on 64 cores,
+using this script
 
 ~~~bash
 local% qcc -source -D_MPI=1 breaking.c
-local% scp _breaking.c user@jean-zay.idris.fr:
+local% scp _breaking.c user@occigen.cines.fr:
 ~~~
 
 ~~~bash
 #!/bin/bash
-#SBATCH --job-name=breaking       # nom du job
-#SBATCH --ntasks=64              # Nombre total de processus MPI
-#SBATCH --ntasks-per-node=32       # Nombre de processus MPI par noeud
-# /!\ Attention, la ligne suivante est trompeuse mais dans le vocabulaire
-# de Slurm "multithread" fait bien référence à l'hyperthreading.
-#SBATCH --hint=nomultithread       # 1 processus MPI par coeur physique (pas d'hyperthreading)
-#SBATCH --time=2:00:00            # Temps d’exécution maximum demande (HH:MM:SS)
-#SBATCH --output=breaking%j.out  # Nom du fichier de sortie
-#SBATCH --error=breaking%j.out   # Nom du fichier d'erreur (ici commun avec la sortie)
+#SBATCH -J breaking
+#SBATCH --constraint=HSW24
+#SBATCH --ntasks=64
+#SBATCH --threads-per-core=1
+#SBATCH --time=1:00:00
+#SBATCH --exclusive
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=popinet@basilisk.fr
- 
-# on se place dans le répertoire de soumission
-cd ${SLURM_SUBMIT_DIR}
- 
-# nettoyage des modules charges en interactif et herites par defaut
-module purge
- 
-# chargement des modules
-module load intel-all/19.0.4 gnuplot
- 
-# echo des commandes lancées
-set -x
 
-# compilation
-mpiicc -Wall -O2 -std=c99 -I$HOME -I$HOME/local/include -L$HOME/local/lib _breaking.c -o breaking -lppr -lgfortran -lm
- 
-# exécution du code
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/local/lib
-rm -f plot*.png
-srun ./breaking 2> log > out
+module purge
+module load openmpi
+module load intel gcc
+
+NAME=breaking
+# mpicc -Wall -std=c99 -O2 _$NAME.c -o $NAME \
+#    -I/home/popinet/local -L/home/popinet/local/gl -L/home/popinet/local/lib \
+#    -lglutils -lfb_osmesa -lOSMesa -lGLU -lppr -lgfortran -lm
+
+export LD_LIBRARY_PATH=/home/popinet/local/lib:$LD_LIBRARY_PATH
+export PATH=$PATH:/home/popinet/local/bin
+rm -f *.ppm
+srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS $NAME 2> log > out
 ~~~
 
-The number of timesteps was 4334 and the runtime was 73 minutes with
-movie generation and 13 minutes without, corresponding to a
-computational speed of 338 000 point.timestep/sec/core (on 64 cores). */
+The number of timesteps was 4450 and the runtime was 37 minutes with
+movie generation and 17 minutes without, corresponding to a
+computational speed of 277 000 point.timestep/sec/core (on 64 cores). */
