@@ -166,7 +166,6 @@ function is_not_bot()
     if [[ "$HTTP_USER_AGENT" =~ [Bb]ot[s]*[^a-zA-Z] ]]; then
 	echo "Access denied for bot: $HTTP_USER_AGENT" >&2
 	cat <<EOF
-Status: 403 Read access forbidden
 Content-Type: text/html; charset=utf-8
 
 <h1>403 Read access forbidden</h1>
