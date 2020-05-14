@@ -120,7 +120,7 @@ recipe should work on most UNIX systems:
 wget http://basilisk.fr/src/gl/mesa-17.2.4.tar.gz
 tar xzvf mesa-17.2.4.tar.gz
 cd mesa-17.2.4
-./configure --prefix=/home/popinet/local --enable-osmesa \
+./configure --prefix=$HOME/local --enable-osmesa \
 	    --with-gallium-drivers=swrast                \
             --disable-driglx-direct --disable-dri --disable-gbm --disable-egl
 make
@@ -129,6 +129,7 @@ make install
 wget http://basilisk.fr/src/gl/glu-9.0.0.tar.gz
 tar xzvf glu-9.0.0.tar.gz
 cd glu-9.0.0
+./configure --prefix=$HOME/local
 make
 make install
 ~~~
