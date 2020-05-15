@@ -56,6 +56,10 @@ Note that only the documented test cases appear in the list below
 * [Breaking Stokes wave](stokes.c)
 * [Advection of a rippled interface](galilean_invariance.c)
 
+## Coriolis
+
+* [Stommel gyre](stommel-ml.c)
+
 ## Volume-Of-Fluid
 
 * [Computation of volume fractions from a levelset function](fractions.c)

@@ -191,7 +191,7 @@ multilayer-tests: dispersion-gn.tst dispersion.tst \
 	bar-ml.tst parabola-ml.tst lonlat-ml.tst \
 	wind-driven-nh.tst wind-driven.tst large.tst \
 	gaussian-stvt.tst gaussian-hydro.tst gaussian.tst \
-	stokes-ns.tst stokes.tst ponds-ml.tst galilean_invariance.tst
+	stokes-ns.tst stokes.tst ponds-ml.tst
 
 dispersion-gn.c: dispersion.c
 	ln -s dispersion.c dispersion-gn.c 
@@ -257,6 +257,8 @@ ponds-ml.c: ponds.c
 	ln -s ponds.c ponds-ml.c 
 ponds-ml.tst: ponds.s
 ponds-ml.tst: CFLAGS += -DML=1
+
+stommel-ml.tst: CFLAGS += -DLAYERS=1
 
 ## MPI tests
 
