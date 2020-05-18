@@ -260,6 +260,13 @@ ponds-ml.tst: CFLAGS += -DML=1
 
 stommel-ml.tst: CFLAGS += -DLAYERS=1
 
+nonlinear.tst: nonlinear-ml.tst
+
+nonlinear-ml.c: nonlinear.c
+	ln -s nonlinear.c nonlinear-ml.c 
+nonlinear-ml.tst: nonlinear.s
+nonlinear-ml.tst: CFLAGS += -DLAYERS=1
+
 ## MPI tests
 
 # bump2Dp.tst crashes with -DDEBUGCOND=1 but works with -DDEBUGCOND=0
