@@ -13,7 +13,7 @@ See [Popinet, 2012](/src/references.bib#popinet2012) for a detailed
 discussion of the pure Saint-Venant model, [Popinet,
 2015](/Bibliography#popinet2015) for a discussion of the dispersive
 effects modelled using the Green--Naghdi equations and [Popinet,
-2019](/Bibliography#popinet2019) for the application of the
+2020](/Bibliography#popinet2020) for the application of the
 single-layer dispersive model.
 
 ## Results
@@ -144,13 +144,14 @@ int main()
   solution.
 
   In the non-hydrostatic case, we add a cut-off breaking parameter
-  ([Popinet, 2019](/src/references.bib#popinet2019)). */
+  ([Popinet, 2020](/src/references.bib#popinet2020)). */
   
 #if GN
   TOLERANCE = HUGE;
   NITERMIN = 1;
 #else // !GN
 #if NH
+  CFL_H = 0.5; // this is necessary for stability at level 13
   breaking = 0.07;
 #endif
 #endif // !GN

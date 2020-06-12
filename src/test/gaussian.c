@@ -7,7 +7,7 @@ non-hydrostatic solutions are obtained. The non-hydrostatic solution
 is compared with [a DNS solution](/src/examples/gaussian-ns.c) using
 the Navier-Stokes/VOF solver.
 
-More details are given in [Popinet (2019)](/Bibliography#popinet2019). */
+More details are given in [Popinet (2020)](/Bibliography#popinet2020). */
 
 #include "grid/multigrid1D.h"
 #if !ML
@@ -126,7 +126,7 @@ event init (i = 0) {
 #else
   u.n[left] = dirichlet (uleft (point, _s, QL*(t < 10. ? t/10. : 1.)));
   u.n[right] = neumann(0.);
-  h[right] = HR/nl;
+  h[right] = dirichlet(HR/nl);
 #endif
 
   /**

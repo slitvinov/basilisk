@@ -16,7 +16,7 @@ steady wavetrain of dispersive waves.
 
 ![Vertical velocity field](gaussian-ns/u.y.png){ width=100% }
 
-See [Popinet (2019)](/Bibliography#popinet2019) for a more detailed
+See [Popinet (2020)](/Bibliography#popinet2020) for a more detailed
 discussion. */
 
 #include "embed.h"

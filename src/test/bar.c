@@ -9,7 +9,7 @@ harmonics are nonlinearly generated and released with phase shifts
 corresponding to the dispersion relation. 
 
 This test case is discussed in [Popinet
-(2019)](/Bibliography#popinet2019) for the layered version. */
+(2020)](/Bibliography#popinet2020) for the layered version. */
 
 #include "grid/multigrid1D.h"
 #if ML

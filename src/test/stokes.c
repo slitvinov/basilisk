@@ -20,7 +20,7 @@ plot for [i = 0:10] '../stokes-ns/log' index i u 1:($2-0.15*i) w l lc -1 lt 1
 unset multiplot
 ~~~
 
-See [Popinet (2019)](/Bibliography#popinet2019) for a more detailed
+See [Popinet (2020)](/Bibliography#popinet2020) for a more detailed
 discussion and [stokes-ns.c]() for the Navier-Stokes/VOF code. */
 
 #include "grid/multigrid1D.h"

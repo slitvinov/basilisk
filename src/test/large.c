@@ -2,7 +2,7 @@
 # Large-amplitude standing wave
 
 This test case is discussed in [Popinet
-(2019)](/Bibliography#popinet2019) and compares the results obtained
+(2020)](/Bibliography#popinet2020) and compares the results obtained
 with the layered model with the Navier-Stokes/VOF solver for the
 large-amplitude, non-linear oscillation of a gravity wave.
 
@@ -40,7 +40,7 @@ int main()
   N = 512;
   G = 9.81;
   nl = 20;
-  max_slope = 1.; // a bit better than with the more dissipative default 0.5
+  max_slope = 1.; // a bit better than with the more dissipative default 0.577
   run();
 }
 

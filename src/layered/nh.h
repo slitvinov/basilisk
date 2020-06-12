@@ -3,7 +3,7 @@
 
 This adds the non-hydrostatic terms of the [vertically-Lagrangian
 multilayer solver for free-surface flows](hydro.h) described in
-[Popinet, 2019](/Bibliography#popinet2019). The corresponding system
+[Popinet, 2020](/Bibliography#popinet2020). The corresponding system
 of equations is
 $$
 \begin{aligned}
@@ -27,7 +27,7 @@ statistics of the multigrid solver are stored in *mgp*.
 
 Wave breaking is parameterised usng the *breaking* parameter, which is
 turned off by default (see Section 3.6.4 in [Popinet,
-2019](/Bibliography#popinet2019)). */
+2020](/Bibliography#popinet2020)). */
 
 #define NH 1
 #include "poisson.h"
@@ -228,7 +228,7 @@ $$
 $$
 The default maximum slope is set to 30 degrees. */
 
-double max_slope = 0.57735; // tan(30.*pi/180.)
+double max_slope = 0.577350269189626; // tan(30.*pi/180.)
 #define slope_limited(dz) (fabs(dz) < max_slope ? (dz) :		\
 			   ((dz) > 0. ? max_slope : - max_slope))
  
@@ -241,38 +241,20 @@ event pressure (i++)
     foreach_dimension()
       dz.x = zb[1] - zb[-1];
     foreach_layer() {
-      rhs[] = 2.*h[]*w[];
+      rhs[] = 2.*w[];
       foreach_dimension()
-	rhs[] -= (hu.x[] + hu.x[1])/2.*
-	  slope_limited((dz.x + h[1] - h[-1])/(2.*Delta));
+	rhs[] -= u.x[]*slope_limited((dz.x + h[1] - h[-1])/(2.*Delta));
       if (point.l > 0)
 	foreach_dimension()
-	  rhs[] += (hu.x[0,0,-1] + hu.x[1,0,-1])/2.*
-  	    slope_limited(dz.x/(2.*Delta));
-
-      /**
-      In the expression below, the simple and consistent
-      discretisation of the divergence is `rhsi`, unfortunately this
-      is unstable for high-Froude/high-slope cases such as the
-      [transcritical Gaussian bump](/src/test/gaussian.c).
-
-      To stabilise we use a slope-weighted sum with the more complex
-      'filtered' expression `rhsf`. The threshold slope for which only
-      the filtered expression is used is 0.1. */
-
-      foreach_dimension() {
-	double slope = fabs(dz.x/(2.*Delta))/0.1;
-	double rhsf = ((h[] + h[1])*fm.x[1]*
-		       (hf.x[1] > dry ? hu.x[1]/hf.x[1] : 0.) -
-		       (h[] + h[-1])*fm.x[]*
-		       (hf.x[] > dry ? hu.x[]/hf.x[] : 0.))/(2.*Delta);
-	double rhsi = (hu.x[1] - hu.x[])/Delta;
-	rhs[] += h[]*(slope > 1. ? rhsf : rhsi + (rhsf - rhsi)*cube(slope));
-      }
-
+	  rhs[] += u.x[0,0,-1]*slope_limited(dz.x/(2.*Delta));
+      foreach_dimension()
+	rhs[] += ((h[] + h[1])*fm.x[1]*
+		  (hf.x[1] > dry ? hu.x[1]/hf.x[1] : 0.) -
+		  (h[] + h[-1])*fm.x[]*
+		  (hf.x[] > dry ? hu.x[]/hf.x[] : 0.))/(2.*Delta);
       for (int k = - 1, s = -1; k >= - point.l; k--, s = -s)
-	rhs[] += 4.*s*h[]*w[0,0,k];
-      rhs[] *= 2./dt;
+	rhs[] += 4.*s*w[0,0,k];
+      rhs[] *= 2.*h[]/dt;
       foreach_dimension()
 	dz.x += h[1] - h[-1];
       h1 += dv()*h[];

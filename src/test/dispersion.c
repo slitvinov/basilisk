@@ -9,7 +9,7 @@ $$
 c_e = \sqrt{gk\tanh(kh)}
 $$
 
-More details can be found in [Popinet (2019)](/Bibliography#popinet2019).
+More details can be found in [Popinet (2020)](/Bibliography#popinet2020).
 
 We use a 1D grid and either the Green-Naghdi solver or the multi-layer
 solver. */

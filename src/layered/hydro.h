@@ -2,7 +2,7 @@
 # A vertically-Lagrangian multilayer solver for free-surface flows
 
 This is the implementation of the solver described in [Popinet,
-2019](/Bibliography#popinet2019). The system of $n$ layers of
+2020](/Bibliography#popinet2020). The system of $n$ layers of
 incompressible fluid pictured below is modelled as the set of
 (hydrostatic) equations:
 $$
@@ -165,7 +165,7 @@ $$
 \Delta t < \text{CFL}\frac{\Delta}{|\mathbf{u}|+\sqrt{gH}}
 $$
 or the modified (non-hydrostatic) condition ([Popinet,
-2019](/Bibliography#popinet2019))
+2020](/Bibliography#popinet2020))
 $$
 \Delta t < 
 \text{CFL}\frac{\Delta}{|\mathbf{u}|+\sqrt{g\Delta H\text{tanh}(H/\Delta)}}
