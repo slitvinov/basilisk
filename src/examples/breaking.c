@@ -50,6 +50,10 @@ int main()
   nl = 60;
   G = g_;
   nu = 1./RE;
+#if 0  // may be necessary at higher resolutions
+  CFL_H = 0.5;
+  TOLERANCE = 1e-4;
+#endif
   run();
 }
 
@@ -105,7 +109,7 @@ event logfile (i++)
 /**
 And generate the movie of the free surface (this is quite expensive). */
 
-event movie (i += 5; t <= 6.*T0)
+event movie (i += 5; t <= 8.*T0)
 {
   view (fov = 17.3106, quat = {0.475152,0.161235,0.235565,0.832313},
 	tx = -0.0221727, ty = -0.0140227, width = 1200, height = 768);
@@ -156,6 +160,6 @@ rm -f *.ppm
 srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS $NAME 2> log > out
 ~~~
 
-The number of timesteps was 4450 and the runtime was 37 minutes with
-movie generation and 17 minutes without, corresponding to a
-computational speed of 277 000 point.timestep/sec/core (on 64 cores). */
+The number of timesteps was 5631 and the runtime was 46 minutes with
+movie generation and 23 minutes without, corresponding to a
+computational speed of 250 000 point.timestep/sec/core (on 64 cores). */
