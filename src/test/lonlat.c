@@ -11,7 +11,7 @@ This test case was proposed by [Rossmanith et al,
 2004](/src/references.bib#rossmanith2004), Figures 5 and 6. */
 
 #include "spherical.h"
-#if LAYERS
+#if ML
 # include "layered/hydro.h"
 #else
 # include "saint-venant.h"

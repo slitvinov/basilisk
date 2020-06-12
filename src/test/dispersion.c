@@ -15,7 +15,7 @@ We use a 1D grid and either the Green-Naghdi solver or the multi-layer
 solver. */
 
 #include "grid/multigrid1D.h"
-#if !LAYERS
+#if !ML
   #include "green-naghdi.h"
 #else
   #include "layered/hydro.h"
@@ -34,7 +34,7 @@ three "optimised" non-uniform layer thicknesses. */
 
 event init (i = 0)
 {
-#if LAYERS
+#if ML
   if (nl == 3 && emax == 1.5)
     beta[0] = 0.68, beta[1] = 0.265, beta[2] = 0.055;
   foreach()
@@ -56,7 +56,7 @@ int nm = 0;
 
 event logfile (i++) {
   double pe = 0., ke = 0.;
-#if LAYERS  
+#if ML  
   foreach() {
     double H = 0.;
     foreach_layer() {
@@ -75,7 +75,7 @@ event logfile (i++) {
 #endif
   
   Point point = locate (L0/2.);
-#if LAYERS
+#if ML
   double H = 0.;
   foreach_layer()
     H += h[];
@@ -121,7 +121,7 @@ event logfile (i++) {
 After 9.25 (exact) wave periods, we dump the vertical velocity
 profiles. */
 
-#if LAYERS
+#if ML
 event profile (t = 9.25*2.*pi/sqrt(tanh(h0)))
 {
   if (nl == 5) {
@@ -137,7 +137,7 @@ event profile (t = 9.25*2.*pi/sqrt(tanh(h0)))
     fclose (fp);
   }
 }
-#endif // LAYERS
+#endif // ML
 
 /**
 After ten (exact) wave periods, we stop and dump the solution. */
@@ -191,7 +191,7 @@ event end (t = end)
 {
   fprintf (stderr, "%g %g %g %g %d %d %d\n",
 	   h0, sqrt(tanh(h0)), 2.*pi/(Tm/nm), (Ee - Es)/Es,
-#if !LAYERS
+#if !ML
 	   mgD.i, mgD.nrelax
 #else	   
 	   mgp.i, mgp.nrelax
@@ -210,7 +210,7 @@ int main()
   periodic (right);
   size (2.*pi);
   N = 128;
-#if LAYERS
+#if ML
   TOLERANCE = 1e-6;
   for (nl = 1; nl <= 5; nl++) {
     char name[80];

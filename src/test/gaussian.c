@@ -10,16 +10,16 @@ the Navier-Stokes/VOF solver.
 More details are given in [Popinet (2019)](/Bibliography#popinet2019). */
 
 #include "grid/multigrid1D.h"
-#if !LAYERS
+#if !ML
 # include "saint-venant.h"
-#else // LAYERS
+#else // ML
 # include "layered/hydro.h"
 # if !HYDRO
 #   include "layered/nh.h"
 # endif
 # include "layered/remap.h"
 # include "layered/perfs.h"
-#endif // LAYERS
+#endif // ML
 
 /**
 The primary parameters are the flow rate, water level, viscosity and bump
@@ -61,7 +61,7 @@ The inflow is a parabolic profile with a total flow rate *Q*. The
 function below computes the height *zc* of the middle of the layer and
 returns the corresponding velocity. */
 
-#if !LAYERS
+#if !ML
 double uleft (Point point, scalar s, double Q)
 {
   double zc = zb[];
@@ -99,7 +99,7 @@ event init (i = 0) {
   foreach() {
     zb[] = BA*exp(- sq(x - 10.)/5.);
     hc[] = HR - zb[];
-#if !LAYERS
+#if !ML
     h[] = hc[];
 #else
     foreach_layer()
@@ -117,7 +117,7 @@ event init (i = 0) {
   Boundary conditions are set for the inflow velocity and the outflow
   of each layer. */
   
-#if !LAYERS
+#if !ML
   for (vector u in ul) {
     u.n[left] = dirichlet (uleft (point, _s, QL*(t < 10. ? t/10. : 1.)));
     u.n[right] = neumann(0.);
@@ -133,7 +133,7 @@ event init (i = 0) {
   In the non-hydrostatic case, a boundary condition is required for
   the non-hydrostatic pressure $\phi$ of each layer. */
   
-#if !HYDRO && LAYERS
+#if !HYDRO && ML
   phi[right] = dirichlet(0.);
 #endif
 }
@@ -164,7 +164,7 @@ event viscous_term (i++)
 We check for convergence. */
 
 event logfile (t += 0.1; i <= 100000) {
-#if !LAYERS
+#if !ML
   double dh = change (h, hc);
 #else
   scalar H[];
@@ -222,7 +222,7 @@ At the end of the simulation we save the profiles. */
 event profiles (t += 5)
 {
   foreach_leaf() {
-#if !LAYERS
+#if !ML
     double H = h[];
 #else
     double H = 0.;
@@ -260,7 +260,7 @@ event output (t = end)
       z += h[];
       printf ("%g %g %g %g\n", x, z, u.x[], w[]);
     }
-#elif !LAYERS
+#elif !ML
     vector u = ul[0];
     scalar w = wl[0];
     printf ("%g %g %g %g\n", x, z, u.x[], w[]);
@@ -269,13 +269,13 @@ event output (t = end)
       z += layer[l++]*h[];
       printf ("%g %g %g %g\n", x, z, u.x[], w[]);
     }
-#else // LAYERS
+#else // ML
     printf ("%g %g %g %g %g\n", x, z, u.x[], w[], phi[]);
     foreach_layer() {
       z += h[];
       printf ("%g %g %g %g %g\n", x, z, u.x[], w[], phi[]);
     }
-#endif // LAYERS   
+#endif // ML
     printf ("\n");
   }
 #if HYDRO

@@ -71,7 +71,7 @@ plot './eta-8' u 1:2:($3>dry?$5*30.:0):($3>dry?$6*30.:0) every 2:2 w vec lc 0
 
 #if IMPLICIT
 # include "saint-venant-implicit.h"
-#elif LAYERS
+#elif ML
 # include "layered/hydro.h"
 # include "layered/nh.h"
 #else

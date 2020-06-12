@@ -40,7 +40,8 @@
   static char * fname;
   
   static char * paths[100] = { LIBDIR }, grid[80] = "quadtree";
-  static int npath = 1, hasgrid = 0, debug = 0, dimension = 0, bghosts = 0;
+  static int npath = 1, hasgrid = 0, debug = 0;
+  static int dimension = 0, bghosts = 0, layers = 0;
   static int incode;    // are we in code (or in a code block)?
   
   static char * _stack[100]; int stack = -1;
@@ -253,6 +254,10 @@ FDECL     {ID}+{SP}*\(
   char * s = strstr (yytext, "BGHOSTS");
   space(s); nonspace(s);
   bghosts = atoi(s);
+}
+
+^{SP}*#{SP}*define{SP}+LAYERS{WS}+1{SP}*$ {
+  layers = 1;
 }
 
 ^{SP}*{ID}+{SP}*\**({SP}+{ID}+{SP}*\**)*{SP}+{ID}+{SP}*\( {
@@ -516,7 +521,8 @@ static int compdir (char * file, char ** out, int nout, const char * dir)
 }
 
 int includes (int argc, char ** argv, char ** out, 
-	      char ** grid1, int * default_grid, int * dim, int * bg,
+	      char ** grid1, int * default_grid,
+	      int * dim, int * bg, int * lyrs,
 	      const char * dir)
 {
   int depend = 0, nout = 0, tags = 0, swig = 0;
@@ -663,5 +669,6 @@ int includes (int argc, char ** argv, char ** out,
   if (dimension > 0)
     *dim = dimension;
   *bg = bghosts;
+  *lyrs = layers;
   return nout;
 }

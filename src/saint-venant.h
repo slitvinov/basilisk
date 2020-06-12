@@ -58,7 +58,10 @@ Saint-Venant system above. This can be changed by setting *nl* to a
 different value. The extension of the Saint-Venant system to multiple
 layers is implemented in [multilayer.h](). */
 
+#if !LAYERS
 int nl = 1;
+#endif
+
 #include "multilayer.h"
 
 /**

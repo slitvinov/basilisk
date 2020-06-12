@@ -10,15 +10,15 @@ generalised to the (linearly) damped case by [Sampson, Easton, Singh,
 2006](/src/references.bib#sampson2006). */
 
 #include "grid/multigrid1D.h"
-#if LAYERS
+#if ML
 # include "layered/hydro.h"
-#else // !LAYERS
+#else // !ML
 #if EXPLICIT
 # include "saint-venant.h"
 #else
 # include "saint-venant-implicit.h"
 #endif
-#endif // !LAYERS
+#endif // !ML
 
 double e1 = 0., e2 = 0., emax = 0.;
 int ne = 0;
@@ -34,7 +34,7 @@ int main()
   size (10000);
   G = 9.81;
   DT = 10.;
-#if !EXPLICIT && !LAYERS
+#if !EXPLICIT && !ML
   dry = 1e-6;
   CFLa = 0.25;
 #endif
@@ -65,7 +65,7 @@ event init (i = 0)
 }
 
 event friction (i++) {
-#if EXPLICIT || LAYERS
+#if EXPLICIT || ML
   // linear friction (implicit scheme)
   foreach()
     u.x[] /= 1. + tau*dt;
@@ -94,7 +94,7 @@ event error (i++) {
 
 event field (t = 1500) {
   if (N == 64) {
-#if EXPLICIT || LAYERS
+#if EXPLICIT || ML
     foreach()
       printf ("p %g %g %g %g %g\n", x, h[], u.x[], zb[], e[]);
 #else
@@ -109,7 +109,7 @@ event umean (t += 50; t <= 6000) {
   if (N == 128) {
     double sq = 0., sh = 0.;
     foreach() {
-#if EXPLICIT || LAYERS
+#if EXPLICIT || ML
       sq += Delta*h[]*u.x[];
 #else
       sq += Delta*q.x[];

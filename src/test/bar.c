@@ -12,7 +12,7 @@ This test case is discussed in [Popinet
 (2019)](/Bibliography#popinet2019) for the layered version. */
 
 #include "grid/multigrid1D.h"
-#if LAYERS
+#if ML
   #include "layered/hydro.h"
   #include "layered/nh.h"
   #include "layered/remap.h"
@@ -29,7 +29,7 @@ int main() {
   N = 2048;
   L0 = 50;
   G = 9.81;
-#if LAYERS
+#if ML
   nl = 2;
   breaking = 0.1;
 #endif
@@ -47,7 +47,7 @@ period of 2.02 seconds matches that of the experiment. */
 event init (i = 0)
 {
 
-#if LAYERS
+#if ML
   u.n[left]  = - radiation (0.021*sin(2.*pi*t/2.02));
 #else
   u.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
@@ -64,7 +64,7 @@ event init (i = 0)
 	    x < 14 ? -0.1 :
 	    x < 17 ? -0.1 - (x - 14.)/3.*0.3 :
 	    -0.4);
-#if LAYERS
+#if ML
     foreach_layer()
       h[] = max(- zb[], 0.)/nl;
 #else

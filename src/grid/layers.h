@@ -2,20 +2,19 @@
 # Multiple "layers"
 
 This adds support for multiple "layers" i.e. a constant number `nl` of
-contiguous scalar fields. 
+contiguous scalar fields. */
 
-Note that codes using this header must be compiled with the
-`-DLAYERS=1` compilation flag. */
-
-int nl = 1, layer = 0;
+int nl = 1;
 
 /**
 We redefine two types of block traversals. An "outer" traversal,
-usable outside foreach() loops, which uses a global `layer` index... */
+usable outside foreach() loops, which uses a global `_layer` index... */
+
+int _layer = 0;
 
 #undef foreach_block
-@define foreach_block() for (layer = 0; layer < nl; layer++)
-@define end_foreach_block() layer = 0
+@define foreach_block() for (_layer = 0; _layer < nl; _layer++)
+@define end_foreach_block() _layer = 0
 
 /**
 ... and an "inner" traversal, usable within foreach() loops, which
@@ -30,7 +29,8 @@ one of the indices is used. */
   
 @undef _index
 @def _index(a,m)
-  (a.i + (layer + point.l + m < _attribute[a.i].block ? layer + point.l + m : 0))
+  (a.i + (_layer + point.l + m < _attribute[a.i].block ?
+	  _layer + point.l + m : 0))
 @
 
 @undef val

@@ -36,6 +36,7 @@ height-weighted face acceleration and face height for each layer.
 `tracers` is a list of tracers for each layer. By default it contains
 only the components of velocity. */
 
+#define LAYERS 1
 #include "run.h"
 #include "bcg.h"
 

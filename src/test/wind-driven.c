@@ -12,7 +12,7 @@ We run the test case for three different solvers: multilayer
 Saint-Venant, layered hydrostatic, layered non-hydrostatic. */
 
 #include "grid/multigrid1D.h"
-#if !LAYERS
+#if !ML
 #  include "saint-venant.h"
 #else
 #  include "layered/hydro.h"
@@ -69,7 +69,7 @@ We set the initial water level to 1 and set the surface stress. */
 
 event init (i = 0) {
   foreach() {
-#if !LAYERS
+#if !ML
     h[] = 1.;
 #else
     foreach_layer()
@@ -91,7 +91,7 @@ event error (t = 10./nu)
   foreach() {
     if (i++ == N/2) {
       double z = zb[], emax = 0.;
-#if !LAYERS
+#if !ML
       int l = 0;
       for (vector u in ul) {
 	double e = fabs(u.x[] - uan (z + h[]*layer[l]/2.));
@@ -125,7 +125,7 @@ event gnuplot (i += 20) {
 	   "p [%g:%g][0:]'-' u 1:3:2 w filledcu lc 3 t '',"
 	   " '' u 1:(-1):3 t '' w filledcu lc -1", nl, t,
 	   X0, X0 + L0);
-#if !LAYERS
+#if !ML
   fprintf (fp, "\n");
   foreach()
     fprintf (fp, "%g %g %g\n", x, zb[] + h[], zb[]);
@@ -161,7 +161,7 @@ event output (t = end) {
   sprintf (name, "uprof-%d", nl);
   FILE * fp = fopen (name, "w");
   int i = 0;
-#if !NH && LAYERS
+#if !NH && ML
   scalar w = new scalar[nl];
   vertical_velocity (w);
   foreach() {
@@ -173,10 +173,10 @@ event output (t = end) {
     }
   }
   boundary ({w});
-#endif // !NH && LAYERS
+#endif // !NH && ML
   foreach() {
     if (i++ == N/2) {
-#if !LAYERS
+#if !ML
       int l = 0;
       double z = zb[] + h[]*layer[l]/2.;
       for (vector u in ul)
@@ -189,7 +189,7 @@ event output (t = end) {
     }
     if (nl == 32) {
       double z = zb[];
-#if !LAYERS
+#if !ML
       int l = 0;
       scalar w;
       vector u;
@@ -205,7 +205,7 @@ event output (t = end) {
     }
   }
   fclose (fp);
-#if !NH && LAYERS
+#if !NH && ML
   delete ({w});
 #endif
 }

@@ -197,69 +197,66 @@ dispersion-gn.c: dispersion.c
 	ln -s dispersion.c dispersion-gn.c 
 dispersion-gn.tst: dispersion-gn.s
 
-dispersion.tst: CFLAGS += -DLAYERS=1
+dispersion.tst: CFLAGS += -DML=1
 
 bar-ml.c: bar.c
 	ln -s bar.c bar-ml.c 
 bar-ml.tst: bar-ml.s
-bar-ml.tst: CFLAGS += -DLAYERS=1
+bar-ml.tst: CFLAGS += -DML=1
 
 wind-driven-nh.c: wind-driven.c
 	ln -s wind-driven.c wind-driven-nh.c 
 wind-driven-nh.tst: wind-driven-nh.s
-wind-driven-nh.tst: CFLAGS += -DLAYERS=1 -DNH=1
+wind-driven-nh.tst: CFLAGS += -DML=1 -DNH=1
 
 wind-driven-stvt.c: wind-driven.c
 	ln -s wind-driven.c wind-driven-stvt.c 
 wind-driven-stvt.tst: wind-driven-stvt.s
 
-wind-driven.tst: CFLAGS += -DLAYERS=1
+wind-driven.tst: CFLAGS += -DML=1
 
-large.tst: CFLAGS += -DLAYERS=1
 large.tst: large-ns.tst
 
 gaussian-hydro.c: gaussian.c
 	ln -s gaussian.c gaussian-hydro.c 
 gaussian-hydro.tst: gaussian-hydro.s
-gaussian-hydro.tst: CFLAGS += -DLAYERS=1 -DHYDRO=1
+gaussian-hydro.tst: CFLAGS += -DML=1 -DHYDRO=1
 
 gaussian-stvt.c: gaussian.c
 	ln -s gaussian.c gaussian-stvt.c 
 gaussian-stvt.tst: gaussian-stvt.s
 
-gaussian.tst: CFLAGS += -DLAYERS=1
+gaussian.tst: CFLAGS += -DML=1
 
 parabola-ml.c: parabola.c
 	ln -s parabola.c parabola-ml.c 
 parabola-ml.tst: parabola-ml.s
-parabola-ml.tst: CFLAGS += -DLAYERS=1
+parabola-ml.tst: CFLAGS += -DML=1
 
 seawall-ml.c: seawall.c
 	ln -s seawall.c seawall-ml.c 
 seawall-ml.tst: seawall.s
-seawall-ml.tst: CFLAGS += -DLAYERS=1
+seawall-ml.tst: CFLAGS += -DML=1
 
 beach-ml.c: beach.c
 	ln -s beach.c beach-ml.c 
 beach-ml.tst: beach.s
-beach-ml.tst: CFLAGS += -DLAYERS=1
+beach-ml.tst: CFLAGS += -DML=1
 
 conical-ml.c: conical.c
 	ln -s conical.c conical-ml.c 
 conical-ml.tst: conical.s
-conical-ml.tst: CFLAGS += -DLAYERS=1
+conical-ml.tst: CFLAGS += -DML=1
 
 lonlat-ml.c: lonlat.c
 	ln -s lonlat.c lonlat-ml.c 
 lonlat-ml.tst: lonlat.s
-lonlat-ml.tst: CFLAGS += -DLAYERS=1
+lonlat-ml.tst: CFLAGS += -DML=1
 
 ponds-ml.c: ponds.c
 	ln -s ponds.c ponds-ml.c 
 ponds-ml.tst: ponds.s
-ponds-ml.tst: CFLAGS += -DLAYERS=1
-
-stokes.tst: CFLAGS += -DLAYERS=1
+ponds-ml.tst: CFLAGS += -DML=1
 
 ## MPI tests
 
@@ -411,14 +408,9 @@ embed-tests: neumann.tst dirichlet.tst poiseuille45.tst \
 
 gotm-tests: couette-gotm.tst entrainment.tst ows_papa.tst
 
-couette-gotm.tst: CFLAGS += -DLAYERS=1
-
-entrainment.tst: CFLAGS += -DLAYERS=1
-
 ows_papa-kpp.c: ows_papa.c
 	ln -s ows_papa.c ows_papa-kpp.c 
 ows_papa-kpp.tst: ows_papa.s
-ows_papa-kpp.tst: CFLAGS += -DLAYERS=1 -DKPP=1
+ows_papa-kpp.tst: CFLAGS += -DKPP=1
 
 ows_papa.tst: ows_papa-kpp.tst
-ows_papa.tst: CFLAGS += -DLAYERS=1

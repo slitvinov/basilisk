@@ -21,7 +21,7 @@ Saint-Venant solver. */
 #  include "saint-venant.h"
 # endif
 # define MGD 0
-#elif LAYERS
+#elif ML
 # include "layered/hydro.h"
 # include "layered/nh.h"
  // fixme: remap does not work
@@ -53,7 +53,7 @@ int main()
   CFLa = 0.25;
 #endif
 
-#if LAYERS
+#if ML
   breaking = 0.07;
   nl = 1;
 #endif
@@ -117,7 +117,7 @@ event init (i = 0)
   We use the definition of the solitary wave to impose conditions on the
   left side (i.e. the "wave paddle"). */
 
-#if LAYERS
+#if ML
   eta[left] = H0 + eta0(t);
   h[left] = (H0 + eta0(t))/nl;
   u.n[left] = uleft (t)/nl;
@@ -149,7 +149,7 @@ event init (i = 0)
 
   foreach() {
     zb[] = island (x, y);
-#if LAYERS
+#if ML
     foreach_layer()
       h[] = max(0., H0 - zb[])/nl;
 #else
@@ -178,7 +178,7 @@ event outputfile (t = {9, 12, 13, 14, 20})
 {
   static int nf = 0;
   printf ("file: conical-%d\n", nf);
-#if LAYERS
+#if ML
   scalar H[];
   foreach() {
     H[] = 0.;
@@ -252,7 +252,7 @@ event logfile (i++) {
   /**
   We output various diagnostics. */
 
-#if LAYERS
+#if ML
   scalar H[];
   foreach() {
     H[] = 0.;
@@ -265,7 +265,7 @@ event logfile (i++) {
 #endif
   stats s = statsf (H);
 
-  #if LAYERS
+  #if ML
   norm n = normf (u.x);
   #elif IMPLICIT
   scalar u[];
@@ -351,7 +351,7 @@ surface elevation. */
 event adapt (i++) {
   scalar eta1[];
   foreach() {
-#if LAYERS
+#if ML
     double H = 0.;
     foreach_layer()
       H += h[];

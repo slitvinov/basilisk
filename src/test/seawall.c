@@ -13,7 +13,7 @@ the dispersive [Green-Naghdi equations](/src/green-naghdi.h) or
 #include "grid/multigrid1D.h"
 #if SAINT_VENANT
 # include "saint-venant.h"
-#elif LAYERS
+#elif ML
 # include "layered/hydro.h"
 # include "layered/nh.h"
 scalar h;
@@ -32,7 +32,7 @@ int main()
   L0 = 15.;
   G = 9.81;
   N = 1 << 11;
-#if LAYERS
+#if ML
   breaking = 0.15;
 #endif
   run();

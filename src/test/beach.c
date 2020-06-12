@@ -7,7 +7,7 @@ case based on the experiments of [Synolakis,
 1987](/src/references.bib#synolakis1987). */
 
 #include "grid/multigrid1D.h"
-#if LAYERS
+#if ML
 #  include "layered/hydro.h"
 #  include "layered/nh.h"
 #  include "layered/remap.h"
@@ -35,7 +35,7 @@ int main()
   L0 = 6.*L;
   N = 1024;
   G = 1.;
-#if LAYERS
+#if ML
   nl = 2;
   breaking = 0.07;
 #else
@@ -77,7 +77,7 @@ event init (i = 0)
   foreach() {
     double eta = soliton (x + h0/slope + L/2., t);
     zb[] = max (slope*x, -h0);
-#if LAYERS
+#if ML
     foreach_layer() {
       h[] = max (0., eta - zb[])/nl;
       u.x[] = c*eta/(h0 + eta);
@@ -96,7 +96,7 @@ obtain a runup comparable with the experiment. */
 
 event friction (i++) {
   foreach() {
-#if LAYERS
+#if ML
     double Q = 0., H = 0.;
     foreach_layer()
       H += h[], Q += h[]*u.x[];

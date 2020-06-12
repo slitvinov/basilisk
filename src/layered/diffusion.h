@@ -41,7 +41,7 @@ void vertical_viscosity (Point point, scalar h, scalar s, double dt)
   The *rhs* of the tridiagonal system is $h_lu_l$. */
       
   foreach_layer()
-    rhs[layer] = s[]*h[];
+    rhs[_layer] = s[]*h[];
 
   /**
   The lower, principal and upper diagonals $a$, $b$ and $c$ are given by
