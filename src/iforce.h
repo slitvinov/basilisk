@@ -136,15 +136,6 @@ event acceleration (i++)
 See Section 3, pages 8-9 of:
 
 ~~~bib
-@Article{popinet2018,
-  author =  {S. Popinet},
-  title =   {Numerical models of surface tension},
-  journal = {Annual Review of Fluid Mechanics},
-  pages =   {1--28},
-  volume =  {50},
-  year =    {2018},
-  doi =     {10.1146/annurev-fluid-122316-045034},
-  url =     {https://hal.archives-ouvertes.fr/hal-01528255}
-}
+@hal{popinet2018, hal-01528255}
 ~~~
 */

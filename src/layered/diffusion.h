@@ -152,23 +152,8 @@ event viscous_term (i++,last)
 ## References
 
 ~~~bib
-@Article{popinet2019,
-  author = 	 {S. Popinet},
-  title = 	 {A vertically-Lagrangian, non-hydrostatic, multilayer model
-                  for multiscale free-surface flows},
-  journal = 	 {Journal of Computational Physics},
-  note =         {Submitted},
-  year = 	 {2019}
-}
+@hal{popinet2020, hal-02365730}
 
-@Article{devita2019,
-  author =  { F. De Vita and P.Y. Lagrée and S. Chibbaro and S. Popinet},
-  title =   {Beyond Shallow Water: Appraisal for a numerical approach to hydraulic jumps based upon the Boundary Layer theory},
-  journal = {European Journal of Mechanics - B/Fluids},
-  volume  = {79/C},
-  pages =   {233-246},
-  year =    {2019},
-  url = {https://hal.archives-ouvertes.fr/hal-02295398}
-}
+@hal{devita2019, hal-02295398}
 ~~~
 */
