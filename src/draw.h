@@ -708,10 +708,10 @@ static void glvertex2d (bview * view, double x, double y) {
 static void glvertex_normal3d (bview * view, Point point, vector n,
 			       double xp, double yp, double zp)
 {
-  coord v = {xp, yp, zp}, np;
+  coord v = {(xp - x)/Delta, (yp - y)/Delta}, np;
   foreach_dimension()
-    np.x = interp (point, v, n.x);
-  glNormal3d (- np.x, - np.y, 1.);
+    np.x = - interp (point, v, n.x);
+  glNormal3d (np.x, np.y, 1.);
   glvertex3d (view, xp, yp, zp);
 }
 #endif // dimension <= 2
