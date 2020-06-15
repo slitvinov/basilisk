@@ -158,7 +158,7 @@ event moviemaker (t = end)
 {
   if (N == 128 && nl == 4)
     system ("mogrify -format gif plot*.png && "
-      "gifsicle --delay 10 --loop plot*.gif > wave.gif && "
+      "gifsicle --delay 10 --colors 256 --loop plot*.gif > wave.gif && "
       "rm -f plot*.*");
 }
 
