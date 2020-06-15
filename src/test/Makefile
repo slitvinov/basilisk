@@ -191,7 +191,7 @@ multilayer-tests: dispersion-gn.tst dispersion.tst \
 	bar-ml.tst parabola-ml.tst lonlat-ml.tst \
 	wind-driven-nh.tst wind-driven.tst large.tst \
 	gaussian-stvt.tst gaussian-hydro.tst gaussian.tst \
-	stokes-ns.tst stokes.tst ponds-ml.tst
+	stokes-ns.tst stokes.tst ponds-ml.tst galilean_invariance.tst
 
 dispersion-gn.c: dispersion.c
 	ln -s dispersion.c dispersion-gn.c 

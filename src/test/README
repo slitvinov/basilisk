@@ -54,6 +54,7 @@ Note that only the documented test cases appear in the list below
 * [Large-amplitude standing wave](large.c)
 * [Transcritical flow over a bump with multiple layers](gaussian.c)
 * [Breaking Stokes wave](stokes.c)
+* [Advection of a rippled interface](galilean_invariance.c)
 
 ## Volume-Of-Fluid
 
