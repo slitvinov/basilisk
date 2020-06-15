@@ -1,7 +1,7 @@
 #include "utils.h"
 
 face vector u[], un[];
-scalar h[], hn[], b[];
+scalar h[], hn[], zb[];
 
 // Default parameters
 // Coriolis parameter
@@ -74,7 +74,7 @@ void momentum (vector u, scalar h, vector du)
   coord f = {1.,-1.};
   foreach_face()
     du.x[] = 
-      - (G*(h[] + b[]) + ke[] - G*(h[-1,0] + b[-1,0]) - ke[-1,0])/Delta
+      - (G*(h[] + zb[]) + ke[] - G*(h[-1,0] + zb[-1,0]) - ke[-1,0])/Delta
       + f.x*(((psi[] + psi[0,1])/2. + F0)*
 	     (u.y[] + u.y[0,1] + u.y[-1,0] + u.y[-1,1])/4.)
       + NU*(u.x[0,1] + u.x[0,-1] - 2.*u.x[])/sq(Delta)
@@ -106,7 +106,7 @@ event defaults (i = 0)
 
 event init (i = 0)
 {
-  boundary ({b,h,u});
+  boundary ({zb,h,u});
 }
 
 void run (void)
