@@ -325,7 +325,8 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     REJECT;
   uline();
   // bibtex file
-  char * command = acat ("bibtex2html -a -d -r "
+  char * command = acat ("awk -f $BASILISK/darcsit/hal2bib.awk | "
+			 "bibtex2html -a -d -r "
 			 "-no-keywords -noabstract -use-keys "
 			 "-nodoc -noheader -q | ",
 			 "sed -e 's|</table>.*|</table>|' -e '/<\\/table>/q' > ",
