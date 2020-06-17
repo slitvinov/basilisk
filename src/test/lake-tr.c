@@ -17,9 +17,12 @@ We use either the explicit or the implicit Saint-Venant solver. */
 
 #include "grid/multigrid1D.h"
 #if EXPLICIT
-#include "saint-venant.h"
+# include "saint-venant.h"
+#elif ML
+# include "layered/hydro.h"
+# include "layered/implicit.h"
 #else
-#include "saint-venant-implicit.h"
+# include "saint-venant-implicit.h"
 #endif
 
 /**
@@ -40,6 +43,9 @@ int main() {
 }
 
 event init (i = 0) {
+#if ML  
+  theta_H = 0.55;
+#endif
   foreach() {
     zb[] = - 50.*exp(-sq(x/1000.));
     h[] = eta0 - zb[];
@@ -53,7 +59,7 @@ We add the slope explicitly and the Darcy--Weissbach friction
 implicitly. */
 
 event source (i++) {
-#if EXPLICIT
+#if EXPLICIT || ML
   foreach()
     u.x[] = (u.x[] + G*slope*dt)/(1. + dt*f/8.*u.x[]/sq(h[]));
   boundary ((scalar *){u});
@@ -77,7 +83,7 @@ event init_herr(i = 0) {
 
 event logfile (i++) {
   double dh = change (h, herr),
-#if EXPLICIT
+#if EXPLICIT || ML
     du = change (u.x, uerr);
 #else
     du = change (q.x, uerr);
@@ -98,7 +104,7 @@ event printprofile (t = {600, 3600, 7200}) {
   sprintf (name, "prof-%g", t);
   FILE * fp = fopen (name, "w");
   foreach() {
-#if EXPLICIT
+#if EXPLICIT || ML
     fprintf (fp, "%g %g %g %g %g %g\n", x, h[], u.x[], zb[],
 	     u.x[]/sqrt(G*h[]), u.x[]*h[]);
 #else
@@ -121,9 +127,13 @@ set ylabel 'z (m)'
 set key top right
 plot [][-6:]								\
      'prof-600' u 1:(zb($1)+$2) w l t 't = 10 min (implicit)',		\
+     '../lake-tr-ml/prof-600' u 1:(zb($1)+$2) w l t			\
+     't = 10 min (implicit ML)',					\
      '../lake-tr-explicit/prof-600' u 1:(zb($1)+$2) w l t		\
      't = 10 min (explicit)',						\
      'prof-7200' u 1:(zb($1)+$2) w l t 't = 2 hours (implicit)',	\
+     '../lake-tr-ml/prof-7200' u 1:(zb($1)+$2) w l t			\
+     't = 2 hours (implicit ML)',					\
      '../lake-tr-explicit/prof-7200' u 1:(zb($1)+$2) w l t		\
      't = 2 hours (explicit)',						\
      zb(x) t 'topography'
@@ -135,31 +145,39 @@ The flow is supercritical at the entrance to the lake.
 set ylabel 'Froude'
 set key top right
 plot 'prof-600' u 1:5 w l t 't = 10 min (implicit)', \
+     '../lake-tr-ml/prof-600' u 1:5 w l t 't = 10 min (implicit ML)', \
      '../lake-tr-explicit/prof-600' u 1:5 w l t 't = 10 min (explicit)', \
      'prof-7200' u 1:5 w l t 't = 2 hours (implicit)',			\
+     '../lake-tr-ml/prof-7200' u 1:5 w l t 't = 2 hours (implicit ML)', \
      '../lake-tr-explicit/prof-7200' u 1:5 w l t 't = 2 hours (explicit)'
 ~~~
 
-We can check the performance for both schemes.
+We can check the performance for all schemes.
 
 ~~~bash
 cat lake-tr/out
 cat lake-tr-explicit/out
+cat lake-tr-ml/out
 ~~~
 
 On my computer, this gives for the implicit scheme:
 
 ~~~bash 
-# Multigrid, 4421 steps, 2.63557 CPU, 2.638 real, 1.72e+06 points.step/s, 14 var
+# Multigrid, 4460 steps, 1.42008 CPU, 1.42 real, 3.22e+06 points.step/s, 14 var
 ~~~ 
+
+for the multilayer implicit scheme:
+
+~~~bash
+# Multigrid, 4524 steps, 1.46437 CPU, 1.464 real, 3.16e+06 points.step/s, 14 var
+~~~
 
 and for the explicit scheme :
 
 ~~~bash
-# Multigrid, 32519 steps, 14.4444 CPU, 14.73 real, 2.26e+06 points.step/s, 16 var
+# Multigrid, 32519 steps, 8.59387 CPU, 8.685 real, 3.83e+06 points.step/s, 16 var
 ~~~
 
 The gain in number of timesteps is a factor of ~7.3 and the gain in
 runtime a factor of ~5.6, which reflects the fact that the implicit
-scheme is slightly slower (per grid point) than the explicit scheme.
-*/
+scheme is slightly slower (per grid point) than the explicit scheme. */

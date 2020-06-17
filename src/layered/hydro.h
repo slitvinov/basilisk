@@ -36,6 +36,7 @@ height-weighted face acceleration and face height for each layer.
 `tracers` is a list of tracers for each layer. By default it contains
 only the components of velocity. */
 
+#define BGHOSTS 2
 #define LAYERS 1
 #include "run.h"
 #include "bcg.h"
@@ -48,6 +49,8 @@ bool linearised = false;
 
 vector hu, ha, hf;
 scalar * tracers = NULL;
+
+double gamma_H = 1., theta_H = 0.;
 
 /**
 ## Setup
@@ -136,8 +139,70 @@ event defaults (i = 0)
 }
 
 /**
+This function reconstructs face heights $h_{i+1/2}$, face fluxes
+$hu_{i+1/2}$ and face accelerations $ha_{i+1/2}$. */
+
+static void face_fields (double theta,
+			 face vector hu, face vector ha, face vector hf)
+{
+  trash ({hu, ha, hf});
+  foreach_face() {
+    
+    /**
+    We compute the acceleration as
+    $$
+    a_{i + 1 / 2, k} = - g \frac{\eta_{i + 1, k} - \eta_{i, k}}{\Delta}
+    $$
+    taking into account [metric
+    terms](/src/README#general-orthogonal-coordinates).*/
+    
+    double ax = - fm.x[]*G*(eta[] - eta[-1])/((cm[] + cm[-1])*Delta/2.);
+    foreach_layer() {
+
+      /**
+      The face velocity is first computed as
+      $$
+      u_{i + 1 / 2, k} = \frac{(hu)_{i + 1, k} + 
+      (hu)_{i, k}}{h_{i + 1, k} + h_{i, k}} + \Delta ta_{i + 1 / 2, k}
+      $$
+      with checks to avoid division by zero. */
+
+      double hl = h[-1] > dry ? h[-1] : 0.;
+      double hr = h[] > dry ? h[] : 0.;
+      hu.x[] = hl > 0. || hr > 0. ? (hl*u.x[-1] + hr*u.x[])/(hl + hr) : 0.;
+
+      /**
+      The face height `hf` is reconstructed using Bell-Collela-Glaz-style
+      upwinding. */
+	
+      double un = dt*(hu.x[] + dt*ax)/Delta, a = sign(un);
+      int i = - (a + 1.)/2.;
+      double g = h.gradient ? h.gradient (h[i-1], h[i], h[i+1])/Delta :
+	(h[i+1] - h[i-1])/(2.*Delta);
+      hf.x[] = h[i] + a*(1. - a*un)*g*Delta/2.;
+
+      /**
+      The height-weighted face acceleration $ha_{i+1/2}$ and
+      face flux $hu_{i+1/2}$ are computed as */
+
+      if (hf.x[] < dry)
+	ha.x[] = hu.x[] = hf.x[] = 0.;
+      else {
+	hf.x[] *= fm.x[];
+	ha.x[]  = hf.x[]*ax;
+	if (theta == 0.)
+	  hu.x[] = hf.x[]*(hu.x[] + dt*ax);
+	else
+	  hu.x[] *= hf.x[]*(1. - theta);
+      }
+    }
+  }
+  boundary ((scalar *){hu, ha, hf});
+}
+
+/**
 After user initialisation, we define the free-surface height $\eta$
-and initial acceleration. */
+and initial (face) acceleration. */
 
 double dtmax;
 
@@ -151,10 +216,10 @@ event init (i = 0)
   boundary (all);
 
   dt = 0;
-  event ("acceleration");
+  face_fields (1e-30, hu, ha, hf);
   dtmax = DT;
   event ("stability");
-  event ("acceleration");
+  face_fields (1e-30, hu, ha, hf);
 }
 
 /**
@@ -322,80 +387,20 @@ event adapt (i++,last);
 /**
 ## Acceleration */
 
-event acceleration (i++,last)
-{
-  trash ({hu, ha, hf});
-  foreach_face() {
-    
-    /**
-    We compute the acceleration as
-    $$
-    a_{i + 1 / 2, k} = - g \frac{\eta_{i + 1, k} - \eta_{i, k}}{\Delta}
-    $$
-    taking into account [metric
-    terms](/src/README#general-orthogonal-coordinates).*/
-    
-    double ax = - fm.x[]*G*(eta[] - eta[-1])/((cm[] + cm[-1])*Delta/2.);
-    foreach_layer() {
-
-      /**
-      The face velocity is first computed as
-      $$
-      u_{i + 1 / 2, k} = \frac{(hu)_{i + 1, k} + 
-      (hu)_{i, k}}{h_{i + 1, k} + h_{i, k}} + \Delta ta_{i + 1 / 2, k}
-      $$
-      with checks to avoid division by zero. */
-
-      double hl = h[-1] > dry ? h[-1] : 0.;
-      double hr = h[] > dry ? h[] : 0.;
-      hu.x[] = hl > 0. || hr > 0. ? (hl*u.x[-1] + hr*u.x[])/(hl + hr) : 0.;
-
-      /**
-      The face height `hf` is reconstructed using Bell-Collela-Glaz-style
-      upwinding. */
-	
-      double un = dt*(hu.x[] + dt*ax)/Delta, a = sign(un);
-      int i = - (a + 1.)/2.;
-      double g = h.gradient ? h.gradient (h[i-1], h[i], h[i+1])/Delta :
-	(h[i+1] - h[i-1])/(2.*Delta);
-      hf.x[] = h[i] + a*(1. - a*un)*g*Delta/2.;
-
-      /**
-      The height-weighted face acceleration $ha_{i+1/2}$ and
-      face flux $hu_{i+1/2}$ are computed as */
-
-      if (hf.x[] < dry)
-	ha.x[] = hu.x[] = hf.x[] = 0.;
-      else {
-	hf.x[] *= fm.x[];
-	ha.x[] = hf.x[]*ax;	
-	hu.x[] = hf.x[]*(hu.x[] + dt*ax);
-      }
-    }
-  }
-  boundary ((scalar *){hu, ha, hf});
-}
+event acceleration (i++, last)
+  face_fields (theta_H, hu, ha, hf);
 
 /**
-Finally the acceleration is used to obtain the velocity field at time
-$n+1$ as
-$$
-u^{n + 1}_{i, k} \leftarrow u^{n + 1}_{i, k} + \Delta t \frac{ha_{i + 1 / 2,
-k} + ha_{i - 1 / 2, k}}{h_{i + 1 / 2,k} + h_{i - 1 / 2, k}}
-$$
-The missing shallow-water metric terms $(f_G v, -f_G u)$, with
-$$
-f_G \equiv \frac{v \partial_{\lambda} m_{\theta} - u \partial_{\theta}
-m_{\lambda}}{m_{\lambda} m_{\theta}}
-$$
-are also added here ([Popinet, 2011](/src/references.bib#popinet2011)). */
+Coriolis terms plug themselves here. */
 
-event pressure (i++,last)
+event coriolis (i++, last);
+
+void apply_acceleration (double dt, double gamma)
 {
   foreach()
     foreach_layer() {
       foreach_dimension()
-        u.x[] += dt*(ha.x[] + ha.x[1])/(hf.x[] + hf.x[1] + dry);
+        u.x[] += gamma*dt*(ha.x[] + ha.x[1])/(hf.x[] + hf.x[1] + dry);
 #if dimension == 2
       // metric terms
       double dmdl = (fm.x[1,0] - fm.x[])/(cm[]*Delta);
@@ -408,6 +413,9 @@ event pressure (i++,last)
     }
   boundary ((scalar *) {u});
 }
+
+event pressure (i++, last)
+  apply_acceleration (dt, gamma_H);
 
 /**
 ## Cleanup

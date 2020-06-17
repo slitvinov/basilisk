@@ -6,9 +6,18 @@ in one dimension. */
 
 #include "grid/multigrid1D.h"
 #if EXPLICIT
-# include "saint-venant.h"
+# if ML
+#   include "layered/hydro.h"
+# else
+#   include "saint-venant.h"
+# endif
 #else
-# include "saint-venant-implicit.h"
+# if ML
+#   include "layered/hydro.h"
+#   include "layered/implicit.h"
+# else
+#   include "saint-venant-implicit.h"
+# endif
 #endif
 
 /**
@@ -31,7 +40,7 @@ int main()
   
   /**
   We do several runs with increasing wave amplitude. */
-  
+
   amp = 0.1;
   run();
   amp = 0.4;
@@ -79,7 +88,9 @@ following wave evolution for the explicit and implicit solvers.
 ~~~gnuplot Explicit and implicit solutions for a wave amplitude of 0.1
 set xlabel 'x'
 set ylabel 'z'
-plot 'out-0.1' w l t 'implicit', '../explicit/out-0.1' w l t 'explicit'
+plot 'out-0.1' w l t 'implicit', '../explicit/out-0.1' w l t 'explicit', \
+     '../implicit-ml/out-0.1' w l t 'implicit (ML)', \
+     '../explicit-ml/out-0.1' w l t 'explicit (ML)'
 ~~~
 
 The solutions are not too far given that the explicit scheme requires
@@ -91,7 +102,9 @@ shock and requires 840 timesteps against 186 timesteps for the
 implicit scheme.
 
 ~~~gnuplot Explicit and implicit solutions for a wave amplitude of 0.4
-plot 'out-0.4' w l t 'implicit', '../explicit/out-0.4' w l t 'explicit'
+plot 'out-0.4' w l t 'implicit', '../explicit/out-0.4' w l t 'explicit', \
+     '../implicit-ml/out-0.4' w l t 'implicit (ML)', \
+     '../explicit-ml/out-0.4' w l t 'explicit (ML)'
 ~~~
 
 For an amplitude of 1., strong shocks develop for both solutions. The
@@ -100,6 +113,8 @@ remains acceptable. The explicit solution requires 1092 steps against
 471 steps for the implicit scheme.
 
 ~~~gnuplot Explicit and implicit solutions for a wave amplitude of 1
-plot 'out-1' w l t 'implicit', '../explicit/out-1' w l t 'explicit'
+plot 'out-1' w l t 'implicit', '../explicit/out-1' w l t 'explicit', \
+     '../implicit-ml/out-1' w l t 'implicit (ML)', \
+     '../explicit-ml/out-1' w l t 'explicit (ML)'     
 ~~~
 */

@@ -319,7 +319,7 @@ event pressure (i++)
 			  slope_limited((dz + h[] - h[-1])/Delta) -
 			  (phi[] + phi[-1])*slope_limited(dz/Delta)))/2.;
 	hu.x[] -= dt*ax;
-	ha.x[] -= ax;
+	ha.x[] -= ax/gamma_H;
 #endif
       }
       dz += h[] - h[-1];

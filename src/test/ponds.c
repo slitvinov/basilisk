@@ -69,11 +69,15 @@ plot './eta-8' u 1:2:($3>dry?$5*30.:0):($3>dry?$6*30.:0) every 2:2 w vec lc 0
 // use KDT database rather than analytical function
 #define KDT 1
 
-#if IMPLICIT
-# include "saint-venant-implicit.h"
-#elif ML
+#if ML
 # include "layered/hydro.h"
-# include "layered/nh.h"
+# if IMPLICIT
+#   include "layered/implicit.h"
+# else
+#   include "layered/nh.h"
+# endif
+#elif IMPLICIT
+# include "saint-venant-implicit.h"
 #else
 # include "saint-venant.h"
 #endif
@@ -127,7 +131,7 @@ event init (i = 0)
 }
 
 event friction (i++) {
-#if IMPLICIT
+#if IMPLICIT && !ML
   // quadratic bottom friction, coefficient 1e-4 (dimensionless)
   foreach() {
     double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(q)/sq(h[]);
@@ -148,7 +152,7 @@ event friction (i++) {
 
 event logfile (i += 10) {
   stats s = statsf (h);
-#if IMPLICIT
+#if IMPLICIT && !ML
   scalar u[];
   foreach()
     u[] = h[] > dry ? q.x[]/h[] : 0.;
@@ -166,7 +170,7 @@ event logfile (i += 10) {
 }
 
 event outputfile (t <= 1200.; t += 1200./8) {
-#if !IMPLICIT  
+#if ML || !IMPLICIT 
   static int nf = 0;
   printf ("file: eta-%d\n", nf);
   output_field ({h, zb, u}, stdout, N, linear = true);
@@ -185,7 +189,7 @@ event outputfile (t <= 1200.; t += 1200./8) {
 //  output_matrix (h, stdout, N, true);
 
 event adapt (i++) {
-  // we dot this so that wavelets use the default bilinear
+  // we do this so that wavelets use the default bilinear
   // interpolation this is less noisy than the linear + gradient
   // limiters used in Saint-Venant not sure whether this is better
   // though.

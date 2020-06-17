@@ -36,12 +36,17 @@ drybump2D-implicit.tst: CFLAGS += -DIMPLICIT=1
 
 drybump2D.tst: drybump2D-implicit.tst
 
-lake-tr.tst: lake-tr-explicit.tst
+lake-tr.tst: lake-tr-explicit.tst lake-tr-ml.tst
 
 lake-tr-explicit.c: lake-tr.c
 	ln -s lake-tr.c lake-tr-explicit.c
 lake-tr-explicit.tst: lake-tr.s
 lake-tr-explicit.tst: CFLAGS += -DEXPLICIT=1
+
+lake-tr-ml.c: lake-tr.c
+	ln -s lake-tr.c lake-tr-ml.c
+lake-tr-ml.tst: lake-tr.s
+lake-tr-ml.tst: CFLAGS += -DML=1
 
 multiriverinflow.tst: multiriverinflow.ctst
 multiriverinflow.tst: CFLAGS += -fopenmp
@@ -80,7 +85,17 @@ explicit.c: implicit.c
 explicit.tst: implicit.s
 explicit.tst: CFLAGS += -DEXPLICIT=1
 
-implicit.tst: explicit.tst
+explicit-ml.c: implicit.c
+	ln -s implicit.c explicit-ml.c 
+explicit-ml.tst: implicit.s
+explicit-ml.tst: CFLAGS += -DML=1 -DEXPLICIT=1
+
+implicit-ml.c: implicit.c
+	ln -s implicit.c implicit-ml.c 
+implicit-ml.tst: implicit.s
+implicit-ml.tst: CFLAGS += -DML=1
+
+implicit.tst: explicit.tst explicit-ml.tst implicit-ml.tst
 
 bore.tst: bore1.tst
 
@@ -191,7 +206,10 @@ multilayer-tests: dispersion-gn.tst dispersion.tst \
 	bar-ml.tst parabola-ml.tst lonlat-ml.tst \
 	wind-driven-nh.tst wind-driven.tst large.tst \
 	gaussian-stvt.tst gaussian-hydro.tst gaussian.tst \
-	stokes-ns.tst stokes.tst ponds-ml.tst
+	stokes-ns.tst stokes.tst ponds-ml.tst ponds-implicit-ml.tst \
+	galilean_invariance.tst \
+	stommel-ml.tst explicit-ml.tst implicit-ml.tst lake-tr-ml.tst \
+	nonlinear-ml.tst
 
 dispersion-gn.c: dispersion.c
 	ln -s dispersion.c dispersion-gn.c 
@@ -256,16 +274,22 @@ lonlat-ml.tst: CFLAGS += -DML=1
 ponds-ml.c: ponds.c
 	ln -s ponds.c ponds-ml.c 
 ponds-ml.tst: ponds.s
+
 ponds-ml.tst: CFLAGS += -DML=1
 
-stommel-ml.tst: CFLAGS += -DLAYERS=1
+ponds-implicit-ml.c: ponds.c
+	ln -s ponds.c ponds-implicit-ml.c 
+ponds-implicit-ml.tst: ponds.s
+ponds-implicit-ml.tst: CFLAGS += -DML=1 -DIMPLICIT=1
+
+stommel-ml.tst: CFLAGS += -DML=1
 
 nonlinear.tst: nonlinear-ml.tst
 
 nonlinear-ml.c: nonlinear.c
 	ln -s nonlinear.c nonlinear-ml.c 
 nonlinear-ml.tst: nonlinear.s
-nonlinear-ml.tst: CFLAGS += -DLAYERS=1
+nonlinear-ml.tst: CFLAGS += -DML=1
 
 ## MPI tests
 

@@ -25,6 +25,7 @@ set cntrparam levels 10
 set cntrlabel onecolor
 unset xtics
 unset ytics
+set zrange [0:2.1e-5]
 splot 'out' u 1:2:3 w l lc rgbcolor "black", 'out' u 1:2:4 w l lc rgbcolor "blue"
 ~~~
 
@@ -115,12 +116,9 @@ plot 'log' index 'border = 0' u 1:4 pt 6 t 'max (border = 0)', \
 ~~~
 
 ## Numerical setup
-
-We use the implicit version of the multilayer solver. */
+*/
 
 #include "grid/multigrid.h"
-#include "layered/hydro.h"
-#include "layered/implicit.h"
 
 /**
 The only control parameter is the relative width of the western
@@ -139,11 +137,13 @@ double tau0 = 1e-5, Beta = 1.;
 
 /**
 We include Coriolis acceleration with a $\beta$-plane variation and a
-linear friction coefficient $K_0$. */
+linear friction coefficient $K_0$. We use the time-implicit version of
+the multilayer solver. */
 
 #define F0() (Beta*(y - 0.5))
 #define K0() (DELTA*Beta)
-#include "layered/coriolis.h"
+#include "layered/hydro.h"
+#include "layered/implicit.h"
 
 double border = 0.;
 
@@ -152,11 +152,10 @@ int main()
 
   /**
   We switch off advection of momentum. */
-  
+
   linearised = true;
   DT = 1;
-  // rigid = true; // fixme: does not work yet
-  TOLERANCE = 1e-6;
+  TOLERANCE = 1e-8;
   for (border = 0; border <= 1; border++) {
     fprintf (ferr, "\n\n# border = %g\n", border);
     for (N = 64; N <= 256; N *= 2) {
@@ -219,14 +218,19 @@ event init (i = 0)
 {
 
   /**
+  A "more implicit" timestepping improves the equilibrium solution. */
+
+  theta_H = alpha_H = 1.;  
+  
+  /**
   The "outside" is a dry, high terrain. Note that this is useful only
   when a "border" is not included. */
 
   foreach_dimension() {
     h[left] = 0.;
-    eta[left] = 1.;
+    eta[left] = dirichlet(1.);
     h[right] = 0.;
-    eta[right] = 1.;
+    eta[right] = dirichlet(1.);
   }
 
   /**
@@ -287,7 +291,7 @@ event logfile (i += 10; t <= 200)
     hw[] = h[] > dry ? fabs (h[] - 1.) : nodata;
   }
   norm n = normf (ev);  
-  fprintf (ferr, "%g %g %g %g %g\n", t, dt, du, n.rms, n.max);
+  //  fprintf (ferr, "%g %g %g %g %g\n", t, dt, du, n.rms, n.max);
 
   scalar psi[], psim[];
   streamfunctions (psi, psim);
@@ -304,17 +308,20 @@ velocity component. */
 
 event snapshot (t = end)
 {
-  scalar ev[];
-  foreach()
+  scalar eu[], ev[];
+  foreach() {
+    eu[] = (u.x[] + (stommel(x, y + 1e-6) - stommel(x, y - 1e-6))/2e-6)*
+      (x > 0 && x < 1 && y > 0 && y < 1);
     ev[] = (u.y[] - (stommel(x + 1e-6, y) - stommel(x - 1e-6, y))/2e-6)*
       (x > 0 && x < 1 && y > 0 && y < 1);
-  norm n = normf (ev);
-  fprintf (ferr, "%d %g %g %g\n", N, t, n.rms, n.max);
+  }
+  norm nv = normf (ev), nu = normf (eu);
+  fprintf (ferr, "%d %g %g %g %g %g\n", N, t, nv.rms, nv.max, nu.rms, nu.max);
 
   if (N == 64 && border == 0) {
     scalar psi[], psim[];
     streamfunctions (psi, psim);
-    dump();    
+    dump();
     output_field ({psi, psim});
   }
 }

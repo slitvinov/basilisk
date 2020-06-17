@@ -57,11 +57,11 @@ plot 'log' index 'F0 = 0.1' u 1:3 w l t 'C grid (Ro = 0.1)', \
 #include <gsl/gsl_integration.h>
 #pragma autolink -lgsl -lgslcblas
 #include "grid/multigrid.h"
-#if LAYERS
-# include "layered/hydro.h"
+#if ML
 double F0 = 0.;
-#define F0() F0
-# include "layered/coriolis.h"
+# define F0() F0
+# include "layered/hydro.h"
+# include "layered/implicit.h"
 #else
 # include "atmosphere.h"
 #endif
@@ -115,9 +115,12 @@ scalar h1[];
 
 event init (i = 0)
 {
+#if ML
+  CFL_H = 1.;
+#endif
   foreach()
     h1[] = h[] = (H0 + h0(sqrt (x*x + y*y)));
-#if LAYERS
+#if ML
   foreach() {
     double r = sqrt (x*x + y*y), vt = vtheta(r);
     u.x[] = - vt*y/r;
