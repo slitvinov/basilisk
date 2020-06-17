@@ -59,6 +59,7 @@ Note that only the documented test cases appear in the list below
 ## Coriolis
 
 * [Stommel gyre](stommel-ml.c)
+* [Geostrophic adjustment](geo.c)
 * [Non-linear geostrophic adjustment](nonlinear.c)
 
 ## Volume-Of-Fluid
