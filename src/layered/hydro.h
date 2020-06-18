@@ -547,3 +547,95 @@ void conserve_layered_elevation (void)
 #endif // TREE
 
 #include "gauges.h"
+
+#if dimension == 2
+
+/**
+# Fluxes through sections
+
+These functions are typically used to compute fluxes (i.e. flow rates)
+through cross-sections defined by two endpoints (i.e. segments). Note
+that the orientation of the segment is taken into account when
+computing the flux i.e the positive normal direction to the segment is
+to the "left" when looking from the start to the end. 
+
+This can be expressed mathematically as:
+$$
+\text{flux}[k] = \int_A^B h_k\mathbf{u}_k\cdot\mathbf{n}dl
+$$
+with $A$ and $B$ the endpoints of the segment, $k$ the list index
+(typically the layer index), $\mathbf{n}$ the oriented segment unit
+normal and $dl$ the elementary length. The function returns the sum
+(over $k$) of all the fluxes. */
+
+double segment_flux (coord segment[2], double * flux, scalar h, vector u)
+{
+  coord m = {segment[0].y - segment[1].y, segment[1].x - segment[0].x};
+  normalize (&m);
+  for (int l = 0; l < nl; l++)
+    flux[l] = 0.;
+  foreach_segment (segment, p) {
+    double dl = 0.;
+    foreach_dimension() {
+      double dp = (p[1].x - p[0].x)*Delta/Delta_x*(fm.y[] + fm.y[0,1])/2.;
+      dl += sq(dp);
+    }
+    dl = sqrt (dl);    
+    for (int i = 0; i < 2; i++) {
+      coord a = p[i];
+      foreach_layer()
+	flux[_layer] += dl/2.*
+	interpolate_linear (point, (struct _interpolate)
+			    {h, a.x, a.y, 0.})*
+	(m.x*interpolate_linear (point, (struct _interpolate)
+				 {u.x, a.x, a.y, 0.}) +
+	 m.y*interpolate_linear (point, (struct _interpolate)
+				 {u.y, a.x, a.y, 0.}));
+    }
+  }
+  // reduction
+#if _MPI
+  MPI_Allreduce (MPI_IN_PLACE, flux, nl, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
+  double tot = 0.;
+  for (int l = 0; l < nl; l++)
+    tot += flux[l];
+  return tot;
+}
+
+/**
+A NULL-terminated array of *Flux* structures passed to
+*output_fluxes()* will create a file (called *name*) for each
+flux. Each time *output_fluxes()* is called a line will be appended to
+the file. The line contains the time and the value of the flux for
+each $h$, $u$ pair in the lists. The *desc* field can be filled with a
+longer description of the flux. */
+
+typedef struct {
+  char * name;
+  coord s[2];
+  char * desc;
+  FILE * fp;
+} Flux;
+
+void output_fluxes (Flux * fluxes, scalar h, vector u)
+{
+  for (Flux * f = fluxes; f->name; f++) {
+    double flux[nl];
+    double tot = segment_flux (f->s, flux, h, u);
+    if (pid() == 0) {
+      if (!f->fp) {
+	f->fp = fopen (f->name, "w");
+	if (f->desc)
+	  fprintf (f->fp, "%s\n", f->desc);
+      }
+      fprintf (f->fp, "%g %g", t, tot);
+      for (int i = 0; i < nl; i++)
+	fprintf (f->fp, " %g", flux[i]);
+      fputc ('\n', f->fp);
+      fflush (f->fp);
+    }
+  }
+}
+
+#endif // dimension == 2
