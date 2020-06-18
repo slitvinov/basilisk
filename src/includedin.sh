@@ -1,5 +1,6 @@
 src=$1
-grep "incl .*/"$src \
+path=`pwd | sed 's|.*/src|/src|'`
+grep "incl $path/$src" \
     $BASILISK/*.tags \
     $BASILISK/navier-stokes/*.tags \
     $BASILISK/examples/*.tags \
@@ -24,8 +25,12 @@ grep "incl .*/"$src \
               gsub(basilisk, "", $1);
               gsub(".tags:.*", "", $1);
               used = "/src" $1;
-              lineno = $4;
-	      t = title(basilisk $1);
-	      if (t != "")
-	        print "used " t "\t" used " " lineno;
+	      if (!already[used]) {
+                lineno = $4;
+	        t = title(basilisk $1);
+	        if (t != "") {
+	          print "used " t "\t" used " " lineno;
+		  already[used] = 1;
+                }
+              }
             }'

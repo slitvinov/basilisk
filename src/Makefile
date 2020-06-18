@@ -73,6 +73,7 @@ qcc.c: qcc.lex Makefile
 
 alltags:
 	cd navier-stokes && make tags
+	cd layered && make tags
 	cd ehd && make tags
 	cd examples && make tags
 	cd test && make tags
