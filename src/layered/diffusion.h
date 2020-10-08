@@ -89,26 +89,29 @@ void vertical_viscosity (Point point, scalar h, scalar s, double dt)
   condition gives
   $$
   \begin{aligned}
-  b_0 & = h_0 + 2 \Delta t \nu \left( \frac{1}{h_0 + h_1} + \frac{h^2_1 + 4
-  h_0 h_1 + 4 h^2_0}{\det} \right),\\
+  b_0 & = h_0 + 2 \Delta t \nu \left( \frac{1}{h_0 + h_1} + \frac{h^2_1 + 3
+  h_0 h_1 + 3 h^2_0}{\det} \right),\\
   c_0 & = - 2 \Delta t \nu \left( \frac{1}{h_0 + h_1} + \frac{h^2_0}{\det}
   \right),\\
-  \text{rhs}_0 & = (hu_0)^{\star} + 2 \Delta t \nu u_b  \frac{h^2_1 + 4 h_0
-  h_1 + 3 h^2_0}{\det},\\
-  \det & = h_0 h_1  (8 \lambda_b + h_1) + h^2_0  (6 \lambda_b + 3 h_1) + 2
-  (h^2_1 \lambda_b + h^3_0),
+  \text{rhs}_0 & = (hu_0)^{\star} + 2 \Delta t \nu u_b  \frac{h^2_1 + 3 h_0
+  h_1 + 2 h^2_0}{\det},\\
+  \det & = h_0 (h_0 + h_1)^2  + 2\lambda (3\,h_0 h_1 + 2\,h_0^2 + h_1^2),
   \end{aligned}
   $$
   */
 
-  double den = h[]*h[0,0,1]*(8.*lambda_b[] + h[0,0,1]) +
-    sq(h[])*(6.*lambda_b[] + 3.*h[0,0,1]) +
-    2.*(sq(h[0,0,1])*lambda_b[] + cube(h[]));
+  double den = h[]*sq(h[] + h[0,0,1]) 
+    + 2.*lambda_b[]*(3.*h[]*h[0,0,1] + 2.*sq(h[]) + sq(h[0,0,1]));
   b[0] = h[] + 2.*dt*nu*(1./(h[] + h[0,0,1]) +
-			  (sq(h[0,0,1]) + 4.*h[]*h[0,0,1] + 4.*sq(h[]))/den);
+			  (sq(h[0,0,1]) + 3.*h[]*h[0,0,1] + 3.*sq(h[]))/den);
   c[0] = - 2.*dt*nu*(1./(h[] + h[0,0,1]) + sq(h[])/den);
-  rhs[0] += 2.*dt*nu*u_b[]*(sq(h[0,0,1]) + 4.*h[]*h[0,0,1] + 3.*sq(h[0]))/den;
-  
+  rhs[0] += 2.*dt*nu*u_b[]*(sq(h[0,0,1]) + 3.*h[]*h[0,0,1] + 2.*sq(h[0]))/den;
+
+  if (nl == 1) {
+    b[0] += c[0];
+    rhs[0] += (- c[0]*h[] - nu*dt) * dut[];
+  }
+    
   /**
   We can now solve the tridiagonal system using the [Thomas
   algorithm](https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm). */
