@@ -272,7 +272,7 @@ yylex (YYSTYPE *lvalp, char ** input, Allocator * alloc)
           /* Get another character.                    */
           c = *((*input)++);
         }
-      while (isalnum (c) || c == '.');
+      while (isalnum (c) || c == '_' || c == '.');
 
       (*input)--;
       symbuf[i] = '\0';
