@@ -110,6 +110,7 @@ event defaults (i = 0)
     c.refine = c.prolongation = fraction_refine;
     scalar * tracers = c.tracers;
     for (scalar t in tracers) {
+      t.restriction = restriction_volume_average;
       t.refine = t.prolongation = vof_concentration_refine;
       t.c = c;
     }
@@ -335,6 +336,11 @@ void vof_advection (scalar * interfaces, int i)
     for (scalar t in tracers) {
       scalar tc = new scalar;
       tcl = list_append (tcl, tc);
+#if TREE      
+      t.restriction = restriction_volume_average;
+      t.refine = t.prolongation = vof_concentration_refine;
+      t.c = c;
+#endif // TREE
     }
     foreach() {
       cc[] = (c[] > 0.5);
