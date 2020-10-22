@@ -589,10 +589,10 @@ static void begin_colorized (float fc[3],
   if (use_texture) {
     GLfloat texture[3*256];
     for (int i = 0; i < 256; i++) {
-      color c = colormap_color (cmap, i/255., 0, 1);
-      texture[3*i] = c.r/255.;
-      texture[3*i + 1] = c.g/255.;
-      texture[3*i + 2] = c.b/255.;
+      color j = colormap_color (cmap, i/255., 0, 1);
+      texture[3*i] = j.r/255.;
+      texture[3*i + 1] = j.g/255.;
+      texture[3*i + 2] = j.b/255.;
     }
     glTexImage1D (GL_TEXTURE_1D, 0, GL_RGB, 256,0, GL_RGB, GL_FLOAT, texture);
     glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
