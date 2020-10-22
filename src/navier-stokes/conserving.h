@@ -34,7 +34,8 @@ static void momentum_restriction (Point point, scalar u)
 We switch-off the default advection scheme of the [centered
 solver](centered.h). */
 
-event defaults (i = 0) {
+event defaults (i = 0)
+{
   stokes = true;
 
 #if TREE
@@ -50,7 +51,7 @@ event defaults (i = 0) {
   while (all[i].i)
     all[i] = all[i-1], i--;
   all[i] = f;
-
+    
   /**
   We then set the refinement and restriction functions for the
   components of the velocity field. */
@@ -160,9 +161,12 @@ event vof (i++) {
   We associate the transport of $q1$ and $q2$ with $f$ and transport
   all fields consistently using the VOF scheme. */
 
-  f.tracers = (scalar *){q1,q2};
+  scalar * tracers = f.tracers;
+  f.tracers = list_concat (tracers, (scalar *){q1, q2});
   vof_advection ({f}, i);
-
+  free (f.tracers);
+  f.tracers = tracers;
+  
   /**
   We recover the advected velocity field using the total momentum and
   the density */

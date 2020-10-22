@@ -56,8 +56,9 @@ scalar sf[];
 # define sf f
 #endif
 
-event properties (i++) {
-
+event tracer_advection (i++)
+{
+  
   /**
   When using smearing of the density jump, we initialise *sf* with the
   vertex-average of *f*. */
@@ -78,13 +79,17 @@ event properties (i++) {
 	    f[1,-1,1] + f[-1,1,1] + f[-1,1,-1] + f[1,1,1] +
 	    f[1,1,-1] + f[-1,-1,-1] + f[1,-1,-1] + f[-1,-1,1])/64.;
 #endif
-#endif 
 
 #if TREE
   sf.prolongation = refine_bilinear;
-  boundary ({sf});
 #endif
   
+  boundary ({sf});
+#endif // !sf
+}
+
+event properties (i++)
+{  
   foreach_face() {
     double ff = (sf[] + sf[-1])/2.;
     alphav.x[] = fm.x[]/rho(ff);

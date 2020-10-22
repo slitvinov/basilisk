@@ -137,6 +137,7 @@ set y2label 'mgpf.nrelax'
 stats "perfs" u 1:6 nooutput
 if (STATS_min_y == STATS_max_y) set yrange [0:STATS_max_y+1];
 plot [][0:]'perfs' u 1:6:(colori($6)) every EVERY w boxes lc rgbcolor variable
+set yrange [*:*]
 
 #-----------------------------------------------
 # subplot  1-1
