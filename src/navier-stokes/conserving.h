@@ -48,7 +48,7 @@ event defaults (i = 0)
 
   int i = 0;
   while (all[i].i != f.i) i++;
-  while (all[i].i)
+  while (i > 0 && all[i].i)
     all[i] = all[i-1], i--;
   all[i] = f;
     
