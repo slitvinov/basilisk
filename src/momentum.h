@@ -87,9 +87,12 @@ event vof (i++) {
   We associate the transport of $q1$ and $q2$ with $f$ and transport
   all fields consistently using the VOF scheme. */
 
-  f.tracers = (scalar *){q1,q2};
+  scalar * tracers = f.tracers;
+  f.tracers = list_concat (tracers, (scalar *){q1, q2});
   vof_advection ({f}, i);
-
+  free (f.tracers);
+  f.tracers = tracers;
+  
   /**
   We recover the total momentum. */
   

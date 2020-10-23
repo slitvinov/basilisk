@@ -79,17 +79,16 @@ event tracer_advection (i++)
 	    f[1,-1,1] + f[-1,1,1] + f[-1,1,-1] + f[1,1,1] +
 	    f[1,1,-1] + f[-1,-1,-1] + f[1,-1,-1] + f[-1,-1,1])/64.;
 #endif
+#endif // !sf
 
 #if TREE
   sf.prolongation = refine_bilinear;
-#endif
-  
   boundary ({sf});
-#endif // !sf
+#endif
 }
 
 event properties (i++)
-{  
+{
   foreach_face() {
     double ff = (sf[] + sf[-1])/2.;
     alphav.x[] = fm.x[]/rho(ff);
