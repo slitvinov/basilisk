@@ -33,9 +33,9 @@
   #define echo() output_s(yytext)
   #define output_s(s) fputs(s, stdout)
 
-  static char * baseurl = "", * ext = NULL;
+  static char * baseurl = "", * ext = NULL, * basilisk_url = NULL;
 
-  char * url (char * s)
+  char * url (char * s, char * baseurl)
   {
     static char s1[256];
     if (s[0] == '/') {
@@ -67,7 +67,7 @@
     }
     return s1;
   }
-  
+
 # define INCODE() (yyextra->incode)
   
   static int check_tag (char * text, struct MyScanner * scan) {
@@ -81,18 +81,18 @@
 	output_s (".3.html");
       }
       else if (!strcmp(t->file, "basilisk")) {
-	output_s (url ("/Basilisk%20C"));
+	output_s (url ("/Basilisk%20C", basilisk_url));
 	output_c ('#');
 	output_s (t->line);
       }
       else {
-	output_s (url (t->file));
+	output_s (url (t->file, basilisk_url));
 	output_c ('#');
 	char s1[256];
 	if (t->file[0] == '/')
 	  strcat (strcpy (s1, baseurl), t->file);
 	else
-	strcpy (s1, t->file);
+	  strcpy (s1, t->file);
 	output_s (t->line);
       }
       output_s (">");
@@ -180,7 +180,7 @@ WS  [ \t\v\n\f]
   output_c (c);
   if (header) {
     output_s ("<a href=");
-    output_s (url (header));
+    output_s (url (header, basilisk_url));
     output_s (">");
   }
   output_s (s);
@@ -298,7 +298,7 @@ WS  [ \t\v\n\f]
   *u = '\0';
   output_s (yytext);
   output_c ('"');
-  output_s (url (u + 1));
+  output_s (url (u + 1, baseurl));
   output_c ('"');
 }
 
@@ -468,6 +468,9 @@ int main (int argc, char * argv[])
   baseurl = argv[1];
   if (argc >= 4)
     ext = argv[3];
+  basilisk_url = getenv ("HTTP_BASILISK_URL");
+  if (basilisk_url == NULL)
+    basilisk_url = baseurl;
   
   codeblock (name);
   return 0;
