@@ -520,6 +520,15 @@ static int compdir (char * file, char ** out, int nout, const char * dir)
   return nout;
 }
 
+static void prepend_path (char * path)
+{
+  int j;
+  for (j = npath; j > 0; j--)
+    paths[j] = paths[j-1];
+  paths[0] = path;
+  npath++;
+}
+
 int includes (int argc, char ** argv, char ** out, 
 	      char ** grid1, int * default_grid,
 	      int * dim, int * bg, int * lyrs,
@@ -529,6 +538,15 @@ int includes (int argc, char ** argv, char ** out,
   char * file = NULL, * output = NULL;
   int i;
   warninclude = 0;
+  char * basilisk_include_path = getenv ("BASILISK_INCLUDE_PATH");
+  if (basilisk_include_path) {
+    basilisk_include_path = strdup (basilisk_include_path);
+    char * s = strtok (basilisk_include_path, ":");
+    while (s) {
+      prepend_path (s);
+      s = strtok (NULL, ":");
+    }
+  }
   for (i = 1; i < argc; i++) {
     if (!strncmp (argv[i], "-grid=", 6))
       strcpy (grid, &argv[i][6]);
@@ -542,13 +560,8 @@ int includes (int argc, char ** argv, char ** out,
       debug = 1;
     else if (!strcmp (argv[i], "-o"))
       output = argv[++i];
-    else if (!strncmp (argv[i], "-I", 2)) {
-      int j;
-      for (j = npath; j > 0; j--)
-	paths[j] = paths[j-1];	
-      paths[0] = argv[i] + 2;
-      npath++;
-    }
+    else if (!strncmp (argv[i], "-I", 2))
+      prepend_path (argv[i] + 2);
     else if (argv[i][0] != '-' && \
 	     (tags || !strcmp (&argv[i][strlen(argv[i]) - 2], ".c"))) {
       if (file) {
@@ -677,5 +690,6 @@ int includes (int argc, char ** argv, char ** out,
     *dim = dimension;
   *bg = bghosts;
   *lyrs = layers;
+  free (basilisk_include_path);
   return nout;
 }
