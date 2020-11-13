@@ -20,6 +20,9 @@
 # comment lines are allowed
 /^[ \t]*#.*$/ { print $0; next }
 
+# CFLAGS can be set
+/^[ \t]*CFLAGS[^a-zA-Z_]+/ { print $0; next }
+
 # line with a continuation character
 /.*\\$/ {
     if (cont)

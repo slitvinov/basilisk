@@ -542,6 +542,13 @@ int includes (int argc, char ** argv, char ** out,
       debug = 1;
     else if (!strcmp (argv[i], "-o"))
       output = argv[++i];
+    else if (!strncmp (argv[i], "-I", 2)) {
+      int j;
+      for (j = npath; j > 0; j--)
+	paths[j] = paths[j-1];	
+      paths[0] = argv[i] + 2;
+      npath++;
+    }
     else if (argv[i][0] != '-' && \
 	     (tags || !strcmp (&argv[i][strlen(argv[i]) - 2], ".c"))) {
       if (file) {

@@ -40,6 +40,9 @@
     static char s1[256];
     if (s[0] == '/') {
       // assert (strlen(baseurl) + strlen(s) + 1) < 256;
+      char * root = getenv ("DOCUMENT_ROOT");
+      if (root && s[strlen(root)] == '/' && !strncmp (root, s, strlen(root)))
+	s += strlen(root);
       strcat (strcpy (s1, baseurl), s);
     }
     else

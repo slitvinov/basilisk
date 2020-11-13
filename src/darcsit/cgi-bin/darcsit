@@ -1170,19 +1170,24 @@ if [[ -n "$USERS" && "$REQUEST_URI" == /_preview/* ]]; then
 	    dirname=$DOCUMENT_ROOT
 	fi
 	log="_preview_$basename.log"
+	makefile=$(mktemp)
+	echo "include $BASILISK/Makefile.defs" > $makefile
+	if [[ -r $dirname/Makefile ]]; then
+	    awk -f $BASILISK/darcsit/filter-makefile.awk $dirname/Makefile >> $makefile
+	fi
 	if cd "$dirname" && \
 		sed 's/raw=//' | urldecode | sanitize > "~$basename" 2> "$log" && \
-		make -f "$BASILISK/Makefile.defs" "~$basename.tags" >> "$log" 2>&1; then
+		make -f $makefile "~$basename.tags" >> "$log" 2>&1; then
 	    setproc "~$basename" "${dirname#$DOCUMENT_ROOT}"
 	    echo -e "Content-type: text/html; charset=utf-8\n"
 	    if ( eval $PREPROC | $PANDOC | $POSTPROC | sed 's/__ESCAPEDDOLLAR__/$/g' ) \
 		   2>> "$log"; then
-	        rm -f "$dirname/$log"
+	        rm -f "$dirname/$log" $makefile
 		exit 0
 	    fi
 	fi
 	internal_error "$log" >&2
-        rm -f "$dirname/$log"
+        rm -f "$dirname/$log" $makefile
 	exit 1
     else
 	echo "Status: 302 Found"
@@ -1196,15 +1201,20 @@ fi
 if [[ -r "$file" ]] ; then
     type=$(filetype "$file")
     if [[ "$type" != */* ]]; then
+	makefile=$(mktemp)
+	echo "include $BASILISK/Makefile.defs" > $makefile
+	if [[ -r $dirname/Makefile ]]; then
+	    awk -f $BASILISK/darcsit/filter-makefile.awk $dirname/Makefile >> $makefile
+	fi
 	if cd $dirname &&  \
-		TYPE="$type" make -f $BASILISK/Makefile.defs $basename.html > $basename.log 2>&1; then
+		TYPE="$type" make -f $makefile $basename.html > $basename.log 2>&1; then
 	    login_timeout
 	    echo -e "Content-type: text/html; charset=utf-8\n"
 	    cat $basename.html
 	else
 	    internal_error $basename.log
 	fi
-	rm -f $basename.log
+	rm -f $basename.log $makefile
 	exit 0
     fi
 fi

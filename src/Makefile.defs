@@ -119,7 +119,7 @@ clean:
 	pandoc -o $@ $<
 
 %.tags: % $(QCC)
-	$(QCC) -tags $<
+	$(QCC) $(CFLAGS) -tags $<
 
 %.itags: %.tags $(subst .page,.tags,$(ALLPAGES)) $(BASILISK)/includedin.sh
 	sh $(BASILISK)/includedin.sh $* > $@
