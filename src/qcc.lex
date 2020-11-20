@@ -2237,7 +2237,7 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
 event{WS}+{ID}{WS}*[(] {
   /* event (... */
   char ids[80], * id = ids;
-  strncpy (id, yytext, 80);
+  strncpy (id, yytext, 79);
   space (id); nonspace (id);
   char * s = id; while (!strchr(" \t\v\n\f(", *s)) s++; *s = '\0';
   eventparent[nevents] = eventchild[nevents] = -1;

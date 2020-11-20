@@ -12,10 +12,10 @@
     int line, type;
   } Tag;
 
-  Tag * tagsa = NULL;
-  int ntags = 0, target = 1, keywords_only = 0, scope = 0, intypedef = 0;
-  int warninclude = 0;
-  FILE * swigfp = NULL;
+  static Tag * tagsa = NULL;
+  static int ntags = 0, target = 1, keywords_only = 0, scope = 0, intypedef = 0;
+  static int warninclude = 0;
+  static FILE * swigfp = NULL;
 
   static void append_tag (Tag t) {
     ntags++;
