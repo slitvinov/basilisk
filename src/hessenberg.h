@@ -24,23 +24,23 @@ where each matrix element is indexed as $H_{ij} = H[in+j]$.
 ~~~
 */
 
-#define sign(a,b) ((b) > 0. ? ((a) > 0. ? (a) : -(a)) : ((a) > 0. ? -(a) : (a)))
-
 static inline void givens (double x, double y, double * c, double * s)
 {
 #if 0
+  #define sign2(a,b) ((b) > 0. ? ((a) > 0. ? (a) : -(a)) : ((a) > 0. ? -(a) : (a)))
+
   if (x == 0. && y == 0.)
     *c = 1., *s = 0.;
   else if (fabs(y) > fabs(x)) {
     double t = x/y;
     x = sqrt(1. + t*t);
-    *s = - sign(1./x, y);
+    *s = - sign2(1./x, y);
     *c = t*(*s);
   }
   else {
     double t = y/x;
-    y = sqrt(1. + t*t);
-    *c = sign(1./y, x);
+    y = sqrt2(1. + t*t);
+    *c = sign2(1./y, x);
     *s = - t*(*c);
   }
 #else
