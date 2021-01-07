@@ -1,10 +1,13 @@
-#if defined(__APPLE__)
+#if defined(DUMBGL)
+#  include <gl/gl.h>
+#elif defined(__APPLE__)
 #  include <OpenGL/gl.h>
 #  include <OpenGL/glu.h>
 #else
 #  include <GL/gl.h>
 #  include <GL/glu.h>
 #endif
+
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -20,25 +23,12 @@ typedef struct {
   float n[6][3];
   float d[6];
   unsigned width;
-#if 0
-  GList * symmetries;
-  FttVector * s;
-#endif
 } Frustum;
 
 void gl_get_frustum (Frustum * f);
 int sphere_in_frustum (double x, double y, double z, double r, Frustum * f);
 float sphere_diameter (double x, double y, double z, double r, Frustum * f);
 void gl_check_error();
-
-enum FeedbackFormat {
-  FEEDBACK_GNU, FEEDBACK_OBJ, FEEDBACK_KML
-};
-
-float * gl_feedback_begin (unsigned buffersize);
-bool    gl_feedback_end   (float * f,
-			   FILE * fp,
-			   enum FeedbackFormat format);
 
 int polygonize (const double val[8], double isolevel, double triangles[5][3][3]);
 

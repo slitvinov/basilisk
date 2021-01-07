@@ -1,12 +1,17 @@
 -include ../config
 
-CFLAGS += -O2
+CFLAGS += -O2 -I..
 
-all: libglutils.a libfb_osmesa.a libfb_glx.a
+all: libglutils.a libfb_dumb.a libfb_osmesa.a libfb_glx.a
 
 libglutils.a: trackball.o gl2ps.o utils.o polygonize.o \
 		og_font.o og_stroke_mono_roman.o parser.o
 	ar cr $@ $^
+
+libfb_dumb.a: fb_dumb.o
+	ar cr $@ $^
+
+fb_dumb.o: gl.h
 
 libfb_osmesa.a: fb_osmesa.o
 	ar cr $@ $^
