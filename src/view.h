@@ -57,16 +57,7 @@ depending on which version of OpenGL should be used.
 We include the various helper functions defined either by the system
 or by the Basilisk libraries in gl/. */
 
-#if defined(__APPLE__)
-#  include <OpenGL/gl.h>
-#  include <OpenGL/glu.h>
-#else
-#  include <GL/gl.h>
-#  include <GL/glu.h>
-#endif
-
 #include <gl/framebuffer.h>
-#include <gl/gl2ps/gl2ps.h>
 #include <gl/trackball.h>
 #include <gl/utils.h>
 #pragma autolink -L$BASILISK/gl -lglutils $OPENGLIBS
@@ -152,7 +143,6 @@ struct _bview {
   float fov;
 
   bool gfsview;   // rotate axis to match gfsview
-  bool vector;    // are we doing vector graphics?
   bool reversed;  // reverse normals
   
   float bg[3];
@@ -197,8 +187,6 @@ bview * bview_new()
   p->res = 1.;
   p->lc = 0.001;
 
-  p->vector = false;
-  
   p->samples = 4;
   p->width = 600*p->samples, p->height = 600*p->samples;
 
@@ -266,10 +254,10 @@ static void redraw() {
   GList * symmetries = get_symmetries (list);
   max = gfs_gl_domain_extent (domain, symmetries);
 #endif
-  
+
   gluPerspective (view->fov, view->width/(float)view->height, 1., 1. + 2.*max);
   glMatrixMode (GL_MODELVIEW);
-	    
+
   glLoadIdentity ();
   glTranslatef (view->tx, view->ty, - (1. + max));
     
@@ -414,6 +402,8 @@ static pointer compose_image (bview * view)
 #endif /* 3D */
 #endif /* _MPI */
 
+#include "vertexbuffer.h"
+
 /**
 # User functions
 
@@ -427,24 +417,18 @@ Drawing user functions are defined in [draw.h](). */
 The commands are calls of user functions. They can be read from a
 file defined by *fp* or *file*, or from the memory buffer *buf*.
 
-If *history* is not *NULL*, the commands are appended to this buffer. 
-
 Besides the *load()*, *save()* and drawing functions defined in
 [draw.h](), valid drawing commands also include:
 
 * [*restore()*](output.h#dump-basilisk-snapshots)
 * [*dump()*](output.h#dump-basilisk-snapshots)
 * [*input_gfs()*](input.h#input_gfs-gerris-simulation-format)
-* *display()*: forces redrawing.
-* *show()*: writes on standard error the content of the current command history.
-* *quit()*: stops parsing commands.
 */
 
 struct _load {
   FILE * fp;   // read commands from this file
   char * file; // read commands from this file
   Array * buf; // read commands from this buffer
-  Array * history; // append history to this one
 };
 
 bool load (struct _load p);
@@ -476,6 +460,10 @@ The recognised file formats are:
 * "mp4", "gif", "ogv": Compressed animation formats. Will only work if
                        [ffmpeg](https://www.ffmpeg.org) is installed on 
                        the system.
+
+The following formats are no longer supported, but this could be fixed
+later:
+
 * "bv": Basilisk View format. Saves all Basilisk function calls necessary to 
         reproduce the figure. Use together with 
         [load()](view.h#load-read-drawing-commands-from-a-file-or-buffer).
@@ -497,7 +485,6 @@ struct _save {
   float lw; /* base line width for vector drawings */
   int sort, options;
 
-  Array * history; // command history
   bview * view;
 };
 
@@ -509,33 +496,6 @@ static void bview_draw (bview * view)
   glFinish ();
   enable_fpe (FE_DIVBYZERO|FE_INVALID);
 }
-
-static void redraw_feedback (struct _save * p)
-{
-  bview * view = p->view ? p->view : get_view();
-  assert (p->history);
-  if (p->history->len) {
-    float res = view->res;
-    view->res = 0.;
-    view->vector = true; // vector graphics
-    redraw();
-    // we use a display list, just as a workaround for some buggy
-    // feedback buffer implementations
-    int list = glGenLists (1);
-    glNewList (list, GL_COMPILE);
-    load (buf = p->history);
-    glEndList();
-    glCallList (list);
-    glFinish ();
-    glDeleteLists (list, 1);
-    enable_fpe (FE_DIVBYZERO|FE_INVALID);
-    view->active = false;
-    view->vector = false;
-    view->res = res;
-  }
-}
-
-#define MAXBUFFSIZE (1 << 28) // 1 GB of feedback buffer
 
 trace
 bool save (struct _save p)
@@ -563,6 +523,10 @@ bool save (struct _save p)
     unsigned char * image = (unsigned char *) compose_image (view);
     if (pid() == 0) {
       FILE * fp = open_image (p.file, p.opt);
+      if (!fp) {
+	perror (p.file);
+	return false;
+      }      
       gl_write_image (fp, image, view->width, view->height, view->samples);
       close_image (p.file, fp);
     }
@@ -584,6 +548,10 @@ bool save (struct _save p)
   }
 
   else if (!strcmp (p.format, "bv")) {
+#if 1 // fixme: not implemented yet
+    fprintf (ferr, "save(): error: the '%s' format is no longer supported\n",
+	     p.format);
+#else
     assert (p.history);
     fprintf (p.fp,
 	     "view (fov = %g, quat = {%g,%g,%g,%g}, "
@@ -598,65 +566,20 @@ bool save (struct _save p)
 	     view->width/view->samples, view->height/view->samples,
 	     view->samples);
     fwrite (p.history->p, 1, p.history->len, p.fp);
+#endif
   }
   
   else if (!strcmp (p.format, "gnu") ||
 	   !strcmp (p.format, "obj") ||
-	   !strcmp (p.format, "kml")) {
-    int format = (!strcmp (p.format, "gnu") ? FEEDBACK_GNU :
-		  !strcmp (p.format, "obj") ? FEEDBACK_OBJ :
-		  !strcmp (p.format, "kml") ? FEEDBACK_KML :
-		  -1);
-    unsigned buffsize = 1 << 24;
-    bool done = false;
-    while (!done && buffsize <= MAXBUFFSIZE) {
-      float * f = gl_feedback_begin (buffsize);
-      redraw_feedback (&p);
-      done = gl_feedback_end (f, p.fp, format);
-      buffsize *= 2;
-    }
-    if (!done)
-      fprintf (ferr, "save(): error: exceeded maximum feedback buffer size\n");
-  }
-  
-  else if (!strcmp (p.format, "ps") ||
+	   !strcmp (p.format, "kml") ||
+	   !strcmp (p.format, "ps")  ||
 	   !strcmp (p.format, "eps") ||
 	   !strcmp (p.format, "tex") ||
 	   !strcmp (p.format, "pdf") ||
 	   !strcmp (p.format, "svg") ||
-	   !strcmp (p.format, "pgf")) {
-    GLint format = (!strcmp (p.format, "ps") ? GL2PS_PS :
-		    !strcmp (p.format, "eps") ? GL2PS_EPS :
-		    !strcmp (p.format, "tex") ? GL2PS_TEX :
-		    !strcmp (p.format, "pdf") ? GL2PS_PDF :
-		    !strcmp (p.format, "svg") ? GL2PS_SVG :
-		    !strcmp (p.format, "pgf") ? GL2PS_PGF :
-		    -1);
-    GLint state = GL2PS_OVERFLOW;
-    GLint sort = p.sort ? p.sort : GL2PS_SIMPLE_SORT;
-    GLint options = p.options ? p.options : (GL2PS_SIMPLE_LINE_OFFSET |
-					     GL2PS_SILENT |
-					     GL2PS_BEST_ROOT |
-					     GL2PS_OCCLUSION_CULL |
-					     GL2PS_USE_CURRENT_VIEWPORT |
-					     GL2PS_TIGHT_BOUNDING_BOX);
-    unsigned buffsize = 1 << 24;
-    while (state == GL2PS_OVERFLOW && buffsize <= MAXBUFFSIZE) {
-      gl2psBeginPage ("", "bview",
-		      NULL,
-		      format, sort, options, 
-		      GL_RGBA, 0, NULL, 
-		      0, 0, 0,
-		      buffsize, p.fp, "");
-      redraw_feedback (&p);
-      disable_fpe (FE_DIVBYZERO|FE_INVALID);
-      state = gl2psEndPage();
-      enable_fpe (FE_DIVBYZERO|FE_INVALID);
-      buffsize *= 2;
-    }
-    if (state == GL2PS_OVERFLOW)
-      fprintf (ferr, "save(): error: exceeded maximum feedback buffer size\n");
-  }
+	   !strcmp (p.format, "pgf"))
+    fprintf (ferr, "save(): error: the '%s' format is no longer supported\n",
+	     p.format);
 
   else {
     fprintf (ferr, "save(): unknown format '%s'\n", p.format);
@@ -711,16 +634,6 @@ static void fields_stats()
   }
 }
 
-static void draw_append (char * buf, Array * history, FILE * interactive)
-{
-  if (interactive) {
-    if (history->len)
-      load (buf = history);
-    save (fp = interactive);
-  }
-  array_append (history, buf, strlen(buf)*sizeof(char));
-}
-
 /**
 The [draw_get.h]() file is generated automatically by [params.awk]()
 and contains parsing commands for the functions defined in
@@ -728,7 +641,7 @@ and contains parsing commands for the functions defined in
 
 #include "draw_get.h"
 
-static bool process_line (char * line, Array * history, FILE * interactive)
+bool process_line (char * line)
 {
   if (line[0] == '\0')
     return true;
@@ -754,9 +667,6 @@ static bool process_line (char * line, Array * history, FILE * interactive)
 	restriction (all);
 	fields_stats();
 	clear();
-	// rebuild display list using history
-	if (history->len && load (buf = history) && interactive)
-	  save (fp = interactive);
       }
     }
   }
@@ -775,9 +685,6 @@ static bool process_line (char * line, Array * history, FILE * interactive)
       restriction (all);
       fields_stats();
       clear();
-      // rebuild display list using history
-      if (history->len && load (buf = history) && interactive)
-	save (fp = interactive);
     }
   }
 
@@ -785,146 +692,104 @@ static bool process_line (char * line, Array * history, FILE * interactive)
     char * file = NULL;
     parse_params ((Params[]){{"file", pstring, &file}, {NULL}});
     if (file)
-      save (file = file, history = history);
+      save (file = file);
   }
 
   else if (!strcmp (s, "load")) {
     char * file = NULL;
     parse_params ((Params[]){{"file", pstring, &file}, {NULL}});
-    if (file && load (file = file, history = history) && interactive) {
-      load (buf = history);
-      save (fp = interactive);
-    }
+    if (file)
+      load (file = file);
   }
         
   else if (!strcmp (s, "cells")) {
     struct _cells p = {{0}};
     _cells_get (&p);
     cells (p);
-    draw_append (buf, history, interactive);
   }
 
   else if (!strcmp (s, "vectors")) {
     struct _vectors p = {0};
     _vectors_get (&p);
     vectors (p);
-    draw_append (buf, history, interactive);
   }
         
   else if (!strcmp (s, "draw_vof")) {
     struct _draw_vof p = {0};
     _draw_vof_get (&p);
-    if (draw_vof (p))
-      draw_append (buf, history, interactive);
+    draw_vof (p);
   }
     
   else if (!strcmp (s, "isoline")) {
     struct _isoline p = {0};
     _isoline_get (&p);
-    if (isoline (p))
-      draw_append (buf, history, interactive);
+    isoline (p);
   }
     
   else if (!strcmp (s, "squares")) {
     struct _squares p = {0};
     _squares_get (&p);
     squares (p);
-    draw_append (buf, history, interactive);
   }
   
   else if (!strcmp (s, "begin_translate")) {
     struct _translate p = {0};
     _translate_get (&p);
     begin_translate (p);
-    draw_append (buf, history, interactive);
   }
 
-  else if (!strcmp (s, "end_translate")) {
+  else if (!strcmp (s, "end_translate"))
     end_translate();
-    draw_append (buf, history, interactive);
-  }
   
   else if (!strcmp (s, "begin_mirror")) {
     struct _mirror p = {{0}};
     _mirror_get (&p);
     begin_mirror (p);
-    draw_append (buf, history, interactive);
   }
 
-  else if (!strcmp (s, "end_mirror")) {
+  else if (!strcmp (s, "end_mirror"))
     end_mirror();
-    draw_append (buf, history, interactive);
-  }
   
   else if (!strcmp (s, "squares")) {
     struct _squares p = {0};
     _squares_get (&p);
     squares (p);
-    draw_append (buf, history, interactive);
   }
     
   else if (!strcmp (s, "isosurface")) {
     struct _isosurface p = {0};
     _isosurface_get (&p);
     isosurface (p);
-    draw_append (buf, history, interactive);
   }
     
   else if (!strcmp (s, "draw_string")) {
     struct _draw_string p = {0};
     _draw_string_get (&p);
     draw_string (p);
-    draw_append (buf, history, interactive);
   }
 
   else if (!strcmp (s, "labels")) {
     struct _labels p = {0};
     _labels_get (&p);
     labels (p);
-    draw_append (buf, history, interactive);
   }
 
-  else if (!strcmp (s, "display")) {
-    if (interactive && history->len && load (buf = history))
-      save (fp = interactive);
-  }
-
-  else if (!strcmp (s, "clear")) {
+  else if (!strcmp (s, "clear"))
     clear();
-    if (interactive)
-      save (fp = interactive);
-    history->len = 0;
-  }
-
-  else if (!strcmp (s, "show")) {
-    if (interactive && history->len)
-      save (fp = ferr, format = "bv", history = history);
-  }
 
   else if (!strcmp (s, "box")) {
     struct _box p = {0};
     _box_get (&p);
     box (p);
-    draw_append (buf, history, interactive);
   }
 
   else if (!strcmp (s, "view")) {
     struct _view_set p = {0};
     _view_set_get (&p);
     view (p);
-    if (p.width || p.height || p.samples) {
-      // rebuild display list using history
-      if (history->len && load (buf = history) && p.samples && interactive)
-	save (fp = interactive);
-    }
   }
 
-  else if (!strcmp (s, "quit")) {
-    free (buf);
-    return false; // quit
-  }
-  
-  else if (s[0] != '\n')
+  else if (s[0] != '\n' && s[0] != '\0')
     fprintf (ferr, "load(): syntax error: '%s'\n", s);
 
   free (buf);
@@ -940,10 +805,9 @@ bool load (struct _load p) {
     }
   }
 
-  Array * history = array_new();
   if (p.fp) { // read lines from file
     char line[256];
-    while (fgets (line, 256, p.fp) && process_line (line, history, NULL));
+    while (fgets (line, 256, p.fp) && process_line (line));
   }
   else if (p.buf) { // read lines from buffer
     int i = 0;
@@ -956,13 +820,9 @@ bool load (struct _load p) {
 	char line[s - start + 1];
 	strncpy (line, start, s - start);
 	line[s - start] = '\0';
-	process_line (line, history, NULL);
+	process_line (line);
       }
     }
   }
-  if (p.history)
-    array_append (p.history, history->p, history->len);
-  array_free (history);
-
   return true;
 }
