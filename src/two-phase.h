@@ -32,6 +32,11 @@ event defaults (i = 0) {
   
   if (mu1 || mu2)
     mu = new face vector;
+
+  /**
+  We add the interface to the default display. */
+
+  display ("draw_vof (c = 'f');");
 }
 
 /**

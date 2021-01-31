@@ -20,6 +20,8 @@ advect the passive tracer *f*. */
 
 scalar f[];
 scalar * tracers = {f};
+double Reynolds = 160.;
+int maxlevel = 9;
 face vector muv[];
 
 /**
@@ -30,6 +32,14 @@ int main() {
   origin (-0.5, -L0/2.);
   N = 512;
   mu = muv;
+
+  /**
+  When using bview we can interactively control the Reynolds number
+  and maximum level of refinement. */
+  
+  display_control (Reynolds, 10, 1000);
+  display_control (maxlevel, 6, 12);
+  
   run(); 
 }
 
@@ -40,7 +50,7 @@ based on the cylinder diameter (0.125) and the inflow velocity (1). */
 event properties (i++)
 {
   foreach_face()
-    muv.x[] = fm.x[]*0.125/160.;
+    muv.x[] = fm.x[]*0.125/Reynolds;
 }
 
 /**
@@ -113,7 +123,7 @@ We adapt according to the error on the embedded geometry, velocity and
 tracer fields. */
 
 event adapt (i++) {
-  adapt_wavelet ({cs,u,f}, (double[]){1e-2,3e-2,3e-2,3e-2}, 9, 4);
+  adapt_wavelet ({cs,u,f}, (double[]){1e-2,3e-2,3e-2,3e-2}, maxlevel, 4);
 }
 
 /**

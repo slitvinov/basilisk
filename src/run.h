@@ -35,3 +35,18 @@ void run (void)
 
   free_grid();
 }
+
+/**
+By default we display the boundaries of the domain. */
+
+event defaults (i = 0) {
+  display ("box();");
+}
+
+/**
+At the end of the run we need to empty the default display, otherwise
+we would append multiple copies when re-running. */
+
+event cleanup (t = end) {
+  display ("", true);
+}

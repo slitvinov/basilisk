@@ -56,6 +56,11 @@ event defaults (i = 0) {
   #endif
 
   boundary ({h});
+
+  /**
+  We setup the default display. */
+
+  display ("squares (color = 'h > 0 ? zb + h : nodata', spread = -1);");
 }
 
 /**

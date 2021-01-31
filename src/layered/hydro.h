@@ -136,6 +136,11 @@ event defaults (i = 0)
     s.restriction = restriction_volume_average;
 #endif
   }
+
+  /**
+  We setup the default display. */
+
+  display ("squares (color = 'h > 0 ? eta : nodata', spread = -1);");
 }
 
 /**

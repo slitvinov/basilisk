@@ -53,8 +53,14 @@ psi[bottom] = dirichlet(0);
 We set the default value for the `CFL` (the default in `utils.h` is
 0.5). This is done once at the beginning of the simulation. */
 
-event defaults (i = 0)
+event defaults (i = 0) {
   CFL = 0.8;
+
+  /**
+  The default display. */
+  
+  display ("squares (color = 'omega', spread = -1);");
+}
 
 /**
 At every timestep we update the streamfunction field $\psi$ by solving

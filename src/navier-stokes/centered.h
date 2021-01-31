@@ -172,6 +172,13 @@ event defaults (i = 0)
 #endif // TREE
 }
 
+
+/**
+We had some objects to display by default. */
+
+event default_display (i = 0)
+  display ("squares (color = 'u.x', spread = -1);");
+
 /**
 After user initialisation, we initialise the face velocity and fluid
 properties. */
