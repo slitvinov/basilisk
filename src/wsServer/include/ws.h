@@ -218,42 +218,23 @@
 	#define CLI_SOCK(sock) (fileno(stdout))
 	#endif
 
-	/**
-	 * @brief events Web Socket events types.
-	 */
-	struct ws_events
-	{
-		/**
-		 * @brief On open event, called when a new client connects.
-		 */
-		void (*onopen)(int);
-
-		/**
-		 * @brief On close event, called when a client disconnects.
-		 */
-		void (*onclose)(int);
-
-		/**
-		 * @brief On message event, called when a client sends a text
-		 * or binary message.
-		 */
-		void (*onmessage)(int, const unsigned char *, size_t, int);
-	};
-
 	/* Forward declarations. */
+        extern int ws_socket_open (uint16_t port);
 	extern int get_handshake_accept(char *wsKey, unsigned char **dest);
 	extern int get_handshake_response(char *hsrequest, char **hsresponse);
 	extern char *ws_getaddress(int fd);
-	extern int ws_sendframe(
+        extern int ws_sendframe_init(int fd, ssize_t size, bool broadcast, int type);
+        extern int ws_sendframe(
 		int fd, const char *msg, ssize_t size, bool broadcast, int type);
 	extern int ws_sendframe_txt(int fd, const char *msg, bool broadcast);
 	extern int ws_sendframe_bin(int fd, const char *msg, size_t size, bool broadcast);
+        extern ssize_t ws_send(int sockfd, const void *buf, size_t len);
 	extern int ws_get_state(int fd);
 	extern int ws_close_client(int fd);
-	extern int ws_socket(struct ws_events *evs, uint16_t port);
-
-#ifdef AFL_FUZZ
-	extern int ws_file(struct ws_events *evs, const char *file);
-#endif
+        extern int ws_socket_poll (int sock,
+				   void (* onopen) (int fd),
+				   void (* onmessage) (int fd, const char * msg, size_t size, int type),
+				   void (* onclose) (int fd),
+				   int timeout);
 
 #endif /* WS_H */

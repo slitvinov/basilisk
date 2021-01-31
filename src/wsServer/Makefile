@@ -13,13 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-CC       ?= gcc
+include ../config
+
 AR        = ar
 INCLUDE   = $(CURDIR)/include
 SRC       = $(CURDIR)/src
-CFLAGS   +=  -Wall -Wextra -O2
+CFLAGS   +=  -O2
 CFLAGS   +=  -I $(INCLUDE) -std=c99 -pedantic
-ARFLAGS   =  cru
+ARFLAGS   =  cr
 LIB       =  libws.a
 MCSS_DIR ?= /usr/bin/
 MANPAGES  = $(CURDIR)/doc/man/man3
@@ -64,7 +65,7 @@ BINDIR = $(PREFIX)/bin
 
 # General objects
 %.o: %.c
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(CC99) $< $(CFLAGS) -c -o $@
 
 # All
 all: libws.a
