@@ -299,17 +299,6 @@ void delete (scalar * list)
   }
 }
 
-typedef void (* free_solver_func) (void);
-
-static Array * free_solver_funcs = NULL;
-
-void free_solver_func_add (free_solver_func func)
-{
-  if (!free_solver_funcs)
-    free_solver_funcs = array_new();
-  array_append (free_solver_funcs, &func, sizeof(free_solver_func));
-}
-
 void free_solver()
 {
   if (free_solver_funcs) {

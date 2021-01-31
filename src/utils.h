@@ -363,3 +363,7 @@ the sub-segment contained in each cell are defined by `p[0]` and
 @define end_foreach_segment() } } end_foreach(); }
 
 #include "output.h"
+
+#ifdef DISPLAY
+# include "display.h" // nodep
+#endif

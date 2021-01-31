@@ -36,7 +36,14 @@ static bool args (Params * p, char * val)
       return false;
     }
     val[strlen(val) - 1] = '\0';
-    *((char **)p->val) = &val[1];
+    char * s = &val[1];
+    int nc = 0; // number of non-blank characters
+    while (*s != '\0') {
+      if (!strchr (" \t\n\r", *s))
+	nc++;
+      s++;
+    }
+    *((char **)p->val) = nc > 0 ? &val[1] : NULL;
     break;
 
   case pcolormap:
@@ -154,7 +161,7 @@ int parse_params (Params * params)
   while (p->key) p++, n++;
   if (!(s = mystrtok (NULL, ");")) || s[0] == '\n')
     return false;
-  while (s) {
+  while (s && *s != '\0') {
     char * next = find_comma (s), * key = s;
     if ((s = strchr (key, '='))) {
       s[0] = '\0', s++;

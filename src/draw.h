@@ -1579,3 +1579,28 @@ bool labels (struct _labels p)
   return false;
 #endif // dimension == 3
 }
+
+/**
+# Interface export
+
+This is used by [bview](bview/README) to automatically generate the
+user interface. */
+
+#include "draw_json.h"
+
+struct {
+  int (* json) (void * q, char * s, int len);
+} bview_interface[] = {
+  { _draw_vof_json },
+  { _squares_json },
+  { _cells_json },
+  { _box_json },
+#if dimension == 2
+  { _isoline_json },
+  { _labels_json },
+  { _vectors_json },
+#else // dimension == 3
+  { _isosurface_json },
+#endif
+  { NULL }
+};

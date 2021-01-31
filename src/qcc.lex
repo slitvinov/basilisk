@@ -43,6 +43,9 @@
   int nexpr[EVMAX], eventline[EVMAX], eventparent[EVMAX], eventchild[EVMAX];
   int eventlast[EVMAX];
 
+  int ninit = 0;
+  char * initfunc[EVMAX];
+  
   typedef struct {
     void * p;
     int n, size;
@@ -2324,6 +2327,19 @@ trace {
     REJECT;
 }
 
+init_solver{WS}+void{WS}+{ID}{WS}*[(]{WS}*(void){0,1}{WS}*[)] {
+  if (debug)
+    fprintf (stderr, "%s:%d: %s\n", fname, line, yytext);
+  char * s = strstr (yytext, "void");
+  fputs ("static ", yyout);
+  fputs (s, yyout);
+  s += 4;
+  while (!strchr(" \t\v\n\f", *s)) s++;
+  while (strchr(" \t\v\n\f", *s)) s++;
+  assert (ninit < EVMAX);
+  initfunc[ninit++] = strdup (s);
+}
+
 stderr fputs ("qstderr()", yyout);
 stdout fputs ("qstdout()", yyout);
 
@@ -2994,6 +3010,11 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   fputs ("void _init_solver (void) {\n"
 	 "  void init_solver();\n"
 	 "  init_solver();\n", fout);
+  /* init_solver functions */
+  for (i = 0; i < ninit; i++)
+    fprintf (fout,
+	     "  void %s;\n"
+	     "  %s;\n", initfunc[i], initfunc[i]);
   /* events */
   fprintf (fout,
 	   "  Events = (Event *) pmalloc (sizeof (Event), __func__, __FILE__, %s);\n"

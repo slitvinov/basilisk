@@ -92,6 +92,12 @@ do {
 
 // Memory tracing
 
+@define sysmalloc malloc
+@define syscalloc calloc
+@define sysrealloc realloc
+@define sysfree free
+@define systrdup strdup
+
 @if MTRACE
 
 struct {
@@ -115,12 +121,6 @@ typedef struct {
 
 static pmfunc * pmfuncs = NULL;
 static int pmfuncn = 0;
-
-@define sysmalloc malloc
-@define syscalloc calloc
-@define sysrealloc realloc
-@define sysfree free
-@define systrdup strdup
 
 static int pmfunc_index (const char * func, const char * file, int line)
 {
@@ -1190,7 +1190,7 @@ double timer_elapsed (timer t)
   return ((tvend.tv_sec - t.tv.tv_sec) + 
 	  (tvend.tv_usec - t.tv.tv_usec)/1e6);
 }
-	  
+
 // Constant fields
 
 const face vector zerof[] = {0.,0.,0.};
@@ -1337,6 +1337,54 @@ void matrix_free (void * m)
   free (((void **) m)[0]);
   free (m);
 }
+
+// Solver cleanup
+
+typedef void (* free_solver_func) (void);
+
+static Array * free_solver_funcs = NULL;
+
+void free_solver_func_add (free_solver_func func)
+{
+  if (!free_solver_funcs)
+    free_solver_funcs = array_new();
+  array_append (free_solver_funcs, &func, sizeof(free_solver_func));
+}
+
+// Default objects to display
+
+static char * display_defaults = NULL;
+
+struct _display {
+  const char * commands;
+  bool overwrite;
+};
+
+static void free_display_defaults() {
+  free (display_defaults);
+}
+
+void display (struct _display p)
+{
+  if (display_defaults == NULL)
+    free_solver_func_add (free_display_defaults);
+  if (p.overwrite) {
+    free (display_defaults);
+    display_defaults = malloc (strlen(p.commands) + 2);
+    strcpy (display_defaults, "@");
+    strcat (display_defaults, p.commands);
+  }
+  else {
+    if (!display_defaults)
+      display_defaults = strdup ("@");
+    display_defaults =
+      realloc (display_defaults,
+	       strlen(display_defaults) + strlen(p.commands) + 1);
+    strcat (display_defaults, p.commands);
+  }
+}
+
+#define display_control(val, ...)
 
 #if LAYERS
 # include "grid/layers.h"

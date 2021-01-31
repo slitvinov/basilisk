@@ -44,9 +44,32 @@
   static int dimension = 0, bghosts = 0, layers = 0;
   static int incode;    // are we in code (or in a code block)?
   
+  static char * strip_path (char * s) {
+    char * s1 = s;
+    do {
+      while (*s1 != '/' && *s1 != '\0') s1++;
+      if (*s1 == '\0') return s;
+    } while (*(++s1) != '/');
+    while (*s1 == '/') s1++;
+    return s1;
+  }
+  
+  static char * _processed[100]; int processed = 0;
   static char * _stack[100]; int stack = -1;
-  #define push(s) { char * f = malloc (strlen (s) + 1);	\
-                    strcpy (f, s); _stack[++stack] = f; }
+  static char * push (char * s) {
+    int i;
+    char * s1 = strip_path (s);
+    for (i = 0; i < processed; i++)
+      if (!strcmp (s1, strip_path (_processed[i])))
+	return NULL;
+    assert (processed < 100 && stack + 1 < 100);
+    char * f = malloc (strlen (s) + 1);
+    strcpy (f, s);
+    _stack[++stack] = f;
+    _processed[processed++] = f;
+    return f;
+  }
+  
   #define pop()  _stack[stack--];
 
   static void singleslash (char * path, FILE * fp)
@@ -196,6 +219,8 @@ FDECL     {ID}+{SP}*\(
 
 ^{SP}*#{SP}*include{SP}+\"[^\"]*\"[^\n]*\n {
   // include "..."
+  if (fdepend && strstr (yytext, "// nodep"))
+    return 0;
   echo();
   if (!keywords_only) {
     char * s = strchr(yytext, '"');
