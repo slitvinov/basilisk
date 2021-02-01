@@ -1,0 +1,140 @@
+# Javascript interface for Basilisk View
+
+This directory contains the javascript implementation of the Basilisk
+View interface. It is a fork of the [three.js](https://threejs.org/)
+[editor](https://threejs.org/editor/) which allows connection to the
+[server](/src/display.h) typically running within a Basilisk solver.
+
+Using javascript and three.js has several advantages: portability
+issues, including OpenGL support (via
+[WebGL](https://en.wikipedia.org/wiki/WebGL)), are delegated to the
+maintainers of web browsers and features such as: import/export in
+several 3D object formats, scene editing, fancy materials and lighting
+etc. are directly inherited from the three.js editor.
+
+The rendering of Basilisk 3D objects is partitioned according to the
+following client/server scheme:
+
+* **Server**: this is implemented by [display.h](/src/display.h)
+  included in the running Basilisk code. The server computes the 3D
+  coordinates, normals and colors of the objects described by the
+  various [drawing functions](/src/draw.h) and sends them to the
+  client(s).
+
+* **Client**: the client (i.e. this javascript implementation) runs in
+  the web browser and sends [drawing functions](/src/draw.h) to the
+  server and receives the corresponding 3D coordinates etc. It then
+  applies camera transformations, texturing, materials, lights,
+  shading etc. to render the final 3D view.
+
+The client interface to the server is generated dynamically i.e. the
+server controls which objects can be displayed and what their
+parameters are. This configuration information is sent to the client
+when connection is established.
+
+This can also be used to generate simple interactive interfaces to
+control numerical parameters of the running code. See
+[display_control()](/src/display.h#display-control) for details.
+
+The server can serve multiple clients (up to sixteen), which can be
+useful when teaching for example, or to setup multiple views of the
+same simulation.
+
+Offline visualisation of [dump files](/src/output.h#dump) is also
+possible using the [bview server](/src/bview.c).
+
+The drawing functions corresponding to a particular setup can also be
+exported/imported as Basilisk code.
+
+# Quick-start guide
+
+As usual the simplest way to get started is to [use the default
+Makefile](/Tutorial#using-makefiles). For example the
+[karman.c](/src/examples/karman.c) simulation can be run interactively
+using:
+
+~~~bash
+cd $BASILISK/examples
+CFLAGS=-DDISPLAY=-1 make karman.tst
+~~~
+
+This will compile and start the simulation in "paused" mode (see
+[display.h](/src/display.h) for other options). The Basilisk View
+interface can then be opened using e.g.
+
+~~~bash
+chromium-browser $BASILISK/examples/karman/display.html
+~~~
+
+Then select the 'SETTINGS' tab and click on 'RUN' in the 'BASILISK'
+section.
+
+Note that google chrome (or better 'chromium-browser' which is the
+google-free version shipped with Debian and other distros) seems to be
+somewhat faster than firefox for 3D display.
+
+You can rotate, pan, zoom etc. using the left/right/middle mouse
+buttons, scrollwheel or one, two-fingers trackpad motions etc.
+
+For this particular example you can also interactively change the
+Reynolds number and maximum level of refinement.
+
+If you get disconnected from the running code (for example when it
+terminates) and want to reconnect (e.g. if you restart the same code),
+just use the 'CONNECT' button. If nothing happens when you click then
+the server is probably not listening (or unreachable).
+
+# Main differences with the old interactive `bview`
+
+* Cannot yet export to Gnuplot, OBJ, PS, PDF, SVG etc.
+
+# Installation
+
+This is only required if you want to setup your own Basilisk web
+server.
+
+~~~bash
+cd $BASILISK/bview/three.js
+git init
+git remote add origin https://github.com/mrdoob/three.js.git
+git fetch
+git reset origin/master
+git checkout r124 -- .
+darcs revert -a .
+~~~
+
+Note that `r124` is the three.js release on which the current version
+of bview is based.
+
+To update the version of three.js...
+
+~~~bash
+cd $BASILISK/bview/three.js
+git checkout -- .
+darcs revert .
+~~~
+
+... and review the changes being reverted i.e. only keep the changes
+which are linked to the new version of three.js (and not to the custom
+bview version). The remaining changes can then be `darcs record`ed and
+of course the `r124` release tag needs to be updated here.
+
+# To do
+
+* MPI
+* non-basilisk objects (sphere, cube etc...) are sent to Basilisk
+* scalar fields / colormapping
+* update Help menu
+* squares z should force linear (or work without linear)
+* deprecate lc/fc
+* more accurate focus (intersection with surfaces etc.)
+* hash table for vertices
+* gnuplot, kml, obj, ply outputs (using view (format = "gnuplot"); interface)
+* tooltips
+* colormaps
+* link Basilisk commands with documentation
+
+# Bugs
+
+* using the xyz gizmo (or Import .bv) does not reset the controls
+  properly (i.e. it jumps)
