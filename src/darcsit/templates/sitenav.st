@@ -30,6 +30,7 @@
   <fieldset>
     <legend>Development</legend>
     <ul>
+      <li><a href="$base$/src/?history">Recent activity</a></li>
       <li><a href="$base$/src/">Source code</a></li>
       <li><a href="https://hub.darcs.net/basilisk/basilisk/browse/src">Darcs Hub</a></li>
       <li><a href="$base$/src/test/README">Test cases</a></li>
