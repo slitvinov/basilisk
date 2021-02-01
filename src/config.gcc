@@ -21,8 +21,16 @@ MDFLAGS = -fpic
 PYTHONINCLUDE = /usr/include/python2.7
 
 # OpenGL libraries
-# see bview-server.c#installation for explanations
-OPENGLIBS = -lfb_osmesa -lGLU -lOSMesa
+
+# This is the "dumb" OpenGL implementation and needs to be replaced by
+# one of the implementations below (fb_osmesa or fb_glx) if you want
+# to use online visualisation with view.h. In this case, the following
+# two lines must be commented out. See [INSTALL#visualisation]() for details.
+
+OPENGLIBS = -lfb_dumb
+CFLAGS += -DDUMBGL
+
+# OPENGLIBS = -lfb_osmesa -lGLU -lOSMesa
 # OPENGLIBS = -lfb_glx -lGLU -lGLEW -lGL -lX11
 
 # Compiler and libraries to use with CADNA.

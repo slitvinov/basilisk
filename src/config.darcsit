@@ -23,7 +23,6 @@ MDFLAGS = -fpic
 PYTHONINCLUDE = /usr/include/python2.7
 
 # OpenGL libraries
-# see bview-server.c#installation for explanations
 # OPENGLIBS = -lfb_osmesa -lGLU -lOSMesa
 OPENGLIBS = -lfb_glx -lGLU -lGLEW -lGL -lX11
 

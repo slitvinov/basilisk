@@ -1,15 +1,13 @@
 CFLAGS += -O2
 
-# these are not tests
-EXCLUDE = qcc.c include.c rotate.c qplot.c bview-server.c
+# these are not Basilisk programs
+EXCLUDE = qcc.c include.c rotate.c qplot.c bview.c
 
-all: qcc qplot libkdt literatec draw_get.h
+all: qcc qplot libkdt literatec libfb_dumb libws bview2D bview3D
 	@chmod +x ppm2mpeg ppm2mp4 ppm2ogv ppm2gif runtest \
-		sequence bview bppm page2html
+		sequence page2html
 	@test -f xyz2kdt || ln -s kdt/xyz2kdt
 	@test -f kdtquery || ln -s kdt/kdtquery
-
-bview-servers: bview-server2D bview-server3D bview2D bview3D
 
 libkdt:
 	cd kdt && make
@@ -46,30 +44,26 @@ qplot: qplot.o
 draw_get.h: draw.h params.awk
 	awk -f params.awk < draw.h > draw_get.h
 
-bview-server2D.d: bview-server.c qcc
-	qcc -MD -o $@ $<
-
-bview-server2D: bview-server.c bview-server2D.d draw_get.h parse.h
-	qcc $(CFLAGS) bview-server.c -o $@ -Lgl -lglutils $(OPENGLIBS) -lm
-
-bview-server3D.d: bview-server.c qcc
-	qcc -grid=octree -MD -o $@ $<
-
-bview-server3D: bview-server.c bview-server3D.d draw_get.h parse.h
-	qcc -grid=octree $(CFLAGS) bview-server.c -o $@ \
-		-Lgl -lglutils $(OPENGLIBS) -lm
-
-bview2D:
-	ln -s bview bview2D
-
-bview3D:
-	ln -s bview bview3D
+draw_json.h: draw.h json.awk
+	awk -f json.awk < draw.h > draw_json.h
 
 include.c: include.lex
 	flex -P inc -o include.c include.lex
 
 qcc.c: qcc.lex Makefile
 	flex -o qcc.c qcc.lex
+
+libfb_dumb:
+	cd gl && make libfb_dumb.a libglutils.a
+
+libws:
+	cd wsServer && make
+
+bview2D: qcc bview.c draw_get.h draw_json.h bview.s
+	qcc $(CFLAGS) -DDUMBGL -autolink bview.c -o bview2D -lfb_dumb -lm
+
+bview3D: qcc bview.c draw_get.h draw_json.h bview.s
+	qcc $(CFLAGS) -DDUMBGL -autolink -grid=octree bview.c -o bview3D -lfb_dumb -lm
 
 alltags:
 	cd navier-stokes && make tags
@@ -110,8 +104,5 @@ dist:
 diff:
 	cd .. && tar czvf src/diff.tgz `darcs whatsnew -s | \
 		sed 's/. .\/.*\/$$//g' | awk '{print $$2}'`
-
--include bview-server3D.d
--include bview-server2D.d
 
 include $(BASILISK)/Makefile.defs

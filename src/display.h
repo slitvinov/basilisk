@@ -3,12 +3,66 @@
 
 This file implements the server-side of the interactive display of a
 running Basilisk code. The client-side is typically done by the
-[javascript bview](bview/README) implementation.
+[javascript implementation](jview/README) implementation.
 
 This works using two main components:
 
 * [The wsServer WebSocket library](wsServer/README.md)
 * [Vertex buffers](vertexbuffer.h)
+
+The initial state of the display can be controlled using the DISPLAY
+macro, following these rules:
+
+* `-DDISPLAY=1, -DDISPLAY`: play controls, start running immediately.
+* `-DDISPLAY=-1`: play controls, initially paused.
+* `-DDISPLAY=0`: no play controls, start running immediately.
+* `#include "display.h"`: play controls, initially paused.
+
+This can also be changed by setting `display_play = 0;` in `main()`. 
+
+## Display port
+
+Multiple servers can run simultaneously on the same machine but must
+use different ports. When connecting, the server looks for a free port
+in the default range (typically 7100 to 7200, see the DISPLAY_RANGE
+macro below). The corresponding connection information (including the
+URL of the [javascript interface](/src/jview/README)) is written in
+the `display.html` file, which can be used to open the connection on
+the client side (i.e. the web browser).
+
+## Display control
+
+The values of integer or double variables can be controlled
+interactively using the `display_control()` macro, for example:
+
+~~~literatec
+display_control (value, 0, 100, "Short Name", "Long tooltip");
+~~~
+
+where the first argument is the name of the variable and the numbers
+indicate the (optional) range (min and max values). The (optional)
+name and tooltip are used to generate the [Basilisk
+View](jview/README) interface. The only compulsory argument is the
+variable name. 
+
+## Default display
+
+Default [drawing function calls](draw.h), which will be sent to an empty
+[javascript client](jview/README), can be setup using something like:
+
+~~~literatec
+display ("squares (color = 'u.x', spread = -1);");
+~~~
+
+where the single quotes will be expanded to doubles quotes when
+interpreted. Do not forget the trailing semi-column.
+
+Note that these function calls will be appended to existing ones. To
+overwrite existing calls, use:
+
+~~~literatec
+display ("squares (color = 'u.x', spread = -1);", true);
+~~~
 */
 
 #ifndef DISPLAY_JS
@@ -232,7 +286,7 @@ static void display_add (const char * command, int fd)
   display_display();
 }
 
-#define JSON_BUILD(...) len += snprintf (build + len, 4096, __VA_ARGS__),	\
+#define JSON_BUILD(...) len += snprintf (build + len, 4096, __VA_ARGS__),     \
     build = realloc (build, len + 4096)
 
 static void array_remove (khiter_t k, int fd)
@@ -325,10 +379,11 @@ struct _DisplayControl {
   int size;
 };
 
-static void display_control_internal (struct _DisplayControl p)
+void display_control_internal (struct _DisplayControl p)
 {
   if (Display.sock < 0) { // fixme: Display should be initialised in main()
-    fprintf (stderr, "display_control(): error: cannot add control before initialisation\n");
+    fprintf (stderr, "display_control(): error: cannot add control "
+	     "before initialisation\n");
     exit (1);
   }
   else {
@@ -512,17 +567,9 @@ void display_url (FILE * fp)
 
 int display_usage = 20; // use 20% of runtime, maximum
 
-/**
-   -DDISPLAY=1, -DDISPLAY: play controls, start running immediately.
-   -DDISPLAY=-1: play controls, initially paused.
-   -DDISPLAY=0: no play controls, start running immediately.
-  
-   #include "display.h": play controls, initially paused.
-   this can be changed by setting display_play = 0; in main().
-*/
-
 #ifdef DISPLAY
-int display_play = DISPLAY < 0 ? -1 : 0; // negative: pause, zero: play, positive: step
+ // negative: pause, zero: play, positive: step
+int display_play = DISPLAY < 0 ? -1 : 0;
 #else
 int display_play = -1;
 #endif
@@ -591,9 +638,10 @@ init_solver void display_init()
 #elif DISPLAY != 0
     display_control (display_play, -1, 1, "Run/Pause");
 #endif
-  
+#ifndef DISPLAY_NO_CONTROLS    
     display_control (display_usage, 0, 50, "Display %", 
 		     "maximum % of runtime used by display");
+#endif
   }
 }
 

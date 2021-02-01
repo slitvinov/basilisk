@@ -25,9 +25,17 @@ GENSUM = shasum
 CHECKSUM = shasum -c --status
 
 # OpenGL libraries
-# see bview-server.c#installation for explanations
+
+# This is the "dumb" OpenGL implementation and needs to be replaced by
+# the implementations below (fb_osmesa or fb_glx) if you want
+# to use online visualisation with view.h. In this case, the following
+# two lines must be commented out. See [INSTALL#visualisation]() for details.
+
+OPENGLIBS = -lfb_dumb
+CFLAGS += -DDUMBGL
+
 # OPENGLIBS = -lfb_glx -lGLU -lGLEW -lGL -lX11
-OPENGLIBS = -L/opt/local/lib/ -lfb_osmesa -lGLU -lOSMesa 
+# OPENGLIBS = -L/opt/local/lib/ -lfb_osmesa -lGLU -lOSMesa 
 
 # Compiler and libraries to use with CADNA.
 # See [README.cadna]() for more documentation.

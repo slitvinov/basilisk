@@ -14,7 +14,7 @@ On a Debian-like system (i.e. Debian, Ubuntu etc...) installing darcs
 is as easy as
 
 ~~~bash
-sudo apt-get install darcs flex make
+sudo apt install darcs flex bison make gawk
 ~~~
 
 To get the latest Basilisk source code do
@@ -114,34 +114,31 @@ and also
 Debian-like system (i.e. Debian, Ubuntu, Mint etc...) you just need to do
 
 ~~~bash
-sudo apt-get install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle pstoedit
+sudo apt install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle pstoedit
 ~~~
 
 # Visualisation
 
-Online visualisation with [Basilisk View](view.h) requires a separate
-[installation](gl/INSTALL).
+By default Basilisk will be configured for interactive visualisation
+with [Basilisk View](jview/README). Online visualisation with
+[view.h]() will not work however (it will just produce black
+images). Online visualisation requires an implementation of OpenGL
+which allows writing into framebuffers, which can be difficult to
+setup on some systems.
 
-Offline (interactive) [visualisation](bview) requires the
-[installation](bview-server.c#installation) of the [Basilisk View
-servers](bview-server.c).
+To setup online visualisation, three steps are required:
 
-A short recipe for installation of both the interactive and non-interactive
-versions of Basilisk View is:
-
-~~~bash
-cd $BASILISK/gl
-make
-cd ..
-make bview-servers
-~~~
+1. Follow the instructions in [gl/INSTALL]() to choose an OpenGL
+   implementation and compile the libraries.
+2. Edit the `config` file to setup the corresponding libraries.
+3. Make again.
 
 # Using Basilisk with python
 
 You will need [SWIG](http://www.swig.org/) which can easily be installed with
 
 ~~~bash
-sudo apt-get install swig libpython-dev
+sudo apt install swig libpython-dev
 ~~~
 
 You also need to setup the *MDFLAGS* and *PYTHONINCLUDE* variables in your

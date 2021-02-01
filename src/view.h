@@ -12,7 +12,7 @@ in various formats (PPM, Gnuplot, OBJ, KML, PDF, SVG etc.).
 
 In contrast with other Basilisk modules, this module relies on
 additional libraries which needs to be installed and linked with the
-Basilisk program. See [gl/INSTALL]() for instructions.
+Basilisk program. See [INSTALL#visualisation]() for instructions.
 
 ## Usage
 
@@ -36,7 +36,14 @@ in [PPM](https://en.wikipedia.org/wiki/Netpbm_format) format. See
 [User functions](view.h#user-functions) for a detailed documentation.
 
 The resulting program needs to be linked with the appropriate
-libraries using e.g.:
+libraries. This can be done automatically using something like:
+
+~~~bash
+qcc -autolink -Wall -O2 program.c -o program -lm
+~~~
+
+(provided qcc is [properly configured](INSTALL#visualisation)) or
+manually using e.g.:
 
 ~~~bash
 qcc -Wall -O2 program.c -o program \
