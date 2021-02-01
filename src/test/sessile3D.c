@@ -141,16 +141,20 @@ event movie (i += 5; t <= 3)
     view (fov = 26.6776, quat = {0.474458,0.144142,0.234923,0.836017},
 	  tx = -0.0137556, ty = -0.00718937, bg = {1,1,1},
 	  width = 758, height = 552);
+    draw_vof ("f");
     draw_vof ("f", edges = true);
     cells (lc = {1,0,0});
     mirror (n = {1,0,0}) {
+      draw_vof ("f");
       draw_vof ("f", edges = true);
       cells (lc = {1,0,0});
     }
     mirror (n = {0,1,0}) {
+      draw_vof ("f");
       draw_vof ("f", edges = true);
       cells (lc = {1,0,0});
       mirror (n = {1,0,0}) {
+	draw_vof ("f");
 	draw_vof ("f", edges = true);
 	cells (lc = {1,0,0});
       }

@@ -80,6 +80,7 @@ int main()
   Finally we display the surface reconstructed from volume fractions. */
 
   clear();
+  draw_vof ("f", "s");
   draw_vof ("f", "s", edges = true, lw = 0.5);
   save ("vof.png");
 }
