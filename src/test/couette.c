@@ -84,7 +84,7 @@ event profile (t = end)
   }
 
   norm n = normf (e);
-  fprintf (ferr, "%d %.3g %.3g %.3g %d %d %d %d %d\n",
+  fprintf (stderr, "%d %.3g %.3g %.3g %d %d %d %d %d\n",
 	   N, n.avg, n.rms, n.max, i, mgp.i, mgp.nrelax, mgu.i, mgu.nrelax);
   dump();
   

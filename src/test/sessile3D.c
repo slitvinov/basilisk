@@ -127,7 +127,7 @@ event end (t = end)
   curvature (f, kappa);
   stats s = statsf (kappa);
   double R = s.volume/s.sum, V = 4.*statsf(f).sum;
-  fprintf (ferr, "%d %g %.5g %.3g %.5g %.3g %.5g\n",
+  fprintf (stderr, "%d %g %.5g %.3g %.5g %.3g %.5g\n",
 	   N, theta0, R, s.stddev, V, normf(u.x).max, t);
 }
 

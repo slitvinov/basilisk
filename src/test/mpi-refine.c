@@ -32,5 +32,5 @@ int main (int argc, char * argv[])
   scalar index[];
   z_indexing (index, true);
   foreach()
-    fprintf (stderr, "%g %g %g %d\n", x, y, z, min(npe - 1, (int)(index[]/nf)));
+    fprintf (qerr, "%g %g %g %d\n", x, y, z, min(npe - 1, (int)(index[]/nf)));
 }

@@ -53,7 +53,7 @@ event init (t = 0)
 
 event logfile (i++; i <= 100)
 {
-  fprintf (ferr, "%d %d %d %d %d %d %d %.3g %.3g %.3g %.3g\n",
+  fprintf (stderr, "%d %d %d %d %d %d %d %.3g %.3g %.3g %.3g\n",
 	   i,
 	   mgp.i, mgp.nrelax, mgp.minlevel,
 	   mgu.i, mgu.nrelax, mgu.minlevel,

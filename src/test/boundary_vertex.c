@@ -25,10 +25,10 @@ int main()
   boundary ({phi});
   
   foreach() {
-    fprintf (stderr, "%g %g %g\n", x - Delta/3., y - Delta/3., phi[]);
-    fprintf (stderr, "%g %g %g\n", x - Delta/3., y + Delta/3., phi[0,1]);
-    fprintf (stderr, "%g %g %g\n", x + Delta/3., y - Delta/3., phi[1,0]);
-    fprintf (stderr, "%g %g %g\n", x + Delta/3., y + Delta/3., phi[1,1]);
+    fprintf (qerr, "%g %g %g\n", x - Delta/3., y - Delta/3., phi[]);
+    fprintf (qerr, "%g %g %g\n", x - Delta/3., y + Delta/3., phi[0,1]);
+    fprintf (qerr, "%g %g %g\n", x + Delta/3., y - Delta/3., phi[1,0]);
+    fprintf (qerr, "%g %g %g\n", x + Delta/3., y + Delta/3., phi[1,1]);
   }
 
 #if _MPI

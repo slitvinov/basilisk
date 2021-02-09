@@ -30,7 +30,7 @@ int main (int argc, char ** argv)
 
   output_cells (stdout);
   foreach() {
-    fprintf (stderr, "%g %g %g %g %g\n", x, y, z, index[], reference[]);
+    fprintf (qerr, "%g %g %g %g %g\n", x, y, z, index[], reference[]);
     assert (index[] == reference[]);
   }
 }

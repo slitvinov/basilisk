@@ -76,7 +76,7 @@ event logfile (i++; t <= 2.) {
   static double volo = 0., to = 0.;
   double vol = statsf(h).sum;
   if (i > 0)
-    fprintf (ferr, "%g %.6f %g %g\n", t, (vol - volo)/(t - to), vol, etas);
+    fprintf (stderr, "%g %.6f %g %g\n", t, (vol - volo)/(t - to), vol, etas);
   volo = vol, to = t;
 }
 

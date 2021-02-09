@@ -169,7 +169,7 @@ int my_adapt() {
   boundary ({eta});
   astats s = adapt_wavelet ({eta, etamax}, (double[]){ETAE,ETAMAXE},
 			    MAXLEVEL, MINLEVEL);
-  fprintf (ferr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
   return s.nf;
 #else // Cartesian
   return 0;
@@ -301,9 +301,9 @@ event logfile (i++) {
   stats s = statsf (h);
   norm n = normf (u.x);
   if (i == 0)
-    fprintf (ferr,
+    fprintf (stderr,
 	     "t i h.min h.max h.sum u.x.rms u.x.max dt mgD.i speed tn\n");
-  fprintf (ferr, "%g %d %g %g %g %g %g %g %d %g %ld\n",
+  fprintf (stderr, "%g %d %g %g %g %g %g %g %d %g %ld\n",
 	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, MGD,
 	   perf.speed, grid->tn);
 }

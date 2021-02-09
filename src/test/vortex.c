@@ -88,7 +88,7 @@ event logfile (t <= 30; t += 1) {
   scalar omega[];
   vorticity (u, omega);
   stats s = statsf (omega);
-  fprintf (ferr, "%g %d %g %g %g %d\n", t, i, dt, s.sum, s.max, mgp.i);
+  fprintf (stderr, "%g %d %g %g %g %d\n", t, i, dt, s.sum, s.max, mgp.i);
 }
 
 /**

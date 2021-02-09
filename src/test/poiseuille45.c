@@ -88,7 +88,7 @@ event profile (t = end) {
     e[] = u.x[] - 0.25*(sq(WIDTH/2.) - sq(x1 >= 0. ? x1 - 0.25 : x1 + 0.75));
   }
   norm n = normf (e);
-  fprintf (ferr, "%d %.3g %.3g %.3g %d %d %d %d %d\n",
+  fprintf (stderr, "%d %.3g %.3g %.3g %d %d %d %d %d\n",
 	   N, n.avg, n.rms, n.max, i, mgp.i, mgp.nrelax, mgu.i, mgu.nrelax);
   
   draw_vof ("cs", "fs");

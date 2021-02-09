@@ -49,7 +49,7 @@ event init (i = 0) {
 
 event logfile (i++) {
   stats s = statsf (h);
-  fprintf (ferr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
+  fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
 }
 
 /**
@@ -74,7 +74,7 @@ The mesh is adapted according to the error on the height field. */
 
 event adapt (i++) {
   astats s = adapt_wavelet ({h}, (double[]){1e-2}, LEVEL);
-  fprintf (ferr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }
 
 /**

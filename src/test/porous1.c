@@ -143,7 +143,7 @@ We check for convergence of the solution. */
 event logfile (i++; i <= 400)
 {
   double avg = normf(u.x).avg, du = change (u.x, un)/(avg + SEPS);
-  fprintf (ferr, "%d %d %d %d %d %d %d %d %.3g %.3g %.3g %.3g %.3g\n",
+  fprintf (stderr, "%d %d %d %d %d %d %d %d %.3g %.3g %.3g %.3g %.3g\n",
 	   maxlevel, i,
 	   mgp.i, mgp.nrelax, mgp.minlevel,
 	   mgu.i, mgu.nrelax, mgu.minlevel,

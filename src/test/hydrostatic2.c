@@ -107,8 +107,8 @@ int main()
   We check the convergence rate and the norms of the velocity field
   (which should be negligible). */
   
-  fprintf (ferr, "mgp %g %g %d %d\n", mgp.resb, mgp.resa, mgp.i, mgp.minlevel);
-  fprintf (ferr, "umax %g %g\n", normf(u.x).max, normf(u.y).max);
+  fprintf (stderr, "mgp %g %g %d %d\n", mgp.resb, mgp.resa, mgp.i, mgp.minlevel);
+  fprintf (stderr, "umax %g %g\n", normf(u.x).max, normf(u.y).max);
 
   /**
   The pressure is hydrostatic, in each of the pores. 

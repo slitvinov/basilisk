@@ -22,7 +22,7 @@ int main (int argc, char * argv[])
   char * file = argc > 1 ? argv[1] : "dump";
 
   if (!restore (file = file, list = all)) {
-    fprintf (ferr, "bview: could not restore from '%s'\n", file);
+    fprintf (stderr, "%s: could not restore from '%s'\n", argv[0], file);
     exit (1);
   }
   restriction (all);

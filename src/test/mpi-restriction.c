@@ -34,13 +34,13 @@ int main (int argc, char * argv[])
   // check restriction
   for (int l = 0; l < depth; l++)
     foreach_coarse_level (l) {
-      fprintf (stderr, "res %g %g %g %g %d\n", x, y, z, s[], level);
+      fprintf (qerr, "res %g %g %g %g %d\n", x, y, z, s[], level);
       assert (s[] == 1.);
     }
 
   // check face traversal
   foreach_face() {
-    fprintf (stderr, "face %g %g %g %g\n", x, y, z, s[] - s[-1]);
+    fprintf (qerr, "face %g %g %g %g\n", x, y, z, s[] - s[-1]);
     assert (s[] == s[-1]);
   }
 }

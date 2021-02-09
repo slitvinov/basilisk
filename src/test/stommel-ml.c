@@ -157,7 +157,7 @@ int main()
   DT = 1;
   TOLERANCE = 1e-8;
   for (border = 0; border <= 1; border++) {
-    fprintf (ferr, "\n\n# border = %g\n", border);
+    fprintf (stderr, "\n\n# border = %g\n", border);
     for (N = 64; N <= 256; N *= 2) {
       size (1. + 2.*border/N);
       origin (- border/N, - border/N);
@@ -291,7 +291,7 @@ event logfile (i += 10; t <= 200)
     hw[] = h[] > dry ? fabs (h[] - 1.) : nodata;
   }
   norm n = normf (ev);  
-  //  fprintf (ferr, "%g %g %g %g %g\n", t, dt, du, n.rms, n.max);
+  //  fprintf (stderr, "%g %g %g %g %g\n", t, dt, du, n.rms, n.max);
 
   scalar psi[], psim[];
   streamfunctions (psi, psim);
@@ -316,7 +316,7 @@ event snapshot (t = end)
       (x > 0 && x < 1 && y > 0 && y < 1);
   }
   norm nv = normf (ev), nu = normf (eu);
-  fprintf (ferr, "%d %g %g %g %g %g\n", N, t, nv.rms, nv.max, nu.rms, nu.max);
+  fprintf (stderr, "%d %g %g %g %g %g\n", N, t, nv.rms, nv.max, nu.rms, nu.max);
 
   if (N == 64 && border == 0) {
     scalar psi[], psim[];

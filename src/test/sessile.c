@@ -110,7 +110,7 @@ event end (t = 10)
   curvature (f, kappa);
   stats s = statsf (kappa);
   double R = s.volume/s.sum, V = 2.*statsf(f).sum;
-  fprintf (ferr, "%d %g %.5g %.3g\n", N, theta0, R/sqrt(V/pi), s.stddev);
+  fprintf (stderr, "%d %g %.5g %.3g\n", N, theta0, R/sqrt(V/pi), s.stddev);
 }
 
 /**

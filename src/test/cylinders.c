@@ -137,7 +137,7 @@ event logfile (i++; i <= 500)
     double Phi = 1. - s.volume/sq(L0);
     double U = s.sum/s.volume;
     double F = sq(L0)/(1. - Phi);
-    fprintf (ferr,
+    fprintf (stderr,
 	     "%d %g %g %g %g\n", maxlevel, sangani[nc][0], F/U, sangani[nc][1],
 	     fabs(F/U - sangani[nc][1])/sangani[nc][1]);
 

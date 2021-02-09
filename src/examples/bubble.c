@@ -174,12 +174,12 @@ event logfile (i += 10) {
     vbz += u.z[]*dv;
     sb += dv;
   }
-  fprintf (ferr,
+  fprintf (stderr,
 	   "%.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", 
 	   t, sb,
 	   xb/sb, yb/sb, zb/sb,
 	   vbx/sb, vby/sb, vbz/sb);
-  fflush (ferr);
+  fflush (stderr);
 }
 
 /**

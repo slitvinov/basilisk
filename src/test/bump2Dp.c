@@ -28,7 +28,7 @@ event init (i = 0)
 
 event logfile (i++) {
   stats s = statsf (h);
-  fprintf (ferr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
+  fprintf (stderr, "%g %d %g %g %.8f\n", t, i, s.min, s.max, s.sum);
 }
 
 event outputfile (t <= 2.5; t += 2.5/8);
@@ -60,7 +60,7 @@ event adapt (i++) {
 #endif
   
   astats st = adapt_wavelet ({h}, (double[]){1e-2}, LEVEL);
-  fprintf (ferr, "# refined %d cells, coarsened %d cells\n", st.nf, st.nc);
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", st.nf, st.nc);
   restriction ({zb}); // fixme: why is it necessary with MPI?
 
 #if BGHOSTS == 2

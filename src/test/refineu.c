@@ -48,9 +48,9 @@ static int error()
 #endif      
     }
 
-  fprintf (ferr, "maximum error: %g %g %g\n", max, maxv, maxw);
+  fprintf (stderr, "maximum error: %g %g %g\n", max, maxv, maxw);
   stats s = statsf (eu);
-  fprintf (ferr, "eu: avg: %g stddev: %g max: %g\n", 
+  fprintf (stderr, "eu: avg: %g stddev: %g max: %g\n", 
 	   s.sum/s.volume, s.stddev, s.max);
 
   return (max != maxv || max != maxw);
@@ -90,7 +90,7 @@ int main (int argc, char ** argv)
 
   astats s = adapt_wavelet ({h}, &tolerance, maxlevel);
   while (s.nc) {
-    fprintf (ferr, "refined: %d coarsened: %d\n", s.nf, s.nc);
+    fprintf (stderr, "refined: %d coarsened: %d\n", s.nf, s.nc);
     s = adapt_wavelet ({h}, &tolerance, maxlevel);
   }
   
@@ -110,11 +110,11 @@ int main (int argc, char ** argv)
       div[] += u.x[] - u.x[1];
   }
   stats sdiv = statsf(div);
-  fprintf (ferr, "div before: %g\n", sdiv.max);
+  fprintf (stderr, "div before: %g\n", sdiv.max);
 
   tolerance = 1e-5;
   s = adapt_wavelet ({h}, &tolerance, maxlevel, list = {h,u});
-  fprintf (ferr, "refined: %d coarsened: %d\n", s.nf, s.nc);
+  fprintf (stderr, "refined: %d coarsened: %d\n", s.nf, s.nc);
 
   foreach() {
     div[] = 0.;
@@ -122,7 +122,7 @@ int main (int argc, char ** argv)
       div[] += u.x[] - u.x[1];
   }
   sdiv = statsf(div);
-  fprintf (ferr, "div after: %g\n", sdiv.max);
+  fprintf (stderr, "div after: %g\n", sdiv.max);
 
 #if DEBUG
   fp = fopen ("cells1", "w");

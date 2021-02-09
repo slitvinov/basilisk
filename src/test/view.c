@@ -45,6 +45,6 @@ int main() {
   /**
   A few more files just for testing. */
   
-  output_facets (f, stderr);
+  output_facets (f, qerr);
   dump (file = "dump");
 }

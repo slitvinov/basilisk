@@ -65,5 +65,5 @@ int main (int argc, char ** argv)
 
   mpi_all_reduce (max, MPI_DOUBLE, MPI_MAX);
   mpi_all_reduce (maxv, MPI_DOUBLE, MPI_MAX);
-  fprintf (ferr, "maximum error on halos: %g %g\n", max, maxv);  
+  fprintf (stderr, "maximum error on halos: %g %g\n", max, maxv);  
 }

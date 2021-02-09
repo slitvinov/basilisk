@@ -147,7 +147,7 @@ event logfile (i++; i <= 500)
     double V = s.sum/s.volume;
     double dp = 1., mu = 1.;
     double K = dp*sq(L0)/(6.*pi*mu*radius*V*(1. - Phi));
-    fprintf (ferr,
+    fprintf (stderr,
 	     "%d %g %g %g %g %g\n",
 	     maxlevel, radius, Phi, V, K,
 	     zick[nc][1]);

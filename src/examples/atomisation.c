@@ -119,9 +119,9 @@ We log some statistics on the solver. */
 
 event logfile (i++) {
   if (i == 0)
-    fprintf (ferr,
+    fprintf (stderr,
 	     "t dt mgp.i mgpf.i mgu.i grid->tn perf.t perf.speed\n");
-  fprintf (ferr, "%g %g %d %d %d %ld %g %g\n", 
+  fprintf (stderr, "%g %g %d %d %d %ld %g %g\n", 
 	   t, dt, mgp.i, mgpf.i, mgu.i,
 	   grid->tn, perf.t, perf.speed);
 }

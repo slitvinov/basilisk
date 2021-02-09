@@ -216,7 +216,7 @@ event logfile (i += 10)
 {
   coord Fp, Fmu;
   embed_force (p, u, mu, &Fp, &Fmu);
-  fprintf (ferr, "%d %g %g %g %g %g %g\n", i, t, dt, Fp.x, Fp.y, Fmu.x, Fmu.y);
+  fprintf (stderr, "%d %g %g %g %g %g %g\n", i, t, dt, Fp.x, Fp.y, Fmu.x, Fmu.y);
 
   static FILE * fp = fopen ("omega", "w");
   omega_zero (fp);

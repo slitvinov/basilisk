@@ -44,5 +44,5 @@ event profile (t = end) {
   foreach()
     e[] = u.y[] - 0.5*(0.25 - x*x);
   norm n = normf (e);
-  fprintf (ferr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
+  fprintf (stderr, "%d %g %g %g\n", N, n.avg, n.rms, n.max);
 }

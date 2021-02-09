@@ -161,7 +161,7 @@ event logfile (i += 10; t <= TMAX) {
   foreach (reduction(+:sumx) reduction(+:sumy))
     sumx += r*cos(theta)*h[]*dv(),
     sumy += r*sin(theta)*h[]*dv();
-  fprintf (ferr, "%g %d %g %g %g %g %g %g %g\n", t, i, s.min, s.max, s.sum,
+  fprintf (stderr, "%g %d %g %g %g %g %g %g %g\n", t, i, s.min, s.max, s.sum,
 	   n.rms, n.max, sumx/s.sum, sumy/s.sum);
 }
 

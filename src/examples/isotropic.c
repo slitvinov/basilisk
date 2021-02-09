@@ -123,8 +123,8 @@ event logfile (i++; t <= 300) {
   vd *= MU/vol;
 
   if (i == 0)
-    fprintf (ferr, "t dissipation energy Reynolds\n");
-  fprintf (ferr, "%g %g %g %g\n",
+    fprintf (stderr, "t dissipation energy Reynolds\n");
+  fprintf (stderr, "%g %g %g %g\n",
 	   t, vd, ke, 2./3.*ke/MU*sqrt(15.*MU/vd));
 }
 

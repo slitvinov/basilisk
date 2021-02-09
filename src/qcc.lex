@@ -2340,8 +2340,10 @@ init_solver{WS}+void{WS}+{ID}{WS}*[(]{WS}*(void){0,1}{WS}*[)] {
   initfunc[ninit++] = strdup (s);
 }
 
-stderr fputs ("qstderr()", yyout);
-stdout fputs ("qstdout()", yyout);
+stderr fputs ("ferr", yyout);
+stdout fputs ("fout", yyout);
+qerr fputs ("qstderr()", yyout);
+qout fputs ("qstdout()", yyout);
 
 foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   int c;

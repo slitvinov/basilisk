@@ -11,5 +11,5 @@ int main ()
 
   // statsf() uses MPI reduction operations
   stats stat = statsf (s);
-  fprintf (stderr, "%g %g %g\n", stat.min, stat.sum, stat.max);
+  fprintf (qerr, "%g %g %g\n", stat.min, stat.sum, stat.max);
 }

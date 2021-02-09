@@ -30,7 +30,7 @@ int main()
     stats s = statsf(e);
     foreach()
       e[] -= s.sum/s.volume;
-    fprintf (ferr, "%d %g\n", n, statsf(e).max);
+    fprintf (stderr, "%d %g\n", n, statsf(e).max);
   }
   foreach()
     printf ("%g %g %g %g %g\n", x, y, z, a[], e[]);

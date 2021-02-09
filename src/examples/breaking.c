@@ -103,7 +103,7 @@ event logfile (i++)
       zc += h[];
     }
   }
-  fprintf (ferr, "%g %g %g\n", t/T0, ke/2., g_*gpe + 0.14);
+  fprintf (stderr, "%g %g %g\n", t/T0, ke/2., g_*gpe + 0.14);
 }
 
 /**

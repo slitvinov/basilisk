@@ -70,8 +70,8 @@ static int mpi_rank, mpi_npe;
 @define systdout  stdout
 
 @if _MPI
-static FILE * qstderr (void);
-static FILE * qstdout (void);
+FILE * qstderr (void);
+FILE * qstdout (void);
 FILE * ferr = NULL, * fout = NULL;
 @ def not_mpi_compatible()
 do {
@@ -693,7 +693,7 @@ int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
 
 @define QFILE FILE // a dirty trick to avoid qcc 'static FILE *' rule
 
-static FILE * qstderr (void)
+FILE * qstderr (void)
 {
   static QFILE * fp = NULL;
   if (!fp) {
@@ -708,7 +708,7 @@ static FILE * qstderr (void)
   return fp;
 }
 
-static FILE * qstdout (void)
+FILE * qstdout (void)
 {
   static QFILE * fp = NULL;
   if (!fp) {
@@ -740,14 +740,14 @@ void mpi_init()
   MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
   MPI_Comm_size (MPI_COMM_WORLD, &mpi_npe);
   srand (mpi_rank + 1);
-  if (ferr == NULL){
+  if (ferr == NULL) {
     if (mpi_rank > 0) {
       ferr = fopen ("/dev/null", "w");
       fout = fopen ("/dev/null", "w");
     }
     else {
-      ferr = stderr;
-      fout = stdout;
+      ferr = systderr;
+      fout = systdout;
     }
     char * etrace = getenv ("MALLOC_TRACE"), name[80];
     if (etrace && mpi_rank > 0) {

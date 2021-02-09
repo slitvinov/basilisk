@@ -138,5 +138,5 @@ velocity components and $10^{-2}$ on the geometry. */
 event adapt (i++) {
   astats s = adapt_wavelet ({cs,u}, (double[]){1e-2,0.02,0.02,0.02},
 			    maxlevel, 4);
-  fprintf (ferr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
 }

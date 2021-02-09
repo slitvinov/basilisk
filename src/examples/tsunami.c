@@ -136,7 +136,7 @@ int adapt() {
 
   astats s = adapt_wavelet ({eta, hmax}, (double[]){ETAE,HMAXE},
 			    maxlevel, MINLEVEL);
-  fprintf (ferr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
+  fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
   return s.nf;
 #else // Cartesian
   return 0;
@@ -246,8 +246,8 @@ event logfile (i++) {
   stats s = statsf (h);
   norm n = normf (u.x);
   if (i == 0)
-    fprintf (ferr, "t i h.min h.max h.sum u.x.rms u.x.max dt speed tn\n");
-  fprintf (ferr, "%g %d %g %g %g %g %g %g %g %ld\n",
+    fprintf (stderr, "t i h.min h.max h.sum u.x.rms u.x.max dt speed tn\n");
+  fprintf (stderr, "%g %d %g %g %g %g %g %g %g %ld\n",
 	   t, i, s.min, s.max, s.sum, n.rms, n.max, dt, perf.speed, grid->tn);
 
   /**

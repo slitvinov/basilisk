@@ -17,10 +17,10 @@ int main()
   curvature (c, kappa);
   foreach() {
     if (h.x[] != nodata)
-      fprintf (stderr, "%g %g %g %g hx\n", x, y, height(h.x[]), Delta);
+      fprintf (qerr, "%g %g %g %g hx\n", x, y, height(h.x[]), Delta);
     if (h.y[] != nodata)
-      fprintf (stderr, "%g %g %g %g hy\n", x, y, height(h.y[]), Delta);
+      fprintf (qerr, "%g %g %g %g hy\n", x, y, height(h.y[]), Delta);
     if (kappa[] != nodata)
-      fprintf (stderr, "%g %g %g kappa\n", x, y, kappa[]);
+      fprintf (qerr, "%g %g %g kappa\n", x, y, kappa[]);
   }
 }

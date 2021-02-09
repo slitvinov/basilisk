@@ -59,8 +59,8 @@ event logfile (i++; t <= 0.8) {
   if (s1 > sfmax1) sfmax1 = s1;
   double e = 2.*(sfmax - sfmin)/(sfmax + sfmin);
   double e1 = 2.*(sfmax1 - sfmin1)/(sfmax1 + sfmin1);
-  fprintf (ferr, "%g %.12f %.12f %.10f %.10f\n", t, s, s1, e, e1);
-  fflush (ferr);
+  fprintf (stderr, "%g %.12f %.12f %.10f %.10f\n", t, s, s1, e, e1);
+  fflush (stderr);
   assert (e < 4e-8);
   assert (e1 < 5e-5);
 }

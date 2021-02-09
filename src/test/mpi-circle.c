@@ -64,7 +64,7 @@ int main (int argc, char * argv[])
   mpi_print (t, 1, tnc, "refine");
   
   if (npe() <= 8)
-    debug_mpi (stderr);
+    debug_mpi (qerr);
   
   int nloops, i;
 
@@ -118,7 +118,7 @@ int main (int argc, char * argv[])
       sum += sq(Delta)*b[];
   }
   mpi_print (t, nloops, tnc*nloops, "sum");
-  fprintf (stderr, "sum: %g\n", sum);
+  fprintf (qerr, "sum: %g\n", sum);
 
   /**
   The restriction operator. */
@@ -146,7 +146,7 @@ int main (int argc, char * argv[])
   scalar e[];
   foreach()
     e[] = a[] - cos(pi*x)*cos(pi*y);
-  fprintf (stderr, "error: %g\n", normf(e).max);
+  fprintf (qerr, "error: %g\n", normf(e).max);
   //  output_ppm (e, file = "error.png", n = 512);
   //  assert (normf(e).max < 0.4);
   
@@ -156,7 +156,7 @@ int main (int argc, char * argv[])
   int nmin = n, nmax = n;
   mpi_all_reduce (nmin, MPI_INT, MPI_MIN);
   mpi_all_reduce (nmax, MPI_INT, MPI_MAX);
-  fprintf (stderr, "balance %d %d\n", nmin, nmax);
+  fprintf (qerr, "balance %d %d\n", nmin, nmax);
 }
 
 /**

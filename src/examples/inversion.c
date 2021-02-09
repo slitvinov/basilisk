@@ -154,11 +154,11 @@ event logfile (i++; t <= 20) {
   //  vd *= MU/vol;
 
   if (i == 0)
-    fprintf (ferr,
+    fprintf (stderr,
 	     "t ke1 ke2 ep1 ep2 er1 er2 R2 area mgp.i mgu.i nc time speed\n");
   double elapsed = timer_elapsed (tt);
   tnc += nc;
-  fprintf (ferr, "%g %g %g %g %g %g %g %g %g %d %d %d %g %g\n",
+  fprintf (stderr, "%g %g %g %g %g %g %g %g %g %d %d %d %g %g\n",
 	   t/tc,
 	   ke1/(1./16.*rho1*sq(Ug)*cube(H)),
 	   ke2/(1./16.*rho2*sq(Ug)*cube(H)),
