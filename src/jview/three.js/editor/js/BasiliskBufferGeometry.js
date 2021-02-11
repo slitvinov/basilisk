@@ -11,7 +11,7 @@ class BasiliskClient {
 		this.socket = new ReconnectingWebSocket( url, null, {
 			automaticOpen: false,
 			maxReconnectAttempts: 0,
-			timeoutInterval: 1000,
+			timeoutInterval: 30000,
 			binaryType: 'arraybuffer'
 		});
 			

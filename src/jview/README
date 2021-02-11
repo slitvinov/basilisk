@@ -84,6 +84,83 @@ terminates) and want to reconnect (e.g. if you restart the same code),
 just use the 'CONNECT' button. If nothing happens when you click then
 the server is probably not listening (or unreachable).
 
+# Interactive display of a remote simulation
+
+The client/server architecture is designed to allow visualisation of
+simulations running on a remote server (for example a large parallel
+computer). On these systems, access to network ports is typically
+tightly controlled by system administrators, since open ports can be a
+security vulnerability.
+
+A (legal) workaround for this restriction is to use [Secure Shell
+tunneling](https://en.wikipedia.org/wiki/Tunneling_protocol#Secure_Shell_tunneling).
+
+The recipe is simple enough:
+
+1. Start the simulation on the server (say `server.org`): compile using
+   the `-DDISPLAY` flag then run using the queueing system etc.
+2. Still on the server, check the content of the `display.html`
+   file, which will be generated when the simulation starts. It should
+   look like
+
+~~~bash
+<head><meta .... ?ws://machine.somedomain.somewhere:7155"></head>
+~~~
+   
+   Just note the machine name and port number.
+
+3. On your local machine (i.e. where your web browser runs), use your
+   SSH account to
+   [forward](https://help.ubuntu.com/community/SSH/OpenSSH/PortForwarding)
+   the remote port (7155) to a local port (for example 7100):
+   
+~~~bash
+ssh -L 7100:machine.somedomain.somewhere:7155 username@server.org
+~~~
+   
+   Note that this will also log you onto the remote system. If you are
+   not running multiple simulations simultaneously, then the default
+   7100 port will be free on both the server and client and the
+   command will just be
+   
+~~~bash
+ssh -L 7100:machine.somedomain.somewhere:7100 username@server.org
+~~~
+
+4. Open Basilisk View using `ws://localhost:7100` as server address.
+
+You probably want to warn the system administrator of the remote
+system that you are opening and forwarding ports, since this may
+trigger security warnings on the administrator side. If explanations
+are required you can of course point to this documentation. Note also
+that other better-known visualisation applications
+([paraview](https://www.paraview.org/) for example) use the same kind
+of techniques, with similar potential security issues.
+
+## Option when SSH port forwarding is not allowed
+
+On some systems, administrators may block SSH port forwarding
+(i.e. the -L option of ssh used above). The wisdom of doing so is
+questionable since a relatively simple workaround is to use a unix
+named pipe instead, like so:
+
+1. Do steps 1 and 2 above.
+
+2. On your local machine (i.e. where your web browser runs), do
+
+~~~bash
+rm -f /tmp/bview
+mkfifo /tmp/bview
+nc -l -p 7100 < /tmp/bview | \
+  ssh username@server.org "nc machine.somedomain.somewhere 7100" > /tmp/bview
+~~~
+
+3. Open Basilisk View using `ws://localhost:7100` as server address.
+
+Note that you will need to redo step 2 everytime you disconnect. Note
+also that `nc` (i.e. `netcat`) need to be installed on the remote
+machine (this is usually the case).
+
 # Main differences with the old interactive `bview`
 
 * Cannot yet export to Gnuplot, OBJ, PS, PDF, SVG etc.
@@ -121,10 +198,8 @@ of course the `r124` release tag needs to be updated here.
 
 # To do
 
-* MPI
 * non-basilisk objects (sphere, cube etc...) are sent to Basilisk
 * scalar fields / colormapping
-* update Help menu
 * squares z should force linear (or work without linear)
 * deprecate lc/fc
 * more accurate focus (intersection with surfaces etc.)
@@ -137,4 +212,4 @@ of course the `r124` release tag needs to be updated here.
 # Bugs
 
 * using the xyz gizmo (or Import .bv) does not reset the controls
-  properly (i.e. it jumps)
+  properly (it jumps)
