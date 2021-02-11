@@ -113,6 +113,11 @@
 	#define WS_FIN_SHIFT  7
 
 	/**
+	 * @brief Open frame.
+	 */
+	#define WS_FR_OP_OPEN 0
+
+	/**
 	 * @brief Continuation frame.
 	 */
 	#define WS_FR_OP_CONT 0
@@ -231,10 +236,14 @@
         extern ssize_t ws_send(int sockfd, const void *buf, size_t len);
 	extern int ws_get_state(int fd);
 	extern int ws_close_client(int fd);
-        extern int ws_socket_poll (int sock,
-				   void (* onopen) (int fd),
-				   void (* onmessage) (int fd, const char * msg, size_t size, int type),
-				   void (* onclose) (int fd),
-				   int timeout);
+
+        struct ws_message {
+		int fd;
+		char * msg;
+		size_t size;
+		int type;
+	};
+
+        extern struct ws_message * ws_socket_poll (int sock, int timeout);
 
 #endif /* WS_H */

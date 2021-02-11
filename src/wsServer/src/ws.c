@@ -545,7 +545,7 @@ static inline int is_control_frame(int frame)
  * @attention This is part of the internal API and is documented just
  * for completeness.
  */
-static int do_handshake(struct ws_frame_data *wfd, void (* onopen)(int))
+static int do_handshake(struct ws_frame_data *wfd)
 {
 	char *response; /* Handshake response message. */
 	char *p;        /* Last request line pointer.  */
@@ -587,8 +587,7 @@ static int do_handshake(struct ws_frame_data *wfd, void (* onopen)(int))
 		return (-1);
 	}
 
-	/* Trigger events and clean up buffers. */
-	onopen(CLI_SOCK(wfd->sock));
+	/* clean up buffers. */
 	free(response);
 	return (0);
 }
@@ -1117,55 +1116,68 @@ static void close_connection(int connection_index)
 	}
 }
 
-static void handle_message (int connection_index,
-			    void (*onmessage) (int, const char *, size_t, int),
-			    void (*onclose) (int))
+static struct ws_message * append_message (struct ws_message * messages,
+					   struct ws_message msg)
+{
+	if (messages == NULL) {
+		messages = malloc (sizeof(struct ws_message));
+		messages[0].fd = -1;
+	}
+	int n = 0;
+	while (messages[n].fd >= 0) n++;
+	messages = realloc (messages, (n + 2)*sizeof(struct ws_message));
+	messages[n] = msg;
+	messages[n + 1].fd = -1;
+	return messages;
+}
+
+static struct ws_message * handle_message (int connection_index, struct ws_message * messages)
 {
 	int sock = client_socks[connection_index].client_sock;
 	struct ws_frame_data * wfd = &client_socks[connection_index].frame_data;
 	
 	/* Read next frame until client disconnects or an error occur. */
-	int status;
-	do {
-		status = next_frame(wfd, connection_index);
-		if (status >= 0)
+	int status = next_frame(wfd, connection_index);
+	if (status >= 0)
+	{
+		/* Text/binary event. */
+		if ((wfd->frame_type == WS_FR_OP_TXT || wfd->frame_type == WS_FR_OP_BIN) &&
+		    !wfd->error)
 		{
-			/* Text/binary event. */
-			if ((wfd->frame_type == WS_FR_OP_TXT || wfd->frame_type == WS_FR_OP_BIN) &&
-			    !wfd->error)
-			{
-				onmessage(sock, (const char *) wfd->msg, wfd->frame_size, wfd->frame_type);
-			}
+			messages = append_message (messages, (struct ws_message) {
+					sock, (char *) wfd->msg, wfd->frame_size, wfd->frame_type });
+		}
 				
-			/* Close event. */
-			else if (wfd->frame_type == WS_FR_OP_CLSE && !wfd->error)
-			{
-				status = -1;
+		/* Close event. */
+		else if (wfd->frame_type == WS_FR_OP_CLSE && !wfd->error)
+		{
+			status = -1;
 					
-				/*
-				 * We only send a CLOSE frame once, if we're already
-				 * in CLOSING state, there is no need to send.
-				 */
-				if (get_client_state(connection_index) != WS_STATE_CLOSING)
-				{
-					set_client_state(connection_index, WS_STATE_CLOSING);
+			/*
+			 * We only send a CLOSE frame once, if we're already
+			 * in CLOSING state, there is no need to send.
+			 */
+			if (get_client_state(connection_index) != WS_STATE_CLOSING)
+			{
+				set_client_state(connection_index, WS_STATE_CLOSING);
 						
-					/* We only send a close frameSend close frame */
-					do_close(wfd, -1);
-				}
+				/* We only send a close frameSend close frame */
+				do_close(wfd, -1);
 			}
-				
+
 			free(wfd->msg);
 		}
+
+	}
 		
-		if (status < 0) {
+	if (status < 0) {
 
-			onclose(sock);
+		messages = append_message (messages, (struct ws_message) {sock, NULL, 0, WS_FR_OP_CLSE });
 	
-			close_connection(connection_index);
-		}
+		close_connection(connection_index);
+	}
 
-	} while (0);
+	return messages;
 }
 
 /**
@@ -1173,16 +1185,14 @@ static void handle_message (int connection_index,
  * events when occurs one.
  *
  * @param vsock Client connection index.
+ * @param messages The array of messages.
  *
- * @return Returns @p vsock if success and a negative
- * number otherwise.
- *
- * @note This will be run on a different thread.
+ * @return Returns the array of connection messages.
  *
  * @attention This is part of the internal API and is documented just
  * for completeness.
  */
-static void ws_establishconnection(int connection_index, void (*onopen)(int))
+static struct ws_message * ws_establishconnection(int connection_index, struct ws_message * messages)
 {
 	struct ws_frame_data * wfd; /* WebSocket frame data.   */
 	int sock;                 /* File descriptor.        */
@@ -1195,13 +1205,15 @@ static void ws_establishconnection(int connection_index, void (*onopen)(int))
 	wfd->sock = sock;
 
 	/* Do handshake. */
-	if (do_handshake(wfd, onopen) < 0) {
+	if (do_handshake(wfd) < 0) {
 		close_connection(connection_index);
-		return;
+		return messages;
 	}
 
 	/* Change state. */
 	set_client_state(connection_index, WS_STATE_OPEN);
+
+	return append_message (messages, (struct ws_message) {sock, NULL, 0, WS_FR_OP_OPEN});
 }
 
 /**
@@ -1248,20 +1260,14 @@ int ws_socket_open (uint16_t port)
  * @brief Polls a WebSocket.
  *
  * @param sock The WebSocket (as returned by ws_socket_open()).
- * @param onopen Function to call on opening a new connection.
- * @param onmessage Function to call when receiving a message.
- * @param onclose Function to call when closing a connection.
  * @param timeout The poll timeout (in milliseconds).
  *
- * @return the number of requests served.
+ * @return the array of messages or NULL.
  */
-int ws_socket_poll (int sock,
-		    void (* onopen) (int fd),
-		    void (* onmessage) (int fd, const char * msg, size_t size, int type),
-		    void (* onclose) (int fd),
-		    int timeout)
+struct ws_message * ws_socket_poll (int sock, int timeout)
 {
-	int tnr = 0, nr = 0;
+	int nr = 0;
+	struct ws_message * messages = NULL;
 
 	do {
 
@@ -1310,24 +1316,22 @@ int ws_socket_poll (int sock,
 						client_socks[connection_index].client_sock = new_sock;
 						client_socks[connection_index].state       = WS_STATE_CONNECTING;
 
-						ws_establishconnection (connection_index, onopen);
+						messages = ws_establishconnection (connection_index, messages);
 					}
 				}
 				else /* Message */
 				{
 					
-					handle_message (j - 1, onmessage, onclose);
+					messages = handle_message (j - 1, messages);
 					
 				}
 				
 			}
 		}
 		
-		tnr += nr;
-		
 	} while (nr);
 	
-	return tnr;
+	return messages;
 }
 
 

@@ -1,7 +1,7 @@
 CFLAGS += -O2
 
 # these are not Basilisk programs
-EXCLUDE = qcc.c include.c rotate.c qplot.c bview.c
+EXCLUDE = qcc.c include.c rotate.c qplot.c
 
 all: qcc qplot libkdt literatec libfb_dumb libws bview2D bview3D
 	@chmod +x ppm2mpeg ppm2mp4 ppm2ogv ppm2gif runtest \

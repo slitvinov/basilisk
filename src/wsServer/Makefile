@@ -19,7 +19,7 @@ AR        = ar
 INCLUDE   = $(CURDIR)/include
 SRC       = $(CURDIR)/src
 CFLAGS   +=  -O2
-CFLAGS   +=  -I $(INCLUDE) -std=c99 -pedantic
+CFLAGS   +=  -I $(INCLUDE)
 ARFLAGS   =  cr
 LIB       =  libws.a
 MCSS_DIR ?= /usr/bin/

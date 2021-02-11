@@ -191,3 +191,7 @@ framebuffer * framebuffer_new (unsigned width, unsigned height)
 unsigned char * framebuffer_image (framebuffer * p) {
   return NULL;
 }
+
+fbdepth_t * framebuffer_depth (framebuffer * p) {
+  return NULL;
+}

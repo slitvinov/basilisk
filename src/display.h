@@ -3,7 +3,7 @@
 
 This file implements the server-side of the interactive display of a
 running Basilisk code. The client-side is typically done by the
-[javascript implementation](jview/README) implementation.
+[javascript implementation](jview/README).
 
 This works using two main components:
 
@@ -80,9 +80,10 @@ display ("squares (color = 'u.x', spread = -1);", true);
 #if 1
 # define debug(...)
 #else
-# define debug(...) fprintf (stderr, __VA_ARGS__)
+# define debug(...) fprintf (qerr, __VA_ARGS__), fflush(qerr)
 #endif
 
+#include <netdb.h>
 #include <wsServer/include/ws.h>
 #pragma autolink -L$BASILISK/wsServer -lws
 
@@ -105,21 +106,19 @@ static struct {
 
 static void display_display()
 {
-  if (pid() == 0) {
-    debug ("**************************\n");
-    for (khiter_t k = kh_begin (Display.objects); k != kh_end (Display.objects);
-	 ++k)
-      if (kh_exist (Display.objects, k)) {
-	debug ("%s", kh_key (Display.objects, k));
-	DisplayClient * client = kh_value (Display.objects, k);
-	while (client->fd >= 0) {
-	  debug (" %d/%d", client->fd, client->iter);
-	  client++;
-	}
-	debug ("\n");
+  debug ("**************************\n");
+  for (khiter_t k = kh_begin (Display.objects); k != kh_end (Display.objects);
+       ++k)
+    if (kh_exist (Display.objects, k)) {
+      debug ("%s", kh_key (Display.objects, k));
+      DisplayClient * client = kh_value (Display.objects, k);
+      while (client->fd >= 0) {
+	debug (" %d/%d", client->fd, client->iter);
+	client++;
       }
-    debug ("--------------------------\n");
-  }
+      debug ("\n");
+    }
+  debug ("--------------------------\n");
 }
 
 static char * read_file_into_buffer (FILE * fp)
@@ -141,121 +140,182 @@ static char * read_file_into_buffer (FILE * fp)
 
 static void display_command (const char * command)
 {
+  debug ("display_command (%s)\n", command);
+  
   vertex_buffer_setup();
   VertexBuffer.vertex = 0; // fixme
+
   // Temporarily redirect stderr to catch errors
-  fflush (stderr);
-  int bak = dup (2);
-  FILE * fp = tmpfile();
-  dup2 (fileno (fp), 2);
-  fclose (fp);
+  int bak = -1;
+  if (pid() == 0) {
+    fflush (stderr);
+    bak = dup (2);
+    FILE * fp = tmpfile();
+    dup2 (fileno (fp), 2);
+    fclose (fp);
+  }
 
   char * line = strdup (command);
-  process_line (line);
+  bool status = process_line (line);
   free (line);
   
   free (Display.error);
-  if (VertexBuffer.type >= 0)
-    Display.error = NULL;
-  else { // Nothing was drawn i.e. an error occured
-    fflush (stderr);
-    FILE * fp = fdopen (2, "r");
-    Display.error = read_file_into_buffer (fp);
-    int len = Display.error ? strlen (Display.error) : 0;
-    if (len > 0 && Display.error[len - 1] == '\n')
-      Display.error[len - 1] = '\0';
-    fclose(fp);
+  Display.error = NULL;
+  if (status) {
+    if (VertexBuffer.type < 0)
+      VertexBuffer.type = 0;
+  }
+  else { // An error occured
+    if (pid() == 0) {
+      fflush (stderr);
+      FILE * fp = fdopen (2, "r");
+      Display.error = read_file_into_buffer (fp);
+      int len = Display.error ? strlen (Display.error) : 0;
+      if (len > 0 && Display.error[len - 1] == '\n')
+	Display.error[len - 1] = '\0';
+      fclose(fp);
+    }
+    else
+      Display.error = strdup ("error (on slave process)");
+    VertexBuffer.type = - 1;
+  }
+
+  if (pid() == 0) {
+    // Restore stderr to its previous value
+    dup2 (bak, 2);
+    close (bak);
   }
     
-  // Restore stderr to its previous value
-  dup2 (bak, 2);
-  close (bak);
-
   if (VertexBuffer.type < 0)
     debug ("error: '%s'\n", Display.error);
-  else
+  else {
+    if (pid() > 0) {
+      if (VertexBuffer.normal->len < VertexBuffer.position->len)
+	VertexBuffer.normal->len = 0;
+      if (VertexBuffer.color->len < VertexBuffer.position->len)
+	VertexBuffer.color->len = 0;
+    }
     debug ("position: %ld, normal: %ld, color: %ld, index: %ld, type: %d\n", 
 	   VertexBuffer.position->len,
 	   VertexBuffer.normal->len,
 	   VertexBuffer.color->len,
 	   VertexBuffer.index->len, VertexBuffer.type);
+  }
+}
+
+static int ws_send_array (int fd, Array * a, int status, int type,
+			  unsigned int * shift)
+{
+@if _MPI
+  if (pid() == 0) {
+    void * p = NULL;
+    long len;
+    for (int pe = 0; pe < npe(); pe++) {
+      if (pe == 0)
+	p = a->p, len = a->len;
+      else {
+	MPI_Status status;
+	MPI_Recv (&len, 1, MPI_LONG, pe, 22, MPI_COMM_WORLD, &status);
+	if (len > 0) {
+	  p = malloc (len);
+	  MPI_Recv (p, len, MPI_BYTE, pe, 23, MPI_COMM_WORLD, &status);
+	}
+	else
+	  p = NULL;
+      }
+      if (type == 0) // position
+	shift[pe] = (pe > 0 ? shift[pe - 1] : 0) + len/(3*sizeof(float));
+      else if (type == 1 && pe > 0) // index
+	for (unsigned int i = 0; i < len/sizeof(unsigned int); i++)
+	  ((unsigned int *) p)[i] += shift[pe - 1];
+      if (status >= 0 && len > 0 && ws_send (fd, p, len) < len)
+	status = -1;
+      if (pe > 0)
+	free (p);
+    }
+  }
+  else { // pid() > 0
+    MPI_Send (&a->len, 1, MPI_LONG, 0, 22, MPI_COMM_WORLD);
+    if (a->len > 0)
+      MPI_Send (a->p, a->len, MPI_BYTE, 0, 23, MPI_COMM_WORLD);
+  }
+@else
+  if (status >= 0 && a->len > 0 && ws_send (fd, a->p, a->len) < a->len)
+    status = -1;
+@endif
+  return status;
 }
 
 static int display_send (const char * command, int fd)
 {
+  int status = 0;
+
   debug ("sending '%s' to %d\n", command, fd);
   
   unsigned int commandlen = strlen (command);
   unsigned int errorlen = Display.error ? strlen (Display.error) : 0;
-
+  
   int paddedlen = 4*ceil(commandlen/4.);
   size_t len = 2*sizeof(unsigned int) + paddedlen;
 
-  if (errorlen > 0)
+  unsigned int lens[] = {VertexBuffer.position->len,
+			 VertexBuffer.normal->len,
+			 VertexBuffer.color->len,
+			 VertexBuffer.index->len}, glens[4];
+  int type = VertexBuffer.type, gtype;
+@if _MPI
+  MPI_Reduce (lens, glens, 4, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Allreduce (&type, &gtype, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+@else
+  for (int i = 0; i < 4; i++) glens[i] = lens[i];
+  gtype = type;
+@endif
+  
+  if (gtype < 0)
     len += errorlen;
   else
     len += 2*sizeof(int) +
-      4*sizeof (unsigned int) +
-      VertexBuffer.position->len +
-      VertexBuffer.normal->len +
-      VertexBuffer.color->len +
-      VertexBuffer.index->len;
-      
-  if (ws_sendframe_init (fd, len, false, WS_FR_OP_BIN) < 0)
-    return -1;
-  
-  if (ws_send (fd, &commandlen, sizeof(unsigned int)) < sizeof(unsigned int))
-    return -1;
-  if (ws_send (fd, &errorlen, sizeof(unsigned int)) < sizeof(unsigned int))
-    return -1;
-  if (ws_send (fd, command, commandlen) < commandlen)
-    return -1;
-  
-  // padding to a multiple of four
-  for (int i = 0; i < paddedlen - commandlen; i++) {
-    char c = '\0';
-    if (ws_send (fd, &c, 1) < 1)
-      return -1;
+      4*sizeof (unsigned int) + glens[0] + glens[1] + glens[2] + glens[3];
+
+  if (pid() == 0) {
+    if (ws_sendframe_init (fd, len, false, WS_FR_OP_BIN) < 0 ||
+	ws_send (fd, &commandlen, sizeof(unsigned int)) < sizeof(unsigned int) ||
+	ws_send (fd, &errorlen, sizeof(unsigned int)) < sizeof(unsigned int) ||
+	ws_send (fd, command, commandlen) < commandlen)
+      status = -1;
+    
+    // padding to a multiple of four
+    for (int i = 0; i < paddedlen - commandlen && status >= 0; i++) {
+      char c = '\0';
+      if (ws_send (fd, &c, 1) < 1)
+	status = -1;
+    }
   }
 
-  if (errorlen > 0) {
-    if (ws_send (fd, Display.error, errorlen) < errorlen)
-      return -1;
+  if (gtype < 0) {
+    if (pid() == 0 && status >= 0 &&
+	ws_send (fd, Display.error, errorlen) < errorlen)
+      status = -1;
   }
   else {
-    if (ws_send (fd, &VertexBuffer.dim, sizeof(int)) < sizeof(int))
-      return -1;
-    if (ws_send (fd, &VertexBuffer.type, sizeof(int)) < sizeof(int))
-      return -1;
-    
-    if (ws_send (fd, &VertexBuffer.position->len, sizeof (unsigned int))
-	< sizeof (unsigned int))
-      return -1;
-    if (ws_send (fd, &VertexBuffer.normal->len, sizeof (unsigned int))
-	< sizeof (unsigned int))
-      return -1;
-    if (ws_send (fd, &VertexBuffer.color->len, sizeof (unsigned int))
-	< sizeof (unsigned int))
-      return -1;
-    if (ws_send (fd, &VertexBuffer.index->len, sizeof (unsigned int))
-	< sizeof (unsigned int))
-      return -1;
-    
-    if (ws_send (fd, VertexBuffer.position->p, VertexBuffer.position->len)
-	< VertexBuffer.position->len)
-      return -1;
-    if (ws_send (fd, VertexBuffer.normal->p, VertexBuffer.normal->len)
-	< VertexBuffer.normal->len)
-      return -1;
-    if (ws_send (fd, VertexBuffer.color->p, VertexBuffer.color->len)
-	< VertexBuffer.color->len)
-      return -1;
-    if (ws_send (fd, VertexBuffer.index->p, VertexBuffer.index->len)
-	< VertexBuffer.index->len)
-      return -1;
+    if (pid() == 0 && status >= 0 &&
+	(ws_send (fd, &VertexBuffer.dim, sizeof(int)) < sizeof(int) ||
+	 ws_send (fd, &gtype, sizeof(int)) < sizeof(int) ||
+	 ws_send (fd, glens, 4*sizeof (unsigned int)) < 4*sizeof (unsigned int)))
+      status = -1;
+    unsigned int * shift = malloc (sizeof(unsigned int)*npe());
+    status = ws_send_array (fd, VertexBuffer.position, status, 0, shift);
+    status = ws_send_array (fd, VertexBuffer.normal, status, -1, shift);
+    status = ws_send_array (fd, VertexBuffer.color, status, -1, shift);
+    status = ws_send_array (fd, VertexBuffer.index, status, 1, shift);
+    free (shift);
   }
   
-  return 0;
+@if _MPI
+  MPI_Bcast (&status, 1, MPI_INT, 0, MPI_COMM_WORLD);
+@endif
+  
+  return status;
 }
 
 static void display_add (const char * command, int fd)
@@ -351,7 +411,8 @@ static char * display_control_json()
 		  *((int *)d->ptr), d->min, d->max);
       break;
     case 8:
-      JSON_BUILD ("\"type\": \"double\", \"value\": %g, \"min\": %g, \"max\": %g",
+      JSON_BUILD ("\"type\": \"double\", \"value\": %g, "
+		  "\"min\": %g, \"max\": %g",
 		  *((double *)d->ptr), d->min, d->max);
       break;
     default:
@@ -381,26 +442,21 @@ struct _DisplayControl {
 
 void display_control_internal (struct _DisplayControl p)
 {
-  if (Display.sock < 0) { // fixme: Display should be initialised in main()
-    fprintf (stderr, "display_control(): error: cannot add control "
-	     "before initialisation\n");
-    exit (1);
-  }
-  else {
-    DisplayControl d;
-    if (!p.name)
-      p.name = p.ptr_name;
+  DisplayControl d;
+  if (!p.name)
+    p.name = p.ptr_name;
 
-    if (display_control_lookup (p.name))
-      return;
+  if (display_control_lookup (p.name))
+    return;
     
-    d.name = strdup (p.name);
-    d.tooltip = p.tooltip ? strdup (p.tooltip) : NULL;
-    d.ptr = p.ptr;
-    d.size = p.size;
-    d.min = p.min, d.max = p.max;
-    array_append (Display.controls, &d, sizeof (DisplayControl));
-    
+  d.name = strdup (p.name);
+  d.tooltip = p.tooltip ? strdup (p.tooltip) : NULL;
+  d.ptr = p.ptr;
+  d.size = p.size;
+  d.min = p.min, d.max = p.max;
+  array_append (Display.controls, &d, sizeof (DisplayControl));
+
+  if (pid() == 0) {
     char * controls = display_control_json();
     ws_sendframe_txt (0, controls, true);
     free (controls);
@@ -408,7 +464,8 @@ void display_control_internal (struct _DisplayControl p)
 }
 
 #undef display_control
-#define display_control(val, ...) display_control_internal (&(val), __VA_ARGS__, size = sizeof(val), ptr_name = #val)
+#define display_control(val, ...) display_control_internal \
+  (&(val), __VA_ARGS__, size = sizeof(val), ptr_name = #val)
 
 static void display_control_update (const char * command, int fd)
 {
@@ -429,9 +486,11 @@ static void display_control_update (const char * command, int fd)
     default: assert (false);
     }
 
-    char * controls = display_control_json();
-    ws_sendframe_txt (- fd, controls, true);
-    free (controls);
+    if (pid() == 0) {
+      char * controls = display_control_json();
+      ws_sendframe_txt (- fd, controls, true);
+      free (controls);
+    }
   }
   free (s);
 }
@@ -489,26 +548,27 @@ void display_onmessage (int fd, const char * msg, size_t size, int type)
 void display_onopen (int fd)
 {
   char * interface = bview_interface_json();
-  if (ws_sendframe_txt (fd, interface, false) < 0) {
-    free (interface);
-    display_onclose (fd);
-    close (fd);
-    return;
-  }
-  free (interface);
-  
   char * controls = display_control_json();
-  if (ws_sendframe_txt (fd, controls, false) < 0) {
-    free (controls);
-    display_onclose (fd);
-    close (fd);
-    return;
-  }
-  free (controls);
+  int status = 0;
 
-  if (display_defaults && ws_sendframe_txt (fd, display_defaults, false) < 0) {
+  if (pid() == 0)
+    if (ws_sendframe_txt (fd, interface, false) < 0 ||
+	ws_sendframe_txt (fd, controls, false) < 0 ||
+	(display_defaults && ws_sendframe_txt (fd, display_defaults, false) < 0))
+      status = -1;
+  free (interface);
+  free (controls);
+  
+@if _MPI
+  MPI_Bcast (&status, 1, MPI_INT, 0, MPI_COMM_WORLD);
+@endif
+
+  debug ("open %d status %d\n", fd, status);
+  
+  if (status < 0) {
     display_onclose (fd);
-    close (fd);
+    if (pid() == 0)
+      close (fd);
   }
 }
 
@@ -532,7 +592,8 @@ static void display_update (int i)
 	      client->iter = i;
 	      if (display_send (command, client->fd) < 0) {
 		debug ("error sending '%s' to '%d'\n", command, client->fd);
-		close (client->fd);
+		if (pid() == 0)
+		  close (client->fd);
 		display_onclose (client->fd);
 		if (!kh_exist (Display.objects, k))
 		  break;
@@ -553,16 +614,99 @@ static void display_update (int i)
     }
 }
 
+@if _MPI
+static Array * pack_messages (struct ws_message * messages)
+{
+  struct ws_message * msg = messages;
+  Array * packed = array_new();
+  while (msg && msg->fd >= 0) {
+    array_append (packed, msg, sizeof(struct ws_message));
+    array_append (packed, msg->msg, msg->size);
+    msg++;
+  }
+  return packed;
+}
+
+static struct ws_message * unpack_messages (Array * packed)
+{
+  Array * array = array_new();
+  char * p = packed->p;
+  while (p - (char *) packed->p < packed->len) {
+    struct ws_message * msg = (struct ws_message *) p;
+    msg->msg = sysmalloc (msg->size + 1);
+    p += sizeof(struct ws_message);
+    memcpy (msg->msg, p, msg->size);
+    msg->msg[msg->size] = '\0';
+    array_append (array, msg, sizeof(struct ws_message));
+    p += msg->size;
+  }
+  struct ws_message msg = {-1};
+  array_append (array, &msg, sizeof(struct ws_message));
+  struct ws_message * messages = array->p;
+  free (array);
+  return messages;
+}
+@endif
+		 
 int display_poll (int timeout)
 {
-  return ws_socket_poll (Display.sock,
-			 display_onopen, display_onmessage, display_onclose,
-			 timeout);
+  struct ws_message * messages = NULL, * msg;
+  int nmsg = 0;
+  if (pid() == 0) {
+    msg = messages = ws_socket_poll (Display.sock, timeout);
+    while (msg && msg->fd >= 0) msg++, nmsg++;
+  }
+
+@if _MPI
+  Array * packed;
+  if (pid() == 0)
+    packed = pack_messages (messages);
+  else
+    packed = calloc (1, sizeof (Array));
+  MPI_Bcast (&packed->len, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+  if (packed->len > 0) {
+    if (pid() != 0)
+      packed->p = malloc (packed->len);
+    MPI_Bcast (packed->p, packed->len, MPI_BYTE, 0, MPI_COMM_WORLD);
+    if (pid() != 0)
+      messages = unpack_messages (packed);
+  }
+  array_free (packed);
+@endif
+
+  msg = messages;
+  nmsg = 0;
+  while (msg && msg->fd >= 0) {
+    switch (msg->type) {
+
+    case WS_FR_OP_OPEN:
+      display_onopen (msg->fd); break;
+
+    case WS_FR_OP_TXT: case WS_FR_OP_BIN:
+      display_onmessage (msg->fd, msg->msg, msg->size, msg->type);
+      break;
+
+    case WS_FR_OP_CLSE:
+      display_onclose (msg->fd); break;
+      
+    default:
+      assert (false);
+      
+    }
+    sysfree (msg->msg);
+    msg++, nmsg++;
+  }
+  sysfree (messages);
+  return nmsg;
 }
 
 void display_url (FILE * fp)
 {
-  fprintf (fp, DISPLAY_JS "?ws://" DISPLAY_HOST ":%d", Display.port);
+  char hostname[1024];
+  hostname[1023] = '\0';
+  gethostname (hostname, 1023);
+  struct hostent * h = gethostbyname (hostname);
+  fprintf (fp, DISPLAY_JS "?ws://%s:%d", h->h_name, Display.port);
 }
 
 int display_usage = 20; // use 20% of runtime, maximum
@@ -576,24 +720,24 @@ int display_play = -1;
 
 static void display_destroy()
 {
-  if (pid() == 0) {
-    for (khiter_t k = kh_begin (Display.objects); k != kh_end (Display.objects);
-	 ++k)
-      if (kh_exist (Display.objects, k)) {
-	free ((void *) kh_key (Display.objects, k));
-	free ((void *) kh_value (Display.objects, k));
-      }
-    kh_destroy (strhash, Display.objects);
-
-    DisplayControl * d = Display.controls->p;
-    for (int i = 0; i < Display.controls->len/sizeof(DisplayControl); i++, d++) {
-      free (d->name);
-      free (d->tooltip);
+  for (khiter_t k = kh_begin (Display.objects); k != kh_end (Display.objects);
+       ++k)
+    if (kh_exist (Display.objects, k)) {
+      free ((void *) kh_key (Display.objects, k));
+      free ((void *) kh_value (Display.objects, k));
     }
-    array_free (Display.controls);
+  kh_destroy (strhash, Display.objects);
 
-    remove ("display.html");
+  DisplayControl * d = Display.controls->p;
+  for (int i = 0; i < Display.controls->len/sizeof(DisplayControl); i++, d++) {
+    free (d->name);
+    free (d->tooltip);
+  }
+  array_free (Display.controls);
   
+  if (pid() == 0) {
+    remove ("display.html");
+    
     // fixme: close connection cleanly
     close (Display.sock);
   }
@@ -622,27 +766,28 @@ init_solver void display_init()
       perror (s);
       exit (1);
     }
-    Display.objects = kh_init (strhash);
-    Display.controls = array_new();
-
-    free_solver_func_add (display_destroy);
 
     FILE * fp = fopen ("display.html", "w");
     fputs ("<head><meta http-equiv=\"refresh\" content=\"0;URL=", fp);
     display_url (fp);
     fputs ("\"></head>\n", fp);
     fclose (fp);
+  }
+
+  Display.objects = kh_init (strhash);
+  Display.controls = array_new();
+  
+  free_solver_func_add (display_destroy);
 
 #ifndef DISPLAY
-    display_control (display_play, -1, 1, "Run/Pause");
+  display_control (display_play, -1, 1, "Run/Pause");
 #elif DISPLAY != 0
-    display_control (display_play, -1, 1, "Run/Pause");
+  display_control (display_play, -1, 1, "Run/Pause");
 #endif
 #ifndef DISPLAY_NO_CONTROLS    
-    display_control (display_usage, 0, 50, "Display %", 
-		     "maximum % of runtime used by display");
+  display_control (display_usage, 0, 50, "Display %", 
+		   "maximum % of runtime used by display");
 #endif
-  }
 }
 
 event refresh_display (i++, last)
@@ -656,7 +801,12 @@ event refresh_display (i++, last)
 
   static timer global_timer = {0};
   static double poll_elapsed = 0.;
-  if (poll_elapsed <= display_usage/100.*timer_elapsed (global_timer)) {
+  int refresh = (poll_elapsed <=
+		 display_usage/100.*timer_elapsed (global_timer));
+@if _MPI
+  MPI_Bcast (&refresh, 1, MPI_INT, 0, MPI_COMM_WORLD);
+@endif
+  if (refresh) {
     global_timer = timer_start();
     display_update (i);
     poll_elapsed = timer_elapsed (global_timer);

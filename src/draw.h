@@ -591,7 +591,7 @@ static scalar compile_expression (char * expr, bool * isexpr)
     }									\
   }
 
-static void begin_colorized (float fc[3],
+static void begin_colorized (float fc[3], bool constant_color,
 			     double cmap[NCMAP][3], bool use_texture)
 {
   // do not use textures for vector graphics
@@ -610,14 +610,16 @@ static void begin_colorized (float fc[3],
     glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glEnable (GL_TEXTURE_1D);
   }
-  glColor3f (fc[0], fc[1], fc[2]);
+  if (constant_color)
+    glColor3f (fc[0], fc[1], fc[2]);
 }
 
 static void end_colorized() {
   glDisable (GL_TEXTURE_1D);
 }
 
-#define colorize() colorized (p.fc, cmap, !VertexBuffer.color &&	\
+#define colorize() colorized (p.fc, !p.color,				\
+			      cmap, !VertexBuffer.color &&		\
 			      p.color && p.linear && col.i >= 0)
 
 /**
@@ -961,7 +963,7 @@ struct _cells {
 };
 
 trace
-void cells (struct _cells p)
+bool cells (struct _cells p)
 {
   bview * view = draw();
   draw_lines (view, p.lc, p.lw) {
@@ -989,6 +991,7 @@ void cells (struct _cells p)
     }
 #endif // dimension == 3
   }
+  return true;
 }
 
 /**
@@ -1003,7 +1006,7 @@ struct _vectors {
 };
 
 trace
-void vectors (struct _vectors p)
+bool vectors (struct _vectors p)
 {
 #if dimension == 2
   vector u;
@@ -1039,6 +1042,7 @@ void vectors (struct _vectors p)
 #else // dimension == 3
   fprintf (stderr, "vectors() is not implemented in 3D yet\n");
 #endif // dimension == 3
+  return true;
 }
   
 /**

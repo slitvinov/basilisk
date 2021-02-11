@@ -711,32 +711,32 @@ bool process_line (char * line)
         
   else if (!strcmp (s, "cells")) {
     struct _cells p = {{0}};
-    _cells_get (&p);
-    cells (p);
+    if (!_cells_get (&p) || !cells (p))
+      return false;
   }
 
   else if (!strcmp (s, "vectors")) {
     struct _vectors p = {0};
-    _vectors_get (&p);
-    vectors (p);
+    if (!_vectors_get (&p) || !vectors (p))
+      return false;
   }
         
   else if (!strcmp (s, "draw_vof")) {
     struct _draw_vof p = {0};
-    _draw_vof_get (&p);
-    draw_vof (p);
+    if (!_draw_vof_get (&p) || !draw_vof (p))
+      return false;
   }
     
   else if (!strcmp (s, "isoline")) {
     struct _isoline p = {0};
-    _isoline_get (&p);
-    isoline (p);
+    if (!_isoline_get (&p) || !isoline (p))
+      return false;
   }
     
   else if (!strcmp (s, "squares")) {
     struct _squares p = {0};
-    _squares_get (&p);
-    squares (p);
+    if (!_squares_get (&p) || !squares (p))
+      return false;
   }
   
   else if (!strcmp (s, "begin_translate")) {
@@ -759,26 +759,26 @@ bool process_line (char * line)
   
   else if (!strcmp (s, "squares")) {
     struct _squares p = {0};
-    _squares_get (&p);
-    squares (p);
+    if (!_squares_get (&p) || !squares (p))
+      return false;
   }
     
   else if (!strcmp (s, "isosurface")) {
     struct _isosurface p = {0};
-    _isosurface_get (&p);
-    isosurface (p);
+    if (!_isosurface_get (&p) || !isosurface (p))
+      return false;
   }
     
   else if (!strcmp (s, "draw_string")) {
     struct _draw_string p = {0};
-    _draw_string_get (&p);
-    draw_string (p);
+    if (!_draw_string_get (&p) || !draw_string (p))
+      return false;
   }
 
   else if (!strcmp (s, "labels")) {
     struct _labels p = {0};
-    _labels_get (&p);
-    labels (p);
+    if (!_labels_get (&p) || !labels (p))
+      return false;
   }
 
   else if (!strcmp (s, "clear"))
@@ -786,8 +786,8 @@ bool process_line (char * line)
 
   else if (!strcmp (s, "box")) {
     struct _box p = {0};
-    _box_get (&p);
-    box (p);
+    if (!_box_get (&p) || !box (p))
+      return false;
   }
 
   else if (!strcmp (s, "view")) {
