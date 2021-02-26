@@ -352,6 +352,12 @@ the raster file.
 
 *linear*
 : if true, the raster data is bilinearly interpolated. Default is false.
+
+*periodic*
+: if true, the x-axis is treated as periodic. Default is false.
+
+*zero*
+: if true NoDataValue are replaced by zero. Default is false.
 */
 
 struct InputGRD {
@@ -359,7 +365,7 @@ struct InputGRD {
   FILE * fp;
   char * file;
   double nodatavalue;
-  bool linear;
+  bool linear, periodic, zero;
 };
 
 void input_grd (struct InputGRD p)
@@ -399,11 +405,20 @@ void input_grd (struct InputGRD p)
   // read the data
   double * value = qmalloc (nx*ny, double);
   for (int i = ny - 1; i >= 0; i--)
-    for (int j = 0 ; j < nx; j++)
+    for (int j = 0 ; j < nx; j++) {
       fscanf (p.fp, "%lf ", &value[j + i*nx]);
+      if (p.zero && value[j + i*nx] == ndv)
+	value[j + i*nx] = 0.;
+    }
 
   bool warning = false;  
   foreach_leaf() {
+    if (p.periodic || input.boundary[right] == periodic_bc) {
+      if (x > XG0 + nx*DeltaGRD)
+	x -= nx*DeltaGRD;
+      else if (x < XG0)
+	x += nx*DeltaGRD;
+    }
     // Test if the point in the Basilisk area is included in the raster area
     int j = (x - XG0 + DeltaGRD/2.)/DeltaGRD;
     int i = (y - YG0 + DeltaGRD/2.)/DeltaGRD;    
@@ -412,7 +427,7 @@ void input_grd (struct InputGRD p)
       // Test if we are on the ring of data around the raster grid
       int j1 = (x - XG0)/DeltaGRD;
       int i1 = (y - YG0)/DeltaGRD;
-      if (p.linear && i1 >= 0 && j1 >= 0 && i1 < ny - 1 && j1 < ny - 1 &&
+      if (p.linear && i1 >= 0 && j1 >= 0 && i1 < ny - 1 && j1 < nx - 1 &&
 	  value[j1 + i1*nx] != ndv && value[j1 + 1 + i1*nx] != ndv &&
 	  value[j1 + (i1 + 1)*nx] != ndv && value[j1 + 1 + (i1 + 1)*nx] != ndv) {
 	// bi-linear interpolation
@@ -429,13 +444,8 @@ void input_grd (struct InputGRD p)
 	val = value[j + i*nx];
       if (val == ndv)
 	input[] = nodata;
-      else {
+      else
 	input[] = val;
-	if (fabs (input[]) > 1e10) {
-	  fprintf (stderr, "%g %g\n", input[], ndv);
-	  assert (false);
-	}
-      }
     }
     else {
       input[] = nodata;
