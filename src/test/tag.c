@@ -13,7 +13,7 @@ int main()
     if (t[] == 0)
       t[] = nodata;
     else
-      fprintf (stderr, "%g %g %g\n", x, y, t[]);
+      fprintf (qerr, "%g %g %g\n", x, y, t[]);
   }
   output_ppm (t, file = "t.ppm", min = 1, max = n, n = 256);
 }
