@@ -24,6 +24,15 @@ uses the `point.l` index as local layer index. */
 @define end_foreach_block_inner() point.l = 0
 
 /**
+We also redefine the "per field" (inner) traversal. */
+
+#undef foreach_blockf
+@def foreach_blockf(_f)
+  for (point.l = 0; point.l < _attribute[_f.i].block; point.l++)
+@
+@define end_foreach_blockf() point.l = 0
+  
+/**
 The two indices are combined to access field values. In practice only
 one of the indices is used. */
   

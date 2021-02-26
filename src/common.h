@@ -963,6 +963,7 @@ attribute {
 }
 
 #define foreach_block() // treatment of block data is disabled by default
+#define foreach_blockf(s)
 
 // lists
 

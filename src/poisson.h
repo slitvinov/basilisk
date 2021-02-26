@@ -54,7 +54,7 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
     if (l == minlevel)
       foreach_level_or_leaf (l)
 	for (scalar s in da)
-	  foreach_block()
+	  foreach_blockf (s)
 	    s[] = 0.;
 
     /**
@@ -64,7 +64,7 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
     else
       foreach_level (l)
 	for (scalar s in da)
-	  foreach_block()
+	  foreach_blockf (s)
 	    s[] = bilinear (point, s);
     
     /**
@@ -84,7 +84,7 @@ void mg_cycle (scalar * a, scalar * res, scalar * da,
   foreach() {
     scalar s, ds;
     for (s, ds in a, da)
-      foreach_block()
+      foreach_blockf (s)
 	s[] += ds[];
   }
   boundary (a);
@@ -197,7 +197,7 @@ mgstats mg_solve (struct MGSolve p)
     on the finest grid. */
 
 #if 1
-    if (s.resa > TOLERANCE) {
+    if (s.resa > p.tolerance) {
       if (resb/s.resa < 1.2 && s.nrelax < 100)
 	s.nrelax++;
       else if (resb/s.resa > 10 && s.nrelax > 2)

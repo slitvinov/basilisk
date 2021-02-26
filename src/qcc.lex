@@ -1365,7 +1365,7 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
     infunctionproto = 0;
 }
 
-(foreach_child|foreach_child_direction|foreach_neighbor|foreach_block) {
+(foreach_child|foreach_child_direction|foreach_neighbor|foreach_block|foreach_blockf) {
   if (indef)
     REJECT;
   foreach_child_t child = {scope, para};
