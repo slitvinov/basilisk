@@ -30,9 +30,9 @@ turned off by default (see Section 3.6.4 in [Popinet,
 2020](/Bibliography#popinet2020)). */
 
 #define NH 1
-#include "poisson.h"
+#include "implicit.h"
 
-scalar w, phi;
+scalar w, q;
 mgstats mgp;
 double breaking = HUGE;
 
@@ -45,12 +45,14 @@ added to the list of advected tracers. */
 event defaults (i = 0)
 {
   hydrostatic = false;
+  if (CFL_H == nodata)
+    CFL_H = 1.; // fixme: HUGE as set in implicit.h
   mgp.nrelax = 4;
   
   assert (nl > 0);
   w = new scalar[nl];
-  phi = new scalar[nl];
-  reset ({w, phi}, 0.);
+  q = new scalar[nl];
+  reset ({w, q}, 0.);
 
   if (!linearised)
     tracers = list_append (tracers, w);
@@ -79,7 +81,7 @@ event viscous_term (i++)
 ## Assembly of the Hessenberg matrix
 
 For the Keller box scheme, the linear system of equations verified by
-the non-hydrostatic pressure $\phi$ is expressed as an [Hessenberg
+the non-hydrostatic pressure $\q$ is expressed as an [Hessenberg
 matrix](https://en.wikipedia.org/wiki/Hessenberg_matrix) for each column.
 
 The Hessenberg matrix $\mathbf{H}$ for a column at a particular *point* is
@@ -87,33 +89,62 @@ stored in a one-dimensional array with `nl*nl` elements. It encodes
 the coefficients of the left-hand-side of the Poisson equation as
 $$
 \begin{aligned}
-  (\mathbf{H}\mathbf{\phi} - \mathbf{d})_l & =
+  (\mathbf{H}\mathbf{\q} - \mathbf{d})_l & =
   - \text{rhs}_l +
-  h_l \partial_x \partial_x (h_l \phi_{l - 1 / 2}) + 
-  h_l \partial_x \partial_x (h_l \phi_{l + 1 / 2}) +\\
-  & 4 (\phi_{l + 1 / 2} - \phi_{l - 1 / 2}) + 8 h_l \sum^{l - 1}_{k = 0}
-  (- 1)^{l + k}  \frac{\phi_{k + 1 / 2} - \phi_{k - 1 / 2}}{h_k}
+  h_l \partial_x \partial_x (h_l \q_{l - 1 / 2}) + 
+  h_l \partial_x \partial_x (h_l \q_{l + 1 / 2}) +\\
+  & 4 (\q_{l + 1 / 2} - \q_{l - 1 / 2}) + 8 h_l \sum^{l - 1}_{k = 0}
+  (- 1)^{l + k}  \frac{\q_{k + 1 / 2} - \q_{k - 1 / 2}}{h_k}
 \end{aligned}
 $$
-where $\mathbf{\phi}$ is the vector of $\phi_l$ for this column and
-$\mathbf{d}$ is a vector dependent only on the values of $\phi$ in the
+where $\mathbf{\q}$ is the vector of $\q_l$ for this column and
+$\mathbf{d}$ is a vector dependent only on the values of $\q$ in the
 neighboring columns. */
 
-static void box_matrix (Point point, scalar phi, scalar rhs,
+double max_slope = 0.577350269189626; // = tan(30.*pi/180.)
+#define slope_limited(dz) (fabs(dz) < max_slope ? (dz) :	\
+			   ((dz) > 0. ? max_slope : - max_slope))
+
+static void box_matrix (Point point, scalar q, scalar rhs,
+			face vector hf, scalar eta,
 			double * H, double * d)
 {
-  for (int l = 0, m = nl - 1; l < nl; l++, m--) {
-    d[l] = rhs[0,0,m];
+  coord dz, dzp;
+  foreach_dimension()
+    dz.x = zb[] - zb[-1], dzp.x = zb[1] - zb[];
+  foreach_layer()
     foreach_dimension()
-      d[l] -= h[0,0,m]*(h[-1,0,m]*phi[-1,0,m] + h[1,0,m]*phi[1,0,m])/sq(Delta);
+      dz.x += h[] - h[-1], dzp.x += h[1] - h[];
+  for (int l = 0, m = nl - 1; l < nl; l++, m--) {
+    double a = h[0,0,m]/(sq(Delta)*cm[]);
+    d[l] = rhs[0,0,m];
     for (int k = 0; k < nl; k++)
       H[l*nl + k] = 0.;
-    H[l*nl + l] = - 2.*dimension*sq(h[0,0,m])/sq(Delta) - 4.;
+    foreach_dimension() {
+      double s = Delta*slope_limited((dz.x - h[0,0,m] + h[-1,0,m])/Delta);
+      double sp = Delta*slope_limited((dzp.x - h[1,0,m] + h[0,0,m])/Delta);
+      d[l] -= a*(gmetric(0)*(h[-1,0,m] - s)*q[-1,0,m] +
+		 gmetric(1)*(h[1,0,m] + sp)*q[1,0,m]
+#if 1
+		 + 2.*G*theta_H*
+		 (hf.x[1,0,m]*gmetric(1)*(eta[1,0,m] - eta[0,0,m]) -
+		  hf.x[0,0,m]*gmetric(0)*(eta[0,0,m] - eta[-1,0,m]))
+#endif
+		 );
+      H[l*nl + l] -= a*(gmetric(0)*(h[0,0,m] + s) +
+			gmetric(1)*(h[0,0,m] - sp));
+    }
+    H[l*nl + l] -= 4.;
     if (l > 0) {
-      foreach_dimension()
-	d[l] -= h[0,0,m]*(h[-1,0,m]*phi[-1,0,m+1] +
-			  h[1,0,m]*phi[1,0,m+1])/sq(Delta);
-      H[l*(nl + 1) - 1] = - 2.*dimension*sq(h[0,0,m])/sq(Delta) + 4.;
+      H[l*(nl + 1) - 1] = 4.;
+      foreach_dimension() {
+        double s = Delta*slope_limited(dz.x/Delta);
+        double sp = Delta*slope_limited(dzp.x/Delta);
+	d[l] -= a*(gmetric(0)*(h[-1,0,m] + s)*q[-1,0,m+1] +
+		   gmetric(1)*(h[1,0,m] - sp)*q[1,0,m+1]);
+	H[l*(nl + 1) - 1] -= a*(gmetric(0)*(h[0,0,m] - s) +
+				gmetric(1)*(h[0,0,m] + sp));
+      }
     }
     for (int k = l + 1, s = -1; k < nl; k++, s = -s) {
       double hk = h[0,0,nl-1-k];
@@ -122,32 +153,78 @@ static void box_matrix (Point point, scalar phi, scalar rhs,
 	H[l*nl + k - 1] += 8.*s*h[0,0,m]/hk;
       }
     }
+    foreach_dimension()
+      dz.x -= h[0,0,m] - h[-1,0,m], dzp.x -= h[1,0,m] - h[0,0,m];
   }
 }
 
 /**
 ## Relaxation operator
 
-The updated values of $\phi$ in a column are obtained as
+The updated values of $\q$ in a column are obtained as
 $$
-\mathbf{\phi} = \mathbf{H}^{-1}\mathbf{b}
+\mathbf{\q} = \mathbf{H}^{-1}\mathbf{b}
 $$
 were $\mathbf{H}$ and $\mathbf{b}$ are the Hessenberg matrix and
 vector constructed by the function above. */
 
 #include "hessenberg.h"
 
+face vector hf;
+
+#define qflux(qf,i) {							\
+  double dz = zb[i] - zb[i-1];						\
+  foreach_layer() {							\
+    qf = 0.;								\
+    if (h[i] + h[i-1] > dry) {						\
+      double s = Delta*slope_limited(dz/Delta);				\
+      qf += (h[i] + s)*q[i] - (h[i-1] - s)*q[i-1];			\
+      if (point.l < nl - 1) {						\
+	double s = Delta*slope_limited((dz + h[i] - h[i-1])/Delta);     \
+	qf += (h[i] - s)*q[i,0,1] - (h[i-1] + s)*q[i-1,0,1];		\
+      }									\
+      qf *= gmetric(i)*hf.x[i]/(Delta*(h[i] + h[i-1]));			\
+    }
+
+#define end_qflux(i)				\
+    dz += h[i] - h[i-1];			\
+  }						\
+}
+
 trace
-static void relax_nh (scalar * phil, scalar * rhsl, int lev, void * data)
+static void relax_nh (scalar * ql, scalar * rhsl, int lev, void * data)
 {
-  scalar phi = phil[0], rhs = rhsl[0];
+  scalar q = ql[0], rhs = rhsl[0];
+  scalar eta = ql[1], rhs_eta = rhsl[1];
+  face vector alpha = *((vector *)data);
   foreach_level_or_leaf (lev) {
+    // q
     double H[nl*nl], b[nl];
-    box_matrix (point, phi, rhs, H, b);
+    box_matrix (point, q, rhs, hf, eta, H, b);
     solve_hessenberg (H, b, nl);
     int l = nl - 1;
     foreach_layer()
-      phi[] = b[l--];
+      q[] = b[l--];
+
+    // eta
+    double n = 0.;
+    foreach_dimension() {
+      double qf;
+      qflux(qf,0)
+	n += qf;
+      end_qflux(0);
+      qflux(qf,1)
+	n -= qf;
+      end_qflux(1);
+    }
+    n *= theta_H*sq(dt)*Delta/cm[];
+    n -= sq(Delta)*rhs_eta[];
+    double d = - sq(Delta);
+    foreach_dimension() {
+      n += (alpha.x[1]*eta[1] + alpha.x[]*eta[-1])/cm[];
+      d += (alpha.x[1] + alpha.x[])/cm[];
+    }
+    eta[] = n/d;
   }
 }
 
@@ -158,85 +235,187 @@ The residual is computed as
 $$
 \begin{aligned}
   \text{res}_l = & \text{rhs}_l -
-  h_l \partial_x \partial_x (h_l \phi_{l - 1 / 2}) -
-  h_l \partial_x \partial_x (h_l \phi_{l + 1 / 2}) -\\
-  & 4 (\phi_{l + 1 / 2} - \phi_{l - 1 / 2}) - 8 h_l \sum^{l - 1}_{k = 0}
-  (- 1)^{l + k}  \frac{\phi_{k + 1 / 2} - \phi_{k - 1 / 2}}{h_k}
+  h_l \partial_x \partial_x (h_l \q_{l - 1 / 2}) -
+  h_l \partial_x \partial_x (h_l \q_{l + 1 / 2}) -\\
+  & 4 (\q_{l + 1 / 2} - \q_{l - 1 / 2}) - 8 h_l \sum^{l - 1}_{k = 0}
+  (- 1)^{l + k}  \frac{\q_{k + 1 / 2} - \q_{k - 1 / 2}}{h_k}
 \end{aligned}
 $$
 */
 
+#if 0
 trace
-static double residual_nh (scalar * phil, scalar * rhsl,
+static double residual_nh (scalar * ql, scalar * rhsl,
 			   scalar * resl, void * data)
 {
-  scalar phi = phil[0], rhs = rhsl[0], res = resl[0];
+  scalar q = ql[0], rhs = rhsl[0], res = resl[0];
+  scalar eta = ql[1], rhs_eta = rhsl[1], res_eta = resl[1];
+  //  face vector alpha = *((vector *)data); // fixme
   double maxres = 0.;
-#if 0 // TREE
-  /* conservative coarse/fine discretisation (2nd order) */
-  assert (false);
-  face vector g[];
-  foreach_face()
-    g.x[] = face_gradient_x (a, 0);
+  double C = G*sq(dt);
+#if 1 // TREE
+  face vector g = new face vector[nl];
+  foreach_face() {
+    double qf;
+    qflux(qf,0) {
+      g.x[] = gmetric(0)*(qf + 2.*hf.x[]*theta_H*G*(eta[] - eta[-1]))/Delta;
+    } end_qflux(0);
+  }
   boundary_flux ({g});
   foreach (reduction(max:maxres)) {
-    res[] = b[] - lambda[]*a[];
-    foreach_dimension()
-      res[] -= (g.x[1] - g.x[])/Delta;
-#else // !TREE
-  /* "naive" discretisation (only 1st order on trees) */
-  foreach (reduction(max:maxres)) {
+    /* conservative coarse/fine discretisation (2nd order) */
+    // residual for q
+    coord dz, dzp;
+    foreach_dimension() {
+      dz.x = zb[] - zb[-1];
+      dzp.x = zb[1] - zb[];
+    }
     foreach_layer() {
-      res[] = rhs[] + 4.*phi[];
-      foreach_dimension()
-	res[] -= h[]*(h[1]*phi[1] - 2.*h[]*phi[] + h[-1]*phi[-1])/sq(Delta);
-      if (point.l < nl - 1) {
-        res[] -= 4.*phi[0,0,1];
-	foreach_dimension()
-	  res[] -= h[]*(h[1]*phi[1,0,1] - 2.*h[]*phi[0,0,1] +
-			h[-1]*phi[-1,0,1])/sq(Delta);
+      res[] = rhs[] + 4.*q[];      
+      foreach_dimension() {
+	res[] -= h[]*(g.x[1] - g.x[])/(Delta*cm[]);
+	res[] += h[]*(g.x[]*slope_limited((dz.x + h[] - h[-1])/Delta) +
+		      g.x[1]*slope_limited((dzp.x + h[1] - h[])/Delta))/
+	  (hf.x[] + hf.x[1] + dry);
+#if 0 // THETA_SCHEME==1 // fixme: why?
+	  /theta_H
+#endif
+	  ;
+	if (point.l > 0)
+	  res[] -= h[]*(g.x[0,0,-1]*slope_limited(dz.x/Delta) +
+			g.x[1,0,-1]*slope_limited(dzp.x/Delta))/
+	    (hf.x[0,0,-1] + hf.x[1,0,-1] + dry);
+#if 0 // THETA_SCHEME==1 // fixme: why
+	    /theta_H
+#endif
+	    ;
       }
+      if (point.l < nl - 1)
+        res[] -= 4.*q[0,0,1];
       for (int k = - 1, s = -1; k >= - point.l; k--, s = -s) {
 	double hk = h[0,0,k];
 	if (hk > dry)
-	  res[] += 8.*s*(phi[0,0,k] - phi[0,0,k+1])*h[]/hk;
+	  res[] += 8.*s*(q[0,0,k] - q[0,0,k+1])*h[]/hk;
       }
-#endif // !TREE    
-#if EMBED
-      if (p->embed_flux) {
-	double c, e = p->embed_flux (point, a, alpha, &c);
-	res[] += c - e*a[];
-      }
-#endif // EMBED    
+#if 1
       if (fabs (res[]) > maxres)
 	maxres = fabs (res[]);
+#endif
+      foreach_dimension() {
+	dz.x += h[] - h[-1];
+	dzp.x += h[1] - h[];
+      }
     }
+    // residual for eta
+    res_eta[] = rhs_eta[] - eta[];
+    foreach_layer()
+      foreach_dimension()
+        res_eta[] += theta_H*sq(dt)/2.*(g.x[1] - g.x[])/(Delta*cm[]);
+#endif // TREE
+
+#if 0    
+#if 1 // non-dimensional maximal residual
+    if (fabs(res_eta[]/C) > maxres)
+      maxres = fabs(res_eta[]/C);
+#else
+    if (fabs(res_eta[]) > maxres)
+      maxres = fabs(res_eta[]);
+#endif
+#endif
   }
-  boundary ({res});
+  boundary (resl);
+#if 1 // TREE
+  delete ((scalar *){g});
+#endif
   return maxres;
 }
-  
-/**
-## Pressure solution
-
-We first define a slope-limiting function and then compute the
-right-hand-side of the Poisson equation as
-$$
-\text{rhs}_l = \frac{2 h_l}{\Delta t}  \left( \partial_x (hu)^{\star}_l 
-  - [u^{\star} \partial_x z]_l +
-    2 w^{\star}_l + 4 \sum^{l - 1}_{k = 0} (- 1)^{l + k} w^{\star}_k \right)
-$$
-The default maximum slope is set to 30 degrees. */
-
-double max_slope = 0.577350269189626; // tan(30.*pi/180.)
-#define slope_limited(dz) (fabs(dz) < max_slope ? (dz) :		\
-			   ((dz) > 0. ? max_slope : - max_slope))
- 
-event pressure (i++)
+#else
+trace
+static double residual_nh (scalar * ql, scalar * rhsl,
+			   scalar * resl, void * data)
 {
-  double h1 = 0., v1 = 0.;
+  scalar q = ql[0], rhs = rhsl[0], res = resl[0];
+  scalar eta = ql[1], rhs_eta = rhsl[1], res_eta = resl[1];
+  //  face vector alpha = *((vector *)data); // fixme
+  double maxres = 0.;
+#if 1 // TREE
+  face vector g = new face vector[nl];
+  foreach_face() {
+    double qf;
+    qflux(qf,0) {
+      g.x[] = 2.*(qf + gmetric(0)*hf.x[]*theta_H*G*(eta[] - eta[-1])/Delta);
+    } end_qflux(0);
+  }
+  boundary_flux ({g});
+  foreach (reduction(max:maxres)) {
+    /* conservative coarse/fine discretisation (2nd order) */
+    // residual for q
+    coord dz;
+    foreach_dimension()
+      dz.x = (fm.x[1]*(zb[1] + zb[]) - fm.x[]*(zb[-1] + zb[]))/2.;
+    foreach_layer() {
+      res[] = rhs[] + 4.*q[];      
+      foreach_dimension() {
+	res[] -= h[]*(g.x[1] - g.x[])/(Delta*cm[]);
+	res[] += h[]*(g.x[] + g.x[1])/(hf.x[] + hf.x[1] + dry)*
+	  slope_limited((dz.x + hf.x[1] - hf.x[])/(Delta*cm[]))
+#if 0 // THETA_SCHEME==1 // fixme: why?
+	  /theta_H
+#endif
+	  ;
+	if (point.l > 0)
+	  res[] -= h[]*(g.x[0,0,-1] + g.x[1,0,-1])/
+	    (hf.x[0,0,-1] + hf.x[1,0,-1] + dry)*slope_limited(dz.x/(Delta*cm[]))
+#if 0 // THETA_SCHEME==1 // fixme: why
+	    /theta_H
+#endif
+	    ;
+      }
+      if (point.l < nl - 1)
+        res[] -= 4.*q[0,0,1];
+      for (int k = - 1, s = -1; k >= - point.l; k--, s = -s) {
+	double hk = h[0,0,k];
+	if (hk > dry)
+	  res[] += 8.*s*(q[0,0,k] - q[0,0,k+1])*h[]/hk;
+      }
+#if 1
+      if (fabs (res[]) > maxres)
+	maxres = fabs (res[]);
+#endif
+      foreach_dimension()
+	dz.x += hf.x[1] - hf.x[];
+    }
+    // residual for eta
+    res_eta[] = rhs_eta[] - eta[];
+    foreach_layer()
+      foreach_dimension()
+        res_eta[] += theta_H*sq(dt)/2.*(g.x[1] - g.x[])/(Delta*cm[]);
+#endif // TREE
+
+#if 0
+#if 1 // non-dimensional maximal residual
+    if (fabs(res_eta[]/C) > maxres)
+      maxres = fabs(res_eta[]/C);
+#else
+    if (fabs(res_eta[]) > maxres)
+      maxres = fabs(res_eta[]);
+#endif
+#endif
+  }
+  boundary (resl);
+#if 1 // TREE
+  delete ((scalar *){g});
+#endif
+  return maxres;
+}
+#endif
+
+event acceleration (i++)
+{
   scalar rhs = new scalar[nl];
+  double h1 = 0., v1 = 0.;
   foreach (reduction(+:h1) reduction(+:v1)) {
+#if 0 // necessary for galilean_invariance.tst
     coord dz;
     foreach_dimension()
       dz.x = zb[1] - zb[-1];
@@ -254,113 +433,102 @@ event pressure (i++)
 		  (hf.x[] > dry ? hu.x[]/hf.x[] : 0.))/(2.*Delta);
       for (int k = - 1, s = -1; k >= - point.l; k--, s = -s)
 	rhs[] += 4.*s*w[0,0,k];
-      rhs[] *= 2.*h[]/dt;
+      rhs[] *= 2.*h[]/(theta_H*dt);
       foreach_dimension()
 	dz.x += h[1] - h[-1];
       h1 += dv()*h[];
       v1 += dv();
     }
-  }
-
-  /**
-  We then call the multigrid solver, using the relaxation and residual
-  functions defined above, to get the non-hydrostatic pressure
-  $\phi$. */
-  
-  restriction ({h});
-  mgp = mg_solve ({phi}, {rhs}, residual_nh, relax_nh, NULL,
-		  nrelax = 4, res = NULL, minlevel = 1,
-		  tolerance = TOLERANCE*sq(h1/(dt*v1)));
-  delete ({rhs});
-
-  /**
-  The non-hydrostatic pressure gradient is added to the face-weighted
-  acceleration and to the face fluxes as
-  $$
-  \begin{aligned}
-  \alpha_{i + 1 / 2, l} \leftarrow & \partial_x
-  (h \phi)_{i + 1 / 2, l} - [\phi \partial_x z]_{i + 1 / 2, l}\\
-  hu_{i + 1 / 2, l} \leftarrow & hu_{i + 1 / 2, l} - \alpha_{i + 1 / 2, l}\\
-  ha_{i + 1 / 2, l} \leftarrow & ha_{i + 1 / 2, l} - \alpha_{i + 1 / 2, l}
-  \Delta t
-  \end{aligned}
-  $$
-  */
-  
-  foreach_face() {
-    double dz = zb[] - zb[-1];
+#elif 1
+    coord dz;
+    foreach_dimension()
+      dz.x = (fm.x[1]*(zb[1] + zb[]) - fm.x[]*(zb[-1] + zb[]))/2.;
     foreach_layer() {
-      if (hf.x[] > dry) {
-	double ax;
-	// fixme: metric terms are missing
-#if 0
-	if (point.l == nl - 1)
-	  ax = fm.x[]*((h[]*phi[] - h[-1]*phi[-1])/Delta +
-		       (phi[] + phi[-1])*slope_limited(dz/Delta))
-	    /(h[] + h[-1]);
-	else
-	  ax = fm.x[]*
-	    ((h[]*(phi[] + phi[0,0,1]) -
-	      h[-1]*(phi[-1] + phi[-1,0,1]))/Delta
-	     - ((phi[0,0,1] + phi[-1,0,1])*
-		slope_limited((dz + h[] - h[-1])/Delta) -
-		(phi[] + phi[-1])*slope_limited(dz/Delta)))
-	    /(h[] + h[-1]);
-	hu.x[] -= dt*hf.x[]*ax;
-	a.x[] -= hf.x[]*ax;
+      rhs[] = 2.*w[];
+      // fixme: add comment on Galilean invariance
+      // fixme: this should be consistent with the residual above
+      foreach_dimension()
+	rhs[] -= u.x[]*slope_limited((dz.x + hf.x[1] - hf.x[])/(Delta*cm[]));
+      if (point.l > 0)
+	foreach_dimension()
+	  rhs[] += u.x[0,0,-1]*slope_limited(dz.x/(Delta*cm[]));
+      foreach_dimension()
+	rhs[] += (hu.x[1] - hu.x[])/(Delta*cm[]);
+      for (int k = - 1, s = -1; k >= - point.l; k--, s = -s)
+	rhs[] += 4.*s*w[0,0,k];
+      rhs[] *= 2.*h[]/(theta_H*dt);
+      foreach_dimension()
+	dz.x += hf.x[1] - hf.x[];
+      h1 += dv()*h[];
+      v1 += dv();
+    }    
 #else
-	if (point.l == nl - 1)
-	  ax = fm.x[]*((h[]*phi[] - h[-1]*phi[-1])/Delta +
-		       (phi[] + phi[-1])*slope_limited(dz/Delta))/2.;
-	else
-	  ax = fm.x[]*((h[]*(phi[] + phi[0,0,1]) -
-			h[-1]*(phi[-1] + phi[-1,0,1]))/Delta
-		       - ((phi[0,0,1] + phi[-1,0,1])*
-			  slope_limited((dz + h[] - h[-1])/Delta) -
-			  (phi[] + phi[-1])*slope_limited(dz/Delta)))/2.;
-	hu.x[] -= dt*ax;
-	ha.x[] -= ax/gamma_H;
-#endif
-      }
-      dz += h[] - h[-1];
+    coord dz, dzp;
+    foreach_dimension() {
+      dz.x = zb[] - zb[-1];
+      dzp.x = zb[1] - zb[];
     }
+    foreach_layer() {
+      rhs[] = 2.*w[];
+      foreach_dimension()
+	rhs[] -= (hu.x[]*slope_limited((dz.x + h[] - h[-1])/Delta) +
+		  hu.x[1]*slope_limited((dzp.x + h[1] - h[])/Delta))/
+	(hf.x[] + hf.x[1] + dry);
+      if (point.l > 0)
+	foreach_dimension()
+	  rhs[] += (hu.x[0,0,-1]*slope_limited(dz.x/Delta) +
+		    hu.x[1,0,-1]*slope_limited(dzp.x/Delta))/
+	  (hf.x[0,0,-1] + hf.x[1,0,-1] + dry);
+      foreach_dimension()
+	rhs[] += (hu.x[1] - hu.x[])/(Delta*cm[]);
+      for (int k = - 1, s = -1; k >= - point.l; k--, s = -s)
+	rhs[] += 4.*s*w[0,0,k];
+      rhs[] *= 2.*h[]/(theta_H*dt);
+      foreach_dimension() {
+	dz.x += h[] - h[-1];
+	dzp.x += h[1] - h[];
+      }
+      h1 += dv()*h[];
+      v1 += dv();
+    }
+#endif
   }
-  boundary ((scalar *){hu});
-  boundary_flux ({ha});
 
-  /**
-  The maximum allowed vertical velocity is computed as
-  $$
-  w_\text{max} = b \sqrt{g | H |_{\infty}}
-  $$
-  with $b$ the breaking parameter.
+  scalar res = new scalar[nl];
+  mgp = mg_solve ({q,eta}, {rhs,rhs_eta}, residual_nh, relax_nh, &alpha_eta,
+		  res = {res,res_eta}, // fixme
+		  nrelax = 4, minlevel = 1,
+		  tolerance = TOLERANCE*sq(h1/(dt*v1)));
+  delete ({rhs, res});
 
-  The vertical pressure gradient is added to the vertical velocity as 
-  $$
-  w^{n + 1}_l = w^{\star}_l - \Delta t \frac{[\phi]_l}{h^{n+1}_l}
-  $$
-  and the vertical velocity is limited by $w_\text{max}$ as 
-  $$
-  w^{n + 1}_l \leftarrow \text{sign} (w^{n + 1}_l) 
-  \min \left( | w^{n + 1}_l |, w_\text{max} \right)
-  $$
-  */
-  
+  face vector su[];
+  foreach_face() {
+    su.x[] = 0.;
+    double qf;
+    qflux(qf,0) {
+      ha.x[] -= qf;
+      su.x[] += qf;
+      hu.x[] -= theta_H*dt*qf;
+    } end_qflux(0);
+  }
+  boundary_flux ({su});
+
   foreach() {
+    foreach_dimension()
+      rhs_eta[] += theta_H*sq(dt)*(su.x[1] - su.x[])/(Delta*cm[]);
     double wmax = 0.;
     foreach_layer()
       wmax += h[];
     wmax = wmax > 0. ? breaking*sqrt(G*wmax) : 0.;
-    foreach_layer() {
+    foreach_layer()
       if (h[] > dry) {
 	if (point.l == nl - 1)
-	  w[] += dt*phi[]/h[];
+	  w[] += dt*q[]/h[];
 	else
-	  w[] -= dt*(phi[0,0,1] - phi[])/h[];
+	  w[] -= dt*(q[0,0,1] - q[])/h[];
 	if (fabs(w[]) > wmax)
 	  w[] = (w[] > 0. ? 1. : -1.)*wmax;
-      }
-    }
+      }    
   }
   boundary ({w});
 }
@@ -371,5 +539,22 @@ event pressure (i++)
 The *w* and *phi* fields are freed. */
       
 event cleanup (i = end, last) {
-  delete ({w, phi});
+  delete ({w, q});
 }
+
+/**
+## References
+
+~~~bib
+@article{vitousek2013stability,
+  title={Stability and consistency of nonhydrostatic free-surface models using the semi-implicit $\theta$-method},
+  author={Vitousek, Sean and Fringer, Oliver B},
+  journal={International Journal for Numerical Methods in Fluids},
+  volume={72},
+  number={5},
+  pages={550--582},
+  year={2013},
+  publisher={Wiley Online Library}
+}
+~~~
+*/

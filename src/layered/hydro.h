@@ -38,19 +38,17 @@ only the components of velocity. */
 
 #define BGHOSTS 2
 #define LAYERS 1
-#include "utils.h"
+#include "run.h"
 #include "bcg.h"
 
 scalar zb[], eta, h;
 vector u;
-double G = 1., dry = 1e-4, CFL_H = 1.;
+double G = 1., dry = 1e-12 /* fixme: 1e-4 before */, CFL_H = nodata;
 double (* gradient) (double, double, double) = minmod2;
 bool linearised = false;
 
 vector hu, ha, hf;
 scalar * tracers = NULL;
-
-double gamma_H = 1., theta_H = 0.;
 
 /**
 ## Setup
@@ -117,7 +115,20 @@ event. */
 
 event defaults (i = 0)
 {
+
+  /**
+  The (velocity) CFL is limited by the unsplit advection scheme, so is
+  dependent on the dimension. The (gravity wave) CFL is set to 1/2 (if
+  not already set by the user). */
+  
+  CFL = 1./(2.*dimension);
+  if (CFL_H == nodata)
+    CFL_H = 0.5;  
+  
   u = new vector[nl];
+
+  // fixme: hu, ha and hf are used only by diffusion.h
+  
   hu = new face vector[nl];
   ha = new face vector[nl];
   hf = new face vector[nl];
@@ -146,72 +157,8 @@ event defaults (i = 0)
 }
 
 /**
-This function reconstructs face heights $h_{i+1/2}$, face fluxes
-$hu_{i+1/2}$ and face accelerations $ha_{i+1/2}$. */
-
-static void face_fields (double theta,
-			 face vector hu, face vector ha, face vector hf)
-{
-  trash ({hu, ha, hf});
-  foreach_face() {
-    
-    /**
-    We compute the acceleration as
-    $$
-    a_{i + 1 / 2, k} = - g \frac{\eta_{i + 1, k} - \eta_{i, k}}{\Delta}
-    $$
-    taking into account [metric
-    terms](/src/README#general-orthogonal-coordinates).*/
-    
-    double ax = - fm.x[]*G*(eta[] - eta[-1])/((cm[] + cm[-1])*Delta/2.);
-    foreach_layer() {
-
-      /**
-      The face velocity is first computed as
-      $$
-      u_{i + 1 / 2, k} = \frac{(hu)_{i + 1, k} + 
-      (hu)_{i, k}}{h_{i + 1, k} + h_{i, k}} + \Delta ta_{i + 1 / 2, k}
-      $$
-      with checks to avoid division by zero. */
-
-      double hl = h[-1] > dry ? h[-1] : 0.;
-      double hr = h[] > dry ? h[] : 0.;
-      hu.x[] = hl > 0. || hr > 0. ? (hl*u.x[-1] + hr*u.x[])/(hl + hr) : 0.;
-
-      /**
-      The face height `hf` is reconstructed using Bell-Collela-Glaz-style
-      upwinding. */
-	
-      double un = dt*(hu.x[] + dt*ax)/Delta, a = sign(un);
-      int i = - (a + 1.)/2.;
-      double g = h.gradient ? h.gradient (h[i-1], h[i], h[i+1])/Delta :
-	(h[i+1] - h[i-1])/(2.*Delta);
-      hf.x[] = h[i] + a*(1. - a*un)*g*Delta/2.;
-
-      /**
-      The height-weighted face acceleration $ha_{i+1/2}$ and
-      face flux $hu_{i+1/2}$ are computed as */
-
-      if (hf.x[] < dry)
-	ha.x[] = hu.x[] = hf.x[] = 0.;
-      else {
-	hf.x[] *= fm.x[];
-	ha.x[]  = hf.x[]*ax;
-	if (theta == 0.)
-	  hu.x[] = hf.x[]*(hu.x[] + dt*ax);
-	else
-	  hu.x[] *= hf.x[]*(1. - theta);
-      }
-    }
-  }
-  boundary ((scalar *){hu, ha, hf});
-}
-
-/**
 After user initialisation, we define the free-surface height $\eta$
 and initial (face) acceleration. */
-
-double dtmax;
 
 event init (i = 0)
 {
@@ -221,81 +168,46 @@ event init (i = 0)
       eta[] += h[];
   }
   boundary (all);
-
-  dt = 0;
-  face_fields (1e-30, hu, ha, hf);
-  dtmax = DT;
-  event ("stability");
-  face_fields (1e-30, hu, ha, hf);
 }
 
 /**
-## Stability condition
+[Vertical remapping](remap.h) is applied here if necessary. */
 
-The maximum timestep is set using the standard (hydrostatic) CFL condition
-$$
-\Delta t < \text{CFL}\frac{\Delta}{|\mathbf{u}|+\sqrt{gH}}
-$$
-or the modified (non-hydrostatic) condition ([Popinet,
-2020](/Bibliography#popinet2020))
-$$
-\Delta t < 
-\text{CFL}\frac{\Delta}{|\mathbf{u}|+\sqrt{g\Delta H\text{tanh}(H/\Delta)}}
-$$
-*/
+event remap (i++, last);
+ 
+/**
+Vertical diffusion (including viscosity) is added by this code. */
 
-event set_dtmax (i++,last) dtmax = DT;
+#include "diffusion.h"
 
-static bool hydrostatic = true;
+/**
+## Mesh adaptation
 
-event stability (i++,last)
+Plugs itself here. */
+
+#if TREE
+event adapt (i++,last);
+#endif
+
+static void advect_list (double dt, scalar * tracers)
 {
-  foreach_face (reduction (min:dtmax)) {
-    double Hf = 0.;
-    foreach_layer()
-      Hf += hf.x[];
-    if (Hf > dry) {
-      Hf /= fm.x[];
-      double cp = hydrostatic ? sqrt(G*Hf) : sqrt(G*Delta*tanh(Hf/Delta));
-      cp /= CFL_H;
-      foreach_layer() {
-	double c = hf.x[]*cp + fabs(hu.x[]);
-	if (c > 0.) {
-	  double dt = hf.x[]/fm.x[]*cm[]*Delta/c;
-	  if (dt < dtmax)
-	    dtmax = dt;
-	}
-      }
+#if !NOCFL // fixme: does not work for implicit-ml.tst
+  foreach_face()
+    foreach_layer() {
+      if (hu.x[]*dt/(Delta*cm[-1]) > CFL*h[-1])
+	hu.x[] = CFL*h[-1]*Delta*cm[-1]/dt;
+      else if (- hu.x[]*dt/(Delta*cm[]) > CFL*h[])
+	hu.x[] = - CFL*h[]*Delta*cm[]/dt;
     }
-  }
-  dt = dtnext (CFL*dtmax);
-}
-
-/**
-## Advection (and diffusion)
-
-This section first solves
-$$
-\begin{aligned}
-  \partial_t h_k + \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k & =
-  0,\\
-  \partial_t \left( h \mathbf{u} \right)_k + \mathbf{{\nabla}} \cdot \left(
-  h \mathbf{u}  \mathbf{u} \right)_k & = 0, \\
-  \partial_t \left( h s \right)_k + \mathbf{{\nabla}} \cdot \left(
-  h s  \mathbf{u} \right)_k & = 0,
-\end{aligned}
-$$
-where $s_k$ is any other tracer field added to the `tracers` list. */
-
-event advection_term (i++,last)
-{
-  if (grid->n == 1) // to optimise 1D-z models
-    return 0;
+  boundary ((scalar *){hu});
+#endif
   
+  /**
+  ## Advection */
+
   face vector flux[];
-  
   foreach_layer() {
-    
+        
     /**
     We compute the flux $(shu)_{i+1/2,k}$ for each tracer $s$, using a
     variant of the BCG scheme. */
@@ -308,7 +220,8 @@ event advection_term (i++,last)
 	  s.gradient (s[i-1], s[i], s[i+1])/Delta :
 	  (s[i+1] - s[i-1])/(2.*Delta);
 	double s2 = s[i] + a*(1. - a*un)*g*Delta/2.;
-#if dimension > 1
+
+#if 0 // dimension > 1
 	if (hf.y[i] + hf.y[i,1] > dry) {
 	  double vn = (hu.y[i] + hu.y[i,1])/(hf.y[i] + hf.y[i,1]);
 	  double syy = (s.gradient ? s.gradient (s[i,-1], s[i], s[i,1]) :
@@ -316,6 +229,7 @@ event advection_term (i++,last)
 	  s2 -= dt*vn*syy/(2.*Delta);
 	}
 #endif
+	
 	flux.x[] = s2*hu.x[];
       }
       boundary_flux ({flux});
@@ -335,79 +249,165 @@ event advection_term (i++,last)
     We then obtain $h^{n+1}$ and $s^{n+1}$ using
     $$
     \begin{aligned}
-    h_i^{n+1} & = h_i^n + \Delta t \frac{(hu)_{i+1/2} - (hu)_{i-1/2}}{\Delta}, \\
+    h_i^{n+1} & = h_i^n + \Delta t \frac{(hu)_{i+1/2} - (hu)_{i-1/2}}{\Delta},\\
     s_i^{n+1} & = \frac{(hs)^\star_i}{h_i^{n+1}}
     \end{aligned}
     $$
     */
 
     foreach() {
+      double h1 = h[];
       foreach_dimension()
-	h[] += dt*(hu.x[] - hu.x[1])/(Delta*cm[]);
-      if (h[] < dry) {
+	h1 += dt*(hu.x[] - hu.x[1])/(Delta*cm[]);
+      assert (h1 >= 0.);
+      if (h1 < dry) {
 	for (scalar f in tracers)
 	  f[] = 0.;
       }
       else
 	for (scalar f in tracers)
-	  f[] /= h[];
+	  f[] /= h1;
     }
   }
-  
-  /**
-  Finally the free-surface height $\eta$ is updated and the boundary
-  conditions are applied. */
-
-  foreach() {
-    double H = 0.;
-    foreach_layer()
-      H += h[];
-    eta[] = zb[] + H;
-  }
-  
-  scalar * list = list_copy ({h, eta});
-  for (scalar s in tracers)
-    list = list_append (list, s);
-  boundary (list);
-  free (list);
+  boundary (tracers);
 }
 
-/**
-[Vertical remapping](remap.h) is applied here if necessary. */
-
-event remap (i++, last);
-
-/**
-Vertical diffusion (including viscosity) is added by this code. */
-
-#include "diffusion.h"
-
-/**
-## Mesh adaptation
-
-Plugs itself here. */
-
-#if TREE
-event adapt (i++,last);
-#endif
-
-/**
-## Acceleration */
-
-event acceleration (i++, last)
-  face_fields (theta_H, hu, ha, hf);
-
-/**
-Coriolis terms plug themselves here. */
-
-event coriolis (i++, last);
-
-void apply_acceleration (double dt, double gamma)
+void advect_h (double dt)
 {
   foreach()
     foreach_layer() {
+      double h1 = h[];
       foreach_dimension()
-        u.x[] += gamma*dt*(ha.x[] + ha.x[1])/(hf.x[] + hf.x[1] + dry);
+	h1 += dt*(hu.x[] - hu.x[1])/(Delta*cm[]);
+      //      assert (h1 >= 0.);      
+      h[] = max(h1,0.);
+    }
+  boundary ({h});
+}
+
+trace
+void advect (double dt)
+{
+  advect_list (dt, tracers);
+  advect_h (dt);
+}
+
+#define STABILITY 1
+
+#if STABILITY
+double dtmax;
+
+event set_dtmax (i++,last) dtmax = DT;
+
+static bool hydrostatic = true;
+
+event stability (i++,last)
+{
+  foreach (reduction (min:dtmax)) {
+    double H = 0.;
+    foreach_layer()
+      H += h[];
+    if (H > dry) {
+      double cp = hydrostatic ? sqrt(G*H) : sqrt(G*Delta*tanh(H/Delta));
+      cp /= CFL_H;
+      foreach_layer()
+	foreach_dimension() {
+	  double c = cp + fabs(u.x[]/CFL);
+	  if (c > 0.) {
+	    double dt = 2.*cm[]/(fm.x[] + fm.x[1])*Delta/c;
+	    if (dt < dtmax)
+	      dtmax = dt;
+	  }
+        }
+    }
+  }
+  dt = dtnext (dtmax);
+}
+#endif // STABILITY
+
+#define gmetric(i) (2.*fm.x[i]/(cm[i] + cm[i-1]))
+
+event face_fields (i++, last)
+{
+  double dtmax = DT;
+  foreach_face (reduction (min:dtmax)) {
+    double ax = - gmetric(0)*G*(eta[] - eta[-1])/Delta;
+    double H = 0., um = 0.;
+    foreach_layer() {
+      double hl = h[-1] > dry ? h[-1] : 0.;
+      double hr = h[] > dry ? h[] : 0.;
+      hu.x[] = hl > 0. || hr > 0. ? (hl*u.x[-1] + hr*u.x[])/(hl + hr) : 0.;
+
+#if 1 // important for stability of gaussian-hydro.tst
+      // also has a significant influence on the amplitude of
+      // the non-hydrostatic waves for gaussian.tst
+      // setting a larger prefactor (e.g. 2.*dt) also stabilises
+      double hff;
+      if (h[] + h[-1] < dry) // fixme: useful??
+	hff = 0.;
+      else {
+	// fixme: dt needs to be multiplied by (1. - theta_H)
+	//	double un = (1. - theta_H)*dt*(hu.x[] + (1. - theta_H)*dt*ax)/Delta,
+	//	  a = sign(un);
+	double un = dt*(hu.x[] + dt*ax)/Delta, a = sign(un);
+	int i = - (a + 1.)/2.;
+	double g = h.gradient ? h.gradient (h[i-1], h[i], h[i+1])/Delta :
+	  (h[i+1] - h[i-1])/(2.*Delta);
+	hff = h[i] + a*(1. - a*un)*g*Delta/2.;
+      }
+#endif
+      hf.x[] = fm.x[]*hff;
+
+#if 0
+      hu.x[] *= hf.x[];
+      if (hu.x[]/cm[-1] > CFL*um*h[-1])
+	um = hu.x[]/(CFL*h[-1]*cm[-1]);
+      else if (- hu.x[]/cm[] > CFL*um*h[])
+	um = - hu.x[]/(CFL*h[]*cm[]);
+#else
+      if (fabs(hu.x[]) > um)
+	um = fabs(hu.x[]);
+      hu.x[] *= hf.x[];
+#endif
+      ha.x[] = hf.x[]*ax;
+ 
+      H += hff;
+    }
+    if (H > 0.) {
+      double c = um/CFL + hydrostatic ? sqrt(G*H)/CFL_H :
+	sqrt(G*Delta*tanh(H/Delta))/CFL_H;
+      double dt = min(cm[], cm[-1])*Delta/(c*fm.x[]);
+      if (dt < dtmax)
+	dtmax = dt;
+    }
+  }
+  boundary ((scalar *){ha, hu, hf});
+#if !STABILITY  
+#if 1
+  static double previous = 0.;
+  if (dtmax > previous)
+    dtmax = (previous + 0.1*dtmax)/1.1;
+  previous = dtmax;
+#endif
+  dt = dtnext (dtmax);
+#endif // !STABILITY
+}
+
+event coriolis (i++, last);
+ 
+event pre_acceleration (i++, last);
+
+event acceleration (i++, last)
+{
+  foreach_face()
+    foreach_layer() 
+      hu.x[] += dt*ha.x[];
+  boundary ((scalar *){hu});
+  
+  foreach()
+    foreach_layer() {
+      foreach_dimension()
+	u.x[] += dt*(ha.x[] + ha.x[1])/(hf.x[] + hf.x[1] + dry);
 #if dimension == 2
       // metric terms
       double dmdl = (fm.x[1,0] - fm.x[])/(cm[]*Delta);
@@ -418,11 +418,38 @@ void apply_acceleration (double dt, double gamma)
       u.y[] -= dt*fG*ux;
 #endif // dimension == 2
     }
-  boundary ((scalar *) {u});
+  boundary ((scalar *){u});
+
+#if 1
+  //  delete ((scalar *){ha});
+  advect (dt);
+  //  delete ((scalar *){hu, hf});
+#endif
 }
 
-event pressure (i++, last)
-  apply_acceleration (dt, gamma_H);
+scalar deta[]; // fixme: just for diagnostic
+
+event advection (i++, last)
+{
+  
+  /**
+  Finally the free-surface height $\eta$ is updated and the boundary
+  conditions are applied. */
+
+  foreach() {
+    double etap = zb[];
+    foreach_layer()
+      etap += h[];
+    deta[] = etap - eta[];
+    eta[] = etap;
+  }
+  
+  scalar * list = list_copy ({h, eta});
+  for (scalar s in tracers)
+    list = list_append (list, s);
+  boundary (list);
+  free (list);
+}
 
 /**
 ## Cleanup
@@ -481,7 +508,11 @@ double _radiation (Point point, double ref, scalar s)
   double H = 0.;
   foreach_layer()
     H += h[];
+#if 0  
   return H > dry ? sqrt(G/H)*(zb[] + H - ref) : 0.;
+#else
+  return sqrt (G*max(H,0.)) - sqrt(G*max(ref - zb[], 0.));
+#endif
 }
   
 #define radiation(ref) _radiation(point, ref, _s)

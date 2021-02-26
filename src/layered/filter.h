@@ -1,104 +1,47 @@
 /**
-# Filter for grid-scale oscillations
+# Fourth-order filter
 
-**Note that this is obsolete and is kept only for historical interest.**
+This is not ready for general consumption. Just kept for reference. */
 
-Because it is colocated, the [layered solver](hydro.h) can be prone to
-grid-scale oscillations. This noise is usually small but can be
-significant when gradients of bathymetry/wave fields are
-under-resolved.
-
-The filter below can be used to reduce this noise. It is inspired from
-the work of [Engquist et al, 1989](#engquist1989).
-
-The strength of the filter is controlled by the filtering timescale
-`filter`: the smaller the value, the stronger the filter. This can be
-interpreted as the timescale during which a disturbance must not move
-to be seen by the filter. */
-
-double filter = 0.;
+double filter = 1./16.; // maximum filtering for fourth-order filter, see Klemp
 
 event viscous_term (i++)
 {
-  if (filter > 0.) {
-    foreach()
-      foreach_dimension() {
-        double Hm = 0., H = 0., Hp = 0.;
-	foreach_layer()
-	  Hm += h[-1], H += h[], Hp += h[1];
-        if (Hm > dry && H > dry && Hp > dry) {
-	  double Dp = eta[1] - eta[], Dm = eta[] - eta[-1];
-
-	  /**
-	  The filter is only applied to extrema in the free-surface
-	  height $\eta$ (first condition) contained within two
-	  inflection points (second condition): this effectively
-	  selects only grid-scale oscillations and avoid filtering
-	  smooth extrema. */
-	  
-	  if (Dp*Dm < 0. && ((eta[2] + eta[] - 2.*eta[1])*
-			     (eta[-1] + eta[1] - 2.*eta[]) < 0. ||
-			     (eta[-1] + eta[1] - 2.*eta[])*
-			     (eta[-2] + eta[] - 2.*eta[-1]) < 0.)) {
-
-	    /**
-	    We then compute the shift in the value of $\eta$ necessary
-	    to smooth the extremum, see Algorithm 2.1 in [Engquist et
-	    al, 1989](#engquist1989). */ 
-	    
-	    double dp, dm;
-	    if (fabs(Dp) > fabs(Dm)) {
-	      dp = fabs(Dp);
-	      dm = fabs(Dm);
-	    }
-	    else {
-	      dp = fabs(Dm);
-	      dm = fabs(Dp);
-	    }
-	    double d = min(dm, dp/2.);
-	    double a = Dp > 0. ? 1. : -1.;
-
-	    /**
-	    We apply only part of the correction, weighted by the
-	    timescale. */
-	    
-	    eta[] += min(dt/filter, 1.)*a*d;
-	    double Hnew = eta[] - zb[];
-	    if (Hnew > dry) {
-	      foreach_layer()
-		h[] *= Hnew/H;
-	    }
-	    else {
-	      for (scalar s in tracers)
-		foreach_layer()
-		  s[] = 0.;
-	    }
-	  }
-	}
-      }
-
-    scalar * list = list_copy ({h, eta});
-    for (scalar s in tracers)
-      list = list_append (list, s);
-    boundary (list);
-    free (list);
-  }
+  // fourth-order filter
+#if dimension == 1
+  foreach()
+    foreach_layer()
+      for (scalar s in {w,u})
+	s[] -= (s[2] + s[-2] - 4.*(s[1] + s[-1]) + 6.*s[])*filter;
+#else // dimension == 2
+  // this is the 4th-order diagonal-term operator of [Klemp, 2017](#klemp2017)
+  foreach()
+    if (x > 114 && x < 169 && y > 10 && y < 65)
+    foreach_layer()
+      for (scalar s in {w,u})
+        s[] -= ((s[2,2] + s[2,-2] + s[-2,-2] + s[-2,2])/16. +
+		(s[-1,2] + s[1,2] + s[-1,-2] + s[1,-2] +
+		 s[2,-1] + s[2,1] + s[-2,-1] + s[-2,1])/4. +
+		3.*(s[2,0] + s[-2,0] + s[0,2] + s[0,-2])/8. -
+		(s[1,1] + s[1,-1] + s[-1,-1] + s[-1,1]) -
+		5.*(s[1,0] + s[-1,0] + s[0,1] + s[0,-1])/2. +
+		41.*s[]/4.)*filter;
+#endif // dimension == 2
+  boundary ({u, w});
 }
 
 /**
 ## References
 
 ~~~bib
-@article{engquist1989,
-  title={Nonlinear filters for efficient shock computation},
-  author={Engquist, Bj{\"o}rn and L{\"o}tstedt, Per and 
-          Sj{\"o}green, Bj{\"o}rn},
-  journal={Mathematics of Computation},
-  volume={52},
-  number={186},
-  pages={509--537},
-  year={1989},
-  url={https://www.ams.org/journals/mcom/1989-52-186/S0025-5718-1989-0955750-9/S0025-5718-1989-0955750-9.pdf}
+@article{klemp2017,
+  title={Damping characteristics of horizontal Laplacian diffusion filters},
+  author={Klemp, Joseph B},
+  journal={Monthly Weather Review},
+  volume={145},
+  number={11},
+  pages={4365--4379},
+  year={2017}
 }
 ~~~
 */
