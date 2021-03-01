@@ -407,8 +407,10 @@ mpi-periodic-3D.tst: CC = mpicc -D_MPI=8
 mpi-periodic-3D.tst: CFLAGS += -grid=multigrid3D
 
 # CADNA tests
+# These are ignored for the moment since nobody seems to be
+# interested and this is complicated to maintain and expensive to run
 
-cadna-tests: poiseuille.CADNA.tst sag.CADNA.tst poisson.CADNA.tst
+cadna-tests: # poiseuille.CADNA.tst sag.CADNA.tst poisson.CADNA.tst
 
 # Periodic boundary tests
 
