@@ -209,7 +209,7 @@ multilayer-tests: dispersion-gn.tst dispersion.tst \
 	stokes-ns.tst stokes.tst ponds-ml.tst ponds-implicit-ml.tst \
 	galilean_invariance.tst \
 	stommel-ml.tst explicit-ml.tst implicit-ml.tst lake-tr-ml.tst \
-	nonlinear-ml.tst
+	nonlinear-ml.tst tsunami.tst
 
 dispersion-gn.c: dispersion.c
 	ln -s dispersion.c dispersion-gn.c 

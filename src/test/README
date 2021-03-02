@@ -55,6 +55,7 @@ Note that only the documented test cases appear in the list below
 * [Transcritical flow over a bump with multiple layers](gaussian.c)
 * [Breaking Stokes wave](stokes.c)
 * [Advection of a rippled interface](galilean_invariance.c)
+* [Typical (1D) tsunami wave](tsunami.c)
 
 ## Coriolis
 
