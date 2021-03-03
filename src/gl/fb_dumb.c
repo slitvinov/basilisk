@@ -69,22 +69,24 @@ GLenum glGetError (void) { return GL_NO_ERROR; }
 
 void glGetFloatv (GLenum pname, GLfloat * params)
 {
+  int i;
   if (pname == GL_MODELVIEW_MATRIX)
-    for (int i = 0; i < 16; i++)
+    for (i = 0; i < 16; i++)
       params[i] = current_modelview[i];
 }
 
 void glMultMatrixf (const GLfloat * m)
 {
   GLfloat r[16];
-  for (int i = 0; i < 4; i++)
-    for (int j = 0; j < 4; j++) {
+  int i, j, k;
+  for (i = 0; i < 4; i++)
+    for (j = 0; j < 4; j++) {
       GLfloat a = 0.;
-      for (int k = 0; k < 4; k++)
+      for (k = 0; k < 4; k++)
 	a += current[4*k + i]*m[4*j + k];
       r[4*j + i] = a;
     }
-  for (int i = 0; i < 16; i++)
+  for (i = 0; i < 16; i++)
     current[i] = r[i];
 }
 
@@ -96,7 +98,8 @@ void glLoadIdentity (void)
     0, 0, 1, 0,
     0, 0, 0, 1
   };
-  for (int i = 0; i < 16; i++)
+  int i;
+  for (i = 0; i < 16; i++)
     current[i] = identity[i];
 }
 
