@@ -148,6 +148,7 @@ struct _bview {
   float tx, ty, sx, sy, sz;
   float quat[4];
   float fov;
+  float tz, near, far;
 
   bool gfsview;   // rotate axis to match gfsview
   bool reversed;  // reverse normals
@@ -256,26 +257,32 @@ static void redraw() {
 
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
-  double max = 2.;    
-#if 0  
-  GList * symmetries = get_symmetries (list);
-  max = gfs_gl_domain_extent (domain, symmetries);
-#endif
 
-  gluPerspective (view->fov, view->width/(float)view->height, 1., 1. + 2.*max);
-  glMatrixMode (GL_MODELVIEW);
+  if (view->far <= view->near) { // "traditional" camera parameters
+    double max = 2.;    
+    gluPerspective (view->fov, view->width/(float)view->height, 1., 1. + 2.*max);
 
-  glLoadIdentity ();
-  glTranslatef (view->tx, view->ty, - (1. + max));
+    glMatrixMode (GL_MODELVIEW);	    
+    glLoadIdentity ();
+    glTranslatef (view->tx, view->ty, - (1. + max));
+  }
+  else { // camera parameters compatible with interactive Basilisk View
+    gluPerspective (view->fov, view->width/(float)view->height,
+		    view->near, view->far);
+
+    glMatrixMode (GL_MODELVIEW);	    
+    glLoadIdentity ();
+    glTranslatef (view->tx, view->ty, view->tz);
+  }
     
   GLfloat m[4][4];
   gl_build_rotmatrix (m, view->quat);
   glMultMatrixf (&m[0][0]);
   
   if (view->gfsview) { // rotate to match gfsview parameters
-    m[0][0] = 0., m[0][1] =  0., m[0][2] =  -1.;
-    m[1][0] = 0., m[1][1] = -1., m[1][2] =   0.;
-    m[2][0] = 1., m[2][1] =  0., m[2][2] =   0.;
+    m[0][0] = 0., m[0][1] =  0., m[0][2] = -1.;
+    m[1][0] = 0., m[1][1] = -1., m[1][2] =  0.;
+    m[2][0] = 1., m[2][1] =  0., m[2][2] =  0.;
     glMultMatrixf (&m[0][0]);
   }
   
