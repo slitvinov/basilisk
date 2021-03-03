@@ -83,7 +83,7 @@ event remap (i++) {
 /**
 The *beta* array is freed at the end of the run. */
 
-event cleanup (i = end)
+event cleanup (t = end, last)
 {
   free (beta), beta = NULL;
 }

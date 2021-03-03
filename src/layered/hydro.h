@@ -38,7 +38,7 @@ only the components of velocity. */
 
 #define BGHOSTS 2
 #define LAYERS 1
-#include "run.h"
+#include "utils.h"
 #include "bcg.h"
 
 scalar zb[], eta, h;
@@ -108,6 +108,8 @@ event defaults0 (i = 0)
   eta.restriction = restriction_eta;
 #endif // TREE
 }
+
+#include "run.h"
 
 /**
 Other fields, such as $\mathbf{u}_k$ here, are added by this
@@ -428,7 +430,7 @@ event pressure (i++, last)
 The fields and lists allocated in [`defaults()`](#defaults0) above
 must be freed at the end of the run. */
    
-event cleanup (i = end, last)
+event cleanup (t = end, last)
 {
   delete ({eta, h, u, hu, ha, hf});
   free (tracers), tracers = NULL;

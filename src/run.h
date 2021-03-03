@@ -47,6 +47,6 @@ event defaults (i = 0) {
 At the end of the run we need to empty the default display, otherwise
 we would append multiple copies when re-running. */
 
-event cleanup (t = end) {
+event cleanup (t = end, last) {
   display ("", true);
 }
