@@ -206,7 +206,7 @@ multilayer-tests: dispersion-gn.tst dispersion.tst \
 	bar-ml.tst parabola-ml.tst lonlat-ml.tst \
 	wind-driven-nh.tst wind-driven.tst large.tst \
 	gaussian-stvt.tst gaussian-hydro.tst gaussian.tst \
-	stokes-ns.tst stokes.tst ponds-ml.tst ponds-implicit-ml.tst \
+	stokes-ns.tst stokes.tst ponds-ml.tst \
 	galilean_invariance.tst \
 	stommel-ml.tst explicit-ml.tst implicit-ml.tst lake-tr-ml.tst \
 	nonlinear-ml.tst tsunami.tst
@@ -239,6 +239,11 @@ gaussian-hydro.c: gaussian.c
 	ln -s gaussian.c gaussian-hydro.c 
 gaussian-hydro.tst: gaussian-hydro.s
 gaussian-hydro.tst: CFLAGS += -DML=1 -DHYDRO=1
+
+gaussian-nometric.c: gaussian.c
+	ln -s gaussian.c gaussian-nometric.c 
+gaussian-nometric.tst: gaussian-nometric.s
+gaussian-nometric.tst: CFLAGS += -DML=1 -DNOMETRIC=1
 
 gaussian-stvt.c: gaussian.c
 	ln -s gaussian.c gaussian-stvt.c 
@@ -276,11 +281,6 @@ ponds-ml.c: ponds.c
 ponds-ml.tst: ponds.s
 
 ponds-ml.tst: CFLAGS += -DML=1
-
-ponds-implicit-ml.c: ponds.c
-	ln -s ponds.c ponds-implicit-ml.c 
-ponds-implicit-ml.tst: ponds.s
-ponds-implicit-ml.tst: CFLAGS += -DML=1 -DIMPLICIT=1
 
 stommel-ml.tst: CFLAGS += -DML=1
 

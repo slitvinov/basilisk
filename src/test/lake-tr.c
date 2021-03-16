@@ -20,7 +20,7 @@ We use either the explicit or the implicit Saint-Venant solver. */
 # include "saint-venant.h"
 #elif ML
 # include "layered/hydro.h"
-# include "layered/implicit.h"
+# include "layered/nh.h"
 #else
 # include "saint-venant-implicit.h"
 #endif
@@ -30,7 +30,7 @@ We use either the explicit or the implicit Saint-Venant solver. */
 
 #define LEVEL 10
 
-double slope = 0.001, eta0 = 0.5, f = 0.05;
+double slope = 0.001, eta0 = 0.5, f = 0.025;
 
 int main() {
   L0 = 10000.;
@@ -38,14 +38,20 @@ int main() {
   G = 9.81;
   N = 1 << LEVEL;
   periodic (right);
-  DT = 10;
+
+#if ML
+  /**
+  We add some damping by off-centering the implicit scheme. */
+  
+  theta_H = 0.6;
+#endif
+
+  DT = 10;  
   run();
 }
 
-event init (i = 0) {
-#if ML  
-  theta_H = 0.55;
-#endif
+event init (i = 0)
+{
   foreach() {
     zb[] = - 50.*exp(-sq(x/1000.));
     h[] = eta0 - zb[];
@@ -61,11 +67,11 @@ implicitly. */
 event source (i++) {
 #if EXPLICIT || ML
   foreach()
-    u.x[] = (u.x[] + G*slope*dt)/(1. + dt*f/8.*u.x[]/sq(h[]));
+    u.x[] = (u.x[] + G*slope*dt)/(1. + dt*f/8.*u.x[]/h[]);
   boundary ((scalar *){u});
 #else
   foreach()
-    q.x[] = (q.x[] + h[]*G*slope*dt)/(1. + dt*f/8.*q.x[]/cube(h[]));
+    q.x[] = (q.x[] + h[]*G*slope*dt)/(1. + dt*f/8.*q.x[]/sq(h[]));
   boundary ((scalar *){q});
 #endif
 }
@@ -99,7 +105,8 @@ event logfile (i++) {
 /**
 We output the free-surface, Froude number etc.. */
 
-event printprofile (t = {600, 3600, 7200}) {
+event printprofile (t = {600, 3600, 7200})
+{
   char name[80];
   sprintf (name, "prof-%g", t);
   FILE * fp = fopen (name, "w");
@@ -114,6 +121,20 @@ event printprofile (t = {600, 3600, 7200}) {
   }
   fclose (fp);
 }
+
+#if 0
+event gnuplot (i += 10)
+{
+  static FILE * fp = popen ("gnuplot", "w");
+  if (i == 0)
+    fputs ("set term x11\nset yrange [-0.2:2]\n", fp);
+  fprintf (fp, "plot '-' u 1:2 w l\n");
+  foreach()
+    fprintf (fp, "%g %g\n", x, u.x[]/sqrt(G*h[]));
+  fprintf (fp, "e\n");
+  fflush (fp);
+}
+#endif
 
 /**
 ## Results

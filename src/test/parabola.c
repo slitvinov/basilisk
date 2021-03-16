@@ -34,6 +34,9 @@ int main()
   size (10000);
   G = 9.81;
   DT = 10.;
+#if ML
+  dry = 1e-6;
+#endif
 #if !EXPLICIT && !ML
   dry = 1e-6;
   CFLa = 0.25;

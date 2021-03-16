@@ -3,7 +3,7 @@
 
 This is a simple test case of a wind-driven lake where we can compare
 results with an analytical solution. For the bottom of the domain we
-impose *no-slip* condition (that is the default), for the top we
+impose a *no-slip* condition (that is the default), for the top we
 impose a Neumann condition (see [viscous friction between
 layers](/src/multilayer.h#viscous-friction-between-layers)
 for details). 
@@ -59,6 +59,11 @@ int main()
 
   /**
   We vary the number of layers. */
+
+#if NH
+  CFL_H = 8.;
+  theta_H = 1.; // to damp short waves faster
+#endif
   
   for (nl = 4; nl <= 32; nl *= 2)
     run();

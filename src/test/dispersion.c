@@ -54,7 +54,8 @@ wave period. */
 double Tm = 0., Es = 1., Ee = 1.;
 int nm = 0;
 
-event logfile (i++) {
+event logfile (i++)
+{
   double pe = 0., ke = 0.;
 #if ML  
   foreach() {
@@ -86,10 +87,13 @@ event logfile (i++) {
 #endif
 #if 0
   static FILE * fp = fopen ("timeseries", "w");
-  scalar w = wl[nl-1];
-  fprintf (fp, "%g %g %g %g %g %g\n", t/(2.*pi/sqrt(tanh(h0))),
-	   H, dh, ke, pe, w[]);
+  char name[80];
+  sprintf (name, "w%d", nl - 1);
+  scalar w = lookup_field (name);
+  fprintf (fp, "%g %g %g %g %g\n", t/(2.*pi/sqrt(tanh(h0))),
+	   H - h0, dh, ke, pe);
 #endif
+  
   static double told = 0., hold = 0., eold = 0., tsold = -1;
   if (i == 0) {
     Tm = 0., nm = 0;
@@ -131,7 +135,7 @@ event profile (t = 9.25*2.*pi/sqrt(tanh(h0)))
     Point point = locate (L0/2.);
     double zl = zb[];
     foreach_layer() {
-      fprintf (fp, "%g %g %g\n", zl + h[]/2., w[], phi[]);
+      fprintf (fp, "%g %g %g\n", zl + h[]/2., w[], q[]);
       zl += h[];
     }
     fclose (fp);
@@ -165,17 +169,22 @@ event movie (i += 1) {
   if (i == 0)
     fputs ("set term x11\n", fp);
   fprintf (fp,
-	   "set title 't = %.2f'\n"
+	   "set title 'nl = %d, h0 = %g, t = %.2f'\n"
 	   "unset key\n"
-	   "p []'-' u 1:3 w l, '' u 1:5 w l, '' u 1:7 w l, '' u 1:9 w l\n", t);
+	   "p []'-' u 1:4 w l, '' u 1:6 w l, '' u 1:8 w l, '' u 1:10 w l\n",
+	   // "p []'-' u 1:2 w l\n",
+	   nl, h0, t);
   foreach() {
-    fprintf (fp, "%g", x);
-    scalar h;
-    vector q;
-    for (h, q in hl, ql)
-      fprintf (fp, " %g %g", h[], q.x[]);
+    double etap = zb[];
+    foreach_layer()
+      etap += h[];
+    fprintf (fp, "%g %g", x, eta[] - etap);
+    //    eta[] = etap;
+    foreach_layer()
+      fprintf (fp, " %g %g", h[], u.x[]);
     fprintf (fp, "\n");
   }
+  boundary ({eta});
   fprintf (fp, "e\n\n");
   fflush (fp);
 
@@ -211,16 +220,30 @@ int main()
   size (2.*pi);
   N = 128;
 #if ML
+  CFL_H = 0.5;
   TOLERANCE = 1e-6;
-  for (nl = 1; nl <= 5; nl++) {
+  linearised = true;
+#if 1
+  for (nl = 1; nl <= 5; nl++)
+#else
+  nl = 1;
+#endif
+  {
     char name[80];
     sprintf (name, "log-%d", nl);
     freopen (name, "w", stderr);
     emax = 1.;
-    DT = 2.*pi/sqrt(tanh(h0))/100.;
+    DT = 2.*pi/sqrt(tanh(h0))/200.;
+#if 1
     for (h0 = 0.1; h0 <= 100. && emax > 0.96; h0 *= 1.3)
+#else
+    h0 = 0.37;
+#endif
+    {
       run();
+    }
   }
+#if 1
   freopen ("log-opt", "w", stderr);
   nl = 3;
   emax = 1.;
@@ -228,6 +251,7 @@ int main()
     emax = 1.5;
     run();
   }
+#endif
 #else
   alpha_d = 1.159;
   for (h0 = 0.1; h0 <= 100. && emax > 0.96 && emax < 1.04; h0 *= 1.2)
@@ -288,7 +312,7 @@ plot  omega1_keller(x)/sqrt(tanh(x)) t '1 layer', \
 ~~~gnuplot Relative energy evolution
 set ylabel 'Energy variation per period (%)'
 set yr [*:*]
-set key bottom left
+set key top left
 plot  'log-1' u ($1):($4*10.) t '1 layer' pt 5 lt 2, \
       'log-2' u ($1):($4*10.) t '2 layers' pt 6 lt 4, \
       'log-3' u ($1):($4*10.) t '3 layers' pt 9 lt 6, \

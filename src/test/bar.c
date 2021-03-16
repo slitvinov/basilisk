@@ -19,6 +19,7 @@ This test case is discussed in [Popinet
 #else
   #include "green-naghdi.h"
 #endif
+#include "layered/perfs.h"
 
 /**
 The basin needs to be long enough so as to minimise the influence of
@@ -30,8 +31,9 @@ int main() {
   L0 = 50;
   G = 9.81;
 #if ML
-  nl = 2;
+  nl = 2;  
   breaking = 0.1;
+  CFL_H = 0.5;
 #endif
   run();
 }
@@ -47,11 +49,7 @@ period of 2.02 seconds matches that of the experiment. */
 event init (i = 0)
 {
 
-#if ML
-  u.n[left]  = - radiation (0.021*sin(2.*pi*t/2.02));
-#else
   u.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
-#endif
   u.n[right] = + radiation (0);
   
   /**
@@ -91,11 +89,49 @@ void plot_profile (double t, FILE * fp)
   fflush (fp);
 }
 
-event profiles (t += 0.05) {
+event profiles (t += 0.05)
+{
+  double ke = 0., gpe = 0.;
+  foreach (reduction(+:ke) reduction(+:gpe)) {
+    double zc = zb[];
+    foreach_layer() {
+#if ML      
+      double norm2 = sq(w[]);
+#else
+      double norm2 = 0.;
+#endif
+      foreach_dimension()
+	norm2 += sq(u.x[]);
+      ke += norm2*h[]*dv();
+      gpe += (zc + h[]/2.)*h[]*dv();
+      zc += h[];
+    }
+  }
   static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
+  if (i == 0)
+    fprintf (fp, "set term x11\n");
   plot_profile (t, fp);
-  fprintf (stderr, "%g %f\n", t, interpolate (eta, 17.3, 0.));
+  fprintf (stderr, "%g %f %g %g\n", t, interpolate (eta, 17.3, 0.), ke, gpe);
 }
+
+#if 0
+event gnuplots (i += 10)
+{
+  static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
+  if (i == 0)
+    fprintf (fp, "set term x11\n"
+	       "set xrange [0:25]\n");
+  FILE * fp1 = fopen ("gnuplot", "w");
+  foreach()
+    fprintf (fp1, "%g %g %g %g\n", x, eta[], deta[], res_eta[]);
+  fclose (fp1);
+  fprintf (fp,
+	   "p 'gnuplot' u 1:3 w l t 'etap - eta',"
+	   "  '' u 1:4 w l t 'res'\n",
+	   t);
+  fflush (fp);
+}
+#endif
 
 event gnuplot (t = end) {
   FILE * fp = popen ("gnuplot", "w");

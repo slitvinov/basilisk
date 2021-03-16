@@ -136,14 +136,20 @@ $\beta$-plane coefficient. */
 double tau0 = 1e-5, Beta = 1.;
 
 /**
+We use the time-implicit version of the multilayer solver. */
+
+#include "layered/hydro.h"
+#include "layered/implicit.h"
+
+/**
 We include Coriolis acceleration with a $\beta$-plane variation and a
-linear friction coefficient $K_0$. We use the time-implicit version of
-the multilayer solver. */
+linear friction coefficient $K_0$. Better results are obtained with a
+more implicit discretisation than the default ($\alpha_H = 1/2$). */
 
 #define F0() (Beta*(y - 0.5))
 #define K0() (DELTA*Beta)
-#include "layered/hydro.h"
-#include "layered/implicit.h"
+#define alpha_H 1.
+#include "layered/coriolis.h"
 
 double border = 0.;
 
@@ -154,7 +160,7 @@ int main()
   We switch off advection of momentum. */
 
   linearised = true;
-  DT = 1;
+  DT = 0.5;
   TOLERANCE = 1e-8;
   for (border = 0; border <= 1; border++) {
     fprintf (stderr, "\n\n# border = %g\n", border);
@@ -174,10 +180,11 @@ $y$. This is [plugged in](/Basilisk%20C#event-inheritance) at the
 appropriate location in the multilayer solver i.e. just before
 [Coriolis acceleration](/src/layered/coriolis.h). */
 
-event viscous_term (i++)
+event coriolis (i++)
 {
   foreach()
-    u.x[] -= dt*tau0*cos(pi*y);
+    if (h[] > dry)
+      u.x[] -= dt*tau0*cos(pi*y);
 }
 
 /**
@@ -218,11 +225,6 @@ event init (i = 0)
 {
 
   /**
-  A "more implicit" timestepping improves the equilibrium solution. */
-
-  theta_H = alpha_H = 1.;  
-  
-  /**
   The "outside" is a dry, high terrain. Note that this is useful only
   when a "border" is not included. */
 
@@ -240,8 +242,10 @@ event init (i = 0)
   foreach() {
     zb[] = x > 0. && x < 1. && y > 0. && y < 1. ? -1. : 1.;
     h[] = max(0., - zb[]);
-    u.x[] = stommel_u (x, y);
-    u.y[] = stommel_v (x, y);
+    if (h[] > dry) {
+      u.x[] = stommel_u (x, y);
+      u.y[] = stommel_v (x, y);
+    }
   }
 }
 
@@ -316,7 +320,8 @@ event snapshot (t = end)
       (x > 0 && x < 1 && y > 0 && y < 1);
   }
   norm nv = normf (ev), nu = normf (eu);
-  fprintf (stderr, "%d %g %g %g %g %g\n", N, t, nv.rms, nv.max, nu.rms, nu.max);
+  fprintf (stderr, "%d %g %.4g %.4g %.4g %.4g\n",
+	   N, t, nv.rms, nv.max, nu.rms, nu.max);
 
   if (N == 64 && border == 0) {
     scalar psi[], psim[];

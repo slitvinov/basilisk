@@ -110,10 +110,12 @@ plot 'log' index 'Beta = 1.607e-11' u 1:3 w l t ''
 
 #include "grid/multigrid.h"
 
-double F0 = 0., Beta = 0.;
-#define F0() (F0 + Beta*y)
 #include "layered/hydro.h"
 #include "layered/implicit.h"
+
+double F0 = 0., Beta = 0.;
+#define F0() (F0 + Beta*y)
+#include "layered/coriolis.h"
 
 #define H0 1000.
 #define R0 100e3
@@ -128,7 +130,7 @@ int main()
   F0 = 1.0285e-4;
   //  TOLERANCE = 1e-6;
   linearised = true;
-  DT = 2000;
+  DT = 1000;
   //  theta_H = 0.55;
   fprintf (stderr, "# Beta = %g\n", Beta);
   run();
@@ -179,7 +181,7 @@ event logfile (i += 1; t <= 20.*86400) {
   static double e0 = 0.;
   if (i == 0)
     e0 = energy();
-  fprintf (stderr, "%g %g %.12g %g\n", t/86400., error(), energy()/e0, dt);
+  fprintf (stderr, "%g %g %.8g %g\n", t/86400., error(), energy()/e0, dt);
 }
 
 event plots (i = 100; i += 100)

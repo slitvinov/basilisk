@@ -45,8 +45,10 @@ added to the list of advected tracers. */
 event defaults (i = 0)
 {
   hydrostatic = false;
-  if (CFL_H == nodata)
+#if 0  
+  if (CFL_H == 1e40)
     CFL_H = 1.; // fixme: HUGE as set in implicit.h
+#endif
   mgp.nrelax = 4;
   
   assert (nl > 0);
@@ -100,10 +102,6 @@ $$
 where $\mathbf{\q}$ is the vector of $\q_l$ for this column and
 $\mathbf{d}$ is a vector dependent only on the values of $\q$ in the
 neighboring columns. */
-
-double max_slope = 0.577350269189626; // = tan(30.*pi/180.)
-#define slope_limited(dz) (fabs(dz) < max_slope ? (dz) :	\
-			   ((dz) > 0. ? max_slope : - max_slope))
 
 static void box_matrix (Point point, scalar q, scalar rhs,
 			face vector hf, scalar eta,
@@ -171,25 +169,6 @@ vector constructed by the function above. */
 #include "hessenberg.h"
 
 face vector hf;
-
-#define qflux(qf,i) {							\
-  double dz = zb[i] - zb[i-1];						\
-  foreach_layer() {							\
-    qf = 0.;								\
-    if (h[i] + h[i-1] > dry) {						\
-      double s = Delta*slope_limited(dz/Delta);				\
-      qf += (h[i] + s)*q[i] - (h[i-1] - s)*q[i-1];			\
-      if (point.l < nl - 1) {						\
-	double s = Delta*slope_limited((dz + h[i] - h[i-1])/Delta);     \
-	qf += (h[i] - s)*q[i,0,1] - (h[i-1] + s)*q[i-1,0,1];		\
-      }									\
-      qf *= gmetric(i)*hf.x[i]/(Delta*(h[i] + h[i-1]));			\
-    }
-
-#define end_qflux(i)				\
-    dz += h[i] - h[i-1];			\
-  }						\
-}
 
 trace
 static void relax_nh (scalar * ql, scalar * rhsl, int lev, void * data)
@@ -410,7 +389,7 @@ static double residual_nh (scalar * ql, scalar * rhsl,
 }
 #endif
 
-event acceleration (i++)
+event pressure (i++)
 {
   scalar rhs = new scalar[nl];
   double h1 = 0., v1 = 0.;

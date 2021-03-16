@@ -45,7 +45,8 @@ int main()
   nl = 60;
   G = g_;
   nu = 1./RE;
-  // max_slope = 1.; // a bit less dissipative
+  CFL_H = 1;
+  max_slope = 1.; // a bit less dissipative
   run();
 }
 

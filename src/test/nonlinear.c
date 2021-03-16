@@ -58,10 +58,11 @@ plot 'log' index 'F0 = 0.1' u 1:3 w l t 'C grid (Ro = 0.1)', \
 #pragma autolink -lgsl -lgslcblas
 #include "grid/multigrid.h"
 #if ML
-double F0 = 0.;
-# define F0() F0
 # include "layered/hydro.h"
 # include "layered/implicit.h"
+double F0 = 0.;
+# define F0() F0
+# include "layered/coriolis.h"
 #else
 # include "atmosphere.h"
 #endif
@@ -116,7 +117,7 @@ scalar h1[];
 event init (i = 0)
 {
 #if ML
-  CFL_H = 1.;
+  CFL_H = 0.25;
 #endif
   foreach()
     h1[] = h[] = (H0 + h0(sqrt (x*x + y*y)));

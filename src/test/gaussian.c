@@ -14,6 +14,7 @@ More details are given in [Popinet (2020)](/Bibliography#popinet2020). */
 # include "saint-venant.h"
 #else // ML
 # include "layered/hydro.h"
+# define phi q
 # if !HYDRO
 #   include "layered/nh.h"
 # endif
@@ -46,17 +47,20 @@ int main()
   
   nu = NU;
   nl = 20; // going to 30 changes very little
+#if ML
+#if NOMETRIC
+  max_slope = 0.;
+#endif
+#if !HYDRO  
+  NITERMIN = 2;
+#endif
+#endif
   run();
 }
 
 /**
 ## Initialisation and boundary conditions
 
-We create a field *hc* to check convergence on *h*. */
-
-scalar hc[];
-
-/**
 The inflow is a parabolic profile with a total flow rate *Q*. The
 function below computes the height *zc* of the middle of the layer and
 returns the corresponding velocity. */
@@ -95,15 +99,15 @@ double uleft (Point point, scalar s, double Q)
 /**
 We initialise the topography and the initial thickness of each layer *h*. */
 
-event init (i = 0) {
+event init (i = 0)
+{
   foreach() {
     zb[] = BA*exp(- sq(x - 10.)/5.);
-    hc[] = HR - zb[];
 #if !ML
-    h[] = hc[];
+    h[] = HR - zb[];
 #else
     foreach_layer()
-      h[] = hc[]/nl;
+      h[] = (HR - zb[])/nl;
 #endif
   }
 
@@ -125,8 +129,7 @@ event init (i = 0) {
   h[right] = dirichlet(HR);
 #else
   u.n[left] = dirichlet (uleft (point, _s, QL*(t < 10. ? t/10. : 1.)));
-  u.n[right] = neumann(0.);
-  h[right] = dirichlet(HR/nl);
+  u.n[right] = neumann(0);
 #endif
 
   /**
@@ -145,37 +148,35 @@ We can optionally add horizontal viscosity. */
 event viscous_term (i++)
 {
   // add horizontal viscosity (small influence)
-  foreach_layer() {
-    scalar d2u[];
-    foreach()
-      d2u[] = (u.x[1] + u.x[-1] - 2.*u.x[])/sq(Delta);
-    foreach()
-      u.x[] += dt*nu*d2u[];
-    foreach()
-      d2u[] = (w[1] + w[-1] - 2.*w[])/sq(Delta);
-    foreach()
-      w[] += dt*nu*d2u[];
-  }
-  boundary ({u, w});
+#if HYDRO
+  scalar * list = {u.x};
+#else
+  scalar * list = {u.x,w};
+#endif
+  scalar d2u[];
+  foreach_layer()
+    for (scalar s in list) {
+      foreach()
+	d2u[] = (u.x[1] + u.x[-1] - 2.*u.x[])/sq(Delta);
+      foreach()
+	u.x[] += dt*nu*d2u[];
+    }
+  boundary (list);
 }
 #endif
 
 /**
 We check for convergence. */
 
+scalar etac[];
+
 event logfile (t += 0.1; i <= 100000) {
-#if !ML
-  double dh = change (h, hc);
-#else
-  scalar H[];
-  foreach() {
-    H[] = 0.;
-    foreach_layer()
-      H[] += h[];
-  }
-  double dh = change (H, hc);
-#endif
-  if (i > 0 && dh < 1e-5)
+  FILE * fp = fopen ("dh", "w");
+  foreach()
+    fprintf (fp, "%g %g\n", x, eta[] - etac[]);
+  fclose (fp);
+  double dh = change (eta, etac);
+  if (i > 1 && dh < 5e-5)
     return 1;
 }
 
@@ -183,32 +184,34 @@ event logfile (t += 0.1; i <= 100000) {
 Uncomment this part if you want on-the-fly animation. */
 
 #if 0
-event gnuplot (i += 20) {
+event gnuplot (i += 20)
+{
   static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
   if (i == 0)
     fprintf (fp, "set term x11\n");
+  FILE * fp1 = fopen ("gnuplot", "w");
+  foreach_leaf() {
+    double H = 0.;
+    foreach_layer()
+      H += h[];
+    fprintf (fp1, "%g %g %g", x, zb[] + H, zb[]);
+    double z = zb[];
+    foreach_layer() {
+      fprintf (fp1, " %g", z);
+      z += h[];
+    }
+    fprintf (fp1, "\n");
+  }
+  fclose (fp1);
   fprintf (fp,
 	   "set title 'nl = %d, t = %.2f'\n"
-	   "p [%g:%g][0:]'-' u 1:3:2 w filledcu lc 3 t '',"
+	   "p [%g:%g][0:]'gnuplot' u 1:3:2 w filledcu lc 3 t '',"
 	   " '' u 1:(-1):3 t '' w filledcu lc -1", nl, t,
 	   X0, X0 + L0);
   int i = 4;
   foreach_layer()
     fprintf (fp, ", '' u 1:%d w l lw 2 t ''", i++);
   fprintf (fp, "\n");
-  foreach_leaf() {
-    double H = 0.;
-    foreach_layer()
-      H += h[];
-    fprintf (fp, "%g %g %g", x, zb[] + H, zb[]);
-    double z = zb[];
-    foreach_layer() {
-      fprintf (fp, " %g", z);
-      z += h[];
-    }
-    fprintf (fp, "\n");
-  }
-  fprintf (fp, "e\n\n");
   //  fprintf (fp, "pause 0.05\n");
   fflush (fp);
 }
@@ -217,7 +220,7 @@ event gnuplot (i += 20) {
 /**
 ## Outputs
 
-At the end of the simulation we save the profiles. */
+We save profiles at regular intervals. */
 
 event profiles (t += 5)
 {
@@ -314,9 +317,9 @@ plot 'log' w l t 'Multilayer', \
 ~~~
 
 ~~~gnuplot Final free surface profiles
-plot 'log' index 13 w l t 'Multilayer', \
+plot 'log' index 11 w l t 'Multilayer', \
      '../../examples/gaussian-ns/log' index 'prof70' w l t 'Navier-Stokes VOF', \
-     'gaussian.nometric' w l t 'no metric'
+     '../gaussian-nometric/log' index 12 w l t 'no metric'
 ~~~
 
 ~~~gnuplot Horizontal velocity field { width=100% }

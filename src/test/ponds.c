@@ -71,11 +71,7 @@ plot './eta-8' u 1:2:($3>dry?$5*30.:0):($3>dry?$6*30.:0) every 2:2 w vec lc 0
 
 #if ML
 # include "layered/hydro.h"
-# if IMPLICIT
-#   include "layered/implicit.h"
-# else
-#   include "layered/nh.h"
-# endif
+# include "layered/nh.h"
 #elif IMPLICIT
 # include "saint-venant-implicit.h"
 #else
@@ -92,9 +88,12 @@ int main()
 {
   init_grid (1 << LEVEL);
   size (1000.);
-  G = 9.81;
-#if IMPLICIT
+  G = 9.81; 
+#if IMPLICIT || ML
   DT = 10.;
+# if ML  
+  CFL_H = HUGE;
+# endif
 #endif
   run();
 }

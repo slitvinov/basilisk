@@ -12,7 +12,7 @@ added to the list of advected tracers. */
 event defaults0 (i = 0)
 {
   hydrostatic = true;
-  if (CFL_H == nodata)
+  if (CFL_H == 1e40)
     CFL_H = HUGE;
   mgH.nrelax = 4;
 }
@@ -64,27 +64,24 @@ scalar res_eta[];
 scalar rhs_eta;
 face vector alpha_eta;
 
-event pre_acceleration (i++)
+event acceleration (i++)
 {
   if (theta_H < 1.)
-    advect (dt*(1. - theta_H));
+    advect ((1. - theta_H)*dt);
     
   face vector su[];
   alpha_eta = new face vector;
   double C = - G*sq(theta_H*dt);
   foreach_face() {
-    double ax = - gmetric(0)*G*(eta[] - eta[-1])/Delta;
+    double ax = - theta_H*gmetric(0)*G*(eta[] - eta[-1])/Delta;
     su.x[] = alpha_eta.x[] = 0.;
     foreach_layer() {
-#if 0 // fixme: useful or not?
       double hl = h[-1] > dry ? h[-1] : 0.;
       double hr = h[] > dry ? h[] : 0.;
       double uf = hl > 0. || hr > 0. ? (hl*u.x[-1] + hr*u.x[])/(hl + hr) : 0.;
-      hf.x[] = fm.x[]*face_height_x (point, h, uf + dt*ax);
-#endif 
-      su.x[] += hu.x[] + dt*hf.x[]*theta_H*(1. - theta_H)*ax;
-      ha.x[]  = hf.x[]*(1. - theta_H)*ax;
-      hu.x[] += theta_H*dt*ha.x[];
+      hu.x[] = (1. - theta_H)*(hu.x[] + dt*hf.x[]*ax) + theta_H*hf.x[]*uf;
+      ha.x[] -= hf.x[]*ax;
+      su.x[] += hu.x[];
       alpha_eta.x[] += hf.x[];
     }
     alpha_eta.x[] *= C*gmetric(0);
@@ -98,14 +95,15 @@ event pre_acceleration (i++)
       rhs_eta[] -= dt*(su.x[1] - su.x[])/(Delta*cm[]);
   }
 
-  restriction ({h, hf, alpha_eta, zb}); // fixme: check which are really necessary
+  // fixme: check which are really necessary
+  restriction ({h, hf, alpha_eta, zb});
   
 #if TREE
   eta.restriction = restriction_average;
 #endif
 }
 
-event acceleration (i++)
+event pressure (i++)
 {
   mgH = mg_solve ({eta}, {rhs_eta}, residual_hydro, relax_hydro, &alpha_eta,
 		  res = {res_eta},
@@ -118,11 +116,13 @@ event acceleration (i++)
 #endif
 
   foreach_face() {
-    double ax = gmetric(0)*theta_H*G*(eta[] - eta[-1])/Delta;
+    double ax = - theta_H*gmetric(0)*G*(eta[] - eta[-1])/Delta;
     foreach_layer() {
-      ha.x[] -= hf.x[]*ax;
-      hu.x[] = theta_H*hu.x[] + (theta_H*(1. - theta_H) - 1.)*dt*ha.x[]
-	- sq(theta_H)*dt*hf.x[]*ax;
+      ha.x[] += hf.x[]*ax;
+      double hl = h[-1] > dry ? h[-1] : 0.;
+      double hr = h[] > dry ? h[] : 0.;
+      double uf = hl > 0. || hr > 0. ? (hl*u.x[-1] + hr*u.x[])/(hl + hr) : 0.;
+      hu.x[] = theta_H*(hf.x[]*uf + dt*ha.x[]) - dt*ha.x[];
     }
   }
   boundary ((scalar *){ha, hu});

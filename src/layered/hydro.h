@@ -38,12 +38,11 @@ only the components of velocity. */
 
 #define BGHOSTS 2
 #define LAYERS 1
-#include "run.h"
-#include "bcg.h"
+#include "utils.h"
 
 scalar zb[], eta, h;
 vector u;
-double G = 1., dry = 1e-12 /* fixme: 1e-4 before */, CFL_H = nodata;
+double G = 1., dry = 1e-12 /* fixme: 1e-4 before */, CFL_H = 1e40;
 double (* gradient) (double, double, double) = minmod2;
 bool linearised = false;
 
@@ -122,7 +121,7 @@ event defaults (i = 0)
   not already set by the user). */
   
   CFL = 1./(2.*dimension);
-  if (CFL_H == nodata)
+  if (CFL_H == 1e40)
     CFL_H = 0.5;  
   
   u = new vector[nl];
@@ -189,19 +188,19 @@ Plugs itself here. */
 event adapt (i++,last);
 #endif
 
-static void advect_list (double dt, scalar * tracers)
+void advect (double dt)
 {
-#if !NOCFL // fixme: does not work for implicit-ml.tst
-  foreach_face()
-    foreach_layer() {
-      if (hu.x[]*dt/(Delta*cm[-1]) > CFL*h[-1])
-	hu.x[] = CFL*h[-1]*Delta*cm[-1]/dt;
-      else if (- hu.x[]*dt/(Delta*cm[]) > CFL*h[])
-	hu.x[] = - CFL*h[]*Delta*cm[]/dt;
-    }
-  boundary ((scalar *){hu});
-#endif
-  
+  if (t > 0) {
+    foreach_face()
+      foreach_layer() {
+        if (hu.x[]*dt/(Delta*cm[-1]) > CFL*h[-1])
+	  hu.x[] = CFL*h[-1]*Delta*cm[-1]/dt;
+	else if (- hu.x[]*dt/(Delta*cm[]) > CFL*h[])
+	  hu.x[] = - CFL*h[]*Delta*cm[]/dt;
+      }
+    boundary ((scalar *){hu});
+  }  
+
   /**
   ## Advection */
 
@@ -260,36 +259,20 @@ static void advect_list (double dt, scalar * tracers)
       foreach_dimension()
 	h1 += dt*(hu.x[] - hu.x[1])/(Delta*cm[]);
       assert (h1 >= 0.);
+      h[] = h1;
       if (h1 < dry) {
 	for (scalar f in tracers)
 	  f[] = 0.;
       }
       else
 	for (scalar f in tracers)
-	  f[] /= h1;
+	  f[] /= h1;      
     }
   }
-  boundary (tracers);
-}
-
-void advect_h (double dt)
-{
-  foreach()
-    foreach_layer() {
-      double h1 = h[];
-      foreach_dimension()
-	h1 += dt*(hu.x[] - hu.x[1])/(Delta*cm[]);
-      //      assert (h1 >= 0.);      
-      h[] = max(h1,0.);
-    }
-  boundary ({h});
-}
-
-trace
-void advect (double dt)
-{
-  advect_list (dt, tracers);
-  advect_h (dt);
+  scalar * list = list_copy (tracers);
+  list = list_append (list, h);
+  boundary (list);
+  free (list);
 }
 
 #define STABILITY 1
@@ -329,6 +312,23 @@ event stability (i++,last)
 
 event face_fields (i++, last)
 {
+#if 0
+    hu.n[left] = 0.;
+    hu.n[right] = 0.;
+    hu.n[top] = 0.;
+    hu.n[bottom] = 0.;
+
+    ha.n[left] = 0.;
+    ha.n[right] = 0.;
+    ha.n[top] = 0.;
+    ha.n[bottom] = 0.;
+    
+    hf.n[left] = 0.;
+    hf.n[right] = 0.;
+    hf.n[top] = 0.;
+    hf.n[bottom] = 0.;
+#endif
+  
   double dtmax = DT;
   foreach_face (reduction (min:dtmax)) {
     double ax = - gmetric(0)*G*(eta[] - eta[-1])/Delta;
@@ -393,11 +393,32 @@ event face_fields (i++, last)
 #endif // !STABILITY
 }
 
-event coriolis (i++, last);
- 
-event pre_acceleration (i++, last);
+double max_slope = 0.577350269189626; // = tan(30.*pi/180.)
+#define slope_limited(dz) (fabs(dz) < max_slope ? (dz) :	\
+			   ((dz) > 0. ? max_slope : - max_slope))
 
-event acceleration (i++, last)
+#define qflux(qf,i) {							\
+  double dz = zb[i] - zb[i-1];						\
+  foreach_layer() {							\
+    qf = 0.;								\
+    if (h[i] + h[i-1] > dry) {						\
+      double s = Delta*slope_limited(dz/Delta);				\
+      qf += (h[i] + s)*q[i] - (h[i-1] - s)*q[i-1];			\
+      if (point.l < nl - 1) {						\
+	double s = Delta*slope_limited((dz + h[i] - h[i-1])/Delta);     \
+	qf += (h[i] - s)*q[i,0,1] - (h[i-1] + s)*q[i-1,0,1];		\
+      }									\
+      qf *= gmetric(i)*hf.x[i]/(Delta*(h[i] + h[i-1]));			\
+    }
+
+#define end_qflux(i)				\
+    dz += h[i] - h[i-1];			\
+  }						\
+}
+
+event acceleration (i++, last);
+
+event pressure (i++, last)
 {
   foreach_face()
     foreach_layer() 
@@ -443,12 +464,7 @@ event advection (i++, last)
     deta[] = etap - eta[];
     eta[] = etap;
   }
-  
-  scalar * list = list_copy ({h, eta});
-  for (scalar s in tracers)
-    list = list_append (list, s);
-  boundary (list);
-  free (list);
+  boundary ({eta});
 }
 
 /**

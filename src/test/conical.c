@@ -55,7 +55,9 @@ int main()
 
 #if ML
   breaking = 0.07;
-  nl = 1;
+  // nl = 1;
+  CFL_H = 0.5;
+  TOLERANCE = 1e-4;
 #endif
   
   init_grid (1 << MAXLEVEL);
@@ -118,8 +120,8 @@ event init (i = 0)
   left side (i.e. the "wave paddle"). */
 
 #if ML
-  eta[left] = H0 + eta0(t);
-  h[left] = (H0 + eta0(t))/nl;
+  eta[left] = dirichlet (H0 + eta0(t));
+  h[left] = dirichlet((H0 + eta0(t))/nl);
   u.n[left] = uleft (t)/nl;
   u.t[left] = 0.;
 #else
@@ -292,6 +294,27 @@ event logfile (i++) {
   #endif
   
   output_gauges (gauges, {eta});
+
+  /**
+  We also use a simple implicit scheme to implement quadratic bottom
+  friction i.e.
+  $$
+  \frac{d\mathbf{u}}{dt} = - C_f|\mathbf{u}|\frac{\mathbf{u}}{h}
+  $$
+  with $C_f=10^{-4}$. */
+  
+  foreach() {
+#if IMPLICIT
+    double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(q)/sq(h[]);
+    foreach_dimension()
+      q.x[] /= a;
+#else
+    double a = h[] < dry ? HUGE : 1. + 1e-4*dt*norm(u)/h[];
+    foreach_dimension()
+      u.x[] /= a;
+#endif
+  }
+  boundary ((scalar *){u});
 }
 
 /**

@@ -93,13 +93,13 @@ event monitoring (t += endoftime/100; t = 0.; t <= endoftime)
     foreach()
       foreach_layer() {
         absdevU[] = fabs(u.x[]-U);
-        absPhi[]  = fabs(phi[]);
+        absPhi[]  = fabs(q[]);
       }
-    boundary({absdevU,absPhi});
+    boundary({absdevU, absPhi});
     double maxdevU = statsf(absdevU).max/U;
     double maxPhi = statsf(absPhi).max;
-    assert (maxPhi < 1e-14 && maxdevU < 1e-14);
     fprintf (fpout, "%g %g %g %g\n", t, maxPhi, maxdevU, etaamp);
+    assert (maxPhi < 1e-13 && maxdevU < 1e-14);
   }
   maxwaveerror = max(maxwaveerror, etaamp);
 }
@@ -158,7 +158,7 @@ event moviemaker (t = end)
 {
   if (N == 128 && nl == 4)
     system ("mogrify -format gif plot*.png && "
-      "gifsicle --delay 10 --colors 256 --loop plot*.gif > wave.gif && "
+      "gifsicle --delay 10 --loop plot*.gif > wave.gif && "
       "rm -f plot*.*");
 }
 
