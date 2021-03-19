@@ -54,20 +54,26 @@
     return s1;
   }
   
-  static char * _processed[100]; int processed = 0;
   static char * _stack[100]; int stack = -1;
+
   static char * push (char * s) {
+    assert (stack + 1 < 100);
+    char * f = malloc (strlen (s) + 1);
+    strcpy (f, s);
+    _stack[++stack] = f;
+    return f;    
+  }
+  
+  static void push_once (char * s) {
+    static char * _processed[100];
+    static int processed = 0;
     int i;
     char * s1 = strip_path (s);
     for (i = 0; i < processed; i++)
       if (!strcmp (s1, strip_path (_processed[i])))
-	return NULL;
-    assert (processed < 100 && stack + 1 < 100);
-    char * f = malloc (strlen (s) + 1);
-    strcpy (f, s);
-    _stack[++stack] = f;
-    _processed[processed++] = f;
-    return f;
+	return; // already processed
+    assert (processed < 100);
+    _processed[processed++] = push (s);
   }
   
   #define pop()  _stack[stack--];
@@ -233,7 +239,7 @@ FDECL     {ID}+{SP}*\(
     char * path;
     FILE * fp = openpath (s, "r", &path);
     if (fp != NULL) {
-      push (path);
+      push_once (path);
       if (ftags && target) {
 	fputs ("incl ", ftags);
 	singleslash (shortpath(path), ftags);
