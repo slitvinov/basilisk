@@ -364,14 +364,6 @@ static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
     res[] = b[] - lambda[]*a[];
     foreach_dimension()
       res[] -= (g.x[1] - g.x[])/Delta;
-#else // !TREE
-  /* "naive" discretisation (only 1st order on trees) */
-  foreach (reduction(max:maxres)) {
-    res[] = b[] - lambda[]*a[];
-    foreach_dimension()
-      res[] += (alpha.x[0]*face_gradient_x (a, 0) -
-		alpha.x[1]*face_gradient_x (a, 1))/Delta;  
-#endif // !TREE    
 #if EMBED
     if (p->embed_flux) {
       double c, e = p->embed_flux (point, a, alpha, &c);
@@ -381,6 +373,23 @@ static double residual (scalar * al, scalar * bl, scalar * resl, void * data)
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
+#else // !TREE
+  /* "naive" discretisation (only 1st order on trees) */
+  foreach (reduction(max:maxres)) {
+    res[] = b[] - lambda[]*a[];
+    foreach_dimension()
+      res[] += (alpha.x[0]*face_gradient_x (a, 0) -
+		alpha.x[1]*face_gradient_x (a, 1))/Delta;  
+#if EMBED
+    if (p->embed_flux) {
+      double c, e = p->embed_flux (point, a, alpha, &c);
+      res[] += c - e*a[];
+    }
+#endif // EMBED    
+    if (fabs (res[]) > maxres)
+      maxres = fabs (res[]);
+  }
+#endif // !TREE    
   boundary (resl);
   return maxres;
 }

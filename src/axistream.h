@@ -58,6 +58,9 @@ static double residual_psi (scalar * al, scalar * bl, scalar * resl, void * data
     res[] = b[] + (a[0,1] - a[0,-1])/(2.*y*Delta);
     foreach_dimension()
       res[] -= (g.x[1] - g.x[])/Delta;
+    if (fabs (res[]) > maxres)
+      maxres = fabs (res[]);
+  }
 #else // !TREE
   /* "naive" discretisation (only 1st order on trees) */
   foreach (reduction(max:maxres)) {
@@ -65,10 +68,10 @@ static double residual_psi (scalar * al, scalar * bl, scalar * resl, void * data
     foreach_dimension()
       res[] += (face_gradient_x (a, 0) -
 		face_gradient_x (a, 1))/Delta;  
-#endif // !TREE
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
+#endif // !TREE
   boundary (resl);
   return maxres;
 }
