@@ -294,8 +294,8 @@ FDECL     {ID}+{SP}*\(
 ^{SP}*{ID}+{SP}*\**({SP}+{ID}+{SP}*\**)*{SP}+{ID}+{SP}*\( {
   // function definition
   echo();
-  if (ftags && scope == 0) {
-    //    fprintf (stderr, "'%s'\n", yytext);
+  if (ftags) {
+    // fprintf (stderr, "'%s' scope: %d\n", yytext, scope);
     char * s = yytext; int nl = 0;
     int fstatic = 0;
     s = strtok (s, " \t\v\n\f(");
