@@ -38,6 +38,8 @@ void clear()
 * *relative*: whether the *theta* and *phi* angles are absolute or
    relative to the current position (i.e. increments of the current
    angles).
+* *tz*, *near*, *far*: an alternative way of specifying the camera, 
+   compatible with the camera parameters in interactive Basilisk View.
 * *camera*: predefined camera angles: "left", "right", "top",
    "bottom", "front", "back" and "iso".
 * *map*: an optional coordinate mapping function.
@@ -53,6 +55,7 @@ struct _view_set {
   float bg[3];
   float theta, phi, psi;
   bool relative;
+  float tz, near, far;
   float res;
   char * camera;
   void (* map) (coord *);
@@ -167,6 +170,12 @@ void view (struct _view_set p)
     gl_add_quats (q, v->quat, v->quat);
   }
 
+  if (p.far > p.near) {
+    v->tz = p.tz;
+    v->far = p.far;
+    v->near = p.near;
+  }
+  
   if (p.res)
     v->res = p.res;
   
