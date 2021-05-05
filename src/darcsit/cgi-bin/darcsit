@@ -1404,7 +1404,7 @@ if [[ "$REQUEST_URI" == "/_register"* && -n "$USERS" ]] && is_not_bot; then
 	    messages="<li style=\"color:red;\">Password must contain at least one non-letter.</li>"
 	elif [[ "$bogopid" != "$bogopid2" ]]; then
 	    messages="<li style=\"color:red;\">Passwords do not match.</li>"
-	elif grep -q -F "$bogoid"$'\t' "$USERS"; then
+	elif grep -q -E ^"$bogoid"$'\t' "$USERS"; then
 	    messages="<li style=\"color:red;\">Sorry, that username is already taken.</li>"
 	else
 	    salt=$(date | sha1sum)
