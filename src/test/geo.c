@@ -62,11 +62,17 @@ Evolution of the surface-height error field. From left to right: t =
 A variant of this test case uses a $\beta$-plane approximation for the
 Coriolis parameter: $f = f_0 + \beta y$ with $\beta = 1.607\times
 10^{-11}$ m^-1^s^-1^. The numerical energy dissipation is displayed
-below.
+below. Note that this looks larger than for the Gerris equivalent case
+(as published in [Popinet & Rickard, 2007](#popinet2007)) because
+the proper reference for (available) potential energy is used here,
+which was not the case for the Gerris case.
 
-~~~gnuplot Evolution of the total energy for the non-linear geostrophic adjustment problem.
-set ylabel 'Normalised total energy'
-plot 'log' index 'Beta = 1.607e-11' u 1:3 w l t ''
+~~~gnuplot Evolution of the total energy for the $\beta$-plane geostrophic adjustment problem.
+set ylabel 'Normalised energy'
+set key center right
+plot 'log' index 'Beta = 1.607e-11' u 1:($3 + $4) w l t 'Total',	\
+     'log' index 'Beta = 1.607e-11' u 1:4 w l t 'Potential',            \
+     'log' index 'Beta = 1.607e-11' u 1:3 w l t 'Kinetic'
 ~~~
 
 ## References
@@ -145,6 +151,8 @@ scalar h1[];
 event init (i = 0)
 {
   foreach() {
+    zb[] = - H0; // this is important to define the reference level
+		 // for (available) potential energy
     h[] = h1[] = H0 + ETA0*exp (-(x*x + y*y)/(sq(R0)));
     u.x[] = 2.*G*ETA0*y/(F0*sq(R0))*exp (-(x*x + y*y)/(sq(R0)));
     u.y[] = - 2.*G*ETA0*x/(F0*sq(R0))*exp (-(x*x + y*y)/(sq(R0)));
@@ -163,14 +171,18 @@ double error()
   return max;
 }
 
-double energy()
+typedef struct {
+  double ke, pe;
+} Energy;
+
+Energy energy()
 {
-  double se = 0.;
-  foreach(reduction(+:se)) {
-    double ke = (sq(u.x[]) + sq(u.y[]))/2.;
-    se += (h[]*ke + G*h[]*(h[]/2. + zb[]))*sq(Delta);
+  double KE = 0., PE = 0.;
+  foreach(reduction(+:KE) reduction(+:PE)) {
+    KE += h[]*(sq(u.x[]) + sq(u.y[]))/2.*dv();
+    PE += G*sq(eta[])/2.*dv();
   }
-  return se;
+  return (Energy){KE, PE};
 }
 
 event movie (i += 10) {
@@ -178,10 +190,13 @@ event movie (i += 10) {
 }
 
 event logfile (i += 1; t <= 20.*86400) {
-  static double e0 = 0.;
+  static Energy E0 = {0.,0.};
+  Energy E = energy();
   if (i == 0)
-    e0 = energy();
-  fprintf (stderr, "%g %g %.8g %g\n", t/86400., error(), energy()/e0, dt);
+    E0 = E;
+  double Etot0 = E0.ke + E0.pe;
+  fprintf (stderr, "%g %g %.8g %.8g %g\n", t/86400., error(),
+	   E.ke/Etot0, E.pe/Etot0, dt);
 }
 
 event plots (i = 100; i += 100)
