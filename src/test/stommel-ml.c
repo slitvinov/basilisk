@@ -176,11 +176,9 @@ int main()
 ## Wind stress 
 
 We add the zonal wind stress, which only depends on "latitude"
-$y$. This is [plugged in](/Basilisk%20C#event-inheritance) at the
-appropriate location in the multilayer solver i.e. just before
-[Coriolis acceleration](/src/layered/coriolis.h). */
+$y$. */
 
-event coriolis (i++)
+event acceleration (i++)
 {
   foreach()
     if (h[] > dry)
