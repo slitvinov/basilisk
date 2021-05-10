@@ -358,6 +358,10 @@ the raster file.
 
 *zero*
 : if true NoDataValue are replaced by zero. Default is false.
+
+*smooth*
+: the number of Laplacian smoothing passes applied to the data before
+interpolation. Default is zero.
 */
 
 struct InputGRD {
@@ -366,6 +370,7 @@ struct InputGRD {
   char * file;
   double nodatavalue;
   bool linear, periodic, zero;
+  int smooth;
 };
 
 void input_grd (struct InputGRD p)
@@ -411,6 +416,31 @@ void input_grd (struct InputGRD p)
 	value[j + i*nx] = 0.;
     }
 
+  // Laplacian smoothing
+  if (p.smooth > 0) {
+    double * smoothed = qmalloc (nx*ny, double);
+    for (int s = 0; s < p.smooth; s++) {
+      for (int i = 0; i < ny; i++)
+	for (int j = 0 ; j < nx; j++) {
+	  int n = 0;
+	  smoothed[j + i*nx] = 0.;
+	  for (int k = -1; k <= 1; k++)
+	    for (int l = -1; l <= 1; l++)
+	      if ((l != 0 || k != 0) &&
+		  i + k >= 0 && i + k < ny &&
+		  j + l >= 0 && j + l < nx &&
+		  value[j + l + (i + k)*nx] != ndv)
+		smoothed[j + i*nx] += value[j + l + (i + k)*nx], n++;
+	  if (n == 0)
+	    smoothed[j + i*nx] = p.zero ? 0. : ndv;
+	  else
+	    smoothed[j + i*nx] /= n;
+	}
+      swap (double *, value, smoothed);
+    }
+    free (smoothed);
+  }
+  
   bool warning = false;  
   foreach_leaf() {
     if (p.periodic || input.boundary[right] == periodic_bc) {
