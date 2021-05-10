@@ -633,21 +633,6 @@ static char * remove_blanks (char * line)
   return line;
 }
 
-static void fields_stats()
-{
-  fprintf (ferr, "# t = %g, fields = {", t);
-  for (scalar s in all)
-    fprintf (ferr, " %s", s.name);
-  fputs (" }\n", ferr);
-  fprintf (ferr, "# %12s: %12s %12s %12s %12s\n",
-	   "name", "min", "avg", "stddev", "max");
-  for (scalar s in all) {
-    stats ss = statsf (s);
-    fprintf (ferr, "# %12s: %12g %12g %12g %12g\n",
-	     s.name, ss.min, ss.sum/ss.volume, ss.stddev, ss.max);
-  }
-}
-
 /**
 The [draw_get.h]() file is generated automatically by [params.awk]()
 and contains parsing commands for the functions defined in
