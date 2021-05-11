@@ -32,6 +32,7 @@ plot 'log' u ($1/1e3):4 w l
 #include "grid/multigrid1D.h"
 #include "layered/hydro.h"
 #include "layered/nh.h"
+#include "layered/check_eta.h"
 
 int main()
 {
@@ -72,7 +73,7 @@ event gnuplot (i += 10)
   fprintf (fp,
 	   "set title 't = %.2f min'\n"
 	   "p 'gnuplot' u ($1/1e3):3 w l t 'etap - eta',"
-	   "  '' u ($1/1e3):4 w l t 'res'\n"
+	   "  '' u ($1/1e3):4 w d t 'res'\n"
 	   //	   "pause 1\n"
 	   , t/60.);
   fflush (fp);
