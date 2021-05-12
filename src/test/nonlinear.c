@@ -42,10 +42,11 @@ set ylabel 'Normalised total energy'
 unset logscale
 set key bottom left
 plot 'log' index 'F0 = 0.1' u 1:3 w l t 'C grid (Ro = 0.1)', \
-     '../nonlinear-ml/log' index 'F0 = 0.1' u 1:3 w l	     \
-       t 'multilayer (Ro = 0.1)',			     \
+     '../nonlinear-ml/log' index 'F0 = 0.1' u 1:($3+$4) w l  \
+        t 'multilayer (Ro = 0.1)',			     \
      'log' index 'F0 = 0' u 1:3 w l t 'C grid (Ro = infty)', \
-     '../nonlinear-ml/log' index 'F0 = 0' u 1:3 w l t 'multilayer (Ro = infty)'
+     '../nonlinear-ml/log' index 'F0 = 0' u 1:($3+$4) w l    \
+        t 'multilayer (Ro = infty)'
 ~~~
 
 ## See also
@@ -119,8 +120,10 @@ event init (i = 0)
 #if ML
   CFL_H = 0.25;
 #endif
-  foreach()
+  foreach() {
+    zb[] = - H0;
     h1[] = h[] = (H0 + h0(sqrt (x*x + y*y)));
+  }
 #if ML
   foreach() {
     double r = sqrt (x*x + y*y), vt = vtheta(r);
@@ -128,10 +131,14 @@ event init (i = 0)
     u.y[] =   vt*x/r;
   }
 #else
-  foreach_face(x)
-    u.x[] = - vtheta(sqrt (x*x + y*y))*y/sqrt (x*x + y*y);
-  foreach_face(y)
-    u.y[] =   vtheta(sqrt (x*x + y*y))*x/sqrt (x*x + y*y);
+  foreach_face(x) {
+    double r = sqrt (x*x + y*y);
+    u.x[] = - vtheta(r)*y/r;
+  }
+  foreach_face(y) {
+    double r = sqrt (x*x + y*y);
+    u.y[] =   vtheta(r)*x/r;
+  }
 #endif
 }
 
@@ -149,22 +156,33 @@ double error()
   return max/(normf(h1).max - H0);
 }
 
-double energy()
+typedef struct {
+  double ke, pe;
+} Energy;
+
+Energy energy()
 {
-  double se = 0.;
-  foreach(reduction(+:se)) {
+  double KE = 0., PE = 0.;
+  foreach(reduction(+:KE) reduction(+:PE)) {
+#if ML
+    double ke = (sq(u.x[]) + sq(u.y[]))/2.;
+#else
     double ke = (sq(u.x[] + u.x[1,0]) + sq(u.y[] + u.y[0,1]))/8.;
-    se += (h[]*ke + G*h[]*(h[]/2. + zb[]))*sq(Delta);
+#endif
+    KE += h[]*ke*dv();
+    PE += G*sq(zb[] + h[])/2.*dv();
   }
-  return se;
+  return (Energy){ KE, PE };
 }
 
 event logfile (i += 10; t <= 5.)
 {
-  static double e0 = 0.;
+  static Energy E0 = {0., 0.};
+  Energy E = energy();
   if (i == 0)
-    e0 = energy();
-  fprintf (stderr, "%g %g %.12g\n", t, error(), energy()/e0);
+    E0 = E;
+  fprintf (stderr, "%g %g %.12g %.12g\n", t, error(),
+	   E.ke/(E0.ke + E0.pe), E.pe/(E0.ke + E0.pe));
 }
 
 event plots (t = end)
