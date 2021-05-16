@@ -270,16 +270,21 @@ Given a velocity field $\mathbf{u}$, this function fills a scalar
 field $\omega$ with the vorticity field
 $$
 \omega = \partial_x u_y - \partial_y u_x
-$$ */
+$$ 
+To properly take the metric into account, $\omega$ is computed as an
+average over the (surface) element, which is easily obtained as
+the circulation of $\mathbf{u}$ along the boundary of the
+element. Using the definitions of the [metric
+factors](README#general-orthogonal-coordinates) `fm` and `cm`, this
+gives the expression below. */
 
 void vorticity (const vector u, scalar omega)
 {
-  struct { double x, y; } a = {1., -1.};
-  foreach() {
-    omega[] = 0.;
-    foreach_dimension(2)
-      omega[] += a.x*center_gradient (u.y);
-  }
+  foreach()
+    omega[] = ((fm.x[1] - fm.x[])*u.y[] +
+	       fm.x[1]*u.y[1] - fm.x[]*u.y[-1] -
+	       (fm.y[0,1] - fm.y[])*u.x[] +
+	       fm.y[]*u.x[0,-1] - fm.y[0,1]*u.x[0,1])/(2.*cm[]*Delta + SEPS);
   boundary ({omega});
 }
 
