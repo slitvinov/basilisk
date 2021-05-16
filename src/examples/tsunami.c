@@ -161,7 +161,7 @@ balance. */
 
 event init (i = 0)
 {
-  terrain (zb, "/home/popinet/terrain/etopo2", NULL);
+  terrain (zb, "~/terrain/etopo2", NULL);
 
   if (restore (file = "dump"))
     conserve_elevation();
