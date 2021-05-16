@@ -627,7 +627,7 @@ static void end_colorized() {
   glDisable (GL_TEXTURE_1D);
 }
 
-#define colorize() colorized (p.fc, !p.color,				\
+#define colorize() colorized (p.fc, !VertexBuffer.color || !p.color,	\
 			      cmap, !VertexBuffer.color &&		\
 			      p.color && p.linear && col.i >= 0)
 
