@@ -271,6 +271,20 @@ void randomap (double cmap[NCMAP][3])
       cmap[i][k] = (noise() + 1.)/2.;
 }
 
+void blue_white_red (double cmap[NCMAP][3])
+{
+  for (int i = 0; i < (NCMAP + 1)/2; i++) {
+    cmap[i][0] = i/((NCMAP - 1)/2.);
+    cmap[i][1] = i/((NCMAP - 1)/2.);
+    cmap[i][2] = 1.;
+  }
+  for (int i = 0; i < (NCMAP - 1)/2; i++) {
+    cmap[i + (NCMAP + 1)/2][0] = 1.;
+    cmap[i + (NCMAP + 1)/2][1] = cmap[(NCMAP - 3)/2 - i][1];
+    cmap[i + (NCMAP + 1)/2][2] = cmap[(NCMAP - 3)/2 - i][1];
+  }
+}
+
 /**
 Given a colormap and a minimum and maximum value, this function
 returns the red/green/blue triplet corresponding to *val*. */
