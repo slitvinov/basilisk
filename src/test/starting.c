@@ -233,10 +233,10 @@ void display_omega (int width, int height)
 	ty = 1e-12, // fixme: this is necessary to re-center the view
 	width = width, height = height);
   draw_vof ("cs", filled = -1, fc = {1,1,1});
-  draw_vof ("cs");
-  squares ("omega", min = -12, max = 12, linear = 1, map = cool_warm);
+  draw_vof ("cs", lw = 6);
+  squares ("omega", min = -12, max = 12, linear = true, map = blue_white_red);
   mirror ({0,1}) {
-    draw_vof ("cs");
+    draw_vof ("cs", lw = 6);
     squares (color = "level", min = 6, max = maxlevel);
   }
 }
@@ -256,7 +256,7 @@ event snapshots (t = 1.; t <= 3.; t += 1.)
     draw_vof ("cs", filled = -1, fc = {1,1,1});
     draw_vof ("cs", filled = 0, lw = 1);
     double max = Re == 9500 ? 40 : 12;
-    squares ("omega", min = -max, max = +max, linear = 1, map = cool_warm);
+    squares ("omega", min = -max, max = +max, linear = 1, map = blue_white_red);
     char name[80];
     sprintf (name, "zoom-%g.png", t);
     save (name);
