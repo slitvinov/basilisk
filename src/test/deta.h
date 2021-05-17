@@ -1,5 +1,11 @@
 #include "layered/check_eta.h"
 
+event init (i = 0)
+{
+  if (res_eta.i < 0)
+    res_eta = new scalar;
+}
+
 event gnuplots (i += 10)
 {
   static FILE * fp = popen ("gnuplot 2> /dev/null", "w");

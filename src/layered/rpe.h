@@ -235,11 +235,6 @@ struct _Energy {
 
 double energy (struct _Energy p)
 {
-#if !NH
-  scalar w = new scalar[nl];
-  vertical_velocity (w);
-#endif // !NH
-  
   double PE = 0., KE = 0.;
   foreach(reduction(+:PE) reduction(+:KE)) {
     double z = zb[];
@@ -247,7 +242,9 @@ double energy (struct _Energy p)
       z += h[]/2;
       double mass = h[]*dv()*(1. + drho(T[]));
       PE += mass*z;
+#if NH
       KE += mass*sq(w[])/2.;
+#endif
       foreach_dimension()
 	KE += mass*sq(u.x[])/2.;
       z += h[]/2;
@@ -256,11 +253,6 @@ double energy (struct _Energy p)
   PE *= G;
   if (p.PE) *p.PE = PE;
   if (p.KE) *p.KE = KE;
-
-#if !NH
-  delete ({w});
-#endif
-  
   return PE + KE;
 }
 

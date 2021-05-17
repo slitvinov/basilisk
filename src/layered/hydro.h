@@ -1,10 +1,13 @@
 /**
 # A vertically-Lagrangian multilayer solver for free-surface flows
 
-This is the implementation of the solver described in [Popinet,
-2020](/Bibliography#popinet2020). The system of $n$ layers of
-incompressible fluid pictured below is modelled as the set of
-(hydrostatic) equations:
+The theoretical basis and main algorithms for this solver are
+described in [Popinet, 2020](/Bibliography#popinet2020). Note however
+that this version of the solver is more recent and may not match the
+details of Popinet, 2020.
+
+The system of $n$ layers of incompressible fluid pictured below is
+modelled as the set of (hydrostatic) equations:
 $$
 \begin{aligned}
   \partial_t h_k + \mathbf{{\nabla}} \cdot \left( h \mathbf{u} \right)_k & =
@@ -26,15 +29,16 @@ The `zb` and `eta` fields define the bathymetry and free-surface
 height. The `h` and `u` fields define the layer thicknesses and velocities.
 
 The acceleration of gravity is `G` and `dry` controls the minimum
-layer thickness. The hydrostatic CFL criterion is defined by `CFL_H`.
+layer thickness. The hydrostatic CFL criterion is defined by
+`CFL_H`. It is set to a very large value by default, but will be tuned
+either by the user or by the default solver settings (typically
+depending on whether time integration is explicit or implicit).
 
 The `gradient` pointer gives the function used for limiting.
 
-The `hu`, `ha` and `hf` fields define the face flux $hu$,
-height-weighted face acceleration and face height for each layer.
-
 `tracers` is a list of tracers for each layer. By default it contains
-only the components of velocity. */
+only the components of velocity (unless `linearised` is set to `true`
+in which case the tracers list is empty). */
 
 #define BGHOSTS 2
 #define LAYERS 1
@@ -42,12 +46,11 @@ only the components of velocity. */
 
 scalar zb[], eta, h;
 vector u;
-double G = 1., dry = 1e-12 /* fixme: 1e-4 before */, CFL_H = 1e40;
+double G = 1., dry = 1e-12, CFL_H = 1e40;
 double (* gradient) (double, double, double) = minmod2;
-bool linearised = false;
 
-vector hu, ha, hf;
 scalar * tracers = NULL;
+bool linearised = false;
 
 /**
 ## Setup
@@ -125,13 +128,7 @@ event defaults (i = 0)
     CFL_H = 0.5;  
   
   u = new vector[nl];
-
-  // fixme: hu, ha and hf are used only by diffusion.h
-  
-  hu = new face vector[nl];
-  ha = new face vector[nl];
-  hf = new face vector[nl];
-  reset ({u, hu, ha, hf}, 0.);
+  reset ({u}, 0.);
     
   if (!linearised)
     foreach_dimension()
@@ -152,12 +149,11 @@ event defaults (i = 0)
   /**
   We setup the default display. */
 
-  display ("squares (color = 'h > 0 ? eta : nodata', spread = -1);");
+  display ("squares (color = 'eta > zb ? eta : nodata', spread = -1);");
 }
 
 /**
-After user initialisation, we define the free-surface height $\eta$
-and initial (face) acceleration. */
+After user initialisation, we define the free-surface height $\eta$. */
 
 event init (i = 0)
 {
@@ -170,39 +166,131 @@ event init (i = 0)
 }
 
 /**
-[Vertical remapping](remap.h) is applied here if necessary. */
+## Computation of face values
 
-event remap (i++, last);
- 
-/**
-Vertical diffusion (including viscosity) is added by this code. */
+At each timestep, temporary face fields are defined for the fluxes $(h
+\mathbf{u})^{n+1/2}$, face height $h_f^{n+1/2}$ and height-weighted
+face accelerations $(ha)^{n+1/2}$. */
 
-#include "diffusion.h"
+#define gmetric(i) (2.*fm.x[i]/(cm[i] + cm[i-1]))
 
-/**
-## Mesh adaptation
+static bool hydrostatic = true;
+face vector hu, hf, ha;
 
-Plugs itself here. */
-
-#if TREE
-event adapt (i++,last);
-#endif
-
-void advect (double dt)
+event face_fields (i++, last)
 {
-  if (t > 0) {
-    foreach_face()
-      foreach_layer() {
-        if (hu.x[]*dt/(Delta*cm[-1]) > CFL*h[-1])
-	  hu.x[] = CFL*h[-1]*Delta*cm[-1]/dt;
-	else if (- hu.x[]*dt/(Delta*cm[]) > CFL*h[])
-	  hu.x[] = - CFL*h[]*Delta*cm[]/dt;
-      }
-    boundary ((scalar *){hu});
-  }  
+  hu = new face vector[nl];
+  hf = new face vector[nl];
+  ha = new face vector[nl];
 
   /**
-  ## Advection */
+  The (CFL-limited) timestep is also computed by this function. A
+  difficulty is that the prediction step below also requires an
+  estimated timestep (the `pdt` variable below). The timestep at the
+  previous iteration is used as estimate. For the initial timestep a
+  "sufficiently small" value is used. */
+  
+  static double pdt = 1e-6;
+  double dtmax = DT;
+  foreach_face (reduction (min:dtmax)) {
+    double ax = - gmetric(0)*G*(eta[] - eta[-1])/Delta;
+    double H = 0., um = 0.;
+    foreach_layer() {
+
+      /**
+      The face velocity is computed as the height-weighted average of
+      the cell velocities. */
+      
+      double hl = h[-1] > dry ? h[-1] : 0.;
+      double hr = h[] > dry ? h[] : 0.;
+      hu.x[] = hl > 0. || hr > 0. ? (hl*u.x[-1] + hr*u.x[])/(hl + hr) : 0.;
+
+      /**
+      The face height is computed using a variant of the
+      [BCG](/src/bcg.h) scheme. */
+      
+      double hff, un = pdt*(hu.x[] + pdt*ax)/Delta, a = sign(un);
+      int i = - (a + 1.)/2.;
+      double g = h.gradient ? h.gradient (h[i-1], h[i], h[i+1])/Delta :
+	(h[i+1] - h[i-1])/(2.*Delta);
+      hff = h[i] + a*(1. - a*un)*g*Delta/2.;
+      hf.x[] = fm.x[]*hff;
+
+      /**
+      The maximum velocity is stored and the flux and height-weighted
+      accelerations are computed. */
+      
+      if (fabs(hu.x[]) > um)
+	um = fabs(hu.x[]);
+      
+      hu.x[] *= hf.x[];
+      ha.x[] = hf.x[]*ax;
+ 
+      H += hff;
+    }
+
+    /**
+    The maximum timestep is computed using the total depth `H` and the
+    advection and gravity wave CFL criteria. The gravity wave speed
+    takes dispersion into account in the non-hydrostatic case. */
+    
+    if (H > dry) {
+      double c = um/CFL + (hydrostatic ? sqrt(G*H) :
+			   sqrt(G*Delta*tanh(H/Delta)))/CFL_H;
+      double dt = min(cm[], cm[-1])*Delta/(c*fm.x[]);
+      if (dt < dtmax)
+	dtmax = dt;
+    }
+  }
+  boundary ((scalar *){ha, hu, hf});
+
+  /**
+  The timestep is computed, taking into account the timing of events,
+  and also stored in `pdt` (see comment above). */
+  
+  pdt = dt = dtnext (dtmax);
+}
+
+/**
+## Advection and diffusion
+
+The function below approximates the advection terms using estimates of
+the face fluxes $h\mathbf{u}$ and face heights $h_f$. */
+
+void advect (scalar * tracers, face vector hu, face vector hf, double dt)
+{
+
+  /**
+  The fluxes are first limited according to the CFL condition to
+  ensure strict positivity of the layer heights. This step is
+  necessary due to the approximate estimation of the CFL condition in
+  the timestep calculation above. */
+  
+  foreach_face()
+    foreach_layer() {
+    double hul = hu.x[];
+    if (hul*dt/(Delta*cm[-1]) > CFL*h[-1])
+      hul = CFL*h[-1]*Delta*cm[-1]/dt;
+    else if (- hul*dt/(Delta*cm[]) > CFL*h[])
+      hul = - CFL*h[]*Delta*cm[]/dt;
+
+    /**
+    In the case where the flux is limited, and for multiple layers, an
+    attempt is made to conserve the total barotropic flux by merging
+    the flux difference with the flux in the layer just above. This
+    allows to maintain an accurate evolution for the free-surface
+    height $\eta$. */
+    
+    if (hul != hu.x[]) {
+      if (point.l < nl - 1)
+	hu.x[0,0,1] += hu.x[] - hul;
+      else if (nl > 1)
+	fprintf (stderr, "warning: could not conserve barotropic flux "
+		 "at %g,%g,%d\n", x, y, point.l);
+      hu.x[] = hul;
+    }
+  }
+  boundary ((scalar *){hu});
 
   face vector flux[];
   foreach_layer() {
@@ -220,14 +308,14 @@ void advect (double dt)
 	  (s[i+1] - s[i-1])/(2.*Delta);
 	double s2 = s[i] + a*(1. - a*un)*g*Delta/2.;
 
-#if 0 // dimension > 1
+#if dimension > 1
 	if (hf.y[i] + hf.y[i,1] > dry) {
 	  double vn = (hu.y[i] + hu.y[i,1])/(hf.y[i] + hf.y[i,1]);
 	  double syy = (s.gradient ? s.gradient (s[i,-1], s[i], s[i,1]) :
 			vn < 0. ? s[i,1] - s[i] : s[i] - s[i,-1]);
 	  s2 -= dt*vn*syy/(2.*Delta);
 	}
-#endif
+#endif // dimension > 1
 	
 	flux.x[] = s2*hu.x[];
       }
@@ -258,8 +346,10 @@ void advect (double dt)
       double h1 = h[];
       foreach_dimension()
 	h1 += dt*(hu.x[] - hu.x[1])/(Delta*cm[]);
-      assert (h1 >= 0.);
-      h[] = h1;
+      if (h1 < - 1e-12)
+	fprintf (stderr, "warning: h1 = %g < - 1e-12 at %g,%g,%d,%g\n",
+		 h1, x, y, _layer, t);
+      h[] = fmax(h1, 0.);
       if (h1 < dry) {
 	for (scalar f in tracers)
 	  f[] = 0.;
@@ -275,155 +365,40 @@ void advect (double dt)
   free (list);
 }
 
-#define STABILITY 1
+/**
+This is where the 'two-step advection' of the [implicit
+scheme](implicit.h) plugs itself (nothing is done for the explicit
+scheme). */
 
-#if STABILITY
-double dtmax;
+event half_advection (i++, last);
 
-event set_dtmax (i++,last) dtmax = DT;
+/**
+Vertical diffusion (including viscosity) is added by this code. */
 
-static bool hydrostatic = true;
+#include "diffusion.h"
 
-event stability (i++,last)
-{
-  foreach (reduction (min:dtmax)) {
-    double H = 0.;
-    foreach_layer()
-      H += h[];
-    if (H > dry) {
-      double cp = hydrostatic ? sqrt(G*H) : sqrt(G*Delta*tanh(H/Delta));
-      cp /= CFL_H;
-      foreach_layer()
-	foreach_dimension() {
-	  double c = cp + fabs(u.x[]/CFL);
-	  if (c > 0.) {
-	    double dt = 2.*cm[]/(fm.x[] + fm.x[1])*Delta/c;
-	    if (dt < dtmax)
-	      dtmax = dt;
-	  }
-        }
-    }
-  }
-  dt = dtnext (dtmax);
-}
-#endif // STABILITY
+/**
+## Accelerations 
 
-#define gmetric(i) (2.*fm.x[i]/(cm[i] + cm[i-1]))
-
-event face_fields (i++, last)
-{
-#if 0
-    hu.n[left] = 0.;
-    hu.n[right] = 0.;
-    hu.n[top] = 0.;
-    hu.n[bottom] = 0.;
-
-    ha.n[left] = 0.;
-    ha.n[right] = 0.;
-    ha.n[top] = 0.;
-    ha.n[bottom] = 0.;
-    
-    hf.n[left] = 0.;
-    hf.n[right] = 0.;
-    hf.n[top] = 0.;
-    hf.n[bottom] = 0.;
-#endif
-  
-  double dtmax = DT;
-  foreach_face (reduction (min:dtmax)) {
-    double ax = - gmetric(0)*G*(eta[] - eta[-1])/Delta;
-    double H = 0., um = 0.;
-    foreach_layer() {
-      double hl = h[-1] > dry ? h[-1] : 0.;
-      double hr = h[] > dry ? h[] : 0.;
-      hu.x[] = hl > 0. || hr > 0. ? (hl*u.x[-1] + hr*u.x[])/(hl + hr) : 0.;
-
-#if 1 // important for stability of gaussian-hydro.tst
-      // also has a significant influence on the amplitude of
-      // the non-hydrostatic waves for gaussian.tst
-      // setting a larger prefactor (e.g. 2.*dt) also stabilises
-      double hff;
-      if (h[] + h[-1] < dry) // fixme: useful??
-	hff = 0.;
-      else {
-	// fixme: dt needs to be multiplied by (1. - theta_H)
-	//	double un = (1. - theta_H)*dt*(hu.x[] + (1. - theta_H)*dt*ax)/Delta,
-	//	  a = sign(un);
-	double un = dt*(hu.x[] + dt*ax)/Delta, a = sign(un);
-	int i = - (a + 1.)/2.;
-	double g = h.gradient ? h.gradient (h[i-1], h[i], h[i+1])/Delta :
-	  (h[i+1] - h[i-1])/(2.*Delta);
-	hff = h[i] + a*(1. - a*un)*g*Delta/2.;
-      }
-#endif
-      hf.x[] = fm.x[]*hff;
-
-#if 0
-      hu.x[] *= hf.x[];
-      if (hu.x[]/cm[-1] > CFL*um*h[-1])
-	um = hu.x[]/(CFL*h[-1]*cm[-1]);
-      else if (- hu.x[]/cm[] > CFL*um*h[])
-	um = - hu.x[]/(CFL*h[]*cm[]);
-#else
-      if (fabs(hu.x[]) > um)
-	um = fabs(hu.x[]);
-      hu.x[] *= hf.x[];
-#endif
-      ha.x[] = hf.x[]*ax;
- 
-      H += hff;
-    }
-    if (H > 0.) {
-      double c = um/CFL + hydrostatic ? sqrt(G*H)/CFL_H :
-	sqrt(G*Delta*tanh(H/Delta))/CFL_H;
-      double dt = min(cm[], cm[-1])*Delta/(c*fm.x[]);
-      if (dt < dtmax)
-	dtmax = dt;
-    }
-  }
-  boundary ((scalar *){ha, hu, hf});
-#if !STABILITY  
-#if 1
-  static double previous = 0.;
-  if (dtmax > previous)
-    dtmax = (previous + 0.1*dtmax)/1.1;
-  previous = dtmax;
-#endif
-  dt = dtnext (dtmax);
-#endif // !STABILITY
-}
-
-double max_slope = 0.577350269189626; // = tan(30.*pi/180.)
-#define slope_limited(dz) (fabs(dz) < max_slope ? (dz) :	\
-			   ((dz) > 0. ? max_slope : - max_slope))
-
-#define qflux(qf,i) {							\
-  double dz = zb[i] - zb[i-1];						\
-  foreach_layer() {							\
-    qf = 0.;								\
-    if (h[i] + h[i-1] > dry) {						\
-      double s = Delta*slope_limited(dz/Delta);				\
-      qf += (h[i] + s)*q[i] - (h[i-1] - s)*q[i-1];			\
-      if (point.l < nl - 1) {						\
-	double s = Delta*slope_limited((dz + h[i] - h[i-1])/Delta);     \
-	qf += (h[i] - s)*q[i,0,1] - (h[i-1] + s)*q[i-1,0,1];		\
-      }									\
-      qf *= gmetric(i)*hf.x[i]/(Delta*(h[i] + h[i-1]));			\
-    }
-
-#define end_qflux(i)				\
-    dz += h[i] - h[i-1];			\
-  }						\
-}
+Acceleration terms are added here. In the simplest case, this is only
+the pressure gradient due to the free-surface slope, as computed in
+[face_fields](#face_fields). */
 
 event acceleration (i++, last);
 
 event pressure (i++, last)
 {
+
+  /**
+  The acceleration is applied to the face fluxes... */
+  
   foreach_face()
     foreach_layer() 
       hu.x[] += dt*ha.x[];
   boundary ((scalar *){hu});
+
+  /**
+  ... and to the centered velocity field, using height-weighting. */
   
   foreach()
     foreach_layer() {
@@ -440,32 +415,41 @@ event pressure (i++, last)
 #endif // dimension == 2
     }
   boundary ((scalar *){u});
+  delete ((scalar *){ha});
 
-#if 1
-  //  delete ((scalar *){ha});
-  advect (dt);
-  //  delete ((scalar *){hu, hf});
-#endif
-}
-
-scalar deta[]; // fixme: just for diagnostic
-
-event advection (i++, last)
-{
-  
   /**
-  Finally the free-surface height $\eta$ is updated and the boundary
-  conditions are applied. */
+  The resulting fluxes are used to advect both tracers and layer
+  heights. */
+  
+  advect (tracers, hu, hf, dt);
+}
+  
+/**
+Finally the free-surface height $\eta$ is updated and the boundary
+conditions are applied. */
 
+event update_eta (i++, last)
+{
+  delete ((scalar *){hu, hf});
   foreach() {
     double etap = zb[];
     foreach_layer()
       etap += h[];
-    deta[] = etap - eta[];
     eta[] = etap;
   }
   boundary ({eta});
 }
+
+/**
+## Vertical remapping and mesh adaptation
+
+[Vertical remapping](remap.h) is applied here if necessary. */
+
+event remap (i++, last);
+ 
+#if TREE
+event adapt (i++,last);
+#endif
 
 /**
 ## Cleanup
@@ -475,8 +459,43 @@ must be freed at the end of the run. */
    
 event cleanup (t = end, last)
 {
-  delete ({eta, h, u, hu, ha, hf});
+  delete ({eta, h, u});
   free (tracers), tracers = NULL;
+}
+
+/**
+# Horizontal pressure gradient
+
+The macro below computes the horizontal pressure gradient
+$$
+pg_k = - \mathbf{{\nabla}} (h \phi)_k + \left[ \phi 
+ \mathbf{{\nabla}} z \right]_k
+$$
+on the faces of each layer. The slope of the layer interfaces
+$\mathbf{{\nabla}} z_{k+1/2}$ in the second-term is bounded by
+`max_slope` (by default 30 degrees). */
+
+double max_slope = 0.577350269189626; // = tan(30.*pi/180.)
+#define slope_limited(dz) (fabs(dz) < max_slope ? (dz) :	\
+			   ((dz) > 0. ? max_slope : - max_slope))
+
+#define hpg(pg,phi,i) {							\
+  double dz = zb[i] - zb[i-1];						\
+  foreach_layer() {							\
+    pg = 0.;								\
+    if (h[i] + h[i-1] > dry) {						\
+      double s = Delta*slope_limited(dz/Delta);				\
+      pg -= (h[i] + s)*phi[i] - (h[i-1] - s)*phi[i-1];			\
+      if (point.l < nl - 1) {						\
+	double s = Delta*slope_limited((dz + h[i] - h[i-1])/Delta);     \
+	pg -= (h[i] - s)*phi[i,0,1] - (h[i-1] + s)*phi[i-1,0,1];	\
+      }									\
+      pg *= gmetric(i)*hf.x[i]/(Delta*(h[i] + h[i-1]));			\
+    }
+
+#define end_hpg(i)				\
+    dz += h[i] - h[i-1];			\
+  }						\
 }
 
 /**
@@ -491,7 +510,7 @@ $$
 $$
 */
 
-void vertical_velocity (scalar w)
+void vertical_velocity (scalar w, face vector hu, face vector hf)
 {
   foreach() {
     double dz = zb[1] - zb[-1];
@@ -617,10 +636,9 @@ This can be expressed mathematically as:
 $$
 \text{flux}[k] = \int_A^B h_k\mathbf{u}_k\cdot\mathbf{n}dl
 $$
-with $A$ and $B$ the endpoints of the segment, $k$ the list index
-(typically the layer index), $\mathbf{n}$ the oriented segment unit
-normal and $dl$ the elementary length. The function returns the sum
-(over $k$) of all the fluxes. */
+with $A$ and $B$ the endpoints of the segment, $k$ the layer index,
+$\mathbf{n}$ the oriented segment unit normal and $dl$ the elementary
+length. The function returns the sum (over $k$) of all the fluxes. */
 
 double segment_flux (coord segment[2], double * flux, scalar h, vector u)
 {
@@ -661,9 +679,9 @@ double segment_flux (coord segment[2], double * flux, scalar h, vector u)
 A NULL-terminated array of *Flux* structures passed to
 *output_fluxes()* will create a file (called *name*) for each
 flux. Each time *output_fluxes()* is called a line will be appended to
-the file. The line contains the time and the value of the flux for
-each $h$, $u$ pair in the lists. The *desc* field can be filled with a
-longer description of the flux. */
+the file. The line contains the time, the total flux and the value of
+the flux for each $h$, $u$ pair in the layer. The *desc* field can be
+filled with a longer description of the flux. */
 
 typedef struct {
   char * name;

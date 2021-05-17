@@ -161,7 +161,7 @@ int main()
 
   linearised = true;
   DT = 0.5;
-  TOLERANCE = 1e-8;
+  TOLERANCE = 1e-9;
   for (border = 0; border <= 1; border++) {
     fprintf (stderr, "\n\n# border = %g\n", border);
     for (N = 64; N <= 256; N *= 2) {
@@ -180,9 +180,9 @@ $y$. */
 
 event acceleration (i++)
 {
-  foreach()
-    if (h[] > dry)
-      u.x[] -= dt*tau0*cos(pi*y);
+  foreach_face(x)
+    if (hf.x[] > dry)
+      ha.x[] -= tau0*cos(pi*y);
 }
 
 /**

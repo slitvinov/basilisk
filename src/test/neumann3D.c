@@ -190,7 +190,7 @@ int main()
     save ("e.png");
 #endif
     
-    dump ("dump");
+    //    dump ("dump"); // too big
   }
 }
 

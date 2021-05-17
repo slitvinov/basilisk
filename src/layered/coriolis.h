@@ -46,13 +46,13 @@ file. */
 
 event acceleration (i++)
 {
-  foreach() {
-    coord b0 = { - K0(), - K0() }, b1 = { F0(), -F0() };
-    coord m0 = { 1. - alpha_H*dt*b0.x, 1. - alpha_H*dt*b0.y };
-    coord m1 = { - alpha_H*dt*b1.x, - alpha_H*dt*b1.y };
-    double det = m0.x*m0.y - m1.x*m1.y;
+  foreach()
     foreach_layer()
       if (h[] > dry) {
+	coord b0 = { - K0(), - K0() }, b1 = { F0(), -F0() };
+	coord m0 = { 1. - alpha_H*dt*b0.x, 1. - alpha_H*dt*b0.y };
+	coord m1 = { - alpha_H*dt*b1.x, - alpha_H*dt*b1.y };
+	double det = m0.x*m0.y - m1.x*m1.y;
         coord r, a;
 	foreach_dimension() {
 	  a.x = dt*(ha.x[] + ha.x[1])/(hf.x[] + hf.x[1] + dry);
@@ -61,7 +61,6 @@ event acceleration (i++)
 	foreach_dimension()
 	  u.x[] = (m0.y*r.x - m1.x*r.y)/det - a.x;
       }
-  }
   boundary ((scalar *){u});  
 }
 

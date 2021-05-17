@@ -63,6 +63,12 @@ Note that only the documented test cases appear in the list below
 * [Geostrophic adjustment](geo.c)
 * [Non-linear geostrophic adjustment](nonlinear.c)
 
+## Stratified multilayer
+
+* [Internal solitary waves](horn.c)
+* [Overflow](overflow.c)
+* [Lock-exchange](lock.c)
+
 ## Volume-Of-Fluid
 
 * [Computation of volume fractions from a levelset function](fractions.c)

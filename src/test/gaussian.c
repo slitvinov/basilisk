@@ -184,37 +184,7 @@ event logfile (t += 0.1; i <= 100000) {
 Uncomment this part if you want on-the-fly animation. */
 
 #if 0
-event gnuplot (i += 20)
-{
-  static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
-  if (i == 0)
-    fprintf (fp, "set term x11\n");
-  FILE * fp1 = fopen ("gnuplot", "w");
-  foreach_leaf() {
-    double H = 0.;
-    foreach_layer()
-      H += h[];
-    fprintf (fp1, "%g %g %g", x, zb[] + H, zb[]);
-    double z = zb[];
-    foreach_layer() {
-      fprintf (fp1, " %g", z);
-      z += h[];
-    }
-    fprintf (fp1, "\n");
-  }
-  fclose (fp1);
-  fprintf (fp,
-	   "set title 'nl = %d, t = %.2f'\n"
-	   "p [%g:%g][0:]'gnuplot' u 1:3:2 w filledcu lc 3 t '',"
-	   " '' u 1:(-1):3 t '' w filledcu lc -1", nl, t,
-	   X0, X0 + L0);
-  int i = 4;
-  foreach_layer()
-    fprintf (fp, ", '' u 1:%d w l lw 2 t ''", i++);
-  fprintf (fp, "\n");
-  //  fprintf (fp, "pause 0.05\n");
-  fflush (fp);
-}
+#include "plot_layers.h"
 #endif
 
 /**
@@ -238,13 +208,24 @@ event profiles (t += 5)
 }
 
 /**
-We also save the velocity and non-hydrostatic pressure fields. */
+For the hydrostatic case, we compute a diagnostic vertical velocity
+field `w`. Note that this needs to be done within this event because
+it relies on the fluxes `hu` and face heights `hf`, which are only
+defined temporarily in the [multilayer solver](hydro.h#update_eta). */
 
-event output (t = end)
+#if HYDRO
+scalar w = {-1};
+
+event update_eta (i++)
 {
-#if HYDRO  
-  scalar w = new scalar[nl];
-  vertical_velocity (w);
+  if (w.i < 0)
+    w = new scalar[nl];
+  vertical_velocity (w, hu, hf);
+
+  /**
+  The layer interface values are averaged at the center of each
+  layer. */
+  
   foreach() {
     double wm = 0.;
     foreach_layer() {
@@ -254,7 +235,14 @@ event output (t = end)
     }
   }
   boundary ({w});
+}
 #endif // HYDRO
+
+/**
+We also save the velocity and non-hydrostatic pressure fields. */
+
+event output (t = end)
+{
   foreach_leaf() {
     double z = zb[];
 #if HYDRO

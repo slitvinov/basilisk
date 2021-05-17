@@ -46,6 +46,7 @@ int main()
 
 event init (i = 0)
 {
+  res_eta = new scalar;
   conserve_elevation();
   foreach() {
     zb[] = - 7000;

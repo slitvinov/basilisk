@@ -93,7 +93,7 @@ event monitoring (t += endoftime/100; t = 0.; t <= endoftime)
     foreach()
       foreach_layer() {
         absdevU[] = fabs(u.x[]-U);
-        absPhi[]  = fabs(q[]);
+        absPhi[]  = fabs(phi[]);
       }
     boundary({absdevU, absPhi});
     double maxdevU = statsf(absdevU).max/U;

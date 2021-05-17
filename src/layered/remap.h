@@ -89,9 +89,7 @@ void vertical_remapping (scalar h, scalar * tracers)
 }
 
 /**
-The remapping is applied at every timestep just before the vertical
-viscosity i.e. just after horizontal advection in the [multilayer
-solver](hydro.h). */
+The remapping is applied at every timestep. */
 
 event remap (i++) {
   if (nl > 1)

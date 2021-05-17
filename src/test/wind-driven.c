@@ -18,6 +18,8 @@ Saint-Venant, layered hydrostatic, layered non-hydrostatic. */
 #  include "layered/hydro.h"
 #  if NH
 #    include "layered/nh.h"
+# else
+#    include "layered/implicit.h"
 #  endif
 #  include "layered/remap.h"
 #endif
@@ -60,7 +62,7 @@ int main()
   /**
   We vary the number of layers. */
 
-#if NH
+#if ML
   CFL_H = 8.;
   theta_H = 1.; // to damp short waves faster
 #endif
@@ -121,40 +123,39 @@ event error (t = 10./nu)
 Uncomment this part if you want on-the-fly animation. */
 
 #if 0
-event gnuplot (i += 20) {
-  static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
-  if (i == 0)
-    fprintf (fp, "set term x11\n");
-  fprintf (fp,
-	   "set title 'nl = %d, t = %.2f'\n"
-	   "p [%g:%g][0:]'-' u 1:3:2 w filledcu lc 3 t '',"
-	   " '' u 1:(-1):3 t '' w filledcu lc -1", nl, t,
-	   X0, X0 + L0);
-#if !ML
-  fprintf (fp, "\n");
-  foreach()
-    fprintf (fp, "%g %g %g\n", x, zb[] + h[], zb[]);
-#else
-  int i = 4;
-  for (scalar h in hl)
-    fprintf (fp, ", '' u 1:%d w l lw 2 t ''", i++);
-  fprintf (fp, "\n");
-  foreach() {
-    double H = 0.;
-    foreach_layer()
-      H += h[];
-    fprintf (fp, "%g %g %g", x, zb[] + H, zb[]);
-    double z = zb[];
-    foreach_layer()
-      fprintf (fp, " %g", z += h[]);
-    fprintf (fp, "\n");
-  }
-#endif  
-  fprintf (fp, "e\n\n");
-  //  fprintf (fp, "pause 0.05\n");
-  fflush (fp);
-}
+#include "plot_layers.h"
 #endif
+
+/**
+For the hydrostatic case, we compute a diagnostic vertical velocity
+field `w`. Note that this needs to be done within this event because
+it relies on the fluxes `hu` and face heights `hf`, which are only
+defined temporarily in the [multilayer solver](hydro.h#update_eta). */
+
+#if !NH && ML
+scalar w = {-1};
+
+event update_eta (i++)
+{
+  if (w.i < 0)
+    w = new scalar[nl];
+  vertical_velocity (w, hu, hf);
+
+  /**
+  The layer interface values are averaged at the center of each
+  layer. */
+  
+  foreach() {
+    double wm = 0.;
+    foreach_layer() {
+      double w1 = w[];
+      w[] = (w1 + wm)/2.;
+      wm = w1;
+    }
+  }
+  boundary ({w});
+}
+#endif // !NH && ML
 
 /**
 We save the horizontal velocity profile at the center of the domain
@@ -166,19 +167,6 @@ event output (t = end) {
   sprintf (name, "uprof-%d", nl);
   FILE * fp = fopen (name, "w");
   int i = 0;
-#if !NH && ML
-  scalar w = new scalar[nl];
-  vertical_velocity (w);
-  foreach() {
-    double wm = 0.;
-    foreach_layer() {
-      double w1 = w[];
-      w[] = (w1 + wm)/2.;
-      wm = w1;
-    }
-  }
-  boundary ({w});
-#endif // !NH && ML
   foreach() {
     if (i++ == N/2) {
 #if !ML
@@ -210,9 +198,6 @@ event output (t = end) {
     }
   }
   fclose (fp);
-#if !NH && ML
-  delete ({w});
-#endif
 }
 
 /**

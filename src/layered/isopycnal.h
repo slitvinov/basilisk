@@ -27,10 +27,10 @@ event acceleration (i++)
   boundary ({q});
   
   foreach_face() {
-    double qf;
-    qflux(qf,0)
-      ha.x[] -= qf;
-    end_qflux(0);
+    double pg;
+    hpg (pg, q, 0)
+      ha.x[] += pg;
+    end_hpg (0);
   }
   boundary ((scalar *){ha});
 

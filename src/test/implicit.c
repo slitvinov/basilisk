@@ -35,7 +35,7 @@ int main()
   implicit solver). */
   
   G = 10.;
-  DT = 1e-2;
+  DT = 5e-3;
   theta = 1.3;
   
   /**

@@ -337,15 +337,17 @@ void plot (FILE * fp)
 event gnuplot (t += 600)
 {
   static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
-  fprintf (fp, "set term x11\n");
   if (i == 0)
     setup (fp);
-  plot (fp);
+  if (getenv ("DISPLAY")) {
+    fprintf (fp, "set term x11\n");
+    plot (fp);
+  }
   fprintf (fp,
 	   "set term pngcairo font \",10\" size 800,500\n"	
 	   "set xrange [0:200]\n"
-	   "set output 'plot-%04d.png'\n"
-	   "replot\n", i);
+	   "set output 'plot-%04d.png'\n", i);
+  plot (fp);
 }
 
 event figures (t <= 12*hour; t += 3.*hour)

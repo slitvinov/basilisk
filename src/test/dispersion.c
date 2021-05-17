@@ -135,7 +135,7 @@ event profile (t = 9.25*2.*pi/sqrt(tanh(h0)))
     Point point = locate (L0/2.);
     double zl = zb[];
     foreach_layer() {
-      fprintf (fp, "%g %g %g\n", zl + h[]/2., w[], q[]);
+      fprintf (fp, "%g %g %g\n", zl + h[]/2., w[], phi[]);
       zl += h[];
     }
     fclose (fp);

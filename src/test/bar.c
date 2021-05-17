@@ -19,6 +19,7 @@ This test case is discussed in [Popinet
 #else
   #include "green-naghdi.h"
 #endif
+#include "layered/check_eta.h"
 #include "layered/perfs.h"
 
 /**
@@ -114,23 +115,12 @@ event profiles (t += 0.05)
   fprintf (stderr, "%g %f %g %g\n", t, interpolate (eta, 17.3, 0.), ke, gpe);
 }
 
+/**
+This optionally displays consistency between `res_eta` and `deta`
+(corresponding to the `check_eta.h` option above). */
+
 #if 0
-event gnuplots (i += 10)
-{
-  static FILE * fp = popen ("gnuplot 2> /dev/null", "w");
-  if (i == 0)
-    fprintf (fp, "set term x11\n"
-	       "set xrange [0:25]\n");
-  FILE * fp1 = fopen ("gnuplot", "w");
-  foreach()
-    fprintf (fp1, "%g %g %g %g\n", x, eta[], deta[], res_eta[]);
-  fclose (fp1);
-  fprintf (fp,
-	   "p 'gnuplot' u 1:3 w l t 'etap - eta',"
-	   "  '' u 1:4 w l t 'res'\n",
-	   t);
-  fflush (fp);
-}
+#include "deta.h"
 #endif
 
 event gnuplot (t = end) {

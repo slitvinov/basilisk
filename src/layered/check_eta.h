@@ -17,7 +17,7 @@ The difference is stored in the `deta` field. */
 
 scalar deta[];
 
-event advection (i++) // fixme: likely to change
+event update_eta (i++)
 {
   foreach() {
     double eta_p = zb[];

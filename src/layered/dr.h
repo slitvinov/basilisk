@@ -66,14 +66,14 @@ event acceleration (i++)
 
   /**
   Once the pressure deviation is known, the terms in blue above are
-  added to the face acceleration field `ha`, reusing the macros used
-  to compute the gradient of the [non-hydrostatic pressure](nh.h). */
+  added to the face acceleration field `ha`, using the
+  [pressure-gradient macro](hydro.h#horizontal-pressure-gradient). */
   
   foreach_face() {
-    double qf;
-    qflux(qf,0)
-      ha.x[] -= qf;
-    end_qflux(0);
+    double pg;
+    hpg (pg, q, 0)
+      ha.x[] += pg;
+    end_hpg(0);
   }
   boundary ((scalar *){ha});
 

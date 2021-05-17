@@ -13,6 +13,8 @@ event perfs (i += 1) {
 	   t, dt,
 #if NH
 	   mgp.i, mgp.nrelax,
+#elif IMPLICIT_H
+	   mgH.i, mgH.nrelax,
 #else
 	   0, 0,
 #endif

@@ -39,7 +39,7 @@ unset multiplot
 
 The results given by the multilayer solver are significantly better
 than those of Vitousek & Fringer. This is mostly due to the improved
-dipersion characteristics of the Keller box scheme.
+dispersion characteristics of the Keller box scheme.
 
 ~~~gnuplot Model (multilayer) and experimental interface displacement.
 set term svg enhanced size 625,800 font ",10"
@@ -48,16 +48,16 @@ set xrange [0:400]
 set yrange [-5:5]
 set key top left
 plot 'horn.horn' u 1:($2*100.) index 'ai = 0.01305' w l t 'Horn 2001', \
-     'log' u 1:($2*100.) index 'ai = 0.01305' w l t 'current'
+     'log' u 1:($2*100.) index 'ai = 0.01305' w l t 'basilisk'
 unset key
 plot 'horn.horn' u 1:($2*100.) index 'ai = 0.0261' w l t 'Horn 2001', \
-     'log' u 1:($2*100.) index 'ai = 0.0261' w l t 'current'
+     'log' u 1:($2*100.) index 'ai = 0.0261' w l t 'basilisk'
 plot 'horn.horn' u 1:($2*100.) index 'ai = 0.03915' w l t 'Horn 2001', \
-     'log' u 1:($2*100.) index 'ai = 0.03915' w l t 'current'
+     'log' u 1:($2*100.) index 'ai = 0.03915' w l t 'basilisk'
 plot 'horn.horn' u 1:($2*100.) index 'ai = 0.0522' w l t 'Horn 2001', \
-     'log' u 1:($2*100.) index 'ai = 0.0522' w l t 'current'
+     'log' u 1:($2*100.) index 'ai = 0.0522' w l t 'basilisk'
 plot 'horn.horn' u 1:($2*100.) index 'ai = 0.0783' w l t 'Horn 2001', \
-     'log' u 1:($2*100.) index 'ai = 0.0783' w l t 'current'
+     'log' u 1:($2*100.) index 'ai = 0.0783' w l t 'basilisk'
 unset multiplot
 ~~~
 
