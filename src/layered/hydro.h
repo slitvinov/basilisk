@@ -1,5 +1,5 @@
 /**
-# A vertically-Lagrangian multilayer solver for free-surface flows
+# The hydrostatic multilayer solver for free-surface flows
 
 The theoretical basis and main algorithms for this solver are
 described in [Popinet, 2020](/Bibliography#popinet2020). Note however
@@ -19,7 +19,8 @@ $$
 with $\mathbf{u}_k$ the velocity vector, $h_k$ the layer thickness,
 $g$ the acceleration of gravity and $\eta$ the free-surface
 height. The non-hydrostatic pressure $\phi_k$ and vertical velocity
-$w_k$ can be added using [the non-hydrostatic extension](nh.h).
+$w_k$ can be added using [the non-hydrostatic extension](nh.h). See
+also the [general introduction](README).
 
 ![Definition of the $n$ layers.](../figures/layers.svg){ width="60%" }
 

@@ -2,7 +2,7 @@
 # Time-implicit barotropic integration
 
 This implements a semi-implicit scheme for the evolution of the
-free-surface elevation $\eta$ of the [multilayer solver](hydro.h).
+free-surface elevation $\eta$ of the [multilayer solver](README).
 The scheme can be summarised as
 $$
 \begin{aligned}

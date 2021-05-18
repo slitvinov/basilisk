@@ -36,7 +36,9 @@ barotropic free-surface evolution (explicit in the previous version)
 and the exact projection of the baroclinic velocities (approximate in
 the previous version). This results in the solution of a coupled
 system for the non-hydrostatic pressure $\phi^{n+1}$ and the
-free-surface elevation $\eta^{n+1}$. */
+free-surface elevation $\eta^{n+1}$. 
+
+See also the [general introduction](README). */
 
 #define NH 1
 #include "implicit.h"

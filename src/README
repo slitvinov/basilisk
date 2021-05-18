@@ -110,7 +110,7 @@ $$
     + [Momentum conservation option](navier-stokes/conserving.h)
 * [Momentum-conserving two-phase interfacial flows](momentum.h)
 * [Multilayer incompressible Euler/Navier-Stokes equations
-   with a free-surface](layered/nh.h)
+   with a free-surface](layered/README)
 
 $$
 \begin{aligned}
