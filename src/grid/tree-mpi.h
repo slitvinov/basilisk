@@ -163,26 +163,34 @@ static void apply_bc (Rcv * rcv, scalar * list, scalar * listv,
 {
   double * b = rcv->buf;
   foreach_cache_level(rcv->halo[l], l) {
-    for (scalar s in list)
-      s[] = *b++;
+    for (scalar s in list) {
+      memcpy (&s[], b, sizeof(double)*s.block);
+      b += s.block;
+    }
     for (vector v in listf)
       foreach_dimension() {
-	v.x[] = *b++;
+	memcpy (&v.x[], b, sizeof(double)*v.x.block);
+	b += v.x.block;
 	if (*b != nodata && allocated(1))
-	  v.x[1] = *b;
-	b++;
+	  memcpy (&v.x[1], b, sizeof(double)*v.x.block);
+	b += v.x.block;
       }
     for (scalar s in listv) {
       for (int i = 0; i <= 1; i++)
 	for (int j = 0; j <= 1; j++)
 #if dimension == 3
-	  for (int k = 0; k <= 1; k++)
-#endif
-	    {
-	      if (*b != nodata && allocated(i,j,k))
-		s[i,j,k] = *b;
-	      b++;
-	    }
+	  for (int k = 0; k <= 1; k++) {
+	    if (*b != nodata && allocated(i,j,k))
+	      memcpy (&s[i,j,k], b, sizeof(double)*s.block);
+	    b += s.block;
+	  }
+#else // dimension == 2
+          {
+	    if (*b != nodata && allocated(i,j))
+	      memcpy (&s[i,j], b, sizeof(double)*s.block);
+	    b += s.block;	    
+          }
+#endif // dimension == 2
     }
   }
   size_t size = b - (double *) rcv->buf;
@@ -286,6 +294,20 @@ static int mpi_waitany (int count, MPI_Request array_of_requests[], int *indx,
   return MPI_Waitany (count, array_of_requests, indx, status);
 }
 
+static int list_lenb (scalar * list) {
+  int len = 0;
+  for (scalar s in list)
+    len += s.block;
+  return len;
+}
+
+static int vectors_lenb (vector * list) {
+  int len = 0;
+  for (vector v in list)
+    len += v.x.block;
+  return len;
+}
+
 static void rcv_pid_receive (RcvPid * m, scalar * list, scalar * listv,
 			     vector * listf, int l)
 {
@@ -294,8 +316,8 @@ static void rcv_pid_receive (RcvPid * m, scalar * list, scalar * listv,
   
   prof_start ("rcv_pid_receive");
 
-  int len = list_len (list) + 2*dimension*vectors_len (listf) +
-    (1 << dimension)*list_len (listv);
+  int len = list_lenb (list) + 2*dimension*vectors_lenb (listf) +
+    (1 << dimension)*list_lenb (listv);
 
   MPI_Request r[m->npid];
   Rcv * rrcv[m->npid]; // fixme: using NULL requests should be OK
@@ -356,8 +378,8 @@ static void rcv_pid_send (RcvPid * m, scalar * list, scalar * listv,
 
   prof_start ("rcv_pid_send");
 
-  int len = list_len (list) + 2*dimension*vectors_len (listf) +
-    (1 << dimension)*list_len (listv);
+  int len = list_lenb (list) + 2*dimension*vectors_lenb (listf) +
+    (1 << dimension)*list_lenb (listv);
 
   /* send ghost values */
   for (int i = 0; i < m->npid; i++) {
@@ -367,20 +389,40 @@ static void rcv_pid_send (RcvPid * m, scalar * list, scalar * listv,
       rcv->buf = malloc (sizeof (double)*rcv->halo[l].n*len);
       double * b = rcv->buf;
       foreach_cache_level(rcv->halo[l], l) {
-	for (scalar s in list)
-	  *b++ = s[];
+	for (scalar s in list) {
+	  memcpy (b, &s[], sizeof(double)*s.block);
+	  b += s.block;
+	}
 	for (vector v in listf)
 	  foreach_dimension() {
-	    *b++ = v.x[];
-	    *b++ = allocated(1) ? v.x[1] : nodata;
+	    memcpy (b, &v.x[], sizeof(double)*v.x.block);
+	    b += v.x.block;
+	    if (allocated(1))
+	      memcpy (b, &v.x[1], sizeof(double)*v.x.block);
+	    else
+	      *b = nodata;
+	    b += v.x.block;
 	  }
 	for (scalar s in listv) {
 	  for (int i = 0; i <= 1; i++)
 	    for (int j = 0; j <= 1; j++)
 #if dimension == 3
-	      for (int k = 0; k <= 1; k++)
-#endif
-		*b++ = allocated(i,j,k) ? s[i,j,k] : nodata;
+	      for (int k = 0; k <= 1; k++) {
+		if (allocated(i,j,k))
+		  memcpy (b, &s[i,j,k], sizeof(double)*s.block);
+		else
+		  *b = nodata;
+		b += s.block;
+	      }
+#else // dimension == 2
+	      {
+		if (allocated(i,j))
+		  memcpy (b, &s[i,j], sizeof(double)*s.block);
+		else
+		  *b = nodata;
+		b += s.block;
+	      }
+#endif // dimension == 2
 	}
       }
 #if 0
@@ -402,7 +444,7 @@ static void rcv_pid_sync (SndRcv * m, scalar * list, int l)
   scalar * listr = NULL, * listv = NULL;
   vector * listf = NULL;
   for (scalar s in list)
-    if (!is_constant(s)) {
+    if (!is_constant(s) && s.block > 0) {
       if (s.face)
 	listf = vectors_add (listf, s.v);
       else if (s.restriction == restriction_vertex)
