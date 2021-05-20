@@ -161,6 +161,30 @@ Note that you will need to redo step 2 everytime you disconnect. Note
 also that `nc` (i.e. `netcat`) need to be installed on the remote
 machine (this is usually the case).
 
+## Troubleshooting
+
+Depending on how the remote system is configured, you may get an error
+message looking like:
+
+~~~bash
+nc -l -p 7100 < /tmp/bview | \
+  ssh username@server.org "nc machine.somedomain.somewhere 7100" > /tmp/bview
+machine.somedomain.somewhere: forward host lookup failed: ...
+~~~
+
+This means that the [DNS](https://en.wikipedia.org/wiki/Domain_Name_System) server on the remote system is strangely configured. A solution is to log onto the remote system and do
+
+~~~bash
+ssh username@server.org
+ping machine.somedomain.somewhere
+PING machine.somedomain.somewhere (132.30.0.84) 56(84) bytes of data.
+64 bytes from machine.somedomain.somewhere (132.30.0.84): icmp_seq=1 ttl=64 time=9.05 ms
+...
+~~~
+
+then copy the IP address (here 132.30.0.84) and replace
+'machine.somedomain.somewhere' with this IP in all the commands above.
+
 # Main differences with the old interactive `bview`
 
 * Cannot yet export to Gnuplot, OBJ, PS, PDF, SVG etc.
