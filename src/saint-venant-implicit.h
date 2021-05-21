@@ -1,6 +1,10 @@
 /**
 # A semi-implicit Saint-Venant solver
 
+<div class="message">
+Note that the [multilayer solver](layered/hydro.h) provides the same
+functionality and should be prefered for most applications.</div>
+
 We solve the [Saint-Venant equations](saint-venant.h) semi-implicitly
 to lift the timestep restriction due to gravity waves. This is just a
 particular application of the "all Mach" semi-implicit solver. We will

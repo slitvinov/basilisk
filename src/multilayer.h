@@ -1,6 +1,10 @@
 /**
 # Multilayer Saint-Venant system with mass exchanges
 
+<div class="message">
+Note that the [multilayer solver](layered/hydro.h) provides the same
+functionality and should be prefered for most applications.</div>
+
 The [Saint-Venant system](saint-venant.h) is extended to multiple
 layers following [Audusse et al, 2011](references.bib#audusse2011) as
 $$

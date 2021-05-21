@@ -1,6 +1,10 @@
 /**
 # A solver for the Saint-Venant equations
 
+<div class="message">
+Note that the [multilayer solver](layered/hydro.h) provides the same
+functionality and should be prefered for most applications.</div>
+
 The
 [Saint-Venant equations](http://en.wikipedia.org/wiki/Shallow_water_equations)
 can be written in integral form as the hyperbolic system of

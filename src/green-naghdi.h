@@ -1,6 +1,10 @@
 /**
 # A solver for the Green-Naghdi equations
 
+<div class="message">
+Note that the [multilayer solver](layered/hydro.h) provides the same
+functionality and should be prefered for most applications.</div>
+
 The Green-Naghdi equations (also known as the Serre or fully nonlinear
 Boussinesq equations) can be seen as an extension of the [Saint-Venant
 equations](saint-venant.h) to the next order $O(\mu^2)$ in term of the
