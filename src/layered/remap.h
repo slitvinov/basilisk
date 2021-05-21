@@ -30,6 +30,25 @@ event defaults (i = 0)
 }
 
 /**
+The default uniform layer distribution can be replaced with a
+geometric progression for the layer thicknesses. This needs to be
+called for example in the `init()` event. The `rmin` parameter
+specifies the minimum layer thickness relative to the uniform layer
+thickness (proportional to `1/nl`). If the `top` parameter is set to
+`true` the minimum layer thickness is at the top (layer `nl - 1`),
+otherwise it is at the bottom (layer 0). */
+
+void geometric_beta (double rmin, bool top)
+{
+  if (rmin <= 0. || rmin >= 1. || nl < 2)
+    return;
+  double r = 1. + 2.*(1./rmin - 1.)/(nl - 1.);
+  double hmin = (r - 1.)/(pow(r, nl) - 1.);
+  for (int l = 0; l < nl; l++)
+    beta[l] = hmin*pow(r, top ? nl - 1 - l : l);
+}
+
+/**
 The *vertical_remapping()* function takes a (block) field of layer
 thicknesses and the corresponding list of tracer fields and performs
 the remapping (defined by *beta*). */

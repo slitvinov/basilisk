@@ -65,6 +65,7 @@ Additional modules include:
 
 * [Vertical viscosity and diffusion](diffusion.h)
 * [Vertical remapping](remap.h)
+* [Horizontal viscosity](viscosity.h)
 * An [interface](gotm.h) for the [General Ocean Turbulence
   Model](http://gotm.net)
 * [Performance statistics](perfs.h)

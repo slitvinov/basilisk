@@ -15,15 +15,14 @@ wave to break earlier there.
  width=100% )
 
 The solution is obtained using the layered model and demonstrates its
-robustness and a degree of realism even for this complex case. Note
-also the interesting longitudinal "scars". */
+robustness and a degree of realism even for this complex case. */
 
-#include "grid/multigrid.h"
-#include "view.h"
 #include "layered/hydro.h"
 #include "layered/nh.h"
 #include "layered/remap.h"
+#include "layered/viscosity.h"
 #include "layered/perfs.h"
+#include "view.h"
 
 /**
 The initial conditions are given by the wave steepness $ak$ and the
@@ -40,37 +39,55 @@ double RE = 40000.;
 
 /**
 The domain is periodic in $x$ and resolved using 256$^2$
-points and 60 layers. */
+points and 30 layers. */
 
 int main()
 {
   origin (-L0/2., -L0/2.);
   periodic (right);
   N = 256;
-  nl = 60;
+  nl = 30;
   G = g_;
-  nu = 1./RE;
-#if 0  // may be necessary at higher resolutions
-  CFL_H = 0.5;
-  TOLERANCE = 1e-4;
-#endif
+  nu_H = nu = 1./RE;
+
+  /**
+  Some implicit damping is necessary to damp fast modes. This may be
+  related to the slow/fast decoupling of the $\theta$-scheme mentioned
+  by [Durran & Blossey, 2012](#durran2012). */
+  
+  theta_H = 0.51;
+
   run();
 }
 
 /**
-The intial conditions for the free-surface and velocity are given by
+The initial conditions for the free-surface and velocity are given by
 the third-order Stokes solution. */
 
 #include "../test/stokes.h"
 
 event init (i = 0)
 {
+
+  /**
+  We can use a larger CFL, in particular because we are not dealing
+  with shallow-water/wetting/drying. */
+  
+  CFL = 0.8;
+
+  /**
+  The layer thicknesses follow a geometric progression, starting from
+  a top layer with a thickness of 1/3 that of the regular
+  distribution. */
+  
+  geometric_beta (1./3., true);
+  
   foreach() {
     zb[] = - 0.5 + sin(pi*y)/4.;
     double H = wave(x, 0) - zb[];
     double z = zb[];
     foreach_layer() {
-      h[] = H/nl;
+      h[] = H*beta[point.l];
       z += h[]/2.;
       u.x[] = u_x(x, z);
       w[] = u_y(x, z);
@@ -84,32 +101,31 @@ We log the evolution of the kinetic and potential energies.
 
 ~~~gnuplot Evolution of the kinetic, potential and total energy
 set xlabel 't/T0'
-plot [0:6]'log' u 1:2 w l t 'kinetic', '' u 1:($3+0.0007) w l t 'potential', \
-     '' u 1:(($2+$3+0.0007)/2.) w l t 'total/2'
+plot [0:6]'log' u 1:2 w l t 'kinetic', '' u 1:3 w l t 'potential', \
+     '' u 1:(($2+$3)/2.) w l t 'total/2'
 ~~~
 */
 
-event logfile (i++)
+event logfile (i++; t <= 8.*T0)
 {
   double ke = 0., gpe = 0.;
   foreach (reduction(+:ke) reduction(+:gpe)) {
-    double zc = zb[];
     foreach_layer() {
       double norm2 = sq(w[]);
       foreach_dimension()
 	norm2 += sq(u.x[]);
       ke += norm2*h[]*dv();
-      gpe += (zc + h[]/2.)*h[]*dv();
-      zc += h[];
     }
+    gpe += sq(eta[])*dv();
   }
-  fprintf (stderr, "%g %g %g\n", t/T0, ke/2., g_*gpe + 0.14);
+  fprintf (stderr, "%g %g %g\n", t/T0, ke/2., g_*gpe/2.);
 }
 
 /**
-And generate the movie of the free surface (this is quite expensive). */
+And generate the movie of the free surface (this is quite
+expensive). The movie is 45 seconds at 25 frames/second. */
 
-event movie (i += 5; t <= 8.*T0)
+event movie (t += 8.*T0/(45*25))
 {
   view (fov = 17.3106, quat = {0.475152,0.161235,0.235565,0.832313},
 	tx = -0.0221727, ty = -0.0140227, width = 1200, height = 768);
@@ -118,7 +134,7 @@ event movie (i += 5; t <= 8.*T0)
   draw_string (s, size = 80);
   for (double x = -1; x <= 1; x++)
     translate (x)
-      squares ("u59.x", linear = true, z = "eta", min = -0.15, max = 0.6);
+      squares ("u29.x", linear = true, z = "eta", min = -0.15, max = 0.6);
   save ("movie.mp4");
 }
 
@@ -150,9 +166,9 @@ module load openmpi
 module load intel gcc
 
 NAME=breaking
-# mpicc -Wall -std=c99 -O2 _$NAME.c -o $NAME \
-#    -I/home/popinet/local -L/home/popinet/local/gl -L/home/popinet/local/lib \
-#    -lglutils -lfb_osmesa -lOSMesa -lGLU -lppr -lgfortran -lm
+mpicc -Wall -std=c99 -O2 _$NAME.c -o $NAME \
+    -I/home/popinet/local -L/home/popinet/local/gl -L/home/popinet/local/lib \
+    -lglutils -lfb_osmesa -lOSMesa -lGLU -lppr -lgfortran -lm
 
 export LD_LIBRARY_PATH=/home/popinet/local/lib:$LD_LIBRARY_PATH
 export PATH=$PATH:/home/popinet/local/bin
@@ -160,6 +176,22 @@ rm -f *.ppm
 srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS $NAME 2> log > out
 ~~~
 
-The number of timesteps was 5631 and the runtime was 46 minutes with
-movie generation and 23 minutes without, corresponding to a
-computational speed of 250 000 point.timestep/sec/core (on 64 cores). */
+The number of timesteps was 4159 and the runtime was 44 minutes with
+movie generation.
+
+## References
+
+~~~bib
+@article{durran2012,
+  title={Implicit--explicit multistep methods for fast-wave--slow-wave problems},
+  author={Durran, Dale R and Blossey, Peter N},
+  journal={Monthly Weather Review},
+  volume={140},
+  number={4},
+  pages={1307--1325},
+  year={2012},
+  publisher={American Meteorological Society},
+  doi={10.1175/MWR-D-11-00088.1}
+}
+~~~
+*/
