@@ -8,7 +8,14 @@ and try to reproduce the experiment of [Berkhoff et al,
 and are damped on the right-hand side. */
 
 #include "grid/multigrid.h"
-#include "green-naghdi.h"
+#if ML
+# include "layered/hydro.h"
+# include "layered/nh.h"
+# include "layered/remap.h"
+# include "layered/perfs.h"
+#else // !ML
+# include "green-naghdi.h"
+#endif
 
 int main()
 {
@@ -16,22 +23,22 @@ int main()
   L0 = 25;
   Y0 = -L0/2.;
   G = 9.81;
-  N = 1024;
-  
-  /**
-  We turn off limiting to try to reduce wave dissipation. */
 
+#if ML
+  N = 512;
+  nl = 2;
+  CFL_H = 1;
+#else // Green-Naghdi
+  /**
+  The Green--Naghdi solver is significantly more dissipative, so we
+  have to turn off limiting and increase resolution. */
+
+  N = 1024;
   gradient = NULL;
+#endif
+  
   run();
 }
-
-/**
-Periodic waves with period one second are generated on the
-left-hand-side. We tune the amplitude of the "radiation" condition to
-match that of the experiment as measured by wave gauges. */
-
-u.n[left]  = - radiation (0.042*sin(2.*pi*t/1.));
-u.n[right] = + radiation (0);
 
 /**
 We declare a new field to store the maximum wave amplitude. */
@@ -40,6 +47,21 @@ scalar maxa[];
 
 event init (i = 0)
 {
+
+  /**
+  Periodic waves with period one second are generated on the
+  left-hand-side. We tune the amplitude of the "radiation" condition
+  to match that of the experiment as measured by wave gauges. This is
+  different for the two solvers, in particular because of the
+  different spatial resolutions. It would be nice to devise a
+  resolution-independent wave generator. */
+
+#if ML
+  u.n[left]  = - radiation (0.06*sin(2.*pi*t/1.)); // 0.049
+#else
+  u.n[left]  = - radiation (0.042*sin(2.*pi*t/1.));
+#endif
+  u.n[right] = + radiation (0);
   
   /**
   The bathymetry is an inclined and skewed plane combined with an
@@ -70,7 +92,12 @@ event init (i = 0)
     double zs = sq(xr/3.) + sq(yr/4.) <= 1. ?
       -0.3 + 0.5*sqrt(1. - sq(xr/3.75) - sq(yr/5.)) : 0.;
     zb[] = z0 + zs - h0;
+#if ML
+    foreach_layer()
+      h[] = max(-zb[], 0.)*beta[point.l];
+#else
     h[] = max(-zb[], 0.);
+#endif
     maxa[] = 0.;
   }
 }
@@ -83,8 +110,11 @@ event friction (i++) {
   foreach() 
     if (x > 12.) {
       double a = h[] < dry ? HUGE : 1. + 2.*(x - 12.)*dt*norm(u)/h[];
-      foreach_dimension()
-	u.x[] /= a;
+#if ML      
+      foreach_layer()
+#endif
+	foreach_dimension()
+	  u.x[] /= a;
     }
 }
 
@@ -164,8 +194,9 @@ unset label
 
 The results are comparable to [Lannes and Marche,
 2014](/src/references.bib#lannes2014), Figure 19, but we have to use a
-higher resolution (1024^2^ instead of 300^2^) because our numerical
-scheme is only second order (versus 4th order).
+higher resolution (1024^2^ for the Green--Naghdi solver instead of
+300^2^) because our numerical scheme is only second order (versus 4th
+order).
 
 ~~~gnuplot Comparison of the maximum wave height with the experimental data (symbols) along various cross-sections
 reset

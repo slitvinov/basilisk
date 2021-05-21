@@ -20,4 +20,9 @@ tohoku-hydro.c: tohoku.c
 tohoku-hydro.tst: tohoku.s
 tohoku-hydro.tst: CFLAGS += -DHYDRO=1
 
+shoal-ml.c: shoal.c
+	ln -s shoal.c shoal-ml.c 
+shoal-ml.tst: shoal.s
+shoal-ml.tst: CFLAGS += -DML=1
+
 include $(BASILISK)/Makefile.defs
