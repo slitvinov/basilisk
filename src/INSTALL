@@ -75,8 +75,8 @@ make
 Note that on 32-bits systems you need to use *config.gcc.32bits*
 instead.
 
-If you are using another system/compiler (for example Mac OSX), find a
-config file which looks close to yours, then try
+If you are using another system/compiler, find a config file which
+looks close to yours, then try
 
 ~~~bash
 cd basilisk/src
@@ -87,6 +87,9 @@ make
 
 You can also edit this file to customise things for your system
 (please also consider sharing your new config file).
+
+Note also that there is a specific [installation
+guide](/sandbox/INSTALL_MACOS) contributed by Mac OSX users.
 
 To avoid having to re-type the two export commands above everytime you
 login, you should also add them to your `$HOME/.bashrc` file. You can
@@ -102,8 +105,7 @@ echo "export PATH=\$PATH:$BASILISK" >> ~/.bashrc
 
 - gnuplot (> 4.2)
 - imagemagick
-- libav-tools
-- smpeg-plaympeg
+- ffmpeg
 - graphviz
 - valgrind
 - gifsicle
@@ -114,7 +116,7 @@ and also
 Debian-like system (i.e. Debian, Ubuntu, Mint etc...) you just need to do
 
 ~~~bash
-sudo apt install gnuplot imagemagick libav-tools smpeg-plaympeg graphviz valgrind gifsicle pstoedit
+sudo apt install gnuplot imagemagick ffmpeg graphviz valgrind gifsicle pstoedit
 ~~~
 
 # Visualisation
@@ -133,7 +135,7 @@ To setup online visualisation, three steps are required:
 2. Edit the `config` file to setup the corresponding libraries.
 3. Make again.
 
-# Using Basilisk with python
+# Using Basilisk from within python
 
 You will need [SWIG](http://www.swig.org/) which can easily be installed with
 
@@ -144,6 +146,32 @@ sudo apt install swig libpython-dev
 You also need to setup the *MDFLAGS* and *PYTHONINCLUDE* variables in your
 *config* file.
 
+# Installation of optional libraries
+
+The standard makefile/installation does not build all the libraries
+provided by Basilisk because they may depend on other
+programs/libraries which are not generally necessary. The modules
+which require additional installation are
+
+* [GOTM for the layered solver](/src/gotm/common.h)
+* [CVMix for the layered solver](/src/cvmix/cvmix.h)
+* [PPR remapping for the layered solver](/src/ppr/Makefile)
+
+This depends on a Fortran compiler, just do
+
+~~~bash
+sudo apt install gfortran
+cd $BASILISK/ppr
+make
+~~~
+
 # Getting started
 
 The best place to start is the [tutorial](/Tutorial).
+
+# Useful links
+
+* [Statically-linked ffmpeg
+  executables](https://johnvansickle.com/ffmpeg/): this can be useful
+  to get ffmpeg on systems with deficient packaging. Note however that
+  this is **definitely not** the best way to install ffmpeg.
