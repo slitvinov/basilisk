@@ -8,7 +8,7 @@ detailed description can be found.
 ![Animation of the density field](kh-ns/T.mp4)
 
 ~~~gnuplot Ten equally-spaced contours of density at $t=$ 21.
-set term svg enhanced size 1000,250 font ",10"
+set term svg enhanced size 1000,170 font ",10"
 set size ratio -1
 unset key
 unset ytics
@@ -68,7 +68,7 @@ int main()
   The contour lines are saved in 'log' to serve as reference
   solution. */
   
-  system ("gnuplot -e 'set table \"log\"' kh-ns.plot");
+  system ("gnuplot -e 'set table' kh-ns.plot | sed '/^#.*/d' > log");
 }
 
 /**

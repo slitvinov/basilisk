@@ -19,7 +19,7 @@ the (completely different) [centered Navier--Stokes
 solver](kh-ns.c). The agreement is excellent as illustrated below.
 
 ~~~gnuplot Ten equally-spaced contours of density at $t=$ 21.
-set term svg enhanced size 1000,250 font ",10"
+set term svg enhanced size 1000,170 font ",10"
 set size ratio -1
 unset key
 unset ytics
@@ -28,14 +28,12 @@ plot 'log' u 1:2 w l lc rgbcolor "black"
 ~~~
 
 ~~~gnuplot Results with the [Navier--Stokes solver](kh-ns.c).
-set term svg enhanced size 1000,250 font ",10"
 plot '../kh-ns/log' u 1:2 w l lc rgbcolor "black"
 ~~~
 
 The hydrostatic solution is different.
 
 ~~~gnuplot Hydrostatic solution.
-set term svg enhanced size 1000,250 font ",10"
 plot '../kh-hydro/log' u 1:2 w l lc rgbcolor "black"
 ~~~
 
@@ -107,7 +105,11 @@ int main()
   
   system ("for f in plot-*.png; do convert $f ppm:- && rm -f $f; done | "
 	  "ppm2mp4 T.mp4");
-  system ("gnuplot -e 'set table \"log\"' kh.plot");
+#if HYDRO
+  system ("gnuplot -e 'set table' kh-hydro.plot | sed '/^#.*/d' > log");
+#else
+  system ("gnuplot -e 'set table' kh.plot | sed '/^#.*/d' > log");
+#endif
 }
 
 /**
