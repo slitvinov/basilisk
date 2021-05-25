@@ -263,7 +263,7 @@ void plot (FILE * fp)
 	   "set title 't = %.2f M2/8'\n"
 	   "sp '-' u 1:2:4\n",
 	   t/(M2/8.));
-  foreach_leaf() {
+  foreach (serial) {
     double z = zb[];
     fprintf (fp, "%g %g %g %g\n", x, z, u.x[], T[]);
     foreach_layer() {

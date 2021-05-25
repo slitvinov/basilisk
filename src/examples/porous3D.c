@@ -132,7 +132,7 @@ coord maxpos (scalar s)
 {
   coord pmax = {0,0,0};
   double numax = 0.;
-  foreach_leaf()
+  foreach (serial)
     if (fabs(s[]) > numax) {
       numax = fabs(s[]);
       pmax = (coord){x,y,z};

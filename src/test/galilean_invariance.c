@@ -137,7 +137,7 @@ event movie (i += 5; t <= (wavelength/U))
     foreach_layer()
       fprintf (fp, ", '' u 1:%d w l dt 2 lt rgb \"gray50\"", i++);
     fprintf (fp, "\n");
-    foreach_leaf() {
+    foreach (serial) {
       double H = 0.;
       foreach_layer()
 	H += h[];

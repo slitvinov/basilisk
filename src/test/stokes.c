@@ -69,7 +69,7 @@ event init (i = 0)
 }
 
 event profiles (t += T0/4.; t <= 2.5*T0) {
-  foreach_leaf() {
+  foreach (serial) {
     double H = zb[];
     foreach_layer()
       H += h[];
@@ -107,7 +107,7 @@ event movie (i += 3)
 	   "p [%g:%g][-0.1:0.15]'-' u 1:(-1):2 w filledcu lc 3 t ''",
 	   i/3, t/(k_/sqrt(g_*k_)), X0, X0 + L0);
   fprintf (fp, "\n");
-  foreach_leaf() {
+  foreach (serial) {
     double H = 0.;
     foreach_layer()
       H += h[];

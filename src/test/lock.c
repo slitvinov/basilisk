@@ -145,7 +145,7 @@ void plot (FILE * fp)
 	   "set title 't = %.1f h'\n"
 	   "sp [%g:%g][-20:0.5]'-' u ($1/1e3):2:4\n",
 	   t/3600., X0/1e3, (X0 + L0)/1e3);
-  foreach_leaf() {
+  foreach (serial) {
     double z = zb[];
     fprintf (fp, "%g %g %g %g\n", x, z, u.x[], T[]);
     foreach_layer() {

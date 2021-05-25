@@ -35,5 +35,6 @@ call	face			basilisk	face-and-vertex-fields
 call	mask			basilisk	complex-domains
 call	periodic		basilisk	periodic-boundaries
 call	reduction		basilisk	parallel-programming
+call	serial			basilisk	parallel-programming
 call	trace			basilisk	tracing-and-profiling
 call	vertex			basilisk	face-and-vertex-fields

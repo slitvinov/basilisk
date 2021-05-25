@@ -26,7 +26,7 @@
   int nvar = 0, nconst = 0, nevents = 0;
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
-    inforeach_boundary, inforeach_face, nmaybeconst = 0;
+    inforeach_boundary, inforeach_face, inforeach_serial, nmaybeconst = 0;
   int invardecl, vartype, varsymmetric, varface, varvertex, varmaybeconst;
   char * varconst, * type = NULL;
   int inval, invalpara, indef;
@@ -522,8 +522,15 @@
 	     "}\n", yyout);
       fprintf (yyout, "#line %d\n", line);
     }
+    if (inforeach_serial) {
+      fprintf (yyout, "\n#if _OPENMP\n");
+      fprintf (yyout, "  #undef OMP\n  #define OMP(x) _Pragma(#x)\n");
+      fprintf (yyout, "#endif\n");
+      fprintf (yyout, "#line %d\n", line);
+    }
     fputs (" }", yyout);
-    inforeach = inforeach_boundary = inforeach_face = nreduct = 0;
+    inforeach = inforeach_boundary = inforeach_face = nreduct =
+      inforeach_serial = 0;
   }
 
   void endtrace() {
@@ -1209,6 +1216,12 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
     ECHO;
     fclose (yyout);
     yyout = foreachfp;
+    if (inforeach_serial) {
+      fprintf (yyout, "\n#if _OPENMP\n");
+      fprintf (yyout, "  #undef OMP\n  #define OMP(x)\n");
+      fprintf (yyout, "#endif\n");
+      fprintf (yyout, "#line %d\n", line);
+    }
     if (nreduct > 0) {
       fputs ("\n#undef OMP_PARALLEL\n"
 	     "#define OMP_PARALLEL()\n"
@@ -2428,6 +2441,14 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   strcpy (reductvar[nreduct++], s1);
 }
 
+,?{WS}*serial {
+  if (inforeach != 1)
+    REJECT;
+  if (debug)
+    fprintf (stderr, "%s:%d: '%s'\n", fname, line, yytext);
+  inforeach_serial = 1;
+}
+
 [{]({SP}*[a-zA-Z_0-9.]+{SP}*,{SP}*)*[a-zA-Z_0-9.]+{SP}*[}] {
   // {h, zb, ...}
   char * list = makelist (yytext, -1);
@@ -2871,7 +2892,7 @@ int endfor (FILE * fin, FILE * fout)
   yyout = fout;
   line = 1, scope = para = 0;
   inforeach = foreachscope = foreachpara = 
-    inforeach_boundary = inforeach_face = 0;
+    inforeach_boundary = inforeach_face = inforeach_serial = 0;
   invardecl = 0;
   inval = invalpara = indef = 0;
   brack = inarray = infine = inmalloc = 0;

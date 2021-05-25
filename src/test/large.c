@@ -69,7 +69,7 @@ event gnuplot (i += 1) {
   foreach_layer()
     fprintf (fp, ", '' u 1:%d w l lw 2 t ''", i++);
   fprintf (fp, "\n");
-  foreach_leaf() {
+  foreach (serial) {
     double H = 0.;
     foreach_layer()
       H += h[];

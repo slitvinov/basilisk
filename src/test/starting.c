@@ -164,7 +164,7 @@ int compar_theta (const void * a, const void * b)
 ThetaOmega * theta_omega()
 {
   Array * a = array_new();
-  foreach_leaf()
+  foreach (serial)
     if (cs[] > 0. && cs[] < 1.) {
       coord n, b;
       embed_geometry (point, &b, &n);
@@ -299,7 +299,7 @@ in particular surface vorticity. */
 
 void cpout (FILE * fp)
 {
-  foreach_leaf()
+  foreach (serial)
     if (cs[] > 0. && cs[] < 1.) {
       coord b, n;
       double area = embed_geometry (point, &b, &n);

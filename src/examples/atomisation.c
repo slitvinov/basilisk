@@ -187,15 +187,15 @@ event droplets (t += 0.1)
   /**
   Once each cell is tagged with a unique droplet index, we can easily
   compute the volume *v* and position *b* of each droplet. Note that
-  we use *foreach_leaf()* rather than *foreach()* to avoid doing a
-  parallel traversal when using OpenMP. This is because we don't have
-  reduction operations for the *v* and *b* arrays (yet). */
+  we use *foreach (serial)* to avoid doing a parallel traversal when
+  using OpenMP. This is because we don't have reduction operations for
+  the *v* and *b* arrays (yet). */
 
   double v[n];
   coord b[n];
   for (int j = 0; j < n; j++)
     v[j] = b[j].x = b[j].y = b[j].z = 0.;
-  foreach_leaf()
+  foreach (serial)
     if (m[] > 0) {
       int j = m[] - 1;
       v[j] += dv()*f[];

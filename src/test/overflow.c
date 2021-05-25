@@ -323,7 +323,7 @@ void plot (FILE * fp)
 	   "set title 't = %.2f hours'\n"
 	   "sp '-' u ($1/1e3):2:4\n",
 	   t/hour);
-  foreach_leaf() {
+  foreach (serial) {
     double z = zb[];
     fprintf (fp, "%g %g %g %g\n", x, z, u.x[], T[]);
     foreach_layer() {

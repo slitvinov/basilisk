@@ -203,7 +203,7 @@ void plot_setup (FILE * fp)
 
 void output_fields (FILE * fp)
 {
-  foreach_leaf() {
+  foreach (serial) {
     double z = zb[];
 #if !NH
     scalar w = u.x;

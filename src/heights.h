@@ -221,7 +221,7 @@ each direction. */
 
 static void column_propagation (vector h)
 {
-  foreach_leaf() // not compatible with OpenMP
+  foreach (serial) // not compatible with OpenMP
     for (int i = -2; i <= 2; i++)
       foreach_dimension()
 	if (fabs(height(h.x[i])) <= 3.5 &&

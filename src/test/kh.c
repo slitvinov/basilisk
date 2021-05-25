@@ -194,7 +194,7 @@ event gnuplot (t += 1; t <= 30)
 	   "set output 'plot-%02g.png'\n"
 	   "sp [%g:%g][0:1.001]'-' u 1:2:3\n",
 	   t, X0, X0 + L0);
-  foreach_leaf() {
+  foreach (serial) {
     double z = zb[];
     fprintf (fp, "%g %g %g\n", x, z, T[]);
     foreach_layer() {

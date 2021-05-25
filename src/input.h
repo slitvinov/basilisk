@@ -442,7 +442,7 @@ void input_grd (struct InputGRD p)
   }
   
   bool warning = false;  
-  foreach_leaf() {
+  foreach (serial) {
     if (p.periodic || input.boundary[right] == periodic_bc) {
       if (x > XG0 + nx*DeltaGRD)
 	x -= nx*DeltaGRD;

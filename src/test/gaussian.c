@@ -194,7 +194,7 @@ We save profiles at regular intervals. */
 
 event profiles (t += 5)
 {
-  foreach_leaf() {
+  foreach (serial) {
 #if !ML
     double H = h[];
 #else
@@ -243,7 +243,7 @@ We also save the velocity and non-hydrostatic pressure fields. */
 
 event output (t = end)
 {
-  foreach_leaf() {
+  foreach (serial) {
     double z = zb[];
 #if HYDRO
     printf ("%g %g %g %g\n", x, z, u.x[], w[]);

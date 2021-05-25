@@ -202,7 +202,7 @@ event profiles (i += 100) {
   fprintf (fp,
 	   "set title 't = %.2f'\n"
 	   "p '-' u 1:3:2 w filledcu lc 3 t ''\n", t);
-  foreach_leaf()
+  foreach (serial)
 #if dimension > 1
     if (y < Delta)
 #endif
@@ -216,7 +216,7 @@ We save the stationary profile at $t=50$. */
 
 event stationary (t = 50) {
   FILE * fp = fopen ("stationary", "w");
-  foreach_leaf()
+  foreach (serial)
 #if dimension > 1
     if (y < Delta)
 #endif
