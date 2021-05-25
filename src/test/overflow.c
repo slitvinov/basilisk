@@ -254,7 +254,10 @@ event viscous_term (i++)
 /**
 ### Horizontal viscosity
 
-This is a somewhat naive implementation of horizontal viscosity. */
+This is a somewhat naive implementation of horizontal viscosity. Note
+that we do not use the
+[horizontal_diffusion()](/src/layered/diffusion.h#horizontal_diffusion)
+function since it does not behave well for zero layer thickness. */
 
 event viscous_term (i++)
 {

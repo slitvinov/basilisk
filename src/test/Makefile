@@ -213,7 +213,7 @@ multilayer-tests: dispersion-gn.tst dispersion.tst \
 	stommel-ml.tst explicit-ml.tst implicit-ml.tst lake-tr-ml.tst \
 	geo.tst nonlinear-ml.tst tsunami.tst
 
-multilayer-stratified: horn.tst lock.tst overflow.tst
+multilayer-stratified: horn.tst lock.tst overflow.tst kh.tst
 
 overflow.tst: overflow-isopycnal.tst
 
@@ -221,6 +221,15 @@ overflow-isopycnal.c: overflow.c
 	ln -s overflow.c overflow-isopycnal.c 
 overflow-isopycnal.tst: overflow-isopycnal.s
 overflow-isopycnal.tst: CFLAGS += -DISOPYCNAL=1
+
+kh.tst: kh-ns.tst kh-hydro.tst
+
+kh-ns.tst: CC = mpicc -D_MPI=8
+
+kh-hydro.c: kh.c
+	ln -s kh.c kh-hydro.c 
+kh-hydro.tst: kh-hydro.s
+kh-hydro.tst: CFLAGS += -DHYDRO=1
 
 dispersion-gn.c: dispersion.c
 	ln -s dispersion.c dispersion-gn.c 

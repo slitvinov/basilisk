@@ -20,7 +20,6 @@ robustness and a degree of realism even for this complex case. */
 #include "layered/hydro.h"
 #include "layered/nh.h"
 #include "layered/remap.h"
-#include "layered/viscosity.h"
 #include "layered/perfs.h"
 #include "view.h"
 
@@ -48,7 +47,7 @@ int main()
   N = 256;
   nl = 30;
   G = g_;
-  nu_H = nu = 1./RE;
+  nu = 1./RE;
 
   /**
   Some implicit damping is necessary to damp fast modes. This may be
@@ -95,6 +94,12 @@ event init (i = 0)
     }
   }
 }
+
+/**
+We add (an approximation of) horizontal viscosity. */
+
+event viscous_term (i++)
+  horizontal_diffusion ((scalar *){u}, nu, dt);
 
 /**
 We log the evolution of the kinetic and potential energies.

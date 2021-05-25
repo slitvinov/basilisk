@@ -117,16 +117,7 @@ event init (i = 0)
 }
 
 event viscous_term (i++)
-{
-  scalar d2u[];
-  foreach_layer() {
-    foreach()
-      d2u[] = (u.x[1] + u.x[-1] - 2.*u.x[])/sq(Delta);
-    foreach()
-      u.x[] += dt*nu_H*d2u[];
-  }
-  boundary ((scalar *){u});
-}
+  horizontal_diffusion ({u.x}, nu_H, dt);
 
 event logfile (i += 10)
 {

@@ -1,5 +1,5 @@
 /**
-## Internal solitary waves
+# Internal solitary waves
 
 This test case is taken from section 5.6 of [Vitousek & Fringer,
 2014](#vitousek2014) itself based on the laboratory experiments of
@@ -155,28 +155,13 @@ event init (i = 0)
 /**
 This adds (an approximation of) horizontal viscosity. */
 
-#if 1
-event viscous_term (i++)
-{
-  scalar d2u[];
-  foreach_layer() {
-    foreach()
-      d2u[] = (u.x[1] + u.x[-1] - 2.*u.x[])/sq(Delta);
-    foreach()
-      u.x[] += dt*nu_H*d2u[];
-  }
-  boundary ((scalar *){u});
+event viscous_term (i++) {
 #if NH
-  foreach_layer() {
-    foreach()
-      d2u[] = (w[1] + w[-1] - 2.*w[])/sq(Delta);
-    foreach()
-      w[] += dt*nu_H*d2u[];
-  }
-  boundary ({w});
+  horizontal_diffusion ({u, w}, nu_H, dt);
+#else
+  horizontal_diffusion ((scalar *){u}, nu_H, dt);
 #endif
 }
-#endif
 
 /**
 We log the position of the layer in the middle of the tank. */

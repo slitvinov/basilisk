@@ -152,6 +152,44 @@ event viscous_term (i++,last)
 }
 
 /**
+## Horizontal diffusion
+
+This approximates
+$$
+h \partial_t s = D \nabla \cdot (h \nabla s)
+$$
+with $D$ the diffusion coefficient.
+*/
+
+void horizontal_diffusion (scalar * list, double D, double dt)
+{
+  if (D > 0.) {
+    scalar * d2sl = list_clone (list);
+    foreach_layer() {
+      foreach() {
+	scalar s, d2s;
+	for (s,d2s in list,d2sl) {
+	  double a = 0.;
+	  foreach_dimension()
+	    a += (hf.x[]*fm.x[]/(cm[-1] + cm[])*(s[-1] - s[]) +
+		  hf.x[1]*fm.x[1]/(cm[1] + cm[])*(s[1] - s[]));
+	  d2s[] = 2.*a/(cm[]*sq(Delta));
+        }
+      }
+      foreach()
+	if (h[] > dry) {
+	  scalar s, d2s;
+	  for (s,d2s in list,d2sl)
+	    s[] += dt*D*d2s[]/h[];
+	}
+    }
+    boundary (list);
+    delete (d2sl);
+    free (d2sl);
+  }
+}
+
+/**
 ## References
 
 ~~~bib

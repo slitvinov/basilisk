@@ -18,6 +18,7 @@ Note that only the documented test cases appear in the list below
 * [Merging of two vertices](stream.c)
 * [Merging of two vortices (centered Euler solver)](vortex.c)
 * [Taylor--Green vortices](taylor-green.c)
+* [Non-hydrostatic lock-exchange](kh-ns.c)
 
 ## Shallow-water flows
 
@@ -54,7 +55,7 @@ Note that only the documented test cases appear in the list below
 * [Large-amplitude standing wave](large.c)
 * [Transcritical flow over a bump with multiple layers](gaussian.c)
 * [Breaking Stokes wave](stokes.c)
-* [Advection of a rippled interface](galilean_invariance.c)
+* [Galilean invariance](galilean_invariance.c)
 * [Typical (1D) tsunami wave](tsunami.c)
 
 ## Coriolis
@@ -68,6 +69,7 @@ Note that only the documented test cases appear in the list below
 * [Internal solitary waves](horn.c)
 * [Overflow](overflow.c)
 * [Lock-exchange](lock.c)
+* [Non-hydrostatic lock-exchange](kh.c)
 
 ## Volume-Of-Fluid
 
