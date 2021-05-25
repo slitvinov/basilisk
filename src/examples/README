@@ -10,6 +10,7 @@ examples)"*](/src/test/README#running-and-creating-test-cases-and-examples).
 * [Coupled reaction–diffusion equations: the Brusselator](brusselator.c)
 * [The complex Ginzburg--Landau equation](ginzburg-landau.c)
 * [Distance field computation from a 3D model](distance.c)
+* [Wavelet transforms and filtering](wavelet.c)
 
 ## Navier--Stokes
 
