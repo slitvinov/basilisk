@@ -88,7 +88,9 @@
   #define REDUCTMAX 10
   char foreachs[80], * fname;
   FILE * foreachfp;
-  char reduction[REDUCTMAX][4], reductvar[REDUCTMAX][80];
+  char reduction[REDUCTMAX][4], reductvar[REDUCTMAX][80],
+    reductionstr[REDUCTMAX][99], reduct_elem[REDUCTMAX][80],
+    not_an_array[13] = "not_an_array";
   int nreduct;
 
   int inboundary;
@@ -501,21 +503,20 @@
     if (nreduct > 0) {
       int i;
       for (i = 0; i < nreduct; i++) {
-	if (strcmp (reduction[i], "+"))
+	if (strcmp(reduct_elem[i], not_an_array)) 
 	  fprintf (yyout,
-		   "OMP(omp critical) if (_%s %s %s) %s = _%s;\n",
-		   reductvar[i], strcmp(reduction[i], "min") ? ">" : "<",
-		   reductvar[i], reductvar[i], reductvar[i]);
+		   "mpi_all_reduce_double (%s, %s, %s);\n",
+		   reductvar[i], 
+		   !strcmp(reduction[i], "min") ? "MPI_MIN" : 
+		   !strcmp(reduction[i], "max") ? "MPI_MAX" : 
+		   "MPI_SUM", reduct_elem[i]);
 	else
 	  fprintf (yyout,
-		   "OMP(omp critical) %s += _%s;\n",
-		   reductvar[i], reductvar[i]);
-	fprintf (yyout,
-		 "mpi_all_reduce_double (%s, %s);\n",
-		 reductvar[i], 
-		 !strcmp(reduction[i], "min") ? "MPI_MIN" : 
-		 !strcmp(reduction[i], "max") ? "MPI_MAX" : 
-		 "MPI_SUM");
+		   "mpi_all_reduce_double (&%s, %s, 1);\n",
+		   reductvar[i], 
+		   !strcmp(reduction[i], "min") ? "MPI_MIN" : 
+		   !strcmp(reduction[i], "max") ? "MPI_MAX" : 
+		   "MPI_SUM");
       }
       fputs ("\n#undef OMP_PARALLEL\n"
 	     "#define OMP_PARALLEL() OMP(omp parallel)\n"
@@ -1226,12 +1227,11 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
     if (nreduct > 0) {
       fputs ("\n#undef OMP_PARALLEL\n"
 	     "#define OMP_PARALLEL()\n"
-	     "OMP(omp parallel) {\n", yyout);
+	     "OMP(omp parallel", yyout);
       int i;
       for (i = 0; i < nreduct; i++)
-	fprintf (yyout, "%s _%s = %s; ",
-		 doubletype, reductvar[i], reductvar[i]);
-      fprintf (yyout, "\n#line %d\n", foreach_line);
+	fprintf (yyout, " %s", reductionstr[i]);
+      fprintf (yyout, ") {\n\n#line %d\n", foreach_line);
     }
     yyout = dopen ("_foreach_body.h", "w");
     fputs ("{\n", yyout);
@@ -2429,17 +2429,31 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     REJECT;
 }
 
-,?{WS}*reduction{WS}*[(](min|max|\+):{ID}[)] {
+,?{WS}*reduction{WS}*[(](min|max|\+):{ID}(\[({D}+|{ID})?:({D}+|{ID})\])?[)] {
   if (debug)
     fprintf (stderr, "%s:%d: '%s'\n", fname, line, yytext);
   if (yytext[0] == ',')
     yytext[0] = ' ';
-  char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':');
-  *s1 = '\0'; s1++;
+  strcpy (reductionstr[nreduct], yytext); //For OpenMP, parse for MPI:
+  char * s = strchr (yytext, '('), * s1 = strchr (yytext, ':'),
+    * s2 = strrchr (yytext, ':');
+  *s1 = '\0'; // first : -> terminate
+  if (s1 == s2) { // No array reduction
+    yytext[yyleng-1] = '\0';
+    strcpy (reduct_elem[nreduct], not_an_array); 
+  } else {  // Parse array syntax
+    s2--; *s2 = '\0'; s2 += 2; // [ -> terminate
+    yytext[yyleng - 2] = '\0';   // ] -> terminate
+    strcpy (reduct_elem[nreduct], s2);
+  }
   assert (nreduct < REDUCTMAX);
   strcpy (reduction[nreduct], ++s);
-  yytext[yyleng-1] = '\0';
-  strcpy (reductvar[nreduct++], s1);
+  strcpy (reductvar[nreduct++], ++s1);
+  if (debug) {
+    int j = nreduct - 1;
+    fprintf (stderr, "nreduct: %d, var: %s, op: %s, elem: %s\n",
+	     j, reductvar[j], reduction[j], reduct_elem[j]);
+  }
 }
 
 ,?{WS}*serial {
@@ -2466,12 +2480,8 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
 {ID} {
   var_t * var;
   if (inforeach) {
-    int i;
-    for (i = 0; i < nreduct; i++)
-      if (!strcmp (yytext, reductvar[i])) {
-	fputc ('_', yyout);
-	break;
-      }
+    ; // I am too afraid to remove this block
+    ; //  '_' prefixes are deprecated here
     cadna_echo (yytext);
   }
   else if (scope == 0 && para == 0 &&

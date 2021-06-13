@@ -646,7 +646,7 @@ static void trace_off()
 @define pid() 0
 @define npe() omp_get_num_threads()
 @define mpi_all_reduce(v,type,op)
-@define mpi_all_reduce_double(v,op)
+@define mpi_all_reduce_double(v,op,elem)
 
 @elif _MPI
 
@@ -664,7 +664,7 @@ static double prof_start, _prof;
 
 @if FAKE_MPI
 @define mpi_all_reduce(v,type,op)
-@define mpi_all_reduce_double(v,op)
+@define mpi_all_reduce_double(v,op,elem)
 @else // !FAKE_MPI
 trace
 int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
@@ -680,11 +680,14 @@ int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
   prof_stop();
 }
 @
-@def mpi_all_reduce_double(v,op) {
+@def mpi_all_reduce_double(v,op,elem) {
   prof_start ("mpi_all_reduce");
-  double global, tmp = v;
-  mpi_all_reduce0 (&tmp, &global, 1, MPI_DOUBLE, op, MPI_COMM_WORLD);
-  v = global;
+  double global[elem], tmp[elem];
+  for (int i = 0; i < elem; i++) //cast any to double
+    tmp[i] = (v)[i];
+  mpi_all_reduce0 (tmp, global, elem, MPI_DOUBLE, op, MPI_COMM_WORLD);
+  for (int i = 0; i < elem; i++)
+    (v)[i] = global[i];
   prof_stop();
 }
 @
@@ -777,7 +780,7 @@ void mpi_init()
 @define pid() 0
 @define npe() 1
 @define mpi_all_reduce(v,type,op)
-@define mpi_all_reduce_double(v,op)
+@define mpi_all_reduce_double(v,op,elem)
 
 @endif // not MPI, not OpenMP
 
