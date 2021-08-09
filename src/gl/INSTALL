@@ -99,7 +99,7 @@ instructions](#using-off-screen-rendering) above.
 
 If when using the system-provided OSMesa library in parallel (with
 MPI), you see only a partial image this can be a symptom of a
-[bug](https://bugs.freedesktop.org/show_bug.cgi?id=108853) in the
+[bug](https://gitlab.freedesktop.org/mesa/mesa/-/issues/885) in the
 "gallium" version of OSMesa. To work around this bug, you will need to
 recompile the `libfb_osmesa` library using something like
 
@@ -108,6 +108,10 @@ cd $BASILISK/gl
 rm -f fb_osmesa.o
 CFLAGS=-DGALLIUM=1 make libfb_osmesa.a
 ~~~
+
+Note that this bug has been
+[fixed](https://gitlab.freedesktop.org/mesa/mesa/-/commit/c5c1aa7c75c05927017325829cb3f354654d0b73)
+in more recent versions of OSMesa.
 
 ## Installing OSMesa/GLU from source
 

@@ -62,6 +62,8 @@ fbdepth_t * framebuffer_depth (framebuffer * p)
 #if GALLIUM
   // fix for bug in gallium/libosmesa
   // the depth buffer is flipped vertically
+  // see https://gitlab.freedesktop.org/mesa/mesa/-/issues/885
+  // Fixed since
   GLint i, j;
   for (j = 0; j < height/2; j++)
     for (i = 0; i < width; i++) {
