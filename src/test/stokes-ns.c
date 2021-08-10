@@ -91,6 +91,15 @@ using the third-order Stokes wave solution. */
 event init (i = 0)
 {
   if (!restore ("restart")) {
+
+    /**
+    We need to make sure that fields are properly initialised before
+    refinement below, otherwise a
+    [-catch](/src/README#tracking-floating-point-exceptions) exception
+    will be triggered when debugging. */
+
+    event ("properties");
+    
     do {
       fraction (f, wave(x,y));
       foreach()
