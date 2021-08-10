@@ -813,3 +813,9 @@ void periodic (int dir)
   periodic_boundary (2*c + 1);
   (&Period.x)[c] = true;
 }
+
+// for debugging
+double getvalue (Point point, scalar s, int i, int j, int k)
+{
+  return s[i,j,k];
+}
