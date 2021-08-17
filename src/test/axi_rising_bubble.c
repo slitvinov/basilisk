@@ -1,8 +1,8 @@
 /**
 # Soluble gas diffusing from a rising bubble
 
-This is the example discussed in section 2.4.2 of [Farsoiya et al.,
-2020](#farsoiya2020).
+This is the example discussed in section 3.3.2 of [Farsoiya et al.,
+2021](#farsoiya2021).
 
 The four cases illustrated below are considered. The left-half of each
 figure is the vertical velocity component and the right-half the
@@ -11,10 +11,10 @@ tracer concentration when close to the stationary regime.
 <center>
 <table>
 <tr>
-<td>![](axi_rising_bubble/final-1.png){ width="200px" }</td>
-<td>![](axi_rising_bubble/final-2.png){ width="200px" }</td>
-<td>![](axi_rising_bubble/final-3.png){ width="200px" }</td>
-<td>![](axi_rising_bubble/final-4.png){ width="200px" }</td>
+<td>![](axi_rising_bubble/final-1.png){ width="100%" }</td>
+<td>![](axi_rising_bubble/final-2.png){ width="100%" }</td>
+<td>![](axi_rising_bubble/final-3.png){ width="100%" }</td>
+<td>![](axi_rising_bubble/final-4.png){ width="100%" }</td>
 </tr>
 <tr>
 <td><center>Case 1</center></td> 
@@ -59,23 +59,18 @@ set xlabel 't U/d_0'
 set ylabel 'Sh'
 set xrange [0.01:4]
 set yrange [0:14]
-plot for [i = 1:4]							\
-     'log' index 'case '.i u ($1*ut[i]/2./r0):(sherwood(D[i])) w l t 'Axi Case '.i lt i,  \
+plot for [i = 1:4]					       \
+     'log' index 'case '.i u ($1*ut[i]/2./r0):(sherwood(D[i])) \
+     w l t 'Axi Case '.i lt i,				       \
      for [i = 1:4] levich(ut[i], D[i]) w l t '' lt i dt 2
 ~~~
 
 ## References
 
 ~~~bib
-@article{farsoiya2020,
-  title = {Bubble mediated gas transfer of diluted component in turbulence},
-  author = {P. K. Farsoiya and S. Popinet and L. Deike},
-  journal = {Journal of Fluid Mechanics},
-  year = {2020},
-  note = {submitted}
-}
+@hal{farsoiya2021, hal-03227997}
 
-@article{levich1962,
+@book{levich1962,
   title={Physicochemical hydrodynamics},
   author={Levich, Veniamin Grigorʹevich},
   year={1962},
@@ -92,7 +87,6 @@ plot for [i = 1:4]							\
 #include "reduced.h"
 #include "henry.h"
 #include "view.h"
-// #include "navier-stokes/perfs.h"
 
 scalar c[], * stracers = {c};
 double bubble_radius = 1.;
@@ -196,7 +190,7 @@ event extract (t = 0; t += 0.01; t <= end_time[dcase-1])
 	
   if (i == 0)
     fprintf (stderr, "t ci co vbx vb vbo area dt\n");
-  fprintf (stderr,"%e %.12e %.12e %.12e %.12e %.12e %.12e %e\n",
+  fprintf (stderr,"%g %g %g %g %g %g %g %g\n",
 	   t,
 	   ci*2.*pi, co*2.*pi,
 	   vbx/vb, 2.*pi*vb, 2.*pi*statsf(f).sum, 2.*pi*area,

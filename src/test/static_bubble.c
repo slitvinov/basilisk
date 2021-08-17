@@ -51,6 +51,7 @@ plt.savefig('p001clt.svg')
 ~~~
 */
 
+#include "grid/multigrid.h"
 #include "axi.h"
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
@@ -92,6 +93,6 @@ event extract (i++; t <= 48)
 {		
   if (i == 0)
     fprintf (stderr, "# t ci co\n");
-  fprintf (stderr, "%e %.12e %.12e\n",
+  fprintf (stderr, "%g %g %g\n",
 	   t, interpolate(c,5.0,0.5), interpolate(c,5.0,1.5));
 }

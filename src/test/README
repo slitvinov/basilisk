@@ -142,6 +142,7 @@ Note that only the documented test cases appear in the list below
 
 * [The SAG equation](sag.c)
 * [Soluble gas diffusing from a static bubble](static_bubble.c)
+* [Soluble gas diffusing from a rising bubble](axi_rising_bubble.c)
 
 ## General Ocean Turbulence Model (GOTM)
 
