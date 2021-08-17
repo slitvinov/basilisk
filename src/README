@@ -194,6 +194,7 @@ $$
 $$
 \nabla\cdot (\alpha\nabla a) + \lambda a = b
 $$
+* [Henry's law](henry.h)
 * [Runge--Kutta time integrators](runge-kutta.h)
 $$
 \frac{\partial\mathbf{u}}{\partial t} = L(\mathbf{u}, t)
