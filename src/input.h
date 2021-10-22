@@ -396,12 +396,36 @@ void input_grd (struct InputGRD p)
 
   // header
   char waste[100];
-  fscanf (p.fp, "%s %d", waste, &nx);
-  fscanf (p.fp, "%s %d", waste, &ny);
-  fscanf (p.fp, "%s %lf", waste, &XG0);
-  fscanf (p.fp, "%s %lf", waste, &YG0);
-  fscanf (p.fp, "%s %lf", waste, &DeltaGRD);
-  fscanf (p.fp, "%s %lf", waste, &ndv);
+  if (fscanf (p.fp, "%s %d", waste, &nx) != 2) {
+    fprintf (stderr, "input_grd(): error reading 'nx'\n");
+    if (opened) fclose (p.fp);
+    return;
+  }
+  if (fscanf (p.fp, "%s %d", waste, &ny) != 2) {
+    fprintf (stderr, "input_grd(): error reading 'ny'\n");
+    if (opened) fclose (p.fp);
+    return;
+  }
+  if (fscanf (p.fp, "%s %lf", waste, &XG0) != 2) {
+    fprintf (stderr, "input_grd(): error reading 'XG0'\n");
+    if (opened) fclose (p.fp);
+    return;    
+  }
+  if (fscanf (p.fp, "%s %lf", waste, &YG0) != 2) {
+    fprintf (stderr, "input_grd(): error reading 'YG0'\n");
+    if (opened) fclose (p.fp);
+    return;    
+  }
+  if (fscanf (p.fp, "%s %lf", waste, &DeltaGRD) != 2) {
+    fprintf (stderr, "input_grd(): error reading 'DeltaGRD'\n");
+    if (opened) fclose (p.fp);
+    return;    
+  }
+  if (fscanf (p.fp, "%s %lf", waste, &ndv) != 2) {
+    fprintf (stderr, "input_grd(): error reading 'ndv'\n");
+    if (opened) fclose (p.fp);
+    return;    
+  }
 
   //default value of NoData value
   if (!p.nodatavalue)
@@ -411,7 +435,12 @@ void input_grd (struct InputGRD p)
   double * value = qmalloc (nx*ny, double);
   for (int i = ny - 1; i >= 0; i--)
     for (int j = 0 ; j < nx; j++) {
-      fscanf (p.fp, "%lf ", &value[j + i*nx]);
+      if (fscanf (p.fp, "%lf ", &value[j + i*nx]) != 1) {
+	fprintf (stderr, "input_grd(): error reading value %d,%d\n", i, j);
+	if (opened) fclose (p.fp);
+	free (value);
+	return;
+      }
       if (p.zero && value[j + i*nx] == ndv)
 	value[j + i*nx] = 0.;
     }

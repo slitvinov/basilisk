@@ -31,10 +31,14 @@ coord * input_stl (FILE * fp)
   Array * a = array_new();
   char tag[6];
 
-  fgets (tag, 6, fp);
+  if (fgets (tag, 6, fp) != tag) {
+    fprintf (stderr, "input_stl(): error reading tag\n");
+    exit(1);
+  }
   rewind (fp);
   if (!strcmp (tag, "solid")) { /* ASCII file */
-    fprintf (stderr, "ASCII STL not implemented yet (use binary instead)\n");
+    fprintf (stderr, "input_stl(): ASCII STL not implemented yet "
+	     "(use binary instead)\n");
     exit(1);
   }
   else { /* binary file */
