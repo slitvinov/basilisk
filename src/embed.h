@@ -299,8 +299,8 @@ int fractions_cleanup (struct Cleanup p)
   through the topology of the domain: for examples, long, unresolved
   "filaments" may need many iterations to be fully removed. */
   
-  int changed = 1, schanged = 0;
-  for (int i = 0; i < 100 && changed; i++) {
+  int changed = 1, schanged = 0, i;
+  for (i = 0; i < 100 && changed; i++) {
 
     /**
     Face fractions of empty cells must be zero. */
@@ -344,7 +344,10 @@ int fractions_cleanup (struct Cleanup p)
 
     schanged += changed;
   }
-  assert (!changed); // not converged yet...
+  if (changed)
+    fprintf (stderr, "WARNING: fractions_cleanup() did not converge after "
+	     "%d iterations\n", i);
+  boundary ((scalar *){s});
   return schanged;
 }
   
