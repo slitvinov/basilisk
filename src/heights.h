@@ -243,14 +243,14 @@ void heights (scalar c, vector h)
 
   /**
   We need a 9-points-high stencil (rather than the default
-  5-points). To do this we store in *cs* the volume fraction field *c*
+  5-points). To do this we store in *s* the volume fraction field *c*
   shifted by 2 grid points in the respective directions. We make sure
   that this field uses the same boundary conditions as *c*. */
   
-  vector cs[];
+  vector s[];
   foreach_dimension()
     for (int i = 0; i < nboundary; i++)
-      cs.x.boundary[i] = c.boundary[i];
+      s.x.boundary[i] = c.boundary[i];
 
   /**
   To compute the height function, we sum the volume fractions in a
@@ -265,14 +265,14 @@ void heights (scalar c, vector h)
     
     foreach()
       foreach_dimension()
-        cs.x[] = c[2*j];
-    boundary ((scalar *){cs});
+        s.x[] = c[2*j];
+    boundary ((scalar *){s});
 
     /**
     We sum the half-column, downward or upward. */
     
     foreach()
-      half_column (point, c, h, cs, j);
+      half_column (point, c, h, s, j);
   }
   boundary ((scalar *){h});
 
@@ -360,10 +360,10 @@ is more complex. */
 trace
 void heights (scalar c, vector h)
 {
-  vector cs[];
+  vector s[];
   foreach_dimension()
     for (int i = 0; i < nboundary; i++)
-      cs.x.boundary[i] = c.boundary[i];
+      s.x.boundary[i] = c.boundary[i];
 
   /**
   To compute the shifted field, we first need to *restrict* the volume
@@ -387,7 +387,7 @@ void heights (scalar c, vector h)
       
       foreach_level (l)
 	foreach_dimension()
-	  cs.x[] = c[2*j];
+	  s.x[] = c[2*j];
 
       /**
       We then need to apply boundary conditions on the shifted
@@ -399,8 +399,8 @@ void heights (scalar c, vector h)
       
       foreach_level (l - 1)
 	foreach_dimension() {
-	  cs.x[] = c[j];
-	  cs.x[j] = c[2*j];
+	  s.x[] = c[j];
+	  s.x[j] = c[2*j];
         }
 
       /**
@@ -410,15 +410,15 @@ void heights (scalar c, vector h)
       
       foreach_halo (prolongation, l - 1)
 	foreach_dimension()
-	  c.prolongation (point, cs.x);
-      boundary_iterate (level, (scalar *){cs}, l);
+	  c.prolongation (point, s.x);
+      boundary_iterate (level, (scalar *){s}, l);
 
       /**
       We can now sum the half-column at this level, downward or upward
       according to *j*. */
 
       foreach_level (l)
-        half_column (point, c, h, cs, j);
+        half_column (point, c, h, s, j);
     }
   }
     
