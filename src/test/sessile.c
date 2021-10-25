@@ -28,6 +28,8 @@ unset key
 unset xtics
 unset ytics
 unset border
+set xrange [-1.6:1.6]
+set yrange [0:]
 plot 'out' w l, '' u (-$1):2 w l lt 1, 0 lt -1
 set term pop
 ~~~

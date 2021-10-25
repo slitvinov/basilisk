@@ -112,11 +112,11 @@ event init (i = 0)
     On trees, we repeat this initialisation until mesh adaptation does
     not refine the mesh anymore. */
 
-#if TREE  
+#if TREE
     while (adapt_wavelet ({f,u},
 			  (double[]){0.01,uemax,uemax,uemax}, LEVEL, 5).nf);
 #else
-    while (0);
+    while (0); // to match 'do' above
 #endif
   }
 }
