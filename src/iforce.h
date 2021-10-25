@@ -87,7 +87,7 @@ event acceleration (i++)
   face vector ia = a;
   foreach_face()
     for (scalar f in list)
-      if (f[] != f[-1]) {
+      if (f[] != f[-1] && fm.x[] > 0.) {
 
 	/**
 	We need to compute the potential *phif* on the face, using its
@@ -104,7 +104,7 @@ event acceleration (i++)
 	  phi[] < nodata ? phi[] :
 	  phi[-1] < nodata ? phi[-1] :
 	  0.;
-	
+
 	ia.x[] += alpha.x[]/fm.x[]*phif*(f[] - f[-1])/Delta;
       }
 

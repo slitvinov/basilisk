@@ -100,7 +100,7 @@ double plane_alpha (double c, coord n)
     double cs = cos(teta);
     alpha = p12*(sqrt(3.*(1. - cs*cs)) - cs) + m12;
   }
-  else if (m12 < m3)
+  else if (m12 <= m3)
     alpha = m3*ch + mm/2.;
   else {
     double p = m1*(m2 + m3) + m2*m3 - 1./4., p12 = sqrt(p);

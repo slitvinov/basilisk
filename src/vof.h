@@ -83,7 +83,7 @@ volume-fraction-weighted linear interpolation of the concentration. */
 static void vof_concentration_refine (Point point, scalar s)
 {
   scalar f = s.c;
-  if ((!s.inverse && f[] <= 0.) || (s.inverse && f[] >= 1.))
+  if (cm[] == 0. || (!s.inverse && f[] <= 0.) || (s.inverse && f[] >= 1.))
     foreach_child()
       s[] = 0.;
   else {
@@ -192,6 +192,9 @@ static void sweep_x (scalar c, scalar cc, scalar * tcl)
     /**
     We also check that we are not violating the CFL condition. */
 
+#if EMBED
+    if (cs[] >= 1.)
+#endif
     if (un*fm.x[]*s/(cm[] + SEPS) > cfl)
       cfl = un*fm.x[]*s/(cm[] + SEPS);
 
@@ -302,13 +305,29 @@ static void sweep_x (scalar c, scalar cc, scalar * tcl)
   $$
   */
 
+#if !EMBED
   foreach() {
-    c[] += dt*(flux[] - flux[1] + cc[]*(uf.x[1] - uf.x[]))/(cm[]*Delta + SEPS);
+    c[] += dt*(flux[] - flux[1] + cc[]*(uf.x[1] - uf.x[]))/(cm[]*Delta);
     scalar t, tc, tflux;
     for (t, tc, tflux in tracers, tcl, tfluxl)
-      t[] += dt*(tflux[] - tflux[1] + tc[]*(uf.x[1] - uf.x[]))/
-	(cm[]*Delta + SEPS);
+      t[] += dt*(tflux[] - tflux[1] + tc[]*(uf.x[1] - uf.x[]))/(cm[]*Delta);
   }
+#else // EMBED
+  /**
+  When dealing with embedded boundaries, we simply ignore the fraction
+  occupied by the solid. This is a simple approximation which has the
+  advantage of ensuring boundedness of the volume fraction and
+  conservation of the total tracer mass (if it is computed also
+  ignoring the volume occupied by the solid in partial cells). */
+  
+  foreach()
+    if (cs[] > 0.) {
+      c[] += dt*(flux[] - flux[1] + cc[]*(uf.x[1] - uf.x[]))/Delta;
+      scalar t, tc, tflux;
+      for (t, tc, tflux in tracers, tcl, tfluxl)
+	t[] += dt*(tflux[] - tflux[1] + tc[]*(uf.x[1] - uf.x[]))/Delta;
+    }
+#endif // EMBED
   boundary ({c});
   boundary (tracers);
 
@@ -376,8 +395,10 @@ event vof (i++)
 
 ~~~bib
 @Article{lopez2015,
-  title = {A VOF numerical study on the electrokinetic effects in the breakup of electrified jets},
-  author = {J. M. Lopez-Herrera and A. M. Ganan-Calvo and S. Popinet and M. A. Herrada},
+  title = {A VOF numerical study on the electrokinetic effects in the 
+           breakup of electrified jets},
+  author = {J. M. Lopez-Herrera and A. M. Ganan-Calvo and S. Popinet and
+            M. A. Herrada},
   journal = {International Journal of Multiphase Flows},
   pages = {14-22},
   volume = {71},
