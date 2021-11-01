@@ -755,7 +755,8 @@
 	vtype--;
 	dot = strchr (dot+1, '.');
       }
-      char member[80] = "";
+      // fixme: this a large buffer but may still overrun for very long lists...
+      char member[800] = "";
       if (scope > 0 || var->i[0] < 0) { // dynamic allocation
 	switch (listtype) {
 	case scalar: {
