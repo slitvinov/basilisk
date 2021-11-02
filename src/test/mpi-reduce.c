@@ -10,13 +10,13 @@ int main ()
     s[] = x + y;
   boundary ({s});
 
-  // statsf() uses MPI reduction operations
+  // statsf() uses reduction operations
   stats stat = statsf (s);
   fprintf (qerr, "%g %g %g\n", stat.min, stat.sum, stat.max);
 
   // Array reduction
   int cells[arr_size] = {0};
-  foreach(reduction(+:cells[:arr_size])) 
+  foreach (reduction(+:cells[:arr_size])) 
     cells[(int)(10*fabs(x))]++;
 
   for (int i = 0; i < arr_size; i++) 
