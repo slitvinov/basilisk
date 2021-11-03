@@ -189,10 +189,10 @@ Makefile.tests: $(BASILISK)/tests.sh
 	sh $(BASILISK)/tests.sh
 
 %.s.d: %.c $(QCC)
-	$(QCC) -MD -o $@ $<
+	$(QCC) $(CFLAGS) -MD -o $@ $<
 
 %.tags.d: % $(QCC)
-	$(QCC) -MD -tags -o $@ $<
+	$(QCC) $(CFLAGS) -MD -tags -o $@ $<
 
 Makefile.deps: 	Makefile.tests \
 		$(subst .c,.s.d,$(wildcard $(filter-out $(EXCLUDE),$(ALLTESTS) $(TESTS)))) \
