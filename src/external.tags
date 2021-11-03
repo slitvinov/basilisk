@@ -22,8 +22,8 @@ call	system			stdlib		1
 call	attribute		basilisk	field-attributes
 call	bid			basilisk	complex-domains
 call	boundary		basilisk	boundary-conditions
-call	boundary_normal		basilisk	boundary-conditions-and-stencils
-call	boundary_tangent	basilisk	boundary-conditions-and-stencils
+call	boundary_flux		basilisk	boundary-conditions-and-stencils
+call	diagonalize		basilisk	diagonalization
 call	event			basilisk	events
 call	foreach			basilisk	iterators
 call	foreach_boundary	basilisk	foreach_boundary

@@ -124,7 +124,7 @@
   typedef struct { 
     char * v, * constant, * block;
     int type, args, scope, automatic, symmetric, face, vertex, maybeconst;
-    int wasmaybeconst;
+    int wasmaybeconst, diag;
     int i[9];
     char * conditional;
   } var_t;
@@ -145,12 +145,15 @@
 	_varstack = realloc (_varstack, varstackmax*sizeof (var_t));
       }
       _varstack[varstack] = (var_t) { f, NULL, NULL, type, na, scope, 
-				      0, 0, 0, 0, maybeconst, 0, {-1} };
+				      0, 0, 0, 0, maybeconst, 0, 0, {-1} };
       v = &(_varstack[varstack]);
     }
     return v;
   }
   var_t ** foreachconst = NULL;
+
+  var_t * indiag;
+  int diagscope;
 
   char * makelist (const char * input, int type);
 
@@ -1338,6 +1341,10 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
     fputs (" free_solver(); ",  yyout);
     inmain = 0;
   }
+  if (indiag && diagscope == scope) {
+    indiag->diag = 0;
+    indiag = NULL;
+  }
   varpop();
   varwasmaybeconst();
   if (infunction && scope <= functionscope)
@@ -1462,6 +1469,29 @@ map{WS}+"{" {
   yyout = dopen ("_map.h", "w");
 }
 
+diagonalize{WS}*"("{WS}*{SCALAR}{WS}*")" {
+  ECHO;
+  if (indiag) {
+    fprintf (stderr, "%s:%d: error: diagonalize() cannot be nested\n",
+	     fname, line);
+    return 1;
+  }
+  char * s = strchr (yytext, '(') + 1;
+  while (strchr(" \t\v\n\f", *s)) s++;
+  char * s1 = s;
+  while (!strchr(" \t\v\n\f)", *s1)) s1++;
+  *s1 = '\0';
+  indiag = varlookup (s, s1 - s);
+  if (!indiag) {
+    fprintf (stderr, "%s:%d: error: unknown scalar '%s'\n", fname, line, s);
+    return 1;
+  }
+  if (debug)
+    fprintf (stderr, "%s:%d: diagonalizing '%s'\n", fname, line, s);
+  indiag->diag = 1;
+  diagscope = scope;
+}
+
 , {
   if (inarray && inarray == brack && inarraypara == para) {
     inarrayargs++;
@@ -1503,6 +1533,10 @@ map{WS}+"{" {
     ECHO; insthg = 1;
     endforeachdim ();
   }
+  if (indiag && diagscope == scope) {
+    indiag->diag = 0;
+    indiag = NULL;
+  }    
   foreach_child_t * i;
   while ((i = stack_top(&foreach_child_stack)) &&
 	 i->scope == scope && i->para == para) {
@@ -1892,6 +1926,8 @@ val{WS}*[(]    {
 	fprintf (yyout, "_val_constant(%s", boundaryrep(yytext));
       else if (var->maybeconst)
 	maybeconst_macro (var, "val", boundaryrep(yytext));
+      else if (var->diag)
+	fprintf (yyout, "val_diagonal(%s", boundaryrep(yytext));
       else
 	fprintf (yyout, "val(%s", boundaryrep(yytext));
       if (yytext[yyleng-1] == ']')
@@ -2908,6 +2944,7 @@ int endfor (FILE * fin, FILE * fout)
   inval = invalpara = indef = 0;
   brack = inarray = infine = inmalloc = 0;
   inevent = inreturn = inattr = inmap = 0;
+  indiag = NULL;
   mallocpara = 0;
   foreachdim_stack.n = 0;
   foreach_child_stack.n = 0;

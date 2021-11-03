@@ -3,6 +3,8 @@
 void (* debug)    (Point);
 
 @define _val_constant(a,k,l,m) ((const double) _constant[a.i -_NVARMAX])
+@define diagonalize(a)
+@define val_diagonal(a,k,l,m) ((k) == 0 && (l) == 0 && (m) == 0)
 
 @undef VARIABLES
 @def VARIABLES
