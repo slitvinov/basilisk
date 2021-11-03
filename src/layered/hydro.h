@@ -167,13 +167,29 @@ event init (i = 0)
 }
 
 /**
+The maximum timestep `dtmax` can be used to impose additional stability
+conditions. */
+
+double dtmax;
+event set_dtmax (i++,last) dtmax = DT;
+
+/**
+The macro below can be overloaded to define the barotropic
+acceleration. By default it is just the slope of the free-surface
+times gravity. */
+
+#define gmetric(i) (2.*fm.x[i]/(cm[i] + cm[i-1]))
+#ifndef a_baro
+# define a_baro(eta, i) (G*gmetric(i)*(eta[i-1] - eta[i])/Delta)
+#endif
+
+/**
 ## Computation of face values
 
 At each timestep, temporary face fields are defined for the fluxes $(h
 \mathbf{u})^{n+1/2}$, face height $h_f^{n+1/2}$ and height-weighted
 face accelerations $(ha)^{n+1/2}$. */
 
-#define gmetric(i) (2.*fm.x[i]/(cm[i] + cm[i-1]))
 
 static bool hydrostatic = true;
 face vector hu, hf, ha;
@@ -192,9 +208,8 @@ event face_fields (i++, last)
   "sufficiently small" value is used. */
   
   static double pdt = 1e-6;
-  double dtmax = DT;
   foreach_face (reduction (min:dtmax)) {
-    double ax = - gmetric(0)*G*(eta[] - eta[-1])/Delta;
+    double ax = a_baro (eta, 0);
     double H = 0., um = 0.;
     foreach_layer() {
 
@@ -236,11 +251,12 @@ event face_fields (i++, last)
     takes dispersion into account in the non-hydrostatic case. */
     
     if (H > dry) {
-      double c = um/CFL + (hydrostatic ? sqrt(G*H) :
-			   sqrt(G*Delta*tanh(H/Delta)))/CFL_H;
-      double dt = min(cm[], cm[-1])*Delta/(c*fm.x[]);
-      if (dt < dtmax)
-	dtmax = dt;
+      double c = um/CFL + sqrt(G*(hydrostatic ? H : Delta*tanh(H/Delta)))/CFL_H;
+      if (c > 0.) {
+	double dt = min(cm[], cm[-1])*Delta/(c*fm.x[]);
+	if (dt < dtmax)
+	  dtmax = dt;
+      }
     }
   }
   boundary ((scalar *){ha, hu, hf});

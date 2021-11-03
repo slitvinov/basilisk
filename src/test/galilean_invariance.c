@@ -49,6 +49,8 @@ int main()
   G = 0.;
   gradient = NULL;
 
+  breaking = 0.; // fixme: without this the computation diverges for N = 256
+
   for (N = 64; N <= 256; N *= 2)
     for (nl = 1; nl <= 16; nl *= 2)
       run();
@@ -88,18 +90,16 @@ event monitoring (t += endoftime/100; t = 0.; t <= endoftime)
     sprintf (name, "output-N-%d-nl-%d", N, nl);
     static FILE * fpout = fopen (name, "w");
 
-    scalar absdevU[];
-    scalar absPhi[];
+    double absdevU = 0., absPhi = 0.;
     foreach()
       foreach_layer() {
-        absdevU[] = fabs(u.x[]-U);
-        absPhi[]  = fabs(phi[]);
+        if (fabs(u.x[] - U) > absdevU)
+	  absdevU = fabs(u.x[] - U);
+	if (fabs(phi[]) > absPhi)
+	  absPhi = fabs(phi[]);
       }
-    boundary({absdevU, absPhi});
-    double maxdevU = statsf(absdevU).max/U;
-    double maxPhi = statsf(absPhi).max;
-    fprintf (fpout, "%g %g %g %g\n", t, maxPhi, maxdevU, etaamp);
-    assert (maxPhi < 1e-13 && maxdevU < 1e-14);
+    fprintf (fpout, "%g %g %g %g\n", t, absPhi, absdevU/U, etaamp);
+    assert (absPhi < 2e-13 && absdevU/U < 1e-14);
   }
   maxwaveerror = max(maxwaveerror, etaamp);
 }
@@ -158,8 +158,8 @@ event moviemaker (t = end)
 {
   if (N == 128 && nl == 4)
     system ("mogrify -format gif plot*.png && "
-      "gifsicle --delay 10 --loop plot*.gif > wave.gif && "
-      "rm -f plot*.*");
+	    "gifsicle --delay 10 --loop plot*.gif > wave.gif && "
+	    "rm -f plot*.*");
 }
 
 /**

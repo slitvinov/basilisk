@@ -134,10 +134,9 @@ static void box_matrix (Point point, scalar phi, scalar rhs,
       double s = Delta*slope_limited((dz.x - h[0,0,m] + h[-1,0,m])/Delta);
       double sp = Delta*slope_limited((dzp.x - h[1,0,m] + h[0,0,m])/Delta);
       d[l] -= a*(gmetric(0)*(h[-1,0,m] - s)*phi[-1,0,m] +
-		 gmetric(1)*(h[1,0,m] + sp)*phi[1,0,m] +		 
-		 2.*G*theta_H*
-		 (hf.x[1,0,m]*gmetric(1)*(eta[1,0,m] - eta[0,0,m]) -
-		  hf.x[0,0,m]*gmetric(0)*(eta[0,0,m] - eta[-1,0,m])));
+		 gmetric(1)*(h[1,0,m] + sp)*phi[1,0,m] +
+		 2.*theta_H*Delta*(hf.x[0,0,m]*a_baro (eta, 0) -
+				   hf.x[1,0,m]*a_baro (eta, 1)));
       H[l*nl + l] -= a*(gmetric(0)*(h[0,0,m] + s) +
 			gmetric(1)*(h[0,0,m] - sp));
     }
@@ -210,12 +209,15 @@ static void relax_nh (scalar * phil, scalar * rhsl, int lev, void * data)
 	n += pg;
       end_hpg (1);
     }
-    n *= theta_H*sq(dt)*Delta/cm[];
-    n -= sq(Delta)*rhs_eta[];
-    double d = - sq(Delta);
+    n *= theta_H*sq(dt);
+
+    double d = - cm[]*Delta;
+    n += d*rhs_eta[];
+    eta[] = 0.;
     foreach_dimension() {
-      n += (alpha.x[1]*eta[1] + alpha.x[]*eta[-1])/cm[];
-      d += (alpha.x[1] + alpha.x[])/cm[];
+      n += alpha.x[0]*a_baro (eta, 0) - alpha.x[1]*a_baro (eta, 1);
+      diagonalize (eta)
+	d -= alpha.x[0]*a_baro (eta, 0) - alpha.x[1]*a_baro (eta, 1);
     }
     eta[] = n/d;
   }
@@ -234,9 +236,10 @@ static double residual_nh (scalar * phil, scalar * rhsl,
 
   face vector g = new face vector[nl];
   foreach_face() {
+    double pgh = theta_H*a_baro (eta, 0);
     double pg;
     hpg (pg, phi, 0)
-      g.x[] = 2.*(- pg + gmetric(0)*hf.x[]*theta_H*G*(eta[] - eta[-1])/Delta);
+      g.x[] = - 2.*(pg + hf.x[]*pgh);
     end_hpg (0);
   }
   boundary_flux ({g});
@@ -428,10 +431,13 @@ event pressure (i++)
   */
 
   foreach() {
-    double wmax = 0.;
-    foreach_layer()
-      wmax += h[];
-    wmax = wmax > 0. ? breaking*sqrt(G*wmax) : 0.;
+    double wmax = HUGE;
+    if (breaking < HUGE) {
+      wmax = 0.;
+      foreach_layer()
+	wmax += h[];
+      wmax = wmax > 0. ? breaking*sqrt(G*wmax) : 0.;
+    }
     foreach_layer()
       if (h[] > dry) {
 	if (point.l == nl - 1)

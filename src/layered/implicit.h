@@ -59,11 +59,13 @@ static void relax_hydro (scalar * ql, scalar * rhsl, int lev, void * data)
   scalar eta = ql[0], rhs_eta = rhsl[0];
   face vector alpha = *((vector *)data);
   foreach_level_or_leaf (lev) {
-    double d = - cm[]*sq(Delta);
+    double d = - cm[]*Delta;
     double n = d*rhs_eta[];
+    eta[] = 0.;
     foreach_dimension() {
-      n += alpha.x[1]*eta[1] + alpha.x[]*eta[-1];
-      d += alpha.x[1] + alpha.x[];
+      n += alpha.x[0]*a_baro (eta, 0) - alpha.x[1]*a_baro (eta, 1);
+      diagonalize (eta)
+	d -= alpha.x[0]*a_baro (eta, 0) - alpha.x[1]*a_baro (eta, 1);
     }
     eta[] = n/d;
   }
@@ -78,13 +80,13 @@ static double residual_hydro (scalar * ql, scalar * rhsl,
   double maxres = 0.;
   face vector g[];
   foreach_face()
-    g.x[] = alpha.x[]*(eta[] - eta[-1])/Delta;
+    g.x[] = alpha.x[]*a_baro (eta, 0);
   boundary_flux ({g});
   
   foreach (reduction(max:maxres)) {
     res_eta[] = rhs_eta[] - eta[];
     foreach_dimension()
-      res_eta[] -= (g.x[1] - g.x[])/(Delta*cm[]);
+      res_eta[] += (g.x[1] - g.x[])/(Delta*cm[]);
     if (fabs(res_eta[]) > maxres)
       maxres = fabs(res_eta[]);
   }
@@ -125,9 +127,9 @@ event acceleration (i++)
 {    
   face vector su[];
   alpha_eta = new face vector;
-  double C = - G*sq(theta_H*dt);
+  double C = - sq(theta_H*dt);
   foreach_face() {
-    double ax = - theta_H*gmetric(0)*G*(eta[] - eta[-1])/Delta;
+    double ax = theta_H*a_baro (eta, 0);
     su.x[] = alpha_eta.x[] = 0.;
     foreach_layer() {
       double hl = h[-1] > dry ? h[-1] : 0.;
@@ -139,7 +141,7 @@ event acceleration (i++)
       su.x[] += hu.x[];
       alpha_eta.x[] += hf.x[];
     }
-    alpha_eta.x[] *= C*gmetric(0);
+    alpha_eta.x[] *= C;
   }
   boundary ((scalar *){alpha_eta, hu, hf, su, ha});
 
@@ -210,7 +212,7 @@ event pressure (i++)
   */
   
   foreach_face() {
-    double ax = - theta_H*gmetric(0)*G*(eta[] - eta[-1])/Delta;
+    double ax = theta_H*a_baro (eta, 0);
     foreach_layer() {
       ha.x[] += hf.x[]*ax;
       double hl = h[-1] > dry ? h[-1] : 0.;
