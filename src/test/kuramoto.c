@@ -1,8 +1,7 @@
 /**
 # Kuramoto--Sivashinsky equation
 
-[Duchemin et Eggers, JCP 263, 37--52,
-2014](http://research-information.bristol.ac.uk/files/55958431/stiff_revision2_nored.pdf),
+[Duchemin et Eggers, 2014](#duchemin2014),
 section 6 propose to use their "Explicit-Implicit-Null" method to solve
 the Kuramoto--Sivashinsky equation
 $$
@@ -15,44 +14,7 @@ In this example we show that this can also be done using the implicit
 multigrid solver. */
 
 #include "grid/multigrid1D.h"
-#include "poisson.h"
-
-static double residual_kuramoto (scalar * al, scalar * bl, scalar * resl,
-				 void * data)
-{
-  scalar u = al[0], b = bl[0], res = resl[0];
-  double dt = *((double *)data);
-  double maxres = 0.;
-  foreach (reduction(max:maxres)) {
-    res[] = b[] - u[]
-      - dt*(u[-1] - 2.*u[] + u[1])/sq(Delta)
-      - dt*(u[-2] - 4.*u[-1] + 6.*u[] - 4.*u[1] + u[2])/sq(sq(Delta));
-    if (fabs (res[]) > maxres)
-      maxres = fabs (res[]);
-  }
-  boundary (resl);
-  return maxres;
-}
-
-static void relax_kuramoto (scalar * al, scalar * bl, int l, void * data)
-{
-  scalar u = al[0], b = bl[0];
-  double dt = *((double *)data);  
-  foreach_level_or_leaf (l)
-    u[] = (b[]
-	   - dt*(u[-1] + u[1])/sq(Delta)
-	   - dt*(u[-2] - 4.*u[-1] - 4.*u[1] + u[2])/sq(sq(Delta)))/
-    (1. - 2.*dt/sq(Delta) + 6.*dt/sq(sq(Delta)));
-}
-
-mgstats solve (scalar u, double dt)
-{
-  scalar b[];
-  foreach()
-    b[] = u[] - dt*u[]*(u[1] - u[-1])/(2.*Delta);
-  boundary ({b});
-  return mg_solve ({u}, {b}, residual_kuramoto, relax_kuramoto, &dt);
-}
+#include "solve.h"
 
 /**
 This is the simple explicit discretisation (which is not used). */
@@ -97,7 +59,15 @@ int main()
 	fprintf (stdout, "%g %g %g\n", t, x, u[]);
       fputs ("\n", stdout);
     }
-    fprintf (stderr, "%g %d\n", t, solve (u, dt).i);
+    scalar b[];
+    foreach()
+      b[] = u[] - dt*u[]*(u[1] - u[-1])/(2.*Delta);
+    boundary ({b});
+    solve (u,
+	   u[] + dt*(u[-1] - 2.*u[] + u[1])/sq(Delta)
+	   + dt*(u[-2] - 4.*u[-1] + 6.*u[] - 4.*u[1] + u[2])/sq(sq(Delta)),
+	   b);
+    fprintf (stderr, "%g %d\n", t, solve_stats.i);
     //    solve_explicit (u, dt);
   }
 }
@@ -114,5 +84,21 @@ set ylabel 't'
 set xrange [100:0]
 set yrange [0:150]
 splot 'out' u 2:1:3
+~~~
+
+## References
+
+~~~bib
+@article{duchemin2014,
+  title={The explicit--implicit--null method: Removing the 
+         numerical instability of PDEs},
+  author={Duchemin, Laurent and Eggers, Jens},
+  journal={Journal of Computational Physics},
+  volume={263},
+  pages={37--52},
+  year={2014},
+  publisher={Elsevier},
+  pdf={http://research-information.bristol.ac.uk/files/55958431/stiff_revision2_nored.pdf}
+}
 ~~~
 */
