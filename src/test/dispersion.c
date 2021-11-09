@@ -61,7 +61,7 @@ event logfile (i++)
   foreach() {
     double H = 0.;
     foreach_layer() {
-      ke += Delta*(sq(u.x[]) + sq(w[]))/2.;
+      ke += Delta*h[]*(sq(u.x[]) + sq(w[]))/2.;
       H += h[];
     }
     pe += Delta*G*sq(H - h0)/2.;
