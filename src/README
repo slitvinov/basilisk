@@ -194,6 +194,10 @@ $$
 $$
 \nabla\cdot (\alpha\nabla a) + \lambda a = b
 $$
+* [General spatial linear systems](solve.h)
+$$
+\mathcal{L}(a) = b
+$$
 * [Henry's law](henry.h)
 * [Runge--Kutta time integrators](runge-kutta.h)
 $$

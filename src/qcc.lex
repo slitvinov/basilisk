@@ -3450,6 +3450,14 @@ int main (int argc, char ** argv)
       }
       else
 	strcat (preproc, cppcommand);
+      // remove "-pedantic option from preprocessor
+      // This is mostly to avoid the preprocessor warning:
+      // "ISO C99 requires at least one argument in a variadic macro"
+      // note that the option is kept for the final compilation
+      char * pedantic = strstr (preproc, "-pedantic");
+      if (pedantic)
+	for (i = 0; i < strlen ("-pedantic"); i++)
+	  pedantic[i] = ' ';
       strcat (preproc, " -I. -I");
       strcat (preproc, LIBDIR);
       strcat (preproc, " ");
