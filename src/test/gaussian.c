@@ -1,7 +1,7 @@
 /**
 # Transcritical flow over a bump with multiple layers
 
-This test case is similar to [transcritical.c]() but using simpler
+This test case is similar to [layered.c]() but using simpler
 (and more physical) boundary conditions. Both hydrostatic and
 non-hydrostatic solutions are obtained. The non-hydrostatic solution
 is compared with [a DNS solution](/src/examples/gaussian-ns.c) using

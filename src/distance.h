@@ -115,7 +115,7 @@ coord * input_stl (FILE * fp)
 In 2D dimensions, the file format is that used by gnuplot i.e. pairs
 of 2D vertex coordinates separated by blank lines. An easy way to
 create these files is to use a vector graphics editing program
-(e.g. inkscape) and save the curve as an *.eps* file, the convert it
+(e.g. inkscape) and save the curve as an *.eps* file, then convert it
 to gnuplot format using
 
 ~~~bash

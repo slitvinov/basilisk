@@ -165,13 +165,10 @@ and returns the corresponding temperature. */
 
 double Tleft (Point point)
 {
-  double H = 0.;
   double zc = zb[];
-  for (int l = - point.l; l < nl - point.l; l++) {
-    H += h[0,0,l];
+  for (int l = - point.l; l < nl - point.l; l++)
     if (l < 0)
       zc += h[0,0,l];
-  }
   zc += h[]/2.;
   return T0(zc);
 }
