@@ -89,7 +89,7 @@ int main()
   DT = 60;
   nu = 1e-4;
 
-  const scalar l[] = HUGE; // free slip
+  const vector l[] = {HUGE}; // free slip
   lambda_b = l;
 
   run();

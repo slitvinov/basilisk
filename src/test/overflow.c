@@ -237,7 +237,7 @@ $$
 $$
 with $C_f$ the (dimensionless) quadratic bottom friction coefficient. */
 
-scalar lambda_q[];
+vector lambda_q[];
 
 event viscous_term (i++)
 {
@@ -247,7 +247,7 @@ event viscous_term (i++)
   lambda_b = lambda_q;
   foreach() {
     double au = norm(u);
-    lambda_q[] = au < 1e-6 ? HUGE : nu*h[]/(Cf*au);
+    lambda_q.x[] = au < 1e-6 ? HUGE : nu*h[]/(Cf*au);
   }
 }
 

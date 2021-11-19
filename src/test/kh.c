@@ -95,7 +95,7 @@ int main()
   We use a slip boundary condition at the bottom, rather than the
   default no-slip (the top boundary is slip by default). */
 
-  const scalar slip[] = HUGE;
+  const vector slip[] = {HUGE};
   lambda_b = slip;
   
   run();
@@ -140,15 +140,9 @@ event viscous_term (i++)
   horizontal_diffusion ({u,T}, nu, dt);
 #endif // NH
   
-  // fixme: ugly hack
-  // fixme: assumes Pr = 1
-  scalar lb = lambda_b;
-  const scalar l[] = HUGE; // no flux at the bottom
-  lambda_b = l;
   foreach()
-    vertical_viscosity (point, h, T, dt);
+    vertical_diffusion (point, h, T, dt, nu, 0, 0, HUGE);
   boundary ({T});
-  lambda_b = lb;
 }
 
 /**

@@ -76,13 +76,9 @@ $w$. */
 event viscous_term (i++)
 {
   if (nu > 0.) {
-    // fixme: ugly hack
-    scalar lb = lambda_b, d = dut, u = u_b;
-    lambda_b = dut = u_b = zeroc;
     foreach()
-      vertical_viscosity (point, h, w, dt);
+      vertical_diffusion (point, h, w, dt, nu, 0., 0., 0.);
     boundary ({w});
-    lambda_b = lb; dut = d; u_b = u;
   }
 }
 
