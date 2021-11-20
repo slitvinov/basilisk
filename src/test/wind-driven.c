@@ -47,7 +47,11 @@ double Re = 10.;
 double s = 1./1000.;
 
 double du0;
+#if !ML
+scalar duv[];
+#else
 vector duv[];
+#endif
 
 int main()
 {
@@ -78,11 +82,12 @@ event init (i = 0) {
   foreach() {
 #if !ML
     h[] = 1.;
+    duv[] = du0*(1. - pow(2.*x/L0,10));
 #else
     foreach_layer()
       h[] = 1./nl;
-#endif
     duv.x[] = du0*(1. - pow(2.*x/L0,10));
+#endif
   }
 }
 
