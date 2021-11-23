@@ -60,7 +60,7 @@ static int mpi_rank, mpi_npe;
 @define sign(x) ((x) > 0 ? 1 : -1)
 @define noise() (1. - 2.*rand()/(double)RAND_MAX)
 @define clamp(x,a,b) ((x) < (a) ? (a) : (x) > (b) ? (b) : (x))
-@define swap(type,a,b) { type tmp = a; a = b; b = tmp; }
+@define swap(type,a,b) do { type __tmp = a; a = b; b = __tmp; } while(0)
 @define unmap(x,y)
 
 @define trash(x)  // data trashing is disabled by default. Turn it on with
