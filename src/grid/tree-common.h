@@ -165,8 +165,16 @@ struct Adapt {
 trace
 astats adapt_wavelet (struct Adapt p)
 {
-  if (p.list == NULL)
-    p.list = all;
+
+  /**
+  Since 'all' can be reallocated when new fields are added (in
+  particular new fields used for MPI load balancing), we need to make
+  sure that we use a copy of 'all' and not the original. Otherwise we
+  would be using invalid list pointers!!. */
+  
+  scalar * list = (p.list == NULL || p.list == all) ? list_copy (all) :
+    p.list;
+
   if (is_constant(cm))
     restriction (p.slist);
   else {
@@ -177,7 +185,7 @@ astats adapt_wavelet (struct Adapt p)
 
   astats st = {0, 0};
   scalar * listc = NULL;
-  for (scalar s in p.list)
+  for (scalar s in list)
     if (!is_constant(s) && s.restriction != no_restriction)
       listc = list_add (listc, s);
 
@@ -287,7 +295,10 @@ astats adapt_wavelet (struct Adapt p)
   mpi_all_reduce (st.nf, MPI_INT, MPI_SUM);
   mpi_all_reduce (st.nc, MPI_INT, MPI_SUM);
   if (st.nc || st.nf)
-    mpi_boundary_update (p.list);
+    mpi_boundary_update (list);
+
+  if (list != p.list)
+    free (list);
   
   return st;
 }
