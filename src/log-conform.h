@@ -162,10 +162,11 @@ event defaults (i = 0) {
 
   for (scalar s in {tau_p}) {
     s.v.x.i = -1; // just a scalar, not the component of a vector
-    foreach_dimension() {
-      s[left] = neumann(0);
-      s[right] = neumann(0);
-    }
+    foreach_dimension()
+      if (s.boundary[left] != periodic_bc) {
+	s[left] = neumann(0);
+	s[right] = neumann(0);
+      }
   }
 #if AXI
   scalar s = tau_p.x.y;
