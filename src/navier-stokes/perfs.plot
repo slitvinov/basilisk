@@ -63,11 +63,12 @@ set rmargin at screen right(2)
 set tmargin at screen top(5)
 set bmargin at screen bot(5)
 
+if (STATS_min_y == STATS_max_y) set y2range [STATS_max_y-1:STATS_max_y+1]; \
+else set y2range [STATS_min_y:STATS_max_y];
 unset ytics
 set y2tics
 unset ylabel
 set y2label '# cells'
-if (STATS_min_y == STATS_max_y) set yrange [STATS_max_y-1:STATS_max_y+1];
 plot 'perfs' u 1:9 every EVERY w boxes lc 0
 set yrange [*:*]
 
@@ -97,6 +98,9 @@ set rmargin at screen right(2)
 set tmargin at screen top(4)
 set bmargin at screen bot(4)
 
+stats "perfs" u 1:4 nooutput
+if (STATS_min_y == STATS_max_y) set y2range [STATS_max_y-1:STATS_max_y+1]; \
+else set y2range [STATS_min_y:STATS_max_y];
 unset ytics
 set y2tics auto
 unset ylabel
@@ -112,13 +116,14 @@ set rmargin at screen right(1)
 set tmargin at screen top(3)
 set bmargin at screen bot(3)
 
+stats "perfs" u 1:5 nooutput
+if (STATS_min_y == STATS_max_y) set yrange [0:STATS_max_y+1]; \
+else set yrange [STATS_min_y:STATS_max_y];
 unset ylabel
 unset y2label
 set ytics auto
 unset y2tics
 set ylabel 'mgpf.i'
-stats "perfs" u 1:5 nooutput
-if (STATS_min_y == STATS_max_y) set yrange [0:STATS_max_y+1];
 plot [][0:]'perfs' u 1:5:(colori($5)) every EVERY w boxes lc rgbcolor variable
 
 #-----------------------------------------------
@@ -130,12 +135,13 @@ set rmargin at screen right(2)
 set tmargin at screen top(3)
 set bmargin at screen bot(3)
 
+stats "perfs" u 1:6 nooutput
+if (STATS_min_y == STATS_max_y) set y2range [0:STATS_max_y+1]; \
+else set y2range [STATS_min_y:STATS_max_y];
 unset ytics
 set y2tics auto
 unset ylabel
 set y2label 'mgpf.nrelax'
-stats "perfs" u 1:6 nooutput
-if (STATS_min_y == STATS_max_y) set yrange [0:STATS_max_y+1];
 plot [][0:]'perfs' u 1:6:(colori($6)) every EVERY w boxes lc rgbcolor variable
 set yrange [*:*]
 
@@ -148,13 +154,14 @@ set rmargin at screen right(1)
 set tmargin at screen top(2)
 set bmargin at screen bot(2)
 
+stats "perfs" u 1:7 nooutput
+if (STATS_min_y == STATS_max_y) set yrange [0:STATS_max_y+1]; \
+else set y2range [STATS_min_y:STATS_max_y];
 unset ylabel
 unset y2label
 set ytics auto
 unset y2tics
 set ylabel 'mgu.i'
-stats "perfs" u 1:7 nooutput
-if (STATS_min_y == STATS_max_y) set yrange [0:STATS_max_y+1];
 plot [][0:]'perfs' u 1:7:(colori($7)) every EVERY w boxes lc rgbcolor variable
 set yrange [*:*]
 
@@ -167,12 +174,13 @@ set rmargin at screen right(2)
 set tmargin at screen top(2)
 set bmargin at screen bot(2)
 
+stats "perfs" u 1:8 nooutput
+if (STATS_min_y == STATS_max_y) set y2range [0:STATS_max_y+1]; \
+else set y2range [STATS_min_y:STATS_max_y];
 unset ytics
 set y2tics auto
 unset ylabel
 set y2label 'mgu.nrelax'
-stats "perfs" u 1:8 nooutput
-if (STATS_min_y == STATS_max_y) set yrange [0:STATS_max_y+1];
 plot [][0:]'perfs' u 1:8:(colori($8)) every EVERY w boxes lc rgbcolor variable
 set yrange [*:*]
 
@@ -203,6 +211,9 @@ set rmargin at screen right(2)
 set tmargin at screen top(1)
 set bmargin at screen bot(1)
 
+stats "perfs" u 1:($11/$12) nooutput
+if (STATS_min_y == STATS_max_y) set y2range [STATS_max_y-1:STATS_max_y+1]; \
+else set y2range [STATS_min_y:STATS_max_y];
 unset ytics
 set y2tics auto
 unset ylabel

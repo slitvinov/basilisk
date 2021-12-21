@@ -63,11 +63,13 @@ set rmargin at screen right(2)
 set tmargin at screen top(3)
 set bmargin at screen bot(3)
 
+stats "perfs" u 1:5 nooutput
+if (STATS_min_y == STATS_max_y) set y2range [STATS_max_y-1:STATS_max_y+1]; \
+else set y2range [STATS_min_y:STATS_max_y];
 unset ytics
 set y2tics
 unset ylabel
 set y2label '# cells'
-if (STATS_min_y == STATS_max_y) set yrange [STATS_max_y-1:STATS_max_y+1];
 plot 'perfs' u 1:5 every EVERY w boxes lc 0
 set yrange [*:*]
 
@@ -97,6 +99,9 @@ set rmargin at screen right(2)
 set tmargin at screen top(2)
 set bmargin at screen bot(2)
 
+stats "perfs" u 1:4 nooutput
+if (STATS_min_y == STATS_max_y) set y2range [STATS_max_y-1:STATS_max_y+1]; \
+else set y2range [STATS_min_y:STATS_max_y];
 unset ytics
 set y2tics auto
 unset ylabel
@@ -130,6 +135,9 @@ set rmargin at screen right(2)
 set tmargin at screen top(1)
 set bmargin at screen bot(1)
 
+stats "perfs" u 1:($7/$8) nooutput
+if (STATS_min_y == STATS_max_y) set y2range [STATS_max_y-1:STATS_max_y+1]; \
+else set y2range [STATS_min_y:STATS_max_y];
 unset ytics
 set y2tics auto
 unset ylabel
