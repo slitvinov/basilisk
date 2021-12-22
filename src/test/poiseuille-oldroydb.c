@@ -56,10 +56,10 @@ average velocity for the steady flow). */
 
 #include "grid/multigrid.h"
 #include "navier-stokes/centered.h"
-#include "log-conform.h"
 #if FENE_P
 # include "fene-p.h"
 #else
+# include "log-conform.h"
 # define L2 1.
 #endif
 
@@ -103,7 +103,6 @@ event init (i = 0)
   s[bottom] = dirichlet(0.);
   foreach()
     u.x[] = 0.;
-  boundary ((scalar *){u});
 }
 
 double analytical (double Y, double T, int KF)

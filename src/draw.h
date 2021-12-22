@@ -443,7 +443,7 @@ static double evaluate_expression (Point point, Node * n)
     scalar s = {n->s};
     int k[3] = {0,0,0};
     for (int i = 0; i < 3; i++)
-      if (n->e[i])
+      strongif (n->e[i])
 	k[i] = evaluate_expression (point, n->e[i]);
     return s[k[0],k[1],k[2]];
   }
@@ -535,7 +535,6 @@ static scalar compile_expression (char * expr, bool * isexpr)
   s.name = strdup (expr);
   foreach()
     s[] = evaluate_expression (point, node);
-  boundary ({s});
   restriction ({s});
   free_node (node);
   
@@ -578,7 +577,10 @@ static scalar compile_expression (char * expr, bool * isexpr)
   									\
   if ((dimension > 2 || args.linear) &&					\
       !args.fc[0] && !args.fc[1] && !args.fc[2])			\
-    args.fc[0] = args.fc[1] = args.fc[2] = 1.;
+    args.fc[0] = args.fc[1] = args.fc[2] = 1.;				\
+									\
+  if (args.linear && col.i >= 0)					\
+    boundary ({col});
 
 #define color_facet(args)						\
   if (args.color && (!args.linear || col.i < 0)) {			\
@@ -755,9 +757,10 @@ bool draw_vof (struct _draw_vof p)
   void (* prolongation) (Point, scalar) = c.prolongation;
   if (prolongation != fraction_refine) {
     c.prolongation = fraction_refine;
-    boundary ({c});
+    c.dirty = true;
   }
 #endif // TREE
+  boundary ({c});
     
   bview * view = draw();
 #if dimension == 2
@@ -889,7 +892,7 @@ bool draw_vof (struct _draw_vof p)
   // revert prolongation
   if (prolongation != fraction_refine) {
     c.prolongation = prolongation;
-    boundary ({c});
+    c.dirty = true;
   }
 #endif // TREE
 

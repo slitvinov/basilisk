@@ -144,7 +144,6 @@ event defaults (i = 0)
     face vector alphav = alpha;
     foreach_face()
       alphav.x[] = fm.x[];
-    boundary ((scalar *){alpha});
   }
 
   /**
@@ -165,6 +164,7 @@ event defaults (i = 0)
   for (scalar s in {p, pf, u, g}) {
     s.restriction = restriction_embed_linear;
     s.refine = s.prolongation = refine_embed_linear;
+    s.depends = list_add (s.depends, cs);
   }
   for (scalar s in {p, pf})
     s.embed_gradient = pressure_embed_gradient;
@@ -187,11 +187,9 @@ double dtmax;
 
 event init (i = 0)
 {
-  boundary ((scalar *){u});
   trash ({uf});
   foreach_face()
     uf.x[] = fm.x[]*face_value (u.x, 0);
-  boundary ((scalar *){uf});
 
   /**
   We update fluid properties. */
@@ -234,9 +232,7 @@ The fluid properties such as specific volume (fields $\alpha$ and
 $\alpha_c$) or dynamic viscosity (face field $\mu_f$) -- at time
 $t+\Delta t/2$ -- can be defined by overloading this event. */
 
-event properties (i++,last) {
-  boundary ({alpha, mu, rho});
-}
+event properties (i++,last);
 
 /**
 ### Predicted face velocity field
@@ -276,7 +272,6 @@ void prediction()
 #endif
 	  du.x[] = (u.x[1] - u.x[-1])/(2.*Delta);
     }
-  boundary ((scalar *){du});
 
   trash ({uf});
   foreach_face() {
@@ -297,7 +292,6 @@ void prediction()
     #endif
     uf.x[] *= fm.x[];
   }
-  boundary ((scalar *){uf});
 
   delete ((scalar *){du});
 }
@@ -331,7 +325,6 @@ static void correction (double dt)
   foreach()
     foreach_dimension()
       u.x[] += dt*g.x[];
-  boundary ((scalar *){u});  
 }
 
 /**
@@ -382,7 +375,6 @@ event acceleration (i++,last)
   trash ({uf});
   foreach_face()
     uf.x[] = fm.x[]*(face_value (u.x, 0) + dt*a.x[]);
-  boundary ((scalar *){uf, a});
 }
 
 /**
@@ -402,7 +394,6 @@ void centered_gradient (scalar p, vector g)
   face vector gf[];
   foreach_face()
     gf.x[] = fm.x[]*a.x[] - alpha.x[]*(p[] - p[-1])/Delta;
-  boundary_flux ({gf});
 
   /**
   We average these face values to obtain the centered, combined
@@ -412,7 +403,6 @@ void centered_gradient (scalar p, vector g)
   foreach()
     foreach_dimension()
       g.x[] = (gf.x[] + gf.x[1])/(fm.x[] + fm.x[1] + SEPS);
-  boundary ((scalar *){g});
 }
 
 /**
@@ -451,7 +441,6 @@ event adapt (i++,last) {
   foreach_face()
     if (uf.x[] && !fs.x[])
       uf.x[] = 0.;
-  boundary ((scalar *){uf});
 #endif
   event ("properties");
 }

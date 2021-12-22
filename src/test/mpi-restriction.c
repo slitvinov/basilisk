@@ -11,7 +11,6 @@ int main (int argc, char * argv[])
   scalar s[];
   foreach()
     s[] = 1;
-  boundary ({s});
 
   output_cells (stdout);
 

@@ -68,12 +68,10 @@ int main()
       phi[] = r - (0.25 + 0.05*cos(6.*theta));
 #endif
     }
-    boundary ({phi});
     fractions (phi, cs, fs);  
 #if TREE
     cs.refine = cs.prolongation = fraction_refine;
 #endif
-    boundary ({cs,fs});
     restriction ({cs,fs});
 
     cm = cs;
@@ -131,7 +129,6 @@ int main()
       double theta = atan2(yc, xc), r2 = sq(xc) + sq(yc);
       b[] = 7.*r2*cos (3.*theta)*cs[];
     }
-    boundary ({a,b});
 
 #if 0
     output_cells (stdout);
@@ -176,10 +173,9 @@ int main()
     struct Poisson p;
     p.alpha = fs;
     p.lambda = zeroc;
-    p.embed_flux = embed_flux;
     scalar res[];
     double maxp = residual ({a}, {b}, {res}, &p), maxf = 0.;
-    foreach()
+    foreach (reduction(max:maxf))
       if (cs[] == 1. && fabs(res[]) > maxf)
 	maxf = fabs(res[]);
     fprintf (stderr, "maxres %d %.3g %.3g\n", N, maxf, maxp);

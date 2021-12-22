@@ -105,7 +105,6 @@ event init (i = 0)
       foreach()
 	foreach_dimension()
 	  u.x[] = u_x(x,y) * f[];
-      boundary ((scalar *){u});
     }
 
     /**

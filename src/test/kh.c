@@ -142,7 +142,6 @@ event viscous_term (i++)
   
   foreach()
     vertical_diffusion (point, h, T, dt, nu, 0, 0, HUGE);
-  boundary ({T});
 }
 
 /**

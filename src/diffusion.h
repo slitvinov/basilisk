@@ -95,7 +95,6 @@ mgstats diffusion (struct Diffusion p)
       beta[] += theta_idt[];
     lambda = beta;
   }
-  boundary ({lambda});
 
   /**
   Finally we solve the system. */

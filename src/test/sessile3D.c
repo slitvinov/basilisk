@@ -177,7 +177,6 @@ event adapt (i++) {
   scalar f1[];
   foreach()
     f1[] = f[];
-  boundary ({f1});
   adapt_wavelet ({f1}, (double[]){1e-3}, minlevel = 3, maxlevel = MAXLEVEL);
 #else
   adapt_wavelet ({f}, (double[]){1e-4}, minlevel = 3, maxlevel = MAXLEVEL);

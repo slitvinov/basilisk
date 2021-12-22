@@ -85,7 +85,6 @@ viscosity is just $1/Re$. */
 event properties (i++) {
   foreach_face()
     muv.x[] = fm.x[]/Re;
-  boundary ((scalar *){muv});
 }
 
 /**
@@ -110,11 +109,7 @@ event init (t = 0)
     Then initialize the embedded boundary with the unit-diameter
     cylinder. */
     
-    vertex scalar phi[];
-    foreach_vertex()
-      phi[] = sq(x) + sq(y) - sq(0.5);
-    boundary ({phi});
-    fractions (phi, cs, fs);
+    solid (cs, fs, sq(x) + sq(y) - sq(0.5));
     
     foreach()
       u.x[] = cs[]; // fixme: with 1 this results in sub-optimal adaptation
@@ -125,11 +120,8 @@ event init (t = 0)
     When we restart, we still need to restore the face fraction field
     *fs*, since it is not dumped. */
     
-    vertex scalar phi[];
-    foreach_vertex()
-      phi[] = sq(x) + sq(y) - sq(0.5);
-    boundary ({phi});
-    fractions (phi, cs, fs);
+    solid (cs, fs, sq(x) + sq(y) - sq(0.5));
+    
   }
 
   /**
@@ -216,7 +208,8 @@ event logfile (i += 10)
 {
   coord Fp, Fmu;
   embed_force (p, u, mu, &Fp, &Fmu);
-  fprintf (stderr, "%d %g %g %g %g %g %g\n", i, t, dt, Fp.x, Fp.y, Fmu.x, Fmu.y);
+  fprintf (stderr, "%d %g %g %.6f %.6f %.6f %.6f\n",
+	   i, t, dt, Fp.x, Fp.y, Fmu.x, Fmu.y);
 
   static FILE * fp = fopen ("omega", "w");
   omega_zero (fp);

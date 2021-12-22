@@ -101,7 +101,6 @@ event init (i = 0) {
   fraction (c, sq(DIAMETER/2) - sq(x) - sq(y));
   foreach()
     cn[] = c[];
-  boundary ({cn});
 }
 
 event logfile (i++; t <= TMAX)
@@ -146,7 +145,7 @@ event error (t = end) {
   double ekmax = 0.;
   scalar un[], ec[], kappa[];
   curvature (c, kappa);
-  foreach() {
+  foreach(reduction(max:ekmax)) {
     un[] = norm(u);
     ec[] = c[] - cref[];
     if (kappa[] != nodata) {

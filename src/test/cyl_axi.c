@@ -69,11 +69,9 @@ event init (t = 0) {
   vertex scalar psi[];
   foreach_vertex ()
     psi[] = cylinder(y);
-  boundary ({psi});
   fractions (psi, f, s);
   foreach()
     rhoe[] = rhoini*f[];
-  boundary ({rhoe});
 
   /**
   The electrical conductivity and permittivity are defined on faces.
@@ -90,7 +88,6 @@ event init (t = 0) {
     epsilon.x[] = (ff*beta + (1. - ff))*fm.x[];
     K.x[] = cond*s.x[]*fm.x[];
   }
-  boundary ((scalar *){epsilon, K});
 }
 
 /**

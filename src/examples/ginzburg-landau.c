@@ -65,7 +65,6 @@ event init (i = 0) {
     Ar[] = 1e-4*noise();
     Ai[] = 1e-4*noise();
   }
-  boundary ({Ar,Ai});
 }
 
 /**
@@ -85,7 +84,6 @@ event integration (i++) {
 
   foreach()
     A2[] = sq(Ar[]) + sq(Ai[]);
-  boundary ({A2});
 
   /**
   We use the diffusion solver (twice) to advance the system from $t$

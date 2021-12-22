@@ -194,7 +194,6 @@ void sverdrup (scalar psi)
 {
   foreach()
     psi[] = tau0*pi*(1. - x)*sin(pi*y);
-  boundary ({psi});
 }
 
 /**
@@ -271,12 +270,10 @@ void streamfunctions (scalar psi, scalar psim)
   vorticity (u, omega);
   foreach()
     psi[] = 0.;
-  boundary ({psi});
   poisson (psi, omega);
 
   foreach()
     psim[] = stommel(x, y)*(x > 0 && x < 1 && y > 0 && y < 1);
-  boundary ({psim});
 }
 
 /**

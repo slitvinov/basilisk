@@ -66,9 +66,10 @@ static int mpi_rank, mpi_npe;
 @define trash(x)  // data trashing is disabled by default. Turn it on with
                   // -DTRASH=1
 
-@define systderr  stderr
-@define systdout  stdout
-
+@define systderr   stderr
+@define systdout   stdout
+@define sysfprintf fprintf
+ 
 @if _MPI
 FILE * qstderr (void);
 FILE * qstdout (void);
@@ -89,6 +90,18 @@ do {
 @ define fout      stdout
 @ define not_mpi_compatible()
 @endif
+
+// redirect assert
+
+static inline void qassert (const char * file, int line, const char * cond) {
+  fprintf (stderr, "%s:%d: Assertion `%s' failed.\n", file, line, cond);
+  abort();
+}
+#undef assert
+#ifndef LINENO
+# define LINENO __LINE__
+#endif
+#define assert(a) if (!(a)) qassert (__FILE__, LINENO, #a)
 
 // Memory tracing
 
@@ -646,7 +659,7 @@ static void trace_off()
 @define pid() 0
 @define npe() omp_get_num_threads()
 @define mpi_all_reduce(v,type,op)
-@define mpi_all_reduce_double(v,op,elem)
+@define mpi_all_reduce_array(v,type,op,elem)
 
 @elif _MPI
 
@@ -664,7 +677,7 @@ static double prof_start, _prof;
 
 @if FAKE_MPI
 @define mpi_all_reduce(v,type,op)
-@define mpi_all_reduce_double(v,op,elem)
+@define mpi_all_reduce_array(v,type,op,elem)
 @else // !FAKE_MPI
 trace
 int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
@@ -680,12 +693,22 @@ int mpi_all_reduce0 (void *sendbuf, void *recvbuf, int count,
   prof_stop();
 }
 @
-@def mpi_all_reduce_double(v,op,elem) {
+@def mpi_all_reduce_array(v,type,op,elem) {
   prof_start ("mpi_all_reduce");
-  double global[elem], tmp[elem];
-  for (int i = 0; i < elem; i++) //cast any to double
+  type global[elem], tmp[elem];
+  for (int i = 0; i < elem; i++)
     tmp[i] = (v)[i];
-  mpi_all_reduce0 (tmp, global, elem, MPI_DOUBLE, op, MPI_COMM_WORLD);
+  MPI_Datatype datatype;
+  if (!strcmp(#type, "double")) datatype = MPI_DOUBLE;
+  else if (!strcmp(#type, "int")) datatype = MPI_INT;
+  else if (!strcmp(#type, "long")) datatype = MPI_LONG;
+  else if (!strcmp(#type, "bool")) datatype = MPI_C_BOOL;
+  else {
+    fprintf (stderr, "unknown reduction type '%s'\n", #type);
+    fflush (stderr);
+    abort();
+  }
+  mpi_all_reduce0 (tmp, global, elem, datatype, op, MPI_COMM_WORLD);
   for (int i = 0; i < elem; i++)
     (v)[i] = global[i];
   prof_stop();
@@ -780,23 +803,9 @@ void mpi_init()
 @define pid() 0
 @define npe() 1
 @define mpi_all_reduce(v,type,op)
-@define mpi_all_reduce_double(v,op,elem)
+@define mpi_all_reduce_array(v,type,op,elem)
 
 @endif // not MPI, not OpenMP
-
-void init_solver()
-{
-@if _CADNA
-  cadna_init (-1);
-@endif
-@if _MPI
-  mpi_init();
-@elif MTRACE == 1
-  char * etrace = getenv ("MTRACE");
-  pmtrace.fp = fopen (etrace ? etrace : "mtrace", "w");
-  pmtrace.fname = systrdup (etrace ? etrace : "mtrace");
-@endif
-}
 
 @define OMP_PARALLEL() OMP(omp parallel)
 
@@ -869,6 +878,16 @@ typedef struct {
 } vector;
 
 typedef struct {
+  scalar * x;
+#if dimension > 1
+  scalar * y;
+#endif
+#if dimension > 2
+  scalar * z;
+#endif
+} vectorl;
+
+typedef struct {
   vector x;
 #if dimension > 1
   vector y;
@@ -883,6 +902,11 @@ struct { int x, y, z; } Period = {false, false, false};
 typedef struct {
   double x, y, z;
 } coord;
+
+OMP(omp declare reduction (+ : coord :
+			   omp_out.x += omp_in.x,
+			   omp_out.y += omp_in.y,
+			   omp_out.z += omp_in.z))
 
 #if dimension == 1
 # define norm(v) fabs(v.x[])
@@ -939,6 +963,53 @@ double  * _constant = NULL;
 extern size_t datasize;
 typedef struct _Point Point;
 
+// stencils
+
+@define strongif(x) if(x)
+@define IF(x) if((x)||1)
+
+typedef struct { int i[dimension]; } IJK;
+
+void _stencil_fprintf (const char * file, int line,
+		       FILE * stream, const char *format, ...) {}
+void _stencil_printf (const char * file, int line,
+		      const char *format, ...) {}
+void _stencil_fputc (const char * file, int line,
+		     int c, FILE * stream) {}
+void _stencil_fputs (const char * file, int line,
+		     const char * s, FILE * stream) {}
+@define _stencil_qassert(...) ((void)0)
+
+int _stencil_access (scalar s, IJK i, const char * file, int line);
+
+@if dimension == 1
+  @ def _stencil_val(file, line, s, i1, i2, i3)
+  (_attribute[is_constant(s) || s.i < 0 ? -1 : s.i].write
+   [_stencil_access(s, (IJK){{point.i + i1}}, file, line)])
+@
+@elif dimension == 2
+  @def _stencil_val(file, line, s, i1, i2, i3)
+  (_attribute[is_constant(s) || s.i < 0 ? -1 : s.i].write
+   [_stencil_access(s, (IJK){{point.i + i1, point.j + i2}}, file, line)])
+@
+@else // dimension == 3
+  @ def _stencil_val(file, line, s, i1, i2, i3)
+  (_attribute[is_constant(s) || s.i < 0 ? -1 : s.i].write
+   [_stencil_access(s, (IJK){{point.i + i1, point.j + i2, point.k + i3}},
+		    file, line)])
+@
+@endif
+
+/*
+fixme: this mixes fine/coarse accesses */
+  
+@def _stencil_fine(file, line, s, i1, i2, i3)
+  _stencil_val(file, line, s, i1, i2, i3)
+@
+@def _stencil_coarse(file, line, s, i1, i2, i3)
+  _stencil_val(file, line, s, i1, i2, i3)
+@
+  
 #include "grid/boundaries.h"
 
 // attributes for each scalar
@@ -961,8 +1032,10 @@ attribute {
 #endif
   } d; // staggering
   vector v;
-  bool   face, nodump, freed;
+  int face;
+  bool   nodump, freed;
   int    block;
+  scalar * depends; // boundary conditions depend on other fields
 }
 
 #define foreach_block() // treatment of block data is disabled by default
@@ -1125,6 +1198,7 @@ tensor * tensors_from_vectors (vector * v)
 }
 
 scalar * all = NULL; // all the fields
+scalar * baseblock = NULL; // base block field
 
 // basic methods
 
@@ -1342,7 +1416,33 @@ void matrix_free (void * m)
   free (m);
 }
 
-// Solver cleanup
+// Solver initialisation and cleanup
+
+void init_solver()
+{
+@if _CADNA
+  cadna_init (-1);
+@endif
+@if _MPI
+  mpi_init();
+@elif MTRACE == 1
+  char * etrace = getenv ("MTRACE");
+  pmtrace.fp = fopen (etrace ? etrace : "mtrace", "w");
+  pmtrace.fname = systrdup (etrace ? etrace : "mtrace");
+@endif
+}
+
+void allocate_globals (int nvar)
+{
+  _attribute = (_Attributes *) calloc (nvar + 1, sizeof (_Attributes));
+  _attribute[0].write = (double *) calloc (1, sizeof(double));
+  _attribute++;
+  all = (scalar *) malloc (sizeof (scalar)*(nvar + 1));
+  baseblock = (scalar *) malloc (sizeof (scalar)*(nvar + 1));
+  for (int i = 0; i < nvar; i++)
+    baseblock[i].i = all[i].i = i;
+  baseblock[nvar].i = all[nvar].i = -1;
+}
 
 typedef void (* free_solver_func) (void);
 

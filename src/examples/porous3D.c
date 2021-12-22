@@ -61,7 +61,6 @@ void porous (scalar cs, face vector fs)
 					  sq(z + zp - pc[i].z) -
 					  sq(R[i])));
   }
-  boundary ({phi});
 
   fractions (phi, cs, fs);
 
@@ -216,7 +215,6 @@ event logfile (i++; i <= 500)
     scalar nu[];
     foreach()
       nu[] = norm(u);
-    boundary ({nu});
 
     view (fov = 32.2073, quat = {-0.309062,0.243301,0.0992085,0.914026},
 	  tx = 0.0122768, ty = 0.0604286, bg = {1,1,1},
@@ -259,7 +257,6 @@ event logfile (i++; i <= 500)
     adapt_wavelet ({cs,u}, (double[]){1e-2,4e-6,4e-6,4e-6}, maxlevel);
 #endif
     porous (cs, fs);
-    boundary (all); // this is necessary since BCs depend on embedded fractions
     event ("adapt");
   }
 }

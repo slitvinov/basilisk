@@ -161,7 +161,6 @@ event viscous_term (i++)
       foreach()
 	u.x[] += dt*nu*d2u[];
     }
-  boundary (list);
 }
 #endif
 
@@ -234,7 +233,6 @@ event update_eta (i++)
       wm = w1;
     }
   }
-  boundary ({w});
 }
 #endif // HYDRO
 

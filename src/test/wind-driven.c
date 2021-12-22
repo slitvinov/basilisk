@@ -100,7 +100,7 @@ solution. */
 event error (t = 10./nu)
 {
   int i = 0;
-  foreach() {
+  foreach (serial) {
     if (i++ == N/2) {
       double z = zb[], emax = 0.;
 #if !ML
@@ -158,7 +158,6 @@ event update_eta (i++)
       wm = w1;
     }
   }
-  boundary ({w});
 }
 #endif // !NH && ML
 
@@ -172,7 +171,7 @@ event output (t = end) {
   sprintf (name, "uprof-%d", nl);
   FILE * fp = fopen (name, "w");
   int i = 0;
-  foreach() {
+  foreach (serial) {
     if (i++ == N/2) {
 #if !ML
       int l = 0;

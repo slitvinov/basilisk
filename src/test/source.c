@@ -63,7 +63,6 @@ event init (i = 0)
 
   foreach()
     zb[] = (- cos(x) + y)/2.;
-  boundary ({zb});
 }
 
 /**

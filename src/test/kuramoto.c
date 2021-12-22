@@ -28,7 +28,6 @@ void solve_explicit (scalar u, double dt)
       - (u[-2] - 4.*u[-1] + 6.*u[] - 4.*u[1] + u[2])/sq(sq(Delta));
   foreach()
     u[] += dt*du[];
-  boundary ({u});
 }
 
 int main()
@@ -43,7 +42,6 @@ int main()
   scalar u[];
   foreach()
     u[] = cos(x/16.)*(1. + sin(x/16.));
-  boundary ({u});
 
   /**
   The timestep is set to 0.1, which is significantly larger than that
@@ -62,7 +60,6 @@ int main()
     scalar b[];
     foreach()
       b[] = u[] - dt*u[]*(u[1] - u[-1])/(2.*Delta);
-    boundary ({b});
     solve (u,
 	   u[] + dt*(u[-1] - 2.*u[] + u[1])/sq(Delta)
 	   + dt*(u[-2] - 4.*u[-1] + 6.*u[] - 4.*u[1] + u[2])/sq(sq(Delta)),

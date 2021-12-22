@@ -61,11 +61,9 @@ event init (i = 0) {
   We also need to define the initial centered pressure gradient (this
   improves the accuracy of the initial conditions). */
 
-  boundary ({p});
   foreach()
     foreach_dimension()
       g.x[] = - (p[1] - p[-1])/(2.*Delta);
-  boundary ((scalar *){g});
 }
 
 event logfile (i++) {

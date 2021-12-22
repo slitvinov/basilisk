@@ -70,7 +70,6 @@ event properties (i++) {
     cf[] = (4.*f[] + 
 	    2.*(f[0,1] + f[0,-1] + f[1,0] + f[-1,0]) +
 	    f[-1,-1] + f[1,-1] + f[1,1] + f[-1,1])/16.;
-  boundary ({cf});
 #endif
 
   /**
@@ -82,7 +81,6 @@ event properties (i++) {
     double cm = (cf[] + cf[-1])/2.;
     alphav.x[] = 1./rho(cm);
   }
-  boundary ((scalar *){alphav});  
 }
 
 #endif // standard centered Navier--Stokes solver
@@ -228,7 +226,6 @@ event adapt (i++) {
   foreach()
     foreach_dimension()
       u.x[] = q.x[]/rho[];
-  boundary ((scalar *){u});
 #endif
   adapt_wavelet ({f,u}, (double[]){5e-3,1e-3,1e-3}, LEVEL);
 }

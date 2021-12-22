@@ -393,6 +393,8 @@ bool balance()
 void mpi_boundary_update (scalar * list)
 {
   mpi_boundary_update_buffers();
+  for (scalar s in list)
+    s.dirty = true;
   grid->tn = 0; // so that tree is not "full" for the call below
   boundary (list);
   while (balance());

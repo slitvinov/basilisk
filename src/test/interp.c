@@ -1,4 +1,20 @@
-/* interpolation on halos  */
+/**
+# Interpolation on halos
+
+~~~gnuplot
+r(x,y)=sqrt(x*x+y*y)
+set xrange [0:0.7]
+set xlabel 'Radial coordinate'
+set ylabel 'Error on halos'
+plot '< awk "(\$3==10){print \$0}" out' u (r($1,$2)):($6) t 'level 10', \
+     '< awk "(\$3==9){print \$0}" out' u (r($1,$2)):($6) t 'level 9', \
+     '< awk "(\$3==8){print \$0}" out' u (r($1,$2)):($6) t 'level 8', \
+     '< awk "(\$3==7){print \$0}" out' u (r($1,$2)):($6) t 'level 7', \
+     '< awk "(\$3==6){print \$0}" out' u (r($1,$2)):($6) t 'level 6', \
+     '< awk "(\$3==5){print \$0}" out' u (r($1,$2)):($6) t 'level 5', \
+     '< awk "(\$3==4){print \$0}" out' u (r($1,$2)):($6) t 'level 4'
+~~~
+*/
 
 scalar h[];
 
@@ -10,7 +26,6 @@ int main (int argc, char ** argv)
   double R0 = 0.1;
   foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));
-  boundary ({h});
   
   /* initial coarsening (see halo.c) */
   double tolerance = 1e-4;
@@ -21,7 +36,6 @@ int main (int argc, char ** argv)
   trash ({h});
   foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));
-  boundary ({h});
 #endif
 
   double max = 0.;

@@ -86,7 +86,6 @@ event init (i = 0) {
   fraction (f, 1. - (sq(x) + sq(y)));
   foreach()
     u.x[] = y;
-  boundary ((scalar *){u});
 }
 
 /**
@@ -105,7 +104,6 @@ event properties (i++) {
     lam[] = Deb*f[];
     mupd[] = MUr*(1. - Beta)*f[]/Re;
   }
-  boundary ({lam, mupd});
 }
 
 /**

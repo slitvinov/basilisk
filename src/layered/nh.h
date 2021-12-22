@@ -75,11 +75,9 @@ $w$. */
 
 event viscous_term (i++)
 {
-  if (nu > 0.) {
+  if (nu > 0.)
     foreach()
       vertical_diffusion (point, h, w, dt, nu, 0., 0., 0.);
-    boundary ({w});
-  }
 }
 
 /**
@@ -238,7 +236,6 @@ static double residual_nh (scalar * phil, scalar * rhsl,
       g.x[] = - 2.*(pg + hf.x[]*pgh);
     end_hpg (0);
   }
-  boundary_flux ({g});
 
   foreach (reduction(max:maxres)) {
 
@@ -294,7 +291,6 @@ static double residual_nh (scalar * phil, scalar * rhsl,
       foreach_dimension()
         res_eta[] += theta_H*sq(dt)/2.*(g.x[1] - g.x[])/(Delta*cm[]);
   }
-  boundary (resl);
 
   delete ((scalar *){g});
   return maxres;
@@ -405,8 +401,6 @@ event pressure (i++)
       hu.x[] += theta_H*dt*pg;
     } end_hpg (0);
   }
-  boundary_flux ({su});
-  boundary ((scalar *){ha});
 
   /**
   The maximum allowed vertical velocity is computed as
@@ -454,7 +448,6 @@ event pressure (i++)
     foreach_dimension()
       rhs_eta[] += theta_H*sq(dt)*(su.x[1] - su.x[])/(Delta*cm[]);
   }
-  boundary ({w});
 }
 
 /**

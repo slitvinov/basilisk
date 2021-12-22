@@ -13,7 +13,6 @@ int main()
   scalar s[];
   foreach()
     u.x[] = u.y[] = s[] = sin(x)*cos(y)*cos(z);
-  boundary ({s,u});
 
   foreach()
     foreach_neighbor(2) {

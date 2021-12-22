@@ -118,7 +118,6 @@ event properties (i++) {
     mupv[] = (1. - BETA)*clamp(f[],0,1)/RE;
     lambdav[] = WI*clamp(f[],0,1);
   }
-  boundary ({mupv, lambdav});
 }
 
 /**

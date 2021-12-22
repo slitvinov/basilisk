@@ -71,7 +71,7 @@ double F0 = 0.;
 int main()
 {
   // coordinates of lower-left corner
-  origin (-0.5, -0.5);
+  origin (-0.5 + 1e-12, -0.5 + 1e-12);
   // number of grid points
   init_grid (64);
   // size of the box

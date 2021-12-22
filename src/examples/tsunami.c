@@ -123,7 +123,6 @@ int adapt() {
   scalar eta[];
   foreach()
     eta[] = h[] > dry ? h[] + zb[] : 0;
-  boundary ({eta});
 
   /**
   We can now use wavelet adaptation on the list of scalars *{η,hmax}*
@@ -174,7 +173,6 @@ event init (i = 0)
     
     foreach()
       h[] = max(0., - zb[]);
-    boundary ({h});
     
     /**
     The initial deformation is given by an Okada fault model with the
@@ -269,7 +267,6 @@ event logfile (i++) {
     if (h[] > dry && h[] + zb[] > hmax[])
       hmax[] = h[] + zb[];
   }
-  boundary ({hmax, u});
 }
 
 /**
@@ -351,7 +348,6 @@ event movies (t++) {
     etam[] = eta[]*(h[] > dry);
     m[] = etam[] - zb[];
   }
-  boundary ({m, etam});
   output_ppm (etam, mask = m, min = -2, max = 2, n = 512, linear = true,
 	      file = "eta.mp4");
 
@@ -500,7 +496,6 @@ event kml (t += 15)
     etam[] = eta[]*(h[] > dry);
     m[] = etam[] - zb[];
   }
-  boundary ({m, etam});
   char name[80];
   sprintf (name, "eta-%g.png", t);
   output_ppm (etam, file = name, mask = m,

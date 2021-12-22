@@ -64,17 +64,12 @@ int main()
 
   /**
   We also compute the volume and surface fractions from the distance
-  field. We first construct a vertex field interpolated from the
-  centered field and then call the appropriate VOF functions. */
+  field. */
 
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = (d[] + d[-1] + d[0,-1] + d[-1,-1] +
-	     d[0,0,-1] + d[-1,0,-1] + d[0,-1,-1] + d[-1,-1,-1])/8.;
-  boundary ({phi});
   scalar f[];
   face vector s[];
-  fractions (phi, f, s);
+  solid (f, s, (d[] + d[-1] + d[0,-1] + d[-1,-1] +
+		d[0,0,-1] + d[-1,0,-1] + d[0,-1,-1] + d[-1,-1,-1])/8.);
   
   /**
   Finally we display the surface reconstructed from volume fractions. */

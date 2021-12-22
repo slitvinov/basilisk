@@ -30,6 +30,7 @@ event defaults (i = 0) {
     s.refine  = refine_linear;
 #endif
     s.restriction = restriction_volume_average;
+    s.dirty = true; // boundary conditions need to be updated
   }
 }
 #endif

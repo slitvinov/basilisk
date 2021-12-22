@@ -103,8 +103,6 @@ void vertical_remapping (scalar h, scalar * tracers)
       }
     }
   }
-  boundary ({h});
-  boundary (tracers);
 }
 
 /**

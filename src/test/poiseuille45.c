@@ -37,15 +37,10 @@ event init (t = 0) {
   mu = fm;
 
   /**
-  The channel geometry is defined using the levelset function
-  $\phi$. */  
+  The channel geometry is defined using Constructive Solid Geometry. */  
 
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = difference (union (y - x - EPS, x - y - 0.5 + EPS),
-			y - x - 0.5 + EPS);
-  boundary ({phi});
-  fractions (phi, cs, fs);
+  solid (cs, fs, difference (union (y - x - EPS, x - y - 0.5 + EPS),
+			     y - x - 0.5 + EPS));
 
   /**
   The boundary condition is zero velocity on the embedded boundaries. */

@@ -246,7 +246,7 @@ event viscous_term (i++)
 {
   struct { realtype * x, * y; } gotm_u = { meanflow_u.a, meanflow_v.a };
   struct { realtype * x, * y; } gotm_t = { &airsea_tx, &airsea_ty };
-  foreach() {
+  foreach (serial, noauto) {
     memcpy (&meanflow_h.a[1], &h[], nl*sizeof(double));
     foreach_dimension() {
       *gotm_t.x = airsea_tau.x[];
@@ -307,5 +307,4 @@ void constant_NNT (double T_top, double S_const, double NN,
       z -= h[0,0,l];
     }
   }
-  boundary ({T});
 }

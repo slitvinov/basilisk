@@ -32,11 +32,9 @@ int main (int argc, char ** argv)
   
   foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));
-  boundary ({h});
   
   foreach_face(x) u.x[] = exp(-(x*x + y*y)/(R0*R0));
   foreach_face(y) u.y[] = exp(-(x*x + y*y)/(R0*R0));
-  boundary ((scalar *){u});
   //  output_cells (stdout);
 
   double max = 0;

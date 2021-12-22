@@ -187,7 +187,6 @@ event outputfile (t = {9, 12, 13, 14, 20})
     foreach_layer()
       H[] += h[];
   }
-  boundary ({H});
 #else
   scalar H = h;
 #endif
@@ -261,7 +260,6 @@ event logfile (i++) {
     foreach_layer()
       H[] += h[];
   }
-  boundary ({H});
 #else
   scalar H = h;
 #endif
@@ -290,7 +288,6 @@ event logfile (i++) {
   scalar eta[];
   foreach()
     eta[] = h[] > dry ? h[] + zb[] : nodata;
-  boundary ({eta});
   #endif
   
   output_gauges (gauges, {eta});
@@ -314,7 +311,6 @@ event logfile (i++) {
       u.x[] /= a;
 #endif
   }
-  boundary ((scalar *){u});
 }
 
 /**
@@ -383,7 +379,6 @@ event adapt (i++) {
     eta1[] = h[] > dry ? zb[] + h[] : 0.;
 #endif
   }
-  boundary ({eta1});
 
   astats s = adapt_wavelet ({eta1}, (double[]){3e-4}, MAXLEVEL, MINLEVEL);
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);

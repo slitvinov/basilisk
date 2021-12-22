@@ -64,34 +64,29 @@ event init (i = 0) {
   scalar f1[];
   foreach()
     f1[] = (x <= 0 && y <= 0 && z <= 0);
-  boundary ({f1});
   astats s;
   do {
     s = adapt_wavelet ({f1}, (double[]){0.0}, maxlevel, list = NULL);
     foreach()
       f1[] = (x <= 0 && y <= 0 && z <= 0);
-    boundary ({f1});
   } while (s.nf);
   foreach()
     f[] = (x <= 0 && y <= 0 && z <= 0);
-  boundary ({f});
 #else
   foreach()
     f[] = (x <= 0 && y <= 0 && z <= 0);
-  boundary ({f});
 #endif
 }
 
 event acceleration (i++) {
   foreach_face(y)
     av.y[] -= G;
-  boundary ((scalar *){av});
 }
 
 event properties (i++) {
 #if TREE
   f.prolongation = refine_bilinear;
-  boundary ({f});
+  f.dirty = true;
 #endif
 
   foreach_face() {
@@ -104,7 +99,7 @@ event properties (i++) {
 
 #if TREE
   f.prolongation = fraction_refine;
-  boundary ({f});
+  f.dirty = true;
 #endif
 }
 

@@ -26,7 +26,7 @@ centered slope estimation). */
 
 face vector uf[];
 #define u uf
-double (* gradient) (double, double, double) = NULL;
+double (* gradient) (double, double, double) = centered;
 
 /**
 Here we set the gradient functions for each tracer (as defined in the
@@ -40,12 +40,9 @@ event defaults (i = 0) {
 }
 
 /**
-We apply boundary conditions after user initialisation. */
+User initialisation happens here. */
 
-event init (i = 0) {
-  boundary ((scalar *){u});
-  boundary (tracers);
-}
+event init (i = 0);
 
 /**
 The timestep is set using the velocity field and the CFL

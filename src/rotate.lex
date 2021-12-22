@@ -114,6 +114,8 @@ back {
 
 {ID}+   ECHO;
 
+^{SP}*#{SP}*define{SP}+val{SP}*\(  ECHO;
+
 val_{ID}*{WS}*\( |
 (val|fine|coarse|allocated|allocated_child|neighbor|neighborp|aparent){WS}*\( {
   int para = 1;

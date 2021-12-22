@@ -48,7 +48,6 @@ int main()
   
   foreach()
     s[] = sin(2.*pi*x) + 0.4*sin(15*pi*x)*max(sin(2.*pi*x), 0);
-  boundary ({s});
 
   /**
   The *w* field contains the wavelet transform of *s*. */

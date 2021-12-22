@@ -12,7 +12,6 @@ static double update (scalar * ul, scalar * kl, double t, double dt,
     for (u1,u,k in u1l,ul,kl)
       u1[] = u[] + dt*k[];
   }
-  boundary (u1l);
   Lu (u1l, t + dt, kl);
   foreach() {
     scalar du, k;
@@ -72,7 +71,6 @@ void runge_kutta (scalar * ul, double t, double dt,
     for (u,du in ul,dul)
       u[] += dt/w*du[];
   }
-  boundary (ul);
 
   delete (dul), free (dul);
   delete (kl), free (kl);

@@ -314,8 +314,12 @@ void input_gfs (struct OutputGfs p)
     if (is_leaf(cell))
       continue;
   }
-  boundary (listm);
-  boundary (input);
+  for (scalar s in listm)
+    if (!is_constant(s))
+      s.dirty = true;
+  for (scalar s in input)
+    if (!is_constant(s))
+      s.dirty = true;
 
   free (input);
   if (opened)

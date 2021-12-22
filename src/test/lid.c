@@ -148,8 +148,11 @@ event profiles (t = end)
 /**
 ## Results
 
-After processing by gnuplot (i.e. using `make lid/plot.png` with
-[lid.plot]()) we get
-
-![Horizontal profile of the $y$-component of the velocity on the
-centerline of the box.](lid/plot.png) */
+~~~gnuplot Horizontal profile of the $y$-component of the velocity on the centerline of the box.
+set xlabel 'x'
+set ylabel 'u_y'
+plot [-0.5:0.5]'../yprof.ghia' u 1:2 title "Ghia et al." w p pt 7, \
+     'yprof' w l lw 2 title "Basilisk (centered)",		   \
+     '../lidmac/yprof' w l lw 2 title "Basilisk (MAC)"
+~~~
+*/

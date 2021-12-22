@@ -76,12 +76,6 @@ event viscous_term (i++)
 	  }
 	}
       }
-
-    scalar * list = list_copy ({h, eta});
-    for (scalar s in tracers)
-      list = list_append (list, s);
-    boundary (list);
-    free (list);
   }
 }
 

@@ -32,7 +32,7 @@ int main (int argc, char * argv[])
   do {
     refined = 0;
     tree->refined.n = 0;
-    foreach()
+    foreach (serial, noauto)
       if (is_leaf(cell) && level <= maxlevel &&
 	  sq(x) + sq(y) + sq(z) < sq(0.05)) {
 	refine_cell (point, list, 0, &tree->refined);
@@ -73,7 +73,7 @@ int main (int argc, char * argv[])
       assert (s[] == 1);
   foreach_face()
     for (int i = -2; i <= 2; i++)
-      assert (u.x[0,i] == 1);
+      assert ((u.x[0,i] == 1));
 
   check_restriction (s);
   

@@ -60,12 +60,8 @@ static double vof_concentration_gradient_x (Point point, scalar c, scalar t)
     cl = 1. - cl, cc = 1. - cc, cr = 1. - cr;
   if (cc >= cmin && t.gradient != zero) {
     if (cr >= cmin) {
-      if (cl >= cmin) {
-	if (t.gradient)
-	  return t.gradient (t[-1]/cl, t[]/cc, t[1]/cr)/Delta;
-	else
-	  return (t[1]/cr - t[-1]/cl)/(2.*Delta);
-      }
+      if (cl >= cmin)
+	return t.gradient (t[-1]/cl, t[]/cc, t[1]/cr)/Delta;
       else
 	return (t[1]/cr - t[]/cc)/Delta;
     }
@@ -108,15 +104,30 @@ event defaults (i = 0)
 {
   for (scalar c in interfaces) {
     c.refine = c.prolongation = fraction_refine;
+    c.dirty = true;
     scalar * tracers = c.tracers;
     for (scalar t in tracers) {
       t.restriction = restriction_volume_average;
       t.refine = t.prolongation = vof_concentration_refine;
+      t.dirty = true;
       t.c = c;
     }
   }
 }
 #endif // TREE
+
+/**
+Boundary conditions for VOF-advected tracers usually depend on
+boundary conditions for the VOF field. */
+
+event defaults (i = 0)
+{
+  for (scalar c in interfaces) {
+    scalar * tracers = c.tracers;
+    for (scalar t in tracers)
+      t.depends = list_add (t.depends, c);
+  }
+}
 
 /**
 We need to make sure that the CFL is smaller than 0.5 to ensure
@@ -163,13 +174,12 @@ static void sweep_x (scalar c, scalar cc, scalar * tcl)
 
     /**
     The gradient is computed using the "interface-biased" scheme above. */
-    
+
     foreach() {
       scalar t, gf;
       for (t,gf in tracers,gfl)
 	gf[] = vof_concentration_gradient_x (point, c, t);
     }
-    boundary (gfl);
   }
   
   /**
@@ -178,7 +188,6 @@ static void sweep_x (scalar c, scalar cc, scalar * tcl)
   the grid. */
 
   reconstruction (c, n, alpha);
-
   foreach_face(x, reduction (max:cfl)) {
 
     /**
@@ -209,10 +218,13 @@ static void sweep_x (scalar c, scalar cc, scalar * tcl)
     When the upwind cell is entirely full or empty we can avoid this
     computation. */
 
-    double cf = (c[i] <= 0. || c[i] >= 1.) ? c[i] :
-      rectangle_fraction ((coord){-s*n.x[i], n.y[i], n.z[i]}, alpha[i],
-			  (coord){-0.5, -0.5, -0.5},
-			  (coord){s*un - 0.5, 0.5, 0.5});
+    double cf; // fixme: ternary operator not properly detected by qcc stencil
+    if (c[i] <= 0. || c[i] >= 1.)
+      cf = c[i];
+    else
+      cf = rectangle_fraction ((coord){-s*n.x[i], n.y[i], n.z[i]}, alpha[i],
+			       (coord){-0.5, -0.5, -0.5},
+			       (coord){s*un - 0.5, 0.5, 0.5});
     
     /**
     Once we have the upwind volume fraction *cf*, the volume fraction
@@ -240,46 +252,6 @@ static void sweep_x (scalar c, scalar cc, scalar * tcl)
   }
   delete (gfl); free (gfl);
   
-  /**
-  On tree grids, we need to make sure that the fluxes match at
-  fine/coarse cell boundaries i.e. we need to *restrict* the fluxes from
-  fine cells to coarse cells. This is what is usually done, for all
-  dimensions, by the `boundary_flux()` function. Here, we only need to
-  do it for a single dimension (x). */
-
-#if TREE
-  scalar * fluxl = list_concat (NULL, tfluxl);
-  fluxl = list_append (fluxl, flux);
-  for (int l = depth() - 1; l >= 0; l--)
-    foreach_halo (prolongation, l) {
-#if dimension == 1
-      if (is_refined (neighbor(-1)))
-	for (scalar fl in fluxl)
-	  fl[] = fine(fl);
-      if (is_refined (neighbor(1)))
-	for (scalar fl in fluxl)
-	  fl[1] = fine(fl,2);
-#elif dimension == 2
-      if (is_refined (neighbor(-1)))
-	for (scalar fl in fluxl)
-	  fl[] = (fine(fl,0,0) + fine(fl,0,1))/2.;
-      if (is_refined (neighbor(1)))
-	for (scalar fl in fluxl)
-	  fl[1] = (fine(fl,2,0) + fine(fl,2,1))/2.;
-#else // dimension == 3
-      if (is_refined (neighbor(-1)))
-	for (scalar fl in fluxl)
-	  fl[] = (fine(fl,0,0,0) + fine(fl,0,1,0) +
-		  fine(fl,0,0,1) + fine(fl,0,1,1))/4.;
-      if (is_refined (neighbor(1)))
-	for (scalar fl in fluxl)
-	  fl[1] = (fine(fl,2,0,0) + fine(fl,2,1,0) +
-		   fine(fl,2,0,1) + fine(fl,2,1,1))/4.;
-#endif
-    }
-  free (fluxl);
-#endif
-
   /**
   We warn the user if the CFL condition has been violated. */
 
@@ -328,8 +300,6 @@ static void sweep_x (scalar c, scalar cc, scalar * tcl)
 	t[] += dt*(tflux[] - tflux[1] + tc[]*(uf.x[1] - uf.x[]))/Delta;
     }
 #endif // EMBED
-  boundary ({c});
-  boundary (tracers);
 
   delete (tfluxl); free (tfluxl);
 }
@@ -355,10 +325,13 @@ void vof_advection (scalar * interfaces, int i)
     for (scalar t in tracers) {
       scalar tc = new scalar;
       tcl = list_append (tcl, tc);
-#if TREE      
-      t.restriction = restriction_volume_average;
-      t.refine = t.prolongation = vof_concentration_refine;
-      t.c = c;
+#if TREE
+      if (t.refine != vof_concentration_refine) {
+	t.refine = t.prolongation = vof_concentration_refine;
+	t.restriction = restriction_volume_average;
+	t.dirty = true;
+	t.c = c;
+      }
 #endif // TREE
     }
     foreach() {

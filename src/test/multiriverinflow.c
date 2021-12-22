@@ -47,7 +47,6 @@ event init (i = 0)
     zb[] = 0.05*pow(x,4) - x*x + 2. + 0.2*(y + Y0);
     river[] = x < 0 ? 1 : 2;
   }
-  boundary ({zb, river});
 }
 
 /**

@@ -126,7 +126,6 @@ event perturb (t = 40) {
     u.y[] += 1e-2*Uo;
 #endif
   }
-  boundary ((scalar *){u});
 }
 
 /**

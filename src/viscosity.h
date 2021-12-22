@@ -95,6 +95,14 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
   double maxres = 0.;
 #if TREE
   /* conservative coarse/fine discretisation (2nd order) */
+
+  /**
+  We manually apply boundary conditions, so that all components are
+  treated simultaneously. Otherwise (automatic) BCs would be applied
+  component by component before each foreach_face() loop. */
+  
+  boundary ({u});
+  
   foreach_dimension() {
     face vector taux[];
     foreach_face(x)
@@ -111,7 +119,6 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
 			   (u.z[1,0,-1] + u.z[1,0,0])/4. -
 			   (u.z[-1,0,-1] + u.z[-1,0,0])/4.)/Delta;
     #endif
-    boundary_flux ({taux});
     foreach (reduction(max:maxres)) {
       double d = 0.;
       foreach_dimension()
@@ -121,7 +128,6 @@ static double residual_viscosity (scalar * a, scalar * b, scalar * resl,
 	maxres = fabs (res.x[]);
     }
   }
-  boundary (resl);
 #else
   /* "naive" discretisation (only 1st order on trees) */
   foreach (reduction(max:maxres))
@@ -180,6 +186,5 @@ mgstats viscosity_explicit (struct Viscosity p)
   foreach()
     foreach_dimension()
       u.x[] += r.x[];
-  boundary ((scalar *){u});
   return mg;
 }

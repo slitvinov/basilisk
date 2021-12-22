@@ -34,7 +34,6 @@ void porous (scalar cs, face vector fs)
 	  phi[] = intersection (phi[], (sq(x + xp - xc[i]) +
 					sq(y + yp - yc[i]) - sq(R[i])));
   }
-  boundary ({phi});
   fractions (phi, cs, fs);
   fractions_cleanup (cs, fs);
 }
@@ -82,15 +81,12 @@ int main()
 #else
   foreach()
     p[] = G.x[]*x + G.y[]*y; // exact pressure
-  boundary ({p});
   foreach_face()
     uf.x[] -= alpha.x[] ? dt*alpha.x[]*face_gradient_x (p, 0) : 0.;
-  boundary ((scalar *){uf});
   
   face vector gf[];
   foreach_face()
     gf.x[] = fm.x[] ? fm.x[]*a.x[] - alpha.x[]*(p[] - p[-1])/Delta : 0.;
-  boundary_flux ({gf});
   
   trash ({g});
   foreach()
@@ -98,7 +94,6 @@ int main()
       g.x[] = (gf.x[] + gf.x[1])/(fm.x[] + fm.x[1] + SEPS);
       //      assert (fabs(g.x[]) < 1e-6);
     }
-  boundary ((scalar *){g});
 
   correction (dt);
 #endif

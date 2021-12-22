@@ -268,7 +268,6 @@ event viscous_term (i++)
     foreach()
       u.x[] += dt*nu_H*d2u[];
   }
-  boundary ((scalar *){u});
 }
 
 /**

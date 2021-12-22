@@ -22,7 +22,7 @@ static int error()
   double max = 0, maxv = 0., maxw = 0.;
 
   scalar eu[];
-  foreach(reduction(max:max) reduction(max:maxv))
+  foreach(reduction(max:max) reduction(max:maxv) reduction(max:maxw))
     for (int i = 0; i <= 1; i++) {
       double xu = x + (i - 0.5)*Delta, yu = y, zu = z ;
       eu[] = fabs (solution(xu,yu,zu) - u.x[i,0]);
@@ -82,11 +82,9 @@ int main (int argc, char ** argv)
   double R0 = 0.1;
   foreach()
     h[] = exp(-(x*x + y*y + z*z)/sq(R0));
-  boundary ({h});
 
   foreach_face()
     u.x[] = solution(x,y,z);
-  boundary ((scalar *){u});
 
   astats s = adapt_wavelet ({h}, &tolerance, maxlevel);
   while (s.nc) {

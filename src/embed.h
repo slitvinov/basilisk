@@ -308,7 +308,6 @@ int fractions_cleanup (struct Cleanup p)
     foreach_face()
       if (s.x[] && ((!c[] || !c[-1]) || s.x[] < p.smin))
 	s.x[] = 0.;
-    boundary ((scalar *){s});
 
     changed = 0;
     foreach(reduction(+:changed))
@@ -340,14 +339,12 @@ int fractions_cleanup (struct Cleanup p)
 	if (n < dimension)
 	  c[] = 0., changed++;
       }
-    boundary ({c});
 
     schanged += changed;
   }
   if (changed)
     fprintf (stderr, "WARNING: fractions_cleanup() did not converge after "
 	     "%d iterations\n", i);
-  boundary ((scalar *){s});
   return schanged;
 }
   
@@ -510,10 +507,8 @@ These two vectors are computed by the *embed_force()* function.
 trace
 void embed_force (scalar p, vector u, face vector mu, coord * Fp, coord * Fmu)
 {
-  // fixme: this could be simplified considerably if reduction worked on vectors
-  double Fpx = 0., Fpy = 0., Fmux = 0., Fmuy = 0.;
-  foreach (reduction(+:Fpx) reduction(+:Fpy)
-	   reduction(+:Fmux) reduction(+:Fmuy))
+  coord Fps = {0}, Fmus = {0};
+  foreach (reduction(+:Fps) reduction(+:Fmus))
     if (cs[] > 0. && cs[] < 1.) {
 
       /**
@@ -525,8 +520,8 @@ void embed_force (scalar p, vector u, face vector mu, coord * Fp, coord * Fmu)
       double area = embed_geometry (point, &b, &n);
       area *= pow (Delta, dimension - 1);
       double Fn = area*embed_interpolate (point, p, b);
-      Fpx += Fn*n.x;
-      Fpy += Fn*n.y;
+      foreach_dimension()
+	Fps.x += Fn*n.x;
 
       /**
       To compute the viscous force, we first need to retrieve the
@@ -602,13 +597,12 @@ void embed_force (scalar p, vector u, face vector mu, coord * Fp, coord * Fmu)
 
 	assert (dimension == 2);
 	coord dudn = embed_gradient (point, u, b, n);
-	Fmux -= area*mua*(dudn.x*(sq(n.x) + 1.) + dudn.y*n.x*n.y);
-	Fmuy -= area*mua*(dudn.y*(sq(n.y) + 1.) + dudn.x*n.x*n.y);
+	foreach_dimension()
+	  Fmus.x -= area*mua*(dudn.x*(sq(n.x) + 1.) + dudn.y*n.x*n.y);
       }
     }
 
-  Fp->x = Fpx; Fp->y = Fpy; 
-  Fmu->x = Fmux; Fmu->y = Fmuy; 
+  *Fp = Fps; *Fmu = Fmus;
 }
 
 /**
@@ -871,7 +865,6 @@ void update_tracer (scalar f, face vector uf, face vector flux, double dt)
       }
     }
   }
-  boundary ({e});
 
   /**
   In a second phase, the excesses in each cell are added to the
@@ -906,6 +899,8 @@ event metric (i = 0)
   cells. So we switch back to the default fraction refinement (which
   is less accurate but only relies on *cs*). */
 
+  // fixme: could work better with embed_fraction_refine
+  // see porous1.tst
   cs.prolongation = fraction_refine;
   foreach_dimension()
     fs.x.prolongation = embed_face_fraction_refine_x;
@@ -916,7 +911,6 @@ event metric (i = 0)
   component. */
   
 #endif
-  boundary ({cs, fs});
   restriction ({cs, fs});
 
   // fixme: embedded boundaries cannot be combined with (another) metric yet

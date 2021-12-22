@@ -39,7 +39,6 @@ event init (i = 0)
     a[] = (x*x + y*y < sq(0.2))*(noise() > 0.);
     age[] = a[];
   }
-  boundary({a});
 }
 
 /**
@@ -88,7 +87,6 @@ event life (i++)
 
     age[] = b[]*(age[] + 1);
   }
-  boundary({b});
 
   /**
   Here we swap the old state (`a`) with the new state (`b`). */

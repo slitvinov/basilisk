@@ -39,7 +39,6 @@ event acceleration (i++) {
       Mx.y[] = epsilon.y[]*(phi[] - phi[0,-1])*
       (phi[1,0] - phi[-1,0] + 
        phi[1,-1] - phi[-1,-1])/sq(2.*Delta);
-    boundary_flux ({Mx});
 
     /**
     The electric force is the divergence of the Maxwell stress tensor
@@ -60,7 +59,6 @@ event acceleration (i++) {
     *(epsilon.x[]/fm.x[] + epsilon.y[]/fm.y[] +
       epsilon.x[1,0]/fm.x[1,0] + epsilon.y[0,1]/fm.y[0,1])/4.;
 #endif
-  boundary ((scalar *){f});
 
   /**
   To get the acceleration from the force we need to multiply by the

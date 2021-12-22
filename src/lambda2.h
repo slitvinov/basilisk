@@ -141,5 +141,4 @@ void lambda2 (const vector u, scalar l2)
     eigenvalues (S2O2, lambda, ev);
     l2[] = lambda[1]/2.;
   }
-  boundary ({l2});
 }

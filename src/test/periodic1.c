@@ -13,7 +13,6 @@ int main() {
   scalar a[];
   foreach()
     a[] = x + y;
-  boundary ({a});
 
   output_cells (stdout);
   foreach()

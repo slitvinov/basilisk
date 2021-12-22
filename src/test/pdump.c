@@ -17,7 +17,6 @@ int main()
   scalar s[];
   foreach()
     s[] = sin(x)*cos(y);
-  boundary ({s});
 
   output_cells (stdout);
   dump (file = "restore.dump", list = {s});

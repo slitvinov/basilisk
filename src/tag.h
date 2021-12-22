@@ -68,6 +68,7 @@ int tag (scalar t)
   t.restriction = restriction_tag;
 #if TREE  
   t.refine = t.prolongation = refine_injection;
+  t.dirty = true;
 #endif
 
   /**
@@ -90,7 +91,6 @@ int tag (scalar t)
       continue;
     }
 #endif // !_MPI
-  boundary ({t});
 
   /**
   To gather cells which belong to the same neighborhood, we repeat
@@ -129,7 +129,7 @@ int tag (scalar t)
       (non-zero) tag value of its closest neighbors. We also track
       whether this update changes any of the tag values. */
       
-      foreach_level (l, reduction(max:changed))
+      foreach_level (l, reduction(||:changed))
         if (t[]) {
 	  double min = t[];
 	  foreach_neighbor(1)
@@ -169,7 +169,7 @@ int tag (scalar t)
   array of unique indices. */
 
   Array * a = array_new();
-  foreach (serial)
+  foreach (serial, noauto)
     if (t[] > 0) {
   
       /**
@@ -259,7 +259,6 @@ int tag (scalar t)
   foreach()
     if (t[] > 0)
       t[] = lookup_tag (a, t[]) + 1;
-  boundary ({t});
 
   /**
   We return the maximum index value. */
@@ -292,7 +291,7 @@ void remove_droplets (struct RemoveDroplets p)
   int n = tag (d), size[n];
   for (int i = 0; i < n; i++)
     size[i] = 0;
-  foreach (serial)
+  foreach (serial, noauto)
     if (d[] > 0)
       size[((int) d[]) - 1]++;
 #if _MPI
@@ -302,5 +301,4 @@ void remove_droplets (struct RemoveDroplets p)
   foreach()
     if (d[] > 0 && size[((int) d[]) - 1] < minsize)
       f[] = p.bubbles;
-  boundary ({f});
 }

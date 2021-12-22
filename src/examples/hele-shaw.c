@@ -55,7 +55,6 @@ event coefficients (i++)
     double ff = (f[] + f[-1])/2.;
     beta.x[] = - k/(mu1 + clamp(ff,0,1)*(mu2 - mu1));
   }
-  boundary ((scalar *){beta});
 }
 
 #if TREE

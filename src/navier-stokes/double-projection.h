@@ -132,7 +132,6 @@ event acceleration (i++)
 {
   foreach_face()
     Af.x[] += fm.x[]*(face_value (u.x, 0) + dt*a.x[]);
-  boundary ((scalar *){Af});
 
   /**
   We also add the centered gradient $\mathbf{g^n}$ to the centered

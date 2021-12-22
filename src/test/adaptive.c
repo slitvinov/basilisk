@@ -47,7 +47,6 @@ event velocity (i++) {
   struct { double x, y; } f = {-1.,1.};
   foreach_face()
     u.x[] = f.x*(psi[0,1] - psi[])/Delta;
-  boundary ((scalar *){u});
 }
 
 event logfile (t = {0,5}) {

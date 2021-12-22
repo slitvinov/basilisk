@@ -33,7 +33,6 @@ event velocity (i++) {
   trash ({u});
   foreach_face(x) u.x[] = -8.*y;
   foreach_face(y) u.y[] =  8.*x;
-  boundary ((scalar *){u});
 }
 
 event logfile (t = {0,end}) {

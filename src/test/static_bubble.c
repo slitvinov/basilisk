@@ -86,7 +86,6 @@ event init (t = 0)
   fraction (f, - (sq(bubble_radius) - sq(x - box_size*0.5) - sq(y)));
   foreach()
     c[] = conc_liq1*f[] + conc_gas1*(1. - f[]);
-  boundary ({c});
 }
 	
 event extract (i++; t <= 48)

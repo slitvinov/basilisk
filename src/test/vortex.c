@@ -56,7 +56,6 @@ event init (t = 0)
 	       exp(-(sq(x + dd) + sq(y))/(dd/10.)));
     psi[] = 0.;
   }
-  boundary ({psi,omega});
 
   /**
   We then solve the Poisson equation
@@ -77,7 +76,6 @@ event init (t = 0)
   foreach()
     foreach_dimension()
       u.x[] = f.x*(psi[0,1] - psi[0,-1])/(2.*Delta);
-  boundary ((scalar *){u});
 }
 
 /**

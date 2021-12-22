@@ -165,6 +165,15 @@ Note that only the documented test cases appear in the list below
 ## Speed benchmarks
 
 * [Speed of elementary operations on different grids](laplacian.c)
+* [Poisson equation](poisson.c)
+* [Poisson equation with a circular refined patch](circle.c)
+
+## Basic operations
+
+* [Automatic stencils / boundary conditions](stencils.c)
+* [Interpolation on halos](interp.c)
+* [Tangential interpolation on face vector fields](interpu.c)
+* [Height Functions](hf.c)
 
 ## Other
 

@@ -53,7 +53,6 @@ static double residual_psi (scalar * al, scalar * bl, scalar * resl, void * data
   face vector g[];
   foreach_face()
     g.x[] = face_gradient_x (a, 0);
-  boundary_flux ({g});
   foreach (reduction(max:maxres)) {
     res[] = b[] + (a[0,1] - a[0,-1])/(2.*y*Delta);
     foreach_dimension()
@@ -72,7 +71,6 @@ static double residual_psi (scalar * al, scalar * bl, scalar * resl, void * data
       maxres = fabs (res[]);
   }
 #endif // !TREE
-  boundary (resl);
   return maxres;
 }
 
@@ -89,7 +87,6 @@ mgstats axistream (vector u, scalar psi)
     psi[] = 0.;
   }
   psi[bottom] = dirichlet(0);
-  boundary ({psi});
   return mg_solve ({psi}, {omega}, residual_psi, relax_psi, NULL, 0, NULL, 1);
 }
 

@@ -80,13 +80,8 @@ event init (t = 0)
   The domain is the intersection of a channel of width unity and a
   circle of diameter 0.125. */
 
-  vertex scalar phi[];
-  foreach_vertex() {
-    phi[] = intersection (0.5 - y, 0.5 + y);
-    phi[] = intersection (phi[], sq(x) + sq(y) - sq(0.125/2.));
-  }
-  boundary ({phi});
-  fractions (phi, cs, fs);
+  solid (cs, fs, intersection (intersection (0.5 - y, 0.5 + y),
+			       sq(x) + sq(y) - sq(0.125/2.)));
 
   /**
   We set the initial velocity field. */
@@ -111,7 +106,6 @@ event movies (i += 4; t <= 15.)
   vorticity (u, omega);
   foreach()
     m[] = cs[] - 0.5;
-  boundary ({m});
   output_ppm (omega, file = "vort.mp4", box = {{-0.5,-0.5},{7.5,0.5}},
 	      min = -10, max = 10, linear = true, mask = m);
   output_ppm (f, file = "f.mp4", box = {{-0.5,-0.5},{7.5,0.5}},

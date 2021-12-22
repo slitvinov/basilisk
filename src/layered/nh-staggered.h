@@ -220,7 +220,6 @@ void correct_qz (double dt, (const) scalar phis)
       l++;
     }
   }
-  boundary (qzl);
 }
 
 #if 1
@@ -236,7 +235,6 @@ event viscous_term (i++)
     foreach()
       // fixme: BCs should be different from those of horizontal velocity
       vertical_viscosity (point, hl, (scalar *) qzl, dt);
-    boundary (qzl);
     lambda_b = lb; dut = d; u_b = u;
 #if 0
     correct_qz (- dt);
@@ -459,7 +457,6 @@ static double residual_nh (scalar * phil, scalar * rhsl,
       l++;
     }
   }
-  boundary (resl);
   return maxres;
 }
 
@@ -574,7 +571,6 @@ static double residual_nh2 (scalar * phil, scalar * rhsl,
       l++, zl += h[-1], z += h[], zr += h[1];
     }
   }
-  boundary (resl);
   return maxres;
 }
 
@@ -632,7 +628,6 @@ static double residual_nh3 (scalar * phil, scalar * rhsl,
       l++;
     }
   }
-  boundary (resl);
   return maxres;
 }
 
@@ -685,8 +680,6 @@ event pressure (i++)
       l++;
     }
   }
-  boundary ((scalar *)ufl);
-  boundary_flux (al);
 
   correct_qz (dt, phit);
 }

@@ -88,8 +88,8 @@ int main()
 #if 0
   p.restriction = restriction_exact;
   p.refine = p.prolongation = refine_exact;
+  p.dirty = true;
 #endif
-  boundary ({p});
   
   event ("acceleration");
 #if 1
@@ -97,18 +97,15 @@ int main()
 #else
   foreach_face()
     uf.x[] -= alpha.x[] ? dt*alpha.x[]*face_gradient_x (p, 0) : 0.;
-  boundary ((scalar *){uf});
 
   face vector gf[];
   foreach_face()
     gf.x[] = fm.x[] ? fm.x[]*a.x[] - alpha.x[]*(p[] - p[-1])/Delta : 0.;
-  boundary_flux ({gf});
   
   trash ({g});
   foreach()
     foreach_dimension()
       g.x[] = (gf.x[] + gf.x[1])/(fm.x[] + fm.x[1] + SEPS);
-  boundary ((scalar *){g});
 
   correction (dt);
 #endif
@@ -117,9 +114,10 @@ int main()
   We check the convergence rate and the norms of the velocity field
   (which should be negligible). */
   
-  fprintf (stderr, "mgp %g %g %d %d %d\n",
+  fprintf (stderr, "mgp %.10f %.10f %d %d %d\n",
 	   mgp.resb, mgp.resa, mgp.i, mgp.minlevel, mgp.nrelax);
-  fprintf (stderr, "umax %g %g %g %g %g\n", normf(u.x).max, normf(u.y).max,
+  fprintf (stderr, "umax %.12f %.12f %.12f %.12f %.12f\n",
+	   normf(u.x).max, normf(u.y).max,
 	   normf(uf.x).max, normf(uf.y).max, normf(uf.z).max);
 
   /**
@@ -146,8 +144,7 @@ int main()
 	      x, y, z, p[], u.x[], u.y[], u.z[], g.x[], g.y[], g.z[], cs[]);
     p[] = G.x[]*x + G.y[]*y;
   }
-  boundary ({p});
-  
+   
   foreach_face (x)
     printf ("fx %g %g %g %g\n", x, y, z, face_gradient_x (p, 0));
   foreach_face (y)

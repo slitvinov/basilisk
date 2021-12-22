@@ -31,12 +31,8 @@ int main()
 
 event init (t = 0)
 {
-  vertex scalar phi[];
   double eps = L0/(1 << 7)/1000.;
-  foreach_vertex()
-    phi[] = union (y - L0/4. + eps, - L0/4 + eps - y);
-  boundary ({phi});
-  fractions (phi, cs, fs);
+  solid (cs, fs, union (y - L0/4. + eps, - L0/4 + eps - y));
 
   mu = fm;
 
@@ -48,7 +44,6 @@ event init (t = 0)
 
   foreach()
     u.y[] = 1.;
-  boundary ((scalar *){u});
 }
 
 event logfile (i++; i <= 100)

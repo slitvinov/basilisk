@@ -61,7 +61,6 @@ event acceleration (i++)
 	foreach_dimension()
 	  u.x[] = (m0.y*r.x - m1.x*r.y)/det - a.x;
       }
-  boundary ((scalar *){u});  
 }
 
 #undef alpha_H

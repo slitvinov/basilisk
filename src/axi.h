@@ -101,8 +101,6 @@ event metric (i = 0) {
   fm.x.prolongation = refine_face_x_axi;
   fm.y.prolongation = refine_face_y_axi;
 #endif
-  
-  boundary ({cm, fm});
 }
 
 /**

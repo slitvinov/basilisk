@@ -78,6 +78,4 @@ event metric (i = 0) {
     fmv.x[] = 1.;
   foreach_face(x)
     fmv.x[] = max(r*dtheta/L0, 1e-20);
-  
-  boundary ({cm, fm});
 }

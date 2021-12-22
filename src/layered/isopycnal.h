@@ -24,7 +24,6 @@ event acceleration (i++)
       q[] = ph;
     }
   }
-  boundary ({q});
   
   foreach_face() {
     double pg;
@@ -32,7 +31,6 @@ event acceleration (i++)
       ha.x[] += pg;
     end_hpg (0);
   }
-  boundary ((scalar *){ha});
 
   delete ({q});
 }

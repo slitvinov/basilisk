@@ -88,7 +88,7 @@ event tracer_advection (i++)
 
 #if TREE
   sf.prolongation = refine_bilinear;
-  boundary ({sf});
+  sf.dirty = true; // boundary conditions need to be updated
 #endif
 }
 
@@ -102,11 +102,12 @@ event properties (i++)
       muv.x[] = fm.x[]*mu(ff);
     }
   }
+  
   foreach()
     rhov[] = cm[]*rho(sf[]);
 
 #if TREE  
   sf.prolongation = fraction_refine;
-  boundary ({sf});
+  sf.dirty = true; // boundary conditions need to be updated
 #endif
 }

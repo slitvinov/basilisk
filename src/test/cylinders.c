@@ -35,18 +35,6 @@ using the volume fraction $\Phi$. */
 int maxlevel = 6, nc;
 double radius;
 
-/**
-This function defines the embedded volume and face fractions. */
-
-void cylinder (scalar cs, face vector fs)
-{
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = sq(x) + sq(y) - sq(radius);
-  boundary ({phi});
-  fractions (phi, cs, fs);
-}
-
 int main()
 {
 
@@ -92,7 +80,7 @@ event init (t = 0)
   /**
   We initialize the embedded geometry. */
   
-  cylinder (cs, fs);
+  solid (cs, fs, sq(x) + sq(y) - sq(radius));
 
   /**
   And set acceleration and viscosity to unity. */
@@ -171,7 +159,7 @@ event logfile (i++; i <= 500)
 #else
     adapt_wavelet ({cs,u}, (double[]){1e-2,2e-6,2e-6}, maxlevel);
 #endif
-    cylinder (cs, fs);
+    solid (cs, fs, sq(x) + sq(y) - sq(radius));
   }
 }
 

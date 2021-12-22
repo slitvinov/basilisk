@@ -66,14 +66,10 @@ solver](navier-stokes/centered.h). */
 (const) scalar mup = unity;
 
 /**
-Constitutive models other than Oldroyd-B (the default) are defined
-through the two functions $\mathbf{f}_s (\mathbf{A})$ and
-$\mathbf{f}_r (\mathbf{A})$. */
+Constitutive models other than Oldroyd-B (the default) are defined by
+defining the two macros $\mathbf{f}_s (\mathbf{A})$ and $\mathbf{f}_r
+(\mathbf{A})$. See [the FENE-P model](fene-p.h) for an example.
 
-void (* f_s) (double, double *, double *) = NULL;
-void (* f_r) (double, double *, double *) = NULL;
-
-/**
 ## The log conformation approach
 
 The numerical resolution of viscoelastic fluid problems often faces the
@@ -142,8 +138,10 @@ scalar tau_qq[];
 event defaults (i = 0) {
   if (is_constant (a.x))
     a = new face vector;
-  if (f_s || f_r)
-    trA = new scalar;
+
+#if defined(f_s) || defined(f_r)
+  trA = new scalar;
+#endif
 
   foreach() {
     foreach_dimension()
@@ -172,14 +170,6 @@ event defaults (i = 0) {
   scalar s = tau_p.x.y;
   s[bottom] = dirichlet (0.);  
 #endif  
-}
-
-event init (i = 0) {
-#if AXI
-  boundary((scalar *){tau_p, tau_qq});
-#else
-  boundary((scalar *){tau_p});
-#endif
 }
 
 /**
@@ -293,9 +283,10 @@ event tracer_advection (i++)
       $\mathbf{A}$.*/
 
       double eta = 1., nu = 1.;
-      if (f_s)
-	f_s (trA[], &nu, &eta);
-
+#ifdef f_s
+      f_s (trA[], nu, eta);
+#endif
+ 
       double fa = (mup[] != 0 ? lambda[]/(mup[]*eta) : 0.);
 
       pseudo_t A;
@@ -398,14 +389,11 @@ event tracer_advection (i++)
   ### Advection of $\Psi$
   
   We proceed with step (b), the advection of the log of the
-  conformation tensor $\Psi$, but first we apply boundary
-  conditions. */
+  conformation tensor $\Psi$. */
 
 #if AXI
-  boundary ({Psi.x.x, Psi.x.y, Psi.y.y, Psiqq});
   advection ({Psi.x.x, Psi.x.y, Psi.y.y, Psiqq}, uf, dt);
 #else
-  boundary ({Psi.x.x, Psi.x.y, Psi.y.y});
   advection ({Psi.x.x, Psi.x.y, Psi.y.y}, uf, dt);
 #endif
 
@@ -460,7 +448,8 @@ event tracer_advection (i++)
       */
 
       double eta = 1., nu = 1.;
-      if (f_r) {
+#ifdef f_r
+      {
 #if 0 // Set to one if the midstep trace is to be used.
 	scalar t = trA;
 	t[] = A.x.x + A.y.y;
@@ -468,9 +457,10 @@ event tracer_advection (i++)
 	t[] += Aqq;
 #endif
 #endif
-	f_r (trA[], &nu, &eta);
+	f_r (trA[], nu, eta);
       }
-
+#endif
+ 
       double fa = exp(-nu*eta*dt/lambda[]);
 
 #if AXI
@@ -484,23 +474,26 @@ event tracer_advection (i++)
 
       /**
       The trace at time $n+1$ is also needed for some models. */
-      
-      if (f_s || f_r) {
+
+#if defined(f_s) || defined(f_r)
+      {
 	scalar t = trA;
 	t[] = A.x.x + A.y.y;
 #if AXI
 	t[] += Aqq;
 #endif
       }
-
+#endif
+ 
       /**
       Then the stress tensor $\mathbf{\tau}_p^{n+1}$ is computed from
       $\mathbf{A}^{n+1}$ according to the constitutive model,
       $\mathbf{f}_s(\mathbf{A})$.  */
 
       nu = 1; eta = 1.;
-      if (f_s)
-	f_s (trA[], &nu, &eta);
+#ifdef f_s
+      f_s (trA[], nu, eta);
+#endif
 
       fa = mup[]/lambda[]*eta;
       
@@ -512,12 +505,6 @@ event tracer_advection (i++)
 	tau_p.x.x[] = fa*(nu*A.x.x - 1.);
     }
   }
-
-#if AXI
-  boundary((scalar *){tau_p, tau_qq});
-#else
-  boundary((scalar *){tau_p});
-#endif
 }
 
 /**
@@ -605,5 +592,5 @@ event acceleration (i++)
 
 ## See also
 
-* [Functions $f_s$ and $f_r$ for the FENE-P model](fene-p.h)
+* [Macros $f_s$ and $f_r$ for the FENE-P model](fene-p.h)
 */

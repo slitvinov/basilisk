@@ -50,7 +50,6 @@ event defaults (i = 0)
 
   foreach_face()
     epsilon.x[] = K.x[] = fm.x[];
-  boundary ((scalar *){epsilon, K});
 }
 
 event tracer_diffusion (i++)
@@ -71,7 +70,6 @@ event tracer_diffusion (i++)
     face vector f[];
     foreach_face()
       f.x[] = K.x[]*dt + epsilon.x[];
-    boundary ((scalar *){f});
 
     /**
     The poisson equation is solved to obtain $\phi^{n+1}$. */
@@ -85,7 +83,6 @@ event tracer_diffusion (i++)
 #if TREE
     foreach_face()
       f.x[] = epsilon.x[]*(phi[] - phi[-1])/Delta;
-    boundary_flux ({f});
     foreach() {
       rhoe[] = 0.;
       foreach_dimension()
@@ -101,7 +98,6 @@ event tracer_diffusion (i++)
       rhoe[] /= cm[]*sq(Delta);
     }
 #endif
-    boundary ({rhoe});
   }
 
   /**

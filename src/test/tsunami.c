@@ -52,7 +52,6 @@ event init (i = 0)
     zb[] = - 7000;
     h[] = - zb[] + 10.*exp(-sq(x/25e3));
   }
-  boundary ({h});
 }
 
 #if 1

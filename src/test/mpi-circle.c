@@ -11,7 +11,7 @@ combinations, in particular the multigrid Poisson solver. */
 
 scalar a[], b[];
 
-static void mpi_print (timer t, int i, size_t tnc,
+static void mpi_print (timer t, int i, long tnc,
 		       const char * name)
 {
   double mpi[npe()];
@@ -49,7 +49,6 @@ int main (int argc, char * argv[])
   
   foreach()
     a[] = b[] = 0.;
-  boundary ({a, b});
   poisson (a, b); // to force allocation of extra fields
   
   MPI_Barrier (MPI_COMM_WORLD);
@@ -58,7 +57,7 @@ int main (int argc, char * argv[])
 				       sq((y - 0.5) - 0.1))));
   check_restriction (a);
   
-  size_t tnc = 0;
+  long tnc = 0;
   foreach(reduction(+:tnc))
     tnc++;
   mpi_print (t, 1, tnc, "refine");
@@ -126,10 +125,8 @@ int main (int argc, char * argv[])
   MPI_Barrier (MPI_COMM_WORLD);
   t = timer_start();
   i = nloops = 1;
-  while (i--) {
-    boundary ({b});
+  while (i--)
     restriction ({b});
-  }
   mpi_print (t, nloops, tnc*nloops, "restriction");
 
   /**
@@ -151,7 +148,7 @@ int main (int argc, char * argv[])
   //  assert (normf(e).max < 0.4);
   
   int n = 0;
-  foreach()
+  foreach (serial)
     n++;
   int nmin = n, nmax = n;
   mpi_all_reduce (nmin, MPI_INT, MPI_MIN);

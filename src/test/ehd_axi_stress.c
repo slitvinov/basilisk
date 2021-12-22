@@ -101,7 +101,6 @@ event init (i = 0) {
     alpha.x[] = fm.x[];
     a.x[] = 0.;
   }
-  boundary ((scalar *){rhoe, phi, epsilon, alpha, a});
   
   mg = poisson (phi, rhs, epsilon);
 }

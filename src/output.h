@@ -54,7 +54,8 @@ void output_field (struct OutputField p)
     p.box[0][0] = X0;      p.box[0][1] = Y0;
     p.box[1][0] = X0 + L0; p.box[1][1] = Y0 + L0;
   }
-  
+
+  boundary (p.list);
   int len = list_len(p.list);
   double Delta = 0.999999*(p.box[1][0] - p.box[0][0])/(p.n - 1);
   int ny = (p.box[1][1] - p.box[0][1])/Delta + 1;
@@ -149,6 +150,10 @@ void output_matrix (struct OutputMatrix p)
 {
   if (p.n == 0) p.n = N;
   if (!p.fp) p.fp = stdout;
+  if (p.linear) {
+    scalar f = p.f;
+    boundary ({f});
+  }
   float fn = p.n;
   float Delta = (float) L0/fn;
   fwrite (&fn, sizeof(float), 1, p.fp);
@@ -597,7 +602,14 @@ void output_ppm (struct OutputPPM p)
   }
   if (!p.map)
     p.map = jet;
-
+  if (p.linear) {
+    scalar f = p.f, mask = p.mask;
+    if (mask.i)
+      boundary ({f, mask});
+    else
+      boundary ({f});
+  }
+  
   double fn = p.n;
   double Delta = (p.box[1][0] - p.box[0][0])/fn;
   int ny = (p.box[1][1] - p.box[0][1])/Delta;
@@ -714,6 +726,13 @@ void output_grd (struct OutputGRD p)
     p.box[0][0] = X0;      p.box[0][1] = Y0;
     p.box[1][0] = X0 + L0; p.box[1][1] = Y0 + L0;
     if (p.Delta == 0) p.Delta = L0/N;
+  }
+  if (p.linear) {
+    scalar f = p.f, mask = p.mask;
+    if (mask.i)
+      boundary ({f, mask});
+    else
+      boundary ({f});
   }
 
   double Delta = p.Delta;
@@ -1343,9 +1362,9 @@ bool restore (struct Dump p)
     if (is_leaf(cell))
       continue;
   }
-  boundary (list);
+  for (scalar s in all)
+    s.dirty = true;
 #endif
-  boundary (listm);
   
   scalar * other = NULL;
   for (scalar s in all)

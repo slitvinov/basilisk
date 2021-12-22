@@ -15,7 +15,6 @@ int main (int argc, char ** argv)
 
     foreach()
       v[] = cos(2.*pi*x)*cos(2.*pi*y);
-    boundary ({v});
 
     //    FILE * fp = fopen("error","w");
     double emax = 0.;

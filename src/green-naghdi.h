@@ -182,7 +182,6 @@ static double residual_GN (scalar * a, scalar * r, scalar * resl, void * data)
       else
 	res.x[] = 0.;
     }
-  boundary (resl);
   
   /**
   The maximum residual is normalised by gravity i.e. the tolerance is
@@ -266,7 +265,6 @@ static double update_green_naghdi (scalar * current, scalar * updates,
       c[] = - dxux*dyuy + dx(u.y)*dy(u.x) + sq(dxux + dyuy);
       d[] = sq(u.x[])*d2x(zb) + sq(u.y[])*d2y(zb) + 2.*u.x[]*u.y[]*d2xy(zb);
     }
-    boundary ({c,d});
 
     /**
     We can now compute $b$
@@ -288,7 +286,6 @@ static double update_green_naghdi (scalar * current, scalar * updates,
   scalar wet[];
   foreach()
     wet[] = h[] > dry;
-  boundary ({wet});
 
   /**
   Finally we solve the linear problem with the multigrid solver using

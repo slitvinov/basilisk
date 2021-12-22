@@ -71,7 +71,6 @@ void fraction_from_stl (scalar f, FILE * fp, double eps, int maxlevel)
   foreach_vertex()
     phi[] = (d[] + d[-1] + d[0,-1] + d[-1,-1] +
 	     d[0,0,-1] + d[-1,0,-1] + d[0,-1,-1] + d[-1,-1,-1])/8.;
-  boundary ({phi});
   fractions (phi, f);
 }
 
@@ -180,7 +179,6 @@ event init (t = 0) {
       f[] = f0[];
       u.y[] = 1.;
     }
-    boundary ({f,u.y});
   }
 
   /**
@@ -203,7 +201,6 @@ event velocity (i++) {
   foreach()
     foreach_dimension()
       u.x[] = (1. - tangaroa[])*u.x[];
-  boundary ((scalar *){u});
 }
 
 /**
@@ -241,7 +238,6 @@ event movie (t += 0.01; t <= 10)
   Z[back] = dirichlet (z);
   foreach()
     Z[] = z;
-  boundary ({Z});
   draw_vof ("f", color = "Z", min = -0.1, max = 0.1, linear = true);
   save ("movie.mp4");
 

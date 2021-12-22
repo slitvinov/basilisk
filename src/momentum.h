@@ -42,13 +42,11 @@ event properties (i++) {
   // fixme: metric
   foreach()
     rhov[] = rho(f[]);
-  boundary ({rhov});
   foreach_face () {
     alphav.x[] = 2./(rhov[] + rhov[-1]);
     double ff = (f[] + f[-1])/2.;
     muv.x[] = fm.x[]*mu(ff);
   }
-  boundary ((scalar *){muv});
 }
 
 /**
@@ -70,7 +68,6 @@ event vof (i++) {
       q1.x[] = f[]*rho1*u;
       q2.x[] = (1. - f[])*rho2*u;
     }
-  boundary ((scalar *){q1,q2});
 
   /**
   Momentum $q2$ is associated with $1 - f$, so we set the *inverse*
@@ -99,7 +96,6 @@ event vof (i++) {
   foreach()
     foreach_dimension()
       q.x[] = q1.x[] + q2.x[];
-  boundary ((scalar *){q});
 
   /**
   We set the list of interfaces to NULL so that the default *vof()*

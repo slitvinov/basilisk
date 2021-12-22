@@ -196,7 +196,6 @@ event snapshot (t = 1; t <= MAXTIME; t++)
   lambda2 (u, l2);
   foreach()
     omegay[] = (u.z[1] - u.z[-1] - u.x[0,0,1] + u.x[0,0,-1])/(2.*Delta);
-  boundary ({omegay});
 #endif
   
   char name[80];

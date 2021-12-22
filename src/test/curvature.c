@@ -40,7 +40,6 @@ static void vofi (scalar c, int levelmax)
     creal p[3] = {x - Delta/2., y - Delta/2., z - Delta/2.};
     c[] = Get_cc (sphere, p, Delta, fh, dimension);
   }
-  boundary ({c});
 }
 
 /**
@@ -85,7 +84,7 @@ void sample_circles (int nr, double R, int levelmax, norm * n, cstats * sc)
       computation... */
 
       sc[l].h += s.h; sc[l].f += s.f; sc[l].a += s.a; sc[l].c += s.c;
-      foreach()
+      foreach (serial)
 	if (c[] > 0. && c[] < 1.) {
 
           /**

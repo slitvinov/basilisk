@@ -127,7 +127,7 @@ void conserve_elevation (void)
   h.refine  = refine_elevation;
   h.prolongation = prolongation_elevation;
   h.restriction = restriction_elevation;
-  boundary ({h});
+  h.dirty = true;
 }
 #else // Cartesian
 void conserve_elevation (void) {}

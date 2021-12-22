@@ -187,14 +187,21 @@ void fractions (struct Fractions a)
   We can now compute the surface fractions. In 3D they will be
   computed for each face (in the z, x and y directions) and stored in
   the face field `s`. In 2D the surface fraction in the z-direction is
-  the *volume fraction* `c`. The call to `boundary_flux()` defines
-  consistent line fractions on trees. */
+  the *volume fraction* `c`. */
 
 #if dimension == 3
+
+  /**
+  In 3D we need to prevent boundary conditions, since this would
+  impose vertex field BCs which are not (apparently) consistent for
+  the edge intersection coordinates. This can probably be improved. */
+  
+  foreach_dimension()
+    p.x.dirty = false;
+  
   scalar s_x = s.x, s_y = s.y, s_z = s.z;
   foreach_face(z,x,y)
 #else // dimension == 2
-  boundary_flux ({s});
   scalar s_z = c;
   foreach()
 #endif
@@ -286,14 +293,13 @@ void fractions (struct Fractions a)
       }
     }
   }
-
+  
   /**
   ### Volume fraction computation
 
   To compute the volume fraction in 3D, we use the same approach. */
   
 #if dimension == 3
-  boundary_flux ({s});
   foreach() {
 
     /**
@@ -338,23 +344,24 @@ void fractions (struct Fractions a)
     }
   }
 #endif // dimension == 3
-  
-  /**
-  We apply the boundary conditions. */
-
-  boundary ({c});
 }
 
 /**
-The convenience macro below can be used to define a volume fraction
-field directly from a function. */
+The convenience macros below can be used to define volume and surface
+fraction fields directly from a function. */
 
 #define fraction(f,func) do {			\
     vertex scalar phi[];			\
     foreach_vertex()				\
       phi[] = func;				\
-    boundary ({phi});				\
     fractions (phi, f);				\
+  } while(0)
+
+#define solid(cs,fs,func) do {			\
+    vertex scalar phi[];			\
+    foreach_vertex()				\
+      phi[] = func;				\
+    fractions (phi, cs, fs);			\
   } while(0)
 
 /**
@@ -475,13 +482,6 @@ void reconstruction (const scalar c, vector n, scalar alpha)
   alpha.n = n;
   alpha.refine = alpha.prolongation = alpha_refine;
 #endif
-
-  /**
-  Finally we apply the boundary conditions to define $\mathbf{n}$ and
-  $\alpha$ everywhere (using the prolongation functions when necessary
-  on tree grids). */
-
-  boundary ({n, alpha});
 }
 
 /**

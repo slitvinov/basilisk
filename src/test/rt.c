@@ -1,3 +1,6 @@
+/**
+# Rayleigh--Taylor instability */
+
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
 #include "navier-stokes/conserving.h"

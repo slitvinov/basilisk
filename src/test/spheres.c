@@ -43,18 +43,6 @@ using the volume fraction $\Phi$. */
 int maxlevel = 5, nc;
 double radius;
 
-/**
-This function defines the embedded volume and face fractions. */
-
-void sphere (scalar cs, face vector fs)
-{
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = sq(x) + sq(y) + sq(z) - sq(radius);
-  boundary ({phi});
-  fractions (phi, cs, fs);
-}
-
 int main()
 {
 
@@ -99,8 +87,8 @@ event init (t = 0)
 
   /**
   We initialize the embedded geometry. */
-  
-  sphere (cs, fs);
+
+  solid (cs, fs, sq(x) + sq(y) + sq(z) - sq(radius));
 
   /**
   And set acceleration and viscosity to unity. */

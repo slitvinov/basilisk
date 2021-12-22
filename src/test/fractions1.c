@@ -19,14 +19,10 @@ int main()
   /**
   We use a circle of radius 0.3 and initialise the fractions. */
 
-  vertex scalar phi[];
   scalar c[];
   c.refine = c.prolongation = fraction_refine;
   face vector s[];
-  foreach_vertex()
-    phi[] = sq(0.3) - sq(x) - sq(y);
-  boundary ({phi});
-  fractions (phi, c, s);
+  solid (c, s, sq(0.3) - sq(x) - sq(y));
 
   /**
   Output the reconstruced facets and cells. */
@@ -45,6 +41,7 @@ int main()
   vector n[];
   scalar alpha[];
   reconstruction (c, n, alpha);
+  boundary ({n, alpha});
   coord p[2];
   for (int l = 0; l < depth(); l++)
     foreach_halo (prolongation, l) 

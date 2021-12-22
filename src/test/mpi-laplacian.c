@@ -10,7 +10,7 @@ combinations, in particular the multigrid Poisson solver. */
 
 scalar a[], b[];
 
-static void mpi_print (timer t, int i, size_t tnc,
+static void mpi_print (timer t, int i, long tnc,
 		       const char * name)
 {
   double mpi[npe()];
@@ -63,7 +63,7 @@ int main (int argc, char * argv[])
   timer t;
 
   double speed = 1e6; // approx speed in points/sec/core
-  size_t tnc = ((size_t)1) << (dimension*maxlevel);
+  long tnc = ((long)1) << (dimension*maxlevel);
   int i, nloops = max(0.1*speed*npe()/(double)tnc, 1);
   if (!pid())
     fprintf (stderr, "grid: %s\nnloops = %d\n", GRIDNAME, nloops);
@@ -77,7 +77,6 @@ int main (int argc, char * argv[])
   init_grid (N);
   foreach()
     a[] = b[] = 0.;
-  boundary ({a, b});
   poisson (a, b); // to force allocation of extra fields
   
   MPI_Barrier (MPI_COMM_WORLD);
@@ -286,7 +285,29 @@ The memory usage per core is given below. The increase for a large number
 of cores corresponds to the memory overhead of communication buffers
 etc...
 
-![Memory usage on Occigen](mpi-laplacian/occigen/3D/memory.png)
+~~~gnuplot Memory usage on Occigen
+# generate results for Occigen
+cd 'occigen/3D'
+
+# generate weak scaling curves
+! bash weak.sh > weak
+
+set logscale
+set logscale x 2
+set grid
+set xrange [2:32768]
+set format x '2^{%L}'
+set xtics 2
+
+set xlabel "# of cores"
+set ylabel "Memory/core (GB)"
+minlevel=9
+maxlevel=11
+plot [][0.1:] for [i=minlevel:maxlevel] \
+     '< sh table.sh poisson '.i u 1:($2/$1) t ''.i.' levels' w lp, \
+     18/x**0.9 t '18/x^{0.9}'
+cd '../..'
+~~~
 
 The wall-clock time for one iteration of the multigrid Poisson solver
 is given below.
@@ -297,28 +318,59 @@ size and the number of cores. The ideal weak scaling would give
 horizontal lines (i.e. constant computation time for
 proportionally-increasing problem sizes and number of cores).
 
-![Wall-clock time on Occigen for the Poisson
- solver](mpi-laplacian/occigen/3D/poisson.png)
+~~~gnuplot Wall-clock time on Occigen for the Poisson solver
+cd 'occigen/3D'
+set ylabel 'Time (sec)'
+plot [][0.01:100] for [i=minlevel:maxlevel] \
+     '< sh time.sh poisson '.i u 1:2 t ''.i.' levels' w lp, \
+     'weak' u 1:2 w lp t 'weak scaling', \
+     600/x**0.95 t '600/x^{0.95}'
+cd '../..'
+~~~
 
 The time spent in communication routines is illustrated below.
 
-![Communication time on Occigen for the Poisson
- solver](mpi-laplacian/occigen/3D/poisson-mpi.png)
+~~~gnuplot Communication time on Occigen for the Poisson solver
+cd 'occigen/3D'
+plot [][1e-2:10] for [i=minlevel:maxlevel] \
+     '< sh time.sh poisson '.i u 1:3 w lp t ''.i.' levels', \
+     4.5/x**0.65 t '4.5/x^{0.65}'
+cd '../..'
+~~~
 
 Similar results are obtained for a pure Laplacian.
 
-![Wall-clock time on Occigen for the
- Laplacian](mpi-laplacian/occigen/3D/laplacian.png)
+~~~gnuplot Wall-clock time on Occigen for the Laplacian
+cd 'occigen/3D'
+plot [][1e-4:10] for [i=minlevel:maxlevel] \
+     '< sh time.sh laplacian '.i u 1:2 w lp t ''.i.' levels', \
+     50/x**0.93 t '50/x^{0.93}'
+cd '../..'
+~~~
 
-![Communication time on Occigen for the
- Laplacian](mpi-laplacian/occigen/3D/laplacian-mpi.png)
+~~~gnuplot Communication time on Occigen for the Laplacian
+cd 'occigen/3D'
+plot [][1e-4:1] for [i=minlevel:maxlevel] \
+     '< sh time.sh laplacian '.i u 1:3 w lp t ''.i.' levels', \
+     2./x**0.7 t '2/x^{0.7}'
+cd '../..'
+~~~
 
 And for the restriction operator.
 
-![Wall-clock time on Occigen for the restriction
- operator](mpi-laplacian/occigen/3D/restriction.png)
+~~~gnuplot Wall-clock time on Occigen for the restriction operator
+cd 'occigen/3D'
+plot [][:1] for [i=minlevel:maxlevel] \
+     '< sh time.sh restriction '.i u 1:2 w lp t ''.i.' levels', \
+     18/x**0.85 t '18/x^{0.85}'
+cd '../..'
+~~~
 
-![Communication time on Occigen for the restriction
- operator](mpi-laplacian/occigen/3D/restriction-mpi.png)
-
+~~~gnuplot Communication time on Occigen for the restriction operator
+cd 'occigen/3D'
+plot [][1e-3:1] for [i=minlevel:maxlevel] \
+     '< sh time.sh restriction '.i u 1:3 w lp t ''.i.' levels', \
+     2.8/x**0.66 t '2.8/x^{0.66}'
+cd '../..'
+~~~
 */

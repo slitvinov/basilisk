@@ -25,8 +25,6 @@ int main()
   foreach_face()
     f.x[] = 1.;
 
-  boundary ({s,v,f});
-
   foreach()
     foreach_neighbor()
       fprintf (stderr, "%g %g %g %g %g\n", x, y, s[], v.x[], v.y[]);

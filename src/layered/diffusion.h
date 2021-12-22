@@ -155,7 +155,6 @@ event viscous_term (i++,last)
 	foreach_dimension()
 	  u.x[] -= dt*(ha.x[] + ha.x[1])/(hf.x[] + hf.x[1] + dry);
     }
-    boundary ((scalar *) {u});
   }
 }
 
@@ -193,7 +192,6 @@ void horizontal_diffusion (scalar * list, double D, double dt)
 	    s[] += dt*D*d2s[]/h[];
 	}
     }
-    boundary (list);
     delete (d2sl);
     free (d2sl);
   }

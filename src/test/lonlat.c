@@ -67,7 +67,9 @@ event profiles (t = 0.3; t += 0.3; t <= 0.9) {
   for (int i = 0; i < 180; i++)
     xp[i] = yp[i] = np[i] = 0.;
   
-  foreach() {
+  foreach (reduction(+:xp[:180])
+	   reduction(+:yp[:180])
+	   reduction(+:np[:180])) {
     printf ("%g %g %g %g %g\n", x, y, u.x[], u.y[], h[]);
     double c = cos(x*pi/180.)*cos(y*pi/180.);
     double d = atan2(sqrt(1. - c*c),c)*180./pi;
@@ -90,7 +92,7 @@ event profiles (t = 0.3; t += 0.3; t <= 0.9) {
   We compute the RMS error between the grid points and the average profile. */
 
   double sum = 0., n1 = 0.;
-  foreach() {
+  foreach(reduction(+:sum) reduction(+:n1)) {
     double c = cos(x*pi/180.)*cos(y*pi/180.);
     double d = atan2(sqrt(1. - c*c),c)*180./pi;
     int i = d*2.;

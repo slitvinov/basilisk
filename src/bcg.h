@@ -57,12 +57,6 @@ void tracer_fluxes (scalar f,
 
     flux.x[] = f2*uf.x[];
   }
-
-  /**
-  Boundary conditions ensure the consistency of fluxes across
-  variable-resolution boundaries (on adaptive meshes). */
-
-  boundary_flux ({flux});
 }
 
 /**
@@ -84,13 +78,11 @@ void advection (struct Advection p)
   If *src* is not provided we set all the source terms to zero. */
   
   scalar * lsrc = p.src;
-  if (!lsrc) {
-    const scalar zero[] = 0.;
+  if (!lsrc)
     for (scalar s in p.tracers)
-      lsrc = list_append (lsrc, zero);
-  }
-
+      lsrc = list_append (lsrc, zeroc);
   assert (list_len(p.tracers) == list_len(lsrc));
+
   scalar f, src;
   for (f,src in p.tracers,lsrc) {
     face vector flux[];
@@ -103,7 +95,6 @@ void advection (struct Advection p)
     update_tracer (f, p.u, flux, p.dt);
 #endif // EMBED
   }
-  boundary (p.tracers);
 
   if (!p.src)
     free (lsrc);

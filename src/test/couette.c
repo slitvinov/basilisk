@@ -34,12 +34,8 @@ event init (t = 0) {
   The geometry of the embedded boundary is defined as two cylinders of
   radii 0.5 and 0.25. */
 
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = difference (sq(0.5) - sq(x) - sq(y),
-			sq(0.25) - sq(x) - sq(y));
-  boundary ({phi});
-  fractions (phi, cs, fs);
+  solid (cs, fs, difference (sq(0.5) - sq(x) - sq(y),
+			     sq(0.25) - sq(x) - sq(y)));
 
   /**
   The outer cylinder is fixed and the inner cylinder is rotating with

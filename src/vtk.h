@@ -7,6 +7,9 @@ void output_vtk (scalar * list, int n, FILE * fp, bool linear)
   fprintf (fp, "DIMENSIONS %d %d 1\n", n, n);
   fprintf (fp, "POINTS %d double\n", n*n);
 
+  if (linear)
+    boundary (list);
+  
   double fn = n;
   double Delta = L0/fn;
   for (int i = 0; i < n; i++) {

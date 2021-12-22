@@ -43,21 +43,15 @@ scalar f[];
 
 event init (t = 0) {
   face vector s[];
-  vertex scalar psi[];
-  foreach_vertex ()
-    psi[] = circle(x,y);
-  boundary ({psi});
-  fractions (psi, f, s);
+  solid (f, s, circle(x, y));
   foreach()
     rhoe[] = rhoini*f[];
-  boundary ({rhoe});
 
   foreach_face() {
     double ff = (f[] + f[-1])/2.;
     epsilon.x[] = (ff*beta + (1. - ff))*fm.x[];
     K.x[] = cond*s.x[]*fm.x[];
   }
-  boundary ((scalar *){epsilon, K});
 }
 
 event chargesum (i++) {

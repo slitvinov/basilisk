@@ -227,7 +227,6 @@ static void column_propagation (vector h)
 	if (fabs(height(h.x[i])) <= 3.5 &&
 	    fabs(height(h.x[i]) + i) < fabs(height(h.x[])))
 	  h.x[] = h.x[i] + i;
-  boundary ((scalar *){h});
 }
 
 /**
@@ -266,15 +265,13 @@ void heights (scalar c, vector h)
     foreach()
       foreach_dimension()
         s.x[] = c[2*j];
-    boundary ((scalar *){s});
 
     /**
     We sum the half-column, downward or upward. */
-    
+
     foreach()
       half_column (point, c, h, s, j);
   }
-  boundary ((scalar *){h});
 
   /**
   Finally we "propagate" values along columns. */
@@ -331,12 +328,13 @@ static void refine_h_x (Point point, scalar h)
 #else // dimension == 3
   double H[3][3], H0 = height(h[]);
   for (int i = -1; i <= 1; i++)
-    for (int j = -1; j <= 1; j++)
+    for (int j = -1; j <= 1; j++) {
       if (h[0,i,j] == nodata || orientation(h[0,i,j]) != ori)
 	return;
       else
 	H[i+1][j+1] = height(h[0,i,j]) - H0;
-
+    }
+      
   double h0 = 
     2.*H0 + (H[2][2] + H[2][0] + H[0][0] + H[0][2] +
 	     30.*(H[2][1] + H[0][1] + H[1][0] + H[1][2]))/512.
@@ -430,9 +428,14 @@ void heights (scalar c, vector h)
   foreach_dimension() {
     h.x.prolongation = no_data;
     h.x.restriction = no_restriction;
+    h.x.dirty = true;
   }
-  boundary ((scalar *){h});
 
+  /**
+  Finally, we "propagate" values along columns. */
+  
+  column_propagation (h);
+  
   /**
   Final prolongation cells will be filled with values obtained either
   from neighboring columns or by interpolation from coarser levels
@@ -440,11 +443,6 @@ void heights (scalar c, vector h)
   
   foreach_dimension()
     h.x.prolongation = refine_h_x;
-
-  /**
-  Finally, we "propagate" values along columns. */
-  
-  column_propagation (h);
 }
 
 #endif // TREE

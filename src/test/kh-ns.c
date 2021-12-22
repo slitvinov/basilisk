@@ -98,7 +98,6 @@ event init (i = 0)
   T.gradient = minmod;
   foreach()
     T[] = - 0.5*tanh((x + 0.1*cos(pi*y/2.))/0.04);
-  boundary ({T});
 }
 
 /**

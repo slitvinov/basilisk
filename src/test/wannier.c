@@ -90,12 +90,8 @@ event init (t = 0) {
   /**
   The geometry is two excentric cylinders. */
   
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = difference (sq(R2) - sq(x) - sq(y - ECC),
-			sq(R1) - sq(x) - sq(y));
-  boundary ({phi});
-  fractions (phi, cs, fs);
+  solid (cs, fs, difference (sq(R2) - sq(x) - sq(y - ECC),
+			     sq(R1) - sq(x) - sq(y)));
   
   /**
   The outer cylinder is fixed and the inner cylinder is rotating with

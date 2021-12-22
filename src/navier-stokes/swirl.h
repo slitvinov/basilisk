@@ -54,7 +54,6 @@ event defaults (i = 0)
     a = new face vector;
     foreach_face()
       a.x[] = 0.;
-    boundary ((scalar *){a});
   }
 }
 

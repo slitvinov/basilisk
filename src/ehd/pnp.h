@@ -47,7 +47,6 @@ void ohmic_flux (struct Species sp)
     face vector f[];
     foreach_face()
       f.x[] = K.x[]*(c[] + c[-1,0])*(phi[] - phi[-1,0])/(2.*Delta);
-    boundary_flux ({f});
 
     /**
     The specie concentration is updated using the net amount of that
@@ -57,6 +56,5 @@ void ohmic_flux (struct Species sp)
     foreach()
       foreach_dimension()
         c[] += sp.dt*(f.x[1,0] - f.x[])/Delta;
-    boundary ({c});    
   }
 }

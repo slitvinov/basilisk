@@ -56,7 +56,6 @@ event adapt (i++) {
     s[] = 1;
   foreach_face()
     u.x[] = 1;
-  boundary ({s,u});
 #endif
   
   astats st = adapt_wavelet ({h}, (double[]){1e-2}, LEVEL);
@@ -66,11 +65,11 @@ event adapt (i++) {
 #if BGHOSTS == 2
   foreach()
     foreach_neighbor()
-      assert (s[] == 1);
+    assert ((s[] == 1));
   check_restriction (s);
   foreach_face()
     for (int i = -2; i <= 2; i++)
-      assert (u.x[0,i] == 1);
+      assert ((u.x[0,i] == 1));
 #endif
 }
 

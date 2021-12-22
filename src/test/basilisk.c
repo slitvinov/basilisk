@@ -81,7 +81,6 @@ pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
   scalar tt[];
   foreach()
     tt[] = d[] < 0;
-  boundary ({tt});
   int n = tag (tt);
   output_ppm (tt, file = "tag.png", n = 512, box = {{-5,-5},{100,30}},
 	      map = randomap, min = 0, max = n);
@@ -95,7 +94,6 @@ pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
   scalar f[];
   foreach_vertex()
     phi[] = (d[] + d[-1] + d[0,-1] + d[-1,-1])/4.;
-  boundary ({phi});
   face vector s[];
   fractions (phi, f, s);
   output_facets (f, stderr, s);
@@ -105,7 +103,7 @@ pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
   neighborhood (a sphere of diameter $3\Delta$) of each cell. */
   
   scalar nt[], surface = d.surface;
-  foreach() {
+  foreach (serial, noauto) {
     nt[] = 0;
     if (surface[]) {
       coord ** p = (coord **) double_to_pointer (surface[]);
@@ -113,7 +111,6 @@ pstoedit -f gnuplot -flat 0.1 basilisk.eps basilisk.gnu
 	nt[]++, p++;
     }
   }
-  boundary ({nt});
 
   /**
   We display the resulting curves and meshes. */

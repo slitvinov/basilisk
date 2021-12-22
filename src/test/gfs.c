@@ -11,7 +11,6 @@ int main()
   vector u[];
   foreach()
     u.x[] = u.y[] = a[] = sin(2.*pi*x)*cos(2.*pi*y);
-  boundary ({a,u});
 
   FILE * fp = fopen ("gfsi.gfs", "w");
   output_gfs (fp);

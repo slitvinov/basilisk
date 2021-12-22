@@ -27,7 +27,6 @@ event viscous_term (i++)
 		5.*(s[1,0] + s[-1,0] + s[0,1] + s[0,-1])/2. +
 		41.*s[]/4.)*filter;
 #endif // dimension == 2
-  boundary ({u, w});
 }
 
 /**

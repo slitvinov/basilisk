@@ -35,7 +35,7 @@ event outputfile (t <= 2.5; t += 2.5/8) {
   output_field ({l});
 
   /* check symmetry */
-  foreach() {
+  foreach (serial, noauto) {
     double h0 = h[];
     point = locate (-x, -y);
     //    printf ("%g %g %g %g %g\n", x, y, h0, h[], h0 - h[]);

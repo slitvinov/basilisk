@@ -137,7 +137,6 @@ event friction (i++) {
     foreach_dimension()
       q.x[] /= a;
   }
-  boundary ((scalar *){q});
 #else
   // quadratic bottom friction, coefficient 1e-4 (dimensionless)
   foreach() {
@@ -145,7 +144,6 @@ event friction (i++) {
     foreach_dimension()
       u.x[] /= a;
   }
-  boundary ((scalar *){u});
 #endif
 }
 
@@ -195,6 +193,5 @@ event adapt (i++) {
   scalar h1[];
   foreach()
     h1[] = h[];
-  boundary ({h1});
   adapt_wavelet ({h1}, (double[]){1e-2}, LEVEL, 4); 
 }

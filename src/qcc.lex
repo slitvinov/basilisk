@@ -9,7 +9,7 @@
   #include <assert.h>
 
   enum { scalar, vector, tensor, bid,
-	 struct_type = -1, other_type = -2 };
+    struct_type = -1, other_type = -2, func_type = -3 };
 
   typedef struct { int i; char * name; } Scalar;
   typedef struct { int x, y, face; char * name; } Vector;
@@ -26,10 +26,12 @@
   int nvar = 0, nconst = 0, nevents = 0;
   int line;
   int scope, para, inforeach, foreachscope, foreachpara, 
-    inforeach_boundary, inforeach_face, inforeach_serial, nmaybeconst = 0;
+    inforeach_boundary, inforeach_face, inforeach_serial, inforeach_noauto;
+  int nmaybeconst = 0;
   int invardecl, vartype, varsymmetric, varface, varvertex, varmaybeconst;
   char * varconst, * type = NULL;
   int inval, invalpara, indef;
+  
   int brack, inarray, inarraypara, inarrayargs;
   int infine;
   int inreturn;
@@ -85,10 +87,20 @@
 
   int mallocpara;
 
+  typedef struct { 
+    char * v, * constant, * block;
+    int type, args, scope, automatic, symmetric, face, vertex, maybeconst;
+    int wasmaybeconst, diag;
+    int i[9];
+    char * conditional, * stype, * array, * proto;
+    int npointers, called;
+  } var_t;
+
   #define REDUCTMAX 10
   char foreachs[80], * fname;
   FILE * foreachfp;
-  char reduction[REDUCTMAX][4], reductvar[REDUCTMAX][80],
+  var_t * reductvar[REDUCTMAX];
+  char reduction[REDUCTMAX][4],
     reductionstr[REDUCTMAX][99], reduct_elem[REDUCTMAX][80],
     not_an_array[13] = "not_an_array";
   int nreduct;
@@ -103,10 +115,14 @@
   int infunction_line;
   FILE * functionfp = NULL;
   char * return_type = NULL;
+  char * dname (const char * fname);
   FILE * dopen (const char * fname, const char * mode);
-
+  
   int infunctionproto;
-
+  FILE * functionprotofp = NULL;
+  char * functionprotoname = NULL;
+  int functionprotoline = 0;
+  
   FILE * tracefp = NULL;
   int intrace, traceon;
   char * tracefunc = NULL;
@@ -121,14 +137,7 @@
   #define doubletype (cadna ? "double_st" : "double")
   #define floattype (cadna ? "float_st" : "float")
   
-  typedef struct { 
-    char * v, * constant, * block;
-    int type, args, scope, automatic, symmetric, face, vertex, maybeconst;
-    int wasmaybeconst, diag;
-    int i[9];
-    char * conditional;
-  } var_t;
-  var_t * _varstack = NULL; int varstack = -1, varstackmax = 0;
+  var_t _varstack[1000]; int varstack = -1;
   var_t * varpush (const char * s, int type, int scope, int maybeconst) {
     var_t * v = NULL;
     if (s[0] != '\0') {
@@ -140,10 +149,7 @@
 	*q++ = '\0'; na++;
       }
       varstack++;
-      if (varstack >= varstackmax) {
-	varstackmax += 100;
-	_varstack = realloc (_varstack, varstackmax*sizeof (var_t));
-      }
+      assert (varstack < 1000);
       _varstack[varstack] = (var_t) { f, NULL, NULL, type, na, scope, 
 				      0, 0, 0, 0, maybeconst, 0, 0, {-1} };
       v = &(_varstack[varstack]);
@@ -152,6 +158,49 @@
   }
   var_t ** foreachconst = NULL;
 
+  struct {
+    int in;
+    var_t ** nonlocal;
+    int nonlocaln;
+  } foreachhook = {0};
+
+  int nohook = 0;
+
+  void foreachhook_end() {
+    free (foreachhook.nonlocal);
+    foreachhook.nonlocal = NULL;
+    foreachhook.nonlocaln = 0;
+    foreachhook.in = 0;
+  }    
+
+  int foreachhook_lookup (var_t * v)
+  {
+    int i = 0;
+    for (i = 0; i < foreachhook.nonlocaln; i++)
+      if (v == foreachhook.nonlocal[i])
+	return 1;
+    return 0;
+  }
+  
+  var_t * foreachhook_lookup_symbol (const char * name)
+  {
+    int i = 0;
+    for (i = 0; i < foreachhook.nonlocaln; i++)
+      if (!strcmp (foreachhook.nonlocal[i]->v, name))
+	return foreachhook.nonlocal[i];
+    return NULL;
+  }
+  
+  void foreachhook_add (var_t * var) {
+    if (foreachhook.in && var && var->scope <= foreachscope &&
+	!foreachhook_lookup (var)) {
+      foreachhook.nonlocal =
+	(var_t **) realloc (foreachhook.nonlocal,
+			    (++foreachhook.nonlocaln)*sizeof (var_t *));
+      foreachhook.nonlocal[foreachhook.nonlocaln - 1] = var;
+    }
+  }  
+  
   var_t * indiag;
   int diagscope;
 
@@ -201,7 +250,7 @@
 	  char list[80];
 	  sprintf (list, "{%s}", var.v);
 	  char * slist = makelist (list, scalar);
-	  fprintf (yyout, " { if (!%s) delete (%s); } ", 
+	  fprintf (yyout, " { strongif (!%s) delete (%s); } ", 
 		   var.conditional, slist);
 	  free (slist);
 	}
@@ -223,6 +272,9 @@
 		 _varstack[varstack].v);
       free (_varstack[varstack].v);
       free (_varstack[varstack].conditional);
+      free (_varstack[varstack].stype);
+      free (_varstack[varstack].array);
+      free (_varstack[varstack].proto);
       free (_varstack[varstack--].constant);
     }
   }
@@ -270,6 +322,7 @@
     return 0;
   }
   
+  // looks up field variables
   var_t * varlookup (char * s, int len) {
     int i;
     for (i = varstack; i >= 0; i--)
@@ -278,6 +331,30 @@
 	if (_varstack[i].type < 0) // not a field
 	  return NULL;
 	if (s[len-1] == '.' && _varstack[i].type != vector)
+	  return NULL;
+	return &_varstack[i];
+      }
+    return NULL;
+  }
+
+  // looks up non-field variables
+  var_t * varlookup_other (char * s, int len) {
+    // exclude intrinsics in foreach()
+    char ** j = (char * []) {
+      "x", "y", "z", "Delta",
+      "Delta_x", "Delta_y", "Delta_z",
+      "level",
+      NULL      
+    };
+    while (*j)
+      if (!strncmp((*j++), s, len))
+	return NULL;
+	
+    int i;
+    for (i = varstack; i >= 0; i--)
+      if (strlen(_varstack[i].v) == len && 
+	  !strncmp(s, _varstack[i].v, len)) {
+	if (_varstack[i].type >= 0) // a field
 	  return NULL;
 	return &_varstack[i];
       }
@@ -301,7 +378,7 @@
   void writefile (FILE * fp, int nrotate, int dim,
 		  int line1, const char * condition) {
     if (condition)
-      fprintf (yyout, " if (%s) {", condition);
+      fprintf (yyout, " strongif (%s) {", condition);
     if (line1 >= 0)
       fprintf (yyout, "\n#line %d\n", line1);
     rotate (fp, yyout, nrotate, dim);
@@ -329,12 +406,43 @@
     }
   }
 
-  void write_face (FILE * fp, int i, int n) {
+  void write_face (FILE * fp, const char * face, int i, int n) {
     fprintf (yyout, " { int %cg = -1; VARIABLES; ", 'i' + i);
     char s[30];
-    sprintf (s, "is_face_%c()", 'x' + i);
+    sprintf (s, "is_%s_%c()", face, 'x' + i);
     writefile (fp, n, dimension, foreach_line, s);
     fputs (" }} ", yyout);
+  }
+
+  void foreachstencil() {
+    FILE * fp = dopen ("_foreach_body.h", "r");
+    if (inforeach_face) {
+      // foreach_face()
+      fputs ("foreach_face_stencil()", yyout);
+      if (foreach_face_xyz == face_xyz) {
+	int i;
+	for (i = 0; i < dimension; i++)
+	  write_face (fp, "stencil_face",
+		      (i + foreach_face_start) % dimension, i);
+      }
+      else if (foreach_face_xyz == face_x)
+	write_face (fp, "stencil_face", 0, 0);
+      else if (foreach_face_xyz == face_y)
+	write_face (fp, "stencil_face", 1, 0);
+      else
+	write_face (fp, "stencil_face", 2, 0);
+      fputs (" end_foreach_face_stencil()\n", yyout);
+      fprintf (yyout, "#line %d\n", line);
+    }
+    else {
+      // foreach()
+      fprintf (yyout, "%s_stencil()", foreachs);
+      int c;
+      while ((c = fgetc (fp)) != EOF)
+	fputc (c, yyout);
+      fprintf (yyout, " } end_%s_stencil();", foreachs);
+    }
+    fclose (fp);
   }
   
   void foreachbody() {
@@ -345,14 +453,14 @@
       if (foreach_face_xyz == face_xyz) {
 	int i;
 	for (i = 0; i < dimension; i++)
-	  write_face (fp, (i + foreach_face_start) % dimension, i);
+	  write_face (fp, "face", (i + foreach_face_start) % dimension, i);
       }
       else if (foreach_face_xyz == face_x)
-	write_face (fp, 0, 0);
+	write_face (fp, "face", 0, 0);
       else if (foreach_face_xyz == face_y)
-	write_face (fp, 1, 0);
+	write_face (fp, "face", 1, 0);
       else
-	write_face (fp, 2, 0);
+	write_face (fp, "face", 2, 0);
       fputs (" end_foreach_face_generic()\n", yyout);
       fprintf (yyout, "#line %d\n", line);
       fclose (fp);
@@ -406,7 +514,7 @@
     if (nmaybeconst) {
       int n = 1 << nmaybeconst, bits;
       for (bits = 0; bits < n; bits++) {
-	fputs ("\nif (", yyout);
+	fputs ("\nstrongif (", yyout);
 	int i;
 	for (i = 0; i < nmaybeconst; i++) {
 	  fprintf (yyout, "%sis_constant(%s%s)",
@@ -499,27 +607,234 @@
       body();
   }
 
+  int n_stencil_functions = 0;
+  char ** stencil_functions = NULL;
+  
+  int lookup_reduction (var_t * var)
+  {
+    int i;
+    for (i = 0; i < nreduct; i++)
+      if (var == reductvar[i])
+	return 1;
+    return 0;
+  }
+
+  int stencils (FILE * fin, FILE * fout, int nolineno);
+
+  static void print_function_rotate (var_t * var, FILE * fp,
+				     const char * fmt)
+  {
+    int len = strlen(var->v);
+    if (len > 2 && *(var->v + len - 2) == '_' &&
+	strchr ("xyz", *(var->v + len - 1))) {
+      char * s = strdup (var->v);
+      int d;
+      for (d = 0; d < dimension; d++) {
+	s[len - 1] = 'x' + d;
+	fprintf (fp, fmt, s);
+      }
+      free (s);
+    }
+    else
+      fprintf (fp, fmt, var->v);
+  }
+      
+  void do_foreachhook() {
+    if (foreachhook.in) {
+      if (!inforeach_noauto) {
+	int i;
+	fputc ('\n', yyout);
+	for (i = 0; i < n_stencil_functions; i++) {
+	  var_t * var = foreachhook_lookup_symbol (stencil_functions[i]);
+	  if (var) {
+	    assert (var->type == func_type);
+	    var->called = 1;
+	    print_function_rotate (var, yyout, "#define %1$s _%1$s\n");
+	  }
+	}
+	fputs ("disable_fpe (FE_DIVBYZERO|FE_INVALID);\n"
+	       "{ ", yyout);
+	for (i = 0; i < foreachhook.nonlocaln; i++) {
+	  var_t * var = foreachhook.nonlocal[i];
+	  if (!lookup_reduction (var) && var->type < 0 &&
+	      var->type != func_type) {
+	    if (var->npointers > 1) {
+	      fprintf (stderr, "%s:%d: error: automatic stencils cannot deal "
+		       "with non-local pointer '%s'\n",
+		       fname, nolineno ? 0 : foreach_line, var->v);
+	      exit (1);
+	    }
+	    else if (var->npointers == 1)
+	      // we allocate some stack memory and hope for the best:
+	      // if data is read, or worse, written beyond the end of the
+	      // buffer, memory corruption is likely...
+	      fprintf (yyout, " %s _%s[10] = {0};\n", var->stype, var->v);
+	    else {
+	      // stack array
+	      if (var->array) {
+		fprintf (yyout, " %s _%s[%s];\n",
+			 var->stype, var->v, var->array);
+		fprintf (yyout, " memcpy (_%s, %s, (%s)*sizeof(%s));\n",
+			 var->v, var->v, var->array, var->stype);
+	      }
+	      else
+		fprintf (yyout, " %s _%s = %s;\n", var->stype, var->v, var->v);
+	    }
+	  }
+	}
+	for (i = 0; i < nreduct; i++) {
+	  var_t * v = reductvar[i];
+	  if (strcmp(reduct_elem[i], not_an_array)) {
+	    fprintf (yyout, " %s * _%s = malloc (%s*sizeof(%s));\n",
+		     v->stype, v->v, reduct_elem[i], v->stype);
+	    fprintf (yyout, " for (int i = 0; i < %s; i++) _%s[i] = %s[i];\n",
+		     reduct_elem[i], v->v, v->v);
+	  }
+	  else
+	    fprintf (yyout, " %s _%s = %s;\n", v->stype, v->v, v->v);
+	}
+	fprintf (yyout, "{");
+	for (i = 0; i < foreachhook.nonlocaln; i++) {
+	  var_t * var = foreachhook.nonlocal[i];
+	  if (!lookup_reduction (var) && var->type < 0 && var->type != func_type)
+	    fprintf (yyout, " %s %s%s = _%s; NOT_UNUSED(%s);\n", var->stype,
+		     var->array || var->npointers == 1 ? "* " : "",
+		     var->v, var->v, var->v);
+	}
+	for (i = 0; i < nreduct; i++)
+	  fprintf (yyout, " %s %s%s = _%s; NOT_UNUSED(%s);\n",
+		   reductvar[i]->stype,
+		   strcmp(reduct_elem[i], not_an_array) ? "* " : "",
+		   reductvar[i]->v, reductvar[i]->v, reductvar[i]->v);
+	fprintf (yyout,
+		 "  static bool _first_call = true;\n"
+		 "  ForeachData _foreach_data = {\n"
+		 "    .fname = \"%s\", .line = %d,\n"
+		 "    .each = \"%s\", .first = _first_call\n"
+		 "  };\n",
+		 fname, nolineno ? 0 : foreach_line, foreachs);
+	if (debug) {
+	  fprintf (stderr, "%s:%d:", fname, foreach_line);
+	  for (i = 0; i < foreachhook.nonlocaln; i++) {
+	    var_t * var = foreachhook.nonlocal[i];
+	    if (var->type >= 0)
+	      fprintf (stderr, " %s", var->v);	  
+	  }
+	  fprintf (stderr, "\n");
+	}
+	{
+	  FILE * fout = yyout;
+	  yyout = dopen ("_foreach_stencil.h", "w");
+	  maybeconst_combinations (foreach_line, foreachstencil);
+	  fclose (yyout);
+	  yyout = fout;
+	  FILE * fp = dopen ("_foreach_stencil.h", "r");
+	  stencils (fp, yyout, nolineno);
+	  fclose (fp);
+	}
+	if (!inforeach_serial)
+	  for (i = 0; i < foreachhook.nonlocaln; i++) {
+	    var_t * var = foreachhook.nonlocal[i];
+	    if (!lookup_reduction (var) && var->type < 0 &&
+		var->type != func_type) {
+	      fputs (" if (_first_call) {\n", yyout);
+	      if (var->npointers == 1) {
+		// check bytes for modification
+		fprintf (yyout, " for (int i = 0; i < (10*sizeof(%s)); i++)\n",
+			 var->stype);
+		fprintf (yyout, "   if (((char *)_%s)[i] != 0) {\n", var->v);
+		fprintf (yyout, "     reduction_warning (\"%s\", %d, \"%s\");\n",
+			 fname, nolineno ? 0 : foreach_line, var->v);
+		fprintf (yyout, "     break; }\n");
+	      }		
+	      else if (var->array) {
+		// stack array
+		fprintf (yyout, " for (int i = 0; i < (%s); i++)\n", var->array);
+		fprintf (yyout, "   if (_%s[i] != %s[i]) {\n", var->v, var->v);
+		fprintf (yyout, "     reduction_warning (\"%s\", %d, \"%s\");\n",
+			 fname, nolineno ? 0 : foreach_line, var->v);
+		fprintf (yyout, "     break; }\n");
+	      }
+	      else {
+		fprintf (yyout, " if (%s != _%s)\n", var->v, var->v);
+		fprintf (yyout, "   reduction_warning (\"%s\", %d, \"%s\");\n",
+			 fname, nolineno ? 0 : foreach_line, var->v);
+	      }
+	      fputs (" }\n", yyout);
+	    }
+	  }
+	for (i = 0; i < nreduct; i++)
+	  if (strcmp(reduct_elem[i], not_an_array))
+	    fprintf (yyout, " free (_%s);\n", reductvar[i]->v);	
+	fputs ("  _first_call = false;\n"
+	       "}}\n"
+	       "enable_fpe (FE_DIVBYZERO|FE_INVALID);\n", yyout);
+	for (i = 0; i < n_stencil_functions; i++) {
+	  var_t * var = foreachhook_lookup_symbol (stencil_functions[i]);
+	  if (var)
+	    print_function_rotate (var, yyout, "#undef %s\n");
+	}
+	fprintf (yyout, "#line %d\n", line);
+      } // !inforeach_noauto
+      foreachhook_end();
+    }
+  }
+
+  char * mpi_reduction (const char * openmp_reduction)
+  {
+    if (!strcmp (openmp_reduction, "min"))
+      return "MPI_MIN";
+    if (!strcmp (openmp_reduction, "max"))
+      return "MPI_MAX";
+    if (!strcmp (openmp_reduction, "+"))
+      return "MPI_SUM";
+    if (!strcmp (openmp_reduction, "||"))
+      return "MPI_LOR";
+    fprintf (stderr, "%s:%d: error: unknown MPI reduction operation '%s'\n",
+	     fname, line, openmp_reduction);
+    exit (1);
+    return "unknown";
+  }
+  
   void endforeach () {
     fclose (yyout);
     yyout = foreachfp;
+
+    do_foreachhook();
+
+    if (inforeach_serial) {
+      fprintf (yyout, "\n#if _OPENMP\n");
+      fprintf (yyout, "  #undef OMP\n  #define OMP(x)\n");
+      fprintf (yyout, "#endif\n");
+      fprintf (yyout, "#line %d\n", foreach_line);
+    }
+    if (nreduct > 0) {
+      fputs ("\n#undef OMP_PARALLEL\n"
+	     "#define OMP_PARALLEL()\n"
+	     "OMP(omp parallel", yyout);
+      int i;
+      for (i = 0; i < nreduct; i++)
+	fprintf (yyout, " %s", reductionstr[i]);
+      fprintf (yyout, ") {\n\n#line %d\n", foreach_line);
+    }
     maybeconst_combinations (foreach_line, foreachbody);
     if (nreduct > 0) {
       int i;
       for (i = 0; i < nreduct; i++) {
-	if (strcmp(reduct_elem[i], not_an_array)) 
+	var_t * v = reductvar[i];
+	if (strcmp(reduct_elem[i], not_an_array))
 	  fprintf (yyout,
-		   "mpi_all_reduce_double (%s, %s, %s);\n",
-		   reductvar[i], 
-		   !strcmp(reduction[i], "min") ? "MPI_MIN" : 
-		   !strcmp(reduction[i], "max") ? "MPI_MAX" : 
-		   "MPI_SUM", reduct_elem[i]);
+		   "mpi_all_reduce_array (%s, %s, %s, %s);\n",
+		   v->v, v->stype, mpi_reduction (reduction[i]),
+		   reduct_elem[i]);
+	else if (!strcmp (v->stype, "coord"))
+	  fprintf (yyout,
+		   "mpi_all_reduce_array (&%s.x, double, %s, %d);\n",
+		   v->v, mpi_reduction (reduction[i]), dimension);
 	else
 	  fprintf (yyout,
-		   "mpi_all_reduce_double (&%s, %s, 1);\n",
-		   reductvar[i], 
-		   !strcmp(reduction[i], "min") ? "MPI_MIN" : 
-		   !strcmp(reduction[i], "max") ? "MPI_MAX" : 
-		   "MPI_SUM");
+		   "mpi_all_reduce_array (&%s, %s, %s, 1);\n",
+		   v->v, v->stype, mpi_reduction (reduction[i]));
       }
       fputs ("\n#undef OMP_PARALLEL\n"
 	     "#define OMP_PARALLEL() OMP(omp parallel)\n"
@@ -534,7 +849,7 @@
     }
     fputs (" }", yyout);
     inforeach = inforeach_boundary = inforeach_face = nreduct =
-      inforeach_serial = 0;
+      inforeach_serial = inforeach_noauto = 0;
   }
 
   void endtrace() {
@@ -611,6 +926,19 @@
     }
   }
 
+  void endfunctionproto() {
+    fclose (yyout);
+    yyout = functionprotofp;
+    functionprotofp = NULL;
+    char * ret = return_type ? return_type : "void";
+    fprintf (yyout, "%s %s ", ret, functionprotoname);
+    FILE * fp = dopen ("_functionproto.h", "r");
+    int c, len = 0;
+    while ((c = fgetc(fp)) != EOF)
+      fputc (c, yyout), len++;
+    fclose (fp);
+  }
+  
   void function_body() {
     FILE * fp = dopen ("_infunction.h", "r");
     int c;
@@ -620,7 +948,25 @@
     fclose (fp);
   }
 
-  int endfunction() {
+  void file_prepend (const char * f1, const char * f2)
+  {
+    FILE * fp1 = dopen (f1, "r");
+    char * df1 = dname (f1), * df2 = dname (f2);
+    if (fp1) {
+      FILE * fp2 = dopen (f2, "a");
+      int c;
+      while ((c = fgetc (fp1)) != EOF)
+	fputc (c, fp2);
+      fclose (fp2);
+      fclose (fp1);
+      remove (df1);
+    }
+    rename (df2, df1);
+    free (df1);
+    free (df2);
+  }
+  
+  void endfunction (char end) {
     infunction = 0;
     if (debug)
       fprintf (stderr, "%s:%d: outfunction %p\n", fname, line, functionfp);
@@ -629,9 +975,80 @@
       yyout = functionfp;
       functionfp = NULL;
       maybeconst_combinations (infunction_line, function_body);
-      return 1;
     }
-    return 0;
+    if (functionprotofp) {
+      if (debug)
+	fprintf (stderr, "%s:%d: function proto %s %s()\n", fname, line,
+		 return_type ? return_type : "void", functionprotoname);
+      endfunctionproto();
+
+      int i, found = 0;
+      for (i = 0; i < n_stencil_functions && !found; i++)
+	if (!strcmp (stencil_functions[i], functionprotoname))
+	  found = 1;
+      if (!found) {
+	n_stencil_functions++;
+	stencil_functions = realloc (stencil_functions,
+				     n_stencil_functions*sizeof(char *));
+	stencil_functions[n_stencil_functions - 1] = strdup(functionprotoname);
+      }
+      
+      {     /* stencil point function */
+	if (end != '}') { /* point function prototype */
+	  fputc (end, yyout);
+	  fprintf (yyout, "\n#if _call_%s\n", functionprotoname);
+	  fprintf (yyout, "static %s _%s ",
+		   return_type ? return_type : "void", functionprotoname);
+	  FILE * fp = dopen ("_functionproto.h", "r");
+	  stencils (fp, yyout, nolineno);
+	  fclose (fp);
+	  fputc (end, yyout);
+	  yytext[0] = '\0';
+	}
+	else { /* point function definition */
+	  FILE * st = NULL;
+	  fprintf (yyout, "\n#if _call_%s\n", functionprotoname);
+	  fputs ("}\n#define _IN_STENCIL 1\n", yyout);
+	  int i;
+	  for (i = 0; i < n_stencil_functions; i++) {
+	    var_t * var = foreachhook_lookup_symbol (stencil_functions[i]);
+	    if (var && var->type == func_type) {
+	      if (st == NULL) {
+		st = dopen ("_stencils.h", "w");
+		fprintf (st, "#if _call_%s\n", functionprotoname);
+	      }
+	      print_function_rotate (var, st,
+				     "#  undef _call_%1$s\n"
+				     "#  define _call_%1$s 1\n");
+	      print_function_rotate (var, yyout, "#define %1$s _%1$s\n");
+	    }
+	  }
+	  if (st) {
+	    fprintf (st, "#endif\n");
+	    fclose (st);
+	    file_prepend ("_stencils_reversed.h", "_stencils.h");
+	  }
+	  fprintf (yyout, "\n#line %d\n", functionprotoline);
+	  fprintf (yyout, "static %s _%s ",
+		   return_type ? return_type : "void", functionprotoname);
+	  FILE * fp = dopen ("_functionproto.h", "r");
+	  stencils (fp, yyout, nolineno);
+	  fclose (fp);
+	  fputc ('\n', yyout);
+	  for (i = 0; i < n_stencil_functions; i++) {
+	    var_t * var = foreachhook_lookup_symbol (stencil_functions[i]);
+	    if (var && var->type == func_type)
+	      print_function_rotate (var, yyout, "#undef %s\n");
+	  }
+	  fputs ("#undef _IN_STENCIL\n", yyout);
+	}
+	fputs ("\n#endif\n", yyout);
+	fprintf (yyout, "\n#line %d\n", line);	  
+      } /* stencil point function */
+      
+      foreachhook_end();
+      free (functionprotoname);
+    }
   }
 
   char * boundaryrep (char * name) {
@@ -705,7 +1122,7 @@
     for (i = 0; i < dimension; i++)
       fprintf (fp,
 	       " int %cg = neighbor.%c - point.%c; "
-	       " if (%cg == 0) %cg = _attribute[_s.i].d.%c; "
+	       " strongif (%cg == 0) %cg = _attribute[_s.i].d.%c; "
 	       " NOT_UNUSED(%cg);",
 	       index[i], index[i], index[i],
 	       index[i], index[i], dir[i],
@@ -1088,6 +1505,21 @@
       v->symmetric = varsymmetric;
       v->face = varface;    
       v->vertex = varvertex;
+      if (type) {
+	v->stype = strdup(type);
+	v->npointers = npointers;
+	if (start) {
+	  if (end) {
+	    v->array = strdup (start + 1);
+	    *strchr (v->array, ']') = '\0';
+	  }
+	  else
+	    v->npointers++;
+	}
+      }
+      if (debug)
+	fprintf (stderr, "%s:%d: declaration '%s' %s type '%s'\n",
+		 fname, line, text, var, v->stype);
       if (scope == 0 && v->type == bid)
 	// global boundary id
 	v->i[0] = 1;
@@ -1220,22 +1652,6 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
   if (inforeach == 1 && scope == foreachscope && para == foreachpara) {
     ECHO;
     fclose (yyout);
-    yyout = foreachfp;
-    if (inforeach_serial) {
-      fprintf (yyout, "\n#if _OPENMP\n");
-      fprintf (yyout, "  #undef OMP\n  #define OMP(x)\n");
-      fprintf (yyout, "#endif\n");
-      fprintf (yyout, "#line %d\n", line);
-    }
-    if (nreduct > 0) {
-      fputs ("\n#undef OMP_PARALLEL\n"
-	     "#define OMP_PARALLEL()\n"
-	     "OMP(omp parallel", yyout);
-      int i;
-      for (i = 0; i < nreduct; i++)
-	fprintf (yyout, " %s", reductionstr[i]);
-      fprintf (yyout, ") {\n\n#line %d\n", foreach_line);
-    }
     yyout = dopen ("_foreach_body.h", "w");
     fputs ("{\n", yyout);
     maps (line);
@@ -1313,6 +1729,11 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
     if (incadnanargs && incadnaargs == incadnaarg[incadnanargs-1] + 1)
       fputc (')', yyout);
   }
+  if (para == 0 && functionprotofp && !infunction) {
+    endfunctionproto();
+    foreachhook_end();
+    free (functionprotoname);
+  }
 }
 
 "{" {
@@ -1348,7 +1769,7 @@ TYPE                    [\*]*{WS}*{ID}({WS}*\[{WS}*{CONSTANT}?{WS}*\]|{WS}*\[)?
   varpop();
   varwasmaybeconst();
   if (infunction && scope <= functionscope)
-    endfunction();
+    endfunction ('}');
   foreachdim_t * dim = stack_top(&foreachdim_stack);
   if (dim && dim->scope == scope && dim->para == para) {
     if (scope != 0 || infunctionproto)
@@ -1436,6 +1857,11 @@ foreach{ID}? {
   yyout = dopen ("_foreach.h", "w");
   inforeach_boundary = (!strncmp(foreachs, "foreach_boundary", 16));
   inforeach_face = (!strcmp(foreachs, "foreach_face"));
+
+  foreachhook.in = !nohook &&
+    (!strcmp (foreachs, "foreach") ||
+     !strcmp (foreachs, "foreach_face") ||
+     !strcmp (foreachs, "foreach_vertex"));
   ECHO;
 }
 
@@ -1560,7 +1986,7 @@ diagonalize{WS}*"("{WS}*{SCALAR}{WS}*")" {
       infunction_declarations (line);
     }
     else if (!infunctiondecl)
-      endfunction();
+      endfunction (';');
   }
   if (inboundary) {
     ECHO;
@@ -1591,9 +2017,10 @@ diagonalize{WS}*"("{WS}*{SCALAR}{WS}*")" {
     fprintf (yyout,
 	     "_attribute[%s.i].boundary[%s] = _boundary%d; "
 	     "_attribute[%s.i].boundary_homogeneous[%s] = "
-	     "_boundary%d_homogeneous;",
+	     "_boundary%d_homogeneous; _attribute[%s.i].dirty = true;",
 	     boundaryvar, boundarydir, nboundary,
-	     boundaryvar, boundarydir, nboundary);
+	     boundaryvar, boundarydir, nboundary,
+	     boundaryvar);
     if (scope == 0)
       /* file scope */
       fputs (" } ", yyout);
@@ -1727,19 +2154,22 @@ diagonalize{WS}*"("{WS}*{SCALAR}{WS}*")" {
 
 \({WS}*const{WS}*\)    varmaybeconst = 1;
 
-(void|char|short|int|long|float|double|coord|stats|norm){WS}+{TYPE} {
+(void|char|short|int|bool|long|float|double|coord|stats|norm){WS}+{TYPE} {
+  if (indef)
+    REJECT;
   char * var = yytext;
   space (var);
   nonspace (var);
   int npointers = 0;
   while (*var == '*') var++, npointers++;
-  nonspace (var);  if (para == 0) { /* declaration */
+  nonspace (var);
+  free (type);
+  char * s = yytext; space (s);
+  type = strndup (yytext, s - yytext);
+  if (para == 0) { /* declaration */
     varsymmetric = varface = varvertex = varmaybeconst = 0;
     varconst = NULL;
     vartype = other_type;
-    free (type);
-    char * s = yytext; space (s);
-    type = strndup (yytext, s - yytext);
     declaration (var, yytext, npointers);
     invardecl = scope + 1;
   }
@@ -1750,7 +2180,9 @@ diagonalize{WS}*"("{WS}*{SCALAR}{WS}*")" {
 	brack++;
       *b = '\0';
     }
-    varpush (var, other_type, scope + 1, 0);
+    var_t * v = varpush (var, other_type, scope + 1, 0);
+    v->stype = strdup (type);
+    v->npointers = npointers;
     invardecl = varmaybeconst = 0;
     if (b)
       *b = '[';
@@ -1980,9 +2412,11 @@ val{WS}*[(]    {
       }
     }
   }
-  if (!var)
+  if (var)
+    foreachhook_add (var);
+  else
     REJECT;
-}
+ }
 
 [a-zA-Z_0-9]+[.ntr]*{WS}*\[{WS}*{ID}{WS}*\]{WS}*= {
   /* v[top] = ..., u.n[left] = ..., u.t[left] = ... */
@@ -2075,11 +2509,12 @@ val{WS}*[(]    {
 	     "_attribute[%s.i].boundary_homogeneous[%s] = "
 	     "_attribute[%s.i].boundary[%s] = "
 	     "_attribute[%s.i].boundary_homogeneous[%s] = "
-	     "periodic_bc;",
+	     "periodic_bc; _attribute[%s.i].dirty = true;",
 	     boundaryvar, boundarydir,
 	     boundaryvar, boundarydir,
 	     boundaryvar, opposite (boundarydir),
-	     boundaryvar, opposite (boundarydir));
+	     boundaryvar, opposite (boundarydir),
+	     boundaryvar);
     if (scope == 0)
       /* file scope */
       fputs (" } ", yyout);
@@ -2161,8 +2596,11 @@ Point{WS}+point[^{ID}] {
   if (debug)
     fprintf (stderr, "%s:%d: infunction\n", fname, line);
   infunction = 1; infunctiondecl = 0;
+  if (functionprotofp)
+    foreachhook.in = !nohook;
   functionscope = scope; functionpara = para;
-  if (yytext[yyleng-1] == ')') para--;
+  if (yytext[yyleng-1] == ')')
+    para--;
   ECHO;
 }
 
@@ -2176,7 +2614,6 @@ for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}{WS}+in{WS}+ {
   *s = '\0';
   char * list = malloc (sizeof(char)); list[0] = '\0';
   int nl = 1, c;
-  char last[] = ")";
   while ((c = input()) != EOF) {
     if (c == ')')
       break;
@@ -2197,18 +2634,18 @@ for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}{WS}+in{WS}+ {
       return yyerror ("invalid list");
   }
   else
-    fprintf (yyout, "if (%s) ", list);
+    fprintf (yyout, "strongif (%s) ", list);
   if (debug)
     fprintf (stderr, "%s:%d: %s\n", fname, line, list);
   fprintf (yyout,
-	   "for (%s %s = *%s, *_i%d = %s; ((scalar *)&%s)->i >= 0; %s = *++_i%d%s",
+	   "for (%s %s = *%s, *_i%d = %s; ((scalar *)&%s)->i >= 0; %s = *++_i%d)",
 	   vartype == scalar ? "scalar" : 
 	   vartype == vector ? "vector" : 
                                "tensor", 
 	   id,
 	   list, i, list, 
 	   id, 
-	   id, i, last);
+	   id, i);
   free (list);
   i++;
   varpush (id, vartype, scope + 1, 0);
@@ -2216,7 +2653,7 @@ for{WS}*[(]{WS}*(scalar|vector|tensor){WS}+{ID}{WS}+in{WS}+ {
 
 for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
   /* for (a,b in c,d) */
-  char * id[10] = {NULL}, * list[10] = {NULL};
+  char * id[10] = {""}, * list[10] = {""};
   int nid = 0, nlist = 0, inin = 0;
   char * s = strchr (yytext, '('); s++;
   s = strtok (s, " \t\v\n\f,");
@@ -2250,7 +2687,7 @@ for{WS}*[(][^)]+,[^)]+{WS}+in{WS}+[^)]+,[^)]+[)] {
     if (!vc && var->type == vector) vc = id[i];
     if (!tc && var->type == tensor) tc = id[i];
   }
-  fprintf (yyout, "if (%s) for (%s = *%s", list[0], id[0], list[0]);
+  fprintf (yyout, "strongif (%s) for (%s = *%s", list[0], id[0], list[0]);
   for (i = 1; i < nid; i++)
     fprintf (yyout, ", %s = *%s", id[i], list[i]);
   fprintf (yyout, "; ((scalar *)&%s)->i >= 0; ", id[0]);
@@ -2416,17 +2853,33 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
 {ID}{WS}+{ID}{WS}*\( {
   if (scope == 0 && para == 0) {
     // function prototype
+    infunctionproto = 1;
+    assert (!functionprotofp);
+    functionprotofp = yyout;
+    functionprotoline = line;
+    yyout = dopen ("_functionproto.h", "w");
     para++;
+#if 1
+    char * s = yytext;
+    while (*s != '\0') {
+      if (*s == '\n')
+	fputc (*s, yyout);
+      s++;
+    }
+    fputc ('(', yyout);
+#else // fixme
     cadna_echo (yytext);
+#endif
     char * s1 = yytext; space (s1); *s1++ = '\0';
     nonspace (s1);
     char * s2 = s1; while (!strchr (" \t\v\n\f(", *s2)) s2++; *s2 = '\0';
     free (return_type);
     return_type = strdup (cadna_type (yytext));
-    infunctionproto = 1;
+    functionprotoname = strdup (s1);
+    varpush (functionprotoname, func_type, 0, 0);
     if (debug)
       fprintf (stderr, "%s:%d: function '%s' returns '%s'\n", 
-	       fname, line, s1, yytext);
+	       fname, line, s1, return_type);
     if (!strcmp (return_type, "void")) {
       free (return_type);
       return_type = NULL;
@@ -2465,7 +2918,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     REJECT;
 }
 
-,?{WS}*reduction{WS}*[(](min|max|\+):{ID}(\[({D}+|{ID})?:({D}+|{ID})\])?[)] {
+,?{WS}*reduction{WS}*[(](min|max|\+|[|][|]):{ID}(\[({D}+|{ID})?:({D}+|{ID})\])?[)] {
   if (debug)
     fprintf (stderr, "%s:%d: '%s'\n", fname, line, yytext);
   if (yytext[0] == ',')
@@ -2482,13 +2935,23 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
     yytext[yyleng - 2] = '\0';   // ] -> terminate
     strcpy (reduct_elem[nreduct], s2);
   }
-  assert (nreduct < REDUCTMAX);
-  strcpy (reduction[nreduct], ++s);
-  strcpy (reductvar[nreduct++], ++s1);
-  if (debug) {
-    int j = nreduct - 1;
-    fprintf (stderr, "nreduct: %d, var: %s, op: %s, elem: %s\n",
-	     j, reductvar[j], reduction[j], reduct_elem[j]);
+  ++s, ++s1;
+  var_t * var = varlookup_other (s1, strlen(s1));
+  if (var) {
+    assert (nreduct < REDUCTMAX);
+    strcpy (reduction[nreduct], s);
+    reductvar[nreduct] = var;
+    if (debug) {
+      int j = nreduct;
+      fprintf (stderr, "%s:%d: nreduct: %d, var: %s, op: %s, elem: %s\n",
+	       fname, line, j, reductvar[j]->v, reduction[j], reduct_elem[j]);
+    }
+    nreduct++;
+  }
+  else {
+    fprintf (stderr, "%s:%d: error: unknown reduction variable '%s'\n",
+	     fname, line, s1);
+    return 1;
   }
 }
 
@@ -2498,6 +2961,14 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   if (debug)
     fprintf (stderr, "%s:%d: '%s'\n", fname, line, yytext);
   inforeach_serial = 1;
+}
+
+,?{WS}*noauto {
+  if (inforeach != 1)
+    REJECT;
+  if (debug)
+    fprintf (stderr, "%s:%d: '%s'\n", fname, line, yytext);
+  inforeach_noauto = 1;
 }
 
 [{]({SP}*[a-zA-Z_0-9.]+{SP}*,{SP}*)*[a-zA-Z_0-9.]+{SP}*[}] {
@@ -2516,8 +2987,8 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
 {ID} {
   var_t * var;
   if (inforeach) {
-    ; // I am too afraid to remove this block
-    ; //  '_' prefixes are deprecated here
+    // I am too afraid to remove this block
+    //  '_' prefixes are deprecated here
     cadna_echo (yytext);
   }
   else if (scope == 0 && para == 0 &&
@@ -2538,6 +3009,7 @@ foreach_dimension{WS}*[(]([1-3]|{WS})*[)] {
   }
   else
     cadna_echo (yytext);
+  foreachhook_add (varlookup_other (yytext, strlen(yytext)));
 }
 
 {SCALAR}[.][xyzi] ECHO;
@@ -2827,7 +3299,7 @@ static{WS}+FILE{WS}*[*]{WS}*{ID}{WS}*= {
   space (s);
   *s = '\0';
   fprintf (yyout,
-	   "NULL; if (!%s || i == 0) %s = pid() > 0 ? "
+	   "NULL; strongif (!%s || i == 0) %s = pid() > 0 ? "
 	   "fopen(\"/dev/null\", \"w\") : ", id, id);
 }
 
@@ -2939,7 +3411,8 @@ int endfor (FILE * fin, FILE * fout)
   yyout = fout;
   line = 1, scope = para = 0;
   inforeach = foreachscope = foreachpara = 
-    inforeach_boundary = inforeach_face = inforeach_serial = 0;
+    inforeach_boundary = inforeach_face = inforeach_serial =
+    inforeach_noauto = 0;
   invardecl = 0;
   inval = invalpara = indef = 0;
   brack = inarray = infine = inmalloc = 0;
@@ -2990,10 +3463,16 @@ void cleanup (int status, const char * dir)
   exit (status);
 }
 
-FILE * dopen (const char * fname, const char * mode)
+char * dname (const char * fname)
 {
   char * out = malloc (strlen (dir) + strlen (fname) + 2);
   strcpy (out, dir); strcat (out, "/"); strcat (out, fname);
+  return out;
+}
+
+FILE * dopen (const char * fname, const char * mode)
+{
+  char * out = dname (fname);
   FILE * fout = fopen (out, mode);
   free (out);
   return fout;
@@ -3077,6 +3556,15 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
   for (i = 0; i < nsetboundary; i++)
     fprintf (fout, "static void _set_boundary%d (void);\n", 
 	     boundaryindex[i]);
+  /* stencil point functions */
+  fp = dopen ("_stencils.h", "w");
+  for (i = varstack; i >= 0; i--) {
+    var_t var = _varstack[i];
+    if (var.called)
+      print_function_rotate (&var, fp, "#define _call_%s 1\n");
+  }
+  fclose (fp);
+  file_prepend ("_stencils_reversed.h", "_stencils.h");
   /* _init_solver() */
   fputs ("void _init_solver (void) {\n"
 	 "  void init_solver();\n"
@@ -3100,18 +3588,10 @@ void compdir (FILE * fin, FILE * fout, FILE * swigfp,
 	  j = eventparent[j];
 	}
       }
-  /* scalar attributes */
-  fprintf (fout, "  _attribute = (_Attributes *) pcalloc (datasize/sizeof(%s), "
-	   "sizeof (_Attributes), __func__, __FILE__, %s);\n",
-	   doubletype, nolineno ? "0" : "__LINE__");
-  /* list of all scalars */
-  fprintf (fout, 
-	   "  all = (scalar *) pmalloc (sizeof (scalar)*%d,__func__, __FILE__, %s);\n"
-	   "  for (int i = 0; i < %d; i++)\n"
-	   "    all[i].i = i;\n"
-	   "  all[%d].i = -1;\n"
-	   "  set_fpe();\n",
-	   nvar + 1, nolineno ? "0" : "__LINE__", nvar, nvar);
+  fprintf (fout,
+	   "  void allocate_globals (int);\n"
+	   "  allocate_globals (%d);\n"
+	   "  set_fpe();\n", nvar);
   if (catch)
     fputs ("  catch_fpe();\n", fout);
   if (progress)
@@ -3235,6 +3715,8 @@ int main (int argc, char ** argv)
       source = 1;
     else if (!strcmp (argv[i], "-autolink"))
       autolinks = 1;
+    else if (!strcmp (argv[i], "-nohook"))
+      nohook = 1;
     else if (!strcmp (argv[i], "-progress"))
       progress = 1;
     else if (!strcmp (argv[i], "-Wall")) {
@@ -3261,10 +3743,8 @@ int main (int argc, char ** argv)
       dimension = 1 + argv[i][12] - '1';
     else if (catch && !strncmp (argv[i], "-O", 2))
       ;
-    else if (!strcmp (argv[i], "-nolineno")) {
+    else if (!strcmp (argv[i], "-nolineno"))
       nolineno = 1;
-      strcat (command1, " -D'assert(x)=((void)(x))'");
-    }
     else if (!strcmp (argv[i], "-o")) {
       strcat (command1, " ");
       strcat (command1, argv[i++]);
@@ -3466,6 +3946,8 @@ int main (int argc, char ** argv)
 	strcat (preproc, BASILISK);
 	strcat (preproc, "\\\"\" ");
       }
+      if (nolineno)
+	strcat (preproc, " -D'LINENO=0' ");
       strcat (preproc, cpp);
       if (debug) {
 	fprintf (stderr, "preproc: %s\n", preproc);
@@ -3486,7 +3968,6 @@ int main (int argc, char ** argv)
 	cleanup (1, dir);
 
       fout = dopen ("_tmp", "w");
-
       fin = dopen (file, "r");
       char line[1024];
       int c, lineno = 1;
@@ -3507,6 +3988,10 @@ int main (int argc, char ** argv)
 	lineno++;
       }
       fp = dopen ("_attributes.h", "r");
+      while ((c = fgetc (fp)) != EOF)
+	fputc (c, fout);
+      fclose (fp);
+      fp = dopen ("_stencils_reversed.h", "r");
       while ((c = fgetc (fp)) != EOF)
 	fputc (c, fout);
       fclose (fp);

@@ -38,7 +38,6 @@ int  main(int argc, char const *argv[])
     scalar s[];
     foreach()
       s[] = noise();
-    boundary ({s});
     
     /**
     We adapt noise with zero tolerance i.e. the mesh should be refined

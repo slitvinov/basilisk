@@ -165,20 +165,22 @@ struct Adapt {
 trace
 astats adapt_wavelet (struct Adapt p)
 {
-
-  /**
-  Since 'all' can be reallocated when new fields are added (in
-  particular new fields used for MPI load balancing), we need to make
-  sure that we use a copy of 'all' and not the original. Otherwise we
-  would be using invalid list pointers!!. */
+  scalar * list = p.list;
   
-  scalar * list = (p.list == NULL || p.list == all) ? list_copy (all) :
-    p.list;
-
-  if (is_constant(cm))
+  if (is_constant(cm)) {
+    if (list == NULL || list == all)
+      list = list_copy (all);
+    boundary (list);
     restriction (p.slist);
+  }
   else {
-    scalar * listr = list_concat ({cm}, p.slist);
+    if (list == NULL || list == all) {
+      list = list_copy ({cm, fm});
+      for (scalar s in all)
+	list = list_add (list, s);
+    }
+    boundary (list);
+    scalar * listr = list_concat (p.slist, {cm});
     restriction (listr);
     free (listr);
   }
@@ -306,6 +308,7 @@ astats adapt_wavelet (struct Adapt p)
 #define refine(cond) do {			                        \
   int refined;								\
   do {									\
+    boundary (all);							\
     refined = 0;							\
     tree->refined.n = 0;						\
     foreach_leaf()							\
@@ -367,44 +370,42 @@ static void refine_level (int depth)
   mpi_boundary_update (all);						\
 } while (0)
 
-static void halo_flux (vector * list)
+trace
+static void halo_face (vectorl vl)
 {
-  vector * listv = NULL;
-  for (vector v in list)
-    if (!is_constant(v.x))
-      listv = vectors_add (listv, v);
-
-  if (listv) {
-    for (int l = depth() - 1; l >= 0; l--)
-      foreach_halo (prolongation, l)
-	foreach_dimension() {
+  foreach_dimension()
+    for (scalar s in vl.x)
+      s.dirty = 2;
+  
+  for (int l = depth() - 1; l >= 0; l--)
+    foreach_halo (prolongation, l)
+      foreach_dimension()
+        if (vl.x) {
 #if dimension == 1
 	  if (is_refined (neighbor(-1)))
-	    for (vector f in listv)
-	      f.x[] = fine(f.x,0);
+	    for (scalar s in vl.x)
+	      s[] = fine(s,0);
 	  if (is_refined (neighbor(1)))
-	    for (vector f in listv)
-	      f.x[1] = fine(f.x,2);
+	    for (scalar s in vl.x)
+	      s[1] = fine(s,2);
 #elif dimension == 2
 	  if (is_refined (neighbor(-1)))
-	    for (vector f in listv)
-	      f.x[] = (fine(f.x,0,0) + fine(f.x,0,1))/2.;
+	    for (scalar s in vl.x)
+	      s[] = (fine(s,0,0) + fine(s,0,1))/2.;
 	  if (is_refined (neighbor(1)))
-	    for (vector f in listv)
-	      f.x[1] = (fine(f.x,2,0) + fine(f.x,2,1))/2.;
+	    for (scalar s in vl.x)
+	      s[1] = (fine(s,2,0) + fine(s,2,1))/2.;
 #else // dimension == 3
 	  if (is_refined (neighbor(-1)))
-	    for (vector f in listv)
-	      f.x[] = (fine(f.x,0,0,0) + fine(f.x,0,1,0) +
-		       fine(f.x,0,0,1) + fine(f.x,0,1,1))/4.;
+	    for (scalar s in vl.x)
+	      s[] = (fine(s,0,0,0) + fine(s,0,1,0) +
+		     fine(s,0,0,1) + fine(s,0,1,1))/4.;
 	  if (is_refined (neighbor(1)))
-	    for (vector f in listv)
-	      f.x[1] = (fine(f.x,2,0,0) + fine(f.x,2,1,0) +
-			fine(f.x,2,0,1) + fine(f.x,2,1,1))/4.;
+	    for (scalar s in vl.x)
+	      s[1] = (fine(s,2,0,0) + fine(s,2,1,0) +
+		      fine(s,2,0,1) + fine(s,2,1,1))/4.;
 #endif
-      }
-    free (listv);
-  }
+	}
 }
 
 // Cartesian methods
@@ -583,6 +584,7 @@ vector tree_init_face_vector (vector v, const char * name)
   return v;
 }
 
+trace
 static void tree_boundary_level (scalar * list, int l)
 {
   int depth = l < 0 ? depth() : l;
@@ -742,6 +744,7 @@ void output_tree (FILE * fp)
 		   treex(parent), treey(parent), treex(point), treey(point));
 }
 
+trace
 void tree_check()
 {
   // checks the consistency of the tree
@@ -788,10 +791,11 @@ void tree_check()
   assert (nleaves == reachable);
 }
 
+trace
 static void tree_restriction (scalar * list) {
+  boundary (list);
   if (tree_is_full())
     multigrid_restriction (list);
-  // otherwise the restriction has already been done by tree_boundary_level()
 }
 
 void tree_methods()
@@ -801,6 +805,6 @@ void tree_methods()
   init_vertex_scalar = tree_init_vertex_scalar;
   init_face_vector   = tree_init_face_vector;
   boundary_level     = tree_boundary_level;
-  boundary_flux      = halo_flux;
+  boundary_face      = halo_face;
   restriction        = tree_restriction;
 }

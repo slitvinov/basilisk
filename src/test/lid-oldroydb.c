@@ -57,7 +57,6 @@ event init (i = 0)
   s[bottom] = dirichlet (0.);	
   foreach()
     u.x[] = 0.;
-  boundary ((scalar *){u});
 }
 
 static double energy()

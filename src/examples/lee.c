@@ -221,10 +221,8 @@ event viscous_term (i++)
 	d2u[] = (w[1] + w[-1] - 2.*w[])/sq(Delta);
       foreach()
 	w[] += dt*nu_H*d2u[];
-      boundary ({w});
 #endif // NH
     }
-    boundary ((scalar *){u});
   }
 }
 

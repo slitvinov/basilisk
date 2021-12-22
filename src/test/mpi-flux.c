@@ -13,12 +13,10 @@ int main (int argc, char ** argv)
   scalar s[];
   foreach()
     s[] = noise();
-  boundary ({s});
   
   face vector g[];
   foreach_face()
     g.x[] = (s[] - s[-1,0])/Delta;
-  boundary_flux ({g});
 
   foreach_face(x)
     fprintf (stderr, "%g %g %g\n", x, y, g.x[]);

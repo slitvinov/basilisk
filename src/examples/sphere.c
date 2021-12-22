@@ -84,11 +84,7 @@ event init (t = 0) {
   /**
   We define the unit sphere. */
 
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = x*x + y*y + z*z - sq(0.5);
-  boundary ({phi});
-  fractions (phi, cs, fs);
+  solid (cs, fs, x*x + y*y + z*z - sq(0.5));
 
   /**
   We set the initially horizontal velocity to unity everywhere
@@ -119,7 +115,6 @@ event movies (t = 30; t += 0.25; t <= 60)
   scalar l2[], vyz[];
   foreach()
     vyz[] = ((u.y[0,0,1] - u.y[0,0,-1]) - (u.z[0,1] - u.z[0,-1]))/(2.*Delta);
-  boundary ({vyz});
   lambda2 (u, l2);
 
   view (fov = 11.44, quat = {0.072072,0.245086,0.303106,0.918076},

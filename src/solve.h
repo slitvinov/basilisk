@@ -98,7 +98,6 @@ static MGSolve_t solve_init (struct MGSolve p) { return p; }
 	foreach()							\
 	  foreach_blockf (_a)						\
 	    _a[] += _da[];						\
-	boundary ({_a});						\
       }									\
       {									\
 	double maxres = 0.;						\

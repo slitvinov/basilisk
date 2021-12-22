@@ -112,7 +112,7 @@ static void embed_face_fraction_refine_x (Point point, scalar s)
     in 3D, we use the 2D projection of the reconstruction. */
 
     for (int j = 0; j <= 1; j++)
-      for (int k = 0; k <= 1; k++)
+      for (int k = 0; k <= 1; k++) {
 	if (!fine(cs,0,j,k) || !fine(cs,1,j,k))
 	  fine(fs.x,1,j,k) = 0.;
 	else {
@@ -121,6 +121,7 @@ static void embed_face_fraction_refine_x (Point point, scalar s)
 	  nc.x = 0., nc.y = (2.*j - 1.)*n.y, nc.z = (2.*k - 1.)*n.z;
 	  fine(fs.x,1,j,k) = rectangle_fraction (nc, alpha, a, b);
 	}
+      }
 
 #endif // dimension == 3
     

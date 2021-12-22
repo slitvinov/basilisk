@@ -83,7 +83,6 @@ event init (i = 0)
     C1[] = ka ; 
     C2[] = kb/ka + 0.01*noise();
   }
-  boundary ({C1, C2});
 }
 
 /**

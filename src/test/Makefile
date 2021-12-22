@@ -1,6 +1,9 @@
 all: check 3D-tests mpi-tests load-balancing curvature-tests axi-tests \
 	cadna-tests embed-tests multilayer-tests multilayer-stratified gotm-tests
 
+failed:
+	$(MAKE) -k `find . -name fail | sed -e 's|\./||g' -e 's|/fail|.tst|g'`
+
 include $(BASILISK)/Makefile.defs
 
 # the default CFLAGS are set in $(BASILISK)/config
@@ -199,7 +202,7 @@ axi-tests: axiadvection.tst axi.tst poiseuille-axi.tst \
 curvature-tests: hf.tst hf3D.tst hf.ctst hf.3D.tst hf1.tst hf-mask.tst \
 	curvature.tst curvature.3D.tst
 
-hf-mask.tst: CFLAGS = -DTRASH=1
+hf-mask.tst: CFLAGS += -DTRASH=1
 
 # Multilayer tests
 
@@ -476,3 +479,7 @@ ows_papa-kpp.tst: ows_papa.s
 ows_papa-kpp.tst: CFLAGS += -DKPP=1
 
 ows_papa.tst: ows_papa-kpp.tst
+
+# Stencils
+
+stencils.tst: CFLAGS += -DPRINTBOUNDARY=1

@@ -1077,6 +1077,8 @@ void mpi_boundary_refine (scalar * list)
   mpi_all_reduce (rerefined.n, MPI_INT, MPI_SUM);
   if (rerefined.n)
     mpi_boundary_refine (list);
+  for (scalar s in list)
+    s.dirty = true;
 }
 
 static void check_depth()
@@ -1246,7 +1248,7 @@ void mpi_partitioning()
   prof_start ("mpi_partitioning");
 
   long nt = 0;
-  foreach()
+  foreach (serial)
     nt++;
 
   /* set the pid of each cell */

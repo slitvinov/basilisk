@@ -61,7 +61,6 @@ event logfile (i++) {
     foreach_dimension()
       u.x[] /= a;
   }
-  boundary ((scalar *){u});
 }
 
 // snapshots every hour
@@ -77,7 +76,6 @@ event movies (t += 10) {
     etam[] = eta[]*(h[] > dry);
     m[] = etam[] - zb[];
   }
-  boundary ({m, etam});
   output_ppm (etam, mask = m, min = -1, max = 1, n = 512, linear = true,
 	      file = "eta.mp4");
 
@@ -105,7 +103,6 @@ event adapt (i++) {
   scalar eta[];
   foreach()
     eta[] = h[] > dry ? h[] + zb[] : 0;
-  boundary ({eta});
 
   double cmax = 1e-2;
   astats s = adapt_wavelet ({eta}, (double[]){cmax}, MAXLEVEL, MINLEVEL);

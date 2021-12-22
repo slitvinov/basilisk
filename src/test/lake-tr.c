@@ -68,11 +68,9 @@ event source (i++) {
 #if EXPLICIT || ML
   foreach()
     u.x[] = (u.x[] + G*slope*dt)/(1. + dt*f/8.*u.x[]/h[]);
-  boundary ((scalar *){u});
 #else
   foreach()
     q.x[] = (q.x[] + h[]*G*slope*dt)/(1. + dt*f/8.*q.x[]/sq(h[]));
-  boundary ((scalar *){q});
 #endif
 }
 

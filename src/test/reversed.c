@@ -68,7 +68,6 @@ event init (i = 0)
   fraction (f, circle(x,y));
   foreach()
     cf[] = f[];
-  boundary ({cf});
 }
 
 event velocity (i++) {
@@ -102,7 +101,6 @@ event velocity (i++) {
   struct { double x, y; } f = {-1.,1.};
   foreach_face()
     u.x[] = f.x*(psi[0,1] - psi[])/Delta;
-  boundary ((scalar *){u});
 }
 
 /**

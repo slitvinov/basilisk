@@ -100,7 +100,7 @@ int main (int argc, char * argv[])
             assert (s[] == 1);
 	foreach_face()
 	  for (int i = -2; i <= 2; i++)
-	    assert (u.x[0,i] == 1);
+	    assert ((u.x[0,i] == 1));
 	image();
       }
     }

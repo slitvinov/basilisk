@@ -38,8 +38,6 @@ int main()
     foreach_layer()
       f.x[] = 1.;
 
-  boundary ({s,v,f});
-
   foreach()
     foreach_layer()
       foreach_neighbor()

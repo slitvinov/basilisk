@@ -71,7 +71,6 @@ event init (t = 0) {
     f[] = (y > 0. ? 0. : 1.0);
     rhoe[] = 0.;
   }
-  boundary ({rhoe, f});
 
   foreach_face(){
     double T = (f[]+f[-1,0])/2.;
@@ -85,7 +84,6 @@ event init (t = 0) {
     // epsilon.x[] = T*beta + (1. - T); // Non exact 
     K.x[] = (ic == 0 ? 0. : (ic == 1 ? T*eta+(1. - T) : eta*T));
   }
-  boundary ((scalar *){epsilon, K});
 }
 
 event set_dt (i++)

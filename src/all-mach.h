@@ -71,12 +71,7 @@ event defaults (i = 0) {
     alpha = fm;
 }
 
-/**
-We apply boundary conditions and define the face velocity field after
-user initialisation. */
-
 event init (i = 0) {
-  boundary ({q,p,rho});
 
   /**
   The face velocity field is obtained by simple linear interpolation
@@ -87,7 +82,6 @@ event init (i = 0) {
   event ("properties");
   foreach_face()
     uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2.;
-  boundary ((scalar *){uf});
 }
 
 /**
@@ -114,7 +108,6 @@ The equation of state (i.e. fields $\alpha$, $\rho$, $\rho c^2$ and
 
 event properties (i++,last)
 {
-  boundary ({rho, rhoc2, ps, alpha, mu});
   
   /**
   If the acceleration is not constant, we reset it to zero. */
@@ -129,10 +122,7 @@ event properties (i++,last)
 /**
 This event can be overloaded to add acceleration terms. */
 
-event acceleration (i++, last)
-{
-  boundary ((scalar *){a});
-}
+event acceleration (i++, last);
 
 /**
 The equation for the pressure is a Poisson--Helmoltz problem which we
@@ -156,12 +146,10 @@ event pressure (i++, last)
     foreach()
       foreach_dimension()
         q.x[] = (q.x[] + dt*g.x[])/rho[];
-    boundary ((scalar *){q});
     mgu = viscosity (q, mu, rho, dt, mgu.nrelax);
     foreach()
       foreach_dimension()
         q.x[] = q.x[]*rho[] - dt*g.x[];
-    boundary ((scalar *){q});
   }  
   
   /**
@@ -171,7 +159,6 @@ event pressure (i++, last)
 
   foreach_face()
     uf.x[] = alpha.x[]*(q.x[] + q.x[-1])/2. + dt*fm.x[]*a.x[];
-  boundary ((scalar *){uf});
 
   /**
   The evolution equation for the pressure is
@@ -226,7 +213,6 @@ event pressure (i++, last)
       div += uf.x[1] - uf.x[];
     rhs[] += div/(dt*Delta);
   }
-  boundary ({lambda, rhs});
   
   /**
   The Poisson--Helmholtz solver is called with a [definition of the
@@ -248,7 +234,6 @@ event pressure (i++, last)
     uf.x[] -= dt*dp;
     gf.x[] = a.x[] - dp/fm.x[];
   }
-  boundary_flux ({gf});
 
   /**
   And finally we apply the pressure gradient/acceleration term to the
@@ -260,7 +245,6 @@ event pressure (i++, last)
       g.x[] = rho[]*(gf.x[] + gf.x[1])/2.;
       q.x[] += dt*g.x[];
     }
-  boundary ((scalar *){q,g,uf});
 }
 
 /**

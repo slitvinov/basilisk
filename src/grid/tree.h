@@ -333,11 +333,6 @@ void cache_shrink (Cache * c)
 #if dimension >= 3
   parent.k = (point.k + GHOSTS)/2;
 #endif
-#if TRASH
-  Cell * cellp = point.level <= depth() && allocated(0,0,0) ?
-    (Cell *) NEIGHBOR(0,0,0) : NULL;
-  NOT_UNUSED(cellp);
-#endif
 @
 
 #include "foreach_cell.h"
@@ -1685,6 +1680,8 @@ void tree_periodic (int dir)
 void mpi_boundary_refine  (scalar * list){}
 void mpi_boundary_coarsen (int a, int b){}
 void mpi_boundary_update  (scalar * list) {
+  for (scalar s in list)
+    s.dirty = true;
   boundary (list);
 }
 @endif // !_MPI

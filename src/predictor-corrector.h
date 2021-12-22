@@ -26,7 +26,6 @@ static void advance_generic (scalar * output, scalar * input, scalar * updates,
     for (o,i,u in output,input,updates)
       o[] = i[] + dt*u[];
   }
-  boundary (output);
 }
 
 static void (* advance) (scalar * output, scalar * input, scalar * updates,

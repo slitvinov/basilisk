@@ -37,19 +37,24 @@ void (* debug)    (Point);
 
 @define end_foreach_face()
 
+#include "stencils.h"
+
+// field allocation
+
 static void init_block_scalar (scalar sb, const char * name, const char * ext,
 			       int n, int block)
 {
   char bname[strlen(name) + strlen(ext) + 10];
   if (n == 0) {
     sprintf (bname, "%s%s", name, ext);
-    init_scalar (sb, bname);
     sb.block = block;
+    init_scalar (sb, bname);
+    baseblock = list_append (baseblock, sb);
   }
   else {
     sprintf (bname, "%s%d%s", name, n, ext);
-    init_scalar (sb, bname);
     sb.block = - n;
+    init_scalar (sb, bname);
   }
   all = list_append (all, sb);
 }
@@ -76,7 +81,19 @@ scalar new_block_scalar (const char * name, const char * ext, int block)
   // need to allocate new slots
   s = (scalar){nvar};
   assert (nvar + block <= _NVARMAX);
-  qrealloc (_attribute, nvar + block, _Attributes);
+
+  /**
+  Note that _attribute[-1] is reserved to deal with undefined/constant
+  fields in stencils checks. */
+  
+  if (_attribute == NULL) {
+    _attribute = (_Attributes *) calloc (nvar + block + 1, sizeof (_Attributes));
+    _attribute[0].write = (double *) calloc (1, sizeof(double));
+  }
+  else
+    _attribute = (_Attributes *)
+      realloc (_attribute - 1, (nvar + block + 1)*sizeof (_Attributes));
+  _attribute++;
   memset (&_attribute[nvar], 0, block*sizeof (_Attributes));
   for (int n = 0; n < block; n++, nvar++) {
     scalar sb = (scalar){nvar};
@@ -231,18 +248,24 @@ vector new_const_vector (const char * name, int i, double * val)
 void scalar_clone (scalar a, scalar b)
 {
   char * name = a.name;
+  double * write = a.write;
+  int * read = a.read;
   double (** boundary) (Point, Point, scalar, void *) = a.boundary;
   double (** boundary_homogeneous) (Point, Point, scalar, void *) =
     a.boundary_homogeneous;
   assert (b.block > 0 && a.block == b.block);
+  free (a.depends);
   _attribute[a.i] = _attribute[b.i];
   a.name = name;
+  a.write = write;
+  a.read = read;
   a.boundary = boundary;
   a.boundary_homogeneous = boundary_homogeneous;
   for (int i = 0; i < nboundary; i++) {
     a.boundary[i] = b.boundary[i];
     a.boundary_homogeneous[i] = b.boundary_homogeneous[i];
   }
+  a.depends = list_copy (b.depends);
 }
 
 scalar * list_clone (scalar * l)
@@ -271,30 +294,44 @@ void delete (scalar * list)
     return;
 
   for (scalar f in list) {
+    if (f.block > 0) {
+      free (f.write); f.write = NULL;
+      free (f.read); f.read = NULL;
+    }
     for (int i = 0; i < f.block; i++) {
       scalar fb = {f.i + i};
       if (f.delete)
 	f.delete (fb);
       free (fb.name); fb.name = NULL;
+      fb.read = NULL;
+      fb.write = NULL;
       free (fb.boundary); fb.boundary = NULL;
       free (fb.boundary_homogeneous); fb.boundary_homogeneous = NULL;
+      free (fb.depends); fb.depends = NULL;
       fb.freed = true;
     }
   }
   
   if (list == all) {
     all[0].i = -1;
+    baseblock[0].i = -1;
     return;
   }
 
   trash (list);
   for (scalar f in list) {
     if (f.block > 0) {
-      scalar * s = all;
-      for (; s->i >= 0 && s->i != f.i; s++);
+      scalar * s;
+      for (s = all; s->i >= 0 && s->i != f.i; s++);
       if (s->i == f.i) {
 	for (; s[f.block].i >= 0; s++)
 	  s[0] = s[f.block];
+	s->i = -1;
+      }
+      for (s = baseblock; s->i >= 0 && s->i != f.i; s++);
+      if (s->i == f.i) {
+	for (; s[1].i >= 0; s++)
+	  s[0] = s[1];
 	s->i = -1;
       }
     }
@@ -302,7 +339,9 @@ void delete (scalar * list)
 }
 
 void free_solver()
-{
+{  
+  assert (_val_higher_dimension == 0.);
+
   if (free_solver_funcs) {
     free_solver_func * a = (free_solver_func *) free_solver_funcs->p;
     for (int i = 0; i < free_solver_funcs->len/sizeof(free_solver_func); i++)
@@ -312,6 +351,7 @@ void free_solver()
   
   delete (all);
   free (all); all = NULL;
+  free (baseblock); baseblock = NULL;
   for (Event * ev = Events; !ev->last; ev++) {
     Event * e = ev->next;
     while (e) {
@@ -322,7 +362,8 @@ void free_solver()
   }
 
   free (Events); Events = NULL;
-  free (_attribute); _attribute = NULL;
+  free ((_attribute - 1)->write);
+  free (_attribute - 1); _attribute = NULL;
   free (_constant); _constant = NULL;
   free_grid();
   qpclose_all();
@@ -340,22 +381,72 @@ void free_solver()
 // Cartesian methods
 
 void (* boundary_level) (scalar *, int l);
-void (* boundary_flux)  (vector *);
+void (* boundary_face)  (vectorl);
+
+#define boundary(...)						\
+  boundary_internal ((scalar *)(__VA_ARGS__), __FILE__, LINENO)
+
+void boundary_flux  (vector * list) __attribute__ ((deprecated));
+
+void boundary_flux  (vector * list)
+{
+  vectorl list1 = {NULL};
+  for (vector v in list)
+    foreach_dimension()
+      list1.x = list_append (list1.x, v.x);
+  boundary_face (list1);
+  foreach_dimension()
+    free (list1.x);
+}
+
+static scalar * list_add_depends (scalar * list, scalar s)
+{
+  for (scalar t in list)
+    if (t.i == s.i)
+      return list;
+  scalar * list1 = list;
+  for (scalar d in _attribute[s.i].depends)
+    if (d.dirty)
+      list1 = list_add_depends (list1, d);
+  return list_append (list1, s);
+}
 
 trace
-void boundary (scalar * list)
+void boundary_internal (scalar * list, const char * fname, int line)
 {
   if (list == NULL)
     return;
-  vector * listf = NULL;
+  scalar * listc = NULL;
+  vectorl listf = {NULL};
+  bool flux = false;
   for (scalar s in list)
-    if (!is_constant(s) && s.block > 0 && s.face)
-      listf = vectors_add (listf, s.v);
-  if (listf) {
-    boundary_flux (listf);
-    free (listf);
+    if (!is_constant(s) && s.block > 0) {
+      if (scalar_is_dirty (s)) {
+	if (s.face && s.dirty != 2)
+	  foreach_dimension()
+	    if (s.v.x.i == s.i)
+	      listf.x = list_add (listf.x, s), flux = true;
+	if (!is_constant(cm) && cm.dirty)
+	  listc = list_add_depends (listc, cm);
+	if (s.face != 2) // flux only
+	  listc = list_add_depends (listc, s);
+      }
+#if 0
+      else
+	fprintf (stderr, "warning: bc already applied on '%s'\n", s.name);
+#endif
+    }
+  if (flux) {
+    boundary_face (listf);
+    foreach_dimension()
+      free (listf.x);
   }
-  boundary_level (list, -1);
+  if (listc) {
+    boundary_level (listc, -1);
+    for (scalar s in listc)
+      s.dirty = false;
+    free (listc);
+  }
 }
 
 void cartesian_boundary_level (scalar * list, int l)
@@ -363,9 +454,11 @@ void cartesian_boundary_level (scalar * list, int l)
   boundary_iterate (level, list, l);
 }
 
-void cartesian_boundary_flux (vector * list)
+void cartesian_boundary_face (vectorl list)
 {
-  // nothing to do
+  foreach_dimension()
+    for (scalar s in list.x)
+      s.dirty = 2;
 }
 
 static double symmetry (Point point, Point neighbor, scalar s, void * data)
@@ -382,6 +475,10 @@ double (* default_scalar_bc[]) (Point, Point, scalar, void *) = {
   symmetry, symmetry, symmetry, symmetry, symmetry, symmetry
 };
 
+static double centered (double s0, double s1, double s2) {
+  return (s2 - s0)/2.;
+}
+
 scalar cartesian_init_scalar (scalar s, const char * name)
 {
   // keep name
@@ -392,21 +489,37 @@ scalar cartesian_init_scalar (scalar s, const char * name)
   }
   else
     pname = s.name;
-  free (s.boundary);
-  free (s.boundary_homogeneous);
-  // reset all attributes
+  int block = s.block;
+  double * write = s.write;
+  int * read = s.read;
+  double (** boundary) (Point, Point, scalar, void *) = s.boundary;
+  double (** boundary_homogeneous) (Point, Point, scalar, void *) =
+    s.boundary_homogeneous;
+  // reset all attributes  
   _attribute[s.i] = (const _Attributes){0};
-  s.block = 1;
   s.name = pname;
-  /* set default boundary conditions */
-  s.boundary = (double (**)(Point, Point, scalar, void *))
+  if (block < 0) {
+    scalar base = {s.i + block};
+    s.block = block;
+    s.write = base.write;
+    s.read = base.read;
+  }
+  else {
+    s.block = block > 0 ? block : 1;
+    s.write = write ? write : malloc(_STENCIL_SIZE*sizeof(double));
+    s.read = read ? read : malloc(_STENCIL_SIZE*sizeof(int));    
+  }
+  /* set default boundary conditions */  
+  s.boundary = boundary ? boundary :
+    (double (**)(Point, Point, scalar, void *))
     malloc (nboundary*sizeof (void (*)()));
-  s.boundary_homogeneous = (double (**)(Point, Point, scalar, void *))
+  s.boundary_homogeneous = boundary_homogeneous ? boundary_homogeneous :
+    (double (**)(Point, Point, scalar, void *))
     malloc (nboundary*sizeof (void (*)()));
   for (int b = 0; b < nboundary; b++)
     s.boundary[b] = s.boundary_homogeneous[b] =
       b < 2*dimension ? default_scalar_bc[b] : symmetry;
-  s.gradient = NULL;
+  s.gradient = centered;
   foreach_dimension() {
     s.d.x = 0;  // not face
     s.v.x.i = -1; // not a vector component
@@ -675,7 +788,7 @@ void cartesian_methods()
   init_tensor        = cartesian_init_tensor;
   init_face_vector   = cartesian_init_face_vector;
   boundary_level     = cartesian_boundary_level;
-  boundary_flux      = cartesian_boundary_flux;
+  boundary_face      = cartesian_boundary_face;
   debug              = cartesian_debug;
 }
 
@@ -718,6 +831,8 @@ static double interpolate_linear (Point point, struct _interpolate p)
 trace
 double interpolate (struct _interpolate p)
 {
+  scalar v = p.v;
+  boundary ({v});
   Point point = locate (p.x, p.y, p.z);
   if (point.level < 0)
     return nodata;
@@ -727,6 +842,7 @@ double interpolate (struct _interpolate p)
 trace
 void interpolate_array (scalar * list, coord * a, int n, double * v, bool linear)
 {
+  boundary (list);
   int j = 0;
   for (int i = 0; i < n; i++) {
     Point point = locate (a[i].x, a[i].y, a[i].z);

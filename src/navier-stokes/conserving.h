@@ -54,11 +54,13 @@ event defaults (i = 0)
     
   /**
   We then set the refinement and restriction functions for the
-  components of the velocity field. */
+  components of the velocity field. The boundary conditions on
+  $\mathbf{u}$ now depend on those on $f$. */
   
   foreach_dimension() {
     u.x.refine = u.x.prolongation = momentum_refine;
     u.x.restriction = momentum_restriction;
+    u.x.depends = list_add (u.x.depends, f);
   }
 #endif
 }
@@ -117,12 +119,15 @@ event vof (i++) {
   /**
   We allocate two temporary vector fields to store the two components
   of the momentum and set the boundary conditions and prolongation
-  functions. */
+  functions. The boundary conditions on $q_1$ and $q_2$ depend on the
+  boundary conditions on $f$. */
   
   vector q1[], q2[];
-  for (scalar s in {q1,q2})
+  for (scalar s in {q1,q2}) {
+    s.depends = list_add (s.depends, f);
     foreach_dimension()
       s.v.x.i = -1; // not a vector
+  }
   for (int i = 0; i < nboundary; i++)
     foreach_dimension() {
       q1.x.boundary[i] = boundary_q1_x;
@@ -145,7 +150,6 @@ event vof (i++) {
       q1.x[] = fc*rho1*u.x[];
       q2.x[] = (1. - fc)*rho2*u.x[];
     }
-  boundary ((scalar *){q1,q2});
 
   /**
   Momentum $q2$ is associated with $1 - f$, so we set the *inverse*
@@ -174,7 +178,6 @@ event vof (i++) {
   foreach()
     foreach_dimension()
       u.x[] = (q1.x[] + q2.x[])/rho(f[]);
-  boundary ((scalar *){u});
 
   /**
   We set the list of interfaces to NULL so that the default *vof()*

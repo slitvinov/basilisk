@@ -59,8 +59,6 @@ event defaults (i = 0) {
     s.prolongation = refine_linear;
   #endif
 
-  boundary ({h});
-
   /**
   We setup the default display. */
 
@@ -76,7 +74,6 @@ solver](all-mach.h). */
 event init (i = 0) {
   foreach()
     p[] = G*sq(h[])/2.;
-  boundary ({zb,p});
 }
 
 /**
@@ -88,7 +85,7 @@ double CFLa = HUGE;
 
 event stability (i++) {
   if (CFLa < HUGE)
-    foreach()
+    foreach (reduction (min:dtmax))
       if (h[] > dry) {
 	double dt = CFLa*Delta/sqrt(G*h[]);
 	if (dt < dtmax)
@@ -231,11 +228,10 @@ event acceleration (i++) {
   We then make sure that $\eta$ uses our restriction/prolongation
   functions. $h^2$ uses the same prolongation functions as $p$ by
   default. */
-  
+
   eta.prolongation = eta_prolongation;
   eta.restriction = eta_restriction;
-  boundary ({eta,h2});
-
+    
   /**
   We then compute the acceleration as
   $$

@@ -220,7 +220,6 @@ void fault (struct Okada p)
   scalar_clone (hold, h);
   foreach()
     hold[] = h[];
-  boundary ({hold});
 
   p.d = h;
   int nitermax = 20;

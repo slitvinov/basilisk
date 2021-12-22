@@ -133,7 +133,6 @@ event init (t = 0) {
 
   foreach()
     phi[] = Ef*x;
-  boundary ({phi});
 }
 
 
@@ -150,7 +149,6 @@ event properties (i++)
     K.x[] = cond(ff)*fm.x[];
     muv.x[] = CMU*fm.x[];
   }
-  boundary ((scalar *){epsilon, K, muv});
 }
 
 /**

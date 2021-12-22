@@ -72,12 +72,10 @@ event friction (i++) {
   // linear friction (implicit scheme)
   foreach()
     u.x[] /= 1. + tau*dt;
-  boundary ({u.x});
 #else
   // linear friction (implicit scheme)
   foreach()
     q.x[] /= 1. + tau*dt;
-  boundary ({q.x});
 #endif
 }
 
@@ -111,7 +109,7 @@ event field (t = 1500) {
 event umean (t += 50; t <= 6000) {
   if (N == 128) {
     double sq = 0., sh = 0.;
-    foreach() {
+    foreach(reduction(+:sq) reduction(+:sh)) {
 #if EXPLICIT || ML
       sq += Delta*h[]*u.x[];
 #else

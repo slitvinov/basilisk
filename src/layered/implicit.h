@@ -81,7 +81,6 @@ static double residual_hydro (scalar * ql, scalar * rhsl,
   face vector g[];
   foreach_face()
     g.x[] = alpha.x[]*a_baro (eta, 0);
-  boundary_flux ({g});
   
   foreach (reduction(max:maxres)) {
     res_eta[] = rhs_eta[] - eta[];
@@ -90,7 +89,6 @@ static double residual_hydro (scalar * ql, scalar * rhsl,
     if (fabs(res_eta[]) > maxres)
       maxres = fabs(res_eta[]);
   }
-  boundary (resl);
 
   return maxres;
 }
@@ -143,7 +141,6 @@ event acceleration (i++)
     }
     alpha_eta.x[] *= C;
   }
-  boundary ((scalar *){alpha_eta, hu, hf, su, ha});
 
   /**
   The r.h.s. is
@@ -221,7 +218,6 @@ event pressure (i++)
       hu.x[] = theta_H*(hf.x[]*uf + dt*ha.x[]) - dt*ha.x[];
     }
   }
-  boundary ((scalar *){ha, hu});
 }
 
 /**

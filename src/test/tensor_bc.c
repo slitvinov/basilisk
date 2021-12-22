@@ -7,7 +7,6 @@ int main()
     u.x[] = sin(x)*sin(y);
     u.y[] = sin(x)*sin(y);
   }
-  boundary ((scalar *){u});
 
   // symmetric: fixme: boundary conditions don't work for symmetric tensors!
     tensor D[];
@@ -17,7 +16,8 @@ int main()
     D.x.y[] = (u.x[0,1] - u.x[0,-1] + u.y[1,0] - u.y[-1,0])/(2.*Delta);
   }
   output_cells (stdout);
-  boundary ((scalar *){D});
+  D.y.x.dirty = true; // fixme
+  boundary ({D.y.x}); // fixme
   foreach()
     foreach_neighbor(1)
       fprintf (stderr, "%g %g %g %g %g %g %g\n",

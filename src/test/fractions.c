@@ -19,7 +19,6 @@ int main()
   vertex scalar phi[];
   foreach_vertex()
     phi[] = sq(0.25) - sq(x) - sq(y);
-  boundary ({phi});
 
   /**
   We then use this function to compute the corresponding volume and

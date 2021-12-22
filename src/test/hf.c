@@ -1,3 +1,15 @@
+/**
+# Height functions
+
+~~~gnuplot
+set size ratio -1
+unset key
+plot 'out' w l, '< grep hx log' u ($1+$3*$4):2, \
+     '< grep hy log' u 1:($2+$3*$4), \
+     '< grep kappa log' u 1:2:3 w labels
+~~~
+*/
+
 #include "fractions.h"
 #include "curvature.h"
 #include "utils.h"

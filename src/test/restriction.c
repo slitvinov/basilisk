@@ -18,6 +18,6 @@ int main(int argc, char * argv[])
   for (int l = 0; l <= depth(); l++)
     foreach_level(l) {
       fprintf (stderr, "%g %g %g %d\n", x - Delta/2., y, u.x[], l);
-      assert (u.x[] == 1. && u.y[] == 1. && u.x[1,0] == 1. && u.y[0,1] == 1.);
+      assert ((u.x[] == 1. && u.y[] == 1. && u.x[1,0] == 1. && u.y[0,1] == 1.));
     }
 }

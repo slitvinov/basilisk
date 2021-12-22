@@ -7,7 +7,7 @@
 double divmax (face vector uf)
 {
   double dmax = 0.;
-  foreach() {
+  foreach (reduction(max:dmax)) {
     double d = 0.;
     foreach_dimension()
       d += uf.x[1] - uf.x[];
@@ -38,14 +38,12 @@ int main()
   foreach_face()
     uf.x[] = 1. - 2.*rand()/(double)RAND_MAX;
 #endif
-  boundary ((scalar *){uf});
 
 #if 1
   TOLERANCE = 1e-10;
   scalar p[];
   foreach()
     p[] = 0.;
-  boundary ({p});
   project (uf, p);
 #endif
 

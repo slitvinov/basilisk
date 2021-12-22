@@ -166,7 +166,6 @@ int my_adapt() {
   scalar eta[];
   foreach()
     eta[] = h[] > dry ? h[] + zb[] : 0;
-  boundary ({eta});
   astats s = adapt_wavelet ({eta, etamax}, (double[]){ETAE,ETAMAXE},
 			    MAXLEVEL, MINLEVEL);
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);
@@ -263,7 +262,6 @@ event init (i = 0)
 
     foreach()
       h[] = max(0., - zb[]);
-    boundary ({h});
 
     /**
     The initial deformation is given by a long collection of small
@@ -291,7 +289,6 @@ event friction (i++)
     if (h[] > dry && h[] + zb[] > etamax[])
       etamax[] = h[] + zb[];
   }
-  boundary ({etamax, u});
 }
 
 /**
@@ -329,7 +326,6 @@ event figures (t = 60; t <= 180; t += 60)
     etam[] = eta[]*(h[] > dry);
     m[] = etam[] - zb[];
   }
-  boundary ({m, etam});
   char name[80];
   sprintf (name, "eta-%g.png", t);
   output_ppm (etam, mask = m, min = -1, max = 2, file = name, n = 1024,
@@ -367,7 +363,6 @@ event movies (t += 0.5)
     m[] = eta[]*(h[] > dry) - zb[];
     etam[] = h[] < dry ? 0. : (zb[] > 0. ? eta[] - zb[] : eta[]);
   }
-  boundary ({m, etam});
   output_ppm (etam, mask = m, min = -1, max = 2, 
 	      n = 1024, linear = true, file = "eta.mp4");
 

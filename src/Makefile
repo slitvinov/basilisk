@@ -1,7 +1,7 @@
 CFLAGS += -O2
 
 # these are not Basilisk programs
-EXCLUDE = qcc.c include.c rotate.c qplot.c
+EXCLUDE = qcc.c include.c rotate.c stencils.c qplot.c
 
 all: qcc qplot libkdt literatec libfb_dumb libws bview2D bview3D
 	@chmod +x ppm2mpeg ppm2mp4 ppm2ogv ppm2gif runtest \
@@ -15,13 +15,13 @@ libkdt:
 literatec:
 	cd darcsit && make && cd cgi-bin && make
 
-qcc: qcc.c include.o rotate.o config
+qcc: qcc.c include.o rotate.o stencils.o config
 	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" \
 		-DCC99="\"$(CC99)\"" \
 		-DCPP99="\"$(CPP99)\"" \
 		-DCADNACC="\"$(CADNACC)\"" \
 		-DBASILISK="\"$(BASILISK)\"" \
-		qcc.c include.o rotate.o -o qcc
+		qcc.c include.o rotate.o stencils.o -o qcc
 
 rotate.c: rotate.lex
 	flex -P rot -o rotate.c rotate.lex
@@ -31,6 +31,15 @@ rotate: rotate.c
 
 rotate.o: rotate.c
 	$(CC) $(CFLAGS) -c rotate.c
+
+stencils.c: stencils.lex
+	flex -P sten -o stencils.c stencils.lex
+
+stencils: stencils.c
+	$(CC) $(CFLAGS) -DTEST stencils.c -o stencils
+
+stencils.o: stencils.c
+	$(CC) $(CFLAGS) -c stencils.c
 
 include.o: include.c
 	$(CC) $(CFLAGS) -DLIBDIR=\"`pwd`\" -c include.c

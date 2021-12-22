@@ -583,8 +583,7 @@ cstats curvature (struct Curvature p)
     else if ((k[] = height_curvature_fit (point, c, h)) != nodata)
       sf++;
   }
-  boundary ({k});
-
+  
   foreach (reduction(+:sa) reduction(+:sc)) {
     
     /**
@@ -626,7 +625,6 @@ cstats curvature (struct Curvature p)
     else
       kappa[] = sigma*kf;      
   }
-  boundary ({kappa});
 
   return (cstats){sh, sf, sa, sc};
 }
@@ -763,5 +761,4 @@ void position (struct Position p)
     else
       pos[] = nodata;
   }
-  boundary ({pos});  
 }

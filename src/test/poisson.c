@@ -1,3 +1,14 @@
+/**
+# Convergence of the Poisson solver
+
+~~~gnuplot Convergence as a function of CPU time
+set xlabel 'CPU time (sec)'
+set ylabel 'Maximum residual'
+set logscale y
+plot 'out' u 2:3 w lp t 'quadtree', 'cout' u 2:3 w lp t 'multigrid'
+~~~
+*/
+
 #include "utils.h"
 #include "poisson.h"
 
@@ -30,7 +41,6 @@ int main (int argc, char ** argv)
     b[] = - 9.*dimension*pi*pi*cos(3.*pi*x)*cos(3.*pi*y)*cos(3.*pi*z);
     a[] = 0.;
   }
-  boundary ({a});
 
   #define NITER 13
   clock_t start = clock(), iter[NITER];
@@ -51,7 +61,7 @@ int main (int argc, char ** argv)
     	    maxres[i]);
   }
   double max = 0;
-  foreach() {
+  foreach(reduction(max:max)) {
     double e = a[] - solution(x, y, z);
     if (fabs(e) > max) max = fabs(e);
     //    printf ("%g %g %g %g %g %g\n", x, y, a[], b[], res[], e);

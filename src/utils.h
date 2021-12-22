@@ -239,28 +239,16 @@ void gradients (scalar * f, vector * g)
   assert (list_len(f) == vectors_len(g));
   foreach() {
     scalar s; vector v;
-    for (s,v in f,g) {
-      if (s.gradient)
-	foreach_dimension() {
+    for (s,v in f,g)
+      foreach_dimension() {
 #if EMBED
-	  if (!fs.x[] || !fs.x[1])
-	    v.x[] = 0.;
-	  else
+	if (!fs.x[] || !fs.x[1])
+	  v.x[] = 0.;
+	else
 #endif
-	    v.x[] = s.gradient (s[-1], s[], s[1])/Delta;
-	}
-      else // centered
-	foreach_dimension() {
-#if EMBED
-	  if (!fs.x[] || !fs.x[1])
-	    v.x[] = 0.;
-	  else
-#endif
-	    v.x[] = (s[1] - s[-1])/(2.*Delta);
-	}
-    }
+	  v.x[] = s.gradient (s[-1], s[], s[1])/Delta;
+      }
   }
-  boundary ((scalar *) g);
 }
 
 /**
@@ -285,7 +273,6 @@ void vorticity (const vector u, scalar omega)
 	       fm.x[1]*u.y[1] - fm.x[]*u.y[-1] -
 	       (fm.y[0,1] - fm.y[])*u.x[] +
 	       fm.y[]*u.x[0,-1] - fm.y[0,1]*u.x[0,1])/(2.*cm[]*Delta + SEPS);
-  boundary ({omega});
 }
 
 /**

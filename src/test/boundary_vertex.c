@@ -17,12 +17,10 @@ int main()
   }
   foreach()
     s[] = shape(x,y);
-  boundary ({s});
   
   vertex scalar phi[];
   foreach_vertex()
     phi[] = (s[] + s[-1] + s[0,-1] + s[-1,-1])/4.;
-  boundary ({phi});
   
   foreach() {
     fprintf (qerr, "%g %g %g\n", x - Delta/3., y - Delta/3., phi[]);

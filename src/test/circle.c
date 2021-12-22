@@ -1,4 +1,46 @@
-/* This is similar to gerris/test/poisson/circle */
+/**
+# Poisson solution with a circular refined patch
+
+~~~gnuplot Error as a function of resolution
+minlevel = 7
+maxlevel = 10
+
+ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
+f(x)=a+b*x
+fit f(x) '< grep "max error" log' u (log(2**$3)):(log($4)) via a,b
+set xlabel 'Maximum resolution'
+set ylabel 'Maximum error'
+set logscale
+set cbrange [1:2]
+set xrange [2**(minlevel-1):2**(maxlevel+1)]
+set xtics 2**(minlevel-1),2,2**(maxlevel+1)
+set grid ytics
+plot '< grep "max error" log' u (2**$3):4 t '', exp(f(log(x))) t ftitle(a,b)
+~~~~
+
+~~~gnuplot Residual as a function of iterations
+reset
+set xlabel 'Multigrid iteration'
+set ylabel 'Residual'
+set logscale y
+set grid ytics
+plot for [i = minlevel:maxlevel] \
+     '< grep "residual '.i.'" log' u 3:4 w lp t 'level '.i
+~~~
+
+~~~gnuplot Residual as a function of CPU time
+reset
+set xlabel 'CPU Time'
+set ylabel 'Residual'
+set logscale
+plot for [i = minlevel:maxlevel] \
+     '< grep "speed '.i.'" out' u 4:5 w lp t 'level '.i
+~~~
+
+## See also
+
+* [Similar test with Gerris](http://gerris.dalembert.upmc.fr/gerris/tests/tests/poisson.html#circle)
+*/
 
 #include "utils.h"
 #include "poisson.h"
@@ -33,7 +75,6 @@ void solve (int depth)
     b[] = - 9.*dimension*pi*pi*cos(3.*pi*x)*cos(3.*pi*y)*cos(3.*pi*z);
     a[] = 0.;
   }
-  boundary ({a});
 
   #define NITER 15
   clock_t start = clock(), iter[NITER];

@@ -47,6 +47,7 @@ needs to be refined before $h$ and $h$ before $\eta$. */
 
 scalar zb[], h[], eta[];
 vector u[];
+scalar w[];
 
 /**
 The only physical parameter is the acceleration of gravity *G*. Cells
@@ -128,12 +129,6 @@ static void advance_saint_venant (scalar * output, scalar * input,
 	  uo.x[] = 0.;
       }
   }
-    
-  // fixme: on trees eta is defined as eta = zb + h and not zb +
-  // ho in the refine_eta() and restriction_eta() functions below
-  scalar * list = list_concat ({ho, eta}, (scalar *) uol);
-  boundary (list);
-  free (list);
 }
 
 /**
@@ -254,7 +249,7 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
       
 	In the case of adaptive refinement, care must be taken to ensure
 	well-balancing at coarse/fine faces (see [notes/balanced.tm]()). */
-	
+
         #if TREE
 	if (is_prolongation(cell)) {
 	  hi = coarse(h);
@@ -281,8 +276,6 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
 	Fh.x[] = Fq.x.x[] = S.x[] = Fq.y.x[] = 0.;
     }
 
-    boundary_flux ({Fh, S, Fq});
-
     /**
     #### Updates for evolving quantities
   
@@ -300,12 +293,10 @@ double update_saint_venant (scalar * evolving, scalar * updates, double dtmax)
       /**
       For [multiple layers](multilayer.h#fluxes-between-layers) we
       need to store the divergence in each layer. */
-      
-      if (l < nl - 1) {
-	scalar div = wl[l];
-	div[] = dhl;
-      }
 
+      scalar div = wl[l];
+      div[] = dhl;
+      
       /**
       We also need to add the metric terms. They can be written (see
       eq. (8) of [Popinet, 2011](references.bib#popinet2011)) 
@@ -351,6 +342,7 @@ event defaults (i = 0)
   assert (ul == NULL && wl == NULL);
   assert (nl > 0);
   ul = vectors_append (ul, u);
+  wl = list_append (wl, w);
   for (int l = 1; l < nl; l++) {
     scalar w = new scalar;
     vector u = new vector;
@@ -365,7 +357,6 @@ event defaults (i = 0)
   foreach()
     for (scalar s in evolving)
       s[] = 0.;
-  boundary (evolving);
   
   /**
   By default, all the layers have the same relative thickness. */
@@ -381,13 +372,23 @@ event defaults (i = 0)
 
   advance = advance_saint_venant;
   update = update_saint_venant;
+
+  /**
+  On trees we make sure that slope-limiting is also used for
+  refinement and prolongation. The prolongation/restriction functions
+  for $\eta$ are set and they depend on boundary conditions on $z_b$
+  and $h$. */
+  
 #if TREE
   for (scalar s in {h,zb,u,eta}) {
     s.refine = s.prolongation = refine_linear;
     s.restriction = restriction_volume_average;
+    s.dirty = true;
   }
   eta.refine  = refine_eta;
   eta.restriction = restriction_eta;
+  eta.depends = list_copy ({zb,h});
+  eta.dirty = true;
 #endif
 
   /**
@@ -404,7 +405,6 @@ event init (i = 0)
 {
   foreach()
     eta[] = zb[] + h[];
-  boundary (all);
 }
 
 /**

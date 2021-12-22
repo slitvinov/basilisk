@@ -38,7 +38,6 @@ int py_scalar_init (scalar s, PyObject * f) {
 	Py_DECREF (result);
       }
     }
-  boundary ({s});
   return status;
 }
 

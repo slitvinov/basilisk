@@ -62,7 +62,6 @@ event acceleration (i++)
       q[] = ph;
     }
   }
-  boundary ({q});
 
   /**
   Once the pressure deviation is known, the terms in blue above are
@@ -75,7 +74,6 @@ event acceleration (i++)
       ha.x[] += pg;
     end_hpg(0);
   }
-  boundary ((scalar *){ha});
 
   delete ({q});
 }

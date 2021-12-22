@@ -86,7 +86,6 @@ mgstats mg;
 event init (i = 0) {
   foreach()
     u.x[] = u.y[] = 0.;
-  boundary ((scalar *){u});
 }
 
 event integration (i++)
@@ -105,7 +104,6 @@ event integration (i++)
 				- 2.*(2.*a + 1.)*cos(x)*cos(y) +
 				2.*(1. - sq(a))*cos(x)*sin(y)/y);
   }
-  boundary ((scalar *){u});
 
   /**
   ...and then solve for viscosity. */

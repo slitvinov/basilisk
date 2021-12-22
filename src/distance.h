@@ -466,6 +466,7 @@ void distance (scalar d, coord * p)
   d.prolongation = refine_bilinear;
   d.refine = refine_distance;  
   d.coarsen = coarsen_distance;
+  d.dirty = true;
 #endif
   d.surface = surface;
   d.delete = delete_distance;

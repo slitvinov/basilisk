@@ -1,3 +1,5 @@
+#define BGHOSTS 2
+
 scalar s[];
 
 int main (int argc, char * argv[])
@@ -10,14 +12,10 @@ int main (int argc, char * argv[])
   
   foreach()
     s[] = 1.;
-  boundary ({s});
 
-  // check boundary conditions on leaves
-  // fixme: should be = -GHOSTS; i <= GHOSTS
   foreach()
-    for (int i = -1; i <= 1; i++)
-      for (int j = -1; j <= 1; j++)
-	assert (s[i,j] == 1.);
+    foreach_neighbor()
+      assert ((s[] == 1.));
 
   // rebalancing
   int nf = 0;

@@ -29,7 +29,6 @@ int main()
     a[] = 0.;
     b[] = -27.*pi*pi*sin(3.*pi*x)*sin(3.*pi*y)*sin(3.*pi*z);
   }
-  boundary ({a});
 
   poisson (a, b);
   

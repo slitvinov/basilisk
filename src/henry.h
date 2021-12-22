@@ -52,6 +52,7 @@ event defaults (i = 0)
     s.refine  = refine_linear;
 #endif
     s.restriction = restriction_volume_average;
+    s.dirty = true;
   }
 }
 #endif // TREE
@@ -94,7 +95,6 @@ event vof (i++)
       phi1[] = a*f[]*c.alpha;
       phi2[] = a*(1. - f[]);
     }
-    boundary ({phi1, phi2});
   }
 }
 
@@ -147,7 +147,6 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
   face vector g[];
   foreach_face()
     g.x[] = D.x[]*face_gradient_x (a, 0) + beta.x[]*face_value (a, 0);
-  boundary_flux ({g});
   foreach (reduction(max:maxres)) {
     res[] = b[] + cm[]/dt*a[];
     foreach_dimension()
@@ -168,7 +167,6 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
       maxres = fabs (res[]);
   }
 #endif // !TREE    
-  boundary (resl);
   return maxres;
 }
 
@@ -203,7 +201,6 @@ event tracer_diffusion (i++)
       beta.x[] = - D.x[]*(c.alpha - 1.)/
 	(ff*c.alpha + (1. - ff))*(f[] - f[-1])/Delta;
     }
-    boundary ({c, D, beta});
   
     restriction ({D, beta, cm});
     struct HDiffusion q;

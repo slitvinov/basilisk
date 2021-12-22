@@ -48,7 +48,6 @@ event adapt (i++) {
   scalar eta[];
   foreach()
     eta[] = h[] > dry ? h[] + zb[] : 0.;
-  boundary ({eta});
 
   astats s = adapt_wavelet ({eta}, (double[]){1e-4}, MAXLEVEL, MINLEVEL);
   fprintf (stderr, "# refined %d cells, coarsened %d cells\n", s.nf, s.nc);

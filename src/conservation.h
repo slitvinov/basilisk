@@ -80,6 +80,7 @@ event defaults (i = 0)
   for (scalar s in evolving) {
     s.refine = s.prolongation = refine_linear;
     s.restriction = restriction_volume_average;
+    s.dirty = true; // boundary conditions need to be updated
   }
   #endif
 }
@@ -91,13 +92,9 @@ leak). */
 event cleanup (i = end) free (evolving);
 
 /**
-We force boundary conditions on all fields after initialisation.
-*/
+User initialisation happens here. */
 
-event init (i = 0)
-{
-  boundary (all);
-}
+event init (i = 0);
 
 /**
 ### Computing fluxes
@@ -157,7 +154,7 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
   vector * lflux = NULL;
   int len = list_len (conserved);
   for (scalar s in conserved) {
-    vector f1 = new vector;
+    vector f1 = new face vector;
     lflux = vectors_append (lflux, f1);
   }
 
@@ -244,8 +241,6 @@ double update_conservation (scalar * conserved, scalar * updates, double dtmax)
       #endif
     }
   }
-
-  boundary_flux (lflux);
 
   /**
   #### Update

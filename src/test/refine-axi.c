@@ -1,4 +1,6 @@
 /**
+# Refinement of axisymmetric metric and face fields
+
 Checks that refinement of axisymmetric metric and face fields behaves
 properly. */
 
@@ -23,7 +25,6 @@ event init (t = 0)
     uf.x[] = 0.;
   foreach_face (x)
     uf.x[] = fm.x[]*(sq(L0) - y*y);
-  boundary ((scalar *){uf});
   
   refine (level < LEVEL && sq(x - 2.) + sq(y) < sq(1.5*R0));
 

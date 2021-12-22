@@ -67,7 +67,6 @@ void momentum (vector u, scalar h, vector du)
     foreach_dimension()
       d.x[] = (u.x[1,0] - u.x[])/Delta;
   }
-  boundary ({ke,d});
   foreach_vertex()
     psi[] = (u.y[] - u.y[-1,0] + u.x[0,-1] - u.x[])/Delta;  
 
@@ -92,21 +91,16 @@ void advance (double t, scalar * f, scalar * df)
 
 void update (double t, scalar * f)
 {
-  vector u = {f[0], f[1]};
-  scalar h = f[2];
-  boundary ({h,u});
 }
 
 event defaults (i = 0)
 {
   foreach()
     h[] = 1.;
-  boundary ({h});
 }
 
 event init (i = 0)
 {
-  boundary ({zb,h,u});
 }
 
 void run (void)
@@ -121,11 +115,9 @@ void run (void)
     advection_centered (h, u, hn);
     foreach()
       h[] += hn[]*dt;
-    boundary ({h});
     momentum (u, h, un);
     foreach_face()
       u.x[] += un.x[]*dt;
-    boundary ((scalar *){u});
 #else /* unstable! */
     scalar f[3] = { u, v, h };
     scalar df[2][3] = {{ un,  vn,  hn },

@@ -108,7 +108,6 @@ event init (t = 0) {
       f[] = f0[]*(x < length);
       u.x[] = f[];
     }
-    boundary ({f,u.x});
   }
 }
 
@@ -143,7 +142,6 @@ event movie (t += 1e-2)
   scalar pid[];
   foreach()
     pid[] = fmod(pid()*(npe() + 37), npe());
-  boundary ({pid}); // not used for the moment
   view (camera = "iso",
 	fov = 14.5, tx = -0.418, ty = 0.288,
 	width = 1600, height = 1200);
@@ -163,7 +161,6 @@ event snapshot (t = 0.1; t += 0.1; t <= 3.8) {
   scalar pid[];
   foreach()
     pid[] = fmod(pid()*(npe() + 37), npe());
-  boundary ({pid});
   dump (name);
 }
 

@@ -32,7 +32,6 @@ event defaults (i = 0) {
     a = new face vector;
     foreach_face()
       a.x[] = 0.;
-    boundary ((scalar *){a});
   }
 }
 
@@ -60,7 +59,6 @@ event acceleration (i++)
 
       foreach()
 	f[] = clamp (f[], 0., 1.);
-      boundary ({f});
     }
 
   /**
@@ -71,9 +69,10 @@ event acceleration (i++)
   fraction field as applied to the pressure field. */
   
 #if TREE
-  for (scalar f in list)
+  for (scalar f in list) {
     f.prolongation = p.prolongation;
-  boundary (list);
+    f.dirty = true; // boundary conditions need to be updated
+  }
 #endif
 
   /**
@@ -113,9 +112,10 @@ event acceleration (i++)
   volume fraction field. */
   
 #if TREE
-  for (scalar f in list)
+  for (scalar f in list) {
     f.prolongation = fraction_refine;
-  boundary (list);
+    f.dirty = true; // boundary conditions need to be updated
+  }
 #endif
   
   /**

@@ -84,7 +84,6 @@ event init (i = 0) {
     c[] = cexact(y);
     cold[] = c[];
   }
-  boundary ({c, cold});
 }
 
 /**
@@ -128,7 +127,6 @@ event profiles (i += 10) {
   scalar flux[];
   foreach()
     flux[] = (c[0,0] - c[0,-1])/Delta;
-  boundary ({flux});
   
   for (double x = -L0/2 ; x < L0/2; x += L0/N) {
     double y = x + L0/2;
@@ -148,7 +146,6 @@ event pictures (t = end) {
   scalar  dce[];
   foreach()
     dce[] =  c[] - cexact(y);
-  boundary ({dce});
   output_ppm (dce, file = "c.png", spread = 2, linear = true);
 }
 

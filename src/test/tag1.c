@@ -5,11 +5,11 @@
 #define LEVEL 10
 
 double geom (double x, double y) {
-  double C1 = sq(x-0.2)+ sq(y) -sq(0.1);
-  double C2 = sq(x-0.8)+sq(y)-sq(0.01);
+  double C1 = sq(x - 0.2) + sq(y) - sq(0.1);
+  double C2 = sq(x - 0.8) + sq(y) - sq(0.01);
 
   double C1C2 = min(C1, C2);
-  return -C1C2;
+  return - C1C2;
 }
 
 int main()
@@ -22,9 +22,9 @@ int main()
   double iteration = 0;
   do {
     iteration++;
-    fraction(f, geom(x,y));
-  } while( adapt_wavelet({f}, (double []){0.005},
-			 maxlevel = LEVEL, 5).nf != 0 && iteration <= 10);
+    fraction (f, geom(x,y));
+  } while (adapt_wavelet({f}, (double []){0.005}, maxlevel = LEVEL, 5).nf != 0
+	   && iteration <= 10);
 
   scalar m[];
   foreach()

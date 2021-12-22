@@ -38,16 +38,11 @@ int main()
 
     /**
     The domain is a sphere of radius 0.392 centered at the origin. */
-    
-    vertex scalar phi[];
-    foreach_vertex()
-      phi[] = sq(0.392) - sq(x) - sq(y) - sq(z);
-    boundary ({phi});
-    fractions (phi, cs, fs);
+
+    solid (cs, fs, sq(0.392) - sq(x) - sq(y) - sq(z));
 #if TREE
     cs.refine = cs.prolongation = fraction_refine;
 #endif
-    boundary ({cs,fs});
     restriction ({cs,fs});
 
     cm = cs;
@@ -92,7 +87,6 @@ int main()
       // fprintf (stderr, "xc %g %g %g\n", xc, yc, zc);
       b[] = - 14.*exact (xc, yc, zc)*cs[];
     }
-    boundary ({a,b});
 
 #if 0    
     foreach_face (z)
@@ -146,19 +140,15 @@ int main()
     struct Poisson p;
     p.alpha = fs;
     p.lambda = zeroc;
-    p.embed_flux = embed_flux;
     scalar res[];
     double maxp = residual ({a}, {b}, {res}, &p), maxf = 0.;
-    foreach()
+    foreach (reduction(max:maxf))
       if (cs[] == 1. && fabs(res[]) > maxf)
 	maxf = fabs(res[]);
     fprintf (stderr, "maxres %d %.3g %.3g\n", N, maxf, maxp);
 
     timer t = timer_start();
-    mgstats s = poisson (a, b, alpha = fs,
-			 embed_flux =
-			 a.boundary[embed] != symmetry ? embed_flux : NULL,
-			 tolerance = 1e-6);
+    mgstats s = poisson (a, b, alpha = fs, tolerance = 1e-6);
     double dt = timer_elapsed (t);
     printf ("%d %g %d %d\n", N, dt, s.i, s.nrelax);
 

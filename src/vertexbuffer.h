@@ -174,9 +174,10 @@ static void vertex_buffer_glEnd()
       break;
     }
     VertexBuffer.state = 0;
-    if (VertexBuffer.type >= 0 && type >= 0)
+    if (VertexBuffer.type >= 0 && type >= 0) {
        // cannot mix lines and surfaces primitives
       assert (VertexBuffer.type == type);
+    }
     else
       VertexBuffer.type = type;
   }

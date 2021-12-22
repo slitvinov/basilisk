@@ -93,7 +93,6 @@ event friction (i++) {
     double S = 25., k = G/(sq(S)*pow(h[],1./3.))*fabs(U);
     lambda[] = k > 0. ? nu/k : 0.;
   }
-  boundary ({lambda});
 }
 
 /**

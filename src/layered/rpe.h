@@ -52,7 +52,7 @@ struct _Zarea {
 };
 typedef struct _Zarea Zarea;
 
-#define A(i) (assert(i >= 0 && i < a->n), a->A[i])
+#define A(i) (a->A[i])
 
 double area_integral (Zarea * a, double z1, double z2, double * Az)
 {

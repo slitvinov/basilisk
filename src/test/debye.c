@@ -89,7 +89,6 @@ event init (i = 0)
     Cp[] = 1.0; 
     Cm[] = 1.0;
   }
-  boundary ({phi, Cp, Cm});
 }
 
 event integration (i++) {

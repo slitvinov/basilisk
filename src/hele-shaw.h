@@ -64,5 +64,4 @@ event pressure (i++, last)
   trash ({u});
   foreach_face()
     u.x[] = beta.x[]*(p[] - p[-1])/Delta;
-  boundary ((scalar *){u});
 }

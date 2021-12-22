@@ -63,12 +63,8 @@ event init (i = 0)
   refine (y < 1.5 && level < 10);
   
   fraction (f, y - H0);
-  
-  vertex scalar phi[];
-  foreach_vertex()
-    phi[] = y - BA*exp(- sq(x - 10.)/5.) - 1e-3;
-  boundary ({phi});
-  fractions (phi, cs, fs);
+
+  solid (cs, fs, y - BA*exp(- sq(x - 10.)/5.) - 1e-3);
 }
 
 event update_hl (i++)

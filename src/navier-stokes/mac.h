@@ -48,14 +48,6 @@ u.n[top]    = 0;
 u.n[bottom] = 0;
 
 /**
-We apply boundary conditions after user initialisation. */
-
-event init (i = 0)
-{
-  boundary ({p,u});
-}
-
-/**
 ## Time integration
 
 ### Advection--Diffusion 
@@ -115,11 +107,6 @@ event advance (i++,last)
       nu*(u.x[] - u.x[0,-1] + u.y[] - u.y[-1,0])/Delta;
 
   /**
-  We only need to apply boundary conditions to the diagonal components. */
-
-  boundary ({S.x.x, S.y.y});
-
-  /**
   Finally we compute
   $$
   \mathbf{u}_* = \mathbf{u}_n + dt\nabla\cdot\mathbf{S}
@@ -147,7 +134,6 @@ $$ */
 
 event projection (i++,last)
 {
-  boundary ((scalar *){u});
   const face vector unity[] = {1.,1.};
   mgp = project (u, p, unity, dt, mgp.nrelax);
 }

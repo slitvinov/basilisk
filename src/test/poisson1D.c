@@ -24,13 +24,12 @@ int main (int argc, char ** argv)
       b[] = - sq(3.*pi)*sin (3.*pi*x);
       a[] = 0.;
     }
-    boundary ({a});
 
     TOLERANCE = 1e-4;
     poisson (a, b);
 
     double max = 0;
-    foreach() {
+    foreach(reduction (max:max)) {
       double e = a[] - solution(x);
       if (fabs(e) > max) max = fabs(e);
       printf ("%g %g %g %g\n", x, a[], b[], e);

@@ -1,4 +1,20 @@
-/* tangential interpolation on face vector fields  */
+/**
+# Tangential interpolation on face vector fields
+
+~~~gnuplot 
+r(x,y)=sqrt(x*x+y*y)
+set xrange [0:0.7]
+set xlabel 'Radial coordinate'
+set ylabel 'Error on halos'
+plot '< awk "(\$3==10){print \$0}" out' u (r($1,$2)):($6) t 'level 10', \
+     '< awk "(\$3==9){print \$0}" out' u (r($1,$2)):($6) t 'level 9', \
+     '< awk "(\$3==8){print \$0}" out' u (r($1,$2)):($6) t 'level 8', \
+     '< awk "(\$3==7){print \$0}" out' u (r($1,$2)):($6) t 'level 7', \
+     '< awk "(\$3==6){print \$0}" out' u (r($1,$2)):($6) t 'level 6', \
+     '< awk "(\$3==5){print \$0}" out' u (r($1,$2)):($6) t 'level 5', \
+     '< awk "(\$3==4){print \$0}" out' u (r($1,$2)):($6) t 'level 4'
+~~~
+*/
 
 scalar h[];
 face vector u[];
@@ -15,7 +31,6 @@ int main (int argc, char ** argv)
   origin (-1, -1);
   foreach()
     h[] = exp(-(x*x + y*y)/(R0*R0));
-  boundary ({h});
   
   /* initial coarsening (see halo.c) */
   double tolerance = 2e-4;
@@ -24,11 +39,10 @@ int main (int argc, char ** argv)
 
   foreach_face(x) u.x[] = exp(-(x*x + y*y)/(R0*R0));
   foreach_face(y) u.y[] = exp(-(x*x + y*y)/(R0*R0));
-  boundary ((scalar *){u});
   //  output_cells (stdout);
 
   double max = 0;
-  foreach_face (x)
+  foreach_face (x, reduction(max:max))
     for (int i = -1; i <= 1; i++) {
       double xu = x, yu = y + i*Delta;
       double e = exp(-(xu*xu+yu*yu)/(R0*R0)) - u.x[0,i];
@@ -37,7 +51,7 @@ int main (int argc, char ** argv)
     }
 
   double maxv = 0;
-  foreach_face (y)
+  foreach_face (y, reduction(max:maxv))
     for (int i = -1; i <= 1; i++) {
       double xv = x + i*Delta, yv = y;
       double e = exp(-(xv*xv+yv*yv)/(R0*R0)) - u.y[i,0];

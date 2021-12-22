@@ -48,8 +48,6 @@ void porous (scalar cs, face vector fs)
 					sq(y + yp - yc[i]) - sq(R[i])));
     phi[] = -phi[];
   }
-  boundary ({phi});
-
   fractions (phi, cs, fs);
   fractions_cleanup (cs, fs);
 }

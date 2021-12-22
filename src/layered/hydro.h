@@ -163,7 +163,6 @@ event init (i = 0)
     foreach_layer()
       eta[] += h[];
   }
-  boundary (all);
 }
 
 /**
@@ -259,7 +258,6 @@ event face_fields (i++, last)
       }
     }
   }
-  boundary ((scalar *){ha, hu, hf});
 
   /**
   The timestep is computed, taking into account the timing of events,
@@ -285,29 +283,28 @@ void advect (scalar * tracers, face vector hu, face vector hf, double dt)
   
   foreach_face()
     foreach_layer() {
-    double hul = hu.x[];
-    if (hul*dt/(Delta*cm[-1]) > CFL*h[-1])
-      hul = CFL*h[-1]*Delta*cm[-1]/dt;
-    else if (- hul*dt/(Delta*cm[]) > CFL*h[])
-      hul = - CFL*h[]*Delta*cm[]/dt;
-
-    /**
-    In the case where the flux is limited, and for multiple layers, an
-    attempt is made to conserve the total barotropic flux by merging
-    the flux difference with the flux in the layer just above. This
-    allows to maintain an accurate evolution for the free-surface
-    height $\eta$. */
-    
-    if (hul != hu.x[]) {
-      if (point.l < nl - 1)
-	hu.x[0,0,1] += hu.x[] - hul;
-      else if (nl > 1)
-	fprintf (stderr, "warning: could not conserve barotropic flux "
-		 "at %g,%g,%d\n", x, y, point.l);
-      hu.x[] = hul;
+      double hul = hu.x[];
+      if (hul*dt/(Delta*cm[-1]) > CFL*h[-1])
+	hul = CFL*h[-1]*Delta*cm[-1]/dt;
+      else if (- hul*dt/(Delta*cm[]) > CFL*h[])
+	hul = - CFL*h[]*Delta*cm[]/dt;
+      
+      /**
+      In the case where the flux is limited, and for multiple layers, an
+      attempt is made to conserve the total barotropic flux by merging
+      the flux difference with the flux in the layer just above. This
+      allows to maintain an accurate evolution for the free-surface
+      height $\eta$. */
+      
+      if (hul != hu.x[]) {
+	if (point.l < nl - 1)
+	  hu.x[0,0,1] += hu.x[] - hul;
+	else if (nl > 1)
+	  fprintf (stderr, "warning: could not conserve barotropic flux "
+		   "at %g,%g,%d\n", x, y, point.l);
+	hu.x[] = hul;
+      }
     }
-  }
-  boundary ((scalar *){hu});
 
   face vector flux[];
   foreach_layer() {
@@ -336,7 +333,6 @@ void advect (scalar * tracers, face vector hu, face vector hf, double dt)
 	
 	flux.x[] = s2*hu.x[];
       }
-      boundary_flux ({flux});
       
       /**
       We compute $(hs)^\star_i = (hs)^n_i + \Delta t 
@@ -376,10 +372,6 @@ void advect (scalar * tracers, face vector hu, face vector hf, double dt)
 	  f[] /= h1;      
     }
   }
-  scalar * list = list_copy (tracers);
-  list = list_append (list, h);
-  boundary (list);
-  free (list);
 }
 
 /**
@@ -412,7 +404,6 @@ event pressure (i++, last)
   foreach_face()
     foreach_layer() 
       hu.x[] += dt*ha.x[];
-  boundary ((scalar *){hu});
 
   /**
   ... and to the centered velocity field, using height-weighting. */
@@ -431,7 +422,6 @@ event pressure (i++, last)
       u.y[] -= dt*fG*ux;
 #endif // dimension == 2
     }
-  boundary ((scalar *){u});
   delete ((scalar *){ha});
 
   /**
@@ -454,7 +444,6 @@ event update_eta (i++, last)
       etap += h[];
     eta[] = etap;
   }
-  boundary ({eta});
 }
 
 /**
@@ -544,7 +533,6 @@ void vertical_velocity (scalar w, face vector hu, face vector hf)
       dz += h[1] - h[-1], wm = w[];
     }
   }
-  boundary ({w});
 }
 
 /**
@@ -629,7 +617,7 @@ void conserve_layered_elevation (void)
   h.refine  = refine_layered_elevation;
   h.prolongation = prolongation_elevation;
   h.restriction = restriction_elevation;
-  boundary ({h});
+  h.dirty = true; // boundary conditions need to be updated
 }
 
 #define conserve_elevation() conserve_layered_elevation()

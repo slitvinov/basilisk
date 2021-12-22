@@ -47,8 +47,6 @@ void porous (scalar cs, face vector fs)
 					sq(y + yp - yc[i]) - sq(R[i])));
     phi[] = -phi[];
   }
-  boundary ({phi});
-
   fractions (phi, cs, fs);
   fractions_cleanup (cs, fs);
 }
@@ -148,7 +146,6 @@ event logfile (i++; i <= 500)
     scalar nu[];
     foreach()
       nu[] = sqrt (sq(u.x[]) + sq(u.y[]));
-    boundary ({nu});
 
     view (fov = 19.3677);
     
@@ -189,7 +186,6 @@ event logfile (i++; i <= 500)
     adapt_wavelet ({cs,u}, (double[]){1e-2,2e-6,2e-6}, maxlevel);
 #endif
     porous (cs, fs);
-    boundary (all); // this is necessary since BCs depend on embedded fractions
   }
 }
 
