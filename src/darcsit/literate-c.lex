@@ -416,25 +416,71 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
   *end = '\0';
   if (!strcmp(link + strlen(link) - 4, ".mp4") ||
       !strcmp(link + strlen(link) - 4, ".ogv")) {
-    char * caption = strchr (yytext, '[') + 1;
-    output_s ("<div class=\"figure\"><video ");
-    if (options[0] == '(') {
-      *strchr (++options, ')') = '\0';
-      output_s (options);
-      output_c (' ');
+    char * caption = strchr (yytext, '[') + 1,
+      * linked = strstr (options, "link");
+    if (linked && strchr ("( \t", linked[-1]) && strchr (") \t", linked[4])) {
+      // link to video
+      for (int i = 0; i < 4; i++)
+	linked[i] = ' ';
+      output_s ("<div class=\"figure\">");
+
+      output_s ("<a href=\"");
+      output_s (link);
+      char tstamp[80];
+      snprintf (tstamp, 79, "?%ld", time (NULL));
+      fputs (tstamp, yyextra->out);
+      output_s ("\">");
+      
+      output_s ("<img ");
+      if (options[0] == '(') {
+	*strchr (++options, ')') = '\0';
+	output_s (options);
+	output_c (' ');
+      }
+      output_s ("src=\"");
+      char * snapshot = strdup (link);
+      strcpy (snapshot + strlen(snapshot) - 4, ".jpg");
+      char * command = malloc (100 + strlen (link) + strlen (snapshot));
+      strcpy (command, "ffmpeg -ss 00:00:10 -i '");
+      strcat (command, link);
+      strcat (command, "' -frames:v 1 -q:v 2 -loglevel quiet -stats -y '");
+      strcat (command, snapshot);
+      strcat (command, "'");
+      system (command);
+      output_s (snapshot);
+      output_s ("\">");
+      free (snapshot);
+      free (command);
+      
+      output_s ("</a>");
+      
+      if (caption[0] != '\0') {
+	output_s ("<p class=\"caption\">");
+	output_s (caption);
+	output_s ("</p>");
+      }
+      output_s ("</div>");
     }
-    output_s ("controls preload=\"metadata\"><source src=\"");
-    output_s (link);
-    fprintf (yyextra->out, "?%ld", time (NULL));
-    output_s ("\" type = \"video/");
-    output_s (!strcmp(link + strlen(link) - 4, ".mp4") ? "mp4" : "ogg");
-    output_s ("\"/>Your browser does not support the video tag.</video>");
-    if (caption[0] != '\0') {
-      output_s ("<p class=\"caption\">");
-      output_s (caption);
-      output_s ("</p>");
+    else { // inline video
+      output_s ("<div class=\"figure\"><video ");
+      if (options[0] == '(') {
+	*strchr (++options, ')') = '\0';
+	output_s (options);
+	output_c (' ');
+      }
+      output_s ("controls preload=\"metadata\"><source src=\"");
+      output_s (link);
+      fprintf (yyextra->out, "?%ld", time (NULL));
+      output_s ("\" type = \"video/");
+      output_s (!strcmp(link + strlen(link) - 4, ".mp4") ? "mp4" : "ogg");
+      output_s ("\"/>Your browser does not support the video tag.</video>");
+      if (caption[0] != '\0') {
+	output_s ("<p class=\"caption\">");
+	output_s (caption);
+	output_s ("</p>");
+      }
+      output_s ("</div>");
     }
-    output_s ("</div>");
   }
   else {
     output_s (yytext);
